@@ -21,7 +21,8 @@ export const ownFamilyOf = (name: string, path: string | null, args: readonly st
 
 export interface TreeRoots {
     daemonPid: number;
-    sessions: readonly { id: string; pid: number }[];
+    // A label for a session no node stands for, such as a launch.
+    sessions: readonly { id: string; pid: number; label?: string }[];
     chats: readonly { id: string; pid: number }[];
 }
 
@@ -35,6 +36,7 @@ export interface IndexedGroup {
     id: string;
     kind: ProcessGroupKind;
     nodeId: string | null;
+    label?: string;
     entries: TreeEntry[];
 }
 
@@ -81,9 +83,14 @@ export const indexTree = (sample: RawSample, roots: TreeRoots, argsOf: (process:
         siblings.sort((a, b) => a.pid - b.pid);
     }
 
-    const nodeRoots = new Map<number, { id: string; kind: ProcessGroupKind; nodeId: string }>();
+    const nodeRoots = new Map<number, { id: string; kind: ProcessGroupKind; nodeId: string; label?: string }>();
     for (const session of roots.sessions) {
-        nodeRoots.set(session.pid, { id: `terminal:${session.id}`, kind: 'terminal', nodeId: session.id });
+        nodeRoots.set(session.pid, {
+            id: `terminal:${session.id}`,
+            kind: 'terminal',
+            nodeId: session.id,
+            ...(session.label === undefined ? {} : { label: session.label })
+        });
     }
     for (const chat of roots.chats) {
         nodeRoots.set(chat.pid, { id: `chat:${chat.id}`, kind: 'chat', nodeId: chat.id });
@@ -208,10 +215,11 @@ const rowOf = (index: TreeIndex, rates: Map<string, ProcessRate>, entry: TreeEnt
     };
 };
 
-const groupOf = (id: string, kind: ProcessGroupKind, nodeId: string | null, rows: ProcessRow[], hidden = 0): ProcessGroup => ({
+const groupOf = (id: string, kind: ProcessGroupKind, nodeId: string | null, rows: ProcessRow[], hidden = 0, label?: string): ProcessGroup => ({
     id,
     kind,
     nodeId,
+    ...(label === undefined ? {} : { label }),
     cpu: sum(rows.map((row) => row.cpu)),
     memory: sum(rows.map((row) => row.memory)),
     diskRead: sum(rows.map((row) => row.diskRead)),
@@ -232,7 +240,9 @@ export const groupsFor = (index: TreeIndex, rates: Map<string, ProcessRate>, sco
             group.id,
             group.kind,
             group.nodeId,
-            group.entries.map((entry) => rowOf(index, rates, entry))
+            group.entries.map((entry) => rowOf(index, rates, entry)),
+            0,
+            group.label
         )
     );
     groups.sort((a, b) => GROUP_ORDER[a.kind] - GROUP_ORDER[b.kind] || (GROUP_ORDER[a.kind] === 0 ? sortValue(b, sort) - sortValue(a, sort) : 0));

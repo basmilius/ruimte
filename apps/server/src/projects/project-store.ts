@@ -130,6 +130,14 @@ export interface ProjectViewFiles {
     closeProject(projectId: string): void;
 }
 
+/* What the store needs of the launches: they may start with a project and they end with it. */
+export interface ProjectLaunches {
+    opened(projectId: string): void;
+    running(projectId: string): number;
+    /* Ends every launch of the project and says how many still ran. */
+    end(projectId: string): Promise<number>;
+}
+
 /* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
 export interface ProjectMutation<T> {
     /* Null when nothing changed, which is what a dry run leaves behind: it runs every check under
@@ -210,6 +218,8 @@ export class ProjectStore {
 
     private personSaved: SaveListener = async () => undefined;
 
+    private launches: ProjectLaunches | null = null;
+
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH) {
         this.home = home;
         this.seams = seams;
@@ -221,6 +231,10 @@ export class ProjectStore {
 
     attachSessionEnder(endSession: SessionEnder): void {
         this.endSession = endSession;
+    }
+
+    attachLaunches(launches: ProjectLaunches): void {
+        this.launches = launches;
     }
 
     /* Only `save` tells it, which only a client's `project.save` calls: a verb, a watcher or a pull never does. */
@@ -317,6 +331,7 @@ export class ProjectStore {
     /* This client put the project on screen, which is what makes it one `showView` reaches. */
     hold(clientId: string, projectId: string): void {
         this.holds.add(clientId, projectId);
+        this.launches?.opened(projectId);
     }
 
     /*
@@ -344,7 +359,7 @@ export class ProjectStore {
     /* What closing would do, for the confirmation that asks before it. */
     closing(clientId: string, projectId: string): ProjectClosingResult {
         const otherClients = this.holds.others(clientId, projectId);
-        return { sessions: otherClients > 0 ? 0 : this.index.sessionNodes(projectId).length, otherClients };
+        return { sessions: otherClients > 0 ? 0 : this.index.sessionNodes(projectId).length + (this.launches?.running(projectId) ?? 0), otherClients };
     }
 
     /* Every project in the registry, without opening or resolving anything: what a folder is called
@@ -827,6 +842,7 @@ export class ProjectStore {
         for (const node of sessions) {
             await this.endSession(node.kind, node.id);
         }
+        const launches = (await this.launches?.end(projectId)) ?? 0;
         await this.locked(async () => {
             this.release(projectId);
             const entries = await this.loadRegistry();
@@ -840,7 +856,7 @@ export class ProjectStore {
             // person keeps in their own menu is that client's business.
             this.publish(closed);
         });
-        return { ended: sessions.length, otherClients: 0 };
+        return { ended: sessions.length + launches, otherClients: 0 };
     }
 
     delete(projectId: string, removeFiles: boolean): Promise<void> {

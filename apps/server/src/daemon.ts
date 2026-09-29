@@ -92,6 +92,10 @@ import { registerFsHandlers } from './handlers/fs.ts';
 import { readMedia } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
+import { registerLaunchHandlers } from './handlers/launches.ts';
+import { LaunchRunner } from './launches/runner.ts';
+import { managerSessions } from './launches/sessions.ts';
+import { LaunchStore } from './launches/store.ts';
 import { registerDrawingHandlers } from './handlers/drawing.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
@@ -112,7 +116,7 @@ import { agentStates } from './agents/agent-state.ts';
 import { chatRequests } from '@ruimte/agents/tasks/waiting-child';
 import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
-import { holdsForeground } from './processes/foreground.ts';
+import { foregroundGroup, holdsForeground } from './processes/foreground.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
 import { createSampler } from './processes/sampler.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
@@ -127,7 +131,7 @@ import { ProviderAccountsService } from '@ruimte/agents/providers/accounts/servi
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionError, SessionManager } from './sessions/manager.ts';
 import { CommandApprovals, commandsSet } from './sessions/command-approvals.ts';
-import { startCwdGuard } from './canvas/project-paths.ts';
+import { checkCwd, startCwdGuard } from './canvas/project-paths.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { limitAccountsOf, usageAccountsOf, usageRootsOf } from '@ruimte/agents/usage/accounts';
 import { sessionAccountsOf } from './usage/session-accounts.ts';
@@ -423,6 +427,20 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.attachDrawings(drawings);
     const diagrams = new DiagramStore(projects);
     projects.attachDiagrams(diagrams);
+    const launchStore = new LaunchStore({
+        projects: { folderOf: (projectId) => projects.index.folderOf(projectId), worktreePaths: (folder) => canvasHost.worktreePaths(folder) },
+        approvals: commandApprovals
+    });
+    const launches = new LaunchRunner({
+        store: launchStore,
+        sessions: managerSessions(manager, foregroundGroup),
+        checkCwd: (folder, cwd) => checkCwd(folder, cwd, (inside) => canvasHost.worktreePaths(inside))
+    });
+    projects.attachLaunches({
+        opened: (projectId) => void launches.opened(projectId),
+        running: (projectId) => launches.running(projectId),
+        end: (projectId) => launches.end(projectId)
+    });
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.warmIndex();
     const folders = new FolderWatcher();
@@ -478,7 +496,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const sampler = await createSampler(process.platform, config.home);
     const processes = new ProcessMonitor({
         sampler,
-        sessions: () => manager.list().map((session) => ({ id: session.sessionId, pid: session.pid, exited: session.exited, agent: session.agent ?? null })),
+        sessions: () =>
+            manager.list().map((session) => ({
+                id: session.sessionId,
+                pid: session.pid,
+                exited: session.exited,
+                agent: session.agent ?? null,
+                label: launches.labelOf(session.sessionId) ?? undefined
+            })),
         chats: () => chats.processTargets(),
         contextUrl: () => manager.contextUrl,
         // Without a SessionEnd a clean exit and a crash look the same, so only these CLIs can be missed.
@@ -661,6 +686,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
+    registerLaunchHandlers(dispatcher, launchStore, launches);
     registerAuthHandlers(dispatcher, auth, {
         identity,
         version: VERSION,
@@ -812,6 +838,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         projects,
         drawings,
         diagrams,
+        launchStore,
+        launches,
         folders,
         statuses,
         usage,
@@ -1127,6 +1155,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         projects.closeAll();
         drawings.closeAll();
         diagrams.closeAll();
+        launches.close();
+        launchStore.closeAll();
         peers.closeAll();
         await relay.stop();
         server.stop(true);

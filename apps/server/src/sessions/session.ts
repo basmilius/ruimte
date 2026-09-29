@@ -319,6 +319,12 @@ export class Session {
         }
     }
 
+    signal(signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void {
+        if (!this.exited) {
+            this.pty.kill(signal);
+        }
+    }
+
     kill(): void {
         this.flush();
         if (this.exited) {

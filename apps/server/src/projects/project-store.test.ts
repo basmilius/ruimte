@@ -462,6 +462,28 @@ describe('ProjectStore', () => {
         expect((await store.list())[0]?.closedAt).toBeNumber();
     });
 
+    test('launches start with the first hold, are counted before closing, and end with the last client out', async () => {
+        const calls: string[] = [];
+        let running = 2;
+        store.attachLaunches({
+            opened: (id) => calls.push(`opened:${id}`),
+            running: () => running,
+            end: async (id) => {
+                calls.push(`end:${id}`);
+                const ended = running;
+                running = 0;
+                return ended;
+            }
+        });
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+        expect(store.closing('c1', projectId)).toEqual({ sessions: 3, otherClients: 0 });
+        expect(await store.closeProject(projectId, 'c1')).toEqual({ ended: 3, otherClients: 0 });
+        expect(calls).toEqual([`opened:${projectId}`, `end:${projectId}`]);
+    });
+
     test('what closing would do counts the sessions, or counts the clients that keep them running', async () => {
         const opened = await store.openProject({ folder });
         const { projectId } = opened.summary;

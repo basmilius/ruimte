@@ -59,6 +59,12 @@ interface CreateSessionOptions {
     agent?: AgentLaunch;
     // Not on the wire; lets a test skip the login flag so the user's profile stays out of the output.
     args?: string[];
+    // Not on the wire: a launch's command, handed to the shell as its argument so the session ends with it.
+    exec?: string;
+    // Not on the wire: variables on top of the daemon's own, which a launch sets.
+    env?: Record<string, string>;
+    // Not on the wire: starts on an empty screen instead of the last one of this id.
+    fresh?: boolean;
 }
 
 export interface SessionManagerOptions {
@@ -201,6 +207,8 @@ export class SessionManager {
 
     private readonly observers = new Set<SessionSink>();
 
+    private readonly exitListeners = new Set<(sessionId: string, exitCode: number) => void>();
+
     observe(sink: SessionSink): () => void {
         this.observers.add(sink);
         return () => {
@@ -250,9 +258,9 @@ export class SessionManager {
         let restoredScreen: string | undefined;
         if (existing) {
             // The previous shell of this id ended on its own; its last screen is worth as much as a disk snapshot.
-            restoredScreen = await existing.serializeScreen();
+            restoredScreen = options.fresh ? undefined : await existing.serializeScreen();
             this.remove(existing);
-        } else {
+        } else if (!options.fresh) {
             restoredScreen = (await this.snapshots?.read(options.sessionId)) ?? undefined;
         }
 
@@ -261,7 +269,8 @@ export class SessionManager {
         const session = this.spawn({
             id: options.sessionId,
             shell,
-            args: options.args ?? defaultShellArgs(shell),
+            // Interactive as well as login, so PATH and version managers are what a terminal of this person has.
+            args: options.args ?? (options.exec === undefined ? defaultShellArgs(shell) : [...defaultShellArgs(shell), '-i', '-c', options.exec]),
             cwd,
             cols: options.cols,
             rows: options.rows,
@@ -269,7 +278,7 @@ export class SessionManager {
             restoredScreen,
             restoredAgent,
             launch,
-            env
+            env: options.env ? { ...env, ...options.env } : env
         });
         session.heldCommand = held;
         this.sessions.set(session.id, session);
@@ -518,6 +527,26 @@ export class SessionManager {
         session.kill();
     }
 
+    /* A signal to the shell of a session that still runs; a session that ended takes none. */
+    signal(sessionId: string, signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void {
+        const session = this.sessions.get(sessionId);
+        if (!session || session.exited) {
+            return;
+        }
+        if (signal === 'SIGKILL') {
+            this.onProcessChange?.(sessionId, 'before-kill');
+        }
+        session.signal(signal);
+    }
+
+    /* Hears every session that ends, whoever watches it; a launch learns its exit code here. */
+    observeExit(listener: (sessionId: string, exitCode: number) => void): () => void {
+        this.exitListeners.add(listener);
+        return () => {
+            this.exitListeners.delete(listener);
+        };
+    }
+
     /*
      * Ends the shell and keeps the session, listed as exited with its last screen, for a child whose
      * parent was stopped: removing it is a person's call, as deleting the node is.
@@ -656,6 +685,9 @@ export class SessionManager {
         }
         this.broadcastListChanged();
         this.onProcessChange?.(sessionId, 'changed');
+        for (const listener of [...this.exitListeners]) {
+            listener(sessionId, exitCode);
+        }
     }
 
     private async setAgent(session: Session, agent: AgentInfo | null): Promise<void> {

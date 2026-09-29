@@ -46,7 +46,7 @@ export type LaunchErrorCode =
     | 'cwd-outside-project'
     | 'bad-cwd'
     | 'launch-held'
-    | 'launch-not-running';
+    | 'launch-stuck';
 
 export class LaunchError extends CodedError<LaunchErrorCode> {}
 

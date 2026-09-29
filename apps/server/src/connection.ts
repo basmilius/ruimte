@@ -53,6 +53,8 @@ export interface ConnectionServices {
     projects: Subscribable;
     drawings: Subscribable;
     diagrams: Subscribable;
+    launchStore?: Subscribable;
+    launches?: Subscribable;
     folders: Attachable;
     statuses: Attachable;
     usage: Subscribable;
@@ -118,6 +120,8 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.projects.subscribe(clientId, sink),
             services.drawings.subscribe(clientId, sink),
             services.diagrams.subscribe(clientId, sink),
+            services.launchStore?.subscribe(clientId, sink) ?? (() => undefined),
+            services.launches?.subscribe(clientId, sink) ?? (() => undefined),
             services.folders.subscribe(clientId, sink),
             services.statuses.subscribe(clientId, sink),
             services.usage.subscribe(clientId, sink),

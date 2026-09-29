@@ -44,7 +44,7 @@ export class ProcessError extends CodedError<ProcessErrorCode> {}
 
 export interface ProcessMonitorOptions {
     sampler: ProcessSampler | null;
-    sessions(): { id: string; pid: number; exited: boolean; agent: AgentInfo | null }[];
+    sessions(): { id: string; pid: number; exited: boolean; agent: AgentInfo | null; label?: string }[];
     chats(): { id: string; pid: number; provider: AgentKind; status: AgentStatus; updatedAt: number }[];
     /* What this daemon's sessions carry as `RUIMTE_CONTEXT_URL`, so a stray of another daemon on the machine is not ours. */
     contextUrl(): string | null;

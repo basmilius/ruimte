@@ -122,3 +122,12 @@ describe('the tree of Ruimte', () => {
         expect(ruimteTotals(index, rates({ 201: 10, 300: 5, 51: 20 })).cpu).toBe(35);
     });
 });
+
+describe('a launch in the tree', () => {
+    test('carries its name as the label of its group', () => {
+        const index = indexTree(SAMPLE, { ...ROOTS, sessions: [{ id: 'launch-1', pid: 200, label: 'Run server' }] });
+        const group = groupsFor(index, new Map(), 'ruimte', 'cpu', 50).find((candidate) => candidate.nodeId === 'launch-1');
+        expect(group).toMatchObject({ kind: 'terminal', label: 'Run server' });
+        expect(groupsFor(indexTree(SAMPLE, ROOTS), new Map(), 'ruimte', 'cpu', 50)[0]).not.toHaveProperty('label');
+    });
+});

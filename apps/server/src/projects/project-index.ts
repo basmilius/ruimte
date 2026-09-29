@@ -82,6 +82,10 @@ export class ProjectIndex {
         return this.projects.has(projectId);
     }
 
+    folderOf(projectId: string): string | null {
+        return this.projects.get(projectId)?.folder ?? null;
+    }
+
     viewsOf(projectId: string): readonly ProjectView[] | null {
         return this.projects.get(projectId)?.content.views ?? null;
     }
