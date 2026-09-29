@@ -564,7 +564,7 @@ describe('login', () => {
         }
         for (const allowed of [
             'https://station.ruimte.app/pulsar/callback',
-            'http://localhost:5173/pulsar/callback',
+            'http://localhost:4212/pulsar/callback',
             'ruimte://pulsar/callback',
             REDIRECT_URI
         ]) {

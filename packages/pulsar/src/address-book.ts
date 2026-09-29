@@ -38,7 +38,7 @@ export const SESSION_REFRESH_MAX_SKEW_MS = 600_000;
  */
 export const APP_REDIRECT_SCHEME_URI = 'ruimte://pulsar/callback';
 export const APP_REDIRECT_LOOPBACK_PATH = '/pulsar/callback';
-export const WEB_REDIRECT_URIS: readonly string[] = ['https://station.ruimte.app/pulsar/callback', 'http://localhost:5173/pulsar/callback'];
+export const WEB_REDIRECT_URIS: readonly string[] = ['https://station.ruimte.app/pulsar/callback', 'http://localhost:4212/pulsar/callback'];
 
 export const isAppRedirectUri = (value: string): boolean => {
     if (value === APP_REDIRECT_SCHEME_URI || WEB_REDIRECT_URIS.includes(value)) {

@@ -9,6 +9,9 @@ import { build, defaultClientConditions, defineConfig, searchForWorkspaceRoot, t
 // The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
 const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
 
+// Beside the daemons instead of Vite's 5173, which other projects on the same computer claim first.
+const port = 4212;
+
 // Where @basmilius/react-ui really lives: a linked checkout sits outside this repository.
 const reactUi = realpathSync(fileURLToPath(new URL('./node_modules/@basmilius/react-ui', import.meta.url)));
 
@@ -129,6 +132,8 @@ export default defineConfig(({ mode }) => ({
         include: ['@base-ui-components/react/menu', '@base-ui-components/react/dialog', 'lucide-react', 'clsx']
     },
     server: {
+        port,
+        strictPort: true,
         fs: {
             allow: [searchForWorkspaceRoot(process.cwd()), reactUi]
         },

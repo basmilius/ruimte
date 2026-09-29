@@ -198,7 +198,7 @@ describe('address book', () => {
         expect(isAppRedirectUri('http://127.0.0.1:53682/pulsar/callback')).toBe(true);
         expect(isAppRedirectUri('http://[::1]:53682/pulsar/callback')).toBe(true);
         expect(isAppRedirectUri('https://station.ruimte.app/pulsar/callback')).toBe(true);
-        expect(isAppRedirectUri('http://localhost:5173/pulsar/callback')).toBe(true);
+        expect(isAppRedirectUri('http://localhost:4212/pulsar/callback')).toBe(true);
         for (const refused of [
             'https://station.ruimte.app/pulsar/callback/',
             'https://station.ruimte.app/pulsar/callback?next=evil',

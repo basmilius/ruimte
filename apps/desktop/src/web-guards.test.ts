@@ -12,7 +12,7 @@ import {
 } from './web-guards';
 
 const APP = 'http://127.0.0.1:4210';
-const DEV = 'http://localhost:5173';
+const DEV = 'http://localhost:4212';
 
 describe('originOf', () => {
     test('reads the origin of a web address and nothing else', () => {
@@ -27,7 +27,7 @@ describe('appWindowNavigation', () => {
     test('keeps the app in its window, the dev server included', () => {
         expect(appWindowNavigation('http://127.0.0.1:4210/', APP)).toBe('allow');
         expect(appWindowNavigation('http://127.0.0.1:4210/link?code=abc', APP)).toBe('allow');
-        expect(appWindowNavigation('http://localhost:5173/', DEV)).toBe('allow');
+        expect(appWindowNavigation('http://localhost:4212/', DEV)).toBe('allow');
     });
 
     test('sends a dropped web link to the system browser', () => {
