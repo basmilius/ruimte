@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Pencil, Play, Plus, Rocket, Search, SquareTerminal } from 'lucide-react';
-import type { LaunchesDocument } from '@ruimte/contracts';
+import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
 import { Button, ButtonGroup, Icon, Menu, Popover, PromptDialog, useNow } from '@basmilius/react-ui';
 import { formatAgo } from '@basmilius/react-ui/format';
 import { chooseLaunch, chosenLaunchId, showLaunchOutput, startLaunch } from '@/launches/actions';
@@ -39,7 +39,8 @@ const chipDetail = (view: LaunchView, t: (key: string, options?: Record<string, 
 export function LaunchChip() {
     const { t } = useTranslation('launches');
     const anchor = useRef<HTMLDivElement>(null);
-    const { key, document, views } = useProjectLaunches();
+    const { key, document, folder, views } = useProjectLaunches();
+    const { repos } = useProjectRepos(folder);
     const chosenId = useUi((s) => (key === null ? undefined : s.chosenLaunches[key]));
     const pressed = useUi((s) => s.panel.open && s.panel.kind === 'launches');
     const ask = useLaunches((s) => s.ask);
@@ -92,7 +93,7 @@ export function LaunchChip() {
                     <Icon icon={ChevronDown} size={12} className="shrink-0 text-text-faint" />
                 </Menu.Trigger>
                 <Menu.Popup className="min-w-72">
-                    <LaunchMenu />
+                    <LaunchMenu repos={repos} />
                 </Menu.Popup>
             </Menu.Root>
             {view !== null && (
@@ -169,11 +170,13 @@ export function LaunchChip() {
     );
 }
 
-/* Mounted while the menu is open, so the checkouts are only asked for then. The panel shows the output itself, so it leaves that item out. */
-export function LaunchMenu({ showOutput = true }: { showOutput?: boolean }) {
+/*
+ * The checkouts come from whoever holds the menu, read before it opens, so the rows do not regroup
+ * under a sub-folder while a person looks. The panel shows the output itself, so it leaves that item out.
+ */
+export function LaunchMenu({ repos, showOutput = true }: { repos: readonly GitRepo[]; showOutput?: boolean }) {
     const { t } = useTranslation('launches');
     const { document, folder, views } = useProjectLaunches();
-    const { repos } = useProjectRepos(folder);
     const sections = useMemo(() => (document === null || folder === null ? [] : launchSections(document.launches, folder, repos)), [document, folder, repos]);
 
     return (

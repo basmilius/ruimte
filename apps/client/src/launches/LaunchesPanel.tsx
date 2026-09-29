@@ -16,6 +16,7 @@ import { chosenLaunch, othersOf, outputOf, shortAddress, type LaunchView } from 
 import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
+import { useProjectRepos } from '@/state/git-repos';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
@@ -99,7 +100,8 @@ export function LaunchesPanel() {
 function LaunchPicker({ view }: { view: LaunchView }) {
     const { t } = useTranslation('launches');
     const now = useNow(1_000);
-    const { views } = useProjectLaunches();
+    const { folder, views } = useProjectLaunches();
+    const { repos } = useProjectRepos(folder);
     const others = useMemo(() => othersOf(views, view.launch), [views, view.launch]);
     const detail = pickerDetail(view, now, t);
 
@@ -127,7 +129,7 @@ function LaunchPicker({ view }: { view: LaunchView }) {
                     <Icon icon={ChevronDown} size={12} className="shrink-0 text-text-faint" />
                 </Menu.Trigger>
                 <Menu.Popup className="min-w-72">
-                    <LaunchMenu showOutput={false} />
+                    <LaunchMenu repos={repos} showOutput={false} />
                 </Menu.Popup>
             </Menu.Root>
             <ButtonGroup className="ml-auto shrink-0">
