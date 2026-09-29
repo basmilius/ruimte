@@ -208,6 +208,17 @@ describe('SessionClient', () => {
         expect(sink.attached.get('a')).toBe(true);
     });
 
+    test('a followed session is attached to and never created, also after a reconnect', async () => {
+        const { transport, client } = setup();
+        const result = await client.open('launch', { follow: true }, 80, 24);
+        expect(result?.screen).toBe('screen');
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('session.create')).toEqual([]);
+        expect(transport.of('session.attach')).toHaveLength(2);
+    });
+
     test('output and exit events reach only the handlers of their node', () => {
         const { transport, sink, client } = setup();
         const seenA: string[] = [];

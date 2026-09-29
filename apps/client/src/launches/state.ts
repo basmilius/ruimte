@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import type { LaunchBusy, LaunchesDocument, LaunchHeld, LaunchStatus } from '@ruimte/contracts';
 import { create } from 'zustand';
 import { EMPTY_DOCUMENT, launchViews, type LaunchView } from '@/launches/model';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { dropEndpoint, endpointKey, isOfEndpoint, useEndpointId } from '@/state/keys';
+import { hasLocalMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 
 /* A start that came back with a question for the person who asked. */
@@ -86,4 +88,10 @@ export const useProjectLaunches = (): ProjectLaunches => {
     const statuses = useLaunches((s) => (key === null ? NO_STATUSES : (s.statuses[key] ?? NO_STATUSES)));
     const views = useMemo(() => launchViews(document ?? EMPTY_DOCUMENT, statuses), [document, statuses]);
     return { key, projectId, folder, document, statuses, views };
+};
+
+/* A project on another machine answers on that machine's localhost, which a page here cannot reach. */
+export const useAddressReachable = (): boolean => {
+    const endpointId = useEndpointId();
+    return endpointId === LOCAL_ENDPOINT_ID && hasLocalMachine();
 };

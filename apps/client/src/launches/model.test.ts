@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitRepo, LaunchConfigEntry, LaunchesDocument, LaunchStatus } from '@ruimte/contracts';
-import { chosenLaunch, launchFolder, launchSections, launchViews, othersOf, shortAddress } from './model.ts';
+import { chosenLaunch, launchFolder, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
 
 const launch = (id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry => ({
     id,
@@ -82,6 +82,17 @@ describe('the chip', () => {
         expect(othersOf(views, document.launches[0]!)).toEqual({ count: 2, failed: false });
         const failed = launchViews(document, { c: status('c', { state: 'exited', exitCode: 1 }) });
         expect(othersOf(failed, document.launches[0]!)).toEqual({ count: 1, failed: true });
+    });
+});
+
+describe('the panel', () => {
+    test('shows a group through the member that runs, else the one that failed', () => {
+        const document = doc([launch('a'), launch('b'), launch('g', { kind: 'group', launches: ['a', 'b'] })]);
+        const group = document.launches[2]!;
+        expect(outputOf(launchViews(document, { a: status('a', { state: 'exited', exitCode: 0 }), b: status('b') }), group)?.launch.id).toBe('b');
+        expect(outputOf(launchViews(document, { b: status('b', { state: 'exited', exitCode: 1 }) }), group)?.launch.id).toBe('b');
+        expect(outputOf(launchViews(document, {}), group)?.launch.id).toBe('a');
+        expect(outputOf(launchViews(document, {}), document.launches[1]!)?.launch.id).toBe('b');
     });
 });
 

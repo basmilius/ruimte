@@ -1,44 +1,16 @@
 import { useMemo, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { OctagonX, Pencil, Play, Plus, Rocket, RotateCw, Square, SquareTerminal } from 'lucide-react';
+import { Pencil, Play, Plus, Rocket, SquareTerminal } from 'lucide-react';
 import type { LaunchConfigEntry } from '@ruimte/contracts';
-import { Button, ButtonGroup, Icon, IconButton, Menu, Popover, PromptDialog, useNow } from '@basmilius/react-ui';
+import { Button, ButtonGroup, Icon, Menu, Popover, PromptDialog, useNow } from '@basmilius/react-ui';
 import { formatAgo } from '@basmilius/react-ui/format';
-import { chooseLaunch, chosenLaunchId, openLaunchAddress, showLaunchOutput, startLaunch, stopLaunch } from '@/launches/actions';
+import { chooseLaunch, chosenLaunchId, openLaunchAddress, showLaunchOutput, startLaunch } from '@/launches/actions';
+import { LaunchButtons, LaunchDot } from '@/launches/LaunchControls';
 import { chosenLaunch, launchSections, othersOf, shortAddress, type LaunchView } from '@/launches/model';
-import { useLaunches, useProjectLaunches } from '@/launches/state';
-import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
 import { useProjectRepos } from '@/state/git-repos';
-import { useEndpointId } from '@/state/keys';
-import { hasLocalMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
-
-/* A task that ended shows how it ended as a ring, so it never reads as a service that runs. */
-const dotClass = (view: LaunchView): string => {
-    const ended = view.launch.kind === 'task' && (view.phase === 'passed' || view.phase === 'failed');
-    if (ended) {
-        return clsx('border-2 bg-transparent', view.phase === 'passed' ? 'border-positive' : 'border-status-error');
-    }
-    switch (view.phase) {
-        case 'held':
-            return 'bg-status-needs-you';
-        case 'starting':
-        case 'stopping':
-            return 'animate-pulse bg-status-running';
-        case 'running':
-            return 'bg-positive';
-        case 'failed':
-            return 'bg-status-error';
-        default:
-            return 'bg-text-faint';
-    }
-};
-
-function LaunchDot({ view }: { view: LaunchView }) {
-    const { t } = useTranslation('launches');
-    return <span role="img" aria-label={t(`phase.${view.phase}`)} className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', dotClass(view))} />;
-}
 
 /* What the chip says after the name: the port it answers on, or why it is not running. */
 const chipDetail = (view: LaunchView, t: (key: string, options?: Record<string, unknown>) => string): string | null => {
@@ -175,40 +147,6 @@ export function LaunchChip() {
     );
 }
 
-/* In a menu row each button is an item of its own, so the arrow keys reach it and a press leaves the menu open. */
-function LaunchButtons({ view, inMenu = false }: { view: LaunchView; inMenu?: boolean }) {
-    const { t } = useTranslation('launches');
-    const { launch, phase } = view;
-    const render = inMenu ? <Menu.Item unstyled closeOnClick={false} /> : undefined;
-    if (phase === 'stopping') {
-        return (
-            <IconButton
-                icon={OctagonX}
-                size="sm"
-                label={t('forceStop', { name: launch.name })}
-                className="text-status-error"
-                render={render}
-                onClick={() => void stopLaunch(launch.id, true)}
-            />
-        );
-    }
-    if (view.live) {
-        return (
-            <>
-                <IconButton
-                    icon={RotateCw}
-                    size="sm"
-                    label={t('restart', { name: launch.name })}
-                    render={render}
-                    onClick={() => void startLaunch(launch.id, { restart: true })}
-                />
-                <IconButton icon={Square} size="sm" label={t('stop', { name: launch.name })} render={render} onClick={() => void stopLaunch(launch.id)} />
-            </>
-        );
-    }
-    return <IconButton icon={Play} size="sm" label={t('start', { name: launch.name })} render={render} onClick={() => void startLaunch(launch.id)} />;
-}
-
 /* Mounted while the menu is open, so the checkouts are only asked for then. */
 function LaunchMenu() {
     const { t } = useTranslation('launches');
@@ -268,10 +206,8 @@ const rowHint = (view: LaunchView, all: readonly LaunchConfigEntry[], now: numbe
 function LaunchRow({ view, document }: { view: LaunchView; document: readonly LaunchConfigEntry[] }) {
     const { t } = useTranslation('launches');
     const now = useNow(30_000);
-    const endpointId = useEndpointId();
     const { launch } = view;
-    // A project on another machine answers on that machine's localhost, which a page here cannot reach.
-    const reachable = endpointId === LOCAL_ENDPOINT_ID && hasLocalMachine();
+    const reachable = useAddressReachable();
     const address = view.phase === 'running' && launch.url !== undefined ? launch.url : null;
 
     return (

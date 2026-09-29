@@ -169,3 +169,21 @@ export const launchSections = (launches: readonly LaunchConfigEntry[], folder: s
 
 /* An address as a person reads it in a row: the host and port, without the scheme. */
 export const shortAddress = (url: string): string => url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '');
+
+/*
+ * The launch whose terminal the panel shows for the one chosen. A group has no session of its own,
+ * so it shows a member: one that runs, else one that failed, else the first that ran at all.
+ */
+export const outputOf = (views: ReadonlyMap<string, LaunchView>, launch: LaunchConfigEntry): LaunchView | null => {
+    if (launch.kind !== 'group') {
+        return views.get(launch.id) ?? null;
+    }
+    const members = (launch.launches ?? []).flatMap((id) => views.get(id) ?? []);
+    return (
+        members.find((member) => member.live) ??
+        members.find((member) => member.phase === 'failed') ??
+        members.find((member) => member.status !== null) ??
+        members[0] ??
+        null
+    );
+};

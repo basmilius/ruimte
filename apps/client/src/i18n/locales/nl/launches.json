@@ -38,5 +38,12 @@
         "description": "Exitcode {{code}} na {{duration}}"
     },
     "startFailed": "{{name}} starten lukte niet",
-    "stopFailed": "{{name}} stoppen lukte niet"
+    "stopFailed": "{{name}} stoppen lukte niet",
+    "panel": {
+        "reading": "Launches lezen…",
+        "empty": "Dit project heeft nog geen launches.",
+        "notRun": "{{name}} liep nog niet sinds de machine startte.",
+        "stopped": "gestopt",
+        "attachFailed": "Kon de output niet tonen."
+    }
 }

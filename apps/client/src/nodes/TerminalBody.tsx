@@ -5,7 +5,7 @@ import i18next from 'i18next';
 import clsx from 'clsx';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { Terminal } from '@xterm/xterm';
+import type { Terminal } from '@xterm/xterm';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
@@ -19,6 +19,7 @@ import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isTerminalPaste, m
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
+import { createTerminal, fitToHost } from '@/terminal/xterm';
 import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
@@ -28,34 +29,6 @@ import { Button, copyText, readClipboardText, Icon, ContextMenu } from '@basmili
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
 const SHIFT_ENTER = '\x1b\r';
-
-const createTerminal = (): Terminal =>
-    new Terminal({
-        theme: readTerminalTheme(),
-        fontFamily: readTerminalFont(),
-        fontSize: useSettings.getState().fontSize,
-        cursorBlink: true,
-        scrollback: 5000,
-        macOptionIsMeta: true
-    });
-
-/*
- * FitAddon measures the host's border box, so a vertical padding on the host would count as room for a
- * row that is cut off. The host has none; what a whole row does not fill is split above and below, as an
- * offset rather than a padding, since FitAddon subtracts the terminal element's own padding too.
- */
-const fitToHost = (term: Terminal, fit: FitAddon): void => {
-    fit.fit();
-    const host = term.element?.parentElement;
-    // The same private dimensions FitAddon itself divides by.
-    const cellHeight: number = (term as unknown as { _core: { _renderService: { dimensions: { css: { cell: { height: number } } } } } })._core._renderService
-        .dimensions.css.cell.height;
-    if (!host || cellHeight === 0) {
-        return;
-    }
-    const slack = host.clientHeight - term.rows * cellHeight;
-    host.style.setProperty('--term-offset', `${Math.max(0, Math.floor(slack / 2))}px`);
-};
 
 /* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {

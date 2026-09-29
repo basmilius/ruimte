@@ -14,6 +14,8 @@ interface OpenOptions {
     command?: string;
     /* An agent CLI to start instead; the daemon builds the line it types. */
     agent?: AgentLaunch;
+    /* A session the daemon started for something else, such as a launch: attached to, never created. */
+    follow?: boolean;
 }
 
 interface Mounted extends OpenOptions, MountedEntry {
@@ -67,6 +69,9 @@ export class SessionClient {
 
     async ensure(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<void> {
         this.opens.set(nodeId, options);
+        if (options.follow === true) {
+            return;
+        }
         try {
             const info = await this.transport.request('session.create', {
                 sessionId: nodeId,
@@ -225,7 +230,7 @@ export class SessionClient {
     }
 
     private async reattach(nodeId: string, entry: Mounted, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
-        await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent }, entry.cols, entry.rows);
+        await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent, follow: entry.follow }, entry.cols, entry.rows);
         // The node may have left the canvas while the create was on the wire.
         if (!this.mounted.has(nodeId)) {
             return;

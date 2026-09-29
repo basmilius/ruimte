@@ -38,5 +38,12 @@
         "description": "Exit code {{code}} after {{duration}}"
     },
     "startFailed": "Could not launch {{name}}",
-    "stopFailed": "Could not stop {{name}}"
+    "stopFailed": "Could not stop {{name}}",
+    "panel": {
+        "reading": "Reading the launches…",
+        "empty": "No launches in this project yet.",
+        "notRun": "{{name}} has not run since the machine started.",
+        "stopped": "stopped",
+        "attachFailed": "Could not show the output."
+    }
 }
