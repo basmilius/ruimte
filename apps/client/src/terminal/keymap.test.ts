@@ -85,6 +85,13 @@ describe('isAppShortcut', () => {
         expect(isAppShortcut(shortcut(',', { code: 'Comma', metaKey: true }), true)).toBe(true);
     });
 
+    test('a launch starts and stops from inside a terminal, with the character Option makes of the key', () => {
+        expect(isAppShortcut(shortcut('®', { code: 'KeyR', metaKey: true, altKey: true }), true)).toBe(true);
+        expect(isAppShortcut(shortcut('≥', { code: 'Period', metaKey: true, altKey: true }), true)).toBe(true);
+        expect(isAppShortcut(shortcut('r', { code: 'KeyR', ctrlKey: true, altKey: true }), false)).toBe(true);
+        expect(isAppShortcut(key('KeyR', { ctrlKey: true }), false)).toBe(false);
+    });
+
     test('everything else in a terminal belongs to the program', () => {
         expect(isAppShortcut(key('KeyK', { metaKey: true }), true)).toBe(false);
         expect(isAppShortcut(key('KeyZ', { metaKey: true }), true)).toBe(false);
@@ -162,7 +169,7 @@ const eventFor = (target: Shortcut, apple: boolean): KeyLike => {
         ? `Key${target.key}`
         : /^[0-9]$/.test(target.key)
           ? `Digit${target.key}`
-          : (({ ',': 'Comma', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight' } as Record<string, string>)[target.key] ?? target.key);
+          : (({ ',': 'Comma', '.': 'Period', '\\': 'Backslash', '[': 'BracketLeft', ']': 'BracketRight' } as Record<string, string>)[target.key] ?? target.key);
     return {
         key: target.key,
         code,

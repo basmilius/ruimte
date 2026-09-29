@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { menuIconOf } from './icons';
-import { GO_VIEW_PREFIX, isPaletteId, MENU_ACTION_IDS, PALETTE_IDS } from './ids';
+import { GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX, MENU_ACTION_IDS, PALETTE_IDS } from './ids';
 import { menuModel, toAccelerator, type MenuContext } from './model';
 
 const NO_OFFERS = {
@@ -42,6 +42,8 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     moveTargets: [],
     layouts: ['Review'],
     agents: [{ kind: 'claude', name: 'Claude Code', chat: true, terminal: true }],
+    launches: [],
+    chosenLaunch: null,
     releaseNotes: true,
     fullscreen: false,
     keepAwake: null,
@@ -76,7 +78,9 @@ const EVERY_CONTEXT: MenuContext[] = [
                     host,
                     offers: { ...NO_OFFERS, duplicate: true, fork: true, openInChat: true, openInTerminal: true, putOnCanvas: true, reveal: true, share: true },
                     moveTargets: [{ id: 'v2', name: 'Other' }],
-                    cells: 2
+                    cells: 2,
+                    launches: [{ id: 'dev', name: 'Dev', live: true }],
+                    chosenLaunch: 'dev'
                 })
             )
         )
@@ -85,14 +89,14 @@ const EVERY_CONTEXT: MenuContext[] = [
 
 describe('the menus', () => {
     test('macOS opens on the application menu, and the view with the focus names the fifth', () => {
-        expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Canvas', 'Go', 'Window', 'Help']);
-        expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Drawing', 'Go', 'Window', 'Help']);
-        expect(labels(menuModel(context({ view: 'chat' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Chat', 'Go', 'Window', 'Help']);
+        expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Drawing', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context({ view: 'chat' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Chat', 'Go', 'Run', 'Window', 'Help']);
     });
 
     test('off macOS Settings sits in File and About in Help', () => {
         const spec = menuModel(context({ apple: false }));
-        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Window', 'Help']);
+        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'command' && node.id === 'settings')).toBe(true);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'role' && node.role === 'quit')).toBe(true);
         expect(flatten(menu(spec, 'Help')).some((node) => node.kind === 'command' && node.id === 'about')).toBe(true);
@@ -120,7 +124,7 @@ describe('the menus', () => {
 
     test('the station has no shell, no clipboard roles and no release notes', () => {
         const spec = menuModel(context({ host: 'station', apple: true, releaseNotes: false }));
-        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Window', 'Help']);
+        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         const nodes = spec.menus.flatMap((entry) => flatten(entry.items));
         expect(nodes.some((node) => node.kind === 'role' || node.kind === 'shell')).toBe(false);
         expect(commandIds(spec)).toContain('about');
@@ -250,6 +254,30 @@ describe('the menus', () => {
         expect(views[0]).toMatchObject({ label: 'A', accelerator: 'CommandOrControl+1' });
     });
 
+    test('Run acts on the launch on the chip with its shortcuts, and lists every launch to choose from', () => {
+        const spec = menuModel(
+            context({
+                launches: [
+                    { id: 'server', name: 'Run server', live: true },
+                    { id: 'dev', name: 'Dev', live: false }
+                ],
+                chosenLaunch: 'dev'
+            })
+        );
+        expect(find(spec, 'launch-run')).toMatchObject({ label: 'Launch Dev', accelerator: 'CommandOrControl+Alt+R' });
+        expect(find(spec, 'launch-stop')).toMatchObject({ label: 'Stop Dev', accelerator: 'CommandOrControl+Alt+.', enabled: false });
+        expect(find(spec, 'launches-stop-all')?.enabled).toBe(true);
+        expect(find(spec, `${LAUNCH_CHOOSE_PREFIX}dev`)).toMatchObject({ checked: true, radio: true });
+        expect(find(spec, `${LAUNCH_CHOOSE_PREFIX}server`)?.checked).toBe(false);
+        expect(find(menuModel(context({ launches: [{ id: 'dev', name: 'Dev', live: true }], chosenLaunch: 'dev' })), 'launch-run')?.label).toBe('Restart Dev');
+    });
+
+    test('without launches Run still offers to add one', () => {
+        const ids = menu(menuModel(context()), 'Run').flatMap((node) => (node.kind === 'command' ? [node.id] : []));
+        expect(ids).toEqual(['launch-run', 'launch-stop', 'launches-stop-all', 'launches-output', 'launches-edit']);
+        expect(find(menuModel(context()), 'launch-run')?.enabled).toBe(false);
+    });
+
     test('no menu starts or ends on a line or draws two in a row', () => {
         for (const spec of EVERY_CONTEXT.map(menuModel)) {
             const lists = [
@@ -269,7 +297,8 @@ describe('the commands behind the menu', () => {
     test('every id in any menu has a handler', () => {
         const ids = new Set(EVERY_CONTEXT.flatMap((entry) => commandIds(menuModel(entry))));
         for (const id of ids) {
-            const handled = (MENU_ACTION_IDS as readonly string[]).includes(id) || isPaletteId(id) || id.startsWith(GO_VIEW_PREFIX);
+            const handled =
+                (MENU_ACTION_IDS as readonly string[]).includes(id) || isPaletteId(id) || id.startsWith(GO_VIEW_PREFIX) || id.startsWith(LAUNCH_CHOOSE_PREFIX);
             expect(handled ? id : `${id} has no handler`).toBe(id);
         }
     });

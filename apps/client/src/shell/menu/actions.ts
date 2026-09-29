@@ -8,12 +8,14 @@ import {
     splitAction
 } from '@/actions/client-actions';
 import { focusPromptStack } from '@/canvas/prompt-stack';
+import { chooseLaunch, chosenLaunchId, runChosenLaunch, showLaunchOutput, stopAllLaunches, stopChosenLaunch } from '@/launches/actions';
+import { useLaunches } from '@/launches/state';
 import { askViewSettings, openSessionInKind, setViewShared, showView, stepView, viewAtIndex } from '@/project/views';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { runAppShortcut } from '@/shell/app-shortcuts';
 import { appCommands } from '@/shell/commands';
 import { activeViewFacts } from '@/shell/menu/context';
-import { GO_VIEW_PREFIX, isPaletteId, type MenuActionId } from '@/shell/menu/ids';
+import { GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX, type MenuActionId } from '@/shell/menu/ids';
 import type { SplitDirection } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
@@ -90,7 +92,12 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
         }
     }),
     'view-share': withActiveView(({ view, shared }) => void setViewShared(view.id, !shared)),
-    'view-settings': withActiveView(({ view }) => askViewSettings(view.id))
+    'view-settings': withActiveView(({ view }) => askViewSettings(view.id)),
+    'launch-run': runChosenLaunch,
+    'launch-stop': stopChosenLaunch,
+    'launches-stop-all': stopAllLaunches,
+    'launches-output': () => showLaunchOutput(),
+    'launches-edit': () => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() })
 };
 
 const isMenuActionId = (id: string): id is MenuActionId => Object.hasOwn(MENU_ACTIONS, id);
@@ -106,6 +113,10 @@ export const runMenuCommand = (id: string): void => {
         if (view) {
             showView(view.id);
         }
+        return;
+    }
+    if (id.startsWith(LAUNCH_CHOOSE_PREFIX)) {
+        chooseLaunch(id.slice(LAUNCH_CHOOSE_PREFIX.length));
         return;
     }
     if (isPaletteId(id)) {

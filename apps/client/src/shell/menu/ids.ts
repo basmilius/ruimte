@@ -28,7 +28,12 @@ export const MENU_ACTION_IDS = [
     'view-put-on-canvas',
     'view-reveal',
     'view-share',
-    'view-settings'
+    'view-settings',
+    'launch-run',
+    'launch-stop',
+    'launches-stop-all',
+    'launches-output',
+    'launches-edit'
 ] as const;
 
 export type MenuActionId = (typeof MENU_ACTION_IDS)[number];
@@ -109,5 +114,8 @@ export const PALETTE_PREFIXES = [
 ] as const;
 
 export const GO_VIEW_PREFIX = 'go-view-';
+
+/* The Run menu's row per launch, which puts that launch on the chip. */
+export const LAUNCH_CHOOSE_PREFIX = 'launch-choose-';
 
 export const isPaletteId = (id: string): boolean => (PALETTE_IDS as readonly string[]).includes(id) || PALETTE_PREFIXES.some((prefix) => id.startsWith(prefix));

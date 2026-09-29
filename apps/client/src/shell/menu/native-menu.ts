@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { useEffect } from 'react';
 import { desktop } from '@/desktop/bridge';
+import { useLaunches } from '@/launches/state';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
@@ -50,6 +51,7 @@ export const useNativeMenu = (): void => {
             useSettings.subscribe(schedule),
             useServers.subscribe(schedule),
             useWindow.subscribe(schedule),
+            useLaunches.subscribe(schedule),
             subscribeCanvases(schedule),
             bridge.onMenuCommand?.(runMenuCommand) ?? (() => undefined)
         ];

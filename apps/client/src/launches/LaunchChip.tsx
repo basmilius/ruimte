@@ -90,7 +90,7 @@ export function LaunchChip() {
             </Menu.Root>
             {view !== null && (
                 <ButtonGroup className="shrink-0 pr-0.5">
-                    <LaunchButtons view={view} />
+                    <LaunchButtons view={view} chosen />
                 </ButtonGroup>
             )}
 

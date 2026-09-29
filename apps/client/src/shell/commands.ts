@@ -24,8 +24,11 @@ import { copyDrawing, exportDrawing } from '@/drawing/drawing-actions';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf, type CanvasState } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
+import { chosenLaunchId, startLaunch, stopLaunch } from '@/launches/actions';
+import { launchViews } from '@/launches/model';
+import { useLaunches } from '@/launches/state';
 import { activeViewOf, useDocument } from '@/state/document';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 import { providersOf } from '@ruimte/agents-react/state/providers';
@@ -111,6 +114,50 @@ const moveNodeCommands = (): Command[] => {
             hint: node.title,
             run: () => moveNodeToViewAction(node.id, view.id)
         }));
+};
+
+/* One row per launch that says what a press does to it now, so a launch that runs offers its restart and its stop. */
+const launchCommands = (): Command[] => {
+    const { current, currentEndpointId } = useProject.getState();
+    if (current === null || currentEndpointId === null) {
+        return [];
+    }
+    const key = endpointKey(currentEndpointId, current.projectId);
+    const { documents, statuses } = useLaunches.getState();
+    const document = documents[key];
+    if (document === undefined) {
+        return [];
+    }
+    const views = launchViews(document, statuses[key] ?? {});
+    return [
+        ...document.launches.flatMap((launch): Command[] =>
+            views.get(launch.id)?.live === true
+                ? [
+                      {
+                          id: `launch-restart-${launch.id}`,
+                          label: i18next.t('launches:palette.restart', { name: launch.name }),
+                          run: () => void startLaunch(launch.id, { restart: true })
+                      },
+                      {
+                          id: `launch-stop-${launch.id}`,
+                          label: i18next.t('launches:palette.stop', { name: launch.name }),
+                          run: () => void stopLaunch(launch.id)
+                      }
+                  ]
+                : [
+                      {
+                          id: `launch-start-${launch.id}`,
+                          label: i18next.t('launches:palette.start', { name: launch.name }),
+                          run: () => void startLaunch(launch.id)
+                      }
+                  ]
+        ),
+        {
+            id: 'launches-edit',
+            label: i18next.t('launches:menu.edit'),
+            run: () => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() })
+        }
+    ];
 };
 
 /*
@@ -460,6 +507,7 @@ export const appCommands = (): Command[] => {
         { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
         { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
         { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') },
+        ...(inWorkspace ? launchCommands() : []),
         { id: 'theme', label: i18next.t('shell:palette.commands.toggleTheme'), run: () => useTheme.getState().toggle() },
         ...(canKeepAwake()
             ? [

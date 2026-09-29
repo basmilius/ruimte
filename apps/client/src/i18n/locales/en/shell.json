@@ -577,6 +577,7 @@
         "edit": "Edit",
         "view": "View",
         "go": "Go",
+        "run": "Run",
         "window": "Window",
         "help": "Help",
         "kinds": {
@@ -694,6 +695,14 @@
         "clear": "Clear",
         "open": "Menu",
         "find": "Find",
-        "toggleFlag": "Flag or Unflag"
+        "toggleFlag": "Flag or Unflag",
+        "launch": "Launch",
+        "launchStart": "Launch {{name}}",
+        "launchRestart": "Restart {{name}}",
+        "launchStop": "Stop {{name}}",
+        "launchStopNone": "Stop",
+        "launchesStopAll": "Stop All Launches",
+        "launchesOutput": "Show Output",
+        "launchesEdit": "Edit Launches…"
     }
 }

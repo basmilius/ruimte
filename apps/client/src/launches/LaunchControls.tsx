@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { OctagonX, Play, RotateCw, Square } from 'lucide-react';
 import { IconButton, Menu } from '@basmilius/react-ui';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { startLaunch, stopLaunch } from '@/launches/actions';
 import type { LaunchView } from '@/launches/model';
 
@@ -31,11 +32,16 @@ export function LaunchDot({ view }: { view: LaunchView }) {
     return <span role="img" aria-label={t(`phase.${view.phase}`)} className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', dotClass(view))} />;
 }
 
-/* In a menu row each button is an item of its own, so the arrow keys reach it and a press leaves the menu open. */
-export function LaunchButtons({ view, inMenu = false }: { view: LaunchView; inMenu?: boolean }) {
+/*
+ * In a menu row each button is an item of its own, so the arrow keys reach it and a press leaves the menu open.
+ * `chosen` is the launch on the chip, the one the shortcuts act on.
+ */
+export function LaunchButtons({ view, inMenu = false, chosen = false }: { view: LaunchView; inMenu?: boolean; chosen?: boolean }) {
     const { t } = useTranslation('launches');
     const { launch, phase } = view;
     const render = inMenu ? <Menu.Item unstyled closeOnClick={false} /> : undefined;
+    const runKeys = chosen ? CANVAS_SHORTCUTS.launchRun : undefined;
+    const stopKeys = chosen ? CANVAS_SHORTCUTS.launchStop : undefined;
     if (phase === 'stopping') {
         return (
             <IconButton
@@ -55,12 +61,22 @@ export function LaunchButtons({ view, inMenu = false }: { view: LaunchView; inMe
                     icon={RotateCw}
                     size="sm"
                     label={t('restart', { name: launch.name })}
+                    kbd={runKeys}
                     render={render}
                     onClick={() => void startLaunch(launch.id, { restart: true })}
                 />
-                <IconButton icon={Square} size="sm" label={t('stop', { name: launch.name })} render={render} onClick={() => void stopLaunch(launch.id)} />
+                <IconButton
+                    icon={Square}
+                    size="sm"
+                    label={t('stop', { name: launch.name })}
+                    kbd={stopKeys}
+                    render={render}
+                    onClick={() => void stopLaunch(launch.id)}
+                />
             </>
         );
     }
-    return <IconButton icon={Play} size="sm" label={t('start', { name: launch.name })} render={render} onClick={() => void startLaunch(launch.id)} />;
+    return (
+        <IconButton icon={Play} size="sm" label={t('start', { name: launch.name })} kbd={runKeys} render={render} onClick={() => void startLaunch(launch.id)} />
+    );
 }

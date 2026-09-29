@@ -122,5 +122,10 @@
         "cancel": "Annuleren",
         "confirm_one": "{{count}} importeren",
         "confirm_other": "{{count}} importeren"
+    },
+    "palette": {
+        "start": "Starten: {{name}}",
+        "restart": "Herstarten: {{name}}",
+        "stop": "Stoppen: {{name}}"
     }
 }

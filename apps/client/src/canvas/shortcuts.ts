@@ -16,6 +16,8 @@ export const CANVAS_SHORTCUTS = {
     newView: shortcut('Mod+T'),
     togglePanel: shortcut('Mod+Alt+B'),
     toggleFlag: shortcut('Mod+Alt+F'),
+    launchRun: shortcut('Mod+Alt+R'),
+    launchStop: shortcut('Mod+Alt+.'),
     focusPrompts: shortcut('Mod+Shift+P'),
     previousView: shortcut('Mod+Shift+['),
     nextView: shortcut('Mod+Shift+]'),

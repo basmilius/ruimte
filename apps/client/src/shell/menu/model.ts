@@ -7,9 +7,16 @@ import type { ViewOffers } from '@/shell/view-offers';
 import type { KeepAwakeMode } from '@/state/settings';
 import type { PanelKind } from '@/state/ui';
 import { formatShortcut, type Shortcut } from '@basmilius/react-ui';
-import { GO_VIEW_PREFIX, type MenuActionId, type PaletteId } from '@/shell/menu/ids';
+import { GO_VIEW_PREFIX, LAUNCH_CHOOSE_PREFIX, type MenuActionId, type PaletteId } from '@/shell/menu/ids';
 
 export type MenuHost = 'desktop' | 'station';
+
+export interface MenuLaunch {
+    id: string;
+    name: string;
+    /* A process of it runs, or is being stopped; a group through its members. */
+    live: boolean;
+}
 
 export interface MenuAgent {
     kind: string;
@@ -53,6 +60,10 @@ export interface MenuContext {
     moveTargets: { id: string; name: string }[];
     layouts: string[];
     agents: MenuAgent[];
+    /* The launches of the project, in their order. */
+    launches: MenuLaunch[];
+    /* The launch on the chip, which the Run menu's first rows act on. */
+    chosenLaunch: string | null;
     releaseNotes: boolean;
     /* The page fills the screen, which only the web client asks the page itself. */
     fullscreen: boolean;
@@ -339,6 +350,28 @@ export const menuModel = (context: MenuContext): MenuSpec => {
         ]
     };
 
+    const chosen = context.launches.find((launch) => launch.id === context.chosenLaunch) ?? null;
+    const runLabel = chosen === null ? t('launch') : t(chosen.live ? 'launchRestart' : 'launchStart', { name: chosen.name });
+    const runMenu = {
+        id: 'run',
+        label: t('run'),
+        items: [
+            command('launch-run', runLabel, { shortcut: CANVAS_SHORTCUTS.launchRun, enabled: chosen !== null }),
+            command('launch-stop', chosen === null ? t('launchStopNone') : t('launchStop', { name: chosen.name }), {
+                shortcut: CANVAS_SHORTCUTS.launchStop,
+                enabled: chosen?.live === true
+            }),
+            command('launches-stop-all', t('launchesStopAll'), { enabled: context.launches.some((launch) => launch.live) }),
+            separator,
+            ...context.launches.map((launch) =>
+                command(`${LAUNCH_CHOOSE_PREFIX}${launch.id}`, launch.name, { checked: launch.id === chosen?.id, radio: true })
+            ),
+            separator,
+            command('launches-output', t('launchesOutput'), { enabled: chosen !== null }),
+            command('launches-edit', t('launchesEdit'))
+        ]
+    };
+
     const helpMenu = {
         id: 'help',
         label: t('help'),
@@ -350,7 +383,17 @@ export const menuModel = (context: MenuContext): MenuSpec => {
     };
 
     const kindMenu = workspace && context.view !== null ? viewKindMenu(context, command) : null;
-    const menus = [...(apple && desktop ? [appMenu] : []), fileMenu, editMenu, viewMenu, ...(kindMenu ? [kindMenu] : []), goMenu, windowMenu, helpMenu];
+    const menus = [
+        ...(apple && desktop ? [appMenu] : []),
+        fileMenu,
+        editMenu,
+        viewMenu,
+        ...(kindMenu ? [kindMenu] : []),
+        goMenu,
+        ...(workspace ? [runMenu] : []),
+        windowMenu,
+        helpMenu
+    ];
     return { menus: menus.map((menu) => ({ id: menu.id, label: menu.label, items: tidy(menu.items) })) };
 };
 

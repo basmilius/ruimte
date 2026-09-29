@@ -114,6 +114,14 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         ]
     },
     {
+        id: 'launches',
+        title: say('launches.title'),
+        shortcuts: [
+            { keys: CANVAS_SHORTCUTS.launchRun, label: say('launches.run') },
+            { keys: CANVAS_SHORTCUTS.launchStop, label: say('launches.stop') }
+        ]
+    },
+    {
         id: 'prompts',
         title: say('prompts.title'),
         shortcuts: [
@@ -153,7 +161,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
     },
     {
         /*
-         * A focused terminal keeps every shortcut that is not in this file's Views, Split or Panels group,
+         * A focused terminal keeps every shortcut that is not in this file's Views, Split, Panels or Launches group,
          * so a program sees the keyboard the way it would in a native terminal. That is why the clear
          * shortcut here is the palette's everywhere else on macOS. The line motions are what macOS gives
          * every native terminal, so only macOS lists them.

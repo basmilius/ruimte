@@ -240,6 +240,11 @@
             "title": "Panelen",
             "toggle": "Het laatst geopende paneel tonen of verbergen"
         },
+        "launches": {
+            "title": "Launches",
+            "run": "De gekozen launch starten of herstarten",
+            "stop": "De gekozen launch stoppen"
+        },
         "prompts": {
             "title": "Prompts",
             "answerFront": "De voorste prompt van het canvas beantwoorden",

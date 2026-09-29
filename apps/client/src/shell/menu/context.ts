@@ -3,7 +3,10 @@ import { canShareView, isCanvasView, isOpenableView, type ProjectView } from '@r
 import { forkRefusal, lastSettledTurn } from '@ruimte/agents-react/chat/logic/fork';
 import { canKeepAwake, desktop, isApplePlatform } from '@/desktop/bridge';
 import { canOpenAsView, type SessionHandoff } from '@/project/views';
-import type { MenuContext, MenuHost } from '@/shell/menu/model';
+import { chosenLaunchId } from '@/launches/actions';
+import { launchViews } from '@/launches/model';
+import { useLaunches } from '@/launches/state';
+import type { MenuContext, MenuHost, MenuLaunch } from '@/shell/menu/model';
 import { canSplit, cellCount, cellsRightOf, freeViewFor, maximizedCell } from '@/shell/split';
 import { sessionHandoffs, viewOffers, type ViewOffers } from '@/shell/view-offers';
 import { focusedCanvas, maximizedNodeOf, maximizeTargetOf } from '@/state/canvas';
@@ -64,6 +67,22 @@ export const activeViewFacts = (): ActiveViewFacts | null => {
     return { view, offers, shared, asChat, asTerminal, workingFolder, forkTurn };
 };
 
+/* The launches of the project on screen, each with whether it runs. */
+const menuLaunches = (endpointId: string): MenuLaunch[] => {
+    const projectId = useProject.getState().current?.projectId;
+    if (projectId === undefined) {
+        return [];
+    }
+    const key = endpointKey(endpointId, projectId);
+    const { documents, statuses } = useLaunches.getState();
+    const document = documents[key];
+    if (document === undefined) {
+        return [];
+    }
+    const views = launchViews(document, statuses[key] ?? {});
+    return document.launches.map((launch) => ({ id: launch.id, name: launch.name, live: views.get(launch.id)?.live === true }));
+};
+
 /* The moment the menu is built for, out of the stores. */
 export const menuContext = (host: MenuHost): MenuContext => {
     const documentState = useDocument.getState();
@@ -108,6 +127,8 @@ export const menuContext = (host: MenuHost): MenuContext => {
         agents: providersOf(endpointId)
             .providers.filter((provider) => provider.installed)
             .map((provider) => ({ kind: provider.kind, name: provider.name, chat: provider.capabilities.chat, terminal: provider.capabilities.terminal })),
+        launches: menuLaunches(endpointId),
+        chosenLaunch: chosenLaunchId(),
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
         fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
         keepAwake: host === 'desktop' && canKeepAwake() ? useSettings.getState().keepAwake : null,

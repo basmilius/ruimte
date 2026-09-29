@@ -240,6 +240,11 @@
             "title": "Panels",
             "toggle": "Toggle the last open panel"
         },
+        "launches": {
+            "title": "Launches",
+            "run": "Launch the chosen launch, or restart it",
+            "stop": "Stop the chosen launch"
+        },
         "prompts": {
             "title": "Prompts",
             "answerFront": "Answer the front prompt of the canvas",

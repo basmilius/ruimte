@@ -19,6 +19,7 @@ import {
     splitAction,
     toggleFlagAction
 } from '@/actions/client-actions';
+import { runChosenLaunch, stopChosenLaunch } from '@/launches/actions';
 import { showView, stepView, viewAtIndex } from '@/project/views';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
@@ -310,6 +311,18 @@ export const useCanvasShortcuts = (): void => {
                 if (!isInFloatingLayer(e.target)) {
                     e.preventDefault();
                     toggleFlagAction();
+                }
+                return;
+            }
+            // From anywhere but a popup, a terminal included: restarting the server is what you do while typing.
+            if (is(CANVAS_SHORTCUTS.launchRun) || is(CANVAS_SHORTCUTS.launchStop)) {
+                if (!isInFloatingLayer(e.target)) {
+                    e.preventDefault();
+                    if (is(CANVAS_SHORTCUTS.launchStop)) {
+                        stopChosenLaunch();
+                    } else {
+                        runChosenLaunch();
+                    }
                 }
                 return;
             }

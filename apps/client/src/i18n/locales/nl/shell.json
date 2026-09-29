@@ -577,6 +577,7 @@
         "edit": "Bewerken",
         "view": "Weergave",
         "go": "Ga naar",
+        "run": "Uitvoeren",
         "window": "Venster",
         "help": "Help",
         "kinds": {
@@ -694,6 +695,14 @@
         "clear": "Wissen",
         "open": "Menu",
         "find": "Zoeken",
-        "toggleFlag": "Vlag zetten of weghalen"
+        "toggleFlag": "Vlag zetten of weghalen",
+        "launch": "Starten",
+        "launchStart": "{{name}} starten",
+        "launchRestart": "{{name}} herstarten",
+        "launchStop": "{{name}} stoppen",
+        "launchStopNone": "Stoppen",
+        "launchesStopAll": "Alle launches stoppen",
+        "launchesOutput": "Output tonen",
+        "launchesEdit": "Launches bewerken…"
     }
 }
