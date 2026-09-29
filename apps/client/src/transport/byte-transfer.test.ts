@@ -52,7 +52,7 @@ describe('readResource', () => {
             async (payload) => {
                 inFlight += 1;
                 most = Math.max(most, inFlight);
-                await new Promise((resolve) => setTimeout(resolve, 1));
+                await new Promise((resolve) => setImmediate(resolve));
                 inFlight -= 1;
                 return fake.read(payload);
             },

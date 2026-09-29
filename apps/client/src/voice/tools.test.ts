@@ -42,6 +42,7 @@ const toolArgs = (tool: string, fields: Record<string, unknown>): string => {
 const run = (tool: string, fields: Record<string, unknown>) => executeVoiceTool(tool, toolArgs(tool, fields));
 
 beforeEach(() => {
+    useProject.getState().setCurrent(null, 0, null);
     useSettings.setState({ voiceConfirmDestructiveActions: true });
     useDocument.getState().load(document, { activeViewId: 'main', views: {} });
     defaultCanvases.of('main').getState().loadView(main, null);
@@ -79,7 +80,7 @@ describe('Voice domain tools', () => {
         expect(cancelled.output.ok).toBe(false);
     });
 
-    test('lists projects in use and under Recent, and resolves a name to one in use before one under Recent', async () => {
+    test('lists projects in use and under Recent from every machine', async () => {
         const summary = (projectId: string, name: string, closedAt: number | null): ProjectSummary => ({
             projectId,
             name,
@@ -101,10 +102,6 @@ describe('Voice domain tools', () => {
         const listed = await run('manage_projects', { action: 'project.list' });
         expect(listed.output.ok).toBe(true);
         expect(listed.output.projects).toHaveLength(3);
-        const ambiguous = await run('inspect_workspace', { action: 'target.resolve', target: 'project', names: ['Flux'] });
-        expect(ambiguous.output).toMatchObject({ ok: true, found: [], ambiguous: [{ name: 'Flux', candidates: [{ id: 'p1' }, { id: 'p2' }] }] });
-        const recent = await run('inspect_workspace', { action: 'target.resolve', target: 'project', names: ['Closed'] });
-        expect(recent.output).toMatchObject({ ok: true, found: [{ id: 'p3' }] });
     });
 
     test('offline agent status is unknown rather than idle or successful', async () => {
@@ -124,9 +121,9 @@ describe('Voice domain tools', () => {
         expect(result.output).toMatchObject({ ok: true, supported: false, tools: [] });
     });
 
-    test('git over a project without a machine says why instead of reporting a result', async () => {
+    test('git over a project without a folder is refused as having no repository', async () => {
         const result = await run('manage_git', { action: 'git.status' });
-        expect(result.output).toMatchObject({ ok: false });
+        expect(result.output).toMatchObject({ ok: false, code: 'no-folder' });
         expect(result.action).toBeUndefined();
     });
 

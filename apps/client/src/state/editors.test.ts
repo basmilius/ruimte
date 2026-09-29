@@ -21,9 +21,9 @@ describe('an editor per view', () => {
     test('a view nobody opened has no editor, and the blank one stands in for it', () => {
         const editors = registry();
         expect(editors.peek('a')).toBeNull();
-        expect(editors.blank).toBe(editors.blank);
         editors.of('a');
         expect(editors.peek('a')).not.toBeNull();
+        expect(editors.of('a')).not.toBe(editors.blank);
     });
 
     test('two editors of the same registry hold their own state', () => {

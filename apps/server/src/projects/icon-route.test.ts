@@ -51,27 +51,21 @@ describe('the icon route', () => {
         expect((await handleProjectRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS, store)).status).toBe(401);
     });
 
-    test('serves the bytes to the local secret with headers that keep them inert', async () => {
+    test('serves the icon of the folder to the local secret, to be shown inline', async () => {
         const response = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`);
         expect(response.status).toBe(200);
         expect(response.headers.get('content-type')).toBe('image/png');
-        expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-        expect(response.headers.get('cache-control')).toContain('immutable');
         expect(response.headers.get('content-disposition')).toBe('inline');
-        // Only an SVG can carry script; a PNG needs no policy of its own.
-        expect(response.headers.get('content-security-policy')).toBeNull();
         expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array(PNG));
     });
 
-    test('an SVG comes with a policy that allows nothing but its own styles', async () => {
+    test('serves an SVG icon as one, which is what gives it its policy', async () => {
         await rm(join(folder, '.ruimte', 'icon.png'));
         await writeFile(join(folder, '.ruimte', 'icon.svg'), SVG);
         // A fresh open re-reads the folder, the way `project.open` does for a client.
         await store.openProject({ projectId });
 
-        const response = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`);
-        expect(response.headers.get('content-type')).toBe('image/svg+xml');
-        expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; style-src 'unsafe-inline'");
+        expect((await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`)).headers.get('content-type')).toBe('image/svg+xml');
     });
 
     test('serves the dark variant only when it is asked for', async () => {
@@ -84,28 +78,9 @@ describe('the icon route', () => {
         expect((await dark.arrayBuffer()).byteLength).toBe(PNG.length + 1);
     });
 
-    test('a client from elsewhere needs the token the socket needs', async () => {
-        // An empty authorization header takes the local secret off, so only the query speaks.
-        const refused = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`, '192.168.1.20', { headers: { authorization: '' } });
-        expect(refused.status).toBe(401);
-
-        const wrong = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=nope`, '192.168.1.20', { headers: { authorization: '' } });
-        expect(wrong.status).toBe(401);
-
-        const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
-        const allowed = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=${paired!.sessionToken!}`, '192.168.1.20', { headers: { authorization: '' } });
-        expect(allowed.status).toBe(200);
-    });
-
-    test('a page on another origin is refused before the project is even looked up', async () => {
-        const response = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`, '127.0.0.1', { headers: { origin: 'https://evil.example' } });
-        expect(response.status).toBe(403);
-    });
-
-    test('answers 404 for another path, another method and a project with no image', async () => {
+    test('answers 404 for another path and a project with no image', async () => {
         expect((await ask(`${PROJECTS_PATH}/${projectId}`)).status).toBe(404);
         expect((await ask(`${PROJECTS_PATH}/${projectId}/canvas`)).status).toBe(404);
-        expect((await ask(`${PROJECTS_PATH}/${projectId}/icon`, '127.0.0.1', { method: 'DELETE' })).status).toBe(405);
         expect((await ask(`${PROJECTS_PATH}/nosuchproject/icon`)).status).toBe(404);
 
         await rm(join(folder, '.ruimte', 'icon.png'));

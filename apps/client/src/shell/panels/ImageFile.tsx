@@ -7,9 +7,9 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
 import { drawsImageMime, imageFormatName } from '@/shell/panels/file-kind';
-import { formatBytes } from '@/shell/panels/file-size';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { Button, ButtonGroup, EmptyState, Icon } from '@basmilius/react-ui';
+import { formatBytes } from '@basmilius/react-ui/format';
 
 type Zoom = 'fit' | 'full';
 

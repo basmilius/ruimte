@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { DiagramDocumentSchema, EMPTY_DIAGRAM, diagramProblemIn, migrateDiagram, type DiagramDocument } from './diagram.ts';
+import { EMPTY_DIAGRAM, diagramProblemIn, migrateDiagram, type DiagramDocument } from './diagram.ts';
 import { ProjectDocumentSchema, isDiagramView, isOpenableView, isSessionView } from './project.ts';
-import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
+import { REQUEST_SCHEMAS } from './index.ts';
 
 /* The example from the design report, word for word. */
 const example: DiagramDocument = {
@@ -25,7 +25,6 @@ const example: DiagramDocument = {
 describe('the diagram document', () => {
     test('the example from the report round-trips and breaks no rule', () => {
         const parsed = migrateDiagram(JSON.parse(JSON.stringify(example)));
-        expect(parsed).toEqual(DiagramDocumentSchema.parse(example));
         expect(parsed).toEqual(example);
         expect(diagramProblemIn(parsed!)).toBeNull();
     });
@@ -93,11 +92,6 @@ describe('a diagram view in a project document', () => {
 });
 
 describe('the wire', () => {
-    test('every diagram request and event is in the tables', () => {
-        expect(Object.keys(REQUEST_SCHEMAS)).toEqual(expect.arrayContaining(['diagram.open', 'diagram.save', 'diagram.close', 'diagram.copy']));
-        expect(Object.keys(EVENT_SCHEMAS)).toContain('diagram.changed');
-    });
-
     test('a save names the rev it was built on', () => {
         const { version: _version, rev: _rev, ...content } = example;
         const payload = REQUEST_SCHEMAS['diagram.save'].payload.parse({ projectId: 'p1', viewId: 'view-abc', baseRev: 3, content });

@@ -143,12 +143,9 @@ describe('the commit message', () => {
 describe('the log', () => {
     const now = Math.floor(new Date('2026-09-10T12:00:00Z').getTime() / 1000);
 
-    test('a commit is dated in the words its age asks for', () => {
-        expect(relativeTime(now - 10, now)).toBe('now');
-        expect(relativeTime(now - 5 * 60, now)).toBe('5m ago');
-        expect(relativeTime(now - 3 * 3600, now)).toBe('3h ago');
-        expect(relativeTime(now - 3 * 86400, now)).toBe('3d ago');
-        expect(relativeTime(now - 40 * 86400, now)).toMatch(/^[A-Z][a-z]{2} \d+$/);
+    test('a commit reads as an age for six days and as a date from the seventh on', () => {
+        expect(relativeTime(now - 6 * 86400, now)).toBe('6d ago');
+        expect(relativeTime(now - 7 * 86400, now)).toMatch(/^[A-Z][a-z]{2} \d+$/);
     });
 
     test('commits fall under the day they were written on, in the order they came in', () => {

@@ -3,7 +3,7 @@ import { keychainService, variablesProblem } from '@ruimte/agents/providers/acco
 import { RUIMTE_ACCOUNTS_HOST } from './accounts-host.ts';
 
 test('the values a person saved stay under the keychain service they were written to', () => {
-    expect(keychainService(RUIMTE_ACCOUNTS_HOST, '/Users/bas/.ruimte')).toMatch(/^ruimte-provider-env-[0-9a-f]{12}$/);
+    expect(keychainService(RUIMTE_ACCOUNTS_HOST, '/Users/bas/.ruimte')).toBe('ruimte-provider-env-8a1d10001889');
 });
 
 test('an account never sets a variable the daemon hands every CLI', () => {

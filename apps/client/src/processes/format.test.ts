@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProcessAlert, ProcessGroup, ProcessPoint } from '@ruimte/contracts';
-import { alertActions, alertPlacement, alertText, chartSeries, formatBytes, formatDuration, formatPercent, formatRate, groupTitle } from './format.ts';
+import { alertActions, alertPlacement, alertText, chartSeries, formatBytes, formatPercent, formatRate, groupTitle } from './format.ts';
 
 const alert = (overrides: Partial<ProcessAlert>): ProcessAlert => ({
     id: 'a',
@@ -36,14 +36,8 @@ describe('the numbers', () => {
         expect(formatRate(null)).toBe('-');
     });
 
-    test('sizes and shares read at a glance', () => {
-        expect(formatPercent(3.456)).toBe('3.5%');
-        expect(formatPercent(87.4)).toBe('87%');
-        expect(formatBytes(1.2 * 1024 ** 3)).toBe('1.2 GB');
-        expect(formatBytes(410 * 1024 ** 2)).toBe('410 MB');
-        expect(formatRate(150 * 1024)).toBe('150 KB/s');
-        expect(formatDuration(14 * 60_000)).toBe('14 min');
-        expect(formatDuration(45_000)).toBe('45 s');
+    test('a rate is a size per second', () => {
+        expect(formatRate(150 * 1024)).toBe(`${formatBytes(150 * 1024)}/s`);
     });
 });
 

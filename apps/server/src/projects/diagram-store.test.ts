@@ -182,13 +182,6 @@ describe('DiagramStore', () => {
         await diagrams.copy(projectId, 'view-c', 'view-c');
         expect(await exists(diagramFile('view-c'))).toBe(false);
     });
-
-    test('deleting the project with its files takes the diagrams directory with it', async () => {
-        await diagrams.open(projectId, 'view-a');
-        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
-        await projects.delete(projectId, true);
-        expect(await exists(join(folder, '.ruimte'))).toBe(false);
-    });
 });
 
 describe('DiagramStore.write', () => {

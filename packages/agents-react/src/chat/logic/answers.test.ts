@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { answersToWire, toggleChoice } from './answers';
+import { toggleChoice } from './answers';
 
 describe('toggleChoice', () => {
     test('adds a choice that is not picked yet', () => {
@@ -18,15 +18,5 @@ describe('toggleChoice', () => {
         expect(picked).toEqual([label]);
         expect(picked.includes(label)).toBe(true);
         expect(toggleChoice(picked, label)).toEqual([]);
-    });
-});
-
-describe('answersToWire', () => {
-    test('joins the choices of a question into one line', () => {
-        expect(answersToWire({ '0': ['Blue'], '1': ['Green', 'Red'] })).toEqual({ '0': 'Blue', '1': 'Green, Red' });
-    });
-
-    test('an unanswered question travels as an empty string', () => {
-        expect(answersToWire({ '0': [] })).toEqual({ '0': '' });
     });
 });

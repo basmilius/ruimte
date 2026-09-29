@@ -3,13 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileAudio } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
-import { formatBytes } from '@/shell/panels/file-size';
 import { FileContextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
 import { Button, EmptyState, Icon } from '@basmilius/react-ui';
-import { formatClockDuration } from '@basmilius/react-ui/format';
+import { formatBytes, formatClockDuration } from '@basmilius/react-ui/format';
 
 // An empty answer is the only certain no; see `VideoFile`.
 const canPlay = (mime: string): boolean => typeof document !== 'undefined' && document.createElement('audio').canPlayType(mime) !== '';

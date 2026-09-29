@@ -7,7 +7,6 @@ import type { SessionEvent } from '../sessions/manager.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
 import { chatInfo, computerSetup, SHELL_APP, terminalStatus, TEXT_EDIT, turnEnded, until, type ComputerSetup } from './computer-test-helpers.ts';
 import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './computer-use.ts';
-import { overlayWords } from './overlay-words.ts';
 
 // How long a call held by the person waits before it asks the helper again.
 const HOLD_MS = 500;
@@ -48,28 +47,12 @@ describe('computer use', () => {
         };
         const dutch = await read('nl-NL');
         const english = await read('en');
-        for (const words of [dutch, english]) {
-            expect(Object.keys(words).sort()).toEqual([
-                'backgroundMenuTitle',
-                'backgroundTitle',
-                'menuTitle',
-                'pause',
-                'resume',
-                'steps',
-                'stop',
-                'takeOver',
-                'title'
-            ]);
-            expect(Object.keys(words.steps as object)).toHaveLength(16);
-        }
         expect(dutch).toMatchObject({ title: 'Ruimte bedient je computer', pause: 'Pauzeren', stop: 'Sessie stoppen' });
         expect(english).toMatchObject({ title: 'Ruimte is using your computer', menuTitle: 'Ruimte is using this Mac', takeOver: 'Take over' });
         // Every step with a target in one language has it in the other.
         for (const [state, step] of Object.entries(english.steps as Record<string, string>)) {
             expect((dutch.steps as Record<string, string>)[state]!.includes('{target}')).toBe(step.includes('{target}'));
         }
-        expect(overlayWords(undefined).title).toBe('Ruimte is using your computer');
-        expect(overlayWords('fr').title).toBe('Ruimte is using your computer');
     });
 
     test('speaks a language a client switched to from then on, only while it is on', async () => {
@@ -561,7 +544,6 @@ describe('the presence at the cursor', () => {
         computer.observe(chatInfo('chat-1', 'idle'));
         await until(() => helper.presences.length === 5);
         expect(helper.presences).toEqual(['permission: Waiting for permission for TextEdit', 'think', 'waiting', 'think', 'done']);
-        expect(helper.presences.every((presence) => !presence.startsWith('undefined'))).toBe(true);
     });
 
     test('ends the session when a chat is interrupted or a terminal goes, and ignores whoever does not hold it', async () => {

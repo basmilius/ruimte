@@ -194,8 +194,8 @@ describe('a drawing row', () => {
 });
 
 describe('what counts as a session', () => {
-    test('only a terminal, a chat and a browser run; a drawing is a file like a note is paper', () => {
-        const kinds: NodeKind[] = ['terminal', 'chat', 'browser'];
+    test('only a terminal, a chat, a browser and a device run; a drawing is a file like a note is paper', () => {
+        const kinds: NodeKind[] = ['terminal', 'chat', 'browser', 'device'];
         expect(kinds.every(isSessionKind)).toBe(true);
         const rest: NodeKind[] = ['group', 'note', 'drawing'];
         expect(rest.some(isSessionKind)).toBe(false);

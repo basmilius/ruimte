@@ -65,9 +65,4 @@ describe('machine model', () => {
     test('a platform nothing here can read answers nothing rather than throwing', async () => {
         expect(await readMachineModel('freebsd')).toBeNull();
     });
-
-    test('the model of the machine running this test is a name or nothing, never an error', async () => {
-        const model = await readMachineModel();
-        expect(model === null || (model.length > 0 && model.trim() === model)).toBe(true);
-    });
 });

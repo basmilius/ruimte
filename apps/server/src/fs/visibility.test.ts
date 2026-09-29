@@ -1,13 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { classifyEntry, isBuildOutput, isOsNoise } from './visibility.ts';
+import { classifyEntry, isBuildOutput } from './visibility.ts';
 
 describe('classifyEntry', () => {
     test('rubbish the operating system keeps to itself is never listed', () => {
         for (const name of ['.DS_Store', '.ds_store', '._resource', 'Thumbs.db', 'desktop.ini', '.Trash-1000', '.nfs0a3f', 'System Volume Information']) {
             expect(classifyEntry(name, { inRepository: true })).toBe('never');
         }
-        expect(isOsNoise('.DS_Store')).toBe(true);
-        expect(isOsNoise('.env')).toBe(false);
+        expect(classifyEntry('.env', { inRepository: true })).toBe('always');
     });
 
     test('what a tool keeps in the folder is out of every listing', () => {

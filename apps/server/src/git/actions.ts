@@ -311,7 +311,7 @@ const stamp = (): string => new Date().toISOString().replace(/[:.]/g, '-').repla
  * Checking out a remote branch means making the local one that follows it, unless a local branch of
  * that name is already there, in which case that is the branch the person means.
  */
-export const checkoutArgs = async (top: string, ref: string): Promise<string[]> => {
+const checkoutArgs = async (top: string, ref: string): Promise<string[]> => {
     const local = (await git(['rev-parse', '--verify', '--quiet', `refs/heads/${ref}`], top))?.trim();
     if (local) {
         return ['checkout', ref];

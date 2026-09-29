@@ -6,7 +6,7 @@ export const DEFAULT_LIMIT = 30;
 // A branch name may hold anything but a control character, so this one cannot appear inside a field.
 const FIELD = '\u001f';
 
-export const LOG_FORMAT = ['%H', '%h', '%an', '%at', '%D', '%s'].join(FIELD);
+const LOG_FORMAT = ['%H', '%h', '%an', '%at', '%D', '%s'].join(FIELD);
 
 /*
  * `log -z --format=...` writes one NUL terminated record per commit, the fields separated by the

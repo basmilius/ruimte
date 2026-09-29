@@ -64,13 +64,25 @@ const selectsActivity = async (device: ActivitySelection, machineId: string, col
     return device.start_machine_id === machineId && device.start_collapse_id === collapseId;
 };
 
+interface DeliveryTarget {
+    token: string;
+    environment: 'sandbox' | 'production';
+    startsActivity: boolean;
+}
+export interface PushDeliverySeams {
+    now(): number;
+    send(env: Env, target: DeliveryTarget, push: PushEnvelope, now: number): Promise<ApnsResult>;
+}
+const SYSTEM_PUSH: PushDeliverySeams = { now: Date.now, send: deliverApns };
+
 export const changePushDevice = async (
     request: Request,
     env: Env,
     handle: string,
     activity: 'update' | 'start' | null,
-    send: typeof deliverApns = deliverApns
+    seams: PushDeliverySeams = SYSTEM_PUSH
 ): Promise<Response> => {
+    const now = seams.now();
     const session = await authenticate(request, env.DB);
     if (!session) {
         return failure('unauthorized', 'Sign in again');
@@ -84,7 +96,7 @@ export const changePushDevice = async (
     if (!owned) {
         return failure('not-found', 'No push device for this session');
     }
-    const limited = await overLimit(env.DB, `push-device:${session.id}`, 60);
+    const limited = await overLimit(env.DB, `push-device:${session.id}`, 60, now);
     if (limited) {
         return limited;
     }
@@ -127,7 +139,6 @@ export const changePushDevice = async (
             }
         }
         if (body.value.reserve) {
-            const now = Date.now();
             const claim = await env.DB.prepare(
                 `INSERT INTO push_activity_start (handle, machine_id, collapse_id, expires_at, started_at) VALUES (?1, ?2, ?3, ?4, ?6)
                 ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET expires_at = excluded.expires_at, pending_push = NULL, started_at = excluded.started_at
@@ -156,7 +167,7 @@ export const changePushDevice = async (
                 ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET token = excluded.token, updated_at = excluded.updated_at, started_at = excluded.started_at
                 WHERE push_activity.started_at IS NULL OR excluded.started_at >= push_activity.started_at`
             )
-                .bind(handle, body.value.collapseId, body.value.token.toLowerCase(), Date.now(), body.value.machineId, body.value.startedAt ?? null)
+                .bind(handle, body.value.collapseId, body.value.token.toLowerCase(), now, body.value.machineId, body.value.startedAt ?? null)
                 .run();
             if (registered.meta.changes === 0) {
                 return noContent();
@@ -173,11 +184,11 @@ export const changePushDevice = async (
                     .first<{ environment: 'sandbox' | 'production' }>();
                 if (parsed.success && parsed.data.pushType === 'liveactivity' && device) {
                     // A push-to-start can finish before iOS has supplied its update token.
-                    const result = await send(
+                    const result = await seams.send(
                         env,
                         { token: body.value.token.toLowerCase(), environment: device.environment, startsActivity: false },
                         parsed.data,
-                        Date.now()
+                        now
                     );
                     if (result.ok) {
                         if (parsed.data.activity.phase === 'done') {
@@ -205,17 +216,6 @@ export const changePushDevice = async (
     }
     return noContent();
 };
-
-interface DeliveryTarget {
-    token: string;
-    environment: 'sandbox' | 'production';
-    startsActivity: boolean;
-}
-export interface PushDeliverySeams {
-    now(): number;
-    send(env: Env, target: DeliveryTarget, push: PushEnvelope, now: number): Promise<ApnsResult>;
-}
-const SYSTEM_PUSH: PushDeliverySeams = { now: Date.now, send: deliverApns };
 
 const claimActivityStart = async (env: Env, push: Extract<PushEnvelope, { pushType: 'liveactivity' }>, now: number, automatic: boolean): Promise<boolean> => {
     // Unconfirmed starts expire with the APNs message. Reclaim legacy eight-hour leases too.

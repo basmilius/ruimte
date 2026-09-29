@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hasHooks, modeOfHook, normalizeHook, settleWaiting } from './hooks.ts';
+import { modeOfHook, normalizeHook, settleWaiting } from './hooks.ts';
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'abc',
@@ -69,15 +69,6 @@ describe('the permission mode a hook reports', () => {
         expect(modeOfHook('codex', 'default', 'auto')).toBe('auto');
         expect(modeOfHook('codex', 'default', 'full-access')).toBe('supervised');
         expect(modeOfHook('codex', 'bypassPermissions', 'supervised')).toBe('full-access');
-    });
-});
-
-describe('hasHooks', () => {
-    test('is true for the CLIs with a normalizer and false for the terminal-only ones', () => {
-        expect(hasHooks('claude')).toBe(true);
-        expect(hasHooks('codex')).toBe(true);
-        expect(hasHooks('gemini')).toBe(false);
-        expect(hasHooks('copilot')).toBe(false);
     });
 });
 

@@ -1,7 +1,9 @@
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import type { ChatInfo } from '@ruimte/agent-contracts';
+import { recordFileName } from '../record-directory.ts';
 import { AttachmentStore, extensionFor, migrateInlineAttachments } from './attachment-store.ts';
 import { ChatStore } from './chat-store.ts';
 
@@ -56,7 +58,6 @@ describe('AttachmentStore', () => {
 
 describe('migrateInlineAttachments', () => {
     test('an image written inline becomes a file, once, and the record keeps the metadata', async () => {
-        const chats = new ChatStore(home, { attachments: store });
         const record = {
             info: { chatId: 'old' },
             items: [
@@ -76,7 +77,39 @@ describe('migrateInlineAttachments', () => {
         expect(await readFile(String(attachment.path), 'utf8')).toBe('png bytes');
         // Nothing inline is left, so a second read has no work to do.
         expect(await migrateInlineAttachments('old', migrated, store)).toBeNull();
-        expect(chats.dir).toBe(join(home, 'chats'));
+    });
+
+    test('a chat store opening a record with an image inline moves it to a file and writes the record back without it', async () => {
+        const chats = new ChatStore(home, { attachments: store });
+        const info: ChatInfo = {
+            chatId: 'old',
+            provider: 'claude',
+            cwd: '/',
+            agentSessionId: null,
+            model: null,
+            selection: { model: 'claude-sonnet-5', options: {} },
+            runtimeMode: 'full-access',
+            status: 'idle',
+            running: false,
+            activeTurnId: null,
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+            createdAt: 0
+        };
+        const inline = { name: 'shot.png', mediaType: 'image/png', data: Buffer.from('png bytes').toString('base64') };
+        const path = join(chats.dir, recordFileName('old'));
+        await mkdir(chats.dir, { recursive: true });
+        await writeFile(
+            path,
+            JSON.stringify({ info, items: [{ id: 'user-1', kind: 'user', createdAt: 1, turnId: 't1', text: 'look', attachments: [inline] }] })
+        );
+
+        const loaded = await chats.read('old');
+        const item = loaded?.items[0];
+        const attachment = item?.kind === 'user' ? item.attachments?.[0] : undefined;
+        expect(attachment).toMatchObject({ name: 'shot.png', mime: 'image/png', size: 9 });
+        expect(await readFile(String(attachment?.path), 'utf8')).toBe('png bytes');
+        expect(await readFile(path, 'utf8')).not.toContain(inline.data);
     });
 
     test('a record without inline attachments is left alone', async () => {

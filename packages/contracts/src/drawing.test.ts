@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { DrawingDocumentSchema, EMPTY_DRAWING, duplicateElementIdIn, migrateDrawing, type DrawingElement } from './drawing.ts';
+import { EMPTY_DRAWING, duplicateElementIdIn, migrateDrawing, type DrawingDocument, type DrawingElement } from './drawing.ts';
 import { ProjectDocumentSchema } from './project.ts';
 import { duplicateIdIn } from './project-migrate.ts';
-import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
+import { REQUEST_SCHEMAS } from './index.ts';
 
 const rect: DrawingElement = { kind: 'rect', id: 'el-1', x: 0, y: 0, w: 160, h: 96, stroke: 'ink', strokeWidth: 2, seed: 7 };
 
@@ -26,7 +26,7 @@ const stroke: DrawingElement = {
 
 describe('the drawing document', () => {
     test('a document with every element kind round-trips', () => {
-        const document = {
+        const document: DrawingDocument = {
             version: 1,
             rev: 4,
             elements: [
@@ -51,12 +51,26 @@ describe('the drawing document', () => {
                     arrowEnd: true
                 },
                 stroke,
-                text
+                text,
+                {
+                    kind: 'note',
+                    id: 'el-7',
+                    x: 0,
+                    y: 0,
+                    w: 180,
+                    h: 180,
+                    stroke: 'ink',
+                    strokeWidth: 1,
+                    seed: 5,
+                    fill: 'solid',
+                    fillColor: 'yellow',
+                    text: 'buy milk',
+                    size: 20,
+                    align: 'center'
+                }
             ]
         };
-        const parsed = migrateDrawing(JSON.parse(JSON.stringify(document)));
-        expect(parsed).not.toBeNull();
-        expect(parsed).toEqual(DrawingDocumentSchema.parse(document));
+        expect(migrateDrawing(JSON.parse(JSON.stringify(document)))).toEqual(document);
     });
 
     test('EMPTY_DRAWING parses as a document', () => {
@@ -111,11 +125,6 @@ describe('a drawing view in a project document', () => {
 });
 
 describe('the wire', () => {
-    test('every drawing request and event is in the tables', () => {
-        expect(Object.keys(REQUEST_SCHEMAS)).toEqual(expect.arrayContaining(['drawing.open', 'drawing.save', 'drawing.close', 'drawing.copy']));
-        expect(Object.keys(EVENT_SCHEMAS)).toContain('drawing.changed');
-    });
-
     test('a save names the rev it was built on', () => {
         const payload = REQUEST_SCHEMAS['drawing.save'].payload.parse({
             projectId: 'p1',

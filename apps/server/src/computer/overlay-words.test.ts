@@ -37,4 +37,9 @@ describe('the words of the overlay', () => {
         }
         expect(source).toContain(`public var title = "${english.title}"`);
     });
+
+    test('fall back to English without a language or for one without words of its own', () => {
+        expect(overlayWords(undefined).title).toBe('Ruimte is using your computer');
+        expect(overlayWords('fr').title).toBe('Ruimte is using your computer');
+    });
 });

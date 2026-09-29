@@ -242,16 +242,15 @@ describe('push authorization and routing', () => {
     test('foreground and push starts share one claim; releasing a failed local start permits another start', async () => {
         sqlite.query('UPDATE push_device SET start_token = ?').run('ef'.repeat(32));
         const body = { machineId: 'machine', collapseId: 'c'.repeat(43), token: null, reserve: true };
-        const first = await changePushDevice(request(body, 'PUT'), env, handle, 'update');
+        const first = await changePushDevice(request(body, 'PUT'), env, handle, 'update', seams);
         expect(await first.json()).toEqual({ reserved: true });
-        expect(await (await changePushDevice(request(body, 'PUT'), env, handle, 'update')).json()).toEqual({ reserved: false });
+        expect(await (await changePushDevice(request(body, 'PUT'), env, handle, 'update', seams)).json()).toEqual({ reserved: false });
         const activity = { title: 'Build', phase: 'running' as const, startedAt: NOW };
-        const realClock = { ...seams, now: Date.now };
-        const push = () => signed({ pushType: 'liveactivity', activity, issuedAt: Date.now(), expiresAt: Date.now() + 110_000 } as Partial<PushEnvelope>);
-        await sendPush(request(push()), env, realClock);
+        const push = () => signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>);
+        await sendPush(request(push()), env, seams);
         expect(delivered.length).toBe(0);
-        await changePushDevice(request({ ...body, reserve: false, release: true }, 'PUT'), env, handle, 'update');
-        await sendPush(request(push()), env, realClock);
+        await changePushDevice(request({ ...body, reserve: false, release: true }, 'PUT'), env, handle, 'update', seams);
+        await sendPush(request(push()), env, seams);
         expect(delivered.length).toBe(1);
     });
 
@@ -265,7 +264,7 @@ describe('push authorization and routing', () => {
         await sendPush(request(signed({ pushType: 'liveactivity', activity: { ...activity, phase: 'done' } } as Partial<PushEnvelope>)), env, seams);
         expect(delivered.length).toBe(1);
         expect(sqlite.query('SELECT pending_push FROM push_activity_start').get()).not.toBeNull();
-        await changePushDevice(request({ machineId: 'machine', collapseId: 'c'.repeat(43), token: 'ab'.repeat(32) }, 'PUT'), env, handle, 'update', seams.send);
+        await changePushDevice(request({ machineId: 'machine', collapseId: 'c'.repeat(43), token: 'ab'.repeat(32) }, 'PUT'), env, handle, 'update', seams);
         expect(delivered.at(-1)).toMatchObject({ activity: { phase: 'done' } });
         expect(sqlite.query('SELECT * FROM push_activity_start').all()).toEqual([]);
         expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
@@ -454,7 +453,7 @@ test('the latest count is retained while an automatic activity waits for its upd
     }
     expect(delivered.length).toBe(1);
     const update = request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32), startedAt: NOW }, 'PUT');
-    expect((await changePushDevice(update, env, handle, 'update', seams.send)).status).toBe(204);
+    expect((await changePushDevice(update, env, handle, 'update', seams)).status).toBe(204);
     expect(delivered.length).toBe(2);
     expect(delivered.at(-1)).toMatchObject({ activity: { runningCount: 3 } });
     expect(sqlite.query('SELECT pending_push FROM push_activity_start').get()).toEqual({ pending_push: null });
@@ -490,9 +489,9 @@ test('an unconfirmed legacy activity start cannot block a new run or flush its o
     expect((await sendPush(request(next), env, seams)).status).toBe(204);
     expect(delivered.map((push) => push.id)).toEqual([next.id]);
     expect(sqlite.query('SELECT expires_at, pending_push FROM push_activity_start').get()).toEqual({ expires_at: NOW + 120_000, pending_push: null });
-    expect(
-        (await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32) }, 'PUT'), env, handle, 'update', seams.send)).status
-    ).toBe(204);
+    expect((await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32) }, 'PUT'), env, handle, 'update', seams)).status).toBe(
+        204
+    );
     expect(delivered.map((push) => push.id)).toEqual([next.id]);
 });
 
@@ -588,7 +587,7 @@ test('a new machine work round replaces a token even when APNs would accept the 
             activity: { title: 'Computer', phase, startedAt }
         });
     const register = (startedAt: number, token: string | null, release = false) =>
-        changePushDevice(request({ machineId: 'machine', collapseId, startedAt, token, release }, 'PUT'), env, handle, 'update', seams.send);
+        changePushDevice(request({ machineId: 'machine', collapseId, startedAt, token, release }, 'PUT'), env, handle, 'update', seams);
     await sendPush(request(round(NOW - 1000)), env, seams);
     await register(NOW - 1000, 'ef'.repeat(32));
     const starts: boolean[] = [];
@@ -627,15 +626,9 @@ test('an old round cannot queue its end or register while the new round waits fo
     await sendPush(request(round(NOW - 1000, 'running')), env, seams);
     expect(delivered).toHaveLength(2);
     expect(sqlite.query('SELECT pending_push, started_at FROM push_activity_start').get()).toEqual({ pending_push: null, started_at: NOW });
-    await changePushDevice(
-        request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32), startedAt: NOW - 1000 }, 'PUT'),
-        env,
-        handle,
-        'update',
-        seams.send
-    );
+    await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32), startedAt: NOW - 1000 }, 'PUT'), env, handle, 'update', seams);
     expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
-    await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ab'.repeat(32), startedAt: NOW }, 'PUT'), env, handle, 'update', seams.send);
+    await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ab'.repeat(32), startedAt: NOW }, 'PUT'), env, handle, 'update', seams);
     expect(delivered).toHaveLength(2);
     expect(sqlite.query('SELECT started_at FROM push_activity').get()).toEqual({ started_at: NOW });
 });

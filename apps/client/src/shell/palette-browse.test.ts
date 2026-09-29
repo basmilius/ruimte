@@ -138,11 +138,6 @@ describe('browseMachines', () => {
         expect(rows.map((row) => row.label)).toEqual(['This machine', 'Row studio', 'Account attic']);
         expect(rows.map((row) => row.active)).toEqual([false, true, false]);
     });
-
-    test('where no daemon serves the page, the local row is not a machine to pick', () => {
-        const entries = mergeMachines({ endpoints: [localRow], accountMachines: [record('attic')], showLocal: false });
-        expect(browseMachines(entries, 'local').map((row) => row.endpointId)).toEqual(['attic']);
-    });
 });
 
 describe('machineLink', () => {

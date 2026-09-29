@@ -14,6 +14,9 @@ interface CommandResult {
 
 export type PhysicalFrameCapture = (deviceId: string, sequence: number, directory: string, signal: AbortSignal) => Promise<LiveStreamFrame>;
 
+const FRAME_PAUSE_MS = 250;
+const RETRY_PAUSE_MS = 1_000;
+
 const CaptureResultSchema = z.object({
     result: z.object({
         width: z.number().int().positive(),
@@ -83,6 +86,9 @@ export const capturePhysicalFrame: PhysicalFrameCapture = async (deviceId, seque
 
 export type PhysicalScreenshot = (deviceId: string) => Promise<Uint8Array>;
 
+/* Resolves after `ms`, or at once when the signal is raised. */
+export type Pause = (ms: number, signal: AbortSignal) => Promise<void>;
+
 /* One png of the screen at the phone's own resolution, for an agent, beside whatever preview runs. */
 export const capturePhysicalScreenshot: PhysicalScreenshot = async (deviceId) => {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-ios-device-shot-'));
@@ -98,16 +104,16 @@ export const capturePhysicalScreenshot: PhysicalScreenshot = async (deviceId) =>
 export class PhysicalScreenshotSource implements DeviceSource {
     private readonly capture: PhysicalFrameCapture;
     private readonly deviceId: string;
-    private readonly pauseMs: number;
+    private readonly pause: Pause;
     private controller: AbortController | null = null;
     private directory: string | null = null;
     private sequence = 0;
     private task: Promise<void> | null = null;
 
-    constructor(deviceId: string, capture: PhysicalFrameCapture = capturePhysicalFrame, pauseMs = 250) {
+    constructor(deviceId: string, capture: PhysicalFrameCapture = capturePhysicalFrame, pause: Pause = wait) {
         this.deviceId = deviceId;
         this.capture = capture;
-        this.pauseMs = pauseMs;
+        this.pause = pause;
     }
 
     async start(publish: (frame: LiveStreamFrame) => void): Promise<void> {
@@ -151,7 +157,7 @@ export class PhysicalScreenshotSource implements DeviceSource {
 
     private async captureLoop(directory: string, signal: AbortSignal, publish: (frame: LiveStreamFrame) => void): Promise<void> {
         while (!signal.aborted) {
-            await wait(this.pauseMs, signal);
+            await this.pause(FRAME_PAUSE_MS, signal);
             if (signal.aborted) {
                 return;
             }
@@ -159,7 +165,7 @@ export class PhysicalScreenshotSource implements DeviceSource {
                 publish(await this.next(directory, signal));
             } catch {
                 if (!signal.aborted) {
-                    await wait(1_000, signal);
+                    await this.pause(RETRY_PAUSE_MS, signal);
                 }
             }
         }

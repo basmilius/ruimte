@@ -12,11 +12,10 @@ import { bytesWorkerReady } from '@/transport/bytes-worker-host';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
 import { readPiece } from '@/transport/piece';
-import { formatBytes } from '@/shell/panels/file-size';
 import { FileTextMenu, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { PDF_PAGE_GAP, pdfPageBox, pdfPageScale, pdfPageTops, pdfReadingPage, type PdfPageSize, type PdfZoom } from '@/shell/panels/pdf-layout';
 import { Button, ButtonGroup, EmptyState, Icon } from '@basmilius/react-ui';
-import { formatNumber } from '@basmilius/react-ui/format';
+import { formatBytes, formatNumber } from '@basmilius/react-ui/format';
 
 // From this page's own origin, so the worker stays inside `worker-src 'self'`.
 GlobalWorkerOptions.workerSrc = workerUrl;

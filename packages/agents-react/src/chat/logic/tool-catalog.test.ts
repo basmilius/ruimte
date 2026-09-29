@@ -4,14 +4,6 @@ import { TOOL_CATALOG } from './tool-catalog';
 import { isFileChange, readImagePath, toolSummary } from './tools';
 
 describe('the tool catalog', () => {
-    /* The four tables this replaced drifted apart, so the one that is left has to hold up on its own. */
-    test('gives every tool it knows an icon and a way to read its summary', () => {
-        for (const [name, tool] of Object.entries(TOOL_CATALOG)) {
-            expect(tool.icon, name).toBeDefined();
-            expect(Array.isArray(tool.summary), name).toBe(true);
-        }
-    });
-
     test('has a sentence for every name that groups, which locales.test.ts then holds Dutch to', () => {
         for (const [name, tool] of Object.entries(TOOL_CATALOG)) {
             if (!tool.grouped) {

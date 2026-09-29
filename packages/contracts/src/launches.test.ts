@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import { LaunchesSharedFileSchema, launchPortOf, readLaunchEntries, type LaunchConfig } from './launches.ts';
-import { EVENT_SCHEMAS, REQUEST_SCHEMAS } from './index.ts';
 
 /* The shared file from the design report, with a field and a kind a later release might add. */
 const file = {
@@ -44,16 +43,5 @@ describe('the port of an address', () => {
         expect(launchPortOf('https://example.test/path')).toBe(443);
         expect(launchPortOf('not an address')).toBeNull();
         expect(launchPortOf(undefined)).toBeNull();
-    });
-});
-
-describe('the wire', () => {
-    test('knows the launch requests and events', () => {
-        for (const type of ['launches.read', 'launches.save', 'launches.detect', 'launch.start', 'launch.restart', 'launch.stop', 'launch.list']) {
-            expect(Object.hasOwn(REQUEST_SCHEMAS, type)).toBe(true);
-        }
-        for (const event of ['launch.status', 'launches.changed']) {
-            expect(Object.hasOwn(EVENT_SCHEMAS, event)).toBe(true);
-        }
     });
 });

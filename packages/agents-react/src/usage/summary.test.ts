@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/agent-contracts';
-import { formatTokens, formatUsd, moneyFormat, shortPath } from './format';
+import { formatTokens, moneyFormat, shortPath } from './format';
 import { deriveDays, deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
 
 const totals = (patch: Partial<UsageTotals> = {}): UsageTotals => ({
@@ -148,9 +148,10 @@ describe('the formatters', () => {
     });
 
     test('an amount under a cent keeps enough decimals to not read as zero', () => {
-        expect(formatUsd(142.181)).toMatch(/142[.,]18$/);
-        expect(formatUsd(0)).toMatch(/0[.,]00$/);
-        expect(formatUsd(0.0004)).toMatch(/0[.,]0004$/);
+        const dollars = moneyFormat('USD', null);
+        expect(dollars(142.181)).toMatch(/142[.,]18$/);
+        expect(dollars(0)).toMatch(/0[.,]00$/);
+        expect(dollars(0.0004)).toMatch(/0[.,]0004$/);
     });
 
     test('euros are the dollar amount at the rate the summary carries', () => {

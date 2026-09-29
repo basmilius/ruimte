@@ -9,7 +9,7 @@ import { ReadingBackend, RecordingBackend, SIMULATOR, pngOf } from '../devices/d
 import { DeviceManager } from '../devices/manager.ts';
 import { refusalBody } from '@ruimte/agents/context/refusal';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
-import { VERBS, verbNamed } from './verbs.ts';
+import { verbNamed } from './verbs.ts';
 
 const noun = verbNamed('device') as Noun;
 
@@ -82,11 +82,6 @@ const run = async (argv: string[]): Promise<string[]> => {
 };
 
 describe('ruimte-context device', () => {
-    test('is a noun of help with every action', () => {
-        expect(VERBS).toContain(noun);
-        expect(noun.actions.map((action) => action.word)).toEqual(['state', 'shot', 'tap', 'swipe', 'button', 'type', 'launch']);
-    });
-
     test('says which device the node holds and what works on it', async () => {
         expect(await run(['state', 'phone-1'])).toEqual([
             'device\tphone-1\tiPhone 18 Pro\tios\tsimulator\tiOS 27.0',

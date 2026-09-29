@@ -4,8 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decideAccess, handleLocalTicketRequest, mayInvite, originAllowed, reachabilityOf } from './access.ts';
 import { AuthStore, PAIRING_TTL_MS } from './auth-store.ts';
-import { verifySignature } from '@ruimte/pulsar/verify-node';
-import { generateKeyPair, signMessage } from './keys.ts';
+import { generateKeyPair } from './keys.ts';
 
 let home: string;
 let clock: number;
@@ -148,33 +147,6 @@ describe('AuthStore', () => {
         const second = await store.pair(store.issuePairingToken(), { label: 'two' });
         expect(await store.registerKey(second!.id, publicKey)).toBe(false);
         expect(await store.sessionForPublicKey(publicKey)).toBe(first!.id);
-    });
-
-    test('a record from before public keys reads back as it was written', async () => {
-        await writeFile(
-            join(home, 'auth.json'),
-            JSON.stringify({ sessions: [{ id: 'old', label: 'docker', tokenHash: 'a'.repeat(64), createdAt: 1, lastSeenAt: 2 }] })
-        );
-        const again = new AuthStore(home, () => clock);
-        expect(await again.list(null)).toEqual([{ id: 'old', label: 'docker', origin: 'link', createdAt: 1, lastSeenAt: 2, current: false }]);
-    });
-});
-
-describe('ed25519 keys', () => {
-    test('a signature verifies against its own key and nothing else', () => {
-        const pair = generateKeyPair();
-        const other = generateKeyPair();
-        const signature = signMessage(pair.privateKey, 'hello');
-        expect(verifySignature(pair.publicKey, 'hello', signature)).toBe(true);
-        expect(verifySignature(pair.publicKey, 'hello there', signature)).toBe(false);
-        expect(verifySignature(other.publicKey, 'hello', signature)).toBe(false);
-    });
-
-    test('rubbish in the place of a key or a signature is false, never a throw', () => {
-        const pair = generateKeyPair();
-        expect(verifySignature('not-a-key', 'hello', signMessage(pair.privateKey, 'hello'))).toBe(false);
-        expect(verifySignature(pair.publicKey, 'hello', 'not-a-signature')).toBe(false);
-        expect(verifySignature('', '', '')).toBe(false);
     });
 });
 

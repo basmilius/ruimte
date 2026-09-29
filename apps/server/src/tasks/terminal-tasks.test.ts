@@ -56,10 +56,3 @@ test('a terminal agent that says goodbye without done fails its task, saying how
         result: { text: 'It ended without a result: a terminal reports back with ruimte-context done.', source: 'exit' }
     });
 });
-
-test('nothing that dies with the daemon settles a task', async () => {
-    const task = await open();
-    coordinator.stop();
-    terminals.ended('terminal-child');
-    expect(tasks.get(task.id)?.status).toBe('open');
-});

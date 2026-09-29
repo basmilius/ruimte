@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { diffCommit } from './diff.ts';
-import { LOG_FORMAT, parseLog, readCommit, readLog } from './log.ts';
+import { parseLog, readCommit, readLog } from './log.ts';
 import { parseRefs, parseWorktreeBranches } from './refs.ts';
 import { gitIn } from './test-repo.ts';
 
@@ -60,7 +60,6 @@ describe('the log', () => {
         const [commit] = parseLog(`${record}\0`);
         expect(commit?.subject).toBe(`fix: a${FIELD}b`);
         expect(commit?.refs).toEqual(['main', 'v1']);
-        expect(LOG_FORMAT.split(FIELD)).toHaveLength(6);
     });
 });
 

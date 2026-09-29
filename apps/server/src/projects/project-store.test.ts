@@ -223,6 +223,34 @@ describe('ProjectStore', () => {
         expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain(`"version": ${PROJECT_VERSION}`);
     });
 
+    test('deleting a project with its files takes its drawings and diagrams, shared or not, and then .ruimte', async () => {
+        const drawings = new DrawingStore(store, fake);
+        const diagrams = new DiagramStore(store, fake);
+        store.attachDrawings(drawings);
+        store.attachDiagrams(diagrams);
+        const { projectId } = (await store.openProject({ folder })).summary;
+        const views: ProjectContent['views'] = [
+            ...content().views,
+            { kind: 'drawing', id: 'sketch', name: 'Sketch' },
+            { kind: 'diagram', id: 'chart', name: 'Chart' },
+            { kind: 'drawing', id: 'scribble', name: 'Scribble' }
+        ];
+        await store.save(projectId, 0, { ...content(), views }, ['main', 'sketch', 'chart']);
+        const element = { kind: 'rect' as const, id: 'e1', x: 0, y: 0, w: 160, h: 96, stroke: 'ink' as const, strokeWidth: 2 as const, seed: 12 };
+        for (const viewId of ['sketch', 'scribble']) {
+            await drawings.open(projectId, viewId);
+            await drawings.save(projectId, viewId, 0, { elements: [element] });
+        }
+        await diagrams.open(projectId, 'chart');
+        await diagrams.save(projectId, 'chart', 0, { meta: { title: '', direction: 'right' }, nodes: [{ id: 'a', label: 'a' }], groups: [], edges: [] });
+        expect(await readdir(join(folder, '.ruimte', 'drawings'))).toEqual(['sketch.json']);
+        expect(await readdir(join(folder, '.ruimte', 'diagrams'))).toEqual(['chart.json']);
+        expect(await readdir(join(folder, '.ruimte', 'private', 'drawings'))).toEqual(['scribble.json']);
+
+        await store.delete(projectId, true);
+        expect(await readdir(folder)).toEqual([]);
+    });
+
     test('a daemon nobody has opened a project on lists nothing, and listing makes nothing', async () => {
         expect(await store.list()).toEqual([]);
         expect(await store.list()).toEqual([]);

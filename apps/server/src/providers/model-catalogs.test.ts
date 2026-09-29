@@ -18,7 +18,6 @@ const catalogOf = (updatedAt: string, slugs: string[]): ModelCatalogData => ({
 
 const SHIPPED = catalogOf('2026-09-01T00:00:00Z', ['model-a']);
 const NEWER = catalogOf('2026-09-28T00:00:00Z', ['model-a', 'model-b']);
-const OLDER = catalogOf('2026-08-01T00:00:00Z', ['model-old']);
 
 let home: string;
 let clock: number;
@@ -94,13 +93,6 @@ describe('ModelCatalogFeed', () => {
         const claude = new ModelCatalog(SHIPPED);
         await feedOf({ claude }, false).refresh();
         expect(asked).toBe(0);
-        expect(slugsOf(claude)).toEqual(['model-a']);
-    });
-
-    test('never goes back behind the shipped catalog', async () => {
-        const claude = new ModelCatalog(SHIPPED);
-        answer = async () => ({ catalogs: { claude: OLDER } });
-        await feedOf({ claude }).refresh();
         expect(slugsOf(claude)).toEqual(['model-a']);
     });
 

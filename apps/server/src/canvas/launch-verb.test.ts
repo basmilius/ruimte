@@ -5,7 +5,7 @@ import { agentLaunches } from '../launches/agent-host.ts';
 import type { LaunchStartOptions } from '../launches/runner.ts';
 import type { ResolvedLaunch } from '../launches/store.ts';
 import { VerbRefusal, type CanvasHost, type LaunchHost, type LaunchReading, type Noun } from './verb.ts';
-import { VERBS, verbNamed } from './verbs.ts';
+import { verbNamed } from './verbs.ts';
 
 const noun = verbNamed('launches') as Noun;
 
@@ -80,11 +80,6 @@ const run = async (argv: string[]): Promise<string[]> => {
 };
 
 describe('ruimte-context launches', () => {
-    test('is a noun of help with every action', () => {
-        expect(VERBS).toContain(noun);
-        expect(noun.actions.map((action) => action.word)).toEqual(['list', 'read', 'start', 'restart', 'stop']);
-    });
-
     test('lists every launch with its state and whether a person approved it', async () => {
         expect(await run(['list'])).toEqual([
             'dev\tDev\tservice\trunning\tyes\t5173\thttp://localhost:5173\t-',

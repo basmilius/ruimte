@@ -119,19 +119,6 @@ describe('StatementGate', () => {
         expect(await gate().admit(client.publicKey, access(statement))).toBe('refused');
     });
 
-    test('a record from before statements lists as a link, and a pairing link records its origin', async () => {
-        await Bun.write(
-            join(home, 'auth.json'),
-            JSON.stringify({ sessions: [{ id: 'old', label: 'Old browser', publicKey: generateKeyPair().publicKey, createdAt: 1, lastSeenAt: 1 }] })
-        );
-        store = new AuthStore(home, () => now);
-        await store.pair(store.issuePairingToken(), { label: 'New browser', publicKey: generateKeyPair().publicKey });
-        expect((await store.list(null)).map((session) => [session.label, session.origin])).toEqual([
-            ['Old browser', 'link'],
-            ['New browser', 'link']
-        ]);
-    });
-
     test('a replayed nonce gets nothing even for a key that is still paired, and an expired statement pairs nobody', async () => {
         const client = generateKeyPair();
         const statement = statementFor(client.publicKey);

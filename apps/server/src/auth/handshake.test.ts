@@ -285,7 +285,7 @@ describe('Handshake on a direct channel', () => {
 
         const plain = handshake.challenge(BINDING).challenge;
         const http = signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, plain, key.publicKey));
-        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: plain, signature: http })).toBeNull();
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: plain, signature: http }, BINDING)).toBeNull();
     });
 
     test('a flood of challenges over HTTP never pushes out the one a channel is waiting on', async () => {

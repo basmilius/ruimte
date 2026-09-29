@@ -81,10 +81,6 @@ describe('a node the caller opened itself', () => {
         expect(await store.answer('other', 'others-child', null, null)).toBe('others-child screen');
     });
 
-    test('never shows up in what the caller lists', () => {
-        expect(store.list('parent')).toEqual([]);
-    });
-
     test('a child of another agent still needs a line', async () => {
         expect(await refusalOf('parent', 'others-child')).toBe('not-linked');
         expect(await refusalOf('other', 'child')).toBe('not-linked');

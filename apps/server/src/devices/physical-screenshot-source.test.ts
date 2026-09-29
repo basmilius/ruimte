@@ -7,26 +7,40 @@ const frame = (sequence: number): LiveStreamFrame => ({ sequence, width: 1320, h
 describe('PhysicalScreenshotSource', () => {
     test('publishes immediately, keeps refreshing and stops cleanly', async () => {
         const calls: number[] = [];
+        const pauses: (() => void)[] = [];
         const source = new PhysicalScreenshotSource(
             'physical-1',
             async (_deviceId, sequence) => {
                 calls.push(sequence);
                 return frame(sequence);
             },
-            1
+            (_ms, signal) =>
+                new Promise((resolve) => {
+                    pauses.push(resolve);
+                    signal.addEventListener('abort', () => resolve(), { once: true });
+                })
         );
         const frames: LiveStreamFrame[] = [];
+        const settle = async (): Promise<void> => {
+            for (let i = 0; i < 5; i++) {
+                await Promise.resolve();
+            }
+        };
 
         await source.start((next) => frames.push(next));
-        await Bun.sleep(5);
-        await source.stop();
-        const countAfterStop = frames.length;
-        await Bun.sleep(5);
+        expect(frames).toEqual([frame(0)]);
 
-        expect(frames[0]).toEqual(frame(0));
-        expect(frames.length).toBeGreaterThan(1);
-        expect(frames).toHaveLength(countAfterStop);
-        expect(calls).toEqual(frames.map((next) => next.sequence));
+        await settle();
+        pauses.shift()?.();
+        await settle();
+        expect(frames.map((next) => next.sequence)).toEqual([0, 1]);
+
+        await source.stop();
+        pauses.shift()?.();
+        await settle();
+
+        expect(frames).toHaveLength(2);
+        expect(calls).toEqual([0, 1]);
     });
 
     test('reports that physical device input is unavailable', () => {

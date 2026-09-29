@@ -27,9 +27,6 @@ export const moneyFormat = (currency: UsageCurrency, rate: UsageRate | null): ((
     };
 };
 
-/* The dollar amounts of a page that has no summary yet, and of a tooltip that prices nothing. */
-export const formatUsd = moneyFormat('USD', null);
-
 export const PROVIDER_LABELS: Record<UsageProvider, string> = { claude: 'Claude Code', codex: 'Codex' };
 
 export const PROVIDER_COLORS: Record<UsageProvider, string> = { claude: 'var(--chart-claude)', codex: 'var(--chart-codex)' };

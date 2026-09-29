@@ -127,7 +127,7 @@ describe('listDirectory', () => {
     });
 
     test('answers with a code for what is not a folder', async () => {
-        expect(listDirectory(join(root, 'nowhere'))).rejects.toThrow(ListError);
-        expect(listDirectory(join(root, 'item2.txt'))).rejects.toThrow('not a folder');
+        await expect(listDirectory(join(root, 'nowhere'))).rejects.toThrow(ListError);
+        await expect(listDirectory(join(root, 'item2.txt'))).rejects.toThrow('not a folder');
     });
 });

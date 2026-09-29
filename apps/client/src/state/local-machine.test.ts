@@ -1,14 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { hasLocalMachine, isRealMachine, listedEndpoints } from './local-machine';
+import { isRealMachine, listedEndpoints } from './local-machine';
 
 const rows = [{ id: 'local' }, { id: 'studio' }, { id: 'attic' }];
 
 describe('the machine that served the page', () => {
-    test('exists only behind a native shell that can read its secret', () => {
-        expect(hasLocalMachine(true)).toBe(true);
-        expect(hasLocalMachine(false)).toBe(false);
-    });
-
     test('is listed with the rest where it is a machine', () => {
         expect(listedEndpoints(rows, true).map((row) => row.id)).toEqual(['local', 'studio', 'attic']);
     });

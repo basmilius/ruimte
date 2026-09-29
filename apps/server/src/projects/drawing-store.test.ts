@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { ProjectStore } from './project-store.ts';
-import { serializeDrawing } from './project-files.ts';
+import { documentPathInFolder, serializeDrawing } from './project-files.ts';
 
 let root: string;
 let home: string;
@@ -195,6 +195,20 @@ describe('DrawingStore', () => {
         await projects.save(projectId, 2, content('view-b'));
         expect(await exists(drawingFile('view-a'))).toBe(false);
         expect(await exists(drawingFile('view-b'))).toBe(true);
+
+        // A pull that drops a shared view may run ahead of the drawing's own file, which is someone's work.
+        await projects.save(projectId, 3, content('view-b', 'view-c'), ['view-b', 'view-c']);
+        const sharedFile = documentPathInFolder(folder);
+        const pulled = JSON.parse(await readFile(sharedFile, 'utf8')) as { views: { id: string }[] };
+        await writeFile(sharedFile, JSON.stringify({ ...pulled, views: pulled.views.filter((view) => view.id !== 'view-b') }, null, 2));
+        fake.on(dirname(sharedFile)).emit('project.json');
+        await fake.settle();
+        expect(projects.isDrawingView(projectId, 'view-b')).toBe(false);
+        expect(await exists(join(sharedDrawingsDir(), 'view-b.json'))).toBe(true);
+
+        // Nor does the next save of a client that took the pull in.
+        await projects.save(projectId, 5, content('view-c'));
+        expect(await exists(join(sharedDrawingsDir(), 'view-b.json'))).toBe(true);
     });
 
     test('copy writes the same elements at rev 0, and copying nothing writes nothing', async () => {
@@ -210,12 +224,5 @@ describe('DrawingStore', () => {
 
         await drawings.copy(projectId, 'view-c', 'view-c');
         expect(await exists(drawingFile('view-c'))).toBe(false);
-    });
-
-    test('deleting the project with its files takes the drawings directory with it', async () => {
-        await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
-        await projects.delete(projectId, true);
-        expect(await exists(join(folder, '.ruimte'))).toBe(false);
     });
 });

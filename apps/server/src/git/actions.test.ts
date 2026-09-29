@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GitActionPayload, GitActionPhase } from '@ruimte/contracts';
-import { GitActions, checkoutArgs, isDirty } from './actions.ts';
+import { GitActions, isDirty } from './actions.ts';
 import { readLog } from './log.ts';
 import { listRefs } from './refs.ts';
 import { forgetBase, readStatus } from './status.ts';
@@ -104,9 +104,9 @@ describe('branches', () => {
         await run(['branch', '--delete', 'published']);
         await run(['fetch', '--quiet', 'origin']);
 
-        expect(await checkoutArgs(repo, 'origin/published')).toEqual(['checkout', '--track', 'origin/published']);
         await act({ kind: 'checkout', ref: 'origin/published' });
         expect((await listRefs(repo)).current).toBe('published');
+        expect((await readStatus(repo)).upstream).toBe('origin/published');
     });
 });
 

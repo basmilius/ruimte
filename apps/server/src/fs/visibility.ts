@@ -70,7 +70,7 @@ const BUILD_OUTPUT = new Set([
     '.vs'
 ]);
 
-export const isOsNoise = (name: string): boolean => {
+const isOsNoise = (name: string): boolean => {
     const lower = name.toLowerCase();
     return OS_NOISE.has(lower) || name === 'Icon\r' || OS_NOISE_PATTERNS.some((pattern) => pattern.test(lower));
 };

@@ -74,7 +74,7 @@ describe('reading what is stored', () => {
             lastProvider: 'claude',
             runtimeMode: 'auto',
             terminalRuntimeMode: 'supervised',
-            accountByMachine: { local: { claude: 'claude_work' } },
+            accountByMachine: { local: { claude: 'claude_work' }, studio: { codex: 'codex_client' } },
             changedAt: 42
         };
         expect(parseChatPreferences(JSON.stringify(stored))).toEqual(stored as ChatPreferences);
@@ -136,10 +136,5 @@ describe('the account for new agents', () => {
         const picked = withAccount(preferences(), 'local', 'claude', 'claude_work');
         expect(withAccount(picked, 'local', 'claude', 'claude').accountByMachine).toEqual({});
         expect(withAccount(picked, 'local', 'claude', null).accountByMachine).toEqual({});
-    });
-
-    test('survives a reload', () => {
-        const stored = JSON.stringify({ accountByMachine: { local: { codex: 'codex_client' } } });
-        expect(parseChatPreferences(stored).accountByMachine).toEqual({ local: { codex: 'codex_client' } });
     });
 });

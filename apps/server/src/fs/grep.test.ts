@@ -73,7 +73,7 @@ describe('grepFiles', () => {
     });
 
     test('a pattern that is no pattern comes back as an error the client can show', async () => {
-        expect(grepFiles(root, '(unclosed', { regex: true })).rejects.toThrow(GrepError);
+        await expect(grepFiles(root, '(unclosed', { regex: true })).rejects.toThrow(GrepError);
     });
 });
 

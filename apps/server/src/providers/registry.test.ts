@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { hasHooks } from '../agents/hooks.ts';
 import { ProviderRegistry } from './registry.ts';
 
 describe('ProviderRegistry', () => {
@@ -9,7 +10,9 @@ describe('ProviderRegistry', () => {
         expect(providers.map((provider) => provider.name)).toEqual(['Claude Code', 'Codex', 'Gemini', 'GitHub Copilot', 'Apple Foundation Models']);
         expect(providers.map((provider) => provider.capabilities.chat)).toEqual([true, true, false, false, true]);
         expect(providers.map((provider) => provider.capabilities.terminal)).toEqual([true, true, true, true, false]);
-        expect(providers.map((provider) => provider.capabilities.hooks)).toEqual([true, true, false, false, false]);
+        for (const provider of providers) {
+            expect(provider.capabilities.hooks).toBe(hasHooks(provider.kind));
+        }
     });
 
     test('a terminal-only CLI reports no models and detection still answers for it', async () => {

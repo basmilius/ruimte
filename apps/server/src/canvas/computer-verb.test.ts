@@ -3,7 +3,7 @@ import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
 import { refusalBody } from '@ruimte/agents/context/refusal';
 import { VerbRefusal, type CanvasHost, type Noun } from './verb.ts';
-import { VERBS, verbNamed } from './verbs.ts';
+import { verbNamed } from './verbs.ts';
 
 const noun = verbNamed('computer') as Noun;
 
@@ -38,22 +38,7 @@ const approved = async (setup: ComputerSetup): Promise<void> => {
 const UNCHANGED = ['window\tUntitled\t292,161\t586x488', 'shot\t/home/computer-use/screenshots/shot.png\t1172x976\t2\t292,161', 'changes\tnone'];
 
 describe('ruimte-context computer', () => {
-    test('is a noun of help with every action', () => {
-        expect(VERBS).toContain(noun);
-        expect(noun.actions.map((action) => action.word)).toEqual([
-            'apps',
-            'state',
-            'read',
-            'click',
-            'type',
-            'key',
-            'set-value',
-            'scroll',
-            'drag',
-            'menu',
-            'open',
-            'wait'
-        ]);
+    test('the help of every action but apps says it needs the approval of a person', () => {
         for (const action of noun.actions) {
             expect(action.detail.some((line) => line.startsWith('approval\t'))).toBe(action.word !== 'apps');
         }

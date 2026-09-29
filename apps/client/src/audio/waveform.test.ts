@@ -1,32 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { WAVEFORM_BAND_COUNT, bandsOf, easeBands, spectrumBands } from '@/audio/waveform';
+import { easeBands, spectrumBands } from '@/audio/waveform';
 
 const filled = (length: number, value: number): Float32Array => Float32Array.from({ length }, () => value);
-
-describe('reading levels off samples', () => {
-    test('draws a bar per band whatever the block size', () => {
-        expect(bandsOf(filled(400, 0)).length).toBe(WAVEFORM_BAND_COUNT);
-        expect(bandsOf(filled(7, 0)).length).toBe(WAVEFORM_BAND_COUNT);
-    });
-
-    test('reads silence as nothing at all', () => {
-        expect(bandsOf(filled(400, 0)).every((level) => level === 0)).toBe(true);
-    });
-
-    test('never draws past the end of the meter', () => {
-        expect(bandsOf(filled(400, 1)).every((level) => level === 1)).toBe(true);
-    });
-
-    test('lifts ordinary speech well off the floor', () => {
-        // A quarter of full scale is a normal speaking level, and it should look like one.
-        const [first] = bandsOf(filled(400, 0.25));
-        expect(first).toBeGreaterThan(0.9);
-    });
-
-    test('takes a block too short to fill every band without dividing by zero', () => {
-        expect(bandsOf(filled(3, 0.5)).every((level) => Number.isFinite(level))).toBe(true);
-    });
-});
 
 describe('easing the bars', () => {
     test('rises faster than it falls', () => {
