@@ -669,6 +669,9 @@ export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
  */
 export const ProjectPanelsSchema = z.object({
     panel: z.object({ open: z.boolean(), kind: ProjectPanelKindSchema }).optional(),
+    // The panel is the launches panel. A field of its own, since a new kind would break an older client
+    // reading this file; `panel` still holds a kind it knows.
+    launchesPanel: z.boolean().optional(),
     // Whole pixels. Absent means the panel opens at the width the app picks for it.
     panelWidth: z.number().int().positive().optional(),
     // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.

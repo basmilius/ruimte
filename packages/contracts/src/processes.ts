@@ -48,6 +48,8 @@ export const ProcessGroupSchema = z.object({
     kind: ProcessGroupKindSchema,
     /* The session or chat id, which is the node id; the client knows the node's title and project. */
     nodeId: z.string().nullable(),
+    /* What to call a group no node stands for, such as a launch: its name. */
+    label: z.string().optional(),
     /* Sums over the readable processes; null when not one of them could be read. */
     cpu: z.number().nullable(),
     memory: z.number().nullable(),

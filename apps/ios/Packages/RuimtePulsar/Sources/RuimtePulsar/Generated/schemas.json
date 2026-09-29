@@ -22524,6 +22524,9 @@
                   "kind"
                 ]
               },
+              "launchesPanel": {
+                "type": "boolean"
+              },
               "panelWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
@@ -24587,6 +24590,9 @@
                   "open",
                   "kind"
                 ]
+              },
+              "launchesPanel": {
+                "type": "boolean"
               },
               "panelWidth": {
                 "type": "integer",
@@ -28592,6 +28598,647 @@
     "type": "object",
     "properties": {}
   },
+  "request.launches.read.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.launches.read.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "rev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "launches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "service",
+                "task",
+                "group"
+              ]
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "launches": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "autostart": {
+              "type": "boolean"
+            },
+            "shared": {
+              "type": "boolean"
+            },
+            "overlay": {
+              "type": "object",
+              "properties": {
+                "cwd": {
+                  "type": "string"
+                },
+                "env": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "kind",
+            "shared"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "approved": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "rev",
+      "launches",
+      "approved"
+    ]
+  },
+  "request.launches.save.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "baseRev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "launches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "service",
+                "task",
+                "group"
+              ]
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "launches": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "autostart": {
+              "type": "boolean"
+            },
+            "shared": {
+              "type": "boolean"
+            },
+            "overlay": {
+              "type": "object",
+              "properties": {
+                "cwd": {
+                  "type": "string"
+                },
+                "env": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "kind",
+            "shared"
+          ],
+          "additionalProperties": {}
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "baseRev",
+      "launches"
+    ]
+  },
+  "request.launches.save.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "rev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "rev"
+    ]
+  },
+  "request.launches.detect.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.launches.detect.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "suggestions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "launch": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "service",
+                    "task",
+                    "group"
+                  ]
+                },
+                "cwd": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "env": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "launches": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "autostart": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "kind"
+              ],
+              "additionalProperties": {}
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "run-xml",
+                "package-json",
+                "composer-json"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "detail": {
+              "type": "string"
+            },
+            "private": {
+              "type": "boolean"
+            },
+            "unsupported": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "launch",
+            "source",
+            "path",
+            "detail",
+            "private"
+          ]
+        }
+      }
+    },
+    "required": [
+      "suggestions"
+    ]
+  },
+  "request.launch.start.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "launchId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "approve": {
+        "type": "boolean"
+      },
+      "replace": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "projectId",
+      "launchId"
+    ]
+  },
+  "request.launch.start.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "started",
+          "held",
+          "busy"
+        ]
+      },
+      "held": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "launchId": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "launchId",
+            "command",
+            "cwd"
+          ]
+        }
+      },
+      "busy": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "launchId": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "projectId",
+          "launchId",
+          "port"
+        ]
+      }
+    },
+    "required": [
+      "outcome"
+    ]
+  },
+  "request.launch.restart.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "launchId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "approve": {
+        "type": "boolean"
+      },
+      "replace": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "projectId",
+      "launchId"
+    ]
+  },
+  "request.launch.restart.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "outcome": {
+        "type": "string",
+        "enum": [
+          "started",
+          "held",
+          "busy"
+        ]
+      },
+      "held": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "launchId": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "launchId",
+            "command",
+            "cwd"
+          ]
+        }
+      },
+      "busy": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "launchId": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "projectId",
+          "launchId",
+          "port"
+        ]
+      }
+    },
+    "required": [
+      "outcome"
+    ]
+  },
+  "request.launch.stop.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "launchId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "force": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "projectId",
+      "launchId"
+    ]
+  },
+  "request.launch.stop.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.launch.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.launch.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "launches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "launchId": {
+              "type": "string"
+            },
+            "sessionId": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "service",
+                "task",
+                "group"
+              ]
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "starting",
+                "running",
+                "stopping",
+                "exited"
+              ]
+            },
+            "exitCode": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "startedAt": {
+              "type": "number"
+            },
+            "endedAt": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "port": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "stopped": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "projectId",
+            "launchId",
+            "sessionId",
+            "kind",
+            "state",
+            "exitCode",
+            "startedAt",
+            "endedAt",
+            "port",
+            "url",
+            "stopped"
+          ]
+        }
+      }
+    },
+    "required": [
+      "launches"
+    ]
+  },
   "request.fs.browse.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -31923,6 +32570,9 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "label": {
+                      "type": "string"
                     },
                     "cpu": {
                       "type": [
@@ -42692,6 +43342,209 @@
       "document"
     ]
   },
+  "event.launch.status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "launchId": {
+        "type": "string"
+      },
+      "sessionId": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "service",
+          "task",
+          "group"
+        ]
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "starting",
+          "running",
+          "stopping",
+          "exited"
+        ]
+      },
+      "exitCode": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "startedAt": {
+        "type": "number"
+      },
+      "endedAt": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "port": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "url": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "stopped": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "projectId",
+      "launchId",
+      "sessionId",
+      "kind",
+      "state",
+      "exitCode",
+      "startedAt",
+      "endedAt",
+      "port",
+      "url",
+      "stopped"
+    ]
+  },
+  "event.launches.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "document": {
+        "type": "object",
+        "properties": {
+          "rev": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "launches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "service",
+                    "task",
+                    "group"
+                  ]
+                },
+                "cwd": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "env": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "launches": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "autostart": {
+                  "type": "boolean"
+                },
+                "shared": {
+                  "type": "boolean"
+                },
+                "overlay": {
+                  "type": "object",
+                  "properties": {
+                    "cwd": {
+                      "type": "string"
+                    },
+                    "env": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "kind",
+                "shared"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "approved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "rev",
+          "launches",
+          "approved"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "document"
+    ]
+  },
   "event.fs.changed": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -43364,6 +44217,9 @@
                 "string",
                 "null"
               ]
+            },
+            "label": {
+              "type": "string"
             },
             "cpu": {
               "type": [

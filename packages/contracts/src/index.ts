@@ -135,6 +135,19 @@ import {
     DiagramTargetPayloadSchema
 } from './diagram.ts';
 import {
+    LaunchListResultSchema,
+    LaunchStartPayloadSchema,
+    LaunchStartResultSchema,
+    LaunchStatusSchema,
+    LaunchStopPayloadSchema,
+    LaunchesChangedEventSchema,
+    LaunchesDetectResultSchema,
+    LaunchesDocumentSchema,
+    LaunchesSavePayloadSchema,
+    LaunchesSaveResultSchema,
+    LaunchesTargetPayloadSchema
+} from './launches.ts';
+import {
     PlanApplyPayloadSchema,
     PlanApplyResultSchema,
     PlanChangedEventSchema,
@@ -217,6 +230,7 @@ export * from './font.ts';
 export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
+export * from './launches.ts';
 export * from './live-stream.ts';
 export * from './machine-http.ts';
 export * from './model.ts';
@@ -337,6 +351,14 @@ export const REQUEST_SCHEMAS = {
     'diagram.save': { payload: DiagramSavePayloadSchema, result: DiagramSaveResultSchema },
     'diagram.close': { payload: DiagramTargetPayloadSchema, result: EmptySchema },
     'diagram.copy': { payload: DiagramCopyPayloadSchema, result: EmptySchema },
+    'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
+    // A person's save; it approves on this machine every launch it adds or changes.
+    'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
+    'launches.detect': { payload: LaunchesTargetPayloadSchema, result: LaunchesDetectResultSchema },
+    'launch.start': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
+    'launch.restart': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
+    'launch.stop': { payload: LaunchStopPayloadSchema, result: EmptySchema },
+    'launch.list': { payload: EmptySchema, result: LaunchListResultSchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -448,6 +470,8 @@ export const EVENT_SCHEMAS = {
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,
     'diagram.changed': DiagramChangedEventSchema,
+    'launch.status': LaunchStatusSchema,
+    'launches.changed': LaunchesChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
     'git.changed': GitChangedEventSchema,
