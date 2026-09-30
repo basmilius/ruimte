@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ProjectIconChoice } from '@ruimte/contracts';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
+import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { SettingsRow } from '@basmilius/react-ui/settings';
 import { Button, useAsyncAction, Tooltip, IconPicker, FormError, Input } from '@basmilius/react-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -31,6 +32,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
     const [name, setName] = useState(savedName);
     const [icon, setIcon] = useState<ProjectIconChoice | null>(savedIcon);
     const { busy, failure, run, fail } = useAsyncAction(t('identity.saveFailed'));
+    const iconGroups = useProjectIconGroups();
     const disabled = disabledReason !== null;
     const dirty = name.trim() !== savedName || JSON.stringify(icon) !== JSON.stringify(savedIcon);
 
@@ -83,7 +85,9 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
             />
             <div className="flex min-w-0 flex-col px-4.5 pb-3.5">
                 <IconPicker
-                    icons={PROJECT_ICON_GLYPHS}
+                    icons={iconGroups}
+                    keywords={PROJECT_ICON_KEYWORDS}
+                    rows={7}
                     value={icon?.value ?? null}
                     disabled={disabled}
                     className="mt-4"

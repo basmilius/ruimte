@@ -5,7 +5,8 @@ import { FolderSearch, ImageUp } from 'lucide-react';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
+import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { Button, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel } from '@basmilius/react-ui';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
@@ -51,6 +52,7 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
     const fileRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState(project.name);
     const { busy, failure, run, fail } = useAsyncAction(t('projectName.failed'));
+    const iconGroups = useProjectIconGroups();
     const trimmedName = name.trim();
 
     const pickFile = async (file: File | undefined): Promise<void> => {
@@ -110,7 +112,9 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
             </div>
 
             <IconPicker
-                icons={PROJECT_ICON_GLYPHS}
+                icons={iconGroups}
+                keywords={PROJECT_ICON_KEYWORDS}
+                rows={7}
                 value={chosen?.value ?? null}
                 disabled={busy}
                 label={t('common:icon.symbol')}

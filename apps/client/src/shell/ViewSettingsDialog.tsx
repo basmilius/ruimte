@@ -6,7 +6,8 @@ import { type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/co
 import { renameViewAction, setViewIconAction } from '@/actions/client-actions';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
+import { useProjectIconGroups } from '@/project/use-project-icon-groups';
 import { Button, Icon, Dialog, Field, IconPicker, Input, SectionLabel } from '@basmilius/react-ui';
 
 /*
@@ -20,6 +21,7 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
     const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null;
     const given = view.name ?? '';
     const [name, setName] = useState(given);
+    const iconGroups = useProjectIconGroups();
 
     const pick = (icon: ProjectIconChoice | null): void => setViewIconAction(view.id, icon);
 
@@ -68,7 +70,9 @@ export function ViewSettingsDialog({ view, onClose }: { view: ProjectView; onClo
             </div>
 
             <IconPicker
-                icons={PROJECT_ICON_GLYPHS}
+                icons={iconGroups}
+                keywords={PROJECT_ICON_KEYWORDS}
+                rows={7}
                 value={chosen?.value ?? null}
                 label={t('common:icon.symbol')}
                 className="mt-4"
