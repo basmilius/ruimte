@@ -38,6 +38,7 @@ export const giveTaskHandler =
         }
         // The turn names the task, so a restart between opening it and dropping this entry gives it once.
         if (chat.items().some((item) => item.kind === 'turn' && (item.taskIds ?? []).includes(task.id))) {
+            await chat.persist?.();
             return;
         }
         const from = deps.titleFor(task.parentId) ?? task.parentId;
@@ -45,4 +46,5 @@ export const giveTaskHandler =
         if (!chat.wake({ text, label: task.title, note: taskNote(from), taskIds: [task.id] })) {
             return 'wait';
         }
+        await chat.persist?.();
     };

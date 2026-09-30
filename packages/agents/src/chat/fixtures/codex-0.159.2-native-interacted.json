@@ -1,0 +1,220 @@
+{
+  "version": "codex-cli 0.159.2",
+  "capturedAt": "2026-09-30",
+  "source": "Live app-server stdio. Root started one native child, waited for completion, then sent a follow-up to the same child and waited again. Only native activity frames retained.",
+  "rootThreadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+  "frames": [
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_k0Jt3qf9tgn9mI47m4IJUR33",
+          "kind": "started",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d2-e4e5-7f23-bb50-dd2bf74d6d0d",
+        "startedAtMs": 1790763536427
+      },
+      "emittedAtMs": 1790763536427
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_k0Jt3qf9tgn9mI47m4IJUR33",
+          "kind": "started",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d2-e4e5-7f23-bb50-dd2bf74d6d0d",
+        "completedAtMs": 1790763536427
+      },
+      "emittedAtMs": 1790763536427
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "collabAgentToolCall",
+          "id": "call_YtRZ7UDKyrnHgjoiR7IuFLSz",
+          "tool": "wait",
+          "status": "inProgress",
+          "senderThreadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+          "receiverThreadIds": [],
+          "prompt": null,
+          "model": null,
+          "reasoningEffort": null,
+          "agentsStates": {}
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d2-e4e5-7f23-bb50-dd2bf74d6d0d",
+        "startedAtMs": 1790763539654
+      },
+      "emittedAtMs": 1790763539654
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "subagent-completed-01a0f1d3-102b-7af0-9bcd-61b99f122d40",
+          "kind": "completed",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d2-e4e5-7f23-bb50-dd2bf74d6d0d",
+        "startedAtMs": 1790763544490
+      },
+      "emittedAtMs": 1790763544490
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "subagent-completed-01a0f1d3-102b-7af0-9bcd-61b99f122d40",
+          "kind": "completed",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d2-e4e5-7f23-bb50-dd2bf74d6d0d",
+        "completedAtMs": 1790763544490
+      },
+      "emittedAtMs": 1790763544490
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "collabAgentToolCall",
+          "id": "call_YtRZ7UDKyrnHgjoiR7IuFLSz",
+          "tool": "wait",
+          "status": "completed",
+          "senderThreadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+          "receiverThreadIds": [],
+          "prompt": null,
+          "model": null,
+          "reasoningEffort": null,
+          "agentsStates": {}
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d2-e4e5-7f23-bb50-dd2bf74d6d0d",
+        "completedAtMs": 1790763544490
+      },
+      "emittedAtMs": 1790763544491
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_h6YPJZGuDhGHjLQJuLm6gMDK",
+          "kind": "interacted",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d3-3a75-7201-90ce-6427a3cf6b3f",
+        "startedAtMs": 1790763552887
+      },
+      "emittedAtMs": 1790763552887
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_h6YPJZGuDhGHjLQJuLm6gMDK",
+          "kind": "interacted",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d3-3a75-7201-90ce-6427a3cf6b3f",
+        "completedAtMs": 1790763552887
+      },
+      "emittedAtMs": 1790763552888
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "collabAgentToolCall",
+          "id": "call_aD4wqmZGY3JHHehDizgElfhK",
+          "tool": "wait",
+          "status": "inProgress",
+          "senderThreadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+          "receiverThreadIds": [],
+          "prompt": null,
+          "model": null,
+          "reasoningEffort": null,
+          "agentsStates": {}
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d3-3a75-7201-90ce-6427a3cf6b3f",
+        "startedAtMs": 1790763555263
+      },
+      "emittedAtMs": 1790763555263
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "subagent-completed-01a0f1d3-5077-7ab3-ab59-cdb575663b4f",
+          "kind": "completed",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d3-3a75-7201-90ce-6427a3cf6b3f",
+        "startedAtMs": 1790763555749
+      },
+      "emittedAtMs": 1790763555749
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "subagent-completed-01a0f1d3-5077-7ab3-ab59-cdb575663b4f",
+          "kind": "completed",
+          "agentThreadId": "01a0f1d3-101b-7122-bb83-37604ac8612c",
+          "agentPath": "/root/lifecycle_probe"
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d3-3a75-7201-90ce-6427a3cf6b3f",
+        "completedAtMs": 1790763555749
+      },
+      "emittedAtMs": 1790763555750
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "collabAgentToolCall",
+          "id": "call_aD4wqmZGY3JHHehDizgElfhK",
+          "tool": "wait",
+          "status": "completed",
+          "senderThreadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+          "receiverThreadIds": [],
+          "prompt": null,
+          "model": null,
+          "reasoningEffort": null,
+          "agentsStates": {}
+        },
+        "threadId": "01a0f1d2-e495-7fb0-bfbd-0756f51209c8",
+        "turnId": "01a0f1d3-3a75-7201-90ce-6427a3cf6b3f",
+        "completedAtMs": 1790763555750
+      },
+      "emittedAtMs": 1790763555750
+    }
+  ]
+}

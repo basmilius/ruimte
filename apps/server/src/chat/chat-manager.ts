@@ -75,6 +75,7 @@ interface ChatManagerOptions extends ChatCoreOptions {
     taskRows?: (chatId: string) => Task[];
     // A cleared chat is a conversation that gave no task, so what it gave before wakes it no more; the rows stay for a person.
     dropWakes?: (chatId: string) => Promise<void>;
+    endChildren?: (chatId: string) => Promise<unknown>;
     plans?: ChatPlans;
     // The widest mode this chat may run in, whatever its record or its node says; null for no limit.
     modeCeiling?: (chatId: string) => RuntimeMode | null;
@@ -197,6 +198,7 @@ export class ChatManager extends ChatCore {
     private readonly ended: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
     private readonly dropWakes: (chatId: string) => Promise<void>;
+    private readonly endChildren: (chatId: string) => Promise<unknown>;
     private readonly plans: ChatPlans | null;
     private readonly tokens = new Map<string, string>();
     // The tasks whose rows a clear hid, per chat.
@@ -221,6 +223,7 @@ export class ChatManager extends ChatCore {
         this.ended = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
         this.dropWakes = options.dropWakes ?? (() => Promise.resolve());
+        this.endChildren = options.endChildren ?? (() => Promise.resolve());
         this.plans = options.plans ?? null;
     }
 
@@ -481,6 +484,10 @@ export class ChatManager extends ChatCore {
 
     protected override recordExtras(chatId: string): ChatRecordExtras {
         return clearedExtras(this.clearedTasks.get(chatId));
+    }
+
+    protected override async clearing(chatId: string): Promise<void> {
+        await this.endChildren(chatId);
     }
 
     /* A cleared chat hides the rows of the tasks it gave, and loses its plans and what those tasks still owed it. */

@@ -1,7 +1,7 @@
 import type { Task } from '@ruimte/agent-contracts';
 import { reportsOnBackgroundWork } from '../chat/background-work.ts';
 import type { ChatCore } from '../chat/chat-core.ts';
-import { chatOpener } from '../chat/wake-chat.ts';
+import { chatOpener, loadChat } from '../chat/wake-chat.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
 import { backgroundLimitHandler, backgroundLimits } from './background-limit.ts';
@@ -13,7 +13,7 @@ import { chatRequests, deliverWaitingHandler, WaitingObserver, type ChatRequests
 import { oweWake, wakeParentHandler } from './wake-parent.ts';
 
 /* What tasks need of the chats of a host; a `ChatCore` has all of it. */
-export type TaskChats = Pick<ChatCore, 'get' | 'observe' | 'hasStored' | 'create' | 'answer' | 'deliverNote'>;
+export type TaskChats = Pick<ChatCore, 'get' | 'observe' | 'hasStored' | 'create' | 'answer' | 'deliverNote' | 'isLoading' | 'storedBackground' | 'save'>;
 
 export interface TaskRecord {
     projectId: string;
@@ -64,6 +64,7 @@ export interface TaskWiringDeps {
 
 export interface TaskWiring {
     coordinator: TaskCoordinator;
+    recover(): Promise<void>;
     waiting: WaitingObserver;
     verbs: TaskVerbs;
     requests: ChatRequests;
@@ -89,6 +90,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         now,
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         placed: (nodeId) => deps.placed(nodeId),
+        loading: (chatId) => chats.isLoading(chatId),
         // Until the turn that carries a task ran, no turn of the child is its answer.
         owedTurn: (taskId) => outbox.list().some((entry) => isGiveTask(entry) && entry.payload.taskId === taskId),
         oweWake: (task) => oweWake({ enqueue }, task),
@@ -132,12 +134,59 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
 
     return {
         coordinator,
+        recover: async () => {
+            for (const task of deps.tasks.all()) {
+                if (task.status === 'open' && task.requiresTaskTurn === true && deps.placed(task.childId)) {
+                    if (!outbox.list().some((entry) => isGiveTask(entry) && entry.payload.taskId === task.id)) {
+                        await enqueue(task.projectId, task.childId, { kind: 'give-task', payload: { taskId: task.id } });
+                    }
+                }
+                const storedBackground = task.status === 'open' ? await chats.storedBackground(task.childId) : { turnId: null, items: [], commands: [] };
+                if (
+                    task.status === 'open' &&
+                    deps.placed(task.childId) &&
+                    (task.background !== undefined ||
+                        task.requiresTaskTurn === true ||
+                        storedBackground.items.length > 0 ||
+                        storedBackground.commands.length > 0)
+                ) {
+                    if (
+                        task.background === undefined &&
+                        storedBackground.turnId !== null &&
+                        (storedBackground.items.length > 0 || storedBackground.commands.length > 0)
+                    ) {
+                        await deps.tasks.holdBackground(task.id, {
+                            turnId: storedBackground.turnId,
+                            itemIds: storedBackground.items.map((item) => item.id),
+                            commands: storedBackground.commands
+                        });
+                    }
+                    const chat = await loadChat({ chats, placed: deps.placed }, task.childId);
+                    if (chat && chat.info.activeTurnId === null) {
+                        const last = chat.thread.list().findLast((item) => item.kind === 'turn');
+                        if (last?.kind === 'turn') {
+                            coordinator.chatEvent({ event: 'chat.event', payload: { chatId: task.childId, event: { type: 'item', item: last } } });
+                        }
+                    }
+                }
+            }
+            await coordinator.settled();
+            for (const task of deps.tasks.all()) {
+                if (
+                    task.status !== 'open' &&
+                    task.wake === 'pending' &&
+                    !outbox.list().some((entry) => entry.kind === 'wake-parent' && (entry.payload as { taskId?: string }).taskId === task.id)
+                ) {
+                    await oweWake({ enqueue }, task);
+                }
+            }
+        },
         waiting,
         verbs: {
             open: (record) => deps.tasks.open(record, now()),
             give: async (record) => {
                 // The record first: the handler reads what the task asks from it, and a restart in between still owes the turn.
-                const task = await deps.tasks.open(record, now());
+                const task = await deps.tasks.open({ ...record, requiresTaskTurn: true }, now());
                 await enqueue(task.projectId, task.childId, { kind: 'give-task', payload: { taskId: task.id } });
                 return task;
             },

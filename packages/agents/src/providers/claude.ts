@@ -23,6 +23,13 @@ const PERMISSION_MODE: Record<RuntimeMode, string | null> = {
     'full-access': 'bypassPermissions'
 };
 
+export const claudeRuntimeMode = (mode: string): RuntimeMode | undefined => {
+    if (mode === 'default') {
+        return 'supervised';
+    }
+    return (Object.keys(PERMISSION_MODE) as RuntimeMode[]).find((key) => PERMISSION_MODE[key] === mode);
+};
+
 interface ClaudeLaunch {
     selection: ModelSelection;
     runtimeMode: RuntimeMode;

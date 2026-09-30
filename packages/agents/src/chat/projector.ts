@@ -160,12 +160,17 @@ export class ThreadProjector {
                         model: event.model ?? info.model,
                         slashCommands: event.slashCommands?.length ? event.slashCommands : info.slashCommands,
                         skills: event.skills?.length ? event.skills : info.skills,
+                        ...(event.effectiveRuntimeMode === undefined ? {} : { effectiveRuntimeMode: event.effectiveRuntimeMode }),
+                        ...(event.permissionMode === undefined ? {} : { permissionMode: event.permissionMode }),
                         running: true
                     })
                 );
                 break;
             case 'thinking.delta':
                 this.appendThinking(generation, event.ref, event.text, false, events);
+                break;
+            case 'permissions':
+                events.push(this.thread.patchInfo({ permissionMode: event.permissionMode, effectiveRuntimeMode: event.effectiveRuntimeMode }));
                 break;
             case 'thinking.done':
                 this.appendThinking(generation, event.ref, event.text, true, events);
@@ -218,7 +223,12 @@ export class ThreadProjector {
                 const tool = this.thread.get(this.itemId(generation, event.ref));
                 if (tool?.kind === 'tool') {
                     const name = event.workflow.name ?? tool.workflow?.name ?? null;
-                    events.push(this.thread.upsert({ ...tool, workflow: { ...event.workflow, name } }));
+                    events.push(
+                        this.thread.upsert({
+                            ...tool,
+                            workflow: { ...event.workflow, name, taskId: event.workflow.taskId ?? tool.workflow?.taskId, lastProgressAt: this.now() }
+                        })
+                    );
                 }
                 break;
             }
@@ -361,6 +371,7 @@ export class ThreadProjector {
                 events.push(this.thread.patchInfo({ status: 'error', activeTurnId: null }));
                 break;
             case 'exit':
+                events.push(this.thread.patchInfo({ effectiveRuntimeMode: undefined, permissionMode: undefined }));
                 this.finishProcess(event.exitCode, event.stderr ?? null, events);
                 break;
         }
@@ -666,7 +677,7 @@ export class ThreadProjector {
             return;
         }
         // A settled agent that starts again under another call was woken by a message, and works on in the background.
-        const resumed = item.status !== 'running' && item.toolUseId !== event.ref;
+        const resumed = event.resumed === true || (item.status !== 'running' && item.toolUseId !== event.ref);
         events.push(
             this.thread.upsert({
                 ...item,

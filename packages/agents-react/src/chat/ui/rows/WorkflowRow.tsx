@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Bot, ListTree } from 'lucide-react';
+import { Bot, ListTree, TriangleAlert, Square } from 'lucide-react';
 import { workflowAgentRef, type ChatToolItem, type ChatWorkflow } from '@ruimte/agent-contracts';
 import { workflowAgentTime, workflowPhases, type WorkflowAgentView, type WorkflowPhaseView } from '../../logic/workflow';
 import { useSubagentSupport } from '../../subagent-support';
@@ -7,7 +7,9 @@ import type { SubagentStep } from '../../subagent-view';
 import { ROW_GUTTER } from '../icons';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from './WorkRows';
 import { useChatScope } from '../../../scope';
-import { Icon } from '@basmilius/desktop-ui';
+import { Icon, IconButton } from '@basmilius/desktop-ui';
+import { useChatActions } from '../../actions';
+import { chatHost } from '../../../host';
 
 function AgentLine({ view, onOpen }: { view: WorkflowAgentView; onOpen?(step: SubagentStep): void }) {
     const { agent, state } = view;
@@ -61,21 +63,49 @@ function PhaseBlock({ phase, onOpen }: { phase: WorkflowPhaseView; onOpen?(step:
     );
 }
 
-/*
- * A Workflow call with the phases its script announced under it, and in each phase the agents it
- * started, in the style of the agents a sub-agent opened. They stay in sight whether the call's own
- * body is open or not; pressing an agent opens its conversation, read from its run's folder.
- */
-export function WorkflowRow({ tool, workflow, onOpenAgent }: { tool: ChatToolItem; workflow: ChatWorkflow; onOpenAgent?(step: SubagentStep): void }) {
+// Keep background progress visible after the launcher turn ends.
+export function WorkflowRow({
+    tool,
+    workflow,
+    chatId,
+    onOpenAgent
+}: {
+    tool: ChatToolItem;
+    workflow: ChatWorkflow;
+    chatId?: string;
+    onOpenAgent?(step: SubagentStep): void;
+}) {
+    const { t } = useTranslation('agent-chat');
     const { id } = useChatScope();
     // A host that does not answer `chat.subagent` has no conversation to open for anyone.
     const refused = useSubagentSupport((s) => s.unsupported[id] === true);
     const running = tool.state === 'running';
     const phases = workflowPhases(workflow, running);
     const onOpen = refused ? undefined : onOpenAgent;
+    const actions = useChatActions();
+    const stop = (): void => {
+        if (chatId && workflow.taskId) {
+            void actions.stopTask(chatId, workflow.taskId).catch((error: unknown) => {
+                chatHost().notify({
+                    kind: 'error',
+                    title: t('activity.stopFailed'),
+                    description: error instanceof Error ? error.message : t('subagents.noAnswer')
+                });
+            });
+        }
+    };
     return (
         <div>
-            {running ? <WorkLiveRow tool={tool} /> : <WorkRow tool={tool} detail={workflow.name ?? undefined} />}
+            <div className="flex items-center gap-1">
+                <div className="min-w-0 grow">{running ? <WorkLiveRow tool={tool} /> : <WorkRow tool={tool} detail={workflow.name ?? undefined} />}</div>
+                {running && chatId && workflow.taskId && <IconButton icon={Square} size="xs" label={t('activity.stop')} onClick={stop} />}
+            </div>
+            {running && workflow.stalledAt !== undefined && (
+                <p role="status" className="ml-6 mb-1 flex items-start gap-1.5 text-xs text-text-muted">
+                    <Icon icon={TriangleAlert} size={12} className="mt-0.5 shrink-0 text-status-needs-you" />
+                    <span>{t('rows.workflow.stalled')}</span>
+                </p>
+            )}
             {phases.length > 0 && (
                 <div className="ml-6">
                     {phases.map((phase) => (

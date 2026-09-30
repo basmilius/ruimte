@@ -54,7 +54,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         case 'work-live':
             return <WorkLiveRow tool={row.tool} />;
         case 'workflow':
-            return <WorkflowRow tool={row.tool} workflow={row.workflow} onOpenAgent={openConversation} />;
+            return <WorkflowRow chatId={chatId} tool={row.tool} workflow={row.workflow} onOpenAgent={openConversation} />;
         case 'work-group':
             return <WorkGroupRow tools={row.tools} summary={row.summary} expanded={row.expanded} onToggle={() => toggleGroup(row.id)} />;
         case 'subagent':

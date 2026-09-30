@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { notResumedNote, type ChatBackgroundTask, type ChatItem, type ChatTurnItem, type Task } from '@ruimte/agent-contracts';
 import type { AgentEvent } from '../events.ts';
+import { writeAtomic } from '../fs.ts';
 import { TaskCoordinator, resultOfTurn } from './task-coordinator.ts';
 import { TaskStore } from './task-store.ts';
 
@@ -17,21 +18,13 @@ let after: 'reports' | 'silent' | 'gone';
 let commands: Map<string, ChatBackgroundTask[]>;
 let limits: Map<string, { commands: readonly string[]; at: number }>;
 
-beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'ruimte-task-coordinator-'));
-    tasks = new TaskStore(home);
-    threads = new Map();
-    owed = [];
-    onOwed = null;
-    after = 'reports';
-    commands = new Map();
-    limits = new Map();
-    coordinator = new TaskCoordinator({
+const makeCoordinator = (): TaskCoordinator =>
+    new TaskCoordinator({
         tasks,
         now: () => 10,
         chatItems: (chatId) => threads.get(chatId) ?? null,
         placed: () => true,
-        // Every task here was given when its child was opened, so no turn of one is still owed.
+        // These tasks were opened with their children, so no separate assignment turn is owed.
         owedTurn: () => false,
         oweWake: async (task) => {
             owed.push(task.id);
@@ -50,9 +43,22 @@ beforeEach(async () => {
             }
         }
     });
+
+beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'ruimte-task-coordinator-'));
+    tasks = new TaskStore(home);
+    threads = new Map();
+    owed = [];
+    onOwed = null;
+    after = 'reports';
+    commands = new Map();
+    limits = new Map();
+    coordinator = makeCoordinator();
 });
 
 afterEach(async () => {
+    coordinator.stop();
+    await coordinator.settled();
     await rm(home, { recursive: true, force: true });
 });
 
@@ -111,6 +117,90 @@ describe('the result of a turn', () => {
 });
 
 describe('the coordinator', () => {
+    test('shutdown waits for the result wake even when the task record is already settled', async () => {
+        const wake = Promise.withResolvers<void>();
+        const waiting = Promise.withResolvers<void>();
+        coordinator = new TaskCoordinator({
+            tasks,
+            now: () => 10,
+            chatItems: (chatId) => threads.get(chatId) ?? null,
+            placed: () => true,
+            owedTurn: () => false,
+            oweWake: async (task) => {
+                waiting.resolve();
+                await wake.promise;
+                owed.push(task.id);
+            },
+            alert: () => undefined,
+            afterBackgroundWork: () => 'gone',
+            commandsOf: () => [],
+            limit: { owed: () => false, owe: async () => undefined, lapse: async () => undefined }
+        });
+        const task = await open('parent', 'child');
+        threads.set('child', [turn('t1', 'done'), answer('t1', 'finished')]);
+        ends('child', turn('t1', 'done'));
+        await waiting.promise;
+        expect(tasks.get(task.id)?.status).toBe('done');
+        coordinator.stop();
+        let shutDown = false;
+        const stopped = coordinator.settled().then(() => {
+            shutDown = true;
+        });
+        await Promise.resolve();
+        expect(shutDown).toBe(false);
+        expect(owed).toEqual([]);
+        wake.resolve();
+        await stopped;
+        expect(owed).toEqual([task.id]);
+    });
+
+    test('a new assignment ignores an old turn during a blocked task write', async () => {
+        const gate = Promise.withResolvers<void>();
+        const writing = Promise.withResolvers<void>();
+        tasks = new TaskStore(home, {
+            write: async (path, text) => {
+                writing.resolve();
+                await gate.promise;
+                await writeAtomic(path, text);
+            }
+        });
+        coordinator = makeCoordinator();
+        const opening = tasks.open({ projectId: 'p', parentId: 'parent', childId: 'child', title: 'new', prompt: 'new work', requiresTaskTurn: true }, 10);
+        const task = tasks.openFor('child')!;
+        await writing.promise;
+        threads.set('child', [turn('old', 'done'), answer('old', 'old answer')]);
+        ends('child', turn('old', 'done'));
+        expect(tasks.get(task.id)?.status).toBe('open');
+        gate.resolve();
+        await opening;
+        expect(tasks.get(task.id)?.status).toBe('open');
+        const own = { ...turn('own', 'done'), createdAt: 11, taskIds: [task.id] };
+        threads.set('child', [turn('old', 'done'), own, answer('own', 'new answer')]);
+        const woken = nextOwed();
+        ends('child', own);
+        await woken;
+        expect(tasks.get(task.id)?.result?.text).toBe('new answer');
+    });
+
+    test('a background workflow lost at restart fails instead of returning its launch answer', async () => {
+        const task = await open('parent', 'child');
+        threads.set('child', [turn('t1', 'done'), workflow('running'), answer('t1', 'I launched it')]);
+        ends('child', turn('t1', 'done'));
+        // The next write waits behind the hold record, so the new store reads the durable state.
+        await tasks.pause(task.id, { kind: 'usage' });
+        tasks = new TaskStore(home);
+        await tasks.load();
+        coordinator = makeCoordinator();
+        after = 'gone';
+        threads.set('child', [turn('t1', 'done'), workflow('error'), answer('t1', 'I launched it')]);
+        const woken = nextOwed();
+        ends('child', turn('t1', 'done'));
+        await woken;
+        expect(tasks.get(task.id)).toMatchObject({ status: 'failed', result: { source: 'exit' } });
+        expect(tasks.get(task.id)?.result?.text).toContain('background');
+        expect(owed).toEqual([task.id]);
+    });
+
     test('settles a chat child on the end of its turn and owes its parent a wake', async () => {
         const task = await open('chat-lead', 'chat-child');
         threads.set('chat-child', [turn('t1', 'done'), answer('t1', 'fixed')]);

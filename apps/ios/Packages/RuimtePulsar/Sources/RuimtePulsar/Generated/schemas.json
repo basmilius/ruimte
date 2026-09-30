@@ -8827,6 +8827,18 @@
           "full-access"
         ]
       },
+      "effectiveRuntimeMode": {
+        "type": "string",
+        "x-open-enum": [
+          "supervised",
+          "auto-accept-edits",
+          "auto",
+          "full-access"
+        ]
+      },
+      "permissionMode": {
+        "type": "string"
+      },
       "status": {
         "type": "string",
         "x-open-enum": [
@@ -8936,6 +8948,9 @@
             "createdAt"
           ]
         }
+      },
+      "queuePaused": {
+        "type": "boolean"
       },
       "background": {
         "type": "array",
@@ -9425,6 +9440,9 @@
                         "null"
                       ]
                     },
+                    "taskId": {
+                      "type": "string"
+                    },
                     "phases": {
                       "type": "array",
                       "items": {
@@ -9520,6 +9538,12 @@
                           "lastTool"
                         ]
                       }
+                    },
+                    "lastProgressAt": {
+                      "type": "number"
+                    },
+                    "stalledAt": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -10013,6 +10037,9 @@
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
                 },
+                "resumePending": {
+                  "type": "boolean"
+                },
                 "taskIds": {
                   "type": "array",
                   "items": {
@@ -10284,6 +10311,18 @@
               "full-access"
             ]
           },
+          "effectiveRuntimeMode": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "permissionMode": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "x-open-enum": [
@@ -10393,6 +10432,9 @@
                 "createdAt"
               ]
             }
+          },
+          "queuePaused": {
+            "type": "boolean"
           },
           "background": {
             "type": "array",
@@ -10854,6 +10896,9 @@
                         "null"
                       ]
                     },
+                    "taskId": {
+                      "type": "string"
+                    },
                     "phases": {
                       "type": "array",
                       "items": {
@@ -10949,6 +10994,12 @@
                           "lastTool"
                         ]
                       }
+                    },
+                    "lastProgressAt": {
+                      "type": "number"
+                    },
+                    "stalledAt": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -11441,6 +11492,9 @@
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
+                },
+                "resumePending": {
+                  "type": "boolean"
                 },
                 "taskIds": {
                   "type": "array",
@@ -11894,6 +11948,9 @@
                         "null"
                       ]
                     },
+                    "taskId": {
+                      "type": "string"
+                    },
                     "phases": {
                       "type": "array",
                       "items": {
@@ -11989,6 +12046,12 @@
                           "lastTool"
                         ]
                       }
+                    },
+                    "lastProgressAt": {
+                      "type": "number"
+                    },
+                    "stalledAt": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -12482,6 +12545,9 @@
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
                 },
+                "resumePending": {
+                  "type": "boolean"
+                },
                 "taskIds": {
                   "type": "array",
                   "items": {
@@ -12928,6 +12994,9 @@
                                 "null"
                               ]
                             },
+                            "taskId": {
+                              "type": "string"
+                            },
                             "phases": {
                               "type": "array",
                               "items": {
@@ -13023,6 +13092,12 @@
                                   "lastTool"
                                 ]
                               }
+                            },
+                            "lastProgressAt": {
+                              "type": "number"
+                            },
+                            "stalledAt": {
+                              "type": "number"
                             }
                           },
                           "required": [
@@ -13516,6 +13591,9 @@
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
                         },
+                        "resumePending": {
+                          "type": "boolean"
+                        },
                         "taskIds": {
                           "type": "array",
                           "items": {
@@ -13771,6 +13849,18 @@
                         "full-access"
                       ]
                     },
+                    "effectiveRuntimeMode": {
+                      "type": "string",
+                      "x-open-enum": [
+                        "supervised",
+                        "auto-accept-edits",
+                        "auto",
+                        "full-access"
+                      ]
+                    },
+                    "permissionMode": {
+                      "type": "string"
+                    },
                     "status": {
                       "type": "string",
                       "x-open-enum": [
@@ -13880,6 +13970,9 @@
                           "createdAt"
                         ]
                       }
+                    },
+                    "queuePaused": {
+                      "type": "boolean"
                     },
                     "background": {
                       "type": "array",
@@ -14140,6 +14233,18 @@
                         "full-access"
                       ]
                     },
+                    "effectiveRuntimeMode": {
+                      "type": "string",
+                      "x-open-enum": [
+                        "supervised",
+                        "auto-accept-edits",
+                        "auto",
+                        "full-access"
+                      ]
+                    },
+                    "permissionMode": {
+                      "type": "string"
+                    },
                     "status": {
                       "type": "string",
                       "x-open-enum": [
@@ -14249,6 +14354,9 @@
                           "createdAt"
                         ]
                       }
+                    },
+                    "queuePaused": {
+                      "type": "boolean"
                     },
                     "background": {
                       "type": "array",
@@ -14710,6 +14818,9 @@
                                   "null"
                                 ]
                               },
+                              "taskId": {
+                                "type": "string"
+                              },
                               "phases": {
                                 "type": "array",
                                 "items": {
@@ -14805,6 +14916,12 @@
                                     "lastTool"
                                   ]
                                 }
+                              },
+                              "lastProgressAt": {
+                                "type": "number"
+                              },
+                              "stalledAt": {
+                                "type": "number"
                               }
                             },
                             "required": [
@@ -15297,6 +15414,9 @@
                             "type": "integer",
                             "exclusiveMinimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "resumePending": {
+                            "type": "boolean"
                           },
                           "taskIds": {
                             "type": "array",
@@ -15955,6 +16075,18 @@
           "full-access"
         ]
       },
+      "effectiveRuntimeMode": {
+        "type": "string",
+        "x-open-enum": [
+          "supervised",
+          "auto-accept-edits",
+          "auto",
+          "full-access"
+        ]
+      },
+      "permissionMode": {
+        "type": "string"
+      },
       "status": {
         "type": "string",
         "x-open-enum": [
@@ -16064,6 +16196,9 @@
             "createdAt"
           ]
         }
+      },
+      "queuePaused": {
+        "type": "boolean"
       },
       "background": {
         "type": "array",
@@ -16616,6 +16751,18 @@
               "full-access"
             ]
           },
+          "effectiveRuntimeMode": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "permissionMode": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "x-open-enum": [
@@ -16725,6 +16872,9 @@
                 "createdAt"
               ]
             }
+          },
+          "queuePaused": {
+            "type": "boolean"
           },
           "background": {
             "type": "array",
@@ -17098,6 +17248,18 @@
                   "full-access"
                 ]
               },
+              "effectiveRuntimeMode": {
+                "type": "string",
+                "x-open-enum": [
+                  "supervised",
+                  "auto-accept-edits",
+                  "auto",
+                  "full-access"
+                ]
+              },
+              "permissionMode": {
+                "type": "string"
+              },
               "status": {
                 "type": "string",
                 "x-open-enum": [
@@ -17207,6 +17369,9 @@
                     "createdAt"
                   ]
                 }
+              },
+              "queuePaused": {
+                "type": "boolean"
               },
               "background": {
                 "type": "array",
@@ -17879,6 +18044,9 @@
                         "null"
                       ]
                     },
+                    "taskId": {
+                      "type": "string"
+                    },
                     "phases": {
                       "type": "array",
                       "items": {
@@ -17974,6 +18142,12 @@
                           "lastTool"
                         ]
                       }
+                    },
+                    "lastProgressAt": {
+                      "type": "number"
+                    },
+                    "stalledAt": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -18466,6 +18640,9 @@
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
+                },
+                "resumePending": {
+                  "type": "boolean"
                 },
                 "taskIds": {
                   "type": "array",
@@ -37982,6 +38159,18 @@
                 "full-access"
               ]
             },
+            "effectiveRuntimeMode": {
+              "type": "string",
+              "x-open-enum": [
+                "supervised",
+                "auto-accept-edits",
+                "auto",
+                "full-access"
+              ]
+            },
+            "permissionMode": {
+              "type": "string"
+            },
             "status": {
               "type": "string",
               "x-open-enum": [
@@ -38091,6 +38280,9 @@
                   "createdAt"
                 ]
               }
+            },
+            "queuePaused": {
+              "type": "boolean"
             },
             "background": {
               "type": "array",
@@ -38321,6 +38513,34 @@
             "batchId": {
               "type": "string",
               "minLength": 1
+            },
+            "requiresTaskTurn": {
+              "type": "boolean"
+            },
+            "background": {
+              "type": "object",
+              "properties": {
+                "turnId": {
+                  "type": "string"
+                },
+                "itemIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "commands": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "turnId",
+                "itemIds",
+                "commands"
+              ]
             },
             "status": {
               "type": "string",
@@ -40092,6 +40312,9 @@
                               "null"
                             ]
                           },
+                          "taskId": {
+                            "type": "string"
+                          },
                           "phases": {
                             "type": "array",
                             "items": {
@@ -40187,6 +40410,12 @@
                                 "lastTool"
                               ]
                             }
+                          },
+                          "lastProgressAt": {
+                            "type": "number"
+                          },
+                          "stalledAt": {
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -40680,6 +40909,9 @@
                         "exclusiveMinimum": 0,
                         "maximum": 9007199254740991
                       },
+                      "resumePending": {
+                        "type": "boolean"
+                      },
                       "taskIds": {
                         "type": "array",
                         "items": {
@@ -40935,6 +41167,18 @@
                       "full-access"
                     ]
                   },
+                  "effectiveRuntimeMode": {
+                    "type": "string",
+                    "x-open-enum": [
+                      "supervised",
+                      "auto-accept-edits",
+                      "auto",
+                      "full-access"
+                    ]
+                  },
+                  "permissionMode": {
+                    "type": "string"
+                  },
                   "status": {
                     "type": "string",
                     "x-open-enum": [
@@ -41044,6 +41288,9 @@
                         "createdAt"
                       ]
                     }
+                  },
+                  "queuePaused": {
+                    "type": "boolean"
                   },
                   "background": {
                     "type": "array",
@@ -41304,6 +41551,18 @@
                       "full-access"
                     ]
                   },
+                  "effectiveRuntimeMode": {
+                    "type": "string",
+                    "x-open-enum": [
+                      "supervised",
+                      "auto-accept-edits",
+                      "auto",
+                      "full-access"
+                    ]
+                  },
+                  "permissionMode": {
+                    "type": "string"
+                  },
                   "status": {
                     "type": "string",
                     "x-open-enum": [
@@ -41413,6 +41672,9 @@
                         "createdAt"
                       ]
                     }
+                  },
+                  "queuePaused": {
+                    "type": "boolean"
                   },
                   "background": {
                     "type": "array",
@@ -41874,6 +42136,9 @@
                                 "null"
                               ]
                             },
+                            "taskId": {
+                              "type": "string"
+                            },
                             "phases": {
                               "type": "array",
                               "items": {
@@ -41969,6 +42234,12 @@
                                   "lastTool"
                                 ]
                               }
+                            },
+                            "lastProgressAt": {
+                              "type": "number"
+                            },
+                            "stalledAt": {
+                              "type": "number"
                             }
                           },
                           "required": [
@@ -42462,6 +42733,9 @@
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
                         },
+                        "resumePending": {
+                          "type": "boolean"
+                        },
                         "taskIds": {
                           "type": "array",
                           "items": {
@@ -42708,6 +42982,18 @@
               "full-access"
             ]
           },
+          "effectiveRuntimeMode": {
+            "type": "string",
+            "x-open-enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "permissionMode": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "x-open-enum": [
@@ -42817,6 +43103,9 @@
                 "createdAt"
               ]
             }
+          },
+          "queuePaused": {
+            "type": "boolean"
           },
           "background": {
             "type": "array",
@@ -49255,6 +49544,34 @@
           "batchId": {
             "type": "string",
             "minLength": 1
+          },
+          "requiresTaskTurn": {
+            "type": "boolean"
+          },
+          "background": {
+            "type": "object",
+            "properties": {
+              "turnId": {
+                "type": "string"
+              },
+              "itemIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "commands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "turnId",
+              "itemIds",
+              "commands"
+            ]
           },
           "status": {
             "type": "string",

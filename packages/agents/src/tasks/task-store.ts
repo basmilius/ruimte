@@ -25,10 +25,11 @@ export class TaskStore {
     private readonly tasks: RecordDirectory<Task>;
     private readonly listeners = new Set<TaskListener>();
     private readonly sinks = new ClientSinks<TaskEvent>();
+    private readonly writes = new Set<Promise<void>>();
 
-    constructor(dataDir: string) {
+    constructor(dataDir: string, options: { write?: (path: string, text: string) => Promise<void> } = {}) {
         this.dir = join(dataDir, 'tasks');
-        this.tasks = new RecordDirectory({ dir: this.dir, schema: TaskSchema, idOf: (task) => task.id });
+        this.tasks = new RecordDirectory({ dir: this.dir, schema: TaskSchema, idOf: (task) => task.id, ...options });
     }
 
     /* Reads what an earlier run of the host wrote down. Call before any verb or observer can ask. */
@@ -49,7 +50,10 @@ export class TaskStore {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    async open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string }, now: number): Promise<Task> {
+    async open(
+        record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string; requiresTaskTurn?: boolean },
+        now: number
+    ): Promise<Task> {
         const task: Task = {
             ...record,
             id: `task-${randomBytes(6).toString('hex')}`,
@@ -61,6 +65,24 @@ export class TaskStore {
         };
         await this.write(task);
         return task;
+    }
+
+    all(): Task[] {
+        return this.sorted();
+    }
+
+    async settled(): Promise<void> {
+        while (this.writes.size > 0) {
+            await Promise.all([...this.writes]);
+        }
+    }
+
+    async holdBackground(id: string, background: NonNullable<Task['background']>): Promise<void> {
+        const task = this.get(id);
+        if (!task || task.status !== 'open' || JSON.stringify(task.background) === JSON.stringify(background)) {
+            return;
+        }
+        await this.write({ ...task, background });
     }
 
     get(id: string): Task | undefined {
@@ -194,7 +216,14 @@ export class TaskStore {
         return this.tasks.all().sort((a, b) => a.createdAt - b.createdAt);
     }
 
-    private async write(task: Task): Promise<void> {
+    private write(task: Task): Promise<void> {
+        const write = this.writeNow(task);
+        this.writes.add(write);
+        void write.finally(() => this.writes.delete(write)).catch(() => undefined);
+        return write;
+    }
+
+    private async writeNow(task: Task): Promise<void> {
         // Only the write that is still the latest tells anyone: an older record never lands after it.
         if (!(await this.tasks.write(task))) {
             return;

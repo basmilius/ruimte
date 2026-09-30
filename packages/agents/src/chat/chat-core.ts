@@ -51,6 +51,7 @@ import type { CodexClientInfo } from './codex-transport.ts';
 import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
+import { commandLabel, isBackgroundWork, runsInBackground, type BackgroundWork } from './background-work.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
 
 /* A turn that was running when the host went down, and the attempt that would take it up again. */
@@ -384,6 +385,7 @@ export class ChatCore {
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             ...(this.onLimits ? { onLimits: this.onLimits } : {}),
             persist: () => this.persist(payload.chatId),
+            save: () => this.save(payload.chatId),
             persistSoon: () => this.persistSoon(payload.chatId),
             ...(kind === 'claude' && claudeTitles
                 ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId, this.claudeProjectsDirOf(session.info)) }
@@ -400,6 +402,25 @@ export class ChatCore {
         }
         await this.opened(session, stored ?? null);
         return session.info;
+    }
+
+    async storedBackground(chatId: string): Promise<{ turnId: string | null; items: BackgroundWork[]; commands: string[] }> {
+        const record = await this.store?.read(chatId);
+        const items = record?.items ?? [];
+        const background = items.filter(
+            (item): item is BackgroundWork =>
+                isBackgroundWork(item) && (runsInBackground(item) || items.some((note) => note.id === `lost-background-${item.id}`))
+        );
+        const last = items.findLast((item) => item.kind === 'turn');
+        return { turnId: background.at(-1)?.turnId ?? last?.id ?? null, items: background, commands: (record?.info.background ?? []).map(commandLabel) };
+    }
+
+    save(chatId: string): Promise<void> {
+        return this.persistNow(chatId, true);
+    }
+
+    isLoading(chatId: string): boolean {
+        return this.creating.has(chatId);
     }
 
     configure(payload: ChatConfigurePayload): ChatInfo {
@@ -669,6 +690,10 @@ export class ChatCore {
     /* Empties the thread and drops the CLI's session and the chat's bookmarks; `force` stops a turn that is in the way. */
     async clear(chatId: string, force = false): Promise<void> {
         const session = this.require(chatId);
+        if (session.busy && !force) {
+            throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
+        }
+        await this.clearing(chatId);
         session.clear(force);
         // Before the record is written, so what it takes along from the record is gone from the write as well.
         const cleared = this.cleared(chatId);
@@ -956,6 +981,8 @@ export class ChatCore {
     /* The chat was cleared; what runs before the first await is in the record written right after. */
     protected async cleared(_chatId: string): Promise<void> {}
 
+    protected async clearing(_chatId: string): Promise<void> {}
+
     /* The chat left memory for good, before its files go. */
     protected forgotten(_chatId: string): void {}
 
@@ -1120,11 +1147,11 @@ export class ChatCore {
         if (ended !== null && ended >= turn.createdAt) {
             return skip('the agent that opened it was stopped');
         }
-        if ((turn.attempt ?? 1) >= MAX_ATTEMPTS) {
+        if ((turn.attempt ?? 1) >= MAX_ATTEMPTS && !turn.resumePending) {
             return skip('it was already resumed after an earlier restart');
         }
         try {
-            const owed = await this.onInterruptedRun({ chatId, turnId: turn.id, attempt: (turn.attempt ?? 1) + 1 });
+            const owed = await this.onInterruptedRun({ chatId, turnId: turn.id, attempt: (turn.attempt ?? 1) + (turn.resumePending ? 0 : 1) });
             return owed ? { resumeTurnId: turn.id, reason: null } : skip(this.unownedReason(chatId));
         } catch (e) {
             console.error(`Owing a resume for chat ${chatId} failed:`, errorText(e));

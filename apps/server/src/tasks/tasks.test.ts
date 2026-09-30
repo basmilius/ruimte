@@ -249,6 +249,37 @@ describe('a task wakes the chat that gave it', () => {
         expect(wakeTurns(daemon)).toEqual([]);
     });
 
+    test('Clear owes the end of running children before resetting and cancels their tasks without a wake', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadWorking(daemon);
+        const child = await delegate(daemon, 'Lexer', 'slow');
+        await daemon.until(() => Boolean(daemon.chats.get(child.childId)?.info.agentSessionId));
+        await expect(daemon.chats.clear('chat-lead')).rejects.toMatchObject({ code: 'chat-busy' });
+        expect(daemon.enqueued.filter((work) => work.kind === 'end-children')).toEqual([]);
+        await daemon.chats.clear('chat-lead', true);
+        await daemon.worker.settled();
+        expect(daemon.enqueued.some((work) => work.kind === 'end-children' && work.payload.nodeIds.includes(child.childId))).toBe(true);
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'cancelled', wake: 'none' });
+        expect(daemon.chats.get(child.childId)?.running).toBe(false);
+        expect(daemon.chats.get(child.childId)?.info.activeTurnId).toBeNull();
+        expect(daemon.chats.get('chat-lead')?.thread.list()).toEqual([]);
+        expect(wakeTurns(daemon)).toEqual([]);
+    });
+
+    test('Clear of a tasked child cancels the assignment instead of leaving its parent waiting for a lost turn', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadWorking(daemon);
+        const child = await delegate(daemon, 'Lexer', 'slow');
+        await daemon.until(() => Boolean(daemon.chats.get(child.childId)?.info.agentSessionId));
+        await daemon.chats.clear(child.childId, true);
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'cancelled', wake: 'none', result: { text: 'a person cleared this chat' } });
+        expect(daemon.chats.get(child.childId)?.thread.list()).toEqual([]);
+        expect(wakeTurns(daemon)).toEqual([]);
+    });
+
     test('a terminal child that exits without done fails its task, and the lead is woken with that', async () => {
         const daemon = await boot();
         daemon.worker.start();
@@ -261,6 +292,7 @@ describe('a task wakes the chat that gave it', () => {
 
         pty.exit(0);
         await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
 
         expect(daemon.tasks.get(child.taskId)).toMatchObject({
             status: 'failed',
@@ -689,6 +721,7 @@ describe('resume at reset', () => {
 
         clock.advance(RESET_AT - clock.now());
         await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done' && turn.taskIds?.includes(child.taskId)));
+        await daemon.worker.settled();
         expect(turnsOf(daemon, 'chat-lead').map((turn) => [turn.state, turn.label ?? null, turn.taskIds ?? null])).toEqual([
             ['error', null, null],
             ['done', 'Usage limit reset', null],
@@ -1044,7 +1077,7 @@ describe('a child with work running in the background', () => {
         expect(daemon.tasks.get(survey!.taskId)?.result?.text).toStartWith('the subagent says: read the docs');
     });
 
-    test('keeps its task open over a restart, with no limit owed and the lead asleep', async () => {
+    test('fails a native task lost at restart and wakes its lead once', async () => {
         const first = await boot();
         first.worker.start();
         await leadIdle(first);
@@ -1055,9 +1088,10 @@ describe('a child with work running in the background', () => {
         const second = await boot();
         second.worker.start();
         await second.worker.settled();
-        expect(second.tasks.get(child.taskId)).toMatchObject({ status: 'open', result: null });
+        expect(second.tasks.get(child.taskId)).toMatchObject({ status: 'failed', wake: 'sent', result: { source: 'exit' } });
         expect(second.outbox.list()).toEqual([]);
-        expect(wakeTurns(second)).toEqual([]);
+        expect(wakeTurns(second)).toHaveLength(1);
+        expect(second.chats.get(child.childId)?.preambles.join(' ')).toContain('will not send a result');
     });
 
     test('settles on its last turn when its CLI opens none once the agent it spawned completed', async () => {

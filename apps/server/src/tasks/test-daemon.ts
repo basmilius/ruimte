@@ -164,6 +164,7 @@ export const bootTestDaemon = async ({
         messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
+        endChildren: (chatId) => endChildren.stopNode(chatId, 'a person cleared this chat'),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans,
         limitResume: {
@@ -207,6 +208,7 @@ export const bootTestDaemon = async ({
     });
     const worker = outboxWiring.worker;
     const wiring = outboxWiring.tasks;
+    await wiring.recover();
     const endChildren = outboxWiring.endChildren;
     const summaries = outboxWiring.summaries;
     endChildren.start();
@@ -352,6 +354,8 @@ export const bootTestDaemon = async ({
             wiring.coordinator.stop();
             wiring.waiting.stop();
             summaries.coordinator.stop();
+            await wiring.coordinator.settled();
+            await worker.settled();
             chats.persistAllSync();
             await chats.shutdown();
             sessions.killAll();

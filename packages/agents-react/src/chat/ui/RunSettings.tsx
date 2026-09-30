@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import {
     Activity,
+    TriangleAlert,
     ChevronDown,
     ChevronRight,
     ChevronUp,
@@ -57,6 +58,8 @@ interface RunSettingsProps {
     selection: ModelSelection;
     model: ModelInfo | undefined;
     runtimeMode: RuntimeMode;
+    effectiveRuntimeMode?: RuntimeMode;
+    permissionMode?: string;
     /* Controlled, so `/model` in the composer can open the same menu a click on the pill does. */
     open: boolean;
     onOpenChange(open: boolean): void;
@@ -104,6 +107,8 @@ export function RunSettings({
     selection,
     model,
     runtimeMode,
+    effectiveRuntimeMode,
+    permissionMode,
     open,
     onOpenChange,
     onModel,
@@ -134,7 +139,11 @@ export function RunSettings({
     const legacy = providers.map((entry) => ({ entry, models: entry.models.filter((row) => row.legacy) })).filter((group) => group.models.length > 0);
     const chosenLegacy = owner?.models.find((row) => row.legacy && row.slug === selection.model);
     const chosenModel = modelValue(provider, selection.model);
-    const fullAccess = runtimeMode === 'full-access';
+    const shownMode = effectiveRuntimeMode ?? runtimeMode;
+    const fullAccess = shownMode === 'full-access';
+    const permissionFallback = permissionMode !== undefined && effectiveRuntimeMode !== runtimeMode;
+    const effectiveLabel = effectiveRuntimeMode === undefined ? permissionMode : t(`modes.${effectiveRuntimeMode}.label`);
+    const permissionHint = permissionFallback ? t('pickers.mode.effective', { effective: effectiveLabel, requested: t(`modes.${runtimeMode}.label`) }) : null;
 
     const chooseModel = (value: string): void => {
         const slash = value.indexOf('/');
@@ -162,7 +171,7 @@ export function RunSettings({
 
     return (
         <Menu.Root open={open} onOpenChange={onOpenChange}>
-            <Tooltip label={t('pickers.settings.title')} kbd="/model">
+            <Tooltip label={permissionHint ?? t('pickers.settings.title')} kbd="/model">
                 {/* Styled from `open`: the tooltip puts `data-popup-open` on the same trigger. */}
                 <Menu.Trigger
                     className={clsx(
@@ -197,8 +206,11 @@ export function RunSettings({
                         ))}
                         <span className="shrink-0 text-text-faint">·</span>
                         <span className={clsx('flex shrink-0 items-center gap-1', fullAccess && 'text-status-needs-you')}>
-                            <Icon icon={MODE_ICONS[runtimeMode]} size={12} className="shrink-0" />
-                            <span className="@max-xl/composer:hidden">{t(`modes.${runtimeMode}.short`)}</span>
+                            <Icon icon={MODE_ICONS[shownMode]} size={12} className="shrink-0" />
+                            <span className="@max-xl/composer:hidden">
+                                {effectiveRuntimeMode === undefined && permissionMode !== undefined ? permissionMode : t(`modes.${shownMode}.short`)}
+                            </span>
+                            {permissionFallback && <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />}
                         </span>
                     </span>
                     <Icon icon={open ? ChevronUp : ChevronDown} size={12} className="shrink-0 @max-sm/composer:hidden" />
@@ -233,6 +245,7 @@ export function RunSettings({
                         <Menu.Hint className="truncate">{t(`modes.${runtimeMode}.label`)}</Menu.Hint>
                     </Menu.SubmenuTrigger>
                     <Menu.Popup className="w-72">
+                        {permissionHint !== null && <p className="px-2.5 py-2 text-xs text-text-muted">{permissionHint}</p>}
                         <Menu.RadioGroup value={runtimeMode} onValueChange={(mode: RuntimeMode) => onMode(mode)}>
                             {RUNTIME_MODES.map((mode) => (
                                 <Menu.RadioItem key={mode} value={mode} className="items-start">

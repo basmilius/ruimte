@@ -1,0 +1,119 @@
+{
+  "version": "codex-cli 0.159.2",
+  "capturedAt": "2026-09-30",
+  "source": "Live app-server stdio. Root spawned one native child and delayed completion with sleep 25. The child command write in a temporary folder was declined only after root completion. Temporary cwd is redacted. Unrelated frames were omitted.",
+  "rootThreadId": "01a0f19d-5e91-7513-9a9a-78e464ac2e92",
+  "frames": [
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_SU1LgqCHix4oNHa7WZuwBvRQ",
+          "kind": "started",
+          "agentThreadId": "01a0f19d-7ed5-73e3-8b77-59f8222fdc06",
+          "agentPath": "/root/approval_probe"
+        },
+        "threadId": "01a0f19d-5e91-7513-9a9a-78e464ac2e92",
+        "turnId": "01a0f19d-5f0d-7af1-b592-7245fc5ae30e",
+        "startedAtMs": 1790760025825
+      }
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_SU1LgqCHix4oNHa7WZuwBvRQ",
+          "kind": "started",
+          "agentThreadId": "01a0f19d-7ed5-73e3-8b77-59f8222fdc06",
+          "agentPath": "/root/approval_probe"
+        },
+        "threadId": "01a0f19d-5e91-7513-9a9a-78e464ac2e92",
+        "turnId": "01a0f19d-5f0d-7af1-b592-7245fc5ae30e",
+        "completedAtMs": 1790760025825
+      }
+    },
+    {
+      "method": "item/commandExecution/requestApproval",
+      "params": {
+        "kind": "command",
+        "threadId": "01a0f19d-7ed5-73e3-8b77-59f8222fdc06",
+        "turnId": "01a0f19d-7ee1-7c80-8f3d-121dcb7e6a61",
+        "itemId": "exec-682e43ae-7f6d-4104-bba1-606c10792101",
+        "startedAtMs": 1790760036365,
+        "environmentId": "local",
+        "reason": "Protocol probe for a temporary file.",
+        "command": "/bin/zsh -lc 'printf sample > approval-probe.txt'",
+        "cwd": "<temporary-folder>",
+        "commandActions": [
+          {
+            "type": "unknown",
+            "command": "printf sample > approval-probe.txt"
+          }
+        ],
+        "proposedExecpolicyAmendment": [
+          "/bin/zsh",
+          "-lc",
+          "printf sample > approval-probe.txt"
+        ],
+        "availableDecisions": [
+          "accept",
+          {
+            "acceptWithExecpolicyAmendment": {
+              "execpolicy_amendment": [
+                "/bin/zsh",
+                "-lc",
+                "printf sample > approval-probe.txt"
+              ]
+            }
+          },
+          "cancel"
+        ]
+      },
+      "id": 0
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0f19d-5e91-7513-9a9a-78e464ac2e92",
+        "turn": {
+          "id": "01a0f19d-5f0d-7af1-b592-7245fc5ae30e",
+          "items": [
+            {
+              "type": "agentMessage",
+              "id": "msg_097b6f1b3dff4c80016abcd47ab84087d2b0f64d1d0b8f7df2",
+              "text": "Spawned exactly one child and completed `sleep 25`. Ending without waiting for the child or its write approval.",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "summary",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790760017,
+          "completedAt": 1790760059,
+          "durationMs": 41904
+        }
+      }
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0f19d-7ed5-73e3-8b77-59f8222fdc06",
+        "turn": {
+          "id": "01a0f19d-7ee1-7c80-8f3d-121dcb7e6a61",
+          "items": [],
+          "itemsView": "notLoaded",
+          "status": "interrupted",
+          "error": null,
+          "startedAt": 1790760025,
+          "completedAt": 1790760059,
+          "durationMs": 33779
+        }
+      }
+    }
+  ]
+}

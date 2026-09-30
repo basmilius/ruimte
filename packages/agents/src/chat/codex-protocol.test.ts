@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import type { BackendEvent } from './backend.ts';
 import { CodexProtocol, unwrapCommand } from './codex-protocol.ts';
+import nativeApprovalCapture from './fixtures/codex-0.159.2-native-approval.json';
+import nativeFileApprovalCapture from './fixtures/codex-0.159.2-native-file-approval.json';
+import nativeInteractedCapture from './fixtures/codex-0.159.2-native-interacted.json';
+import { ChatThread } from './thread.ts';
+import { ThreadProjector } from './projector.ts';
+import { codexProvider } from '../providers/codex-provider.ts';
 
 const ids = { threadId: 't1', turnId: 'ct1' };
 
@@ -16,6 +22,83 @@ const message = (id: string, text: string, extra: Record<string, unknown> = {}) 
 });
 
 describe('CodexProtocol', () => {
+    test('replays a real interacted child on its original row and thread, without duplicating completion or projecting foreign activity', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.threadReady({ thread: { id: nativeInteractedCapture.rootThreadId } });
+        const thread = new ChatThread({
+            chatId: 'probe',
+            provider: 'codex',
+            cwd: '/tmp',
+            agentSessionId: nativeInteractedCapture.rootThreadId,
+            model: null,
+            selection: codexProvider.catalog.normalize(undefined),
+            runtimeMode: 'auto',
+            running: true,
+            status: 'running',
+            activeTurnId: 'root-turn',
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+            createdAt: 1
+        });
+        const projector = new ThreadProjector(thread, { providerName: 'Codex' });
+        let completed = 0;
+        let restarted = 0;
+        for (const frame of nativeInteractedCapture.frames) {
+            for (const event of protocol.handle(frame)) {
+                projector.project(1, event);
+                if (event.type === 'task.done') {
+                    completed++;
+                }
+                if (event.type === 'task.started' && event.resumed) {
+                    restarted++;
+                    expect(thread.list().filter((item) => item.kind === 'subagent')).toHaveLength(1);
+                    expect(thread.list().find((item) => item.kind === 'subagent')).toMatchObject({
+                        status: 'running',
+                        turnId: 'root-turn',
+                        finishedAt: null,
+                        native: { threadId: frame.params.item.agentThreadId }
+                    });
+                }
+            }
+            expect(protocol.handle({ ...frame, params: { ...frame.params, threadId: 'unrelated-child' } })).toEqual([]);
+        }
+        expect(restarted).toBe(1);
+        expect(completed).toBe(2);
+        expect(thread.list().filter((item) => item.kind === 'subagent')).toHaveLength(1);
+        expect(thread.list().find((item) => item.kind === 'subagent')).toMatchObject({ status: 'done', description: 'lifecycle_probe', turnId: 'root-turn' });
+    });
+    test('reports the effective approval policy and sandbox from the handshake', () => {
+        for (const [effectiveRuntimeMode, approvalPolicy, sandbox] of [
+            ['supervised', 'untrusted', 'readOnly'],
+            ['auto-accept-edits', 'untrusted', 'workspaceWrite'],
+            ['auto', 'on-request', 'workspaceWrite'],
+            ['full-access', 'never', 'dangerFullAccess']
+        ]) {
+            expect(new CodexProtocol(1).threadReady({ thread: { id: 'root' }, approvalPolicy, sandbox: { type: sandbox } })[0]).toMatchObject({
+                effectiveRuntimeMode,
+                permissionMode: `${approvalPolicy} / ${sandbox}`
+            });
+        }
+    });
+
+    test('replays a real child file approval with its diff held across root completion', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.threadReady({ thread: { id: nativeFileApprovalCapture.rootThreadId } });
+        let approval: Extract<BackendEvent, { type: 'approval.requested' }> | undefined;
+        for (const frame of nativeFileApprovalCapture.frames) {
+            const events = protocol.handle(frame);
+            approval ??= events.find((event) => event.type === 'approval.requested');
+            if (frame.method === 'turn/completed' && frame.params.threadId === nativeFileApprovalCapture.rootThreadId) {
+                expect(events.some((event) => event.type === 'request.withdrawn')).toBe(false);
+                expect(approval).toMatchObject({
+                    toolName: 'ApplyPatch',
+                    description: 'Requested by subagent file_probe.',
+                    input: { changes: [{ path: '<temporary-folder>/approval-probe.txt', kind: 'add', diff: 'sample\n' }] }
+                });
+                expect(protocol.approvalDecision(approval!.requestId, 'deny')).toEqual({ rpcId: 0, result: { decision: 'decline' } });
+            }
+        }
+    });
     test('the handshake answers the thread id and model; the turn id comes from turn/started', () => {
         const protocol = new CodexProtocol(1);
         expect(protocol.threadReady({ thread: { id: 'thread-abc', model: 'gpt-6-astra' }, model: 'gpt-6-astra never danger-full-access' })).toEqual([
@@ -562,4 +645,144 @@ describe('rate limits', () => {
             { type: 'turn.done', state: 'done', costUsd: 0, native: { turnId: 'ct1' } }
         ]);
     });
+});
+
+describe('native child approval ownership', () => {
+    test('replays the live Codex 0.159.2 child approval held across root completion', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.threadReady({ thread: { id: nativeApprovalCapture.rootThreadId } });
+        let requestId: string | null = null;
+        let rpcId: number | string | null = null;
+        for (const frame of nativeApprovalCapture.frames) {
+            const events = protocol.handle(frame);
+            const approval = events.find((event) => event.type === 'approval.requested');
+            if (approval?.type === 'approval.requested') {
+                requestId = approval.requestId;
+                rpcId = frame.id!;
+                expect(approval.description).toContain('approval_probe');
+            }
+            if (frame.method === 'turn/completed' && frame.params.threadId === nativeApprovalCapture.rootThreadId) {
+                expect(requestId).not.toBeNull();
+                expect(rpcId).not.toBeNull();
+                expect(events.some((event) => event.type === 'request.withdrawn')).toBe(false);
+                expect(protocol.approvalDecision(requestId!, 'deny')).toEqual({ rpcId: rpcId!, result: { decision: 'decline' } });
+            }
+        }
+        expect(protocol.approvalDecision(requestId!, 'allow')).toBeNull();
+    });
+
+    const child = { threadId: 'child', turnId: 'child-turn', itemId: 'patch' };
+    const request = (protocol: CodexProtocol, id = 9) => protocol.handle({ id, method: 'item/fileChange/requestApproval', params: child });
+    const ready = () => {
+        const protocol = new CodexProtocol(1);
+        protocol.threadReady({ thread: { id: 'root' } });
+        return protocol;
+    };
+
+    test('keeps a child diff without projecting child output into the root thread', () => {
+        const protocol = ready();
+        expect(
+            protocol.handle({
+                method: 'item/started',
+                params: {
+                    ...child,
+                    item: { type: 'fileChange', id: 'patch', changes: [{ path: 'child.ts', kind: 'update', diff: '-old\n+new' }], status: 'inProgress' }
+                }
+            })
+        ).toEqual([]);
+        expect(protocol.handle({ method: 'item/agentMessage/delta', params: { ...child, delta: 'child text' } })).toEqual([]);
+        expect(request(protocol)[0]).toMatchObject({
+            type: 'approval.requested',
+            input: {
+                changes: [{ path: 'child.ts', kind: 'update', diff: '-old\n+new' }]
+            }
+        });
+        expect(request(protocol, 10)[0]).toMatchObject({ description: expect.stringContaining('child') });
+    });
+
+    test('names the child in its approval and closes only requests owned by the closing thread', () => {
+        const protocol = ready();
+        protocol.handle({
+            method: 'item/started',
+            params: { threadId: 'root', item: { type: 'subAgentActivity', id: 'spawn', kind: 'started', agentThreadId: 'child', agentPath: '/root/Reviewer' } }
+        });
+        expect(request(protocol)[0]).toMatchObject({ description: 'Requested by subagent Reviewer.' });
+        protocol.handle({ id: 10, method: 'item/fileChange/requestApproval', params: { threadId: 'root', turnId: 'root-turn', itemId: 'root-patch' } });
+        expect(protocol.handle({ method: 'thread/closed', params: { threadId: 'root' } })).toEqual([{ type: 'request.withdrawn', requestId: '1-10' }]);
+        expect(protocol.approvalDecision('1-9', 'allow')).toEqual({ rpcId: 9, result: { decision: 'accept' } });
+    });
+
+    test('root completion cannot withdraw a child request, but its own turn can', () => {
+        const protocol = ready();
+        request(protocol);
+        const root = protocol.handle({ method: 'turn/completed', params: { threadId: 'root', turn: { id: 'root-turn', status: 'completed' } } });
+        expect(root.some((event) => event.type === 'request.withdrawn')).toBe(false);
+        expect(protocol.approvalDecision('1-9', 'allow')).toEqual({ rpcId: 9, result: { decision: 'accept' } });
+        expect(protocol.approvalDecision('1-9', 'allow')).toBeNull();
+        request(protocol, 10);
+        const ended = protocol.handle({ method: 'turn/completed', params: { threadId: 'child', turn: { id: 'child-turn', status: 'completed' } } });
+        expect(ended).toEqual([{ type: 'request.withdrawn', requestId: '1-10' }]);
+        expect(protocol.approvalDecision('1-10', 'allow')).toBeNull();
+    });
+
+    test('another turn of the same child leaves the owner turn waiting', () => {
+        const protocol = ready();
+        request(protocol);
+        protocol.handle({ method: 'turn/completed', params: { threadId: 'child', turn: { id: 'other', status: 'completed' } } });
+        expect(protocol.approvalDecision('1-9', 'deny')).toEqual({ rpcId: 9, result: { decision: 'decline' } });
+    });
+
+    test('a child withdrawal and process exit both end its request', () => {
+        const protocol = ready();
+        request(protocol);
+        expect(protocol.handle({ method: 'serverRequest/resolved', params: { threadId: 'child', requestId: 9 } })).toEqual([
+            { type: 'request.withdrawn', requestId: '1-9' }
+        ]);
+        expect(protocol.approvalDecision('1-9', 'allow')).toBeNull();
+        request(protocol, 10);
+        protocol.forgetPending();
+        expect(protocol.approvalDecision('1-10', 'allow')).toBeNull();
+    });
+});
+
+test('approval metadata is scoped by thread, cleared by owner completion and bounded between completions', () => {
+    const protocol = new CodexProtocol(1);
+    protocol.threadReady({ thread: { id: 'root' } });
+    const patch = (threadId: string, itemId: string, path: string) =>
+        protocol.handle({
+            method: 'item/started',
+            params: {
+                threadId,
+                turnId: 'turn',
+                item: { type: 'fileChange', id: itemId, changes: [{ path, kind: 'update', diff: '-x\n+y' }] }
+            }
+        });
+    const approval = (id: number, threadId: string, itemId: string) =>
+        protocol.handle({ id, method: 'item/fileChange/requestApproval', params: { threadId, turnId: 'turn', itemId } })[0];
+    patch('child', 'same', 'child.ts');
+    patch('root', 'same', 'root.ts');
+    expect(approval(1, 'child', 'same')).toMatchObject({ input: { summary: 'child.ts' } });
+    expect(approval(2, 'root', 'same')).toMatchObject({ input: { summary: 'root.ts' } });
+    protocol.handle({ method: 'turn/completed', params: { threadId: 'child', turn: { id: 'turn', status: 'completed' } } });
+    expect(approval(3, 'child', 'same')).toMatchObject({ input: { changes: [] } });
+    for (let i = 0; i < 600; i++) {
+        patch('child', `patch-${i}`, `file-${i}.ts`);
+    }
+    expect(approval(4, 'child', 'patch-0')).toMatchObject({ input: { changes: [] } });
+    expect(approval(5, 'child', 'patch-599')).toMatchObject({ input: { summary: 'file-599.ts' } });
+    protocol.forgetPending();
+    expect(approval(6, 'child', 'patch-599')).toMatchObject({ input: { changes: [] } });
+});
+
+test('Stop declines a child request and its runtime closing withdraws another', () => {
+    const protocol = new CodexProtocol(1);
+    protocol.threadReady({ thread: { id: 'root' } });
+    const request = (id: number) =>
+        protocol.handle({ id, method: 'item/commandExecution/requestApproval', params: { threadId: 'child', turnId: 'turn', command: 'example' } });
+    request(1);
+    expect(protocol.declineRequest('1-1')).toEqual({ rpcId: 1, result: { decision: 'decline' } });
+    expect(protocol.approvalDecision('1-1', 'allow')).toBeNull();
+    request(2);
+    expect(protocol.handle({ method: 'thread/closed', params: { threadId: 'child' } })).toEqual([{ type: 'request.withdrawn', requestId: '1-2' }]);
+    expect(protocol.approvalDecision('1-2', 'allow')).toBeNull();
 });

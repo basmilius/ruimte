@@ -1,5 +1,6 @@
 import type { ChatFileChange, ChatQuestion, ChatTurnLimit, UsageWindow } from '@ruimte/agent-contracts';
 import { readCodexLimits } from '../usage/limits/normalize.ts';
+import { codexRuntimeMode } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 import type { CodexFrame } from './codex-transport.ts';
 import { cleanTitle } from '../title-file.ts';
@@ -125,10 +126,14 @@ const outputChunk = (params: Frame): string | null => {
     return new TextDecoder().decode(Uint8Array.from(bytes.filter((byte): byte is number => typeof byte === 'number')));
 };
 
-type Pending =
-    | { type: 'approval'; rpcId: CodexRpcId; kind: 'command' | 'fileChange'; amendment: string[] | null; decisions: string[] }
-    | { type: 'question'; rpcId: CodexRpcId | null; questionIds: string[] }
-    | { type: 'elicitation'; rpcId: CodexRpcId; persist: ElicitationPersist | null };
+type RequestOwner = { threadId: string | null; turnId: string | null };
+
+type Pending = RequestOwner &
+    (
+        | { type: 'approval'; rpcId: CodexRpcId; kind: 'command' | 'fileChange'; amendment: string[] | null; decisions: string[] }
+        | { type: 'question'; rpcId: CodexRpcId | null; questionIds: string[] }
+        | { type: 'elicitation'; rpcId: CodexRpcId; persist: ElicitationPersist | null }
+    );
 
 type ElicitationPersist = 'always' | 'session';
 
@@ -170,7 +175,7 @@ export class CodexProtocol {
     private readonly generation: number;
     private readonly pending = new Map<string, Pending>();
     // The input the thread shows for an item, so an approval about it can repeat what it is for.
-    private readonly toolInputs = new Map<string, { input: unknown; changes: ChatFileChange[] }>();
+    private readonly toolInputs = new Map<string, RequestOwner & { input: unknown; changes: ChatFileChange[] }>();
     private codexTurnId: string | null = null;
     // Command items with a terminal session of their own, by item id, to the process id that ending one names.
     private readonly openTerminals = new Map<string, string>();
@@ -180,7 +185,7 @@ export class CodexProtocol {
     // The chat's own thread. A spawned agent's thread streams over the same connection, and none of it is the chat's.
     private ownThreadId: string | null = null;
     // Per agent thread, the ref of the row that stands for it and whether that row has settled.
-    private readonly agentRows = new Map<string, { ref: string; settled: boolean }>();
+    private readonly agentRows = new Map<string, { ref: string; label: string; settled: boolean; interaction?: string }>();
 
     constructor(generation: number) {
         this.generation = generation;
@@ -195,12 +200,17 @@ export class CodexProtocol {
     threadReady(result: unknown): BackendEvent[] {
         const thread = isRecord(result) && isRecord(result.thread) ? result.thread : {};
         this.ownThreadId = str(thread.id) ?? this.ownThreadId;
+        const policy = isRecord(result) ? str(result.approvalPolicy) : null;
+        const sandbox = isRecord(result) && isRecord(result.sandbox) ? str(result.sandbox.type) : null;
+        const effectiveRuntimeMode = policy && sandbox ? codexRuntimeMode(policy, sandbox) : undefined;
         return [
             {
                 type: 'session',
                 agentSessionId: str(thread.id),
                 model: (isRecord(result) ? str(result.model) : null) ?? str(thread.model),
-                title: cleanTitle(thread.name)
+                title: cleanTitle(thread.name),
+                ...(policy && sandbox ? { permissionMode: `${policy} / ${sandbox}` } : {}),
+                ...(effectiveRuntimeMode === undefined ? {} : { effectiveRuntimeMode })
             }
         ];
     }
@@ -215,9 +225,26 @@ export class CodexProtocol {
             this.handleServerRequest(frame.method, frame.id as CodexRpcId, params, events);
             return events;
         }
+        if (frame.method === 'serverRequest/resolved') {
+            const rpcId = params.requestId;
+            if (typeof rpcId === 'number' || typeof rpcId === 'string') {
+                const requestId = this.requestId(rpcId);
+                this.pending.delete(requestId);
+                events.push({ type: 'request.withdrawn', requestId });
+            }
+            return events;
+        }
+        if (frame.method === 'item/started' || frame.method === 'item/completed') {
+            this.rememberPatch(params);
+        }
         // Codex 0.156.1 streams a spawned agent's turns, items and usage here too, under that agent's thread id.
         const threadId = frame.method === 'thread/started' ? (isRecord(params.thread) ? str(params.thread.id) : null) : str(params.threadId);
         if (threadId !== null && this.ownThreadId !== null && threadId !== this.ownThreadId) {
+            if (frame.method === 'turn/completed') {
+                this.withdrawOwner(threadId, isRecord(params.turn) ? str(params.turn.id) : null, events);
+            } else if (frame.method === 'thread/closed') {
+                this.withdrawOwner(threadId, null, events);
+            }
             return events;
         }
         switch (frame.method) {
@@ -237,6 +264,9 @@ export class CodexProtocol {
                 break;
             case 'turn/completed':
                 this.handleTurnCompleted(params, events);
+                break;
+            case 'thread/closed':
+                this.withdrawOwner(threadId ?? this.ownThreadId, null, events);
                 break;
             case 'item/started':
             case 'item/completed':
@@ -284,15 +314,6 @@ export class CodexProtocol {
                     contextTokens: num(last.totalTokens),
                     ...(contextWindow > 0 ? { contextWindow } : {})
                 });
-                break;
-            }
-            case 'serverRequest/resolved': {
-                const rpcId = params.requestId;
-                if (typeof rpcId === 'number' || typeof rpcId === 'string') {
-                    const requestId = this.requestId(rpcId);
-                    this.pending.delete(requestId);
-                    events.push({ type: 'request.withdrawn', requestId });
-                }
                 break;
             }
             case 'error': {
@@ -370,6 +391,67 @@ export class CodexProtocol {
 
     forgetPending(): void {
         this.pending.clear();
+        this.toolInputs.clear();
+        this.agentRows.clear();
+    }
+
+    declineRequest(requestId: string): { rpcId: CodexRpcId; result: unknown } | null {
+        const pending = this.pending.get(requestId);
+        if (!pending) {
+            return null;
+        }
+        if (pending.type !== 'question') {
+            return this.approvalDecision(requestId, 'deny');
+        }
+        this.pending.delete(requestId);
+        return pending.rpcId === null ? null : { rpcId: pending.rpcId, result: { answers: {} } };
+    }
+
+    private owner(params: Frame): RequestOwner {
+        const threadId = str(params.threadId) ?? this.ownThreadId;
+        return { threadId, turnId: str(params.turnId) ?? (threadId === this.ownThreadId ? this.codexTurnId : null) };
+    }
+
+    private toolKey(threadId: string | null, itemId: string): string {
+        return JSON.stringify([threadId, itemId]);
+    }
+
+    private rememberPatch(params: Frame): void {
+        const item = isRecord(params.item) ? params.item : null;
+        if (item?.type !== 'fileChange' || typeof item.id !== 'string') {
+            return;
+        }
+        const owner = this.owner(params);
+        const changes = parseChanges(item.changes);
+        this.toolInputs.set(this.toolKey(owner.threadId, item.id), { ...owner, input: { summary: changes.map((change) => change.path).join(', ') }, changes });
+        // An approval copies its input into the event, so evicting cached metadata cannot change an open card.
+        if (this.toolInputs.size > 512) {
+            this.toolInputs.delete(this.toolInputs.keys().next().value!);
+        }
+    }
+
+    private withdrawOwner(threadId: string | null, turnId: string | null, events: BackendEvent[]): void {
+        const belongs = (owner: RequestOwner): boolean => owner.threadId === threadId && (turnId === null || owner.turnId === null || owner.turnId === turnId);
+        for (const [requestId, pending] of this.pending) {
+            if (belongs(pending)) {
+                this.pending.delete(requestId);
+                events.push({ type: 'request.withdrawn', requestId });
+            }
+        }
+        for (const [key, input] of this.toolInputs) {
+            if (belongs(input)) {
+                this.toolInputs.delete(key);
+            }
+        }
+    }
+
+    private requestDescription(params: Frame, description: string | null): string | null {
+        const threadId = str(params.threadId);
+        if (threadId === null || this.ownThreadId === null || threadId === this.ownThreadId) {
+            return description;
+        }
+        const label = this.agentRows.get(threadId)?.label || threadId;
+        return [`Requested by subagent ${label}.`, description].filter(Boolean).join(' ');
     }
 
     private requestId(rpcId: CodexRpcId): string {
@@ -383,7 +465,7 @@ export class CodexProtocol {
             if (questions.length === 0) {
                 return;
             }
-            this.pending.set(requestId, { type: 'question', rpcId, questionIds: questions.map((question) => question.id) });
+            this.pending.set(requestId, { ...this.owner(params), type: 'question', rpcId, questionIds: questions.map((question) => question.id) });
             events.push({ type: 'question.requested', requestId, questions });
             return;
         }
@@ -396,7 +478,7 @@ export class CodexProtocol {
             return;
         }
         const itemId = str(params.itemId);
-        const known = itemId ? this.toolInputs.get(itemId) : undefined;
+        const known = itemId ? this.toolInputs.get(this.toolKey(this.owner(params).threadId, itemId)) : undefined;
         const decisions = Array.isArray(params.availableDecisions)
             ? params.availableDecisions.map((decision) =>
                   typeof decision === 'string' ? decision : (Object.keys(isRecord(decision) ? decision : {})[0] ?? '')
@@ -410,14 +492,21 @@ export class CodexProtocol {
             kind === 'command'
                 ? { command: unwrapCommand(str(params.command) ?? ''), cwd: str(params.cwd) ?? undefined }
                 : { ...(isRecord(known?.input) ? known.input : { itemId }), changes: known?.changes ?? [] };
-        this.pending.set(requestId, { type: 'approval', rpcId, kind, amendment: amendment && amendment.length > 0 ? amendment : null, decisions });
+        this.pending.set(requestId, {
+            ...this.owner(params),
+            type: 'approval',
+            rpcId,
+            kind,
+            amendment: amendment && amendment.length > 0 ? amendment : null,
+            decisions
+        });
         events.push({
             type: 'approval.requested',
             requestId,
             ref: itemId,
             toolName: kind === 'command' ? 'Bash' : 'ApplyPatch',
             input,
-            description: str(params.reason),
+            description: this.requestDescription(params, str(params.reason)),
             canAllowAlways: (amendment !== null && amendment.length > 0) || decisions.includes('acceptForSession'),
             ...(amendment && amendment.length > 0
                 ? {
@@ -442,14 +531,14 @@ export class CodexProtocol {
         }
         const meta = isRecord(params._meta) ? params._meta : {};
         const persist = elicitationPersist(meta);
-        this.pending.set(requestId, { type: 'elicitation', rpcId, persist });
+        this.pending.set(requestId, { ...this.owner(params), type: 'elicitation', rpcId, persist });
         events.push({
             type: 'approval.requested',
             requestId,
             ref: str(meta.callId),
             toolName: str(meta.connector_name) ?? str(params.serverName) ?? 'MCP',
             input: elicitationInput(meta),
-            description: str(params.message),
+            description: this.requestDescription(params, str(params.message)),
             canAllowAlways: persist !== null,
             ...(persist === 'always'
                 ? { allowAlways: { label: 'Always allow', description: 'Codex remembers this approval, also in later chats.' } }
@@ -473,7 +562,7 @@ export class CodexProtocol {
                     if (!completed || this.pending.has(ref)) {
                         return;
                     }
-                    this.pending.set(ref, { type: 'question', rpcId: null, questionIds: questions.map((question) => question.id) });
+                    this.pending.set(ref, { ...this.owner(params), type: 'question', rpcId: null, questionIds: questions.map((question) => question.id) });
                     events.push({ type: 'question.requested', requestId: ref, questions, async: true });
                     return;
                 }
@@ -587,11 +676,7 @@ export class CodexProtocol {
         const limit = status === 'failed' && isRecord(turn.error) ? this.limitOf(turn.error.codexErrorInfo) : null;
         const turnId = str(turn.id) ?? this.codexTurnId;
         this.codexTurnId = null;
-        // Forgotten here, so the thread may not keep waiting on any of it: nothing could answer it past the turn.
-        for (const requestId of this.pending.keys()) {
-            events.push({ type: 'request.withdrawn', requestId });
-        }
-        this.pending.clear();
+        this.withdrawOwner(str(params.threadId) ?? this.ownThreadId, turnId, events);
         // A terminal session still open as the turn ends is one Codex left running; it only completes once its process does.
         for (const [ref, processId] of this.openTerminals) {
             this.backgroundTerminals.set(ref, processId);
@@ -655,7 +740,7 @@ export class CodexProtocol {
             return;
         }
         if (!this.agentRows.has(threadId)) {
-            this.agentRows.set(threadId, { ref, settled: false });
+            this.agentRows.set(threadId, { ref, label: (str(item.prompt) ?? '').split('\n')[0] ?? '', settled: false });
         }
         if (!this.settleEndedAgents(item.agentsStates, events)) {
             events.push({ type: 'task.progress', ref, summary: summary || null, lastTool: null, usage: null });
@@ -672,6 +757,7 @@ export class CodexProtocol {
                 continue;
             }
             row.settled = true;
+            this.withdrawOwner(threadId, null, events);
             settled = true;
             events.push({ type: 'task.done', ref: row.ref, summary: collabAgentOutput({ [threadId]: state }), ok: status === 'completed' });
         }
@@ -691,16 +777,32 @@ export class CodexProtocol {
             return;
         }
         const row = this.agentRows.get(threadId);
-        if (kind === 'started' && row === undefined) {
-            this.agentRows.set(threadId, { ref, settled: false });
+        if ((kind === 'started' || kind === 'interacted') && row === undefined) {
             // The path ends in the name the parent gave the agent, which is all the stream says about its task.
             const path = str(item.agentPath) ?? '';
+            this.agentRows.set(threadId, { ref, label: path.split('/').at(-1) ?? '', settled: false, ...(kind === 'interacted' ? { interaction: ref } : {}) });
             events.push({ type: 'tool.started', ref, name: 'Agent', input: { agentPath: path }, parentRef: null });
             events.push({ type: 'task.started', ref, description: path.split('/').at(-1) ?? '', subagentType: null, prompt: null, background: true, threadId });
             return;
         }
+        if (kind === 'interacted' && row !== undefined && row.interaction !== ref) {
+            row.interaction = ref;
+            row.settled = false;
+            events.push({
+                type: 'task.started',
+                ref: row.ref,
+                description: row.label,
+                subagentType: null,
+                prompt: null,
+                background: true,
+                threadId,
+                resumed: true
+            });
+            return;
+        }
         if ((kind === 'completed' || kind === 'interrupted') && row !== undefined && !row.settled) {
             row.settled = true;
+            this.withdrawOwner(threadId, null, events);
             events.push({ type: 'task.done', ref: row.ref, summary: null, ok: kind === 'completed' });
         }
     }
@@ -715,7 +817,6 @@ export class CodexProtocol {
         events: BackendEvent[],
         changes?: ChatFileChange[]
     ): void {
-        this.toolInputs.set(ref, { input, changes: changes ?? [] });
         events.push({ type: 'tool.started', ref, name, input, parentRef: null, ...(changes && changes.length > 0 ? { changes } : {}) });
         if (completed) {
             events.push({ type: 'tool.done', ref, output, state: succeeded ? 'done' : 'error', ...(changes && changes.length > 0 ? { changes } : {}) });

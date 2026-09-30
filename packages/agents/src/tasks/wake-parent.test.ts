@@ -130,3 +130,55 @@ describe('wake-parent', () => {
         expect(wakePrompt(tasks)).toEndWith('\n\n[The result was cut at 8 KiB.]');
     });
 });
+
+test('a wake is marked only after its parent turn is durably saved, including a failed save and retry', async () => {
+    const candidate = task('durable');
+    const items: ChatItem[] = [];
+    const saved = Promise.withResolvers<void>();
+    let fail = true;
+    let turns = 0;
+    const handler = wakeParentHandler({
+        tasks: {
+            pendingWake: () => (candidate.wake === 'pending' ? [candidate] : []),
+            readyWake: () => [candidate],
+            openBatches: () => [],
+            markWoken: async () => {
+                candidate.wake = 'sent';
+            },
+            dropWake: async () => undefined
+        },
+        chat: async () => ({
+            items: () => items,
+            wake: (wake) => {
+                turns += 1;
+                items.push({
+                    id: 'durable-turn',
+                    kind: 'turn',
+                    turnId: 'durable-turn',
+                    taskIds: wake.taskIds,
+                    createdAt: 1,
+                    endedAt: null,
+                    state: 'running',
+                    costUsd: 0
+                });
+                return true;
+            },
+            persist: async () => {
+                await saved.promise;
+                if (fail) {
+                    throw new Error('disk full');
+                }
+            }
+        })
+    });
+    const first = handler(entry);
+    await Promise.resolve();
+    expect(candidate.wake).toBe('pending');
+    saved.resolve();
+    await expect(first).rejects.toThrow('disk full');
+    expect(candidate.wake).toBe('pending');
+    fail = false;
+    await handler(entry);
+    expect(candidate.wake).toBe('sent');
+    expect(turns).toBe(1);
+});

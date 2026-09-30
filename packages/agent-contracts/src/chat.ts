@@ -144,6 +144,9 @@ export const ChatInfoSchema = z.object({
     model: z.string().nullable(),
     selection: ModelSelectionSchema,
     runtimeMode: RuntimeModeSchema,
+    // The CLI's reported permissions; absent until it confirms them for the current process.
+    effectiveRuntimeMode: RuntimeModeSchema.optional(),
+    permissionMode: z.string().optional(),
     status: AgentStatusSchema,
     // Whether the CLI process is alive right now. A dead one is started again with `--resume` on the next send.
     running: z.boolean(),
@@ -154,6 +157,7 @@ export const ChatInfoSchema = z.object({
     skills: z.array(z.string()).optional(),
     // Messages typed while a turn ran, in the order they go out once it settles.
     queue: z.array(ChatQueuedMessageSchema).optional(),
+    queuePaused: z.boolean().optional(),
     background: z.array(ChatBackgroundTaskSchema).optional(),
     usage: ChatUsageSchema,
     // The name the CLI gave the session, when it gives one; a node that nobody named takes it.
@@ -277,8 +281,11 @@ export type ChatWorkflowAgent = z.infer<typeof ChatWorkflowAgentSchema>;
 // What a Workflow call runs: every phase the script announced, and the agents it started so far.
 export const ChatWorkflowSchema = z.object({
     name: z.string().nullable(),
+    taskId: z.string().optional(),
     phases: z.array(ChatWorkflowPhaseSchema),
-    agents: z.array(ChatWorkflowAgentSchema)
+    agents: z.array(ChatWorkflowAgentSchema),
+    lastProgressAt: z.number().optional(),
+    stalledAt: z.number().optional()
 });
 export type ChatWorkflow = z.infer<typeof ChatWorkflowSchema>;
 
@@ -427,6 +434,8 @@ export const ChatTurnItemSchema = z.object({
     checkpointDiff: ChatCheckpointDiffSchema.optional(),
     // How many CLI processes worked on this turn; absent is one, which is every turn before this field.
     attempt: z.number().int().positive().optional(),
+    // A written resume attempt whose CLI has not accepted its prompt yet; retries reuse it.
+    resumePending: z.boolean().optional(),
     // The tasks whose results woke the chat for this turn; only a turn the daemon opened carries them.
     taskIds: z.array(z.string()).optional(),
     // The nodes whose messages woke the chat for this turn, which is where waking on a message stops: a turn with one wakes nobody.

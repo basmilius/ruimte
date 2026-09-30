@@ -137,7 +137,8 @@
     "workflow": {
       "notStarted": "nog niet begonnen",
       "waiting": "wacht",
-      "stopped": "gestopt"
+      "stopped": "gestopt",
+      "stalled": "Vijf minuten geen voortgang gemeld. De workflow loopt nog; je kunt hem stoppen."
     }
   },
   "work": {
@@ -271,7 +272,8 @@
       "attachments_other": "{{count}} bijlagen",
       "alreadySent": "Dat bericht was al verstuurd",
       "editFailed": "Het bericht kon niet worden teruggehaald om te bewerken",
-      "sendNow": "Nu versturen"
+      "sendNow": "Nu versturen",
+      "paused": "Wachtrij gepauzeerd. Verstuur een bericht of kies Nu versturen om verder te gaan."
     },
     "quote": {
       "add": "Citeren",
@@ -370,7 +372,8 @@
       "files_other": "{{count}} bestanden, niet bewaard"
     },
     "mode": {
-      "label": "Rechten"
+      "label": "Rechten",
+      "effective": "Draait met {{effective}}. Gekozen: {{requested}}."
     },
     "account": {
       "label": "Account",

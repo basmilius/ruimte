@@ -1,9 +1,29 @@
 import { describe, expect, jest, test } from 'bun:test';
 import { ClaudeProtocol } from './claude-protocol.ts';
+import autoFallbackCapture from './fixtures/claude-2.1.285-auto-fallback.json';
 
 const usage = { input_tokens: 8, cache_creation_input_tokens: 2671, cache_read_input_tokens: 24869, output_tokens: 1 };
 
 describe('ClaudeProtocol', () => {
+    test('replays the live Haiku Auto fallback that only the later status frame reveals', () => {
+        const protocol = new ClaudeProtocol();
+        expect(protocol.handle(autoFallbackCapture.frames[0])[0]).toMatchObject({ type: 'session', effectiveRuntimeMode: 'auto' });
+        expect(protocol.handle(autoFallbackCapture.frames[1])).toEqual([
+            { type: 'permissions', permissionMode: 'default', effectiveRuntimeMode: 'supervised' }
+        ]);
+    });
+    test('reports the actual init permission mode, including a fallback from Auto', () => {
+        for (const [permissionMode, effectiveRuntimeMode] of Object.entries({
+            default: 'supervised',
+            auto: 'auto',
+            acceptEdits: 'auto-accept-edits',
+            bypassPermissions: 'full-access'
+        })) {
+            expect(new ClaudeProtocol().handle({ type: 'system', subtype: 'init', permissionMode })[0]).toMatchObject({ permissionMode, effectiveRuntimeMode });
+        }
+        expect(new ClaudeProtocol().handle({ type: 'system', subtype: 'init', permissionMode: 'plan' })[0]).toMatchObject({ permissionMode: 'plan' });
+        expect(new ClaudeProtocol().handle({ type: 'system', subtype: 'init', permissionMode: 'plan' })[0]).not.toHaveProperty('effectiveRuntimeMode');
+    });
     test('the init frame reports the session, and text streams under one ref per block', () => {
         const protocol = new ClaudeProtocol();
         expect(protocol.handle({ type: 'system', subtype: 'init', session_id: 'sid', model: 'm', slash_commands: ['compact'], skills: ['unslop'] })).toEqual([
@@ -506,6 +526,7 @@ describe('ClaudeProtocol', () => {
             });
         const byStatus = new ClaudeProtocol();
         expect(launch(byStatus)).toEqual([
+            { type: 'workflow.progress', ref: 'toolu_wf', workflow: { name: null, taskId: 'wtbdiuq1l', phases: [], agents: [] } },
             { type: 'tool.done', ref: 'toolu_wf', output: expect.stringMatching(/^Workflow launched in background/), state: 'done' }
         ]);
         expect(byStatus.handle({ type: 'system', subtype: 'task_updated', task_id: 'wtbdiuq1l', patch: { status: 'failed' } })).toEqual([
@@ -544,7 +565,7 @@ describe('ClaudeProtocol', () => {
                 workflow_name: 'write-and-read-workflow'
             })
         ).toEqual([
-            { type: 'workflow.progress', ref: 'toolu_wf', workflow: { name: 'write-and-read-workflow', phases: [], agents: [] } },
+            { type: 'workflow.progress', ref: 'toolu_wf', workflow: { name: 'write-and-read-workflow', taskId: 'w4u5arky1', phases: [], agents: [] } },
             { type: 'tool.progress', ref: 'toolu_wf', startedAt: null, description: 'Write alpha to a.txt in phase 1, then read it in phase 2' }
         ]);
         const progress = (extra: Record<string, unknown>) =>
@@ -600,6 +621,7 @@ describe('ClaudeProtocol', () => {
             ref: 'toolu_wf',
             workflow: {
                 name: null,
+                taskId: 'w4u5arky1',
                 phases: [
                     { index: 1, title: 'Write' },
                     { index: 2, title: 'Read' }

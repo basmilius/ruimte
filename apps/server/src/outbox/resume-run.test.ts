@@ -266,11 +266,15 @@ describe('resume-run', () => {
         expect(turnOf(daemon, turnId)).toMatchObject({ state: 'aborted' });
         const session = daemon.chats.get('chat-child')!;
         expect(session.info).toMatchObject({ status: 'idle', activeTurnId: null, running: false });
-        expect(session.thread.list().find((item) => item.kind === 'note')).toMatchObject({
+        expect(
+            session.thread.list().find((item) => item.kind === 'note' && item.level === 'warning' && item.text.includes('could not be resumed'))
+        ).toMatchObject({
             turnId,
             level: 'warning',
             text: expect.stringContaining('could not be resumed after the machine restarted')
         });
+        expect(turnOf(daemon, turnId)).toMatchObject({ attempt: 2, resumePending: true });
+        expect(session.thread.list().filter((item) => item.id === `resume-${turnId}-2`)).toHaveLength(1);
         expect(daemon.outbox.list()).toEqual([]);
     });
 

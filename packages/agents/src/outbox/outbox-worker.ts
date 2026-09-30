@@ -109,6 +109,7 @@ export class OutboxWorker<Work extends OutboxWorkShape> {
 
     private drain(): void {
         if (!this.started) {
+            this.notifySettled();
             return;
         }
         const now = this.clock.now();
@@ -197,7 +198,7 @@ export class OutboxWorker<Work extends OutboxWorkShape> {
 
     private isSettled(): boolean {
         const now = this.clock.now();
-        return this.running.size === 0 && !this.store.list().some((entry) => entry.notBefore <= now && !this.waiting.has(entry.id));
+        return this.running.size === 0 && (!this.started || !this.store.list().some((entry) => entry.notBefore <= now && !this.waiting.has(entry.id)));
     }
 
     private notifySettled(): void {

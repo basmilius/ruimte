@@ -1065,6 +1065,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                     )}
                     {queue.length > 0 && (
                         <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
+                            {info.queuePaused === true && <p className="px-1.5 text-xs text-text-muted">{t('composer.queue.paused')}</p>}
                             {queue.map((message) => {
                                 const sendNow = (): void => void actions.sendNow(chatId, message.id).catch(() => undefined);
                                 const unqueue = (): void => void actions.unqueue(chatId, message.id).catch(() => undefined);
@@ -1222,6 +1223,8 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                             selection={info.selection}
                             model={model}
                             runtimeMode={info.runtimeMode}
+                            effectiveRuntimeMode={info.effectiveRuntimeMode}
+                            permissionMode={info.permissionMode}
                             open={modelPickerOpen}
                             onOpenChange={setModelPickerOpen}
                             onModel={chooseModel}

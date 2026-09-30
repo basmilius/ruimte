@@ -5,11 +5,12 @@ import type { ChatSession } from './chat-session.ts';
 /* A chat the host may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one, false while a turn or an owed resume is in the way. */
 export interface WakeChat {
     items(): ChatItem[];
+    persist?(): Promise<void>;
     wake(wake: { text: string; label: string; note?: string; taskIds: string[]; messageFrom?: string[] }): boolean;
 }
 
 export interface ChatOpenerDeps {
-    chats: Pick<ChatCore, 'get' | 'hasStored' | 'create'>;
+    chats: Pick<ChatCore, 'get' | 'hasStored' | 'create' | 'save'>;
     /* Whether a project still places the node; one that left the document is nobody's to open a turn in. */
     placed(nodeId: string): boolean;
 }
@@ -36,6 +37,7 @@ export const chatOpener =
         return session
             ? {
                   items: () => session.thread.list(),
+                  persist: () => deps.chats.save(chatId),
                   // A turn before the reset would stop on the same limit and spend one of the resume's tries, so it waits for the resume turn.
                   wake: (wake) => session.info.resumeAt === undefined && session.wake(wake) !== null
               }

@@ -63,9 +63,19 @@ export type ApprovalDecision = 'allow' | 'allow-always' | 'deny';
  */
 export type BackendEvent =
     // `title` is the name the CLI already has for the thread, as a resumed Codex thread carries it.
-    | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[]; skills?: string[]; title?: string | null }
+    | {
+          type: 'session';
+          agentSessionId: string | null;
+          model: string | null;
+          slashCommands?: string[];
+          skills?: string[];
+          title?: string | null;
+          effectiveRuntimeMode?: RuntimeMode;
+          permissionMode?: string;
+      }
     // The CLI renamed its thread, for a protocol that says so.
     | { type: 'title'; title: string }
+    | { type: 'permissions'; permissionMode: string; effectiveRuntimeMode?: RuntimeMode }
     | { type: 'text.delta'; ref: string; text: string }
     // `parentRef` is set for text a subagent wrote; it belongs to that agent's row, not to the thread.
     | { type: 'text.done'; ref: string; text: string; parentRef?: string | null }
@@ -106,6 +116,7 @@ export type BackendEvent =
           threadId?: string | null;
           // How many agents deep it runs: 1 for one the chat's own agent opened, 2 for one a subagent opened.
           depth?: number;
+          resumed?: boolean;
       }
     | { type: 'task.progress'; ref: string; taskId?: string | null; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
     // The model a subagent's own answers came from, which its call may not have named.

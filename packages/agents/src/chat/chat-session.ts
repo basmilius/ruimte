@@ -15,7 +15,7 @@ import { notResumedNote } from '@ruimte/agent-contracts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
-import { runningInBackground } from './background-work.ts';
+import { commandLabel, isBackgroundWork, runningInBackground, type BackgroundWork } from './background-work.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
@@ -24,6 +24,7 @@ import { isMainAgentOutput, ThreadProjector } from './projector.ts';
 import type { SubagentSettlement } from './subagent-settlement.ts';
 import { ChatThread } from './thread.ts';
 import { errorText } from '../error-text.ts';
+import { systemClock, type OutboxClock } from '../outbox/outbox-worker.ts';
 
 /* What a host keeps of a chat's turns in git (or anything like it), so a turn can show what it changed. */
 export interface TurnCheckpoints {
@@ -46,6 +47,7 @@ export type ChatReferences = (ids: readonly string[] | undefined) => { ids: stri
 
 export interface ChatSessionOptions {
     info: ChatInfo;
+    clock?: OutboxClock;
     items?: ChatItem[];
     // Said once, in front of the next real prompt, and kept in the record until then (a fork's note for its agent).
     preambles?: string[];
@@ -68,6 +70,7 @@ export interface ChatSessionOptions {
     /* What a turn said about the plan it runs on. It belongs to the machine, so it leaves the chat. */
     onLimits?(update: LimitsUpdate): void;
     persist(): void;
+    save?(): Promise<void>;
     // A write that may wait a moment, for a small change the log already holds.
     persistSoon(): void;
     // The name the CLI gave its session, where it writes one down; absent for a CLI that does not.
@@ -125,6 +128,9 @@ export class ChatSession {
     private readonly projector: ThreadProjector;
     private backend: ChatBackend | null = null;
     private starting: Promise<ChatBackend> | null = null;
+    private pendingStart: { turnId: string; warning: unknown } | null = null;
+    private sendAfterStop = false;
+    private readonly workflowWarnings = new Map<string, unknown>();
     // Bumped per backend, so thread items of a resumed CLI never overwrite older ones.
     private generation = 0;
     // Set by configure: the running process has the old settings, the next send starts a new one.
@@ -230,6 +236,9 @@ export class ChatSession {
         const turnId = newId('turn');
         // Behind whatever still waits (a CLI that crashed leaves its queue), so everything goes out in the order it was sent.
         if (this.busy || this.queue.length > 0) {
+            if (this.busy && this.info.queuePaused) {
+                this.sendAfterStop = true;
+            }
             const message: ChatQueuedMessage = {
                 id: newId('queued'),
                 turnId,
@@ -241,7 +250,8 @@ export class ChatSession {
                 ...(extras.attachments?.length ? { attachments: extras.attachments } : {})
             };
             this.setQueue([...this.queue, message]);
-            this.drainQueue();
+            this.lapseResume();
+            this.drainQueue(true);
             return { queued: true, turnId };
         }
         this.dispatch(text, extras, turnId);
@@ -268,10 +278,11 @@ export class ChatSession {
         }
         this.setQueue([message, ...queue.filter((entry) => entry.id !== messageId)]);
         if (this.busy) {
-            this.cancel();
+            this.cancel(true);
             return true;
         }
-        this.drainQueue();
+        this.lapseResume();
+        this.drainQueue(true);
         return true;
     }
 
@@ -285,16 +296,23 @@ export class ChatSession {
     }
 
     /* The next queued message, once nothing is in its way. */
-    private drainQueue(): void {
+    private drainQueue(explicit = false): void {
         const [next, ...rest] = this.queue;
-        if (!next || this.busy) {
+        const limited = limitedTurn(this.thread.list());
+        if (
+            !next ||
+            this.busy ||
+            (!explicit && (this.info.queuePaused || (limited !== null && (limited.limit.kind === 'usage' || this.info.resumeAt !== undefined))))
+        ) {
             return;
         }
+        this.pauseQueue(false);
         this.setQueue(rest);
         this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, chats: next.chats, attachments: next.attachments }, next.turnId);
     }
 
     private dispatch(text: string, extras: ChatSendExtras, requestedTurnId?: string): void {
+        this.pauseQueue(false);
         this.settleAgentTurn();
         const { preamble, note } = this.contextNote(text);
         // A slash command must stay the first thing the CLI reads, as `contextNote` keeps it.
@@ -330,24 +348,47 @@ export class ChatSession {
         this.startTurnWith((backend) => backend.compact());
     }
 
-    cancel(): void {
+    cancel(advanceQueue = false): void {
+        this.sendAfterStop = advanceQueue;
+        this.pauseQueue(true);
         this.lapseResume();
         const turnId = this.thread.info.activeTurnId;
         // A turn still waiting to be resumed has no process to interrupt; stopping it is ending it here.
         if (!this.backend && turnId !== null) {
+            this.clearStartWarning();
             this.abandon(turnId, null);
             return;
         }
         if (!this.backend || turnId === null) {
+            if (turnId === null && this.backend) {
+                for (const item of this.thread.pending()) {
+                    if (this.backend.declineRequest?.(item.requestId, 'The user stopped the turn')) {
+                        this.receive(this.generation, { type: 'request.withdrawn', requestId: item.requestId });
+                    }
+                }
+                this.options.persist();
+            }
             return;
         }
-        // Through the same queue as the turn, so a stop can never overtake the message it stops.
-        this.run((backend) => backend.interrupt());
+        if (this.pendingStart?.turnId === turnId) {
+            this.clearStartWarning();
+            const backend = this.backend;
+            this.backend = null;
+            this.starting = null;
+            backend.stop();
+            this.emit([this.thread.patchInfo({ running: false })]);
+            this.receive(this.generation, { type: 'turn.done', state: 'aborted', costUsd: 0 });
+            return;
+        }
+        this.backend.interrupt();
     }
 
     /* Ends a command or a monitor the CLI runs in the background; the CLI's own report takes it off the list. */
     stopTask(taskId: string): void {
-        if (!this.thread.info.background?.some((task) => task.id === taskId)) {
+        const workflow = this.thread
+            .list()
+            .some((item) => item.kind === 'tool' && item.name === 'Workflow' && item.state === 'running' && item.workflow?.taskId === taskId);
+        if (!workflow && !this.thread.info.background?.some((task) => task.id === taskId)) {
             throw new ChatError('task-not-found', 'This chat runs no such task');
         }
         if (!this.backend?.stopTask) {
@@ -407,6 +448,7 @@ export class ChatSession {
         // A cleared chat starts a new conversation, which what was waiting to be said no longer describes.
         this.pendingPreambles = [];
         this.staleResults = 0;
+        this.sendAfterStop = false;
         this.restartPending = false;
         this.launchedSelection = null;
         this.turnReady = Promise.resolve();
@@ -418,7 +460,10 @@ export class ChatSession {
                 status: 'idle',
                 activeTurnId: null,
                 queue: [],
+                queuePaused: false,
                 background: [],
+                effectiveRuntimeMode: undefined,
+                permissionMode: undefined,
                 slashCommands: [],
                 // The next CLI starts on the current pick, so the window the one that just went reported is not its.
                 usage: {
@@ -445,6 +490,9 @@ export class ChatSession {
             if (settled === item) {
                 continue;
             }
+            if (isBackgroundWork(item)) {
+                this.recordLostBackground(item);
+            }
             events.push(this.thread.upsert(settled));
             if (item.kind === 'turn' && settled.kind === 'turn' && settled.state === 'aborted') {
                 const reason = item.id === this.thread.info.activeTurnId && resume.reason !== null ? resume.reason : 'it was not the turn the chat was running';
@@ -454,9 +502,20 @@ export class ChatSession {
             }
         }
         const info = this.thread.info;
-        const patch: Partial<ChatInfo> = { selection, running: false, status: resumeTurnId === null ? 'idle' : 'running', activeTurnId: resumeTurnId };
+        const patch: Partial<ChatInfo> = {
+            selection,
+            running: false,
+            status: resumeTurnId === null ? 'idle' : 'running',
+            activeTurnId: resumeTurnId,
+            effectiveRuntimeMode: undefined,
+            permissionMode: undefined
+        };
         // No process of the host that went down is left to run what it kept in the background.
         if (info.background?.length) {
+            for (const command of info.background) {
+                const text = `The machine restarted while background command "${commandLabel(command)}" was running. It will not send a result. Do not wait for it.`;
+                this.deliverNote({ noteId: `lost-command-${command.id}`, note: text, preamble: text });
+            }
             patch.background = [];
         }
         // The window stored is whatever the session that went left behind; the next CLI starts on the pick.
@@ -468,6 +527,8 @@ export class ChatSession {
             JSON.stringify(selection) !== JSON.stringify(info.selection) ||
             patch.usage !== undefined ||
             info.running ||
+            info.effectiveRuntimeMode !== undefined ||
+            info.permissionMode !== undefined ||
             patch.background !== undefined ||
             info.status !== patch.status ||
             info.activeTurnId !== resumeTurnId
@@ -487,44 +548,72 @@ export class ChatSession {
         if (!this.awaitsResume(turnId, attempt)) {
             return;
         }
-        let backend: ChatBackend;
-        try {
-            backend = await this.ensureBackend();
-        } catch (e) {
-            if (this.backend === null) {
-                this.emit([this.thread.patchInfo({ running: false })]);
-            }
-            throw e;
-        }
-        const turn = this.thread.get(turnId);
-        if (!this.awaitsResume(turnId, attempt) || this.backend !== backend || turn?.kind !== 'turn') {
+        const original = this.thread.get(turnId);
+        if (original?.kind !== 'turn') {
             return;
         }
         const now = Date.now();
         this.emit([
-            this.thread.upsert({ ...turn, attempt }),
-            this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: words.note })
+            this.thread.upsert({ ...original, attempt, resumePending: true }),
+            this.thread.upsert({ id: `resume-${turnId}-${attempt}`, kind: 'note', createdAt: now, turnId, level: 'info', text: words.note })
         ]);
         this.options.persist();
+        const pending = this.watchStart(turnId);
+        let backend: ChatBackend;
+        try {
+            await this.options.save?.();
+            if (this.pendingStart !== pending || !this.awaitsResume(turnId, attempt)) {
+                return;
+            }
+            backend = await this.ensureBackend();
+        } catch (e) {
+            if (this.pendingStart !== pending) {
+                return;
+            }
+            this.clearStartWarning();
+            if (this.backend === null) {
+                this.emit([this.thread.patchInfo({ running: false })]);
+            }
+            this.addNote('warning', `The resume attempt could not start: ${errorText(e)}`);
+            throw e;
+        }
+        const turn = this.thread.get(turnId);
+        if (this.pendingStart !== pending || !this.awaitsResume(turnId, attempt) || this.backend !== backend || turn?.kind !== 'turn') {
+            return;
+        }
+        this.clearStartWarning();
         // The turn keeps the checkpoint it started with, so its card still shows everything it changed.
         this.turnReady = Promise.resolve();
-        backend.sendTurn({ text: words.prompt, preamble: words.preamble, attachments: [], mentions: [], skills: [] });
+        const context = this.contextNote(words.prompt);
+        const preamble = [words.preamble, context.preamble].filter(Boolean).join('\n\n') || null;
+        if (context.note) {
+            this.emit([this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: context.note })]);
+        }
+        this.options.persist();
+        backend.sendTurn({ text: words.prompt, preamble, attachments: [], mentions: [], skills: [] });
+        const sent = this.thread.get(turnId);
+        if (sent?.kind === 'turn') {
+            this.emit([this.thread.upsert({ ...sent, resumePending: undefined })]);
+            this.options.persist();
+        }
     }
 
-    /* Ends a running turn nobody is working on, with the reason in the thread when there is one; the queue goes out after it. */
+    /* Ends a running turn nobody is working on and keeps queued messages for a person's next send. */
     abandon(turnId: string, reason: string | null): void {
         const turn = this.thread.get(turnId);
         if (turn?.kind !== 'turn' || turn.state !== 'running' || this.thread.info.activeTurnId !== turnId || this.running) {
             return;
         }
         const now = Date.now();
+        this.pauseQueue(true);
         this.emit([
             this.thread.upsert({ ...turn, state: 'aborted', endedAt: now }),
             ...(reason === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'warning', text: reason })]),
             this.thread.patchInfo({ status: 'idle', activeTurnId: null })
         ]);
         this.options.persist();
-        this.drainQueue();
+        this.drainQueue(this.sendAfterStop);
+        this.sendAfterStop = false;
     }
 
     /*
@@ -589,13 +678,16 @@ export class ChatSession {
             return false;
         }
         const wake = limitResumeWake(turn.limit.kind);
-        return (
+        const woke =
             this.wake({
                 ...wake,
                 taskIds: turn.taskIds ?? [],
                 ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
-            }) !== null
-        );
+            }) !== null;
+        if (woke) {
+            this.pauseQueue(false);
+        }
+        return woke;
     }
 
     /* A limited turn a fork went on with is that fork's to take up, never this chat's. */
@@ -729,6 +821,9 @@ export class ChatSession {
      * or to carry on in, which starts the CLI again like any send.
      */
     end(reason: string): void {
+        this.clearStartWarning();
+        this.clearWorkflowWarnings();
+        this.sendAfterStop = false;
         this.lapseResume();
         const backend = this.backend;
         this.backend = null;
@@ -751,6 +846,8 @@ export class ChatSession {
         events.push(
             this.thread.patchInfo({
                 running: false,
+                effectiveRuntimeMode: undefined,
+                permissionMode: undefined,
                 status: 'idle',
                 activeTurnId: null,
                 ...(this.queue.length > 0 ? { queue: [] } : {}),
@@ -763,12 +860,16 @@ export class ChatSession {
 
     /* Ends the process and stops listening to it, as the host goes down; the thread stays as it is. */
     freeze(): void {
+        this.clearStartWarning();
+        this.clearWorkflowWarnings();
         this.frozen = true;
         this.backend?.stop();
     }
 
     /* Ends the CLI and everything it started; settles once it exited or was sent the SIGKILL. */
     dispose(): Promise<void> {
+        this.clearStartWarning();
+        this.clearWorkflowWarnings();
         if (this.titleTimer !== null) {
             clearTimeout(this.titleTimer);
             this.titleTimer = null;
@@ -800,23 +901,26 @@ export class ChatSession {
         return backend?.running === true && backend.listThreadItems ? backend.listThreadItems(params) : null;
     }
 
-    /*
-     * The background subagents of the CLI's own that were running when the chat was stored. Whatever
-     * ran them went with the host, so no notification will come: a Claude row settles as done when
-     * its transcript shows the end, and stays running otherwise (a CLI can outlive the host for a
-     * moment and still finish); a Codex agent works inside its parent's app-server, so it is gone too.
-     */
+    /* A completed transcript survives the process; unfinished work cannot send a result after a restart. */
     async settleOrphanedSubagents(): Promise<void> {
         const rows = this.runningBackgroundRows();
-        if (this.info.provider === 'codex') {
-            const now = Date.now();
-            this.settleRows(rows.map((row) => ({ ...row, status: 'failed', finishedAt: now })));
-            return;
+        if (this.info.provider === 'claude') {
+            for (const row of rows) {
+                this.orphans.add(row.toolUseId);
+            }
+            await this.settleFromTranscripts(rows);
         }
-        for (const row of rows) {
-            this.orphans.add(row.toolUseId);
+        const lost = this.runningBackgroundRows();
+        for (const row of lost) {
+            this.recordLostBackground(row);
         }
-        await this.settleFromTranscripts(rows);
+        this.settleRows(lost.map((row) => ({ ...row, status: 'failed', finishedAt: Date.now() })));
+    }
+
+    private recordLostBackground(item: BackgroundWork): void {
+        const label = item.kind === 'subagent' ? item.description || item.subagentType || item.toolUseId : item.name;
+        const text = `The machine restarted before background work "${label}" completed. It will not send a result. Do not wait for it.`;
+        this.deliverNote({ noteId: `lost-background-${item.id}`, note: text, preamble: text });
     }
 
     /*
@@ -867,7 +971,7 @@ export class ChatSession {
     /* Asks the transcript again for a row a load left running, when somebody looks at it. */
     async recheckOrphan(toolUseId: string): Promise<void> {
         const row = this.thread.find('subagent', (item) => item.toolUseId === toolUseId);
-        if (this.orphans.has(toolUseId) && row?.status === 'running') {
+        if (this.orphans.has(toolUseId) && (row?.status === 'running' || row?.status === 'failed')) {
             await this.settleFromTranscripts([row]);
         }
     }
@@ -957,7 +1061,7 @@ export class ChatSession {
             .take(this.thread.info.cwd)
             .then((tree) => {
                 const turn = this.thread.get(turnId);
-                if (tree === null || turn?.kind !== 'turn') {
+                if (tree === null || turn?.kind !== 'turn' || turn.state !== 'running' || this.info.activeTurnId !== turnId) {
                     return;
                 }
                 this.emit([this.thread.upsert({ ...turn, checkpoint: tree })]);
@@ -1004,16 +1108,60 @@ export class ChatSession {
 
     /* Runs one turn against the backend; a backend that will not start ends the turn with the reason. */
     private run(work: (backend: ChatBackend) => void): void {
-        // The process starts while the checkpoint runs; the work itself waits for both, and a stop
-        // waits for the same promise, so it can never overtake the message it stops.
+        const turnId = this.info.activeTurnId;
+        if (turnId === null) {
+            return;
+        }
+        const pending = this.watchStart(turnId);
         const backend = this.ensureBackend();
+        const generation = this.generation;
         void Promise.all([backend, this.turnReady])
             .then(([started]) => {
-                if (this.backend === started) {
-                    work(started);
+                if (this.pendingStart !== pending || this.backend !== started || this.info.activeTurnId !== turnId || this.frozen) {
+                    return;
                 }
+                this.clearStartWarning();
+                work(started);
             })
-            .catch((error: unknown) => this.receive(this.generation, { type: 'failed', message: errorText(error) }));
+            .catch((error: unknown) => {
+                if (this.pendingStart === pending || (this.backend !== null && this.generation === generation && this.info.activeTurnId === turnId)) {
+                    this.clearStartWarning();
+                    this.receive(generation, { type: 'failed', message: errorText(error) });
+                }
+            });
+    }
+
+    private watchStart(turnId: string): { turnId: string; warning: unknown } {
+        this.clearStartWarning();
+        const clock = this.options.clock ?? systemClock;
+        const pending = {
+            turnId,
+            warning: clock.setTimeout(() => {
+                if (this.pendingStart?.turnId === turnId && this.info.activeTurnId === turnId && !this.frozen) {
+                    this.emit([
+                        this.thread.upsert({
+                            id: newId('note'),
+                            kind: 'note',
+                            createdAt: clock.now(),
+                            turnId,
+                            level: 'warning',
+                            text: 'The agent is still starting. You can stop this turn and try again.'
+                        })
+                    ]);
+                    this.options.persist();
+                }
+            }, 30_000)
+        };
+        this.pendingStart = pending;
+        return pending;
+    }
+
+    private clearStartWarning(): void {
+        if (this.pendingStart === null) {
+            return;
+        }
+        (this.options.clock ?? systemClock).clearTimeout(this.pendingStart.warning);
+        this.pendingStart = null;
     }
 
     /* Only where a turn starts, so a stop or a resume never ends the process of the turn it is about. */
@@ -1076,7 +1224,7 @@ export class ChatSession {
         }
         const backend = made.backend;
         this.backend = backend;
-        this.emit([this.thread.patchInfo({ running: true })]);
+        this.emit([this.thread.patchInfo({ running: true, effectiveRuntimeMode: undefined, permissionMode: undefined })]);
         let started: Promise<void>;
         try {
             started = backend.start();
@@ -1099,7 +1247,13 @@ export class ChatSession {
 
     private awaitsResume(turnId: string, attempt: number): boolean {
         const turn = this.thread.get(turnId);
-        return !this.frozen && turn?.kind === 'turn' && turn.state === 'running' && this.thread.info.activeTurnId === turnId && (turn.attempt ?? 1) < attempt;
+        return (
+            !this.frozen &&
+            turn?.kind === 'turn' &&
+            turn.state === 'running' &&
+            this.thread.info.activeTurnId === turnId &&
+            ((turn.attempt ?? 1) < attempt || (turn.attempt === attempt && turn.resumePending === true))
+        );
     }
 
     private receive(generation: number, event: BackendEvent): void {
@@ -1142,6 +1296,9 @@ export class ChatSession {
             this.staleResults = 0;
         }
         const openTurnId = this.thread.info.activeTurnId;
+        if ((event.type === 'turn.done' && event.state !== 'done') || ((event.type === 'failed' || event.type === 'exit') && openTurnId !== null)) {
+            this.pauseQueue(true);
+        }
         // Settled as failed by the exit below; the transcript may still show that they finished first.
         const orphaned = event.type === 'exit' && this.info.provider === 'claude' ? this.runningBackgroundRows() : [];
         if (event.type === 'turn.done' && event.state === 'aborted') {
@@ -1151,6 +1308,7 @@ export class ChatSession {
             }
         }
         this.emit(this.projector.project(generation, event));
+        this.watchWorkflows(event);
         if (isMainAgentOutput(event)) {
             this.spokenTurnId = this.thread.info.activeTurnId;
         }
@@ -1166,6 +1324,9 @@ export class ChatSession {
             this.options.persist();
         }
         if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
+            this.options.persist();
+        }
+        if (event.type === 'permissions' || event.type === 'session') {
             this.options.persist();
         }
         if (openTurnId !== null && activeTurnId === null) {
@@ -1189,10 +1350,78 @@ export class ChatSession {
             if (event.state === 'done') {
                 this.nameThread();
             }
-            this.drainQueue();
             if (event.limit !== undefined) {
                 this.oweResume(true);
             }
+            this.drainQueue(event.state === 'aborted' && this.sendAfterStop);
+            this.sendAfterStop = false;
+        }
+    }
+
+    private pauseQueue(paused: boolean): void {
+        if ((this.info.queuePaused ?? false) !== paused) {
+            this.emit([this.thread.patchInfo({ queuePaused: paused })]);
+            this.options.persist();
+        }
+    }
+
+    private clearWorkflowWarnings(): void {
+        const clock = this.options.clock ?? systemClock;
+        for (const timer of this.workflowWarnings.values()) {
+            clock.clearTimeout(timer);
+        }
+        this.workflowWarnings.clear();
+    }
+
+    private watchWorkflows(event: BackendEvent): void {
+        if (
+            !['tool.started', 'tool.progress', 'tool.output', 'tool.done', 'workflow.progress', 'task.started', 'task.done', 'exit', 'failed'].includes(
+                event.type
+            )
+        ) {
+            return;
+        }
+        const clock = this.options.clock ?? systemClock;
+        const ref = 'ref' in event ? event.ref : null;
+        for (const item of this.thread.list()) {
+            if (item.kind !== 'tool' || item.name !== 'Workflow') {
+                continue;
+            }
+            const existing = this.workflowWarnings.get(item.id);
+            const progress =
+                ref === item.toolUseId &&
+                ['workflow.progress', 'tool.started', 'tool.progress', 'tool.output', 'tool.done', 'task.started'].includes(event.type);
+            if (item.state !== 'running' || progress) {
+                if (existing !== undefined) {
+                    clock.clearTimeout(existing);
+                    this.workflowWarnings.delete(item.id);
+                }
+            }
+            if (item.state !== 'running' || (!progress && existing !== undefined) || (!progress && item.workflow?.stalledAt !== undefined)) {
+                continue;
+            }
+            if (progress) {
+                this.emit([
+                    this.thread.upsert({
+                        ...item,
+                        workflow: { name: null, phases: [], agents: [], ...item.workflow, lastProgressAt: clock.now(), stalledAt: undefined }
+                    })
+                ]);
+            }
+            this.workflowWarnings.set(
+                item.id,
+                clock.setTimeout(() => {
+                    this.workflowWarnings.delete(item.id);
+                    const current = this.thread.get(item.id);
+                    if (this.frozen || current?.kind !== 'tool' || current.state !== 'running') {
+                        return;
+                    }
+                    this.emit([
+                        this.thread.upsert({ ...current, workflow: { name: null, phases: [], agents: [], ...current.workflow, stalledAt: clock.now() } })
+                    ]);
+                    this.options.persist();
+                }, 5 * 60_000)
+            );
         }
     }
 

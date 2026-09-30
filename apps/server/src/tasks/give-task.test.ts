@@ -238,3 +238,99 @@ describe('a task given to an agent that is already open', () => {
         expect(daemon.tasks.involving(childId)).toEqual([]);
     });
 });
+
+describe('task recovery between durable writes', () => {
+    test('recovers lost workflow ownership before a background task marker was written', async () => {
+        const daemon = await boot();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await daemon.chats.create({ chatId: 'chat-other', provider: 'claude', cwd: folder });
+        const child = daemon.chats.get('chat-other')!;
+        child.upsertItems([
+            { id: 'main', turnId: 'main', kind: 'turn', createdAt: 2, endedAt: 3, state: 'done', costUsd: 0 },
+            { id: 'answer', turnId: 'main', kind: 'assistant', createdAt: 2, text: 'The work is launched.', streaming: false, parentToolUseId: null },
+            {
+                id: 'workflow',
+                turnId: 'main',
+                kind: 'tool',
+                createdAt: 2,
+                toolUseId: 'workflow',
+                name: 'Workflow',
+                input: {},
+                output: 'launched',
+                state: 'running',
+                parentToolUseId: null
+            }
+        ]);
+        await daemon.chats.save('chat-other');
+        expect((await daemon.chats.storedBackground('chat-other')).items.map((item) => item.id)).toEqual(['workflow']);
+        // The chat survived the crash, but the coordinator had not saved its background marker yet.
+        const task = await daemon.tasks.open({ projectId, parentId: 'chat-lead', childId: 'chat-other', title: 'Workflow result', prompt: 'go' }, 1);
+        expect(task.background).toBeUndefined();
+        await daemon.stop();
+        running = [];
+
+        const recovered = await boot();
+        expect(recovered.tasks.get(task.id)).toMatchObject({ status: 'failed', result: { source: 'exit' } });
+        expect(recovered.tasks.get(task.id)?.result?.text).toContain('Workflow');
+        expect(recovered.chats.get('chat-other')?.preambles.join('\n')).toContain('will not send a result');
+        recovered.worker.start();
+        await recovered.until(() => recovered.tasks.get(task.id)?.wake === 'sent');
+        await recovered.worker.settled();
+        expect(turnsFor(recovered, 'chat-lead', task.id)).toHaveLength(1);
+        await recovered.stop();
+        running = [];
+
+        const again = await boot();
+        again.worker.start();
+        await again.worker.settled();
+        await again.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        expect(turnsFor(again, 'chat-lead', task.id)).toHaveLength(1);
+        expect(again.tasks.get(task.id)?.status).toBe('failed');
+    });
+
+    test('recreates a missing completion wake and never repeats a recorded parent turn', async () => {
+        const daemon = await boot();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        const task = await daemon.tasks.open({ projectId, parentId: 'chat-lead', childId: 'chat-other', title: 'Result', prompt: 'go' }, 1);
+        await daemon.tasks.settle(task.id, 'done', { text: 'saved result', source: 'done', at: 2 }, 2);
+        await daemon.stop();
+        running = [];
+        const recovered = await boot();
+        expect(recovered.outbox.list().filter((entry) => entry.kind === 'wake-parent')).toHaveLength(1);
+        recovered.worker.start();
+        await recovered.until(() => recovered.tasks.get(task.id)?.wake === 'sent');
+        await recovered.worker.settled();
+        expect(turnsFor(recovered, 'chat-lead', task.id)).toHaveLength(1);
+        // Simulate a crash after the parent's turn write but before markWoken.
+        const { writeFile } = await import('node:fs/promises');
+        await recovered.stop();
+        running = [];
+        await writeFile(join(home, 'tasks', `${task.id}.json`), JSON.stringify({ ...recovered.tasks.get(task.id), wake: 'pending' }));
+        const again = await boot();
+        again.worker.start();
+        await again.until(() => again.tasks.get(task.id)?.wake === 'sent');
+        await again.worker.settled();
+        expect(turnsFor(again, 'chat-lead', task.id)).toHaveLength(1);
+        expect(again.tasks.get(task.id)?.result?.text).toBe('saved result');
+    });
+
+    test('recreates a missing give-task after the task record was saved', async () => {
+        const daemon = await boot();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        await daemon.chats.create({ chatId: 'chat-other', provider: 'claude', cwd: folder });
+        const task = await daemon.tasks.open(
+            { projectId, parentId: 'chat-lead', childId: 'chat-other', title: 'New work', prompt: 'new work', requiresTaskTurn: true },
+            1
+        );
+        await daemon.stop();
+        running = [];
+        const recovered = await boot();
+        expect(recovered.outbox.list().filter((entry) => entry.kind === 'give-task')).toHaveLength(1);
+        recovered.worker.start();
+        await recovered.until(() => recovered.tasks.get(task.id)?.wake === 'sent');
+        await recovered.worker.settled();
+        expect(turnsFor(recovered, 'chat-other', task.id)).toHaveLength(1);
+        expect(turnsFor(recovered, 'chat-lead', task.id)).toHaveLength(1);
+        expect(recovered.tasks.get(task.id)?.result?.text).toContain('new work');
+    });
+});

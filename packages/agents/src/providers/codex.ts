@@ -26,6 +26,14 @@ const THREAD_OPTIONS: Record<RuntimeMode, CodexThreadOptions> = {
 
 export const codexThreadOptions = (runtimeMode: RuntimeMode): CodexThreadOptions => THREAD_OPTIONS[runtimeMode];
 
+export const codexRuntimeMode = (approvalPolicy: string, sandbox: string): RuntimeMode | undefined => {
+    const names: Record<string, string> = { readOnly: 'read-only', workspaceWrite: 'workspace-write', dangerFullAccess: 'danger-full-access' };
+    return (Object.keys(THREAD_OPTIONS) as RuntimeMode[]).find((mode) => {
+        const options = THREAD_OPTIONS[mode];
+        return options.approvalPolicy === approvalPolicy && options.sandbox === (names[sandbox] ?? sandbox);
+    });
+};
+
 // What the app-server calls the faster of the two tiers it lists per model; the standard tier is no id at all.
 const CODEX_PRIORITY_TIER = 'priority';
 

@@ -1,0 +1,136 @@
+{
+  "version": "codex-cli 0.159.2",
+  "capturedAt": "2026-09-30",
+  "source": "Live app-server stdio, workspace-write with exclude_tmpdir_env_var and exclude_slash_tmp. One child requested apply_patch outside the workspace but inside the isolated temporary probe folder. The file approval was held across root completion and declined. Paths are redacted; unrelated frames omitted.",
+  "rootThreadId": "01a0f1cb-b203-7622-ba34-2b236060399d",
+  "frames": [
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_sVAHTvH2y4JqK9A4xFgujb1A",
+          "kind": "started",
+          "agentThreadId": "01a0f1cb-d36d-7222-accf-69eb3a9c7899",
+          "agentPath": "/root/file_probe"
+        },
+        "threadId": "01a0f1cb-b203-7622-ba34-2b236060399d",
+        "turnId": "01a0f1cb-b25a-7021-ab7c-d8d90902e90d",
+        "startedAtMs": 1790763062138
+      }
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "subAgentActivity",
+          "id": "call_sVAHTvH2y4JqK9A4xFgujb1A",
+          "kind": "started",
+          "agentThreadId": "01a0f1cb-d36d-7222-accf-69eb3a9c7899",
+          "agentPath": "/root/file_probe"
+        },
+        "threadId": "01a0f1cb-b203-7622-ba34-2b236060399d",
+        "turnId": "01a0f1cb-b25a-7021-ab7c-d8d90902e90d",
+        "completedAtMs": 1790763062138
+      }
+    },
+    {
+      "method": "item/started",
+      "params": {
+        "item": {
+          "type": "fileChange",
+          "id": "exec-e3b6ac70-4d60-4535-ba47-fc5b26fb67f3",
+          "changes": [
+            {
+              "path": "<temporary-folder>/approval-probe.txt",
+              "kind": {
+                "type": "add"
+              },
+              "diff": "sample\n"
+            }
+          ],
+          "status": "inProgress"
+        },
+        "threadId": "01a0f1cb-d36d-7222-accf-69eb3a9c7899",
+        "turnId": "01a0f1cb-d37a-7883-8b09-afec79101cd8",
+        "startedAtMs": 1790763068850
+      }
+    },
+    {
+      "method": "item/fileChange/requestApproval",
+      "id": 0,
+      "params": {
+        "threadId": "01a0f1cb-d36d-7222-accf-69eb3a9c7899",
+        "turnId": "01a0f1cb-d37a-7883-8b09-afec79101cd8",
+        "itemId": "exec-e3b6ac70-4d60-4535-ba47-fc5b26fb67f3",
+        "startedAtMs": 1790763068861,
+        "reason": null,
+        "grantRoot": null
+      }
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0f1cb-b203-7622-ba34-2b236060399d",
+        "turn": {
+          "id": "01a0f1cb-b25a-7021-ab7c-d8d90902e90d",
+          "items": [
+            {
+              "type": "agentMessage",
+              "id": "msg_02041b3cd17efb35016abce05728cc87d288ed0134a136dfb4",
+              "text": "Spawned `file_probe` and ran `sleep 25`. Ending without waiting for the child or approval.",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "summary",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790763053,
+          "completedAt": 1790763095,
+          "durationMs": 42325
+        }
+      }
+    },
+    {
+      "method": "item/completed",
+      "params": {
+        "item": {
+          "type": "fileChange",
+          "id": "exec-e3b6ac70-4d60-4535-ba47-fc5b26fb67f3",
+          "changes": [
+            {
+              "path": "<temporary-folder>/approval-probe.txt",
+              "kind": {
+                "type": "add"
+              },
+              "diff": "sample\n"
+            }
+          ],
+          "status": "declined"
+        },
+        "threadId": "01a0f1cb-d36d-7222-accf-69eb3a9c7899",
+        "turnId": "01a0f1cb-d37a-7883-8b09-afec79101cd8",
+        "completedAtMs": 1790763095987
+      }
+    },
+    {
+      "method": "turn/completed",
+      "params": {
+        "threadId": "01a0f1cb-d36d-7222-accf-69eb3a9c7899",
+        "turn": {
+          "id": "01a0f1cb-d37a-7883-8b09-afec79101cd8",
+          "items": [],
+          "itemsView": "notLoaded",
+          "status": "interrupted",
+          "error": null,
+          "startedAt": 1790763062,
+          "completedAt": 1790763096,
+          "durationMs": 33861
+        }
+      }
+    }
+  ]
+}

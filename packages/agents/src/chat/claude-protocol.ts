@@ -8,6 +8,7 @@ import type {
     ChatWorkflowPhase
 } from '@ruimte/agent-contracts';
 import { readClaudeEvent } from '../usage/limits/normalize.ts';
+import { claudeRuntimeMode } from '../providers/claude.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 
 type Frame = Record<string, unknown>;
@@ -255,7 +256,20 @@ export class ClaudeProtocol {
                 ? frame.slash_commands.filter((command): command is string => typeof command === 'string')
                 : [];
             const skills = Array.isArray(frame.skills) ? frame.skills.filter((skill): skill is string => typeof skill === 'string') : [];
-            events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands, skills });
+            const permissionMode = str(frame.permissionMode);
+            const effectiveRuntimeMode = permissionMode === null ? undefined : claudeRuntimeMode(permissionMode);
+            events.push({
+                type: 'session',
+                agentSessionId: str(frame.session_id),
+                model: str(frame.model),
+                slashCommands: commands,
+                skills,
+                ...(permissionMode === null ? {} : { permissionMode }),
+                ...(effectiveRuntimeMode === undefined ? {} : { effectiveRuntimeMode })
+            });
+        } else if (frame.subtype === 'status' && typeof frame.permissionMode === 'string') {
+            const effectiveRuntimeMode = claudeRuntimeMode(frame.permissionMode);
+            events.push({ type: 'permissions', permissionMode: frame.permissionMode, ...(effectiveRuntimeMode === undefined ? {} : { effectiveRuntimeMode }) });
         } else if (frame.subtype === 'task_started') {
             this.handleTaskStarted(frame, events);
         } else if (frame.subtype === 'task_updated') {
@@ -267,7 +281,15 @@ export class ClaudeProtocol {
             }
             // Only some of a workflow's progress frames carry it; the rest only count what it spent.
             if (Array.isArray(frame.workflow_progress)) {
-                events.push({ type: 'workflow.progress', ref, workflow: { name: null, ...parseWorkflowProgress(frame.workflow_progress) } });
+                events.push({
+                    type: 'workflow.progress',
+                    ref,
+                    workflow: {
+                        name: null,
+                        ...parseWorkflowProgress(frame.workflow_progress),
+                        ...(typeof frame.task_id === 'string' ? { taskId: frame.task_id } : {})
+                    }
+                });
             }
             // Only a subagent reports what it spent; a task without that is a command with a description.
             if (frame.task_type === 'local_agent' || str(frame.subagent_type)) {
@@ -330,7 +352,7 @@ export class ClaudeProtocol {
         const description = str(frame.description);
         if (taskId && ref && frame.task_type === 'local_workflow') {
             this.workflows.set(taskId, ref);
-            events.push({ type: 'workflow.progress', ref, workflow: { name: str(frame.workflow_name), phases: [], agents: [] } });
+            events.push({ type: 'workflow.progress', ref, workflow: { name: str(frame.workflow_name), taskId, phases: [], agents: [] } });
         }
         if (taskId && typeof frame.task_type === 'string' && BACKGROUND_TASK_TYPES.has(frame.task_type) && frame.ambient !== true) {
             if (frame.is_backgrounded === false) {
@@ -517,6 +539,7 @@ export class ClaudeProtocol {
                 const workflow = WORKFLOW_LAUNCHED.exec(output)?.[1];
                 if (workflow) {
                     this.workflows.set(workflow, ref);
+                    events.push({ type: 'workflow.progress', ref, workflow: { name: null, taskId: workflow, phases: [], agents: [] } });
                 }
                 events.push({ type: 'tool.done', ref, output, state: block.is_error === true ? 'error' : 'done' });
             }

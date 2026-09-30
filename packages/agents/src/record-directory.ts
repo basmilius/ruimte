@@ -11,6 +11,7 @@ export interface RecordDirectoryOptions<T> {
     dir: string;
     schema: z.ZodType<T>;
     idOf(record: T): string;
+    write?: (path: string, text: string) => Promise<void>;
     /*
      * What a record read from disk is worth keeping as, for a store that drops what went stale while
      * the host was down. Null takes the file with it.
@@ -27,6 +28,7 @@ export class RecordDirectory<T> {
     readonly dir: string;
     private readonly schema: z.ZodType<T>;
     private readonly idOf: (record: T) => string;
+    private readonly writeFile: (path: string, text: string) => Promise<void>;
     private readonly keep: ((record: T) => T | null) | null;
     private readonly records = new Map<string, T>();
     // One write at a time per record, so an older one never lands after a newer one.
@@ -36,6 +38,7 @@ export class RecordDirectory<T> {
         this.dir = options.dir;
         this.schema = options.schema;
         this.idOf = options.idOf;
+        this.writeFile = options.write ?? writeAtomic;
         this.keep = options.keep ?? null;
     }
 
@@ -101,7 +104,7 @@ export class RecordDirectory<T> {
                 return false;
             }
             await mkdir(this.dir, { recursive: true, mode: 0o700 });
-            await writeAtomic(this.pathOf(id), JSON.stringify(record));
+            await this.writeFile(this.pathOf(id), JSON.stringify(record));
             if (!this.records.has(id)) {
                 await rm(this.pathOf(id), { force: true });
                 return false;

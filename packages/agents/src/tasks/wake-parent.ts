@@ -85,6 +85,7 @@ export const wakeParentHandler =
         const named = new Set(chat.items().flatMap((item) => (item.kind === 'turn' ? (item.taskIds ?? []) : [])));
         const already = deps.tasks.pendingWake(parentId).filter((task) => named.has(task.id));
         if (already.length > 0) {
+            await chat.persist?.();
             await deps.tasks.markWoken(already.map((task) => task.id));
         }
         const tasks = deps.tasks.readyWake(parentId).filter((task) => !named.has(task.id));
@@ -102,6 +103,7 @@ export const wakeParentHandler =
         ) {
             return 'wait';
         }
+        await chat.persist?.();
         await deps.tasks.markWoken(tasks.map((task) => task.id));
         return held();
     };

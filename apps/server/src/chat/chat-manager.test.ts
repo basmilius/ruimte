@@ -234,10 +234,25 @@ describe('ChatManager', () => {
     });
 
     test('cancel interrupts a running turn and marks it aborted', async () => {
+        const received = Promise.withResolvers<void>();
+        claude = inProcess((io) => {
+            const program = fakeClaude(io);
+            return {
+                onLine: (line) => {
+                    program.onLine(line);
+                    if (JSON.parse(line).type === 'user') {
+                        received.resolve();
+                    }
+                }
+            };
+        });
+        await retire(manager);
+        manager = makeManager();
+        manager.subscribe('c1', recorder.sink());
         await manager.create({ chatId: 'chat-4', cwd: home });
         manager.attach('chat-4', 'c1');
         await manager.send('chat-4', 'slow');
-        await recorder.until(() => recorder.info?.running === true);
+        await received.promise;
         manager.cancel('chat-4');
         await recorder.until(idle);
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['[interrupted]']);
@@ -1140,7 +1155,7 @@ describe('a background subagent whose CLI is gone', () => {
         expect((await store.read('chat-stale'))?.items.find((item) => item.kind === 'subagent')).toMatchObject({ status: 'done' });
     });
 
-    test('stays running on load while its transcript ends mid tool call, and settles when a read finds the end', async () => {
+    test('marks an unfinished transcript lost on load and recovers a later recorded end on read', async () => {
         const transcript = join(projects, '-work-demo', SESSION, 'subagents', 'agent-a9b8c7d6e5f4a3b21.jsonl');
         const finished = await readFile(transcript, 'utf8');
         const lines = finished.trimEnd().split('\n');
@@ -1157,7 +1172,7 @@ describe('a background subagent whose CLI is gone', () => {
         manager.subscribe('c1', recorder.sink());
 
         await manager.create({ chatId: 'chat-working' });
-        expect(rowOf(manager, 'chat-working', CALL)).toMatchObject({ status: 'running', finishedAt: null });
+        expect(rowOf(manager, 'chat-working', CALL)).toMatchObject({ status: 'failed', finishedAt: expect.any(Number) });
 
         const answer = JSON.stringify({
             isSidechain: true,

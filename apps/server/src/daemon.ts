@@ -371,6 +371,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
+        endChildren: (chatId) => endChildren.stopNode(chatId, 'a person cleared this chat'),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans,
         bookmarks,
@@ -1098,6 +1099,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
     manager.contextUrl = `http://127.0.0.1:${server.port}${CONTEXT_PATH}`;
     // Only once `hookUrl` is set: a terminal the worker starts before that runs without hooks for good.
+    await taskWiring.recover();
     outboxWorker.start();
     endChildren.start();
     // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.
@@ -1143,6 +1145,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         // await, so a turn in flight would otherwise never reach its file.
         chats.persistAllSync();
         try {
+            await taskWiring.coordinator.settled();
             await snapshotSchedule.flush();
             await chats.shutdown();
         } catch (e) {

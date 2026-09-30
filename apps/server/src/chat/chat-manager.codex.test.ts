@@ -12,6 +12,7 @@ import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { ChatRecorder } from './chat-test-helpers.ts';
 import { inProcess, type InProcessCli } from '@ruimte/agents/chat/fake-cli';
 import { FAKE_CHILD_STEPS, fakeCodexWith } from '@ruimte/agents/chat/fake-codex';
+import nativeApprovalCapture from '@ruimte/agents/chat/fixtures/codex-0.159.2-native-approval.json';
 
 let home: string;
 let store: ChatStore;
@@ -20,6 +21,7 @@ let manager: ChatManager;
 let recorder: ChatRecorder;
 let codex: InProcessCli;
 let requests: Array<{ method: string; params: Record<string, unknown> }>;
+let turnSent: (() => void) | null = null;
 let modelPage: ((params: Record<string, unknown>) => unknown) | null;
 
 const png = { name: 'shot.png', mime: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=' };
@@ -46,6 +48,7 @@ beforeEach(async () => {
     attachments = new AttachmentStore(home);
     store = new ChatStore(home, { attachments: attachments });
     requests = [];
+    turnSent = null;
     modelPage = null;
     codex = inProcess((io) => {
         const program = fakeCodexWith({ resumeLead: CONTEXT_LEAD })(io);
@@ -54,6 +57,9 @@ beforeEach(async () => {
                 const frame = JSON.parse(line);
                 if (frame.method) {
                     requests.push(frame);
+                    if (frame.method === 'turn/start') {
+                        turnSent?.();
+                    }
                 }
                 if (frame.method === 'model/list' && modelPage) {
                     io.out({ id: frame.id, result: modelPage(frame.params) });
@@ -121,6 +127,10 @@ describe('ChatManager with Codex', () => {
         expect(await manager.send('chat-queued-image', '', {}, [png])).toMatchObject({ queued: true });
         const queued = recorder.info!.queue![0]!.attachments![0]!;
         manager.cancel('chat-queued-image');
+        await recorder.until(idle);
+        expect(turnInputs()).toHaveLength(1);
+        expect(recorder.info?.queuePaused).toBe(true);
+        manager.sendNow('chat-queued-image', recorder.info!.queue![0]!.id);
         await recorder.until(() => turnInputs().length === 2 && recorder.ofKind('turn').at(-1)?.state === 'done' && idle());
         expect(turnInputs()[1]!.at(-1)).toEqual({ type: 'localImage', path: queued.path });
         const threadId = recorder.info!.agentSessionId;
@@ -145,6 +155,8 @@ describe('ChatManager with Codex', () => {
         await manager.send('chat-missing-image', 'Look', {}, [png]);
         await rm(recorder.info!.queue![0]!.attachments![0]!.path);
         manager.cancel('chat-missing-image');
+        await recorder.until(idle);
+        manager.sendNow('chat-missing-image', recorder.info!.queue![0]!.id);
         await recorder.until(() => recorder.ofKind('note').some((note) => note.text.includes('Could not read attached image')));
         expect(turnInputs()).toHaveLength(1);
         expect(recorder.ofKind('turn').at(-1)?.state).toBe('error');
@@ -342,9 +354,60 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('assistant')[0]?.streaming).toBe(false);
     });
 
+    for (const arrivesAfterRoot of [false, true]) {
+        test(`Stop declines a native child approval ${arrivesAfterRoot ? 'arriving after' : 'held across'} root completion`, async () => {
+            const answered = Promise.withResolvers<unknown>();
+            const probe = inProcess((io) => {
+                const program = fakeCodexWith({ resumeLead: CONTEXT_LEAD })(io);
+                return {
+                    onLine: (line) => {
+                        const frame = JSON.parse(line);
+                        if (frame.method === 'turn/start') {
+                            const root = nativeApprovalCapture.frames.find(
+                                (event) => event.method === 'turn/completed' && event.params.threadId === nativeApprovalCapture.rootThreadId
+                            )!;
+                            const approval = nativeApprovalCapture.frames.find((event) => event.method.endsWith('/requestApproval'))!;
+                            const spawn = nativeApprovalCapture.frames.filter((event) => event.method.startsWith('item/') && event.id === undefined);
+                            io.out({ id: frame.id, result: { turn: root.params.turn } });
+                            const events = [...spawn, ...(arrivesAfterRoot ? [root, approval] : [approval, root])];
+                            for (const event of events) {
+                                io.out({
+                                    ...event,
+                                    params: {
+                                        ...event.params,
+                                        threadId: event.params.threadId === nativeApprovalCapture.rootThreadId ? frame.params.threadId : event.params.threadId
+                                    }
+                                });
+                            }
+                        } else if (frame.method === undefined && frame.id === 0) {
+                            answered.resolve(frame.result);
+                        } else {
+                            program.onLine(line);
+                        }
+                    }
+                };
+            });
+            await retire(manager);
+            manager = makeManager({ spawn: probe.spawn });
+            manager.subscribe('c1', recorder.sink());
+            await open('chat-child-approval');
+            await manager.send('chat-child-approval', 'probe');
+            await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'done' && recorder.ofKind('approval')[0]?.decision === 'pending');
+            manager.cancel('chat-child-approval');
+            expect(await answered.promise).toEqual({ decision: 'decline' });
+            await recorder.until(() => recorder.ofKind('approval')[0]?.decision === 'cancelled');
+            expect(recorder.info?.activeTurnId).toBeNull();
+            expect(recorder.ofKind('subagent')[0]?.status).toBe('running');
+            expect(probe.started).toHaveLength(1);
+        });
+    }
+
     test('a cancel sent before Codex named the turn still interrupts it', async () => {
         await open('chat-4');
+        const sent = Promise.withResolvers<void>();
+        turnSent = () => sent.resolve();
         await manager.send('chat-4', 'slow');
+        await sent.promise;
         manager.cancel('chat-4');
         await recorder.until(idle);
         expect(recorder.ofKind('turn')[0]?.state).toBe('aborted');

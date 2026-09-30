@@ -220,6 +220,10 @@ export class CodexBackend implements ChatBackend {
         }
         if (!turnId) {
             this.interruptOwed = this.turnUnnamed;
+            // A child request can open a host turn after the root's native turn already ended.
+            if (!this.turnUnnamed) {
+                this.emit({ type: 'turn.done', state: 'aborted', costUsd: 0 });
+            }
             return;
         }
         void this.transport.request('turn/interrupt', { threadId: this.threadId, turnId }).catch(() => {
@@ -272,6 +276,15 @@ export class CodexBackend implements ChatBackend {
     /* Codex asks its async question once and waits; forgetting it locally is all a dismissal is. */
     dismissRequest(requestId: string): boolean {
         return this.protocol.dismissQuestion(requestId);
+    }
+
+    declineRequest(requestId: string, _message: string): boolean {
+        const answer = this.protocol.declineRequest(requestId);
+        if (!this.transport || !answer) {
+            return false;
+        }
+        this.transport.respond(answer.rpcId, answer.result);
+        return true;
     }
 
     stop(): void {

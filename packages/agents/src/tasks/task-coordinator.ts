@@ -12,6 +12,7 @@ export interface TaskCoordinatorDeps {
     chatItems(chatId: string): readonly ChatItem[] | null;
     /* Whether a project still places the node; a child that went is cancelled by the prune, never failed. */
     placed(nodeId: string): boolean;
+    loading?(chatId: string): boolean;
     /* Whether the host still owes the turn that carries a task, which is a task nobody is working on yet. */
     owedTurn(taskId: string): boolean;
     /* Owes the parent a wake; only ever writes the outbox. */
@@ -88,8 +89,7 @@ export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at:
 export class TaskCoordinator {
     private readonly deps: TaskCoordinatorDeps;
     private stopped = false;
-    // Per child, the last turn that ended while background work ran on, which is no answer while the CLI will still report on it.
-    private readonly outlived = new Map<string, string>();
+    private readonly pending = new Set<Promise<unknown>>();
 
     constructor(deps: TaskCoordinatorDeps) {
         this.deps = deps;
@@ -100,12 +100,22 @@ export class TaskCoordinator {
         this.stopped = true;
     }
 
+    async settled(): Promise<void> {
+        while (this.pending.size > 0) {
+            await Promise.allSettled([...this.pending]);
+        }
+        await this.deps.tasks.settled();
+    }
+
     /* For `chats.observe()`. */
     chatEvent(event: AgentEvent): void {
         if (this.stopped || event.event !== 'chat.event') {
             return;
         }
         const { chatId, event: chatEvent } = event.payload;
+        if (this.deps.loading?.(chatId)) {
+            return;
+        }
         if (chatEvent.type === 'item' && chatEvent.item.kind === 'turn' && chatEvent.item.state === 'running') {
             this.turnStarted(chatId);
         } else if (chatEvent.type === 'item' && chatEvent.item.kind === 'turn') {
@@ -204,7 +214,7 @@ export class TaskCoordinator {
             return false;
         }
         const own = items.findIndex((item) => item.kind === 'turn' && (item.taskIds ?? []).includes(task.id));
-        return own === -1 || own < items.findIndex((item) => item.id === turn.id);
+        return own === -1 ? task.requiresTaskTurn !== true && turn.createdAt >= task.createdAt : own < items.findIndex((item) => item.id === turn.id);
     }
 
     private turnEnded(chatId: string, turn: ChatTurnItem): void {
@@ -220,16 +230,53 @@ export class TaskCoordinator {
         }
         // A turn a person stopped or that failed ends the task as it always did, whatever still runs beside it.
         if (turn.state === 'done' && this.heldInBackground(chatId, task, items)) {
-            this.outlived.set(chatId, turn.id);
+            this.track(
+                this.deps.tasks.holdBackground(task.id, {
+                    turnId: turn.id,
+                    itemIds: runningInBackground(items).map((item) => item.id),
+                    commands: this.deps.commandsOf(chatId).map(commandLabel)
+                }),
+                `Saving the background work of task ${task.id} failed`
+            );
             return;
         }
-        if (this.outlived.get(chatId) === turn.id) {
+        if (task.background?.turnId === turn.id) {
             const after = this.deps.afterBackgroundWork(chatId);
             if (after === 'reports') {
                 return;
             }
             if (after === 'gone') {
-                this.settle(task, 'failed', { text: 'It ended before the work it ran in the background was done.', source: 'exit', at: this.deps.now() });
+                if (task.background.itemIds.length === 0 && this.deps.limit.owed(task.id)) {
+                    return;
+                }
+                const lost = task.background.itemIds.filter((id) => {
+                    const item = items.find((item) => item.id === id);
+                    return !item || (item.kind === 'subagent' ? item.status !== 'done' : item.kind !== 'tool' || item.state !== 'done');
+                });
+                if (lost.length > 0 || task.background.commands.length > 0) {
+                    this.settle(task, 'failed', {
+                        text: `The agent ended before its background work completed: ${[
+                            ...lost.map((id) => {
+                                const row = items.find((item) => item.id === id);
+                                return row?.kind === 'subagent' ? row.description || row.toolUseId : row?.kind === 'tool' ? row.name : id;
+                            }),
+                            ...task.background.commands
+                        ].join(', ')}. This work will not send a result.`,
+                        source: 'exit',
+                        at: this.deps.now()
+                    });
+                } else {
+                    const reports = task.background.itemIds.flatMap((id) => {
+                        const row = items.find((item) => item.id === id);
+                        const report = row?.kind === 'subagent' ? row.result : row?.kind === 'tool' ? row.output : null;
+                        return report ? [report] : [];
+                    });
+                    this.settle(task, 'done', {
+                        text: reports.join('\n\n') || resultOfTurn(turn, items, this.deps.now()).result.text,
+                        source: 'turn',
+                        at: this.deps.now()
+                    });
+                }
                 return;
             }
         } else if (turn.state === 'done' && this.deps.limit.owed(task.id) && this.deps.afterBackgroundWork(chatId) === 'gone') {
@@ -310,11 +357,15 @@ export class TaskCoordinator {
     }
 
     private settle(task: Task, status: 'done' | 'failed', result: TaskResult): void {
-        void this.settleNow(task, status, result).catch((e: unknown) => console.error(`Settling task ${task.id} failed:`, errorText(e)));
+        this.track(this.settleNow(task, status, result), `Settling task ${task.id} failed`);
+    }
+
+    private track(work: Promise<unknown>, message: string): void {
+        this.pending.add(work);
+        void work.catch((e: unknown) => console.error(`${message}:`, errorText(e))).finally(() => this.pending.delete(work));
     }
 
     private async settleNow(task: Task, status: 'done' | 'failed', result: TaskResult): Promise<Task | null> {
-        this.outlived.delete(task.childId);
         const settled = await this.deps.tasks.settle(task.id, status, result, this.deps.now());
         if (!settled) {
             return null;

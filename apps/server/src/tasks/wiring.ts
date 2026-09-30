@@ -32,6 +32,7 @@ export interface TaskWiringDeps {
 
 export interface TaskWiring {
     coordinator: TaskCoordinator;
+    recover(): Promise<void>;
     waiting: WaitingObserver;
     terminals: TerminalTasks;
     host: TaskVerbs;
@@ -73,6 +74,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
 
     return {
         coordinator: core.coordinator,
+        recover: core.recover,
         waiting: core.waiting,
         terminals: terminalTasks(core.coordinator),
         host: core.verbs,

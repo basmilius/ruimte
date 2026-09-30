@@ -137,7 +137,8 @@
     "workflow": {
       "notStarted": "not started",
       "waiting": "waiting",
-      "stopped": "stopped"
+      "stopped": "stopped",
+      "stalled": "No progress reported for five minutes. The workflow is still running; you can stop it."
     }
   },
   "work": {
@@ -271,7 +272,8 @@
       "attachments_other": "{{count}} attachments",
       "alreadySent": "That message was already sent",
       "editFailed": "The message could not be taken back to edit",
-      "sendNow": "Send now"
+      "sendNow": "Send now",
+      "paused": "Queue paused. Send a message or choose Send now to continue."
     },
     "quote": {
       "add": "Quote",
@@ -370,7 +372,8 @@
       "files_other": "{{count}} files, not kept"
     },
     "mode": {
-      "label": "Permissions"
+      "label": "Permissions",
+      "effective": "Running with {{effective}}. Selected: {{requested}}."
     },
     "account": {
       "label": "Account",
