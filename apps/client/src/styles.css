@@ -240,28 +240,6 @@
  * would keep the wider default. The controls and popups every component shares are in `@basmilius/desktop-ui/theme.css`.
  */
 @layer components {
-    /* ---------------------------------------------------------------- Popups */
-
-    .project-menu-row { gap: 1px; }
-    .project-menu-row > .menu-item:first-child { border-radius: 6px 0 0 6px; }
-    .project-menu-row > .project-menu-actions:not(:last-child) { border-radius: 0; }
-    .project-menu-actions {
-        width: calc(var(--text-sm--line-height) + 12px);
-        padding: 0;
-        border-radius: 0 6px 6px 0;
-        justify-content: center;
-        gap: 0;
-    }
-    :root[data-modality='pointer'] .project-menu-row:hover > .menu-item {
-        background: color-mix(in srgb, var(--surface-hover) 55%, transparent);
-    }
-    :root[data-modality='pointer'] .project-menu-row > .menu-item[data-highlighted] {
-        background: var(--surface-hover);
-    }
-    .project-menu-row:has(.project-menu-actions[data-popup-open]) > .menu-item {
-        background: var(--surface-hover);
-    }
-
     /* ---------------------------------------------------------------- Canvas */
 
     /* The accent itself, not a wash of it: a selection ring has to read at a glance on a canvas full

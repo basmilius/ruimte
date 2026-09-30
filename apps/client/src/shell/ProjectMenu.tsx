@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ActionInput } from '@ruimte/actions';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { AppWindow, ChevronDown, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
+import { AppWindow, ExternalLink, FolderOpen, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { openProjectClickAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
@@ -20,53 +19,27 @@ import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { Icon, Tooltip, PromptDialog, Menu } from '@basmilius/desktop-ui';
+import { Icon, Tooltip, PromptDialog, Menu, ProjectSwitcher, type ProjectSwitcherItem } from '@basmilius/desktop-ui';
 
-interface ProjectRowProps {
+interface SwitcherItem extends ProjectSwitcherItem {
     row: ProjectMenuRow;
-    /* One machine needs no naming; the label only earns its place in the row once there are two. */
-    showMachine: boolean;
-    actions?: {
-        platform: string | null;
-        /* The project this window shows, which moves to a new window rather than opening in one. */
-        current: boolean;
-        onSettings(): void;
-        onClose(): void;
-    };
 }
 
-/* One project in the switcher. The folder is what the tooltip says, so the row stays a single line. */
-function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
+function ProjectActions({
+    row,
+    platform,
+    current,
+    onSettings,
+    onClose
+}: {
+    row: ProjectMenuRow;
+    platform: string | null;
+    current: boolean;
+    onSettings(): void;
+    onClose(): void;
+}) {
     const { t } = useTranslation('shell');
     const { summary } = row;
-    const tooltip = (
-        <span className="flex flex-col items-start">
-            <span>{summary.folder}</span>
-            {/* Not connected is about the machine, unavailable about the folder; a row can be either. */}
-            {!row.connected && <span className="text-text-muted">{t('connection.noLink')}</span>}
-            {!summary.available && <span className="text-text-muted">{t('projectMenu.folderGone')}</span>}
-        </span>
-    );
-
-    const project = (
-        <Menu.Item
-            className={clsx('min-w-0 flex-1', (!summary.available || !row.connected) && 'opacity-50')}
-            disabled={!summary.available}
-            onClick={(event) => openProjectClickAction(event, row.endpointId, summary.projectId)}
-        >
-            <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} />
-            <span className="min-w-0 truncate">{summary.name}</span>
-            {showMachine && <span className="ml-auto pl-3 truncate text-xs text-text-faint">{row.machineLabel}</span>}
-        </Menu.Item>
-    );
-
-    if (!actions) {
-        return (
-            <Tooltip label={tooltip} side="right">
-                {project}
-            </Tooltip>
-        );
-    }
 
     const reveal = async (): Promise<void> => {
         if (!summary.folder) {
@@ -78,43 +51,28 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
     };
 
     return (
-        <div className="project-menu-row flex min-w-0 items-stretch" role="group">
-            <Tooltip label={tooltip} side="right" sideOffset={41}>
-                {project}
-            </Tooltip>
-            <Menu.SubmenuRoot>
-                <Menu.SubmenuTrigger
-                    className="project-menu-actions shrink-0"
-                    chevron={false}
-                    aria-label={t('projectMenu.actionsFor', { name: summary.name })}
-                    label={t('projectMenu.actionsFor', { name: summary.name })}
+        <>
+            {summary.folder && (
+                <Menu.Item onClick={() => void reveal()}>
+                    <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(platform) })}
+                </Menu.Item>
+            )}
+            {canOpenWindows() && (
+                <Menu.Item
+                    disabled={!current && !summary.available}
+                    onClick={() => (current ? void moveToNewWindow() : openInNewWindow(row.endpointId, summary.projectId))}
                 >
-                    <Icon icon={MoreHorizontal} size={14} />
-                </Menu.SubmenuTrigger>
-                <Menu.Popup className="min-w-52">
-                    {summary.folder && (
-                        <Menu.Item onClick={() => void reveal()}>
-                            <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(actions.platform) })}
-                        </Menu.Item>
-                    )}
-                    {canOpenWindows() && (
-                        <Menu.Item
-                            disabled={!actions.current && !summary.available}
-                            onClick={() => (actions.current ? void moveToNewWindow() : openInNewWindow(row.endpointId, summary.projectId))}
-                        >
-                            <Icon icon={AppWindow} size={14} /> {t(actions.current ? 'projectMenu.moveToNewWindow' : 'projectMenu.openInNewWindow')}
-                        </Menu.Item>
-                    )}
-                    <Menu.Item onClick={actions.onSettings}>
-                        <Icon icon={Settings2} size={14} /> {t('projectMenu.projectSettings')}
-                    </Menu.Item>
-                    <Menu.Separator />
-                    <Menu.Item onClick={actions.onClose}>
-                        <Icon icon={X} size={14} /> {t('projectMenu.closeProject')}
-                    </Menu.Item>
-                </Menu.Popup>
-            </Menu.SubmenuRoot>
-        </div>
+                    <Icon icon={AppWindow} size={14} /> {t(current ? 'projectMenu.moveToNewWindow' : 'projectMenu.openInNewWindow')}
+                </Menu.Item>
+            )}
+            <Menu.Item onClick={onSettings}>
+                <Icon icon={Settings2} size={14} /> {t('projectMenu.projectSettings')}
+            </Menu.Item>
+            <Menu.Separator />
+            <Menu.Item onClick={onClose}>
+                <Icon icon={X} size={14} /> {t('projectMenu.closeProject')}
+            </Menu.Item>
+        </>
     );
 }
 
@@ -234,58 +192,69 @@ export function ProjectMenu() {
         }
     };
 
+    const switcherItem = (row: ProjectMenuRow, withActions: boolean): SwitcherItem => ({
+        id: `${row.endpointId}:${row.summary.projectId}`,
+        name: row.summary.name,
+        icon: <ProjectGlyph projectId={row.summary.projectId} endpointId={row.endpointId} icon={row.summary.icon} color={row.summary.color} />,
+        description: (
+            <span className="flex flex-col items-start">
+                <span>{row.summary.folder}</span>
+                {/* Not connected is about the machine, unavailable about the folder; a row can be either. */}
+                {!row.connected && <span className="text-text-muted">{t('connection.noLink')}</span>}
+                {!row.summary.available && <span className="text-text-muted">{t('projectMenu.folderGone')}</span>}
+            </span>
+        ),
+        hint: showMachine ? row.machineLabel : undefined,
+        disabled: !row.summary.available,
+        muted: !row.connected,
+        actions: withActions ? (
+            <ProjectActions
+                row={row}
+                platform={servers[row.endpointId]?.platform ?? null}
+                current={isCurrent(row)}
+                onSettings={() => openSettings(row)}
+                onClose={() => void askClose(row)}
+            />
+        ) : undefined,
+        row
+    });
+
     return (
         <>
-            <Menu.Root>
-                <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
-                    {machine && (
+            <ProjectSwitcher
+                current={
+                    current === null
+                        ? null
+                        : {
+                              id: `${currentEndpointId}:${current.projectId}`,
+                              name: current.name,
+                              icon: (
+                                  <ProjectGlyph
+                                      projectId={current.projectId}
+                                      endpointId={currentEndpointId ?? undefined}
+                                      icon={current.icon}
+                                      color={current.color}
+                                  />
+                              )
+                          }
+                }
+                projects={open.map((row) => switcherItem(row, true))}
+                recentProjects={recent.map((row) => switcherItem(row, false))}
+                onSelect={({ row }, event) => openProjectClickAction(event, row.endpointId, row.summary.projectId)}
+                leading={
+                    machine && (
                         <Tooltip label={machine.label}>
                             <span className="flex shrink-0 items-center">
                                 <MachineGlyph icon={machineIcon} size={14} className="text-text-muted" />
                             </span>
                         </Tooltip>
-                    )}
-                    {current && (
-                        <ProjectGlyph projectId={current.projectId} endpointId={currentEndpointId ?? undefined} icon={current.icon} color={current.color} />
-                    )}
-                    <span className="truncate text-sm font-medium text-text">{current?.name}</span>
-                    <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
-                </Menu.Trigger>
-                <Menu.Popup className="min-w-60">
-                    {open.map((row) => (
-                        <ProjectRow
-                            key={`${row.endpointId}:${row.summary.projectId}`}
-                            row={row}
-                            showMachine={showMachine}
-                            actions={{
-                                platform: servers[row.endpointId]?.platform ?? null,
-                                current: isCurrent(row),
-                                onSettings: () => openSettings(row),
-                                onClose: () => void askClose(row)
-                            }}
-                        />
-                    ))}
-                    {recent.length > 0 && (
-                        <>
-                            {open.length > 0 && <Menu.Separator />}
-                            <Menu.SubmenuRoot>
-                                <Menu.SubmenuTrigger>
-                                    <Icon icon={History} size={14} /> {t('projectMenu.recent')}
-                                </Menu.SubmenuTrigger>
-                                <Menu.Popup className="min-w-60">
-                                    {recent.map((row) => (
-                                        <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
-                                    ))}
-                                </Menu.Popup>
-                            </Menu.SubmenuRoot>
-                        </>
-                    )}
-                    {(open.length > 0 || recent.length > 0) && <Menu.Separator />}
-                    <Menu.Item onClick={() => useUi.getState().openFolderBrowser()}>
-                        <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
-                    </Menu.Item>
-                </Menu.Popup>
-            </Menu.Root>
+                    )
+                }
+            >
+                <Menu.Item onClick={() => useUi.getState().openFolderBrowser()}>
+                    <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
+                </Menu.Item>
+            </ProjectSwitcher>
 
             <ProjectSettingsDialog
                 subject={settingsSubject}

@@ -293,12 +293,10 @@
     },
     "projectMenu": {
         "folderGone": "Die map bestaat niet meer",
-        "actionsFor": "Acties voor {{name}}",
         "openIn": "Openen in {{app}}",
         "projectSettings": "Projectinstellingen…",
         "closeProject": "Project sluiten",
         "projects": "Projecten",
-        "recent": "Recente projecten",
         "openFolder": "Map openen",
         "closeTitle": "{{name}} sluiten?",
         "openInNewWindow": "Openen in nieuw venster",

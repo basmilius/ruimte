@@ -293,12 +293,10 @@
     },
     "projectMenu": {
         "folderGone": "That folder is gone",
-        "actionsFor": "Actions for {{name}}",
         "openIn": "Open in {{app}}",
         "projectSettings": "Project settings…",
         "closeProject": "Close project",
         "projects": "Projects",
-        "recent": "Recent projects",
         "openFolder": "Open folder",
         "closeTitle": "Close {{name}}?",
         "openInNewWindow": "Open in new window",
