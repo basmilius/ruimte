@@ -17,6 +17,8 @@ export const USAGE_PERIODS: readonly { id: UsagePeriod; days: number }[] = [
 
 const STORAGE_KEY = 'ruimte.usage';
 
+export const USAGE_PREFERENCES_KEY = STORAGE_KEY;
+
 interface Preferences {
     period: UsagePeriod;
     metric: UsageMetric;
@@ -114,6 +116,11 @@ interface UsageStore extends Preferences {
     /* A host that is forgotten takes its numbers with it; the three preferences are the viewer's and stay. */
     forget(scopeId: string): void;
 }
+
+/* Reads the period, metric and currency again, once another window of the same origin wrote them. */
+export const reloadUsagePreferences = (): void => {
+    useUsageStore.setState(readPreferences());
+};
 
 export const useUsageStore = create<UsageStore>((set, get) => ({
     ...readPreferences(),

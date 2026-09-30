@@ -33,6 +33,7 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { ensureMachine } from '@/endpoint/reach';
 import { createViewAction, openFolderAction, openProjectAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { revealNode, showFileOnCanvas, showView } from '@/project/views';
+import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
     browseBack,
@@ -126,6 +127,8 @@ interface Entry extends Command {
     here?: boolean;
     /* Pushed to the end of the row, where a state belongs: the hint next to a name is about the name. */
     trailing?: React.ReactNode;
+    /* What Cmd-click or Cmd+Enter (Ctrl off macOS) does instead of `run`, such as a project in a window of its own. */
+    inNewWindow?: () => void;
     section: 'recent' | 'jump' | 'files' | 'views' | 'projects' | 'actions' | 'folders' | 'machines';
     /* The folder a browse row stands for: what Enter steps into, and what Tab completes the field
        to without stepping in. Navigating is the palette's own business, so such a row has no `run`. */
@@ -660,7 +663,8 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                     hint: projectMachines.size > 1 ? `${machine} · ${where}` : where,
                     icon: <ProjectGlyph projectId={summary.projectId} endpointId={endpointId} icon={summary.icon} color={summary.color} size={14} />,
                     section: 'projects',
-                    run: () => openProjectAction(endpointId, summary.projectId)
+                    run: () => openProjectAction(endpointId, summary.projectId),
+                    inNewWindow: () => openInNewWindow(endpointId, summary.projectId)
                 };
             });
         /* What the last answer held stays out of a list it no longer belongs to; the effect above
@@ -800,7 +804,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
        on the button is the Electron machine's, because that is whose dialog opens. */
     const nativeDialog = browseEndpointId === LOCAL_ENDPOINT_ID ? desktop() : null;
 
-    const run = (entry: Entry | undefined): void => {
+    const run = (entry: Entry | undefined, newWindow = false): void => {
         if (!entry) {
             return;
         }
@@ -818,6 +822,10 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
             setRecents(rememberRecent(entry.id));
         }
         setOpen(false);
+        if (newWindow && entry.inNewWindow) {
+            entry.inNewWindow();
+            return;
+        }
         entry.run();
     };
 
@@ -912,7 +920,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                                 ) {
                                     void submitPath(query);
                                 } else {
-                                    run(active);
+                                    run(active, wantsNewWindow(e));
                                 }
                             } else if (e.key === 'Tab' && browsing && !machineStep && active?.browsePath) {
                                 // Completes the field to the folder under the highlight, without stepping into it.
@@ -1041,7 +1049,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
                                     data-active={entry === active}
                                     className="cursor-row flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
                                     onMouseEnter={() => setIndex(i)}
-                                    onClick={() => run(entry)}
+                                    onClick={(e) => run(entry, wantsNewWindow(e))}
                                 >
                                     <span className="shrink-0 text-text-faint">{entry.icon}</span>
                                     <span className="min-w-0 truncate">{entry.label}</span>
