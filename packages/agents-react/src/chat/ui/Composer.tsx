@@ -60,7 +60,7 @@ import { ResumeCompactionDock } from './ResumeCompactionDock';
 import { StashPicker } from './Pickers';
 import { RunSettings } from './RunSettings';
 import { UploadThumb } from './UploadThumb';
-import { formatNumber } from '@basmilius/react-ui/format';
+import { formatNumber } from '@basmilius/desktop-ui/format';
 import {
     ButtonGroup,
     ContextMenu,
@@ -77,7 +77,7 @@ import {
     Surface,
     Tooltip,
     useNow
-} from '@basmilius/react-ui';
+} from '@basmilius/desktop-ui';
 import { useChatRow, waitingRequestsOf } from '../../state/chats';
 import { useProviders } from '../../state/providers';
 

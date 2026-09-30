@@ -7,7 +7,7 @@ import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
-import { Button, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel } from '@basmilius/react-ui';
+import { Button, Icon, useAsyncAction, Dialog, Field, FormError, IconPicker, Input, SectionLabel } from '@basmilius/desktop-ui';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
 const MAX_BYTES = 256 * 1024;

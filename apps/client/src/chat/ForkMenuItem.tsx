@@ -6,7 +6,7 @@ import { useChatPlace } from '@/chat/use-chat-place';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
-import { DisabledReason, Icon, ContextMenu } from '@basmilius/react-ui';
+import { DisabledReason, Icon, ContextMenu } from '@basmilius/desktop-ui';
 
 /*
  * "Fork conversation…" in the menu of a chat node or a chat view, offered as a fork after the last

@@ -14,7 +14,7 @@ import {
     summaryWordOf,
     taskIdOf
 } from './subagent-list';
-import { formatMoment, formatTokens } from '@basmilius/react-ui/format';
+import { formatMoment, formatTokens } from '@basmilius/desktop-ui/format';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
     id,

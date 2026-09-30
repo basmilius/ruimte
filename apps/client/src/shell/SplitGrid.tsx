@@ -11,7 +11,7 @@ import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Button, Kbd, Surface, Tooltip } from '@basmilius/react-ui';
+import { Button, Kbd, Surface, Tooltip } from '@basmilius/desktop-ui';
 import { carriesView, draggedViewId, dragging, edgeZoneAt, isNowhereDrop, setGridTakesPath, shapeOf, zoneAt } from '@/shell/view-drag';
 import { ViewSurface } from '@/shell/ViewHost';
 import { CellToolbar } from '@/shell/CellToolbar';

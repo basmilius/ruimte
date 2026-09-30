@@ -4,7 +4,7 @@ import { fitAction, historyAction } from '@/actions/client-actions';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagram, exportDiagram } from '@/diagram/diagram-actions';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
-import { ButtonGroup, Icon, IconButton, Separator, Menu, DockShell, ZoomControls } from '@basmilius/react-ui';
+import { ButtonGroup, Icon, IconButton, Separator, Menu, DockShell, ZoomControls } from '@basmilius/desktop-ui';
 import { useSettings } from '@/state/settings';
 
 /*

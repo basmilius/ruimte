@@ -1,7 +1,7 @@
 import { Folder, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow } from '@basmilius/react-ui/settings';
-import { Input, Segmented, Stepper, Switch } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Input, Segmented, Stepper, Switch } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
 

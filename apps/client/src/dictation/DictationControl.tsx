@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from 'react
 import { Mic, Square, X, CircleAlert } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ButtonGroup, ErrorBoundary, IconButton } from '@basmilius/react-ui';
+import { ButtonGroup, ErrorBoundary, IconButton } from '@basmilius/desktop-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { cancelDictation, observeSpeech, registerDictationTarget, toggleDictation, useDictation, type DictationInsertion } from './controller';
 

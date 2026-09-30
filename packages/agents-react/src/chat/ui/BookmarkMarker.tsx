@@ -6,7 +6,7 @@ import { CHAT_BOOKMARK_LIMITS, type ChatBookmark } from '@ruimte/agent-contracts
 import { nameBookmark, removeBookmark, useBookmarkNaming } from '../bookmarks';
 import { bookmarkLabel } from '../logic/bookmarks';
 import { useChatScope } from '../../scope';
-import { ButtonGroup, Icon, IconButton, Input } from '@basmilius/react-ui';
+import { ButtonGroup, Icon, IconButton, Input } from '@basmilius/desktop-ui';
 
 interface BookmarkMarkerProps {
     chatId: string;

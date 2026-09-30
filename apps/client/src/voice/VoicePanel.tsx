@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { clampColumnSize, SlidingColumn, lazyNamed } from '@basmilius/react-ui';
+import { clampColumnSize, SlidingColumn, lazyNamed } from '@basmilius/desktop-ui';
 import { useVoice } from '@/voice/state';
 
 const VoicePanelBody = lazyNamed(() => import('@/voice/VoicePanelBody'), 'VoicePanelBody');

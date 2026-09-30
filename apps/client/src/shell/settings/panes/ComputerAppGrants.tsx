@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { AppWindow, Clock, SquareTerminal, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComputerAppEntry, ComputerAppGrants as Grants, ComputerRevokePayload } from '@ruimte/contracts';
-import { formatDayWithYear, useFormatLocale } from '@basmilius/react-ui/format';
-import { SettingsRow, TopIcon } from '@basmilius/react-ui/settings';
-import { Button, Tooltip } from '@basmilius/react-ui';
+import { formatDayWithYear, useFormatLocale } from '@basmilius/desktop-ui/format';
+import { SettingsRow, TopIcon } from '@basmilius/desktop-ui/settings';
+import { Button, Tooltip } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 interface ComputerAppGrantsProps {

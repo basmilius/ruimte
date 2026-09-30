@@ -30,7 +30,7 @@ import { nextId } from '@/state/canvas';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@basmilius/react-ui';
+import { isInFloatingLayer, Kbd, isModHeld, ContextMenu } from '@basmilius/desktop-ui';
 import { isApplePlatform } from '@/desktop/bridge';
 
 /*

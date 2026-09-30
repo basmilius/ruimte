@@ -3,4 +3,4 @@
 pathIgnorePatterns = ["**/*.integration.test.ts"]
 # The client's English words, so a pure function that reads one off i18next is testable
 # without every test file initializing it first.
-preload = ["@basmilius/react-ui/testing/dedupe", "./test-preload.ts"]
+preload = ["@basmilius/desktop-ui/testing/dedupe", "./test-preload.ts"]

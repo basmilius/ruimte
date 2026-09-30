@@ -9,7 +9,7 @@ import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { copyText, Icon, Menu } from '@basmilius/react-ui';
+import { copyText, Icon, Menu } from '@basmilius/desktop-ui';
 
 /* Which of the three surfaces these items are on, since a file already on one does not offer to go
    there again: a node is not shown on the canvas twice and a view is not opened as one. */

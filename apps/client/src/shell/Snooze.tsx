@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlarmClock, AlarmClockOff } from 'lucide-react';
-import { formatClock, formatMoment, formatWeekdayClock } from '@basmilius/react-ui/format';
-import { Icon, IconButton, Menu, Tooltip, ContextMenu } from '@basmilius/react-ui';
+import { formatClock, formatMoment, formatWeekdayClock } from '@basmilius/desktop-ui/format';
+import { Icon, IconButton, Menu, Tooltip, ContextMenu } from '@basmilius/desktop-ui';
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
 
 /* The moment a choice lands on, beside its name: a clock today, a weekday for tomorrow. */

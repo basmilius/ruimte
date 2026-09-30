@@ -33,7 +33,7 @@ import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import { reloadOnStaleChunk } from '@/stale-chunks';
-import { prefetcher } from '@basmilius/react-ui';
+import { prefetcher } from '@basmilius/desktop-ui';
 import '@/state/theme';
 import '@/state/settings';
 import '@fontsource-variable/geist';

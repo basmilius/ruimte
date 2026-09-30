@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import i18next from 'i18next';
-import { Dialog } from '@basmilius/react-ui';
+import { Dialog } from '@basmilius/desktop-ui';
 
 /*
  * The frame of the usage page: larger than the settings, since the chart and the breakdown need the

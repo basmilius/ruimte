@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChatAttachResult, ComputerApproval } from '@ruimte/contracts';
-import { ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@basmilius/react-ui';
+import { ButtonGroup, ErrorBoundary, IconButton, PreviewCard } from '@basmilius/desktop-ui';
 import { answerPrompt, type ChatPromptClients } from '@ruimte/agents-react/prompts/logic/subjects';
 import { usePromptSession } from '@ruimte/agents-react/prompts/logic/usePromptSession';
 import { PROMPT_SURFACE } from '@ruimte/agents-react/prompts/ui/PromptCard';

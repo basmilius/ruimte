@@ -36,7 +36,7 @@ import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Icon, Kbd, KEY_SHORTCUTS, Menu } from '@basmilius/react-ui';
+import { Icon, Kbd, KEY_SHORTCUTS, Menu } from '@basmilius/desktop-ui';
 
 interface ViewMenuItemsProps {
     viewId: string;

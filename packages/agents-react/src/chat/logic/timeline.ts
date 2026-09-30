@@ -14,7 +14,7 @@ import type {
 } from '@ruimte/agent-contracts';
 import { abortedByMachine } from '@ruimte/agent-contracts';
 import type { ThreadCard } from '../../host';
-import { formatElapsedShort } from '@basmilius/react-ui/format';
+import { formatElapsedShort } from '@basmilius/desktop-ui/format';
 import { handbackReportOf } from './handback';
 import { toolEntry } from './tool-catalog';
 import { hasFileChanges, isFileChange } from './tools';

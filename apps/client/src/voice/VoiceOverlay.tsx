@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FadingWords } from '@ruimte/agents-react/chat/ui/FadingWords';
-import { ErrorBoundary } from '@basmilius/react-ui';
+import { ErrorBoundary } from '@basmilius/desktop-ui';
 import { useVoice } from '@/voice/state';
 import { VoiceWaveform } from '@/voice/VoiceWaveform';
 

@@ -44,7 +44,7 @@ import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
-import { ColorSwatch, Icon, Tooltip, Kbd, ContextMenu } from '@basmilius/react-ui';
+import { ColorSwatch, Icon, Tooltip, Kbd, ContextMenu } from '@basmilius/desktop-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /*

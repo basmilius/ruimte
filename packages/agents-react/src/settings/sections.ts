@@ -1,9 +1,9 @@
 import type { ComponentType } from 'react';
 import i18next from 'i18next';
 import { Brain, ChartNoAxesColumn, type LucideIcon } from 'lucide-react';
-import type { SettingsSectionEntry } from '@basmilius/react-ui/settings';
+import type { SettingsSectionEntry } from '@basmilius/desktop-ui/settings';
 
-/* A section of this package for the settings dialog of @basmilius/react-ui, with its words read when it is drawn. */
+/* A section of this package for the settings dialog of @basmilius/desktop-ui, with its words read when it is drawn. */
 export interface AgentsSettingsSection {
     id: string;
     icon: LucideIcon;

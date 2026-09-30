@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { formatDuration } from '@basmilius/react-ui/format';
+import { formatDuration } from '@basmilius/desktop-ui/format';
 import type { LaunchStatus } from '@ruimte/contracts';
 import { showLaunchOutput, startLaunch } from '@/launches/actions';
 import { useLaunches } from '@/launches/state';

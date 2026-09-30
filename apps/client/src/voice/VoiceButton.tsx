@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Mic } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { IconButton } from '@basmilius/react-ui';
+import { IconButton } from '@basmilius/desktop-ui';
 import { closeVoicePanel } from '@/voice/controller';
 import { refreshVoiceCredential, useVoice } from '@/voice/state';
 

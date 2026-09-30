@@ -7,7 +7,7 @@ import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
 import { useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Icon, Menu } from '@basmilius/react-ui';
+import { Icon, Menu } from '@basmilius/desktop-ui';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (

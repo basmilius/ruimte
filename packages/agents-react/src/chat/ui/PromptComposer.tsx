@@ -10,7 +10,7 @@ import { PromptView } from '../../prompts/ui/PromptView';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatActions } from '../actions';
-import { Icon } from '@basmilius/react-ui';
+import { Icon } from '@basmilius/desktop-ui';
 
 /* The one being read stays in front; otherwise blocking before optional, oldest first, as everywhere else. */
 const pickSubject = (waiting: readonly PromptSubject[], activeId: string | null): PromptSubject | null =>

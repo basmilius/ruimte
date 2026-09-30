@@ -5,7 +5,7 @@ import { GIT_GROUP } from '@/shell/panels/classes';
 import { performAsPerson } from '@/actions/client-actions';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
-import { Button, copyText, Icon, ListRow, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu } from '@basmilius/react-ui';
+import { Button, copyText, Icon, ListRow, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu } from '@basmilius/desktop-ui';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;

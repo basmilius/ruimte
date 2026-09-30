@@ -7,7 +7,7 @@ import { accentColor, accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { textRect } from '@/canvas/edge-lines';
 import { FONT_STACK } from '@/canvas/text-font';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@basmilius/react-ui';
+import { ButtonGroup, ColorSwatch, Icon, IconButton, Menu, Surface, Tooltip } from '@basmilius/desktop-ui';
 
 const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { pool, transportFor } from '@/transport';
-import { messageOf } from '@basmilius/react-ui';
+import { messageOf } from '@basmilius/desktop-ui';
 import { usePulsarAccount, withAccessToken } from './account';
 import { AutoRegistrar, announcedRecordOf } from './auto-register';
 import { refreshAccountMachines, usePulsarMachines } from './machines';

@@ -21,7 +21,7 @@ import {
     Select,
     TextArea,
     Tooltip
-} from '@basmilius/react-ui';
+} from '@basmilius/desktop-ui';
 import {
     draftOf,
     draftProblem,

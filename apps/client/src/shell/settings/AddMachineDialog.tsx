@@ -1,7 +1,7 @@
 import { KeyRound, Link2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Button, FieldHint, FormError, Icon, Input, Tooltip, Dialog } from '@basmilius/react-ui';
+import { Button, FieldHint, FormError, Icon, Input, Tooltip, Dialog } from '@basmilius/desktop-ui';
 
 /*
  * Adding a machine from the start screen, which has no Account pane to do it in. The dialog is about

@@ -24,8 +24,8 @@ import {
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress } from '@ruimte/plan';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
-import { formatMoment } from '@basmilius/react-ui/format';
-import { copyText, EmptyState, Icon, IconButton, Menu, TextArea, TextMenu, Tooltip, ContextMenu } from '@basmilius/react-ui';
+import { formatMoment } from '@basmilius/desktop-ui/format';
+import { copyText, EmptyState, Icon, IconButton, Menu, TextArea, TextMenu, Tooltip, ContextMenu } from '@basmilius/desktop-ui';
 import {
     collapsedOf,
     copyPlanMarkdown,

@@ -4,7 +4,7 @@ import { flagOf } from '@ruimte/contracts';
 import { flagAction } from '@/actions/client-actions';
 import { accentLabel, NODE_ACCENTS } from '@/canvas/accents';
 import { useDocument } from '@/state/document';
-import { Icon, Menu } from '@basmilius/react-ui';
+import { Icon, Menu } from '@basmilius/desktop-ui';
 
 function ColorItem({ ids, entry, picked }: { ids: readonly string[]; entry: (typeof NODE_ACCENTS)[number]; picked: boolean }) {
     return (

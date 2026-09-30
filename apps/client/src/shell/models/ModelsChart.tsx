@@ -2,8 +2,8 @@ import { useId, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { BenchmarkPoint } from '@ruimte/pulsar';
-import { formatDecimal, formatUsdSignificant } from '@basmilius/react-ui/format';
-import { EmptyState, useMeasuredWidth } from '@basmilius/react-ui';
+import { formatDecimal, formatUsdSignificant } from '@basmilius/desktop-ui/format';
+import { EmptyState, useMeasuredWidth } from '@basmilius/desktop-ui';
 import {
     boxOf,
     costAxis,

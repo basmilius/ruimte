@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Spinner, Tooltip } from '@basmilius/react-ui';
+import { Spinner, Tooltip } from '@basmilius/desktop-ui';
 
 /* An agent in the middle of a turn. `plain` drops the tooltip for a row that already names itself. */
 export function WorkingMark({ plain = false }: { plain?: boolean }) {

@@ -9,7 +9,7 @@ import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { isUnsavedDraft, useTextDrafts } from '@/state/text-drafts';
-import { FileIcon, Icon, IconButton, Tooltip, ContextMenu } from '@basmilius/react-ui';
+import { FileIcon, Icon, IconButton, Tooltip, ContextMenu } from '@basmilius/desktop-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* A tab lifts on hover instead of sinking (`surface-raised` is the step above the panel's ground),

@@ -5,7 +5,7 @@ import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo } from '@ruimte
 import { AgentIcon } from '../../agents/AgentIcon';
 import { modelName } from '../../agents/model-name';
 import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '../stash';
-import { Icon, IconButton, Menu, Popover, Tooltip } from '@basmilius/react-ui';
+import { Icon, IconButton, Menu, Popover, Tooltip } from '@basmilius/desktop-ui';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';

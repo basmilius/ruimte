@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type R
 import { useTranslation } from 'react-i18next';
 import { ChartNoAxesColumn, RefreshCw } from 'lucide-react';
 import { USAGE_PROVIDERS, type UsageAccount } from '@ruimte/agent-contracts';
-import { Button, CloseButton, Dialog, EmptyState, FormError, IconButton, Segmented, Select, Skeleton } from '@basmilius/react-ui';
+import { Button, CloseButton, Dialog, EmptyState, FormError, IconButton, Segmented, Select, Skeleton } from '@basmilius/desktop-ui';
 import { AccountDot } from '../agents/AccountDot';
 import { chatHost } from '../host';
 import { useChatScope } from '../scope';

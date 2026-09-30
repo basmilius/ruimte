@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
-import { Button, Dialog } from '@basmilius/react-ui';
+import { Button, Dialog } from '@basmilius/desktop-ui';
 
 /*
  * Asked after an update when the background service still runs the older build, because a restart

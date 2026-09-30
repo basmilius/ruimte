@@ -40,7 +40,7 @@ import { useChatScope } from '../../scope';
 import { FileLinkContext } from './file-links';
 import { AgentIcon } from '../../agents/AgentIcon';
 import { useModelName } from '../../agents/model-name';
-import { ContextMenu, EmptyState, ErrorBoundary, Icon, SectionLabel } from '@basmilius/react-ui';
+import { ContextMenu, EmptyState, ErrorBoundary, Icon, SectionLabel } from '@basmilius/desktop-ui';
 
 const ESTIMATED_ROW_PX = 56;
 

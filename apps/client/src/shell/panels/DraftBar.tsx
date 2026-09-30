@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TriangleAlert } from 'lucide-react';
 import { textDrafts, useTextDraft } from '@/state/text-drafts';
-import { Button, Icon } from '@basmilius/react-ui';
+import { Button, Icon } from '@basmilius/desktop-ui';
 
 /* A line over the editor with the buttons that answer it. It wraps in a narrow node rather than cutting the message. */
 export function EditorNotice({ message, children }: { message: string; children?: ReactNode }) {

@@ -1,4 +1,4 @@
-import { shortcut } from '@basmilius/react-ui';
+import { shortcut } from '@basmilius/desktop-ui';
 
 /* The shortcuts `app-shortcuts.ts` binds, apart from the handler so the terminal keymap can read them without the stores. */
 export const APP_SHORTCUTS = {

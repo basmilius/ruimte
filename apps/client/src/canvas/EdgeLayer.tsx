@@ -10,7 +10,7 @@ import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
-import { Icon, ContextMenu, Input } from '@basmilius/react-ui';
+import { Icon, ContextMenu, Input } from '@basmilius/desktop-ui';
 
 function EdgeLabel({
     ids,

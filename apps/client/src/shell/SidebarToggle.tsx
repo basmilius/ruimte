@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useUi } from '@/state/ui';
-import { IconButton } from '@basmilius/react-ui';
+import { IconButton } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 /* The toolbar keeps this control available when the sidebar is closed. */

@@ -1,10 +1,10 @@
 @import "tailwindcss";
-@import "@basmilius/react-ui/theme.css";
+@import "@basmilius/desktop-ui/theme.css";
 @import "@ruimte/agents-react/theme.css";
 
-/* The components of @basmilius/react-ui and the chat of @ruimte/agents-react carry their own classes, outside the folder Tailwind scans by itself.
+/* The components of @basmilius/desktop-ui and the chat of @ruimte/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */
-@source "../node_modules/@basmilius/react-ui/src";
+@source "../node_modules/@basmilius/desktop-ui/src";
 @source "../../../packages/agents-react/src";
 
 /* Markdown reads as prose, which is a rhythm nobody wants to write twice. The plugin brings it;
@@ -28,7 +28,7 @@
     --color-iron-950: #020513;
 }
 
-/* Ruimte's own tokens, beside the ones @basmilius/react-ui defines. */
+/* Ruimte's own tokens, beside the ones @basmilius/desktop-ui defines. */
 :root, [data-theme="light"] {
     --canvas-bg: #eeeef1;
     --canvas-dot: #cfcfd6;
@@ -237,7 +237,7 @@
  * a counter, a keyframe.
  * Inside Tailwind's `components` layer on purpose: an unlayered rule beats every utility of the
  * same specificity, so `icon-btn h-7 w-7` would silently stay 32 pixels and `menu-popup min-w-48`
- * would keep the wider default. The controls and popups every component shares are in `@basmilius/react-ui/theme.css`.
+ * would keep the wider default. The controls and popups every component shares are in `@basmilius/desktop-ui/theme.css`.
  */
 @layer components {
     /* ---------------------------------------------------------------- Popups */

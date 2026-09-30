@@ -1,7 +1,7 @@
 import { ChartNoAxesColumn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { SettingsRow, SettingsSection } from '@basmilius/react-ui/settings';
-import { Segmented, Button, Icon } from '@basmilius/react-ui';
+import { SettingsRow, SettingsSection } from '@basmilius/desktop-ui/settings';
+import { Segmented, Button, Icon } from '@basmilius/desktop-ui';
 import { useUsage, useUsageStore } from '../state/usage';
 import type { UsageCurrency } from './format';
 

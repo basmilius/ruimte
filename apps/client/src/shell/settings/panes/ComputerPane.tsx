@@ -16,8 +16,8 @@ import {
 } from '@/computer/setup';
 import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
-import { SettingsRow } from '@basmilius/react-ui/settings';
-import { Switch, Button, ErrorBoundary, Pill, FormError } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Switch, Button, ErrorBoundary, Pill, FormError } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
 import { useComputer } from '@/state/computer';

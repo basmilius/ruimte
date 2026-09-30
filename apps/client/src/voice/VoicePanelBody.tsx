@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 import { FadingWords } from '@ruimte/agents-react/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { formatClockDuration } from '@basmilius/react-ui/format';
-import { Button, CloseButton, EmptyState, FormError, Icon, IconButton, PanelHeader, SectionLabel, useNow } from '@basmilius/react-ui';
+import { formatClockDuration } from '@basmilius/desktop-ui/format';
+import { Button, CloseButton, EmptyState, FormError, Icon, IconButton, PanelHeader, SectionLabel, useNow } from '@basmilius/desktop-ui';
 import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
 import { VoiceWaveform } from '@/voice/VoiceWaveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';

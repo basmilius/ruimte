@@ -73,7 +73,7 @@ import {
     KEY_SHORTCUTS,
     matchesShortcut,
     Dialog
-} from '@basmilius/react-ui';
+} from '@basmilius/desktop-ui';
 import { usePulsarAccount } from '@/pulsar/account';
 import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { useCanvas } from '@/state/canvas';

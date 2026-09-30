@@ -3,8 +3,8 @@ import { Power } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { pendingRestartLine } from '@/shell/machine-update';
-import { ConfirmDialog, SettingsRow } from '@basmilius/react-ui/settings';
-import { Switch, Button, Icon, FormError } from '@basmilius/react-ui';
+import { ConfirmDialog, SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Switch, Button, Icon, FormError } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { backgroundServiceRow } from '@/shell/settings/background-service';
 

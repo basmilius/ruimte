@@ -8,7 +8,7 @@ import { useEndpointId } from '@/state/keys';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Button, Icon } from '@basmilius/react-ui';
+import { Button, Icon } from '@basmilius/desktop-ui';
 
 /*
  * The image an agent looked at with `Read`. The thread only carries the path, so the daemon is

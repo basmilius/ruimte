@@ -21,7 +21,7 @@ import { accountFor, readChatPreferences, selectionFor } from '@ruimte/agents-re
 import { forkOriginIn } from '@/chat/fork-origin';
 import { ModelPicker } from '@ruimte/agents-react/chat/ui/Pickers';
 import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Switch, Button, ErrorBoundary, FieldHint, FormError, Icon, Input, Select, Dialog } from '@basmilius/react-ui';
+import { Switch, Button, ErrorBoundary, FieldHint, FormError, Icon, Input, Select, Dialog } from '@basmilius/desktop-ui';
 import { canvasOfNode } from '@/state/canvas';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useDocument } from '@/state/document';

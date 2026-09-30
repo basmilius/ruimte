@@ -21,7 +21,7 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useTransportStatus } from '@/transport/status';
-import { ButtonGroup, ErrorBoundary, IconButton, Tooltip } from '@basmilius/react-ui';
+import { ButtonGroup, ErrorBoundary, IconButton, Tooltip } from '@basmilius/desktop-ui';
 
 const idOf = (prompt: CanvasPrompt): string => prompt.id;
 

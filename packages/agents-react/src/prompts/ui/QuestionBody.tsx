@@ -5,7 +5,7 @@ import { Circle, CircleCheck, Square } from 'lucide-react';
 import type { ChatQuestion } from '@ruimte/agent-contracts';
 import { answerFieldKey, choiceKey, stepIndex } from '../logic/keys';
 import { pickPromptChoice, type PromptAnswer } from '../logic/prompts';
-import { Icon } from '@basmilius/react-ui';
+import { Icon } from '@basmilius/desktop-ui';
 import { chatHost } from '../../host';
 
 /* One question of a request: its choices, "Something else…", or a written answer when it offers no choices. */

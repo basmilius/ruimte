@@ -39,7 +39,7 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
-import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@basmilius/react-ui';
+import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@basmilius/desktop-ui';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
 

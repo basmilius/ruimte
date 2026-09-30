@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FsReadBinary } from '@ruimte/contracts';
-import { ErrorBoundary, lazyNamed } from '@basmilius/react-ui';
+import { ErrorBoundary, lazyNamed } from '@basmilius/desktop-ui';
 
 // pdf.js is most of a megabyte, so it waits for the first PDF or for the prefetcher.
 const PdfFile = lazyNamed(() => import('@/shell/panels/PdfFile'), 'PdfFile');

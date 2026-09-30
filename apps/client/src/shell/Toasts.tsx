@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy } from 'lucide-react';
 import { useToasts, type Toast } from '@/state/toasts';
-import { Button, Icon, Toasts as ToastStack } from '@basmilius/react-ui';
+import { Button, Icon, Toasts as ToastStack } from '@basmilius/desktop-ui';
 
 /* Nothing else in the app copies text, so the button says whether it worked instead of a toast about a toast. */
 function CopyOutput({ output }: { output: string }) {

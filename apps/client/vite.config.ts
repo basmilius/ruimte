@@ -12,8 +12,8 @@ const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
 // Beside the daemons instead of Vite's 5173, which other projects on the same computer claim first.
 const port = 4212;
 
-// Where @basmilius/react-ui really lives: a linked checkout sits outside this repository.
-const reactUi = realpathSync(fileURLToPath(new URL('./node_modules/@basmilius/react-ui', import.meta.url)));
+// Where @basmilius/desktop-ui really lives: a linked checkout sits outside this repository.
+const desktopUi = realpathSync(fileURLToPath(new URL('./node_modules/@basmilius/desktop-ui', import.meta.url)));
 
 /*
  * The web client at `station.ruimte.app` (`vite build --mode station`). It is the same page, plus what
@@ -135,7 +135,7 @@ export default defineConfig(({ mode }) => ({
         port,
         strictPort: true,
         fs: {
-            allow: [searchForWorkspaceRoot(process.cwd()), reactUi]
+            allow: [searchForWorkspaceRoot(process.cwd()), desktopUi]
         },
         // Vite compiles a module on its first request; this does all of them while `bun dev` starts, so the first open is not the slow one.
         warmup: {

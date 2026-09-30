@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Copy, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyText, Icon, IconButton, TextMenu, ContextMenu } from '@basmilius/react-ui';
+import { copyText, Icon, IconButton, TextMenu, ContextMenu } from '@basmilius/desktop-ui';
 
 interface NodeNoticeProps {
     tone?: 'muted' | 'error';

@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ProcessAlert, ProcessGroup, ProcessPoint } from '@ruimte/contracts';
-import { formatDuration, formatBytes as bytesOf, formatPercent as percentOf } from '@basmilius/react-ui/format';
+import { formatDuration, formatBytes as bytesOf, formatPercent as percentOf } from '@basmilius/desktop-ui/format';
 
 /* A number that could not be read is shown as nothing rather than as zero, which is what it is not. */
 export const UNREADABLE = '-';

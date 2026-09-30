@@ -32,7 +32,7 @@ import {
     IconButton,
     PanelHeader,
     SectionLabel
-} from '@basmilius/react-ui';
+} from '@basmilius/desktop-ui';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';

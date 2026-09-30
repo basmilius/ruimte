@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { signInToPulsar, usePulsarAccount } from '@/pulsar/account';
-import { Button } from '@basmilius/react-ui';
+import { Button } from '@basmilius/desktop-ui';
 import { SignInMark } from '@/ui/SignInMark';
 
 interface ProviderButtonProps {

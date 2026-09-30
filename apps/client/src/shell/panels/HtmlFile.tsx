@@ -18,7 +18,7 @@ import { useEndpointId } from '@/state/keys';
 import { useUnsaved } from '@/state/text-drafts';
 import { CellViewContext } from '@/state/workspace-stores';
 import { useTransport } from '@/transport/context';
-import { Button, ButtonGroup, EmptyState } from '@basmilius/react-ui';
+import { Button, ButtonGroup, EmptyState } from '@basmilius/desktop-ui';
 
 type HtmlView = 'preview' | 'source';
 

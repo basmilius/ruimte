@@ -8,8 +8,8 @@ import { badgeCountOf, entryTimeOf, flyoutSubagents, statusWordOf, subagentTitle
 import { useSubagentSupport } from '../subagent-support';
 import { canOpenSubagent, crumbOf, openFromMain, useSubagentTrail } from '../subagent-view';
 import { SubagentStopButton } from './SubagentStopButton';
-import { formatElapsedShort } from '@basmilius/react-ui/format';
-import { Icon, IconButton, Popover, Surface, useNow } from '@basmilius/react-ui';
+import { formatElapsedShort } from '@basmilius/desktop-ui/format';
+import { Icon, IconButton, Popover, Surface, useNow } from '@basmilius/desktop-ui';
 import { useChatRow } from '../../state/chats';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';

@@ -1,6 +1,6 @@
 import type { ChatItem } from '@ruimte/agent-contracts';
 import type { TimelineRow } from './timeline';
-import { selectionWithin } from '@basmilius/react-ui';
+import { selectionWithin } from '@basmilius/desktop-ui';
 
 /* What the right-click landed on, read once when the menu opens. */
 export interface TimelineTarget {

@@ -4,7 +4,7 @@ import { TriangleAlert } from 'lucide-react';
 import type { ProcessAlert } from '@ruimte/contracts';
 import { alertText } from '@/processes/format';
 import { useUi } from '@/state/ui';
-import { Icon, Tooltip, useNow } from '@basmilius/react-ui';
+import { Icon, Tooltip, useNow } from '@basmilius/desktop-ui';
 
 const MINUTE_MS = 60_000;
 

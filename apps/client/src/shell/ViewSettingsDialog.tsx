@@ -8,7 +8,7 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { resetTitle } from '@/nodes/node-host';
 import { PROJECT_ICON_KEYWORDS } from '@/project/project-icons';
 import { useProjectIconGroups } from '@/project/use-project-icon-groups';
-import { Button, Icon, Dialog, Field, IconPicker, Input, SectionLabel } from '@basmilius/react-ui';
+import { Button, Icon, Dialog, Field, IconPicker, Input, SectionLabel } from '@basmilius/desktop-ui';
 
 /*
  * What one view is called and what it wears, the two together the way a project holds them. The mark

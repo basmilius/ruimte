@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { GitFork } from 'lucide-react';
 import { forkPointOf } from '@ruimte/agents-react/chat/logic/fork';
-import { formatDayClock } from '@basmilius/react-ui/format';
-import { Icon, Pill, Tooltip } from '@basmilius/react-ui';
+import { formatDayClock } from '@basmilius/desktop-ui/format';
+import { Icon, Pill, Tooltip } from '@basmilius/desktop-ui';
 import { useChatPlace } from '@/chat/use-chat-place';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { LogOut } from 'lucide-react';
 import { useLeaveConflict } from '@/project/leave-conflict';
-import { PromptDialog } from '@basmilius/react-ui';
+import { PromptDialog } from '@basmilius/desktop-ui';
 
 /* Asked while the project on screen holds edits that cannot save until its conflict is resolved. */
 export function LeaveConflictDialog() {

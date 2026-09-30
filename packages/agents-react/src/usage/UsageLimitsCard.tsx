@@ -3,7 +3,7 @@ import { useState, type ReactElement } from 'react';
 import { hasSeveralAccounts } from './limit-groups';
 import { AccountLimitsList, LimitsList } from './LimitsList';
 import { useLimitGroups, useUsageLimits } from './limits';
-import { useNow, PreviewCard } from '@basmilius/react-ui';
+import { useNow, PreviewCard } from '@basmilius/desktop-ui';
 
 const MINUTE_MS = 60_000;
 

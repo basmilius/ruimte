@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { VOICE_LANGUAGES } from '@ruimte/contracts';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/audio/microphone';
 import { useSettings } from '@/state/settings';
-import { SettingsRow } from '@basmilius/react-ui/settings';
-import { Select } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Select } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 
 export function VoiceInputSection() {

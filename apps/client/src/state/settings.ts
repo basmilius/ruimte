@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
-import { FORMAT_LANGUAGE, formatRegionFrom } from '@basmilius/react-ui/format';
+import { FORMAT_LANGUAGE, formatRegionFrom } from '@basmilius/desktop-ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 

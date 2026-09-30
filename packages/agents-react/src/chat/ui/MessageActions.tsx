@@ -9,7 +9,7 @@ import { markdownOf, messageTextOf } from '../logic/timeline-copy';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow, useChats } from '../../state/chats';
-import { ButtonGroup, copyText, IconButton } from '@basmilius/react-ui';
+import { ButtonGroup, copyText, IconButton } from '@basmilius/desktop-ui';
 
 const COPIED_MS = 1500;
 

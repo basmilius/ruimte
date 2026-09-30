@@ -10,7 +10,7 @@ import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
-import { copyText } from '@basmilius/react-ui';
+import { copyText } from '@basmilius/desktop-ui';
 
 interface PlanViewPrefs {
     filter: PlanFilter;

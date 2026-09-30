@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { SettingsRow } from '@basmilius/react-ui/settings';
-import { Switch } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Switch } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useServers } from '@/state/server';
 import { useProvidersStore } from '@ruimte/agents-react/state/providers';

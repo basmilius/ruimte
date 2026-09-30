@@ -3,7 +3,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { isInNodeBody } from '@/canvas/node-body';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useUi } from '@/state/ui';
-import { matchesShortcut, type KeyLike } from '@basmilius/react-ui';
+import { matchesShortcut, type KeyLike } from '@basmilius/desktop-ui';
 
 // Window shortcuts also work on the start screen; project shortcuts are bound by the workspace.
 export type AppShortcut = 'palette' | 'find-in-files' | 'settings' | 'settings-search' | 'sidebar';

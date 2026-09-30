@@ -7,7 +7,7 @@ import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { useFileActions, type FileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
-import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu } from '@basmilius/react-ui';
+import { cameThroughPortal, IconButton, Separator, Menu, TextMenu, ContextMenu } from '@basmilius/desktop-ui';
 
 /*
  * The bar above every file renderer: the controls that change how the file is drawn, at its right.

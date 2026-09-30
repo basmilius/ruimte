@@ -14,7 +14,7 @@ import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/she
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { type CellAt } from '@/shell/split';
-import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover, Tooltip } from '@basmilius/react-ui';
+import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover, Tooltip } from '@basmilius/desktop-ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */

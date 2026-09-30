@@ -7,7 +7,7 @@ import { bookmarkLabel, bookmarksInThreadOrder } from '../logic/bookmarks';
 import { chatHost } from '../../host';
 import { useChatScope } from '../../scope';
 import { useChatRow } from '../../state/chats';
-import { ButtonGroup, Icon, IconButton, Menu } from '@basmilius/react-ui';
+import { ButtonGroup, Icon, IconButton, Menu } from '@basmilius/desktop-ui';
 
 type RowAction = 'rename' | 'remove';
 

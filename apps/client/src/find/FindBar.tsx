@@ -6,8 +6,8 @@ import { isApplePlatform } from '@/desktop/bridge';
 import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
-import { formatNumber } from '@basmilius/react-ui/format';
-import { ButtonGroup, Icon, IconButton, Separator, Surface, matchesShortcut, type Shortcut, Tooltip } from '@basmilius/react-ui';
+import { formatNumber } from '@basmilius/desktop-ui/format';
+import { ButtonGroup, Icon, IconButton, Separator, Surface, matchesShortcut, type Shortcut, Tooltip } from '@basmilius/desktop-ui';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },

@@ -60,7 +60,7 @@ The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` 
 
 1. **A Linux line in `.github/workflows/ci.yml`.** It runs on `macos-latest` only, so nothing
    catches a Linux regression before a tag.
-2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@basmilius/react-ui/theme.css`
+2. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `@basmilius/desktop-ui/theme.css`
    name Apple, Microsoft and web faces only (an issue for that library, not a patch here), so both fall through to the generic on a Linux
    desktop. Cantarell, Ubuntu and Noto Sans for the first, DejaVu Sans Mono, Liberation Mono and
    Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `packages/drawing/src/text.ts` has the

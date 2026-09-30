@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { appShortcutFor } from './app-shortcuts';
-import type { KeyLike } from '@basmilius/react-ui';
+import type { KeyLike } from '@basmilius/desktop-ui';
 
 const key = (patch: Partial<KeyLike>): KeyLike => ({ metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, key: '', code: '', ...patch });
 

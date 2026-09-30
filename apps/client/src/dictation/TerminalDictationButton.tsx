@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { CircleAlert, Mic, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
-import { ErrorBoundary, IconButton } from '@basmilius/react-ui';
+import { ErrorBoundary, IconButton } from '@basmilius/desktop-ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { observeSpeech, toggleDictation, useDictation } from './controller';
 import { terminalTargetKey, useTerminalDictationTargets } from './terminal-targets';

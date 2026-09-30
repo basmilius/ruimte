@@ -24,7 +24,7 @@ import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { Button, copyText, readClipboardText, Icon, ContextMenu } from '@basmilius/react-ui';
+import { Button, copyText, readClipboardText, Icon, ContextMenu } from '@basmilius/desktop-ui';
 
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */

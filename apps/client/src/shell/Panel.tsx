@@ -7,7 +7,7 @@ import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
-import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel } from '@basmilius/react-ui';
+import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel } from '@basmilius/desktop-ui';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';

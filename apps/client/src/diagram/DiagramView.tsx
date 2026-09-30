@@ -17,7 +17,7 @@ import { Swatches } from '@/drawing/DrawingDock';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
-import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@basmilius/react-ui';
+import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@basmilius/desktop-ui';
 
 const isChrome = (target: EventTarget | null): boolean =>
     isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);

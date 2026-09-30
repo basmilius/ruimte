@@ -15,7 +15,7 @@ import { useToggleSet } from './useToggleSet';
 import { FileLinkContext } from './file-links';
 import { useChatRow } from '../../state/chats';
 import { useChatScope } from '../../scope';
-import { EmptyState, ContextMenu, Icon } from '@basmilius/react-ui';
+import { EmptyState, ContextMenu, Icon } from '@basmilius/desktop-ui';
 
 const NO_TURNS = new Set<string>();
 

@@ -41,7 +41,7 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { copyText, FILE_TREE_ICONS, Icon, IconButton, PanelEmpty, SectionLabel, ContextMenu } from '@basmilius/react-ui';
+import { copyText, FILE_TREE_ICONS, Icon, IconButton, PanelEmpty, SectionLabel, ContextMenu } from '@basmilius/desktop-ui';
 
 /* The groups in the order a person acts on them; each one reads its heading out of `git.group`. */
 const GROUPS: readonly GitFileState[] = ['conflicted', 'staged', 'unstaged', 'untracked'];

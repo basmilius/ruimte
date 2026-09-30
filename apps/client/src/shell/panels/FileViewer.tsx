@@ -4,7 +4,7 @@ import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
-import { FileIcon, EmptyState, Icon, ListRow, SectionLabel, Tile, ContextMenu } from '@basmilius/react-ui';
+import { FileIcon, EmptyState, Icon, ListRow, SectionLabel, Tile, ContextMenu } from '@basmilius/desktop-ui';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useFiles } from '@/state/files';

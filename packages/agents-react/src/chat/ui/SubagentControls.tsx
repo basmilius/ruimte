@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, X } from 'lucide-react';
 import { breadcrumbOf, MAIN_AGENT, trailTo, useOpenableSubagents, useSubagentTrail } from '../subagent-view';
 import { SubagentStopButton } from './SubagentStopButton';
-import { Icon, IconButton } from '@basmilius/react-ui';
+import { Icon, IconButton } from '@basmilius/desktop-ui';
 
 const CRUMB_LINK = 'truncate text-text-muted hover:text-text';
 

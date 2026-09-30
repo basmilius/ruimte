@@ -20,7 +20,7 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
-import { ButtonGroup, IconButton, Separator } from '@basmilius/react-ui';
+import { ButtonGroup, IconButton, Separator } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { VoiceButton } from '@/voice/VoiceButton';
 import { useVoice } from '@/voice/state';

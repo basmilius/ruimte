@@ -4,7 +4,7 @@ import { fitAction, historyAction } from '@/actions/client-actions';
 import { copyDrawing, cutSelection, deleteSelection, duplicateSelection, pasteInto, reorderSelection, toggleLockSelection } from '@/drawing/drawing-actions';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { useDrawing, useDrawingStore } from '@/state/drawing';
-import { Icon, Kbd, ContextMenu } from '@basmilius/react-ui';
+import { Icon, Kbd, ContextMenu } from '@basmilius/desktop-ui';
 
 /*
  * A right-click on the drawing surface. Every item here is a key `use-drawing-keys.ts` already

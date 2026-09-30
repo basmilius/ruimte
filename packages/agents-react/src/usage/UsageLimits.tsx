@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import type { UsageProvider } from '@ruimte/agent-contracts';
 import { AccountDot } from '../agents/AccountDot';
-import { Button, Icon, SectionLabel, Segmented, Tooltip, useNow } from '@basmilius/react-ui';
+import { Button, Icon, SectionLabel, Segmented, Tooltip, useNow } from '@basmilius/desktop-ui';
 import { chatHost } from '../host';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from './format';
 import { accountNote, checkedLabel, hasSeveralAccounts, isSignedOut, type LimitAccount } from './limit-groups';

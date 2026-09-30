@@ -8,8 +8,8 @@ import { cancelPulsarSignIn, linkPulsarProvider, refreshPulsarIdentities, signOu
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
 import { PAIRING_PLACEHOLDER, usePairMachine } from '@/shell/settings/pair-machine';
-import { Skeleton, Button, Icon, IconButton, Tooltip, FormError, Input } from '@basmilius/react-ui';
-import { SettingsRow } from '@basmilius/react-ui/settings';
+import { Skeleton, Button, Icon, IconButton, Tooltip, FormError, Input } from '@basmilius/desktop-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
 import { SignInMark } from '@/ui/SignInMark';

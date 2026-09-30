@@ -3,7 +3,7 @@ import type { ProjectIcon } from '@ruimte/contracts';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { useTheme } from '@/state/theme';
 import { useMachineUrl } from '@/transport/machine-url';
-import { Icon } from '@basmilius/react-ui';
+import { Icon } from '@basmilius/desktop-ui';
 
 interface ProjectGlyphProps {
     projectId: string;

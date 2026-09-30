@@ -11,7 +11,7 @@ import { useDocument } from '@/state/document';
 import { useSessions } from '@/state/sessions';
 import { useSnoozes } from '@/state/snooze';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { Button, Icon, Separator, Tooltip } from '@basmilius/react-ui';
+import { Button, Icon, Separator, Tooltip } from '@basmilius/desktop-ui';
 
 /* A count that walks through the nodes behind it, across views, one per click. */
 function Walker({ label, count, ids, children }: { label: string; count: number; ids: string[]; children: ReactNode }) {

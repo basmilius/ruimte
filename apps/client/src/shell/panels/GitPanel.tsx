@@ -11,7 +11,7 @@ import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
-import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@basmilius/react-ui';
+import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@basmilius/desktop-ui';
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
 import { PushMenu } from '@/shell/panels/PushMenu';

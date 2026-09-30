@@ -4,7 +4,7 @@ import { isEmptyDraft, type ChatDraft } from './drafts';
 import { isRecord } from './logic/json';
 import { persistedJson } from './persisted-json';
 import { withQuote } from './quote';
-import { shortcut } from '@basmilius/react-ui';
+import { shortcut } from '@basmilius/desktop-ui';
 
 /* Puts the draft away, or takes the last one back on an empty box. */
 export const STASH_SHORTCUT = shortcut('Mod+S');

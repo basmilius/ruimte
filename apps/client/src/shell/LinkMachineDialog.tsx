@@ -10,7 +10,7 @@ import { accountName } from '@/pulsar/account-name';
 import { linkStep, typedCode } from '@/pulsar/link-request';
 import { refreshAccountMachines } from '@/pulsar/machines';
 import { SignInButtons } from '@/shell/SignInButtons';
-import { Button, useAsyncAction, FieldHint, FormError, Icon, Input, Dialog } from '@basmilius/react-ui';
+import { Button, useAsyncAction, FieldHint, FormError, Icon, Input, Dialog } from '@basmilius/desktop-ui';
 
 interface LinkMachineDialogProps {
     open: boolean;

@@ -22,7 +22,7 @@ import {
     type MergeRun
 } from '@/shell/panels/worktree-merge';
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
-import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@basmilius/react-ui';
+import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@basmilius/desktop-ui';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@ruimte/agents-react/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';

@@ -12,8 +12,8 @@ import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useUi } from '@/state/ui';
-import { Icon, IconButton, Kbd, SectionLabel, Tile } from '@basmilius/react-ui';
-import type { Shortcut } from '@basmilius/react-ui';
+import { Icon, IconButton, Kbd, SectionLabel, Tile } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@basmilius/desktop-ui';
 
 interface TileLook {
     icon: ReactNode;

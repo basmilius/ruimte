@@ -47,7 +47,7 @@ const KEY_LISTENERS: Record<string, string> = {
     'drawing/use-drawing-keys.ts': "a drawing view's bare tool keys, the one exception the product rules allow, and only while that drawing has the keyboard"
 };
 
-/* Where the app may build on `Intl` itself rather than on `@basmilius/react-ui/format`, and why there. */
+/* Where the app may build on `Intl` itself rather than on `@basmilius/desktop-ui/format`, and why there. */
 const INTL_OUTSIDE_FORMAT: Record<string, string> = {
     'voice/controller.ts': 'the date told to the speech model, fixed to en-GB so the model always reads one format; no person reads it'
 };
@@ -405,7 +405,7 @@ describe('the conventions of the client', () => {
         expect(between).toEqual([]);
     });
 
-    test('only @basmilius/react-ui/format builds a formatter out of Intl', () => {
+    test('only @basmilius/desktop-ui/format builds a formatter out of Intl', () => {
         const building = sources()
             .filter(({ path }) => !(path in INTL_OUTSIDE_FORMAT))
             .flatMap(({ path, text }) => {

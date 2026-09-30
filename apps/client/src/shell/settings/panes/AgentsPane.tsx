@@ -4,8 +4,8 @@ import { rememberChatPreferences, useChatPreferences } from '@ruimte/agents-reac
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
-import { SettingsRow } from '@basmilius/react-ui/settings';
-import { Switch, Select, type SelectItem } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Switch, Select, type SelectItem } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';

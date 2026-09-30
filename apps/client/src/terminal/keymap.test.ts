@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import type { KeyLike, Shortcut } from '@basmilius/react-ui';
+import type { KeyLike, Shortcut } from '@basmilius/desktop-ui';
 import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isShellShortcut, isTerminalPaste, macMotionSequence, TERMINAL_HANDED_BACK } from './keymap.ts';
 
 const shortcut = (key: string, modifiers: Partial<Omit<KeyLike, 'key'>> = {}): KeyLike => ({

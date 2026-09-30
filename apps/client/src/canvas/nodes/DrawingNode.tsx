@@ -10,7 +10,7 @@ import { applyCamera, paintElements, paintOptions } from '@/drawing/paint';
 import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useTheme } from '@/state/theme';
-import { EmptyState } from '@basmilius/react-ui';
+import { EmptyState } from '@basmilius/desktop-ui';
 
 /* World units of air around a mirrored drawing, so nothing touches the frame. */
 const PADDING = 24;

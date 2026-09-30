@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ErrorBoundary, TextArea } from '@basmilius/react-ui';
+import { Button, ErrorBoundary, TextArea } from '@basmilius/desktop-ui';
 import { observeSpeech, registerDictationTarget, useDictation } from './controller';
 import { registerTerminalDictationTarget, terminalTargetKey } from './terminal-targets';
 import { useEndpointId } from '@/state/keys';

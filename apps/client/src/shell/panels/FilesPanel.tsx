@@ -62,7 +62,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { copyText, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu } from '@basmilius/react-ui';
+import { copyText, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;

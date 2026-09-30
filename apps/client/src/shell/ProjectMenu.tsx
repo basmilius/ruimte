@@ -19,7 +19,7 @@ import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { Icon, Tooltip, PromptDialog, Menu } from '@basmilius/react-ui';
+import { Icon, Tooltip, PromptDialog, Menu } from '@basmilius/desktop-ui';
 
 interface ProjectRowProps {
     row: ProjectMenuRow;

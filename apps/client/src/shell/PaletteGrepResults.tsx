@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import type { FsGrepMatch } from '@ruimte/contracts';
 import { firstContextLine, groupByFile } from '@/shell/palette-grep';
-import { FileIcon, SectionLabel } from '@basmilius/react-ui';
+import { FileIcon, SectionLabel } from '@basmilius/desktop-ui';
 
 interface LineProps {
     number: number;

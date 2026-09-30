@@ -45,7 +45,7 @@ import {
     PromptDialog,
     SectionLabel,
     ContextMenu
-} from '@basmilius/react-ui';
+} from '@basmilius/desktop-ui';
 import { projectNodes, revealNode } from '@/project/views';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { ProcessChart } from '@/shell/panels/ProcessChart';

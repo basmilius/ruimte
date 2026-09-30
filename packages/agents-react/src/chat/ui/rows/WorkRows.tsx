@@ -9,8 +9,8 @@ import { useOpenForFind } from '../find-reveal';
 import { chatHost } from '../../../host';
 import { lazyNamed } from '../../../lazy';
 import { useChatActions } from '../../actions';
-import { formatClockDuration, formatElapsedShort } from '@basmilius/react-ui/format';
-import { Icon, Spinner, useTickingText } from '@basmilius/react-ui';
+import { formatClockDuration, formatElapsedShort } from '@basmilius/desktop-ui/format';
+import { Icon, Spinner, useTickingText } from '@basmilius/desktop-ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.

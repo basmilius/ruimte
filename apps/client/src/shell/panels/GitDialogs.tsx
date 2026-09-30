@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
-import { Icon, Input, Menu, Dialog } from '@basmilius/react-ui';
+import { Icon, Input, Menu, Dialog } from '@basmilius/desktop-ui';
 
 export interface Choice {
     value: string;

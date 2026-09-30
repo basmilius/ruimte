@@ -7,7 +7,7 @@ import { chatHost } from '../../host';
 import { lazyNamed } from '../../lazy';
 import { isPrimaryKey } from '../logic/keys';
 import type { PromptDraft } from '../logic/prompts';
-import { Button, TextMenu } from '@basmilius/react-ui';
+import { Button, TextMenu } from '@basmilius/desktop-ui';
 
 const EditDiff = lazyNamed(() => import('../../chat/ui/EditDiff'), 'default');
 const UnifiedDiff = lazyNamed(() => import('../../chat/ui/UnifiedDiff'), 'default');

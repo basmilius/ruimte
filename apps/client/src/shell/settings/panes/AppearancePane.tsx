@@ -1,9 +1,9 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentColor, accentLabel } from '@/canvas/accents';
-import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@basmilius/react-ui/format';
-import { AccentSwatches, Switch, Select } from '@basmilius/react-ui';
-import { SettingsRow } from '@basmilius/react-ui/settings';
+import { formatDayClock, useFormatLocale, formatMoney, FORMAT_LANGUAGE, FORMAT_REGION_CHOICES, FORMAT_SYSTEM, regionName } from '@basmilius/desktop-ui/format';
+import { AccentSwatches, Switch, Select } from '@basmilius/desktop-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';

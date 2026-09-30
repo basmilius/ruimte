@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { shortcut } from '@basmilius/react-ui';
+import { shortcut } from '@basmilius/desktop-ui';
 import { commandShortcuts, filterShortcuts, shortcutGroupOf, shortcutGroups, shortcutRowId } from './shortcuts.ts';
 
 describe('commandShortcuts', () => {

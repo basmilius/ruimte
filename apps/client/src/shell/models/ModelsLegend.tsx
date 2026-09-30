@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
-import { Switch } from '@basmilius/react-ui';
+import { Switch } from '@basmilius/desktop-ui';
 import { markPath, type ChartModel, type ModelMark } from '@/shell/models/chart';
 import { PROVIDER_LABELS } from '@ruimte/agents-react/usage/format';
 import { ProviderLogo } from '@ruimte/agents-react/agents/ProviderLogo';

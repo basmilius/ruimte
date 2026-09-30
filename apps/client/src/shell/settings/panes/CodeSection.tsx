@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { highlightCode } from '@/shell/panels/highlight';
-import { SettingsRow } from '@basmilius/react-ui/settings';
-import { Switch, Select } from '@basmilius/react-ui';
+import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { Switch, Select } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { codeThemesOf, useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';

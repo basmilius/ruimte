@@ -16,7 +16,7 @@ import { chatClient } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
-import { ErrorBoundary, lazyNamed } from '@basmilius/react-ui';
+import { ErrorBoundary, lazyNamed } from '@basmilius/desktop-ui';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 
