@@ -29,7 +29,7 @@ import { NEW_NODE, VerbRefusal, canvasNamed, field, orNote, type VerbCall } from
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { verbCallOf, type ServerActionContext } from './context.ts';
 
-/* The set is closed and short enough to print whole, unlike the sixty Lucide names a view picks from. */
+/* The set is closed and short enough to print whole, unlike the Lucide names a view picks from. */
 export const COLOR_LINES: readonly string[] = [['colors', ...NODE_ACCENT_NAMES].join('\t')];
 
 const withCanvas = (content: ProjectContent, canvas: ProjectCanvasView): ProjectContent => ({

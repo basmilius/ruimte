@@ -52,7 +52,20 @@
     },
     "icon": {
         "label": "Icon",
-        "symbol": "Symbol"
+        "symbol": "Symbol",
+        "group": {
+            "general": "General",
+            "code": "Code",
+            "ai": "AI & agents",
+            "web": "Web & apps",
+            "infra": "Infrastructure",
+            "data": "Data & science",
+            "hardware": "Hardware",
+            "design": "Design & media",
+            "writing": "Writing & learning",
+            "planning": "Planning",
+            "life": "Life & world"
+        }
     },
     "status": {
         "running": "running",

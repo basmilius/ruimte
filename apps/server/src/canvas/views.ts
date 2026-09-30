@@ -65,7 +65,7 @@ export const deleteReason = (view: ProjectView, call: { caller: string; place: I
 
 export const deletableView = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): boolean => deleteReason(view, call).may;
 
-/* The icon names in rows of ten: sixty of them one per line would bury the refusal they belong to. */
+/* The icon names in rows of ten: one per line they would bury the refusal they belong to. */
 export const ICON_NAME_LINES = Array.from({ length: Math.ceil(PROJECT_ICON_NAMES.length / 10) }, (_, row) =>
     ['icons', ...PROJECT_ICON_NAMES.slice(row * 10, row * 10 + 10)].join('\t')
 );

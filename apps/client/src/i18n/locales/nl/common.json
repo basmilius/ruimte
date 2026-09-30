@@ -52,7 +52,20 @@
     },
     "icon": {
         "label": "Icoon",
-        "symbol": "Symbool"
+        "symbol": "Symbool",
+        "group": {
+            "general": "Algemeen",
+            "code": "Code",
+            "ai": "AI & agents",
+            "web": "Web & apps",
+            "infra": "Infrastructuur",
+            "data": "Data & wetenschap",
+            "hardware": "Hardware",
+            "design": "Ontwerp & media",
+            "writing": "Schrijven & leren",
+            "planning": "Planning",
+            "life": "Leven & wereld"
+        }
     },
     "status": {
         "running": "bezig",
