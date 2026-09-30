@@ -4,19 +4,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
-import {
-    MENU_ROLES,
-    type AgentActivity,
-    type BackgroundServiceState,
-    type KeepAwakeRequest,
-    type MenuNode,
-    type MenuSpec,
-    type UpdateState
-} from '@ruimte/desktop-bridge';
+import { createMenuCommands, createPageKeys, createUpdater, devToolsAccelerator, menuTemplateOf, staticMenuTemplate } from '@basmilius/desktop-shell';
+import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE } from './keep-awake';
-import { createPageKeys } from './page-keys';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
@@ -1020,104 +1012,27 @@ handleFromApp('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false)
 onFromApp('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
 
 /*
- * electron-updater puts the whole HTTP exchange in the message of a failed check: every response
- * header, the session cookie among them. None of that belongs in a settings pane, so only the first
- * line travels, and a 404 on the feed gets the sentence that actually says what went wrong.
- */
-const describeUpdateError = (message: string): string => {
-    const first = message.split('\n')[0]?.trim();
-    if (!first) {
-        return 'No reason given.';
-    }
-    if (first.startsWith('404')) {
-        return 'No release feed found. There is no published release yet, or the repository is private.';
-    }
-    return first.length > 200 ? `${first.slice(0, 200)}…` : first;
-};
-
-/*
  * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
- * pushed to the window, which draws the green button in the toolbar and About in the settings. A
- * checkout has no feed (electron-updater reads `app-update.yml` from the bundle), so there the
- * state stays `unsupported` and nothing in the client offers to update.
+ * pushed to the window, which draws the green button in the toolbar and About in the settings.
  */
-let updateState: UpdateState = { status: 'unsupported', currentVersion: app.getVersion() };
-let updater: import('electron-updater').AppUpdater | null = null;
-let updateTimer: ReturnType<typeof setInterval> | null = null;
-
-/* Often enough that a release lands the same day, rarely enough to be invisible. */
-const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
-
-const setUpdateState = (patch: Partial<UpdateState>): void => {
-    updateState = { ...updateState, ...patch };
-    mainWindow?.webContents.send('update:state', updateState);
-};
-
-const setupUpdates = (): void => {
-    if (!app.isPackaged) {
-        return;
-    }
-    try {
-        const { autoUpdater } = require('electron-updater') as typeof import('electron-updater');
-        updater = autoUpdater;
-        // The client owns the preference and sends it before the first check, so nothing downloads
-        // behind the back of someone who turned it off.
-        autoUpdater.autoDownload = false;
-        autoUpdater.on('checking-for-update', () => setUpdateState({ status: 'checking', error: null }));
-        autoUpdater.on('update-available', (info) => setUpdateState({ status: 'available', version: info.version, error: null }));
-        autoUpdater.on('update-not-available', () => setUpdateState({ status: 'current', version: undefined, error: null }));
-        autoUpdater.on('download-progress', (progress) => setUpdateState({ status: 'downloading', percent: progress.percent }));
-        autoUpdater.on('update-downloaded', (info) => setUpdateState({ status: 'ready', version: info.version, percent: 100 }));
-        autoUpdater.on('error', (e) => setUpdateState({ status: 'error', error: describeUpdateError(e.message) }));
-        setUpdateState({ status: 'idle' });
-    } catch (e) {
-        // electron-updater missing from the bundle is the only way here; the app stays as it is.
-        console.error('The updater did not start', e);
-    }
-};
-
-const checkForUpdate = async (): Promise<void> => {
-    // Nothing to learn while a check or a download is running, and a build that is already waiting
-    // to be installed does not get better for being asked about again.
-    if (!updater || updateState.status === 'checking' || updateState.status === 'downloading' || updateState.status === 'ready') {
-        return;
-    }
+const updater = createUpdater({
+    currentVersion: app.getVersion(),
+    packaged: app.isPackaged,
+    load: () => (require('electron-updater') as typeof import('electron-updater')).autoUpdater,
+    publish: (state) => mainWindow?.webContents.send('update:state', state),
     // Refreshed with the check, so the notes of a version it finds are on disk before anyone asks.
-    void releaseNotes.list(true);
-    try {
-        await updater.checkForUpdates();
-    } catch (e) {
-        // checkForUpdates rejects as well as emitting `error`; the state is already set there.
-        console.error('Update check failed', e);
-    }
-};
-
-handleFromApp('update:state', () => updateState);
-
-handleFromApp('update:configure', (_event, autoDownload: boolean) => {
-    if (!updater) {
-        return;
-    }
-    updater.autoDownload = autoDownload;
-    // The hourly check starts with the first preference the client sends, never before: until then
-    // the shell does not know whether it is allowed to download what a check turns up.
-    updateTimer ??= setInterval(() => void checkForUpdate(), UPDATE_INTERVAL_MS);
+    beforeCheck: () => void releaseNotes.list(true)
 });
 
-handleFromApp('update:check', () => checkForUpdate());
+handleFromApp('update:state', () => updater.state());
 
-handleFromApp('update:download', async () => {
-    if (!updater) {
-        return;
-    }
-    try {
-        await updater.downloadUpdate();
-    } catch (e) {
-        console.error('Update download failed', e);
-    }
-});
+handleFromApp('update:configure', (_event, autoDownload: unknown) => updater.configure(autoDownload));
 
-onFromApp('update:install', () => updater?.quitAndInstall());
+handleFromApp('update:check', () => updater.check());
+
+handleFromApp('update:download', () => updater.download());
+
+onFromApp('update:install', () => updater.install());
 
 /* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
    only the versions between this one and the next, and a tag whose release is still a draft. */
@@ -1128,125 +1043,55 @@ const releaseNotes = createReleaseNotes({
 
 handleFromApp('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
 
-// Replace macOS's stock About and Settings with client routes while retaining native roles such as Quit.
-function appMenu(): Electron.MenuItemConstructorOptions {
-    // Only where a service can run: anywhere else quitting already stops the machine.
-    const stopItems: Electron.MenuItemConstructorOptions[] =
-        support === 'supported' ? [{ label: 'Stop the Machine and Quit', click: () => stopMachine() }] : [];
-    if (process.platform !== 'darwin') {
-        return stopItems.length > 0 ? { label: 'File', submenu: [...stopItems, { type: 'separator' }, { role: 'quit' }] } : { role: 'fileMenu' };
-    }
+// What stands until the page sends its own menu, and again after a reload or a crash.
+const setStaticMenu = (): void => {
     const openSettings = (section: string | null): void => {
         mainWindow?.show();
         mainWindow?.webContents.send('menu:settings', section);
     };
-    return {
-        label: app.name,
-        submenu: [
+    // Only where a service can run: anywhere else quitting already stops the machine.
+    const quitItems: Electron.MenuItemConstructorOptions[] =
+        support === 'supported' ? [{ label: 'Stop the Machine and Quit', click: () => stopMachine() }] : [];
+    const template = staticMenuTemplate({
+        appName: app.name,
+        // Replace macOS's stock About and Settings with client routes.
+        appItems: [
             { label: `About ${app.name}…`, click: () => openSettings('about') },
             { type: 'separator' },
-            { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings(null) },
-            { type: 'separator' },
-            { role: 'services' },
-            { type: 'separator' },
-            { role: 'hide' },
-            { role: 'hideOthers' },
-            { role: 'unhide' },
-            { type: 'separator' },
-            ...stopItems,
-            { role: 'quit' }
-        ]
-    };
-}
-
-/*
- * The stock View menu without reload and the zoom roles: their accelerators (Cmd+R, Cmd+0, Cmd+plus,
- * Cmd+minus) are taken before the page sees them, and Cmd+0 is the canvas's zoom to 100%. A reload
- * would also drop every node's live state without asking.
- */
-function viewMenu(): Electron.MenuItemConstructorOptions {
-    return {
-        label: 'View',
-        submenu: [
-            {
-                /* Named instead of the role: that one follows the focused web contents, which is the
-                   page inside a browser node as soon as one has the keyboard, and then the app's own
-                   tools are out of reach. A page has its own inspector in the right-click menu. */
-                label: 'Toggle Developer Tools',
-                accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
-                click: () => mainWindow?.webContents.toggleDevTools()
-            },
-            { type: 'separator' },
-            { role: 'togglefullscreen' }
-        ]
-    };
-}
-
-// What stands until the page sends its own menu, and again after a reload or a crash.
-const setStaticMenu = (): void => {
-    Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, viewMenu(), { role: 'windowMenu' }]));
+            { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings(null) }
+        ],
+        quitItems,
+        toggleDevTools: () => mainWindow?.webContents.toggleDevTools()
+    });
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 };
 
-const DEVTOOLS_ACCELERATOR = process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I';
+/* A page in a browser node or an HTML preview never sees the key, so there the menu answers. */
+const runMenuCommand = createMenuCommands({
+    pageKeys,
+    window: () => mainWindow,
+    keyBypassesPage: () => {
+        const focused = webContents.getFocusedWebContents();
+        return focused !== null && (isBrowserGuest(focused) || isPreviewGuest(focused));
+    }
+});
 
-/*
- * A command from the menu goes to the page, which runs it the way the palette does. One fired by a key
- * the page already had is dropped: its own listeners answered it or let it pass on purpose. A page in
- * a browser node or an HTML preview never sees the key, so there the menu answers. Only a minimized
- * window is shown: showing activates the app, and a pick from behind the person's work must leave it there.
- */
-const runMenuCommand = (id: string, byKey: boolean): void => {
-    const focused = webContents.getFocusedWebContents();
-    const inGuest = focused !== null && (isBrowserGuest(focused) || isPreviewGuest(focused));
-    if (byKey && !inGuest && pageKeys.take()) {
-        return;
+const shellMenuItem = (action: MenuShellAction, label: string): Electron.MenuItemConstructorOptions | null => {
+    if (action === 'devtools') {
+        return { label, accelerator: devToolsAccelerator(), click: () => mainWindow?.webContents.toggleDevTools() };
     }
-    if (mainWindow?.isMinimized()) {
-        mainWindow.show();
-    }
-    mainWindow?.webContents.send('menu:run', id);
+    // Only where a service can run: anywhere else quitting already stops the machine.
+    return action === 'stop-machine-and-quit' && support === 'supported' ? { label, click: () => stopMachine() } : null;
 };
-
-const menuItemOf = (node: MenuNode): Electron.MenuItemConstructorOptions | null => {
-    switch (node.kind) {
-        case 'separator':
-            return { type: 'separator' };
-        case 'submenu':
-            return { label: node.label, enabled: node.enabled ?? true, submenu: menuItemsOf(node.items) };
-        case 'role':
-            return MENU_ROLES.includes(node.role) ? { role: node.role, label: node.label } : null;
-        case 'shell':
-            if (node.action === 'devtools') {
-                /* Named instead of the role: that one follows the focused web contents, which is the
-                   page inside a browser node as soon as one has the keyboard. */
-                return { label: node.label, accelerator: DEVTOOLS_ACCELERATOR, click: () => mainWindow?.webContents.toggleDevTools() };
-            }
-            // Only where a service can run: anywhere else quitting already stops the machine.
-            return node.action === 'stop-machine-and-quit' && support === 'supported' ? { label: node.label, click: () => stopMachine() } : null;
-        case 'command':
-            return {
-                label: node.label,
-                type: node.checked === undefined ? 'normal' : node.radio === true ? 'radio' : 'checkbox',
-                checked: node.checked ?? false,
-                enabled: node.enabled ?? true,
-                ...(node.accelerator ? { accelerator: node.accelerator } : {}),
-                // Off macOS a registered accelerator would take Ctrl+W or Ctrl+B from a terminal before the page saw it.
-                registerAccelerator: process.platform === 'darwin',
-                click: (_item, _window, event) => runMenuCommand(node.id, event.triggeredByAccelerator === true)
-            };
-    }
-};
-
-const menuItemsOf = (nodes: readonly MenuNode[]): Electron.MenuItemConstructorOptions[] =>
-    nodes.map(menuItemOf).filter((item): item is Electron.MenuItemConstructorOptions => item !== null);
 
 // The client builds the menu from what has the focus (`apps/client/src/shell/menu`); the shell draws it.
 onFromApp('menu:set', (_event, spec: MenuSpec) => {
-    if (!Array.isArray(spec?.menus)) {
+    const template = menuTemplateOf(spec, { run: runMenuCommand, shellItem: shellMenuItem });
+    if (!template) {
         return;
     }
     try {
-        Menu.setApplicationMenu(Menu.buildFromTemplate(spec.menus.map((menu) => ({ label: menu.label, submenu: menuItemsOf(menu.items) }))));
+        Menu.setApplicationMenu(Menu.buildFromTemplate(template));
     } catch (error) {
         console.error('[ruimte] menu refused', error);
     }
@@ -1360,7 +1205,7 @@ if (!app.requestSingleInstanceLock()) {
             app.quit();
             return;
         }
-        setupUpdates();
+        updater.start();
         watchPendingRestart();
     });
 
