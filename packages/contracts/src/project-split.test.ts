@@ -56,6 +56,31 @@ describe('splitContent', () => {
         expect(split.private.overlay.n2).toBeUndefined();
     });
 
+    test('a name a session gave waits in the overlay, and the shared file carries the name of the kind', () => {
+        const views = [
+            canvas('main', [node('n1', { title: 'Fix the login', titleSource: 'auto' }), node('n2', { title: 'Mine', titleSource: 'user' })]),
+            { ...chatView('c1', { resume: 'sess-1' }), name: 'Refactor auth', titleSource: 'auto' } as ProjectView
+        ];
+        const split = splitContent(content(views), ['main', 'c1'], 1);
+        const [main, chat] = split.shared.views as [ProjectCanvasView, ProjectView];
+        expect(main.nodes[0]).toEqual(node('n1', { title: 'New chat' }));
+        expect(main.nodes[1]).toEqual(node('n2', { title: 'Mine', titleSource: 'user' }));
+        expect(chat).toEqual({ ...chatView('c1'), name: 'New chat' });
+        expect(split.private.overlay).toEqual({ n1: { title: 'Fix the login' }, c1: { resume: 'sess-1', name: 'Refactor auth' } });
+    });
+
+    test('a session renaming a shared node leaves the shared file as it was', () => {
+        const named = (title: string) => content([canvas('main', [node('n1', { title, titleSource: 'auto' })])]);
+        const before = splitContent(named('First prompt'), ['main'], 1);
+        const after = splitContent(named('What the CLI called it'), ['main'], 2);
+        expect(after.shared).toEqual(before.shared);
+    });
+
+    test('a kind without a name of its own keeps the name a session gave in the shared file', () => {
+        const main = { ...canvas('main'), name: 'Named', titleSource: 'auto' } as ProjectView;
+        expect(splitContent(content([main]), ['main'], 1).shared.views[0]).toEqual(main);
+    });
+
     test('a folder inside the project travels and one outside it does not', () => {
         const split = splitContent(content([canvas('main', [node('in', { cwd: './apps/server' }), node('out', { cwd: '/etc' })])]), ['main'], 1);
         const shared = split.shared.views[0] as ProjectCanvasView;
@@ -149,6 +174,29 @@ describe('mergeFiles', () => {
         const before = content([canvas('main', [node('n1', { resume: 'sess-1', cwd: '/etc' })]), chatView('c1', { resume: 'sess-2' }), canvas('own')]);
         const split = splitContent(before, ['main', 'c1'], 3);
         expect(mergeFiles(split.shared, split.private, fallback)).toEqual({ content: before, shared: ['main', 'c1'] });
+    });
+
+    test('the names sessions gave come back over the shared file', () => {
+        const before = content([
+            canvas('main', [node('n1', { title: 'Fix the login', titleSource: 'auto' })]),
+            { ...chatView('c1'), name: 'Refactor auth', titleSource: 'auto' } as ProjectView
+        ]);
+        const split = splitContent(before, ['main', 'c1'], 3);
+        expect(mergeFiles(split.shared, split.private, fallback).content).toEqual(before);
+    });
+
+    test('a name a person gave in the shared file wins over the one a session gave here', () => {
+        const shared: ProjectSharedFile = {
+            version: PROJECT_VERSION,
+            name: 'repo',
+            color: '#7c74ff',
+            views: [
+                canvas('main', [node('n1', { title: 'Theirs', titleSource: 'user' })]),
+                { ...chatView('c1'), name: 'Also theirs', titleSource: 'user' } as ProjectView
+            ]
+        };
+        const merged = mergeFiles(shared, { ...EMPTY_PRIVATE_FILE, overlay: { n1: { title: 'Mine' }, c1: { name: 'Also mine' } } }, fallback);
+        expect(merged.content.views).toEqual(shared.views);
     });
 
     test('the flags come back over both files', () => {

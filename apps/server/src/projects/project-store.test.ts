@@ -863,6 +863,25 @@ describe('the two files of a project', () => {
         expect((await privateFileOnDisk(folder)).views.map((view) => view.id)).toEqual(['mine']);
     });
 
+    test('a session naming a shared node leaves the shared file untouched, and the name comes back on the way in', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const named = (title: string): ProjectContent => {
+            const next = content();
+            canvas(next).nodes[0] = { ...canvas(next).nodes[0]!, title, titleSource: 'auto' };
+            return next;
+        };
+        await store.save(projectId, 0, named('First prompt'), ['main']);
+        const before = await sharedText();
+
+        await store.save(projectId, 1, named('What the CLI called it'), ['main']);
+        expect(await sharedText()).toBe(before);
+
+        store.closeAll();
+        const again = await store.openProject({ folder });
+        expect(canvas(again.document).nodes[0]).toMatchObject({ title: 'What the CLI called it', titleSource: 'auto' });
+    });
+
     test('a version-2 file git tracks was shared on purpose and stays that way', async () => {
         await mkdir(join(folder, '.ruimte'));
         const legacy = { version: 2, rev: 5, name: 'repo', color: '#123456', views: content().views };

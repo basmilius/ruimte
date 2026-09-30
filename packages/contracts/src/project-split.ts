@@ -1,3 +1,4 @@
+import { DEFAULT_TITLES } from './node-defaults.ts';
 import { liveFlags } from './project-flags.ts';
 import { isAbsolutePath } from './stored-path.ts';
 import {
@@ -6,6 +7,7 @@ import {
     PROJECT_VERSION,
     isCanvasView,
     isDividerView,
+    type NodeKind,
     type ProjectContent,
     type ProjectNode,
     type ProjectNodeOverlay,
@@ -21,8 +23,9 @@ import {
  *
  * A view goes in whole. Sharing half a canvas would give a colleague lines to nodes that are not
  * there, so the only thing that travels per field is what a shared node cannot carry: the session
- * you are resuming, the mode it runs in, the worktree it sits in and any path off your own disk.
- * Those wait in the overlay of the private file and are laid back over the node on the way in.
+ * you are resuming, the mode it runs in, the worktree it sits in, any path off your own disk and
+ * the name that session gave it. Those wait in the overlay of the private file and are laid back
+ * over the node on the way in.
  */
 
 /* The fields of a node that belong to one person, whatever canvas the node is on. An account id
@@ -32,7 +35,10 @@ const OVERLAY_FIELDS = ['resume', 'account', 'runtimeMode', 'worktree'] as const
 /* And the ones that belong to one machine only when they name a place outside the project folder. */
 const PATH_FIELDS = ['cwd', 'path'] as const;
 
-type Carrier = { [K in keyof ProjectNodeOverlay]?: ProjectNodeOverlay[K] };
+/* What the overlay holds besides the name a session gave, which lives on a node or on a view. */
+type CarrierOverlay = Omit<ProjectNodeOverlay, 'title' | 'name'>;
+
+type Carrier = { [K in keyof CarrierOverlay]?: CarrierOverlay[K] };
 
 /* Whether a relative path climbs out of the folder it is read against, on either kind of machine. */
 const climbsOut = (path: string): boolean => {
@@ -54,8 +60,8 @@ const climbsOut = (path: string): boolean => {
 const isPortablePath = (path: string): boolean => !isAbsolutePath(path) && !climbsOut(path);
 
 /* What a carrier cannot take into the shared file, or null when it can travel as it is. */
-const overlayOfCarrier = (carrier: Carrier): ProjectNodeOverlay | null => {
-    const overlay: ProjectNodeOverlay = {};
+const overlayOfCarrier = (carrier: Carrier): CarrierOverlay | null => {
+    const overlay: CarrierOverlay = {};
     for (const field of OVERLAY_FIELDS) {
         if (carrier[field] !== undefined) {
             overlay[field] = carrier[field] as never;
@@ -89,12 +95,79 @@ const trustedOfShared = <T extends Carrier>(carrier: T): T => {
     return trusted;
 };
 
-const withoutOverlay = <T extends Carrier>(carrier: T, overlay: ProjectNodeOverlay): T => {
+const withoutOverlay = <T extends Carrier>(carrier: T, overlay: CarrierOverlay): T => {
     const stripped = { ...carrier };
-    for (const field of Object.keys(overlay) as (keyof ProjectNodeOverlay)[]) {
+    for (const field of Object.keys(overlay) as (keyof CarrierOverlay)[]) {
         delete stripped[field];
     }
     return stripped;
+};
+
+const carrierPartOf = (overlay: ProjectNodeOverlay | undefined): CarrierOverlay | null => {
+    if (!overlay) {
+        return null;
+    }
+    const part: ProjectNodeOverlay = { ...overlay };
+    delete part.title;
+    delete part.name;
+    return Object.keys(part).length === 0 ? null : part;
+};
+
+/* The name a shared file gives in place of a session's, or null for a kind that has none to fall back on. */
+const defaultTitleOf = (kind: string): string | null => (Object.hasOwn(DEFAULT_TITLES, kind) ? DEFAULT_TITLES[kind as NodeKind] : null);
+
+/*
+ * A shared view with every name a session gave taken out into the overlay and the name of its kind
+ * in its place, so an agent naming its chat never shows up in git. Without a `titleSource` in the
+ * shared file a colleague's own session names the node again, and a name a person typed travels.
+ */
+const withoutSessionTitles = (view: ProjectView, overlay: Record<string, ProjectNodeOverlay>): ProjectView => {
+    const hold = (id: string, entry: ProjectNodeOverlay): void => {
+        overlay[id] = { ...overlay[id], ...entry };
+    };
+    let next = view;
+    if (isCanvasView(view)) {
+        next = {
+            ...view,
+            nodes: view.nodes.map((node: ProjectNode) => {
+                const title = defaultTitleOf(node.kind);
+                if (node.titleSource !== 'auto' || title === null) {
+                    return node;
+                }
+                hold(node.id, { title: node.title });
+                const stripped = { ...node, title };
+                delete stripped.titleSource;
+                return stripped;
+            })
+        };
+    }
+    const name = defaultTitleOf(next.kind);
+    if (!('titleSource' in next) || next.titleSource !== 'auto' || name === null) {
+        return next;
+    }
+    hold(next.id, { name: next.name });
+    const stripped = { ...next, name };
+    delete stripped.titleSource;
+    return stripped;
+};
+
+/* A shared view with the names this person's sessions gave laid back over it, unless a person named it in the shared file. */
+const withSessionTitles = (view: ProjectView, overlay: Record<string, ProjectNodeOverlay>): ProjectView => {
+    let next = view;
+    if (isCanvasView(view)) {
+        next = {
+            ...view,
+            nodes: view.nodes.map((node: ProjectNode) => {
+                const title = overlay[node.id]?.title;
+                return title === undefined || node.titleSource === 'user' ? node : { ...node, title, titleSource: 'auto' as const };
+            })
+        };
+    }
+    const name = overlay[next.id]?.name;
+    if (name === undefined || ('titleSource' in next && next.titleSource === 'user')) {
+        return next;
+    }
+    return { ...next, name, titleSource: 'auto' } as ProjectView;
 };
 
 /*
@@ -163,16 +236,15 @@ export const splitContent = (content: ProjectContent, shared: readonly string[],
             rest.push(view);
             continue;
         }
-        travelling.push(
-            withCarriers(view, (id, carrier) => {
-                const held = overlayOfCarrier(carrier);
-                if (!held) {
-                    return carrier;
-                }
-                overlay[id] = held;
-                return withoutOverlay(carrier, held);
-            })
-        );
+        const carried = withCarriers(view, (id, carrier) => {
+            const held = overlayOfCarrier(carrier);
+            if (!held) {
+                return carrier;
+            }
+            overlay[id] = held;
+            return withoutOverlay(carrier, held);
+        });
+        travelling.push(withoutSessionTitles(carried, overlay));
     }
     // A flag is one person's mark, so it stays here whichever file its view went to.
     const flags = liveFlags(content.flags, content.views);
@@ -243,11 +315,14 @@ export const mergeFiles = (
 ): { content: ProjectContent; shared: string[] } => {
     const overlay = file.overlay;
     const sharedViews = (shared?.views ?? []).map((view) =>
-        withCarriers(view, (id, carrier) => {
-            const trusted = trustedOfShared(carrier);
-            const held = overlay[id];
-            return held ? { ...trusted, ...held } : trusted;
-        })
+        withSessionTitles(
+            withCarriers(view, (id, carrier) => {
+                const trusted = trustedOfShared(carrier);
+                const held = carrierPartOf(overlay[id]);
+                return held ? { ...trusted, ...held } : trusted;
+            }),
+            overlay
+        )
     );
     return {
         content: {

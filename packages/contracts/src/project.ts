@@ -692,6 +692,11 @@ export const ProjectNodeOverlaySchema = ProjectNodeSchema.pick({
     runtimeMode: true,
     worktree: true,
     path: true
+}).extend({
+    // The name a session gave a shared node (`title`) or view (`name`). Only a session names
+    // anything automatically, and the session is one person's too.
+    title: z.string().optional(),
+    name: z.string().min(1).optional()
 });
 export type ProjectNodeOverlay = z.infer<typeof ProjectNodeOverlaySchema>;
 
