@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
-    "@basmilius/desktop-ui": "^0.5.1",
+    "@basmilius/desktop-ui": "^0.6.0",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/language": "^6.12.4",
     "@codemirror/state": "^6.7.6",

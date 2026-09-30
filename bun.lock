@@ -15,7 +15,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@base-ui-components/react": "^1.0.0-rc.0",
-        "@basmilius/desktop-ui": "^0.5.1",
+        "@basmilius/desktop-ui": "^0.6.0",
         "@codemirror/commands": "^6.11.1",
         "@codemirror/language": "^6.12.4",
         "@codemirror/state": "^6.7.6",
@@ -78,7 +78,7 @@
       "name": "@ruimte/desktop",
       "version": "0.0.0",
       "dependencies": {
-        "@basmilius/desktop-shell": "^0.5.1",
+        "@basmilius/desktop-shell": "^0.6.0",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
@@ -246,7 +246,7 @@
         "zustand": "^5.0.15",
       },
       "devDependencies": {
-        "@basmilius/desktop-ui": "^0.5.1",
+        "@basmilius/desktop-ui": "^0.6.0",
         "@types/bun": "^1.4.2",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
@@ -257,7 +257,7 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@basmilius/desktop-ui": "^0.5.1",
+        "@basmilius/desktop-ui": "^0.6.0",
         "i18next": "^26.4.2",
         "react": "^19.3.0",
         "react-dom": "^19.3.0",
@@ -289,7 +289,7 @@
       "name": "@ruimte/desktop-bridge",
       "version": "0.0.0",
       "dependencies": {
-        "@basmilius/desktop-shell": "^0.5.1",
+        "@basmilius/desktop-shell": "^0.6.0",
         "@ruimte/contracts": "workspace:*",
       },
       "devDependencies": {
@@ -509,9 +509,9 @@
 
     "@base-ui-components/utils": ["@base-ui-components/utils@0.2.2", "", { "dependencies": { "@babel/runtime": "^7.28.4", "@floating-ui/utils": "^0.2.10", "reselect": "^5.1.1", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-rNJCD6TFy3OSRDKVHJDzLpxO3esTV1/drRtWNUpe7rCpPN9HZVHUCuP+6rdDYDGWfXnQHbqi05xOyRP2iZAlkw=="],
 
-    "@basmilius/desktop-shell": ["@basmilius/desktop-shell@0.5.1", "", { "peerDependencies": { "electron": ">=44", "electron-updater": "^6.8.9" }, "optionalPeers": ["electron", "electron-updater"] }, "sha512-gGvtaw5dsO79w93hng3DD2r4UU+V4lL9BkgmP3MUSAmPAcIvtSZ5RM0XR0muLurlqDRP0EPPhfeLxvmwYtw4Pw=="],
+    "@basmilius/desktop-shell": ["@basmilius/desktop-shell@0.6.0", "", { "peerDependencies": { "electron": ">=44", "electron-updater": "^6.8.9" }, "optionalPeers": ["electron", "electron-updater"] }, "sha512-sIRX/+kh06kK28/LsC71iBQBRvtKyy21LTFaDhDis2qOJZ28eG21liiEbAQwWULBga48iX/dmh7QUcUNKxriFQ=="],
 
-    "@basmilius/desktop-ui": ["@basmilius/desktop-ui@0.5.1", "", { "dependencies": { "@base-ui-components/react": "^1.0.0-rc.0", "@pierre/trees": "1.0.0-beta.6", "clsx": "^2.1.1", "lucide-react": "^1.47.0", "zustand": "^5.0.15" }, "peerDependencies": { "i18next": "^26.4.2", "react": "^19.3.0", "react-dom": "^19.3.0", "react-i18next": "^17.0.15" } }, "sha512-SLwzBUu/opW4f/tBwCMmvNiS8bf72/qp39BN3H0soMfXh3+J3jX2wyC6Rj0YefKZmc1rW9pc/KBaEwjwplf67g=="],
+    "@basmilius/desktop-ui": ["@basmilius/desktop-ui@0.6.0", "", { "dependencies": { "@base-ui-components/react": "^1.0.0-rc.0", "@pierre/trees": "1.0.0-beta.6", "clsx": "^2.1.1", "lucide-react": "^1.47.0", "zustand": "^5.0.15" }, "peerDependencies": { "i18next": "^26.4.2", "react": "^19.3.0", "react-dom": "^19.3.0", "react-i18next": "^17.0.15" } }, "sha512-GS5IR1/aLX2mAg+J9yEMtwB73aDTYDo7oi2smfQGIC6A0EIMcX8pZHTtC1QoE58zZpfiPwURJxBJvn8emThXNw=="],
 
     "@cloudflare/kv-asset-handler": ["@cloudflare/kv-asset-handler@0.5.0", "", {}, "sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg=="],
 

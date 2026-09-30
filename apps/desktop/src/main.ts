@@ -4,7 +4,16 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
-import { createMenuCommands, createPageKeys, createUpdater, devToolsAccelerator, menuTemplateOf, staticMenuTemplate } from '@basmilius/desktop-shell';
+import {
+    createMenuCommands,
+    createPageKeys,
+    createUpdater,
+    createWindowState,
+    devToolsAccelerator,
+    fileStorage,
+    menuTemplateOf,
+    staticMenuTemplate
+} from '@basmilius/desktop-shell';
 import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
@@ -464,10 +473,16 @@ let quitConfirmed = false;
 
 const pageKeys = createPageKeys();
 
+/* The window opens where a person left it, maximized or in full screen included. */
+const windowState = createWindowState({
+    storage: fileStorage(join(app.getPath('userData'), 'window-state.json')),
+    displays: () => screen.getAllDisplays(),
+    defaults: { width: 1440, height: 900 }
+});
+
 const createWindow = (): Electron.BrowserWindow => {
     const window = new BrowserWindow({
-        width: 1440,
-        height: 900,
+        ...windowState.bounds('main'),
         minWidth: 800,
         minHeight: 500,
         show: false,
@@ -484,6 +499,7 @@ const createWindow = (): Electron.BrowserWindow => {
             additionalArguments: [`--ruimte-system-locale=${app.getSystemLocale()}`, `--ruimte-system-languages=${app.getPreferredSystemLanguages().join(',')}`]
         }
     });
+    windowState.track('main', window);
     const contents = window.webContents;
     contents.session.setPermissionCheckHandler((requester, permission, _origin, details) => {
         if (permission !== 'media') {
@@ -1215,6 +1231,9 @@ if (!app.requestSingleInstanceLock()) {
             void mainWindow.loadURL(appUrl);
         }
     });
+
+    // A window writes when it closes; this covers one that moved a moment before the quit.
+    app.on('will-quit', () => windowState.flush());
 
     app.on('window-all-closed', () => {
         if (process.platform !== 'darwin') {
