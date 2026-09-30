@@ -36,7 +36,7 @@ export const isMainAgentOutput = (event: BackendEvent): boolean => {
  * the CLI runs no turn at all, and a note or a usage line is not the agent starting to work.
  */
 const startsAgentTurn = (event: BackendEvent): boolean =>
-    isMainAgentOutput(event) || event.type === 'approval.requested' || event.type === 'question.requested';
+    isMainAgentOutput(event) || ((event.type === 'approval.requested' || event.type === 'question.requested') && event.background !== true);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 

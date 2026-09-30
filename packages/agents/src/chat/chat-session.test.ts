@@ -71,6 +71,35 @@ const rig = (options: Partial<ChatSessionOptions> = {}, blocked = false) => {
 };
 
 describe('a queue behind a usage limit', () => {
+    test('an unknown reset preserves the queue without owing an automatic resume', async () => {
+        let owed = 0;
+        const run = rig({
+            limitResume: {
+                allowed: () => true,
+                now: () => 1000,
+                owe: async () => {
+                    owed += 1;
+                },
+                lapse: async () => undefined,
+                owed: () => false
+            }
+        });
+        run.session.send('original');
+        await flush();
+        run.session.send('queued');
+        run.event({ type: 'turn.done', state: 'error', costUsd: 0, limit: { kind: 'usage' }, error: 'reset unknown' });
+        await flush();
+        expect(owed).toBe(0);
+        expect(run.session.info.resumeAt).toBeUndefined();
+        expect(run.session.info.queuePaused).toBe(true);
+        expect(run.session.info.queue?.map((message) => message.text)).toEqual(['queued']);
+        expect(run.sent.map((input) => input.text)).toEqual(['original']);
+        expect(run.session.sendNow(run.session.info.queue![0]!.id)).toBe(true);
+        await flush();
+        expect(run.sent[1]?.text).toBe('queued');
+        await run.session.dispose();
+    });
+
     for (const allowed of [false, true]) {
         test(`waits across a restart with automatic resume ${allowed}`, async () => {
             let owed = 0;

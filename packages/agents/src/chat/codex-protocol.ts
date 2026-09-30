@@ -160,10 +160,13 @@ const elicitationInput = (meta: Frame): Frame => {
     return input;
 };
 
-/* The latest reset among the windows a rate limit update shows spent, since the request waits for all of them. */
+// Every spent window must reset; one unknown reset keeps resuming a person's choice.
 const spentUntil = (windows: readonly UsageWindow[]): number | null => {
-    const resets = windows.flatMap((window) => (window.used >= 1 && window.resetsAt !== null ? [window.resetsAt] : []));
-    return resets.length === 0 ? null : Math.max(...resets);
+    const spent = windows.filter((window) => window.used >= 1);
+    if (spent.length === 0 || spent.some((window) => window.resetsAt === null)) {
+        return null;
+    }
+    return Math.max(...spent.map((window) => window.resetsAt!));
 };
 
 /*
@@ -324,9 +327,11 @@ export class CodexProtocol {
             case 'account/rateLimits/updated': {
                 // The plan's own numbers, sent beside a token usage tick; the usage monitor keeps them.
                 const reading = readCodexLimits(isRecord(params.rateLimits) ? params.rateLimits : params);
-                if (reading !== null && reading.windows.length > 0) {
+                if (reading !== null) {
                     this.spentUntil = spentUntil(reading.windows);
-                    events.push({ type: 'limits', update: { kind: 'codex', plan: reading.plan, windows: reading.windows } });
+                    if (reading.windows.length > 0) {
+                        events.push({ type: 'limits', update: { kind: 'codex', plan: reading.plan, windows: reading.windows } });
+                    }
                 }
                 break;
             }
@@ -445,11 +450,16 @@ export class CodexProtocol {
         }
     }
 
-    private requestDescription(params: Frame, description: string | null): string | null {
+    private isChildRequest(params: Frame): boolean {
         const threadId = str(params.threadId);
-        if (threadId === null || this.ownThreadId === null || threadId === this.ownThreadId) {
+        return threadId !== null && this.ownThreadId !== null && threadId !== this.ownThreadId;
+    }
+
+    private requestDescription(params: Frame, description: string | null): string | null {
+        if (!this.isChildRequest(params)) {
             return description;
         }
+        const threadId = str(params.threadId)!;
         const label = this.agentRows.get(threadId)?.label || threadId;
         return [`Requested by subagent ${label}.`, description].filter(Boolean).join(' ');
     }
@@ -466,7 +476,7 @@ export class CodexProtocol {
                 return;
             }
             this.pending.set(requestId, { ...this.owner(params), type: 'question', rpcId, questionIds: questions.map((question) => question.id) });
-            events.push({ type: 'question.requested', requestId, questions });
+            events.push({ type: 'question.requested', requestId, questions, ...(this.isChildRequest(params) ? { background: true } : {}) });
             return;
         }
         if (method === 'mcpServer/elicitation/request') {
@@ -508,6 +518,7 @@ export class CodexProtocol {
             input,
             description: this.requestDescription(params, str(params.reason)),
             canAllowAlways: (amendment !== null && amendment.length > 0) || decisions.includes('acceptForSession'),
+            ...(this.isChildRequest(params) ? { background: true } : {}),
             ...(amendment && amendment.length > 0
                 ? {
                       allowAlways: {
@@ -540,6 +551,7 @@ export class CodexProtocol {
             input: elicitationInput(meta),
             description: this.requestDescription(params, str(params.message)),
             canAllowAlways: persist !== null,
+            ...(this.isChildRequest(params) ? { background: true } : {}),
             ...(persist === 'always'
                 ? { allowAlways: { label: 'Always allow', description: 'Codex remembers this approval, also in later chats.' } }
                 : persist === 'session'

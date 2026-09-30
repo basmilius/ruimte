@@ -572,14 +572,17 @@ describe('ChatManager', () => {
         await manager.send('chat-late-ask', 'background approval: ls\nlate');
         await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'done' && idle());
 
-        // The request comes while the CLI runs no turn, so the thread opens one the CLI never sends a result for.
         claude.started[0]!.runLater();
         await recorder.until(() => recorder.items.get('approval-req-bg') !== undefined);
-        expect(recorder.ofKind('turn')[1]).toMatchObject({ origin: 'agent', state: 'running' });
+        expect(recorder.ofKind('turn')).toHaveLength(1);
+        expect(recorder.items.get('approval-req-bg')).toMatchObject({ decision: 'pending', toolUseId: 'toolu_bgask_bash' });
+        expect(recorder.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
 
         expect(await manager.send('chat-late-ask', 'hello')).toMatchObject({ queued: false });
-        await recorder.until(() => recorder.ofKind('turn')[2]?.state === 'done');
-        expect(recorder.ofKind('turn')[1]).toMatchObject({ state: 'done' });
+        await recorder.until(() => recorder.ofKind('turn')[1]?.state === 'done');
+        expect(recorder.ofKind('turn')).toHaveLength(2);
+        expect(recorder.ofKind('turn')[1]).toMatchObject({ origin: 'user', state: 'done' });
+        expect(recorder.items.get('approval-req-bg')).toMatchObject({ decision: 'pending' });
         expect(recorder.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
     });
 

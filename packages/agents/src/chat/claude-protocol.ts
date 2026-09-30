@@ -595,19 +595,21 @@ export class ClaudeProtocol {
         }
         const toolUseId = str(request.tool_use_id);
         const toolName = str(request.tool_name) ?? 'tool';
+        const background = Boolean(str(request.agent_id));
         if (toolName === 'AskUserQuestion') {
             const questions = parseQuestions(request.input);
             if (questions.length === 0) {
                 return;
             }
             this.pending.set(requestId, { type: 'question', toolUseId, input: request.input });
-            events.push({ type: 'question.requested', requestId, questions });
+            events.push({ type: 'question.requested', requestId, questions, ...(background ? { background: true } : {}) });
             return;
         }
         const suggestions = Array.isArray(request.permission_suggestions) ? request.permission_suggestions : [];
         this.pending.set(requestId, { type: 'approval', toolUseId, input: request.input ?? {}, suggestions });
         events.push({
             type: 'approval.requested',
+            ...(background ? { background: true } : {}),
             requestId,
             ref: toolUseId,
             toolName,

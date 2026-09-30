@@ -1,10 +1,65 @@
 import { describe, expect, jest, test } from 'bun:test';
 import { ClaudeProtocol } from './claude-protocol.ts';
 import autoFallbackCapture from './fixtures/claude-2.1.285-auto-fallback.json';
+import { ChatThread } from './thread.ts';
+import { ThreadProjector } from './projector.ts';
 
 const usage = { input_tokens: 8, cache_creation_input_tokens: 2671, cache_read_input_tokens: 24869, output_tokens: 1 };
 
 describe('ClaudeProtocol', () => {
+    for (const [toolName, input] of [
+        ['Bash', { command: 'echo test' }],
+        ['AskUserQuestion', { questions: [{ question: 'Continue?', header: 'Pick', options: [{ label: 'Continue', description: '' }] }] }]
+    ] as const) {
+        test(`a late background ${toolName} request waits without opening a main turn`, () => {
+            const protocol = new ClaudeProtocol();
+            const thread = new ChatThread({
+                chatId: 'probe',
+                provider: 'claude',
+                cwd: '/tmp',
+                agentSessionId: 'session',
+                model: null,
+                selection: { model: 'claude-haiku-4-5', options: {} },
+                runtimeMode: 'supervised',
+                running: true,
+                status: 'idle',
+                activeTurnId: null,
+                slashCommands: [],
+                usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                createdAt: 1
+            });
+            const projector = new ThreadProjector(thread, { providerName: 'Claude' });
+            const events = protocol.handle({
+                type: 'control_request',
+                request_id: 'child-request',
+                request: { subtype: 'can_use_tool', tool_name: toolName, input, tool_use_id: 'child-tool', agent_id: 'background-agent' }
+            });
+            expect(events).toHaveLength(1);
+            for (const event of events) {
+                projector.project(1, event);
+            }
+            expect(thread.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
+            expect(thread.list().some((item) => item.kind === 'turn')).toBe(false);
+            expect(thread.pending()).toHaveLength(1);
+            for (const event of protocol.handle({ type: 'control_cancel_request', request_id: 'child-request' })) {
+                projector.project(1, event);
+            }
+            expect(thread.info).toMatchObject({ status: 'idle', activeTurnId: null });
+        });
+    }
+
+    test('an absent or invalid background agent id leaves a main-chain request unchanged', () => {
+        for (const agentId of [undefined, null, '', 1]) {
+            const events = new ClaudeProtocol().handle({
+                type: 'control_request',
+                request_id: 'root-request',
+                request: { subtype: 'can_use_tool', tool_name: 'Bash', input: {}, agent_id: agentId }
+            });
+            expect(events).toHaveLength(1);
+            expect(events[0]).not.toHaveProperty('background');
+        }
+    });
+
     test('replays the live Haiku Auto fallback that only the later status frame reveals', () => {
         const protocol = new ClaudeProtocol();
         expect(protocol.handle(autoFallbackCapture.frames[0])[0]).toMatchObject({ type: 'session', effectiveRuntimeMode: 'auto' });

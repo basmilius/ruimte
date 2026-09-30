@@ -4,6 +4,7 @@ import { CodexProtocol, unwrapCommand } from './codex-protocol.ts';
 import nativeApprovalCapture from './fixtures/codex-0.159.2-native-approval.json';
 import nativeFileApprovalCapture from './fixtures/codex-0.159.2-native-file-approval.json';
 import nativeInteractedCapture from './fixtures/codex-0.159.2-native-interacted.json';
+import usageWindowsCapture from './fixtures/codex-0.159.2-usage-windows.json';
 import { ChatThread } from './thread.ts';
 import { ThreadProjector } from './projector.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
@@ -22,6 +23,44 @@ const message = (id: string, text: string, extra: Record<string, unknown> = {}) 
 });
 
 describe('CodexProtocol', () => {
+    for (const [method, params] of [
+        ['item/fileChange/requestApproval', { itemId: 'patch' }],
+        ['item/commandExecution/requestApproval', { itemId: 'command', command: 'echo test' }],
+        ['item/tool/requestUserInput', { questions: [{ id: 'pick', header: 'Pick', question: 'Which?', options: [{ label: 'A', description: '' }] }] }],
+        ['mcpServer/elicitation/request', { mode: 'form', message: 'Allow?', requestedSchema: { type: 'object', properties: {} } }]
+    ] as const) {
+        test(`a late child ${method} waits without opening a phantom main turn`, () => {
+            const protocol = new CodexProtocol(1);
+            protocol.threadReady({ thread: { id: 'main' } });
+            const thread = new ChatThread({
+                chatId: 'probe',
+                provider: 'codex',
+                cwd: '/tmp',
+                agentSessionId: 'main',
+                model: null,
+                selection: codexProvider.catalog.normalize(undefined),
+                runtimeMode: 'supervised',
+                running: true,
+                status: 'idle',
+                activeTurnId: null,
+                slashCommands: [],
+                usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                createdAt: 1
+            });
+            const projector = new ThreadProjector(thread, { providerName: 'Codex' });
+            const events = protocol.handle({ method, id: 1, params: { ...params, threadId: 'child', turnId: 'child-turn' } });
+            expect(events).toHaveLength(1);
+            for (const event of events) {
+                projector.project(1, event);
+            }
+            expect(thread.info).toMatchObject({ status: 'needs-you', activeTurnId: null });
+            expect(thread.list().some((item) => item.kind === 'turn')).toBe(false);
+            expect(thread.pending()).toHaveLength(1);
+            projector.project(1, { type: 'request.withdrawn', requestId: '1-1' });
+            expect(thread.info).toMatchObject({ status: 'idle', activeTurnId: null });
+        });
+    }
+
     test('replays a real interacted child on its original row and thread, without duplicating completion or projecting foreign activity', () => {
         const protocol = new CodexProtocol(1);
         protocol.threadReady({ thread: { id: nativeInteractedCapture.rootThreadId } });
@@ -220,6 +259,55 @@ describe('CodexProtocol', () => {
         expect(failed(protocol, 'usageLimitExceeded')).toEqual([
             { type: 'turn.done', state: 'error', costUsd: 0, error: 'no', native: { turnId: 'ct1' }, limit: { kind: 'usage', resetsAt: 1_789_000_000_000 } }
         ]);
+    });
+
+    test('replays a live weekly primary window and a successful turn without inventing a limit', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.threadReady({ thread: { id: usageWindowsCapture.rootThreadId }, model: usageWindowsCapture.model });
+        const events = usageWindowsCapture.frames.flatMap((frame) => protocol.handle(frame));
+        expect(events.find((event) => event.type === 'limits')).toMatchObject({
+            update: {
+                kind: 'codex',
+                windows: [{ id: 'primary', kind: 'weekly', used: 0.16, durationMs: 604_800_000, resetsAt: 1_791_055_009_000 }]
+            }
+        });
+        expect(events.find((event) => event.type === 'turn.done')).toMatchObject({ state: 'done' });
+        expect(events.find((event) => event.type === 'turn.done')).not.toHaveProperty('limit');
+    });
+
+    for (const [primaryReset, secondaryReset, expectedReset] of [
+        [1_789_000_000, 1_789_400_000, 1_789_400_000_000],
+        [1_789_400_000, 1_789_000_000, 1_789_400_000_000],
+        [null, 1_789_400_000, undefined],
+        [1_789_000_000, null, undefined]
+    ] as const) {
+        test(`two spent windows wait for all known resets (${primaryReset}, ${secondaryReset})`, () => {
+            const protocol = new CodexProtocol(1);
+            protocol.handle({
+                method: 'account/rateLimits/updated',
+                params: {
+                    rateLimits: {
+                        limitId: 'codex',
+                        primary: { usedPercent: 100, windowDurationMins: 300, resetsAt: primaryReset },
+                        secondary: { usedPercent: 100, windowDurationMins: 10080, resetsAt: secondaryReset }
+                    }
+                }
+            });
+            const event = failed(protocol, 'usageLimitExceeded')[0] as Extract<BackendEvent, { type: 'turn.done' }>;
+            expect(event.limit?.kind).toBe('usage');
+            expect(event.limit?.resetsAt).toBe(expectedReset);
+        });
+    }
+
+    test('a main quota snapshot without windows drops an older reset instead of scheduling stale work', () => {
+        const protocol = new CodexProtocol(1);
+        protocol.handle({
+            method: 'account/rateLimits/updated',
+            params: { rateLimits: { limitId: 'codex', primary: { usedPercent: 100, resetsAt: 1_789_000_000 } } }
+        });
+        protocol.handle({ method: 'account/rateLimits/updated', params: { rateLimits: { limitId: 'codex', primary: null, secondary: null } } });
+        const event = failed(protocol, 'usageLimitExceeded')[0] as Extract<BackendEvent, { type: 'turn.done' }>;
+        expect(event.limit).toEqual({ kind: 'usage' });
     });
 
     test('an overloaded server is an overload, and any other failure no limit at all', () => {

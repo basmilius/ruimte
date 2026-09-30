@@ -1,146 +1,356 @@
 # Next
 
-What is still open, roughly in the order that makes sense.
+Only open implementation, decisions and verification belong in this plan. Each numbered package
+is a reviewable change; split larger packages into issues when implementation starts. The order
+is a priority recommendation. Run measurements or a design spike before estimating larger work.
 
-The one open issue first, then the rest. Sizes are rough: hours, a day, several days. Each of the
-larger ones becomes a GitHub issue when it starts.
+## Implementation order
 
-1. **#15**: Windows, which can wait. The PTY is the one hard block: Bun opens one only on POSIX,
-   and `docs/reports/2026-09-24-cross-platform.html` proposes a Rust helper on ConPTY, with the
-   POSIX assumptions around it, the shell and an unsigned release build
-   (`docs/research/windows.md` is the design for a project in its own window, not for the
-   platform). Linux runs, with its own list in `docs/LINUX.md`; the signed and notarized macOS
-   build, the icon and the update path are done, see `docs/RELEASE.md`.
-2. **Copilot and Gemini as chat providers**, after Claude, Codex and Apple Foundation Models
-   (`docs/reports/2026-09-25-provider-research.html`: Copilot through its TypeScript SDK, Gemini
-   through `gemini --acp`): a provider value, a backend and a protocol mapper each. `AgentKind`
-   already names `gemini` and `copilot`, which today only launch in a terminal. Hooks for
-   Gemini and Copilot are a day per CLI on top, approvals included, the way Claude Code and Codex
-   answer theirs. Two things come before it. The iPhone app with open enums (`AgentKind`, `RuntimeMode` and `AgentStatus` are `x-open-enum` in `schemas.json`, since
-   1a42876c) has to be out in an iOS release first, since an older build refuses a whole answer over
-   one value it does not know. And the desktop client validates `AgentKind` with zod just as closed
-   (`packages/contracts/src/agent.ts`), so a newer machine elsewhere with a new provider breaks the
-   desktop the same way. Decide how it reads an unknown provider before this starts.
-3. **Terminal basics**, about two days. Search on Cmd+F (the shared find bar in
-   `apps/client/src/find` has no terminal host yet), clickable file paths across wrapped rows (URLs
-   already are), OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
-   xterms, and "Clear" in the node menu and the terminal's right-click menu (Cmd+K, the app menu
-   and `terminal.clear` have it). Then "Send to linked chat" (a terminal selection lands as a fenced
-   block in the composer of the chat the node has an edge to) and port discovery: an `lsof` poll
-   tied to the owning session, an "Open :5173" chip that adds a browser node with an edge. The
-   browser node's splash already probes a fixed list of ports (`apps/server/src/browser/dev-servers.ts`);
-   that is not this.
-4. **Canvas ergonomics**, about two days, all client state. Directional focus between nodes and
-   maximize for a node on the canvas; the keys the plan named for them now move between and fill
-   the cells of the grid (Mod+Alt+Arrow, Mod+Shift+Enter), so both need keys of their own. Camera
-   history (Cmd+[ and Cmd+] belong to a browser while one is focused; the history stays in the
-   editor and stores nothing). Arrange, align and tidy as pure functions with palette entries (only
-   the alignment guides while dragging exist). Palette ranking (exact, prefix, substring), `>` for
-   actions, recently visited nodes on an empty query (it shows recent commands and the canvas's
-   nodes in stacking order today). Images on the canvas from paste, stored under
-   `<folder>/.ruimte/images`; an image already in the folder is a file node and needs none of this.
-5. **Chat depth**, several days. Review comments from a diff into the prompt, and approval choices in the
-   provider's own words (the provider's description is shown; the allow-always labels are ours).
-   From branching: "Restore files to this turn" as its own action on a turn (the shared-folder
-   undo) and a verb for agents to fork (`chat.fork` is a person's and voice's). Two small ones: a
-   question in a finished turn stays outside its fold, since it explains the answer below it, and
-   after Stop an empty composer offers "Continue" in place of the send button.
-6. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
-   Keyboard pane (which lists them by hand and read-only today), then overrides with
-   press-to-record, conflict labels and reset. A "restore defaults" action, a canvas font size for
-   chat and text elements, and settings search that the palette reads, so a settings row is a
-   palette entry (only a few settings panes are, as jump commands).
-7. **Worktree leftovers**: the iOS app shows none of them beyond forking into one, and a merge
-   into a branch checked out nowhere is refused (`target-not-checked-out`) rather than offered as a
-   ref-only merge.
-8. **Around the editor.** A text file opens in the editor (`packages/editor`) in the files panel
-   and in a file node from a zoom of 0.6, and saves over the mtime it was read at. Left: a diff
-   node that reuses the git panel's scopes (the files preview has a diff tab with them, there is
-   no node kind); a line number in a file node's path (`file.preview` already takes one); "open in
-   editor": an editor probe and preference, `fs.open` with `path:line`, used from menus, diff rows
-   and paths in terminal output; and language servers on the machine, so the editor knows the
-   rest of the project (`docs/reports/2026-09-23-language-servers.html`, designed, not built).
-   Still unmeasured: what a canvas of ten file nodes on the largest files of a repository costs,
-   now that the plate and the highlighting cap are the two things standing between it and the
-   thirty-node goal. Audio playing on the web is not yet checked in the Electron dev app, over the
-   socket and over a direct connection.
-9. **A test floor**: a dev-only 30-node palette command and whatever it finds; a DOM setup for
-   `bun test` with first specs for the composer and the canvas wiring.
-10. **More than one window**: a window shows a start screen or one project, and two projects side by
-    side never share one (decided 16 September). A second project opens in a window of its own;
-    `docs/research/windows.md` is the design and none of it is built. The empty states that stay a
-    sentence: the Files and Git panels of a project without a folder, since linking a folder to a
-    project needs a request the wire does not have.
-11. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
-    of its body; "Clear" in a chat node's menu (`chat.clear` exists, only the composer offers it);
-    what happens to a chat's background subagents on a clear (the CLI goes and `background` is
-    emptied, but the subagents are not marked stopped the way a cancel does); splitting the
-    composer's CodeMirror (~98 kB gzip) out of the workspace chunk, only if a measurement shows
-    startup gains.
-12. **Remote access leftovers**: a production broker on a server of its own, after which the test
-    droplet goes (`apps/pulsar-broker/deploy` has what it runs on); TURN for phones behind
-    carrier-grade NAT, built but not measured on real networks; a window of accepted protocol
-    versions instead of only the same one (`docs/reports/2026-09-15-protocol-versions.html`, not
-    decided); the desktop app overwriting a service `ruimte service install` set up (only the CLI
-    checks who owns it); an expired login on station showing an error on the start screen,
-    unverified. A video over a direct connection streams through a service worker
-    (`apps/client/src/worker/bytes-worker.ts`),
-    verified in the app against a real direct machine, with a small stutter that is acceptable. The
-    iPhone plays video and sound in ranges as well (`MachineMediaLoader` in `RuimteTransport`): each
-    piece crosses once into a spool file, the source reads ahead to the end of the file, and a piece
-    lost to a dropped connection is asked again on the next one. A piece of `bytes.read` travels as a
-    binary reply on the desktop and the iPhone, and werift is patched (`patches/`) to back off to 70%
-    on a lost packet and grow back four times as fast. A 56 Mbit/s video still stutters now and then
-    on the iPhone: its direct connection drops mid-video and comes back about 5 s later, for a reason
-    not yet known. The desktop does not spool or read ahead yet. The binary path's throughput
-    and its effect on terminal output have not been measured.
-13. **Devices**: the iOS Simulator, physical iPhones and
-    iPads, and Android emulators and phones run as a panel, a view and a node, and an agent operates
-    them with `ruimte-context device`. Left: typing on a physical iPhone (the simulator and Android
-    have it), and the iPhone app, which knows a device from the generated schema and draws none of
-    it. Out on purpose: installing an app and logs.
-14. **Plugins** (`docs/reports/2026-09-14-plugins.html`, decisions pending): internal registries
-    first (the action registry in `packages/actions` is the first), then a compatibility release in
-    contracts, then declarative plugins from `$RUIMTE_HOME/plugins`, isolated code last. The report's
-    alternative, plugins that only feed context to agents, is still to be weighed. Unproven: whether
-    a compiled binary can `import()` plugin code; ad-hoc compiled binaries get SIGKILL on this Mac,
-    so test it in the signed app and never as an agent experiment (one hung for four hours).
-15. **Account leftovers** (`docs/reports/2026-09-25-provider-accounts.html`). Several accounts per
-    CLI are built: a config folder per login, passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at
-    spawn, and the CLI logs in itself. Unmeasured: two Claude folders keeping their own login after
-    a restart, and a Codex chat continuing on another account through its shadow home. Open: logging
-    in from the iPhone or the station, and an extra Claude account not seeing the skills, `CLAUDE.md`
-    and settings in `~/.claude`.
-16. **Orchestration leftovers** (`docs/reports/2026-09-24-orchestration-upstream.html`). Built and
-    tested end to end in the dev app: limits and overload with a resume a person turns on, notes for
-    a child waiting on input and `ruimte-context answer`, nested subagents, Codex spawned agents, a
-    chat attached with `@`, a task that waits for the child's background work (commands up to 30
-    minutes), a parent reading its own child, request ids in `read`, the phases of a workflow and a
-    background agent's approval that outlives the turn. Open: a mode the CLI does not honor is
-    silent (auto on Haiku falls back to default and asks on every tool); a workflow or subagent a
-    restart took down settles its task as done, where background commands fail it; a workflow that
-    hangs in the CLI holds its task until a person stops the child; a Codex spawned agent's request
-    is still dropped at its own turn's end, unverified; the sub-agent list over the composer lacks a
-    workflow's agents and background subagent rows fold into their turn; a Codex `subAgentActivity`
-    of kind `interacted` is not handled; a resume whose CLI dies before the resume records itself
-    ends without its attempt and its note; stashing a draft drops the chats attached to it.
+| Package | Priority | Depends on |
+| --- | --- | --- |
+| 1. Chat lifecycle and native requests | First | Nothing |
+| 2. Ownership and persistent files | First | Nothing |
+| 3. Test floor and measurements | Early | Nothing for a baseline |
+| 4. Keyboard and settings | Next | DOM setup from 3 for interaction tests |
+| 5. File and diff entry points | Next | Nothing |
+| 6. Terminal basics | Next | 4 for new bindings; 5 for file links |
+| 7. Canvas ergonomics | Next | 4 for bindings; baseline from 3 |
+| 8. Chat depth | Next | 1 for lifecycle; 5 for shared file locations |
+| 9. Accounts | Next | 1 for continuation/recovery |
+| 10. Remote access and media | Next | 2; measurements from 3 |
+| 11. iOS, devices and worktrees | Next | 1 for task status; 5 for locations |
+| 12. Multiple windows | Later | 2 and 4; baseline from 3 |
+| 13. Copilot and Gemini chat | Later | 1 and 9; compatibility checks below |
+| 14. Language servers | Later | 5; design spike and permission decisions |
+| 15. Plugins | Decision first | Registry inventory and a compatibility release |
+| 16. Linux and Windows | Linux checks early, Windows deferred | Platform spikes and CI |
 
-Decided against, so not to be proposed again: a card for a proposed plan (plan mode is not how Bas
-works, and Claude Code may drop it), per-project settings (a person keeps their own environment, so
-`.ruimte/settings.json` and the paths it linked into new worktrees went), overrides for prices and
-plans in usage (it reads the data it has), and a frame rate goal for devices (below 30 fps is fine).
+Measurements must finish before changing the WebGL budget, splitting the composer chunk or
+choosing media buffer sizes.
 
-Known gaps to keep in mind: the WebGL budget is a fixed 10 contexts, not a setting and not
-measured against what a given machine really keeps alive; the 30-node performance target is
-unmeasured, and so are nine cells of the grid at once. Backpressure is handled per socket (output
-dropped over the high-water mark, repaired with `session.resync` on drain); what is not there is a
-per-session cap, so one very loud shell can still be the reason a client is dropped. An agent's
-`view delete` leaves the drawing or diagram file behind: `ProjectStore.mutate` updates the ids
-without asking the stores, so orphans only go when a person saves the project. A `codex` typed by hand in a
-terminal joins Codex's shared background server, whose hooks carry the token of the terminal that
-started it, so its status can land on another node or nowhere. A turn's diff is of
-the chat's own folder (or its worktree), so an edit the person made there during the turn lands in
-its card too.
+## 1. Chat lifecycle and native requests
 
-Research that is written but not built: `docs/research/windows.md` and the reports under
-`docs/reports`. A report goes once its work is done.
+Sources: `packages/agents/src/chat`, task coordination and the host's resume handlers.
+
+The implementation and CLI captures are recorded in
+[the orchestration report](reports/private/2026-09-30-orchestration-upstream.html#resultaat).
+The remaining checks need the desktop or a naturally occurring provider limit.
+
+1. Complete the remaining Electron checks after the Ruimte Dev computer-use run. That run verified
+   child file approvals after root completion, reuse of the same child, Claude's effective mode
+   and its selected-mode explanation, Stop preserving the queue, Send now and new Send resuming
+   it, busy Clear cancellation and confirmation, and Clear's composer layout. It also verified
+   immediate Stop after a cold start, native Codex Shift+Stop with its provider limitation, and a
+   real workflow warning after five minutes followed by its own Stop button. Late child requests
+   in Codex and Claude no longer open phantom main turns; Clear's clipped composer is fixed.
+   Still check a deliberately slow CLI startup, the Shift+Stop confirmation for delegated Ruimte
+   children, Clear with delegated tasks, and desktop daemon restart while a delegated task waits
+   on native child work. Recovery must produce one failure/wake and a notice on the next prompt.
+2. Capture a real provider-limit/reset sequence when one occurs and add a versioned replay. A live
+   Codex 0.159.2 turn now has a quota fixture, with a weekly primary window at 16 percent; it did
+   not hit a limit. The bounded probe and reset regressions are in the report. Unknown reset times
+   keep the queue paused without scheduling a resume; empty snapshots drop stale reset times.
+   The deterministic tests do not establish the live refusal/reset frame sequence.
+
+Done when the desktop checks pass and the live limit sequence has a versioned replay.
+
+## 2. Ownership and persistent files
+
+1. Make `ProjectStore.mutate` notify drawing and diagram stores when a view disappears, using the
+   same orphan cleanup as save. Its current id update can hide the deletion from a later save too.
+   Test deletion through `view delete`, a failed write, shared/private files and unknown kinds that
+   must retain their assets.
+2. Apply the CLI's service ownership check to the desktop service controller before install,
+   replacement, uninstall or stop. Preserve a service installed by another Ruimte executable.
+   Retain the existing update/restart path for a service owned by this app.
+3. Reproduce the remaining status-routing problem when someone types `codex` manually in a shell.
+   Use the supported launch route in `apps/server/src/providers/launch.ts` as a baseline and
+   determine a supported remedy for handwritten launches. Do not silently replace the person's
+   shell configuration or guess status from terminal output.
+
+Done when deleting a view cleans only its unused files, the app cannot take over a CLI-owned
+service, and the handwritten Codex case has either a verified fix or a documented limitation with
+a usable launch route.
+
+## 3. Test floor and measurements
+
+1. Add a DOM test setup alongside the existing i18n/React-deduplication preloads. Start with composer
+   send/queue/Stop and canvas focus/command wiring. Existing pure state and renderer tests stay.
+2. Add the dev-only palette command that creates a reproducible 30-node scene. Measure input
+   latency, frame time, heap and mount/read counts for terminals, chats and files, then nine grid
+   cells. Measure ten file nodes with representative large files, including zoom below/above the
+   editor gate and repeated view switching.
+3. Measure the fixed ten-context WebGL budget on representative hardware and under context loss.
+   Choose any cap/adaptation change from those results. A user setting is not automatically required.
+4. Extend the [recorded Codex and idle-load baseline](reports/private/2026-09-30-orchestration-upstream.html#metingen)
+   to many distinct native children and the desktop renderer. Profile Bun's retained process
+   memory before choosing a cache or allocation change; record RSS and collected heap separately.
+5. Measure binary `bytes.read` throughput while terminals and chats are busy, on socket and direct
+   connections. If one session can dominate the socket, add fair per-session limits that preserve
+   replies/chat events and repair dropped terminal output through `session.resync`.
+6. Measure workspace startup and composer chunk cost before splitting CodeMirror. Split it only
+   when the measurement shows a startup improvement, then repeat that same measurement.
+
+Done when the baseline, hardware/build, fixture sizes and results are recorded with units, and
+any measured regression has a bounded follow-up. Choose performance acceptance budgets from the
+baseline before optimizing; the node counts alone are not a latency target.
+
+## 4. Keyboard and settings
+
+Sources: the app/canvas/terminal shortcut handlers, `shell/settings/shortcuts.ts`,
+`shell/settings/search.ts` and `state/settings.ts`.
+
+1. Replace handwritten shortcut lists with one binding table containing stable command ids,
+   defaults and `when` contexts. Handlers, Keyboard, menu accelerators and the palette read it.
+   Preserve terminal/browser ownership and the existing drawing/prompt-widget exceptions.
+2. Add persisted overrides, press-to-record, context-aware conflict labels, per-binding reset and
+   Restore defaults. An invalid override cannot make the app's essential controls unreachable.
+3. Expose the existing settings search results as palette entries that open the exact row, with
+   the same availability checks and translated search words.
+4. Add a separate canvas font size for chat and text elements, preserving the current interface
+   and terminal font sizes. Specify whether existing explicitly sized text follows that default.
+
+Done when changing a binding changes both behavior and the displayed key, overlapping contexts
+are tested, reset restores defaults, and a palette setting result reaches the right row.
+
+## 5. File and diff entry points
+
+1. Carry a line location through a file node instead of encoding it into the filesystem path.
+   Reuse `file.preview` and the file surface so preview, node and editor agree on the location.
+2. Probe installed external editors, add an editor preference and implement `fs.open` with a
+   structured path/line location. Route file menus, diff rows and terminal file links through it,
+   on the machine that owns the file. Handle an unavailable editor and paths containing spaces.
+3. Add a diff node that reuses the git panel's worktree/base/commit scopes and diff rendering.
+   Introduce its contract with the existing unknown-kind compatibility discipline; older clients
+   must preserve a node they cannot draw.
+
+Done when a location opens the correct line from every entry point, a diff node follows its scope,
+and reloads/older clients preserve the stored node.
+
+## 6. Terminal basics
+
+1. Register xterm as a host of the shared find bar, with next/previous, result state and disposal.
+2. Add clickable file paths across wrapped rows, carrying line/column locations into package 5.
+   Test wrapped paths, spaces and an invalid or missing file.
+3. Type a shell-quoted path when a local file is dropped on a terminal. Use the existing Finder
+   bridge and remote-machine refusal rules; dragging a local path to a remote shell is not a valid path.
+4. Enable matching Unicode 11 widths on client and headless xterms. Compare attach/resync snapshots
+   with the client after resize, wide characters and emoji.
+5. Add Clear to the node and terminal context menus through the existing `terminal.clear` action.
+6. Add Send to linked chat for a terminal selection. Append a fenced block to the chosen linked
+   chat's draft without sending; offer a chooser when several chats qualify.
+7. Discover listening ports from the session's process tree using a platform adapter, beginning
+   with the planned `lsof` probe on macOS. Reuse launch port/probe behavior where useful. Stop the
+   poll with the owning session and offer Open :port as a browser node with an edge.
+
+Done when search, links, drop and Clear work in both a terminal view and node; a discovered port
+belongs to that session, and its chip creates the linked browser.
+
+## 7. Canvas ergonomics
+
+1. Add directional node focus with its own binding context. Grid focus remains Mod+Alt+Arrow;
+   maximize remains Mod+Shift+Enter. Test groups, hidden nodes and a node body owning the keyboard.
+2. Add local camera back/forward history. Browser Cmd+[ and Cmd+] win while a browser is focused.
+   History stays out of project persistence and does not record every pan animation frame.
+3. Implement arrange, align and tidy as pure geometry functions, expose them in palette/menu and
+   undo each operation as one change.
+4. Rank palette results by exact match, prefix and substring; add `>` for actions. Track recently
+   visited nodes independently of recent commands, and use them on an empty query.
+5. Save pasted images under `<folder>/.ruimte/images` and create file nodes pointing at them.
+   Handle a project without a folder, failed writes and unused-image cleanup deliberately.
+6. Add optional color/arrowhead styling to plain lines, preserving the meaning and permissions
+   of context/target/origin edges. Give notes a first body heading derived from their title without
+   duplicating or overwriting an existing heading; settle rename behavior before implementation.
+
+Done when geometry changes undo cleanly, focus/history never take over another surface's keys,
+and image/line/note data survives save and reload. Confirm the measurements from package 3 still hold.
+
+## 8. Chat depth
+
+1. Preserve attached chats in `StashedPrompt`, parsing older entries as an empty list. Restore only
+   references still readable in the destination project.
+2. Keep a settled question outside its turn fold and keep running background subagents visible.
+   Include workflow members in the activity list above the composer.
+3. Offer Continue in an empty composer after a person stopped a turn. Reuse the normal continuation
+   path and keep its queue/limit behavior consistent with package 1.
+4. Add Clear to a chat node's menu through the existing action, after package 1 defines child cleanup.
+5. Let a person attach diff review comments to the draft, with path, line/side and quoted context.
+   Keep provider permission choices faithful to the descriptions/choices it actually supplies;
+   today's remember labels in both protocol mappers are written by Ruimte.
+6. Expose fork to agents through the action registry and context CLI with lineage, project, account
+   and permission-ceiling checks. `chat.fork` currently admits only person/voice actors.
+7. Design Restore files to this turn as a separate action. A turn checkpoint includes all changes
+   in the chat's working folder, including concurrent human edits. Decide its overlap/conflict rule
+   and show a reviewable diff before building a shared-folder restore. Keep the existing fork into
+   a new worktree behavior; that does not restore the original folder.
+
+Done when draft references survive stashing, folds do not hide needed context or active work,
+and review/fork/restore actions enforce their actor and file boundaries. File restore stays a
+decision-dependent step until concurrent edits have a defined treatment.
+
+## 9. Accounts
+
+Source: [the account report](reports/2026-09-25-provider-accounts.html) and
+`packages/agents/src/providers/accounts`.
+
+1. Verify two real Claude account folders retain separate logins after daemon/app restart, and a
+   real Codex conversation continues on another account through its shadow home. Record versions
+   and outcomes without reading vendor credentials.
+2. Verify login started from iPhone and station. Codex's device-auth route is a candidate; establish
+   what Claude's browser callback requires when the browser and CLI are on different machines.
+   Implement only the missing flow, preserving the distinction from Ruimte's own account login.
+3. Decide which skills, `CLAUDE.md` and settings an additional Claude account should share with
+   `~/.claude`. Implement that policy without sharing authentication or overwriting an explicit
+   account configuration.
+4. Complete the iOS account follow-up from the report: Continue on account after a limit, limit
+   information in its account menu, and a remembered default keyed by machine and CLI. Recheck
+   each against current iOS behavior before writing it.
+
+Done when the real-account checks pass and mobile/web login either succeeds or has a precise
+remaining provider limitation. Folder-isolation tests alone cannot establish login isolation.
+
+## 10. Remote access and media
+
+1. Reproduce the iPhone's direct connection dropping during the 56 Mbit/s video. Correlate ICE,
+   channel, broker and media request events to distinguish a connection failure from a decoder or
+   buffer stall. Fix the cause before increasing buffering.
+2. Verify audio in Electron dev over a socket and a direct connection, including seek, reconnect
+   and repeated playback. Add desktop spool/read-ahead only if measurements show a benefit;
+   define its disk/memory bounds and invalidation on file version changes.
+3. Measure TURN on real carrier-grade NAT networks, record which route was selected and compare
+   throughput/latency. TURN configuration alone is insufficient evidence.
+4. Move the broker to its production server: inventory the current deploy configuration, prepare
+   health checks and rollback, validate the replacement, migrate, then remove the test droplet.
+   The infrastructure cutover/deletion is a separate operational step when implementation reaches it.
+5. Check an expired station login at cold start and during reconnect. The start screen must show
+   the reason and a usable sign-in action instead of an indefinitely waiting project.
+6. Decide a supported protocol-version window using
+   [the protocol report](reports/2026-09-15-protocol-versions.html). Implement negotiation and
+   cross-version fixtures only after that decision; today's gate accepts exactly the same version.
+
+Done when connection drops have an explained, tested outcome, real-network media/terminal
+measurements meet the agreed budgets, and broker migration has verified rollback. Preserve the
+existing binary reply path, range streaming and explicit direct-connection failure behavior.
+
+## 11. iOS, devices and worktrees
+
+1. Add typing to physical iOS devices behind the existing backend input capability. Verify Unicode,
+   multiline text and the taken-over/stopped state on an actual device. Android's current text
+   path is limited to ASCII, so do not claim Unicode parity without a fix.
+2. Render a device node/view in the iOS app, using the existing device schema, stream and input
+   requests. Define behavior for a disconnected device and an unsupported video format.
+3. Add iOS worktree listing, changes, merge/conflict and removal through the existing requests.
+4. Decide how to merge into a branch checked out nowhere. The current code intentionally refuses
+   `target-not-checked-out`. A ref-only merge needs its own conflict/result path and must never move
+   a ref behind a working tree; implement it only after updating that invariant deliberately.
+
+Done when phone acceptance checks are recorded and worktree actions show/resolve conflicts
+without losing work. Installing apps and device logs remain out of scope.
+
+## 12. Multiple windows
+
+Use [the old window design](research/windows.md) as research, not a current implementation script.
+It predates the background service, project merge fixes and the grid of views within one project.
+
+1. Rewrite its file map and acceptance cases against today's code. Keep one start screen or one
+   project per window; views of that project may still occupy a grid.
+2. Replace Electron's singleton window with a window registry and resolve window-specific IPC,
+   menus, dialogs, browser guests and notification routing from the sender/owning window.
+3. Open another project in its own window. Define same-project window presence, restore URLs,
+   shared settings/endpoint storage synchronization and window bounds recovery.
+4. Verify closing a window detaches its client and preserves the daemon's sessions. Explicitly
+   closing a project still follows the existing last-client rule.
+
+Done when two local/remote projects work side by side, reload/reopen restores the right project,
+and actions in one window cannot change another window's menu, dialog parent or active view.
+
+## 13. Copilot and Gemini chat
+
+Source: [the provider research](reports/2026-09-25-provider-research.html).
+
+1. Correct the existing Copilot terminal first-prompt behavior separately: it still uses `-p` in
+   `apps/server/src/providers/terminal-providers.ts`. Verify the installed CLI's interactive flag
+   (the report proposes `-i`) and ensure the session remains open after its first answer.
+2. Recheck supported versions and run bounded Copilot SDK versus ACP and Gemini ACP spikes.
+   Choose Copilot's transport from actual permission/question/resume and packaged-Bun behavior.
+   Keep any shared ACP parsing independent of a provider's unstable model-selection extension.
+3. Implement one backend and protocol mapper per provider in `packages/agents`, with capability
+   discovery, accounts/login probing, model selection, streaming, Stop, approvals, questions and resume.
+   Add terminal hook normalization only for documented status/context events; leave TUI answers there.
+4. Test desktop and iOS against these existing provider words. Separately design unknown-provider
+   handling in `packages/agent-contracts/src/agent.ts` so an older desktop does not reject a whole
+   answer. Confirm the iOS open-enum build has shipped before introducing any new enum word;
+   regenerating schemas is not proof that the installed app has that change.
+
+Done per provider when two turns, denied writes, an open approval stopped by the person, restart
+and account/login failures work in the packaged app. Do not promise an SDK/API choice before the spike.
+
+## 14. Language servers
+
+Source: [the language-server design](reports/2026-09-23-language-servers.html).
+
+1. Spike Monaco's language-id separation from its TS worker, definition opening without a loaded
+   target model, and suggestions/hover in a zoomed file node. Verify the current TypeScript LSP.
+2. Build daemon stdio framing, a process seam/fake server, per-root lifecycle, cancellation,
+   document ownership and versioned diagnostics. Start with TypeScript.
+3. Add optional contracts and client synchronization, permission to run project code, editor
+   providers/markers and a visible status/restart path. Use the file locations from package 5.
+4. Add other installed servers one at a time after their execution rules are settled, especially
+   build scripts/proc macros in agent worktrees. Keep diagnostics outside open editors a separate choice.
+
+Done when real TypeScript completion, hover, signatures, definitions and diagnostics work across
+local/remote machines, stale responses are discarded, and crashes/cancellation close their work.
+Fake-server tests are standard tests; real servers belong in integration tests.
+
+## 15. Plugins
+
+Source: [the plugin report](reports/2026-09-14-plugins.html), whose product choices remain open.
+
+1. Choose context-only plugins versus declarative commands/panels/nodes, installation scope and
+   agent permissions. Inventory existing action/verb registries and only deepen the missing ones.
+2. Ship the required compatibility changes before writing plugin kinds or ids. Preserve unknown
+   plugin data in project and client-local state, including when a plugin is absent.
+3. Implement a manifest and install/disable/error lifecycle under `$RUIMTE_HOME/plugins` for the
+   selected model. Opening a repository must not execute its suggested plugins.
+4. Introduce isolated executable code only if the declarative model proves insufficient. Test
+   compiled-binary loading in the signed app if that route is still needed. Do not repeat the
+   ad-hoc compiled-binary experiment that was killed or hung; it proved nothing about `import()`.
+
+Done when one representative plugin can be installed, used, disabled and reopened on a client
+without it, with bounded capabilities and intact stored data. This package cannot pass its first
+step on an engineering assumption alone.
+
+## 16. Linux and Windows
+
+1. Recheck [LINUX.md](LINUX.md) against the current split between deterministic and integration
+   tests. Add Linux CI, handle platform assumptions explicitly, and record package smoke checks for
+   deb on Debian trixie/Ubuntu noble, arm64, AppImage on Ubuntu and GNOME/KDE/X11/Wayland.
+2. Address Linux font fallbacks in drawing text and request the generic UI font change in
+   `@basmilius/desktop-ui`. Decide native Wayland behavior from fractional-scaling measurements.
+3. Keep Windows deferred under [issue #15](https://github.com/basmilius/ruimte/issues/15). First prove
+   a ConPTY helper behind the existing PTY adapter; then shell/path/process assumptions, filesystem
+   watching, service/CLI packaging and an unsigned installer. Use
+   [the platform audit](reports/2026-09-24-cross-platform.html) as the checklist,
+   not `research/windows.md`, which is about multiple application windows.
+
+Done when each supported platform has CI and recorded packaged-app checks for its claimed
+architectures/formats.
+
+## Decisions and completion rules
+
+The decision-dependent steps are queue policy after ordinary Stop/errors, Clear's child semantics,
+shared-folder restore with concurrent edits, Claude account configuration sharing, ref-only merges,
+the protocol window, plugin scope and the later language-server execution rules. Decide each before
+its dependent implementation, while continuing the other steps. Measurements settle buffer, cap
+and chunk choices.
+
+For each code change, run focused deterministic regressions and the repository's required checks.
+Use integration tests for real shells, watchers, sockets and provider/server processes. Verify UI
+changes in the Electron dev app and capture real-device/network evidence where the package calls
+for it. New actions go through the registry, menu and palette; new text has English and Dutch.
+Keep new wire fields optional and regenerate Swift schemas with contract changes. A new kind or
+enum word needs the compatibility checks above.
+
+Remove each step once its implementation and required verification are complete. Keep completion
+history and evidence in reports, outside this list. A passing fake or a generated schema does not
+complete a real-account, device, deployment or release check.

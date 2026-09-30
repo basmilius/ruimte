@@ -263,7 +263,7 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
     const totalSize = virtualizer.getTotalSize();
     useLayoutEffect(() => {
         const element = scrollRef.current;
-        if (!followRef.current || rows.length === 0 || element === null) {
+        if (!followRef.current || element === null) {
             return;
         }
         // The composer is in the scroll flow, so its measured height is part of this end position.

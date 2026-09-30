@@ -95,10 +95,12 @@ export type BackendEvent =
           input: unknown;
           description: string | null;
           canAllowAlways: boolean;
+          // A child request may arrive after the main turn ended, without starting another one.
+          background?: boolean;
           allowAlways?: { label: string; description: string };
       }
     // `async` marks a question the CLI goes on past, which is the only kind the person may dismiss.
-    | { type: 'question.requested'; requestId: string; questions: ChatQuestion[]; async?: boolean }
+    | { type: 'question.requested'; requestId: string; questions: ChatQuestion[]; async?: boolean; background?: boolean }
     // The CLI took an approval or a question back; the person no longer has to answer it.
     | { type: 'request.withdrawn'; requestId: string }
     // An agent the agent delegated to, keyed by the call that spawned it. `background` says whether
