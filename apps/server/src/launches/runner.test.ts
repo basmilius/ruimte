@@ -48,9 +48,9 @@ const flush = async (): Promise<void> => {
     }
     await Bun.sleep(0);
 };
-// For a step behind file reads, which take more than a few turns of the loop.
+// For a step behind file reads, which take as long as the disk does: a cap on the turns would race a slow runner.
 const until = async (done: () => boolean): Promise<void> => {
-    for (let i = 0; i < 100 && !done(); i++) {
+    while (!done()) {
         await flush();
     }
 };
