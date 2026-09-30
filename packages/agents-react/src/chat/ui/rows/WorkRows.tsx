@@ -222,6 +222,42 @@ function CheckpointFileBody({ file }: { file: ChatCheckpointFile }) {
     );
 }
 
+/* The frame of a changed files card: a header that folds the list of files away. */
+function ChangedFilesCard({
+    count,
+    truncated,
+    added,
+    deleted,
+    children
+}: {
+    count: number;
+    truncated?: boolean;
+    added?: number;
+    deleted?: number;
+    children: React.ReactNode;
+}) {
+    const { t } = useTranslation('agent-chat');
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
+            <button
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-text-muted hover:bg-surface-hover"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((value) => !value)}
+            >
+                <Icon icon={FileDiff} size={12} className="shrink-0" />
+                <span className="shrink-0 font-medium text-text">{t('work.changedFiles', { count })}</span>
+                {truncated && <span className="min-w-0 truncate text-text-faint">{t('work.andMore')}</span>}
+                <span className="grow" />
+                {added !== undefined && <span className="text-term-green tabular-nums">+{added}</span>}
+                {deleted !== undefined && <span className="text-term-red tabular-nums">-{deleted}</span>}
+                <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', expanded && 'rotate-90')} />
+            </button>
+            {expanded && children}
+        </div>
+    );
+}
+
 /*
  * The files a settled turn changed, as a card; each file opens its diff in place. The host's
  * checkpoint diff comes first (the working tree against the tree the turn started from), then the
@@ -241,7 +277,6 @@ export function ChangedFilesRow({
     chatId: string;
     turnId: string;
 }) {
-    const { t } = useTranslation('agent-chat');
     const [open, setOpen] = useState<Record<string, boolean>>({});
     const [fetched, setFetched] = useState<ChatCheckpointDiff | null>(null);
     const actions = useChatActions();
@@ -264,14 +299,15 @@ export function ChangedFilesRow({
     }, [actions, chatId, turnId, diff, checkpoint]);
     const checkpointDiff = diff ?? fetched;
     if (checkpointDiff !== null && checkpointDiff.files.length > 0) {
+        const files = checkpointDiff.files;
         return (
-            <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
-                <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
-                    <Icon icon={FileDiff} size={12} />
-                    <span className="font-medium text-text">{t('work.changedFiles', { count: checkpointDiff.files.length })}</span>
-                    {checkpointDiff.truncated && <span className="text-text-faint">{t('work.andMore')}</span>}
-                </div>
-                {checkpointDiff.files.map((file) => (
+            <ChangedFilesCard
+                count={files.length}
+                truncated={checkpointDiff.truncated}
+                added={files.reduce((sum, file) => sum + file.added, 0)}
+                deleted={files.reduce((sum, file) => sum + file.deleted, 0)}
+            >
+                {files.map((file) => (
                     <div key={file.path} className="border-t border-border">
                         <button
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover"
@@ -295,7 +331,7 @@ export function ChangedFilesRow({
                         )}
                     </div>
                 ))}
-            </div>
+            </ChangedFilesCard>
         );
     }
     return <ProviderChangedFiles tools={tools} open={open} setOpen={setOpen} />;
@@ -335,11 +371,7 @@ function ProviderChangedFiles({
         }
     }
     return (
-        <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
-                <Icon icon={FileDiff} size={12} />
-                <span className="font-medium text-text">{t('work.changedFiles', { count: byPath.size })}</span>
-            </div>
+        <ChangedFilesCard count={byPath.size}>
             {[...byPath].map(([path, entry]) => {
                 const count = entry.edits.length + entry.patches.length;
                 return (
@@ -369,7 +401,7 @@ function ProviderChangedFiles({
                     </div>
                 );
             })}
-        </div>
+        </ChangedFilesCard>
     );
 }
 
