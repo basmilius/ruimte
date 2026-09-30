@@ -1,6 +1,6 @@
 import { DRAWING_VERSION, EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
 import type { WatchSeams } from '@ruimte/agents/watch-seam';
-import { drawingsDirOf, privateDrawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
+import { drawingsDirOf, privateDrawingsDirOf, readDrawing, tooNewMessage, viewFilePathOf, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
@@ -43,8 +43,22 @@ export class DrawingStore extends ProjectViewFileStore<DrawingDocument, DrawingC
             if (!this.projects.isDrawingView(projectId, viewId)) {
                 continue;
             }
-            const outcome = await readDrawing(viewFilePathIn(drawingsDirOf(this.projects.documentPathOf(projectId)), viewId));
-            return outcome.kind === 'ok' ? outcome.document.elements : [];
+            const place = await this.projects.place(projectId);
+            const outcome = await readDrawing(viewFilePathOf(place.documentPath, 'drawing', viewId, place.shared), { setAside: false });
+            if (outcome.kind === 'ok') {
+                return outcome.document.elements;
+            }
+            if (outcome.kind === 'missing') {
+                return [];
+            }
+            throw new DrawingError(
+                'drawing-invalid',
+                outcome.kind === 'too-new'
+                    ? tooNewMessage('drawing', outcome.version, DRAWING_VERSION)
+                    : outcome.kind === 'invalid'
+                      ? outcome.message
+                      : 'The drawing on disk could not be read'
+            );
         }
         return null;
     }

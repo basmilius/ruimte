@@ -1,7 +1,7 @@
 import type { GitActionPhase, WorktreeMergePayload, WorktreeMergeResult } from '@ruimte/contracts';
 import { rm } from 'node:fs/promises';
 import { Job, type ProgressSink } from './actions.ts';
-import { abortOperation, conflictedFiles, gitPath, gitPathExists, operationOf } from './conflict.ts';
+import { abortOperation, conflictedFiles, gitPath, gitPathExists, hasStaged, operationOf, squashWaits } from './conflict.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, runGit, streamGit } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
@@ -316,12 +316,5 @@ export class WorktreeMerge {
         return (await runGit(['rev-parse', '--verify', '--quiet', `refs/heads/${local}`], main)).code === 0 ? local : null;
     }
 }
-
-const hasStaged = async (cwd: string): Promise<boolean> => (await runGit(['diff', '--cached', '--quiet'], cwd)).code !== 0;
-
-/* A squash that stopped: its prepared message with something still to settle or to commit. A message
-   alone is one git left behind, and counting it would refuse every merge after it. */
-const squashWaits = async (cwd: string): Promise<boolean> =>
-    (await gitPathExists(cwd, 'SQUASH_MSG')) && ((await conflictedFiles(cwd)).length > 0 || (await hasStaged(cwd)));
 
 const messageBody = (body: string | undefined): string[] => (body === undefined || body.trim() === '' ? [] : ['--message', body.trim()]);

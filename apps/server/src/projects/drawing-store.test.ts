@@ -73,7 +73,7 @@ afterEach(async () => {
 describe('DrawingStore', () => {
     test('a drawing follows its view into git and back out again', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('e1')));
+        await drawings.save(projectId, 'view-a', 0, drawn(element('e1')), 'c1');
         expect(await exists(drawingFile('view-a'))).toBe(true);
 
         await projects.save(projectId, 1, content('view-a'), ['view-a']);
@@ -94,18 +94,18 @@ describe('DrawingStore', () => {
 
     test('the first save writes rev 1 with one element per line, and the rev rises', async () => {
         await drawings.open(projectId, 'view-a');
-        expect(await drawings.save(projectId, 'view-a', 0, drawn(element('el-1'), element('el-2', 200)))).toBe(1);
+        expect(await drawings.save(projectId, 'view-a', 0, drawn(element('el-1'), element('el-2', 200)), 'c1')).toBe(1);
         const text = await readFile(drawingFile('view-a'), 'utf8');
         expect(text.split('\n').filter((line) => line.includes('"kind"'))).toHaveLength(2);
         expect(text.endsWith('\n')).toBe(true);
         expect(JSON.parse(text)).toMatchObject({ version: 1, rev: 1 });
-        expect(await drawings.save(projectId, 'view-a', 1, drawn(element('el-1')))).toBe(2);
+        expect(await drawings.save(projectId, 'view-a', 1, drawn(element('el-1')), 'c1')).toBe(2);
     });
 
     test('a save based on an older rev is refused', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
-        await expect(drawings.save(projectId, 'view-a', 0, drawn())).rejects.toMatchObject({ code: 'rev-conflict' });
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')), 'c1');
+        await expect(drawings.save(projectId, 'view-a', 0, drawn(), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
     });
 
     test('a view that is not a drawing, and a project that is not open, are refused', async () => {
@@ -115,7 +115,7 @@ describe('DrawingStore', () => {
 
     test('an outside write is reported with what is on disk, and our own write is not', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')), 'c1');
         fake.on(drawingsDir()).emit('view-a.json');
         await fake.settle();
         expect(events).toEqual([]);
@@ -135,8 +135,8 @@ describe('DrawingStore', () => {
             payload: { projectId, viewId: 'view-a', document: { rev: 7, elements: [{ id: 'el-9' }] } }
         });
         // The daemon now expects saves against the rev that came in.
-        await expect(drawings.save(projectId, 'view-a', 1, drawn())).rejects.toMatchObject({ code: 'rev-conflict' });
-        expect(await drawings.save(projectId, 'view-a', 7, drawn())).toBe(8);
+        await expect(drawings.save(projectId, 'view-a', 1, drawn(), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await drawings.save(projectId, 'view-a', 7, drawn(), 'c1')).toBe(8);
     });
 
     test('broken JSON is set aside, JSON that is not a drawing stays where it is', async () => {
@@ -152,12 +152,12 @@ describe('DrawingStore', () => {
 
     test('a save right after an outside write is refused, and the write is taken in', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')), 'c1');
         const theirs = serializeDrawing({ version: 1, rev: 4, elements: [element('el-9')] });
         await writeFile(drawingFile('view-a'), theirs);
 
         // The watcher has not settled yet.
-        await expect(drawings.save(projectId, 'view-a', 1, drawn())).rejects.toMatchObject({ code: 'rev-conflict' });
+        await expect(drawings.save(projectId, 'view-a', 1, drawn(), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
         expect(await readFile(drawingFile('view-a'), 'utf8')).toBe(theirs);
         expect(events).toEqual([
             { event: 'drawing.changed', payload: { projectId, viewId: 'view-a', document: { version: 1, rev: 4, elements: [element('el-9')] } } }
@@ -166,12 +166,12 @@ describe('DrawingStore', () => {
         fake.on(drawingsDir()).emit('view-a.json');
         await fake.settle();
         expect(events).toHaveLength(1);
-        expect(await drawings.save(projectId, 'view-a', 4, drawn())).toBe(5);
+        expect(await drawings.save(projectId, 'view-a', 4, drawn(), 'c1')).toBe(5);
     });
 
     test('a file caught halfway through an outside write stays where it is until the write is whole', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')), 'c1');
         await writeFile(drawingFile('view-a'), '{ "version": 1, "rev": 3, "elem');
         fake.on(drawingsDir()).emit('view-a.json');
         await fake.settle();
@@ -187,10 +187,10 @@ describe('DrawingStore', () => {
 
     test('a save that drops the view removes its file, an outside edit that drops it does not', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')), 'c1');
         await projects.save(projectId, 1, content('view-a', 'view-b'));
         await drawings.open(projectId, 'view-b');
-        await drawings.save(projectId, 'view-b', 0, drawn(element('el-2')));
+        await drawings.save(projectId, 'view-b', 0, drawn(element('el-2')), 'c1');
 
         await projects.save(projectId, 2, content('view-b'));
         expect(await exists(drawingFile('view-a'))).toBe(false);
@@ -213,7 +213,7 @@ describe('DrawingStore', () => {
 
     test('copy writes the same elements at rev 0, and copying nothing writes nothing', async () => {
         await drawings.open(projectId, 'view-a');
-        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
+        await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')), 'c1');
         await projects.save(projectId, 1, content('view-a', 'view-b', 'view-c'));
 
         await drawings.copy(projectId, 'view-a', 'view-b');

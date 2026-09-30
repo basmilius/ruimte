@@ -1,8 +1,8 @@
-import { mkdir, readdir, rename, rm } from 'node:fs/promises';
-import { basename, dirname } from 'node:path';
+import { mkdir, readdir, rm } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead, type JsonDocumentReadOptions } from './project-files.ts';
+import { tooNewMessage, viewFilePathIn, viewFilePathOf, viewIdOfFile, type JsonDocumentRead, type JsonDocumentReadOptions } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
@@ -32,7 +32,7 @@ interface OpenProjectFiles {
  */
 export interface ViewFileKind<TDocument extends TContent & { rev: number }, TContent> {
     /* The word a log line uses, which is what a person reading the console sees. */
-    noun: string;
+    noun: 'drawing' | 'diagram';
     /* The version this Ruimte writes, so a file that says a higher one can be named in the refusal. */
     version: number;
     /* Where the files of shared views sit, and where the ones of private views sit beside it. */
@@ -87,7 +87,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     open(projectId: string, viewId: string): Promise<TDocument> {
         return this.locked(async () => {
             const state = await this.stateOf(projectId, viewId);
-            const outcome = await this.kind.read(this.pathOf(projectId, state, viewId));
+            const outcome = await this.kind.read(this.pathOf(projectId, viewId));
             if (outcome.kind === 'invalid') {
                 throw this.kind.invalid(outcome.message);
             }
@@ -108,7 +108,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         });
     }
 
-    save(projectId: string, viewId: string, baseRev: number, content: TContent): Promise<number> {
+    save(projectId: string, viewId: string, baseRev: number, content: TContent, origin: string | null = null): Promise<number> {
         return this.locked(async () => {
             const state = await this.stateOf(projectId, viewId);
             const current = state.open.get(viewId) ?? { rev: 0, lastText: '' };
@@ -119,9 +119,18 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
             if (problem) {
                 throw this.kind.invalid(problem);
             }
-            const path = this.pathOf(projectId, state, viewId);
+            const path = this.pathOf(projectId, viewId);
             // Never over a write the watcher has not reported yet: that one is taken in and the save refused.
             const onDisk = await this.kind.read(path, { setAside: false });
+            if (onDisk.kind === 'too-new') {
+                throw this.kind.invalid(tooNewMessage(this.kind.noun, onDisk.version, this.kind.version));
+            }
+            if (onDisk.kind === 'invalid') {
+                throw this.kind.invalid(onDisk.message);
+            }
+            if (onDisk.kind === 'unreadable' || onDisk.kind === 'corrupt') {
+                throw this.kind.revConflict(`The ${this.kind.noun} changed on disk and could not be read`);
+            }
             if (onDisk.kind === 'ok' && onDisk.text !== current.lastText) {
                 this.takeOutsideEdit(projectId, state, viewId, onDisk.document, onDisk.text);
                 throw this.kind.revConflict(`The ${this.kind.noun} changed on disk; it is now at rev ${onDisk.document.rev}`);
@@ -129,6 +138,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
             const document = this.kind.documentOf(content, current.rev + 1);
             const text = await this.kind.write(path, document);
             state.open.set(viewId, { rev: document.rev, lastText: text });
+            this.emit(this.kind.changed(projectId, viewId, document), origin);
             return document.rev;
         });
     }
@@ -137,12 +147,12 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     copy(projectId: string, from: string, to: string): Promise<void> {
         return this.locked(async () => {
             const state = await this.stateOf(projectId, to);
-            const outcome = await this.kind.read(this.pathOf(projectId, state, from));
+            const outcome = await this.kind.read(this.pathOf(projectId, from));
             if (outcome.kind !== 'ok') {
                 // Nothing was ever saved for the source, so the copy has nothing to be.
                 return;
             }
-            const text = await this.kind.write(this.pathOf(projectId, state, to), this.kind.documentOf(outcome.document, 0));
+            const text = await this.kind.write(this.pathOf(projectId, to), this.kind.documentOf(outcome.document, 0));
             state.open.set(to, { rev: 0, lastText: text });
         });
     }
@@ -152,26 +162,8 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     }
 
     /* Where this view's file belongs right now, which is the side of the folder its view is on. */
-    private pathOf(projectId: string, state: OpenProjectFiles, viewId: string): string {
-        return viewFilePathIn(this.projects.isSharedView(projectId, viewId) ? state.dir : state.privateDir, viewId);
-    }
-
-    /*
-     * A view that changed sides takes its file along. Nothing is read or parsed: the bytes are the
-     * person's either way, and a file that is not there is a view nobody ever drew in.
-     */
-    async resettle(projectId: string, viewIds: readonly string[]): Promise<void> {
-        const state = this.states.get(projectId);
-        if (!state) {
-            return;
-        }
-        for (const viewId of viewIds) {
-            const shared = this.projects.isSharedView(projectId, viewId);
-            const from = viewFilePathIn(shared ? state.privateDir : state.dir, viewId);
-            const to = viewFilePathIn(shared ? state.dir : state.privateDir, viewId);
-            await mkdir(dirname(to), { recursive: true });
-            await rename(from, to).catch(() => undefined);
-        }
+    private pathOf(projectId: string, viewId: string): string {
+        return viewFilePathOf(this.projects.documentPathOf(projectId), this.kind.noun, viewId, this.projects.isSharedView(projectId, viewId) ? [viewId] : []);
     }
 
     async removeOrphans(projectId: string, keep: Set<string>): Promise<void> {
@@ -232,8 +224,12 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         }
     }
 
-    protected emit(event: SessionEvent): void {
-        this.sinks.emit(event);
+    protected emit(event: SessionEvent, except: string | null = null): void {
+        for (const clientId of this.sinks.clientIds()) {
+            if (clientId !== except) {
+                this.sinks.to(clientId, event);
+            }
+        }
     }
 
     /*
@@ -318,7 +314,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (!current) {
             return;
         }
-        const outcome = await this.kind.read(this.pathOf(projectId, state, viewId), { setAside: false });
+        const outcome = await this.kind.read(this.pathOf(projectId, viewId), { setAside: false });
         if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {
             const why = outcome.kind === 'invalid' ? outcome.message : tooNewMessage(this.kind.noun, outcome.version, this.kind.version);
             console.warn(`An outside edit to the ${this.kind.noun} ${viewId} was ignored: ${why}`);

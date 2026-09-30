@@ -3,7 +3,7 @@ import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GitActionPhase } from '@ruimte/contracts';
 import { GitActions } from './actions.ts';
-import { conflictedFiles, operationOf, readConflict, readConflicts, resolveConflict, runOperation } from './conflict.ts';
+import { conflictedFiles, gitPath, operationOf, readConflict, readConflicts, resolveConflict, runOperation, squashWaits } from './conflict.ts';
 import { forgetBase, readStatus } from './status.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
@@ -222,5 +222,36 @@ describe('a rebase that conflicts', () => {
         expect(conflicts.operation).toBe('rebase');
         expect(conflicts.ours).toBe('other');
         expect(conflicts.theirs).toBe('our change');
+    });
+});
+
+describe('a squash after its last conflict is resolved', () => {
+    const resolvedSquash = async (): Promise<void> => {
+        await run(['merge', '--squash', 'other']).catch(() => undefined);
+        expect(await operationOf(repo)).toBe('merge');
+        const conflict = await readConflict(repo, 'file.txt');
+        await resolveConflict({ cwd: repo, path: 'file.txt', content: 'resolved\n', hash: conflict.hash });
+        expect(await operationOf(repo)).toBe('merge');
+        expect(await squashWaits(repo)).toBe(true);
+        expect((await readStatus(repo)).operation).toBe('merge');
+    };
+    test('can commit the staged resolution', async () => {
+        await resolvedSquash();
+        await runOperation(repo, 'continue', 'squash', () => undefined);
+        expect(await run(['show', 'HEAD:file.txt'])).toBe('resolved\n');
+        expect(await operationOf(repo)).toBeNull();
+        expect(await squashWaits(repo)).toBe(false);
+    });
+    test('can abort the staged resolution', async () => {
+        await resolvedSquash();
+        await runOperation(repo, 'abort', 'squash', () => undefined);
+        expect(await readFile(join(repo, 'file.txt'), 'utf8')).toBe('one\nour two\nthree\n');
+        expect(await operationOf(repo)).toBeNull();
+        expect(await gitPath(repo, 'SQUASH_MSG')).toBeNull();
+    });
+    test('an old squash message without index work is harmless', async () => {
+        await writeFile(join(repo, '.git', 'SQUASH_MSG'), 'old squash\n');
+        expect(await operationOf(repo)).toBeNull();
+        expect(await squashWaits(repo)).toBe(false);
     });
 });

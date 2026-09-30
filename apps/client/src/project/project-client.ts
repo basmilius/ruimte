@@ -1,5 +1,14 @@
 import i18next from 'i18next';
-import type { ProjectContent, ProjectDocument, ProjectFlags, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
+import {
+    PROJECT_VERSION,
+    type ProjectContent,
+    type ProjectDocument,
+    type ProjectFlags,
+    type ProjectIconChoice,
+    type ProjectLocal,
+    type ProjectSummary,
+    type ProjectView
+} from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
@@ -9,6 +18,9 @@ import { readDeletedViews, writeDeletedViews } from './deleted-views';
 import { browserStorage, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
+import { dropProjectDraft, readProjectDraft, writeProjectDraft } from './project-draft';
+
+type SaveOutcome = 'saved' | 'offline' | 'failed';
 
 /* The slice of a canvas editor the client reads; the real store has more. */
 interface CanvasSlice {
@@ -133,7 +145,7 @@ export class ProjectClient {
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
-    private saving: Promise<void> | null = null;
+    private saving: Promise<SaveOutcome> | null = null;
     private resuming: Promise<void> | null = null;
     /*
      * Its own project reached the stores. Until then the stores may still hold the project this client
@@ -142,6 +154,9 @@ export class ProjectClient {
     private opened = false;
     /* What the daemon's file holds at the rev this client is on, which a merge measures against. */
     private base: ProjectContent | null = null;
+    private baseRev = 0;
+    private baseShared: string[] = [];
+    private locallyDrafted = false;
     /* Why the last incoming document went to the person instead of being merged in. */
     private refusal: string | null = null;
     /* Views that left the trash for good but may still be in the file, until a save without them lands. */
@@ -194,7 +209,7 @@ export class ProjectClient {
                 this.flushLocal();
                 if (this.opened && this.documents.getState().trashed.length > 0) {
                     this.documents.getState().purgeTrash();
-                    void this.flush();
+                    void this.flush().catch(() => undefined);
                 }
             };
             host.addEventListener('pagehide', onLeave);
@@ -237,7 +252,9 @@ export class ProjectClient {
         this.flushLocal();
         this.opened = false;
         if (current) {
-            await this.transport.request('project.release', { projectId: current.projectId }).catch(() => undefined);
+            if (this.transport.status === 'open' && !this.locallyDrafted) {
+                await this.transport.request('project.release', { projectId: current.projectId }).catch(() => undefined);
+            }
         }
     }
 
@@ -252,11 +269,12 @@ export class ProjectClient {
         if (this.opened) {
             this.documents.getState().purgeTrash();
         }
+        await this.beforeLeave();
         await this.flush();
         this.flushLocal();
         if (current) {
             this.forgetSessions(this.endpointId(), this.documents.getState().exportViews());
-            if (this.transport.status === 'open') {
+            if (this.transport.status === 'open' && !this.locallyDrafted) {
                 await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
             }
             rememberClosedProject(this.endpointId(), current.projectId, this.storage);
@@ -328,6 +346,8 @@ export class ProjectClient {
         }
         this.sink.setConflict(null);
         this.base = contentOf(conflict);
+        this.baseRev = conflict.rev;
+        this.baseShared = [...(conflict.shared ?? [])];
         if (choice === 'theirs') {
             this.documents.getState().load(conflict, this.localOfScreen());
             this.sink.setChosenIcon(conflict.icon ?? null);
@@ -345,10 +365,21 @@ export class ProjectClient {
             clearTimeout(this.saveTimer);
             this.saveTimer = null;
         }
-        if (this.sink.getState().dirty) {
-            await this.save();
-        } else if (this.saving) {
-            await this.saving;
+        if (!this.opened) {
+            return;
+        }
+        if (this.sink.getState().conflict) {
+            throw new Error(i18next.t('project:error.projectNotSaved'));
+        }
+        while (this.saving || this.sink.getState().dirty) {
+            const outcome = await (this.saving ?? this.save());
+            if (outcome === 'offline') {
+                this.keepDraft();
+                return;
+            }
+            if (outcome === 'failed') {
+                throw new Error(i18next.t('project:error.projectNotSaved'));
+            }
         }
     }
 
@@ -379,19 +410,34 @@ export class ProjectClient {
     }
 
     private async open(payload: { projectId?: string; folder?: string; name?: string; createFolder?: boolean }): Promise<void> {
+        if (this.opened) {
+            await this.leave();
+        }
         this.sink.setSwitching(true);
         try {
             const result = await this.transport.request('project.open', payload);
+            const draft = readProjectDraft(this.storage, this.endpointId(), result.summary.projectId);
             forgetClosedProject(this.endpointId(), result.summary.projectId, this.storage);
-            this.base = contentOf(result.document);
+            this.base = contentOf(draft?.base ?? result.document);
+            this.baseRev = draft?.base.rev ?? result.document.rev;
+            this.baseShared = [...(draft?.base.shared ?? result.document.shared ?? [])];
+            this.locallyDrafted = draft !== null;
             const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
             this.onLoad();
             this.opened = true;
-            this.documents.getState().load(result.document, local);
+            this.documents.getState().load(draft?.document ?? result.document, local);
             // In the same tick as the canvas, so the panels never paint the project that just left.
             this.panels.load(result.summary.projectId, local.panels);
-            this.sink.setChosenIcon(result.document.icon ?? null);
-            this.sink.setCurrent(result.summary, result.document.rev);
+            this.sink.setChosenIcon(draft?.document.icon ?? result.document.icon ?? null);
+            this.sink.setCurrent(result.summary, draft?.base.rev ?? result.document.rev);
+            if (draft) {
+                this.sink.setSummary({ ...result.summary, name: draft.document.name, color: draft.document.color });
+                this.sink.setDirty(true);
+                if (result.document.rev !== draft.base.rev) {
+                    this.onChanged(result.summary.projectId, result.document);
+                }
+                this.scheduleSave();
+            }
             this.remember(result.summary.projectId);
             this.finishDeletions(result.summary.projectId, result.document);
             // The project is open whatever the list says; a list that did not come is asked again when the link opens.
@@ -510,15 +556,36 @@ export class ProjectClient {
         return { ...this.documents.getState().exportLocal(), panels: this.panels.export() };
     }
 
-    private save(): Promise<void> {
+    private keepDraft(): void {
+        const { current, rev } = this.sink.getState();
+        if (!this.opened || !current || !this.base) {
+            return;
+        }
+        writeProjectDraft(
+            this.storage,
+            this.endpointId(),
+            current.projectId,
+            { version: PROJECT_VERSION, ...this.base, rev: this.baseRev, shared: this.baseShared },
+            { version: PROJECT_VERSION, ...this.contentOfScreen(), rev, shared: [...this.documents.getState().shared] }
+        );
+        this.locallyDrafted = true;
+    }
+
+    private save(): Promise<SaveOutcome> {
         if (this.saving) {
             // One write at a time; the edits made meanwhile ride the next one.
-            return this.saving.then(() => (this.sink.getState().dirty ? this.save() : undefined));
+            return this.saving.then((outcome) => (outcome === 'saved' && this.sink.getState().dirty ? this.save() : outcome));
         }
         const { current, rev, conflict } = this.sink.getState();
         // A link that is down keeps the edit dirty for the resume to write, rather than a request that can only fail.
-        if (!this.opened || !current || conflict || this.transport.status !== 'open') {
-            return Promise.resolve();
+        if (!this.opened || !current) {
+            return Promise.resolve('saved');
+        }
+        if (conflict) {
+            return Promise.resolve('failed');
+        }
+        if (this.transport.status !== 'open') {
+            return Promise.resolve('offline');
         }
         const content = this.contentOfScreen();
         const shared = [...this.documents.getState().shared];
@@ -528,8 +595,12 @@ export class ProjectClient {
             .then((result) => {
                 // The file now holds what went out, which is what the next merge measures against.
                 this.base = content;
+                this.baseRev = result.rev;
+                this.baseShared = shared;
                 this.sink.setRev(result.rev);
                 this.sink.setError(null);
+                dropProjectDraft(this.storage, this.endpointId(), current.projectId);
+                this.locallyDrafted = false;
                 const landed = [...this.purging].filter((viewId) => !content.views.some((view) => view.id === viewId));
                 if (landed.length > 0) {
                     for (const viewId of landed) {
@@ -537,6 +608,7 @@ export class ProjectClient {
                     }
                     this.rememberDeletions(current.projectId);
                 }
+                return 'saved' as const;
             })
             .catch((e: unknown) => {
                 this.sink.setDirty(true);
@@ -547,11 +619,12 @@ export class ProjectClient {
                     if (this.sink.getState().rev !== rev) {
                         this.scheduleSave();
                     }
-                    return;
+                    return this.sink.getState().rev !== rev ? ('saved' as const) : ('failed' as const);
                 }
                 if (!isConnectionError(e)) {
                     this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.projectNotSaved'));
                 }
+                return isConnectionError(e) ? ('offline' as const) : ('failed' as const);
             })
             .finally(() => {
                 this.saving = null;
@@ -580,6 +653,8 @@ export class ProjectClient {
             return;
         }
         this.base = contentOf(document);
+        this.baseRev = document.rev;
+        this.baseShared = [...(document.shared ?? [])];
         this.documents.getState().load(document, this.localOfScreen());
         this.sink.setChosenIcon(document.icon ?? null);
         this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
@@ -603,6 +678,8 @@ export class ProjectClient {
         }
         this.refusal = null;
         this.base = contentOf(document);
+        this.baseRev = document.rev;
+        this.baseShared = [...(document.shared ?? [])];
         this.sink.setRev(document.rev);
         /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull
            can share one, and nothing here may argue with what the daemon just read off disk. */

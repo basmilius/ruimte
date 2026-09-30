@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
     DIAGRAM_VERSION,
     DRAWING_VERSION,
@@ -331,6 +331,11 @@ export const privateDiagramsDirOf = (documentPath: string): string => join(priva
 
 /* The view id, never its name: a rename must not move a file, and two machines must agree. */
 export const viewFilePathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
+
+export const viewFilePathOf = (documentPath: string, kind: 'drawing' | 'diagram', viewId: string, shared: readonly string[]): string => {
+    const dir = kind === 'drawing' ? drawingsDirOf(documentPath) : diagramsDirOf(documentPath);
+    return viewFilePathIn(shared.includes(viewId) ? dir : join(privateDirOf(documentPath), basename(dir)), viewId);
+};
 
 /* The view a drawing or diagram file belongs to, or null for a name that is not one of ours. */
 export const viewIdOfFile = (filename: string): string | null => {

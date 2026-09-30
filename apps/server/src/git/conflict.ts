@@ -43,6 +43,12 @@ const readGitFile = async (cwd: string, name: string): Promise<string | null> =>
     return path === null ? null : await readFile(path, 'utf8').catch(() => null);
 };
 
+export const hasStaged = async (cwd: string): Promise<boolean> => (await runGit(['diff', '--cached', '--quiet'], cwd)).code === 1;
+
+// SQUASH_MSG lingers after a commit; only unfinished index work makes it an operation.
+export const squashWaits = async (cwd: string): Promise<boolean> =>
+    (await gitPathExists(cwd, 'SQUASH_MSG')) && ((await conflictedFiles(cwd)).length > 0 || (await hasStaged(cwd)));
+
 /*
  * Which operation stopped halfway in this checkout. A rebase writes a directory rather than a file,
  * and which of the two it writes depends on how it was started, so both are asked for.
@@ -60,9 +66,7 @@ export const operationOf = async (cwd: string): Promise<GitOperation | null> => 
     if (await gitPathExists(cwd, 'REVERT_HEAD')) {
         return 'revert';
     }
-    /* A squash leaves no head of its own, so a prepared message with files still unmerged is the only
-       sign it stopped. Last, since that message also lingers after a squash that went through. */
-    if ((await gitPathExists(cwd, 'SQUASH_MSG')) && (await conflictedFiles(cwd)).length > 0) {
+    if (await squashWaits(cwd)) {
         return 'merge';
     }
     return null;

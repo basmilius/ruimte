@@ -1,9 +1,9 @@
-import { translate } from '../dispatcher.ts';
+import { translate, type ClientConnection } from '../dispatcher.ts';
 
 /* The part of a view file store a request reaches; the store has more, and none of it is on the wire. */
 interface ViewFileRequests<TDocument, TContent> {
     open(projectId: string, viewId: string): Promise<TDocument>;
-    save(projectId: string, viewId: string, baseRev: number, content: TContent): Promise<number>;
+    save(projectId: string, viewId: string, baseRev: number, content: TContent, origin?: string): Promise<number>;
     close(projectId: string, viewId: string): void;
     copy(projectId: string, from: string, to: string): Promise<void>;
 }
@@ -27,8 +27,8 @@ export const viewFileHandlers = <TDocument, TContent>(store: ViewFileRequests<TD
         open: (payload: ViewRef): Promise<{ document: TDocument }> =>
             translate(async () => ({ document: await store.open(payload.projectId, payload.viewId) })),
 
-        save: (payload: ViewRef & { baseRev: number; content: TContent }): Promise<{ rev: number }> =>
-            translate(async () => ({ rev: await store.save(payload.projectId, payload.viewId, payload.baseRev, payload.content) })),
+        save: (payload: ViewRef & { baseRev: number; content: TContent }, client: ClientConnection): Promise<{ rev: number }> =>
+            translate(async () => ({ rev: await store.save(payload.projectId, payload.viewId, payload.baseRev, payload.content, client.id) })),
 
         close: (payload: ViewRef): Promise<Record<string, never>> =>
             translate(() => {

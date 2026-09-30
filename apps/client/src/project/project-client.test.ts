@@ -72,6 +72,7 @@ class FakeTransport implements Transport {
     panels: ProjectPanels | undefined = undefined;
     /* Set to keep a save on the wire, so a test can let something else reach the daemon first. */
     holdSave: Promise<void> | null = null;
+    saveError: TransportError | null = null;
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -94,6 +95,9 @@ class FakeTransport implements Transport {
                 const { baseRev } = payload as { baseRev: number };
                 // The rev is read when the daemon gets to the write, not when the client sent it.
                 const write = (): Promise<RequestMap[T]['result']> => {
+                    if (this.saveError) {
+                        return Promise.reject(this.saveError);
+                    }
                     if (baseRev !== this.rev) {
                         return Promise.reject(new TransportError('rev-conflict', 'stale'));
                     }
@@ -747,6 +751,67 @@ describe('ProjectClient', () => {
         await tick();
         expect(transport.of('project.open')).toHaveLength(opens);
         expect(transport.of('project.close')).toEqual([]);
+        dispose();
+    });
+
+    for (const action of ['close', 'leave', 'switch'] as const) {
+        test(`a failed final save preserves the workspace during ${action}`, async () => {
+            const { state, client, transport, dispose } = setup();
+            await tick();
+            const text = focusedCanvas().getState().addText({ x: 0, y: 0 });
+            transport.saveError = new TransportError('internal', 'Disk full');
+            const leaving = action === 'close' ? client.closeProject() : action === 'leave' ? client.leave() : client.openProject('p2');
+            await expect(leaving).rejects.toThrow();
+            expect(state.current?.projectId).toBe('p1');
+            expect(state.dirty).toBe(true);
+            expect(state.error).toBe('Disk full');
+            expect(focusedCanvas().getState().texts[text]).toBeDefined();
+            expect(transport.of('project.close')).toEqual([]);
+            expect(transport.of('project.release')).toEqual([]);
+            transport.saveError = null;
+            await client.closeProject();
+            expect(state.current).toBeNull();
+            dispose();
+        });
+    }
+
+    for (const disconnectDuringSave of [false, true]) {
+        test(`an offline draft survives closing and reopening ${disconnectDuringSave ? 'when the save disconnects' : 'while disconnected'}`, async () => {
+            const storage = new Map<string, string>();
+            const first = setup({ storage, stores: createWorkspaceStores() });
+            await tick();
+            const textId = canvasOf(first.stores).getState().addText({ x: 3, y: 4 });
+            if (disconnectDuringSave) {
+                first.transport.saveError = new TransportError('disconnected', 'Connection lost');
+            } else {
+                first.transport.setStatus('closed');
+            }
+            await first.client.closeProject();
+            expect(first.state.current).toBeNull();
+            expect(first.transport.of('project.close')).toEqual([]);
+            first.dispose();
+            const second = setup({ storage, stores: createWorkspaceStores(), open: null });
+            await second.client.openProject('p1');
+            expect(canvasOf(second.stores).getState().texts[textId]).toBeDefined();
+            await second.client.flush();
+            expect([...storage.keys()].some((key) => key.startsWith('ruimte.projectDraft.'))).toBe(false);
+            second.dispose();
+        });
+    }
+
+    test('a full draft storage keeps the offline project open', async () => {
+        const { client, transport, state, storage, dispose } = setup();
+        await tick();
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
+        transport.setStatus('closed');
+        const original = storage.set.bind(storage);
+        storage.set = () => {
+            throw new Error('Quota exceeded');
+        };
+        await expect(client.closeProject()).rejects.toThrow('Quota exceeded');
+        expect(state.current?.projectId).toBe('p1');
+        expect(Object.keys(focusedCanvas().getState().texts)).toHaveLength(1);
+        storage.set = original;
         dispose();
     });
 

@@ -57,11 +57,11 @@ import {
     tooNewMessage,
     writeGitignoreIfMissing,
     writePrivateFile,
-    writeSharedFile,
     writeIconFile,
     ICON_EXTENSION_BY_MIME,
     PROJECT_FILE
 } from './project-files.ts';
+import { PROJECT_WRITE_IO, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
@@ -125,8 +125,6 @@ const newId = (): string => randomBytes(6).toString('base64url');
 export interface ProjectViewFiles {
     /* Every file whose view left the project is deleted, but only when a person saved. */
     removeOrphans(projectId: string, keep: Set<string>): Promise<void>;
-    /* The views that changed sides take their files along, from `private/` into git or back. */
-    resettle(projectId: string, viewIds: readonly string[]): Promise<void>;
     closeProject(projectId: string): void;
 }
 
@@ -209,6 +207,7 @@ export class ProjectStore {
     private readonly writes = new Serializer();
 
     private readonly seams: WatchSeams;
+    private readonly writeIO: ProjectWriteIO;
 
     /* Nothing is shared until the daemon hands over a probe that can ask git; see `TrackedProbe`. */
     private tracked: TrackedProbe = async () => false;
@@ -220,9 +219,10 @@ export class ProjectStore {
 
     private launches: ProjectLaunches | null = null;
 
-    constructor(home: string, seams: WatchSeams = SYSTEM_WATCH) {
+    constructor(home: string, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
         this.seams = seams;
+        this.writeIO = writeIO;
     }
 
     attachTracked(tracked: TrackedProbe): void {
@@ -300,17 +300,12 @@ export class ProjectStore {
         content: ProjectContent,
         shared: readonly string[],
         rev: number,
-        was: { text: string; private: string }
+        moved: readonly string[] = []
     ): Promise<{ text: string; private: string }> {
         const split = splitContent(content, shared, rev);
         const sharedText = serializeSharedFile(split.shared);
-        if (sharedText !== was.text) {
-            await writeSharedFile(path, split.shared);
-        }
         const privateText = serializePrivateFile(split.private);
-        if (privateText !== was.private) {
-            await writePrivateFile(privatePathOf(path), split.private);
-        }
+        await writeProjectFiles(path, { text: sharedText, private: privateText }, moved, shared, this.writeIO);
         return { text: sharedText, private: privateText };
     }
 
@@ -456,6 +451,7 @@ export class ProjectStore {
         }
 
         const path = this.documentPath(entry);
+        await this.recover(entry);
         let outcome = await readSharedFile(path);
         if (outcome.kind === 'invalid') {
             throw new ProjectError('project-invalid', outcome.message);
@@ -482,7 +478,7 @@ export class ProjectStore {
         /* A folder that has no private file yet is one this daemon never wrote: a fresh project, a
            clone of a repository with a canvas in it, or a version-2 file this open is splitting. */
         if (missing || loaded.privateText === null) {
-            const written = await this.writeFiles(path, toPortable(content, entry.folder), loaded.shared, loaded.rev, { text, private: privateText });
+            const written = await this.writeFiles(path, toPortable(content, entry.folder), loaded.shared, loaded.rev);
             text = written.text;
             privateText = written.private;
         }
@@ -555,18 +551,11 @@ export class ProjectStore {
         const flags = content.flags ?? this.index.flagsOf(projectId);
         const portable = toPortable({ ...content, ...(flags ? { flags } : {}) }, state.entry.folder);
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
-        const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, {
-            text: state.lastText,
-            private: state.lastPrivate
-        });
+        const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, moved);
         state.lastText = written.text;
         state.lastPrivate = written.private;
         state.shared = ids;
         state.rev = document.rev;
-        if (moved.length > 0) {
-            await this.drawings?.resettle(projectId, moved);
-            await this.diagrams?.resettle(projectId, moved);
-        }
         const daemonSide = fromPortable(document, state.entry.folder);
         this.index.set(projectId, state.entry.folder, daemonSide);
         await this.personSaved(state.entry.folder, before ?? daemonSide.views, daemonSide.views);
@@ -641,10 +630,7 @@ export class ProjectStore {
             throw new ProjectError('project-invalid', `The change would give two things the id "${duplicate}"`);
         }
         const state = this.open.get(projectId);
-        const written = await this.writeFiles(path, toPortable(mutation.content, entry.folder), shared, document.rev, {
-            text: state?.lastText ?? '',
-            private: state?.lastPrivate ?? ''
-        });
+        const written = await this.writeFiles(path, toPortable(mutation.content, entry.folder), shared, document.rev);
         const icon = mutation.content.icon ?? null;
         const identityChanged = mutation.content.name !== entry.name || mutation.content.color !== entry.color || !sameIcon(icon, entry.icon ?? null);
         const nextEntry = identityChanged ? { ...entry, name: mutation.content.name, color: mutation.content.color, icon } : entry;
@@ -692,10 +678,10 @@ export class ProjectStore {
      * Where the project file sits and which views it holds, read from disk whether the project is open
      * or not: a diagram written after the person switched away still has to land in its own folder.
      */
-    place(projectId: string): Promise<{ documentPath: string; views: ProjectView[] }> {
+    place(projectId: string): Promise<{ documentPath: string; views: ProjectView[]; shared: string[] }> {
         return this.locked(async () => {
-            const { path, content } = await this.readCurrent(projectId);
-            return { documentPath: path, views: content.views };
+            const { path, content, shared } = await this.readCurrent(projectId);
+            return { documentPath: path, views: content.views, shared };
         });
     }
 
@@ -709,6 +695,7 @@ export class ProjectStore {
             throw new ProjectError('project-not-found', `No project ${projectId}`);
         }
         const path = this.documentPath(entry);
+        await this.recover(entry);
         let text: string;
         try {
             text = await readFile(path, 'utf8');
@@ -997,6 +984,7 @@ export class ProjectStore {
         if (this.open.get(state.entry.projectId) !== state) {
             return;
         }
+        await this.recover(state.entry);
         if (state.iconTouched) {
             state.iconTouched = false;
             if (state.entry.folder) {
@@ -1032,6 +1020,9 @@ export class ProjectStore {
      */
     private async refuseOverOutsideEdit(state: OpenProject): Promise<void> {
         const path = this.documentPath(state.entry);
+        if (await this.recover(state.entry)) {
+            throw new ProjectError('rev-conflict', `The interrupted save was recovered; the canvas is now at rev ${state.rev}`);
+        }
         let text: string;
         try {
             text = await readFile(path, 'utf8');
@@ -1082,6 +1073,33 @@ export class ProjectStore {
         this.index.set(state.entry.projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         this.emit({ event: 'project.changed', payload: { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) } });
         this.publish(state.entry);
+    }
+
+    private async recover(entry: RegistryEntry): Promise<boolean> {
+        const path = this.documentPath(entry);
+        const written = await recoverProjectWrite(path, this.writeIO);
+        if (!written) {
+            return false;
+        }
+        const parsed = parseSharedFile(written.text);
+        if (parsed.kind !== 'ok') {
+            throw new ProjectError('project-invalid', 'The recovered project file could not be read');
+        }
+        const loaded = await this.loadFiles(path, entry, parsed.document);
+        const document: ProjectDocument = { version: PROJECT_VERSION, rev: loaded.rev, ...loaded.content, shared: loaded.shared };
+        const state = this.open.get(entry.projectId);
+        if (state) {
+            state.lastText = written.text;
+            state.lastPrivate = written.private;
+            state.rev = loaded.rev;
+            state.shared = loaded.shared;
+            state.drawingIds = drawingIdsIn(document.views);
+            state.diagramIds = diagramIdsIn(document.views);
+        }
+        const daemonSide = fromPortable(document, entry.folder);
+        this.index.set(entry.projectId, entry.folder, daemonSide);
+        this.emit({ event: 'project.changed', payload: { projectId: entry.projectId, document: daemonSide } });
+        return true;
     }
 
     /* Tells every client what a project looks like now; too small a change to ship a document for. */

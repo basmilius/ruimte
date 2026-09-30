@@ -91,24 +91,24 @@ describe('DiagramStore', () => {
 
     test('the first save writes rev 1 with one node and one edge per line, and the rev rises', async () => {
         await diagrams.open(projectId, 'view-a');
-        expect(await diagrams.save(projectId, 'view-a', 0, graph([node('a'), node('b')], [['a', 'b']]))).toBe(1);
+        expect(await diagrams.save(projectId, 'view-a', 0, graph([node('a'), node('b')], [['a', 'b']]), 'c1')).toBe(1);
         const text = await readFile(diagramFile('view-a'), 'utf8');
         expect(text.split('\n').filter((line) => line.includes('"label"'))).toHaveLength(2);
         expect(text.split('\n').filter((line) => line.includes('"from"'))).toHaveLength(1);
         expect(text.endsWith('\n')).toBe(true);
         expect(JSON.parse(text)).toMatchObject({ version: 1, rev: 1, meta: { title: 'Wire' } });
-        expect(await diagrams.save(projectId, 'view-a', 1, graph([node('a')]))).toBe(2);
+        expect(await diagrams.save(projectId, 'view-a', 1, graph([node('a')]), 'c1')).toBe(2);
     });
 
     test('a save based on an older rev is refused', async () => {
         await diagrams.open(projectId, 'view-a');
-        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
-        await expect(diagrams.save(projectId, 'view-a', 0, graph([]))).rejects.toMatchObject({ code: 'rev-conflict' });
+        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]), 'c1');
+        await expect(diagrams.save(projectId, 'view-a', 0, graph([]), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
     });
 
     test('a save with an edge to an unknown id is refused by that id and writes nothing', async () => {
         await diagrams.open(projectId, 'view-a');
-        const refused = diagrams.save(projectId, 'view-a', 0, graph([node('a')], [['a', 'ghost']]));
+        const refused = diagrams.save(projectId, 'view-a', 0, graph([node('a')], [['a', 'ghost']]), 'c1');
         await expect(refused).rejects.toMatchObject({ code: 'diagram-invalid' });
         await expect(refused).rejects.toThrow('"ghost"');
         expect(await exists(diagramFile('view-a'))).toBe(false);
@@ -122,7 +122,7 @@ describe('DiagramStore', () => {
 
     test('an outside write is reported with what is on disk, and our own write is not', async () => {
         await diagrams.open(projectId, 'view-a');
-        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
+        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]), 'c1');
         fake.on(diagramsDir()).emit('view-a.json');
         await fake.settle();
         expect(events).toEqual([]);
@@ -137,8 +137,8 @@ describe('DiagramStore', () => {
             payload: { projectId, viewId: 'view-a', document: { rev: 7, nodes: [{ id: 'z', label: 'Zed' }] } }
         });
         // The daemon now expects saves against the rev that came in.
-        await expect(diagrams.save(projectId, 'view-a', 1, graph([]))).rejects.toMatchObject({ code: 'rev-conflict' });
-        expect(await diagrams.save(projectId, 'view-a', 7, graph([]))).toBe(8);
+        await expect(diagrams.save(projectId, 'view-a', 1, graph([]), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await diagrams.save(projectId, 'view-a', 7, graph([]), 'c1')).toBe(8);
     });
 
     test('broken JSON is set aside; JSON that is not a diagram, or breaks a rule of one, stays where it is', async () => {
@@ -158,10 +158,10 @@ describe('DiagramStore', () => {
 
     test('a save that drops the view removes its file, and leaves the other diagrams alone', async () => {
         await diagrams.open(projectId, 'view-a');
-        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
+        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]), 'c1');
         await projects.save(projectId, 1, content('view-a', 'view-b'));
         await diagrams.open(projectId, 'view-b');
-        await diagrams.save(projectId, 'view-b', 0, graph([node('b')]));
+        await diagrams.save(projectId, 'view-b', 0, graph([node('b')]), 'c1');
 
         await projects.save(projectId, 2, content('view-b'));
         expect(await exists(diagramFile('view-a'))).toBe(false);
@@ -170,7 +170,7 @@ describe('DiagramStore', () => {
 
     test('copy writes the same graph at rev 0, and copying nothing writes nothing', async () => {
         await diagrams.open(projectId, 'view-a');
-        await diagrams.save(projectId, 'view-a', 0, graph([node('a'), node('b')], [['a', 'b']]));
+        await diagrams.save(projectId, 'view-a', 0, graph([node('a'), node('b')], [['a', 'b']]), 'c1');
         await projects.save(projectId, 1, content('view-a', 'view-b', 'view-c'));
 
         await diagrams.copy(projectId, 'view-a', 'view-b');
@@ -199,14 +199,14 @@ describe('DiagramStore.write', () => {
 
     test('a write to a diagram a client has open moves its rev along and the watcher stays quiet', async () => {
         await diagrams.open(projectId, 'view-a');
-        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
+        await diagrams.save(projectId, 'view-a', 0, graph([node('a')]), 'c1');
         expect(await diagrams.write(projectId, 'view-a', graph([node('b')]))).toBe(2);
         fake.on(diagramsDir()).emit('view-a.json');
         await fake.settle();
         expect(events).toHaveLength(1);
         expect(events[0]).toMatchObject({ event: 'diagram.changed', payload: { viewId: 'view-a', document: { rev: 2 } } });
-        await expect(diagrams.save(projectId, 'view-a', 1, graph([]))).rejects.toMatchObject({ code: 'rev-conflict' });
-        expect(await diagrams.save(projectId, 'view-a', 2, graph([]))).toBe(3);
+        await expect(diagrams.save(projectId, 'view-a', 1, graph([]), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await diagrams.save(projectId, 'view-a', 2, graph([]), 'c1')).toBe(3);
     });
 
     test('an unknown id, a view that is not a diagram, a project nobody knows and a file that is not a diagram are refused', async () => {
