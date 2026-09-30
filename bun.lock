@@ -78,7 +78,7 @@
       "name": "@ruimte/desktop",
       "version": "0.0.0",
       "dependencies": {
-        "@basmilius/desktop-shell": "^0.7.0",
+        "@basmilius/desktop-shell": "^0.8.0",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
@@ -289,7 +289,7 @@
       "name": "@ruimte/desktop-bridge",
       "version": "0.0.0",
       "dependencies": {
-        "@basmilius/desktop-shell": "^0.7.0",
+        "@basmilius/desktop-shell": "^0.8.0",
         "@ruimte/contracts": "workspace:*",
       },
       "devDependencies": {
@@ -509,7 +509,7 @@
 
     "@base-ui-components/utils": ["@base-ui-components/utils@0.2.2", "", { "dependencies": { "@babel/runtime": "^7.28.4", "@floating-ui/utils": "^0.2.10", "reselect": "^5.1.1", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "@types/react": "^17 || ^18 || ^19", "react": "^17 || ^18 || ^19", "react-dom": "^17 || ^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-rNJCD6TFy3OSRDKVHJDzLpxO3esTV1/drRtWNUpe7rCpPN9HZVHUCuP+6rdDYDGWfXnQHbqi05xOyRP2iZAlkw=="],
 
-    "@basmilius/desktop-shell": ["@basmilius/desktop-shell@0.7.0", "", { "peerDependencies": { "electron": ">=44", "electron-updater": "^6.8.9" }, "optionalPeers": ["electron", "electron-updater"] }, "sha512-gr/4N8jCCxf1gpP5K/m4J/sYpl0KBfuwXwgCWICiOowAAx4Wte/R+HcVhLTGrSgoBeUqkii1ofggzoEnLWno7Q=="],
+    "@basmilius/desktop-shell": ["@basmilius/desktop-shell@0.8.0", "", { "peerDependencies": { "electron": ">=44", "electron-updater": "^6.8.9" }, "optionalPeers": ["electron", "electron-updater"] }, "sha512-EN0C6K5+oXLUjvyonmRy+21XNO99L4CX0g0eBlc6UZoT9b7k1wU1fKVlTjY57m4ouBwAVnV8OVVcSa7zAS8a6A=="],
 
     "@basmilius/desktop-ui": ["@basmilius/desktop-ui@0.7.0", "", { "dependencies": { "@base-ui-components/react": "^1.0.0-rc.0", "@pierre/trees": "1.0.0-beta.6", "clsx": "^2.1.1", "lucide-react": "^1.47.0", "zustand": "^5.0.15" }, "peerDependencies": { "i18next": "^26.4.2", "react": "^19.3.0", "react-dom": "^19.3.0", "react-i18next": "^17.0.15" } }, "sha512-mz1Wcx9QROUaLWTmJ0QpPsTTiUiVZqYqFgTdSKtu7z+4p3z9RZDBNLUpS9f/pb2pxvDicHoXu1RvsZhbKWVH6A=="],
 

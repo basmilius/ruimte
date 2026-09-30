@@ -7,6 +7,7 @@ import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH,
 import {
     createMenuCommands,
     createPageKeys,
+    createTheme,
     createUpdater,
     createWindows,
     type WindowOrigin,
@@ -16,6 +17,7 @@ import {
     menuTemplateOf,
     staticMenuTemplate
 } from '@basmilius/desktop-shell';
+import type { ThemeState } from '@basmilius/desktop-shell/bridge';
 import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
 import { isWindowKey, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
@@ -327,26 +329,19 @@ onFromApp('service:stop-machine', () => stopMachine());
 const TITLEBAR_HEIGHT = 48;
 const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
 
-/* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end.
-   `trafficLightPosition` is the top left of the buttons' frame, lined up with the sidebar toggle beside it. */
-const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
-    process.platform === 'darwin'
-        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 17, y: 17 } }
-        : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
-
 /*
  * The theme the client is in. The client owns it (it may follow the system or not) and reports it,
- * because the shell needs it three times over: for the native window controls, for the window's own
- * ground, and for the `prefers-color-scheme` every page inside a webview asks for, which without
- * this would be the system's answer rather than the app's. The color travels with the message, so
- * `styles.css` stays the one place the token is written down.
+ * and the shell paints it on the native window controls, the window's own ground and the
+ * `prefers-color-scheme` every page inside a webview asks for. The color travels with the message, so
+ * `styles.css` stays the one place the token is written down. macOS keeps the traffic lights, inset
+ * into the sidebar and lined up with the sidebar toggle; elsewhere the controls overlay the toolbar's right end.
  */
-interface AppTheme {
-    resolved: 'light' | 'dark';
-    /* True while the app follows the system, which is the one case a page may follow it too. */
-    followsSystem: boolean;
-    background: string;
-}
+const theme = createTheme({
+    nativeTheme,
+    windows: () => windows.all(),
+    background: '#131316',
+    overlay: { height: TITLEBAR_HEIGHT, colors: OVERLAY_COLORS }
+});
 
 /*
  * The preload of every browser page (`guest.ts`): the wheel samples a swipe is read from, the side
@@ -359,24 +354,6 @@ const registerGuestPreload = (): void => {
 
 const isBrowserGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
-
-/* The theme a page last reported, which a window opened after it is built in, so it never flashes the other one. */
-let appTheme: AppTheme | null = null;
-
-const applyTheme = (theme: AppTheme): void => {
-    appTheme = theme;
-    // Chromium answers `prefers-color-scheme` from this, so a page follows the app instead of the
-    // system the app happens to run on. 'system' is only right while the app follows it as well.
-    nativeTheme.themeSource = theme.followsSystem ? 'system' : theme.resolved;
-    for (const window of windows.all()) {
-        // The overlay controls are native; they follow the client's theme by hand.
-        if (process.platform !== 'darwin') {
-            window.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[theme.resolved] });
-        }
-        // The window's own ground, so a reload and a resize never flash the other theme's color.
-        window.setBackgroundColor(theme.background);
-    }
-};
 
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
@@ -534,8 +511,7 @@ const createWindow = (
         minWidth: 800,
         minHeight: 500,
         show: false,
-        ...titleBarOptions(appTheme?.resolved !== 'light'),
-        backgroundColor: appTheme?.background ?? '#131316',
+        ...theme.windowOptions(),
         webPreferences: {
             preload: join(here, 'preload.cjs'),
             contextIsolation: true,
@@ -551,12 +527,6 @@ const createWindow = (
     const contents = window.webContents;
     window.once('ready-to-show', () => window.show());
     contents.on('before-input-event', (_event, input) => pageKeys.saw(input));
-    // Off macOS the last window closing quits the app, so it stays in the session as a quit would leave it.
-    window.on('close', () => {
-        if (process.platform !== 'darwin' && windows.all().every((other) => other === window)) {
-            windows.quit();
-        }
-    });
     window.on('closed', () => {
         menuTemplates.delete(id);
         dropWindowShares(id);
@@ -1139,7 +1109,7 @@ handleFromApp('window:move-to-new', (event) => {
     return window !== null && windows.move(window) !== null;
 });
 
-onFromApp('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
+onFromApp('window:theme', (_event, state: ThemeState) => theme.apply(state));
 
 /*
  * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
@@ -1319,20 +1289,7 @@ if (!app.requestSingleInstanceLock()) {
         contents.on('context-menu', (_e, params) => guestContextMenu(contents, params, 'browser'));
     });
 
-    /* Set once the first windows opened, so an `activate` during the start does not open them twice. */
-    let started = false;
-
-    app.on('second-instance', () => {
-        const window = windows.focused();
-        if (window) {
-            if (window.isMinimized()) {
-                window.restore();
-            }
-            window.focus();
-        } else if (started) {
-            windows.restore();
-        }
-    });
+    windows.attach(app);
 
     void app.whenReady().then(async () => {
         setStaticMenu();
@@ -1361,24 +1318,8 @@ if (!app.requestSingleInstanceLock()) {
             return;
         }
         windows.restore();
-        started = true;
         updater.start();
         watchPendingRestart();
-    });
-
-    app.on('activate', () => {
-        if (started && windows.all().length === 0) {
-            windows.restore();
-        }
-    });
-
-    // A window writes when it closes; this covers one that moved a moment before the quit.
-    app.on('will-quit', () => windowState.flush());
-
-    app.on('window-all-closed', () => {
-        if (process.platform !== 'darwin') {
-            app.quit();
-        }
     });
 
     app.on('before-quit', (event) => {
