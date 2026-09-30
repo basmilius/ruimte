@@ -297,6 +297,19 @@ export class SessionClient {
         }
     }
 
+    /*
+     * The agent in every shell on this machine, attached or not. `session.status` only carries a
+     * change, so a workspace that just opened asks for the standing answer.
+     */
+    async loadStatuses(): Promise<void> {
+        const sessions = await this.listSessions();
+        for (const session of sessions ?? []) {
+            if (session.agent) {
+                this.sink.setAgent(session.sessionId, session.agent);
+            }
+        }
+    }
+
     private async listSessions(): Promise<SessionInfo[] | null> {
         try {
             return (await this.transport.request('session.list', {})).sessions;

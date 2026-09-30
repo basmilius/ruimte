@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from 'bun:test';
-import type { ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
+import type { AgentInfo, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
+import { useChats } from '@ruimte/agents-react/state/chats';
+import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { useWindow, windowWorkspace } from '@/state/window';
+import { endpointKey } from '@/state/keys';
+import { useSessions } from '@/state/sessions';
 import { defaultWorkspaceStores } from '@/state/workspace';
 import { machineTransport, pool } from '@/transport';
 import { dropMachine, enterWorkspace, leaveWorkspace, machineFor, showStart } from './connections';
@@ -21,6 +25,8 @@ const other: Endpoint = {
     daemonId: null,
     daemonPublicKey: null
 };
+
+const agent: AgentInfo = { kind: 'claude', agentSessionId: 'abc', transcriptPath: null, status: 'running', live: true, updatedAt: 1 };
 
 const project: ProjectSummary = {
     projectId: 'project-1',
@@ -49,6 +55,14 @@ const answer =
         }
         if (type === 'project.list') {
             return Promise.resolve({ projects: [project] } as RequestMap[RequestType]['result']);
+        }
+        if (type === 'session.list') {
+            return Promise.resolve({
+                sessions: [{ sessionId: 'terminal-1', cwd: '/', pid: 1, cols: 80, rows: 24, createdAt: 0, attached: 0, exited: false, agent }]
+            } as RequestMap[RequestType]['result']);
+        }
+        if (type === 'chat.list') {
+            return Promise.resolve({ chats: [{ chatId: 'chat-1', provider: 'claude', status: 'running' }] } as unknown as RequestMap[RequestType]['result']);
         }
         return Promise.resolve({} as RequestMap[RequestType]['result']);
     };
@@ -139,6 +153,22 @@ describe('a workspace and the link of its machine', () => {
         } finally {
             events.restore();
         }
+    });
+
+    test('a project opened again shows the agents at work in it before any of their views is on screen', async () => {
+        const working = (): boolean[] => [
+            sessionWorking(useSessions.getState().byKey[endpointKey(other.id, 'terminal-1')]),
+            chatWorking(useChats.getState().statusByKey[endpointKey(other.id, 'chat-1')])
+        ];
+        await enterWorkspace(other.id, { projectId: project.projectId });
+        await Promise.resolve();
+        expect(working()).toEqual([true, true]);
+
+        await leaveWorkspace();
+        expect(working()).toEqual([false, false]);
+        await enterWorkspace(other.id, { projectId: project.projectId });
+        await Promise.resolve();
+        expect(working()).toEqual([true, true]);
     });
 
     test('opening and closing twenty times leaves no listener and no hold behind', async () => {

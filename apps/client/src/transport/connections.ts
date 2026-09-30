@@ -182,7 +182,12 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
         afterResume: async (): Promise<void> => {
             await Promise.all([drawings.resume(), diagrams.resume()]);
         },
-        onLoad: () => onLoad(connection),
+        onLoad: () => {
+            // The last project on this machine took its rows with it, and the socket stayed open, so nothing asks again by itself.
+            void connection.sessions.loadStatuses();
+            void connection.chats.loadStatuses();
+            onLoad(connection);
+        },
         endpointId
     });
     const connection: Connection = {
