@@ -19,6 +19,15 @@ export const keepAwakeRequestFrom = (value: unknown): KeepAwakeRequest | null =>
     return { onBattery: onBattery === true, display: display === true };
 };
 
+/* What every window asks for at once: the block holds while one of them wants it, as far as the widest asks. */
+export const mergeKeepAwake = (requests: Iterable<KeepAwakeRequest>): KeepAwakeRequest | null => {
+    const all = [...requests];
+    if (all.length === 0) {
+        return null;
+    }
+    return { onBattery: all.some((request) => request.onBattery), display: all.some((request) => request.display) };
+};
+
 /*
  * The block a request comes down to right now, or none. Mac only for now, so anywhere else a request
  * is heard and ignored. Agents need `prevent-app-suspension`, not a lit display; the display block is

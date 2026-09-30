@@ -7,7 +7,9 @@ export const APP_SHORTCUTS = {
     settings: shortcut('Mod+,'),
     // Only while the settings dialog is up, where it stands in for the canvas's find.
     settingsSearch: shortcut('Mod+F'),
-    sidebar: shortcut('Mod+B')
+    sidebar: shortcut('Mod+B'),
+    // The desktop app's own; a browser keeps it for a private window.
+    newWindow: shortcut('Mod+Shift+N')
 } as const;
 
 /*

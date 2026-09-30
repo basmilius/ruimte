@@ -29,6 +29,7 @@ import { startWakeReconnect } from '@/transport/wake';
 import { desktop } from '@/desktop/bridge';
 import { startKeepAwake } from '@/state/keep-awake';
 import { startLastSeen } from '@/state/last-seen-watch';
+import { startSharedStorage } from '@/state/shared-storage';
 import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
@@ -56,6 +57,8 @@ if (!desktop()) {
         prefetching: () => prefetcher.busy
     });
 }
+/* First, so a window that opens beside another follows what that one changes from the start. */
+startSharedStorage();
 startSessionLifecycle();
 startSnoozeClock();
 startAgentNotifications();

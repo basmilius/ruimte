@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         return () => ipcRenderer.removeListener('window:fullscreen', handler);
     },
     setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme),
+    claimWindow: (key: string | null): Promise<boolean> => ipcRenderer.invoke('window:claim', key),
+    openWindow: (key: string | null): void => ipcRenderer.send('window:open', key),
+    moveToNewWindow: (): Promise<boolean> => ipcRenderer.invoke('window:move-to-new'),
     setKeepAwake: (keep: boolean): void => ipcRenderer.send('power:keep-awake', keep),
     requestKeepAwake: (request: KeepAwakeRequest | null): void => ipcRenderer.send('power:keep-awake-request', request),
     setAgentActivity: (activity: { working: number; attention: number }): void => ipcRenderer.send('agents:activity', activity),

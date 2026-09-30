@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { canShareView, isCanvasView, isOpenableView, type ProjectView } from '@ruimte/contracts';
 import { forkRefusal, lastSettledTurn } from '@ruimte/agents-react/chat/logic/fork';
 import { canKeepAwake, desktop, isApplePlatform } from '@/desktop/bridge';
+import { canOpenWindows } from '@/project/windows';
 import { canOpenAsView, type SessionHandoff } from '@/project/views';
 import { chosenLaunchId } from '@/launches/actions';
 import { launchViews } from '@/launches/model';
@@ -132,6 +133,7 @@ export const menuContext = (host: MenuHost): MenuContext => {
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
         fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
         keepAwake: host === 'desktop' && canKeepAwake() ? useSettings.getState().keepAwake : null,
-        settingsOpen: ui.settings.open
+        settingsOpen: ui.settings.open,
+        windows: host === 'desktop' && canOpenWindows()
     };
 };

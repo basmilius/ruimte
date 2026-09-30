@@ -2,13 +2,14 @@ import { useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { isRecentProject } from '@ruimte/contracts';
-import { FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
+import { AppWindow, FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
 import { openProject } from '@/project/open';
-import { openProjectAction } from '@/actions/client-actions';
+import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
+import { canOpenWindows, openInNewWindow } from '@/project/windows';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
@@ -75,7 +76,7 @@ function RecentRow({ row }: { row: ProjectMenuRow }) {
         .join(' · ');
     return (
         <ContextMenu.Root>
-            <ContextMenu.Trigger render={<button />} className={ROW} onClick={() => openProjectAction(row.endpointId, summary.projectId)}>
+            <ContextMenu.Trigger render={<button />} className={ROW} onClick={(event) => openProjectClickAction(event, row.endpointId, summary.projectId)}>
                 <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} size={16} />
                 <span className="flex min-w-0 grow flex-col">
                     <span className={clsx('truncate text-sm', row.connected ? 'text-text' : 'text-text-muted')}>{summary.name}</span>
@@ -100,6 +101,11 @@ function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
             <ContextMenu.Item onClick={() => openProjectAction(row.endpointId, summary.projectId)}>
                 <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
             </ContextMenu.Item>
+            {canOpenWindows() && (
+                <ContextMenu.Item onClick={() => openInNewWindow(row.endpointId, summary.projectId)}>
+                    <Icon icon={AppWindow} size={14} /> {t('projectMenu.openInNewWindow')}
+                </ContextMenu.Item>
+            )}
             {folder !== null && (
                 <>
                     <ContextMenu.Separator />

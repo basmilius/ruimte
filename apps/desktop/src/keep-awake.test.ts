@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, type KeepAwakeBlocker } from './keep-awake';
+import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake, type KeepAwakeBlocker } from './keep-awake';
 
 const MAC_ON_AC = { platform: 'darwin', onBattery: false } as const;
 const MAC_ON_BATTERY = { platform: 'darwin', onBattery: true } as const;
@@ -37,6 +37,25 @@ describe('a request over IPC', () => {
     test('asks for nothing when it is no request at all', () => {
         expect(keepAwakeRequestFrom(null)).toBeNull();
         expect(keepAwakeRequestFrom(true)).toBeNull();
+    });
+});
+
+describe('the requests of every window', () => {
+    test('ask for nothing while no window asks', () => {
+        expect(mergeKeepAwake([])).toBeNull();
+    });
+
+    test('hold as far as the widest request', () => {
+        expect(
+            mergeKeepAwake([
+                { onBattery: false, display: true },
+                { onBattery: true, display: false }
+            ])
+        ).toEqual({ onBattery: true, display: true });
+    });
+
+    test("keep one window's request as it is", () => {
+        expect(mergeKeepAwake([{ onBattery: false, display: false }])).toEqual({ onBattery: false, display: false });
     });
 });
 

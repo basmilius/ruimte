@@ -110,6 +110,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     settings: Settings,
     'project-settings': FolderCog,
     'open-folder': FolderOpen,
+    'window-new': AppWindow,
+    'window-move': SquareArrowOutUpRight,
     reveal: CornerUpRight,
     'close-cell': X,
     'view-new': Frame,

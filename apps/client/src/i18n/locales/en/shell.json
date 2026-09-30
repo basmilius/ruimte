@@ -300,7 +300,9 @@
         "projects": "Projects",
         "recent": "Recent projects",
         "openFolder": "Open folder",
-        "closeTitle": "Close {{name}}?"
+        "closeTitle": "Close {{name}}?",
+        "openInNewWindow": "Open in new window",
+        "moveToNewWindow": "Move to new window"
     },
     "projectSettings": {
         "title": "Project settings",
@@ -525,7 +527,9 @@
             "keepAwakeOff": "Let this computer sleep",
             "keepAwakeWorking": "Keep this computer awake while agents work",
             "keepAwakeAlways": "Always keep this computer awake",
-            "toggleFlag": "Flag or unflag"
+            "toggleFlag": "Flag or unflag",
+            "newWindow": "Open a new window",
+            "moveToNewWindow": "Move this project to a new window"
         },
         "sections": {
             "recent": "Recent",
@@ -703,6 +707,8 @@
         "launchStopNone": "Stop",
         "launchesStopAll": "Stop All Launches",
         "launchesOutput": "Show Output",
-        "launchesEdit": "Edit Launches…"
+        "launchesEdit": "Edit Launches…",
+        "newWindow": "New Window",
+        "moveToNewWindow": "Move to New Window"
     }
 }

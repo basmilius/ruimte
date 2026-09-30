@@ -1126,6 +1126,24 @@ describe('a deleted view waiting on its undo', () => {
         dispose();
     });
 
+    test('an edit still waiting on the save clock is sent when the page goes', async () => {
+        const listeners = new Map<string, () => void>();
+        const host = {
+            addEventListener: (type: string, listener: () => void) => void listeners.set(type, listener),
+            removeEventListener: (type: string) => void listeners.delete(type)
+        } as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>;
+        const { client, transport, dispose } = setup({ open: 'p1', window: host, stores: createWorkspaceStores() });
+        await tick();
+        const before = transport.of('project.save').length;
+        await client.rename('Renamed');
+        // Synchronous from here on, so the save clock cannot have run out.
+        listeners.get('pagehide')!();
+        const saved = transport.of('project.save');
+        expect(saved).toHaveLength(before + 1);
+        expect((saved.at(-1)!.payload as { content: ProjectContent }).content.name).toBe('Renamed');
+        dispose();
+    });
+
     test('a page that goes before its save lands finishes the deletion on the next open', async () => {
         const storage = new Map<string, string>();
         const listeners = new Map<string, () => void>();

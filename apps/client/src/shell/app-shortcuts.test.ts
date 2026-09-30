@@ -24,6 +24,13 @@ describe('the shortcuts of the window', () => {
         expect(appShortcutFor(key({ metaKey: true, altKey: true, key: 'k', code: 'KeyK' }), mac)).toBeNull();
     });
 
+    test('a new window opens only where the shell keeps windows', () => {
+        const newWindow = { metaKey: true, shiftKey: true, key: 'N', code: 'KeyN' };
+        expect(appShortcutFor(key(newWindow), { ...mac, windows: true })).toBe('new-window');
+        expect(appShortcutFor(key({ ctrlKey: true, shiftKey: true, key: 'N', code: 'KeyN' }), { ...other, windows: true })).toBe('new-window');
+        expect(appShortcutFor(key(newWindow), mac)).toBeNull();
+    });
+
     test('the sidebar is chrome of the window, and so is its shortcut', () => {
         expect(appShortcutFor(key({ metaKey: true, key: 'b', code: 'KeyB' }), mac)).toBe('sidebar');
     });

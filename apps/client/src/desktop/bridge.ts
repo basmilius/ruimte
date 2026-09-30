@@ -154,6 +154,15 @@ export interface DesktopBridge {
        `prefers-color-scheme` every page it hosts asks for, and for the ground a page paints on
        before it has one. Optional for the same reason `onBrowserContextMenu` is. */
     setTheme?(theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void;
+    /* Tells the shell which project this window shows (`endpointKey`), or none (null). A project is in
+       one window at a time: false when another window has it, which the shell brings to the front, and
+       then this page stays where it was. Optional for the same reason `onBrowserContextMenu` is. */
+    claimWindow?(key: string | null): Promise<boolean>;
+    /* Opens a window on a project, or raises the window that has it; null opens one on the start screen. */
+    openWindow?(key: string | null): void;
+    /* Hands this window's project to a new window, which has it before this one lets go. True once it
+       did, and then this page goes to the start screen. */
+    moveToNewWindow?(): Promise<boolean>;
     /* Keeps the machine from sleeping while an agent works. The client decides when that is and says
        so; the shell holds the block and drops it on a reload or when the window goes. Optional for
        the same reason `onBrowserContextMenu` is. Superseded by `requestKeepAwake`, and still what a

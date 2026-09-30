@@ -51,6 +51,7 @@ const spyDeps = (start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { d
             steps.push('start');
             current = null;
         },
+        claim: async () => true,
         ...over
     };
     return { deps, steps, here: () => current };
@@ -177,6 +178,77 @@ describe('opening a project', () => {
     });
 });
 
+/* The shell's claims written down beside the steps, granted unless the project is in `taken`. */
+const claiming = (steps: string[], taken: string[] = []): Pick<SwitchDeps, 'claim'> => ({
+    claim: async (project) => {
+        const key = project === null ? 'none' : `${project.endpointId}:${project.projectId}`;
+        steps.push(`claim:${key}`);
+        return !taken.includes(key);
+    }
+});
+
+describe('one project in one window', () => {
+    test('the shell is asked for the project before the open one is left', async () => {
+        const { deps, steps } = spyDeps(HERE);
+        deps.claim = claiming(steps).claim;
+        await run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps).done;
+        expect(steps).toEqual(['ensure:daemon-b', 'claim:daemon-b:q1', 'leave', 'enter:daemon-b:project:q1']);
+    });
+
+    test('a project another window has stays there, and this window stays where it was', async () => {
+        const claims: string[] = [];
+        const { deps, steps, here } = spyDeps(HERE, claiming(claims, ['daemon-b:q1']));
+        await run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps).done;
+        expect(steps).toEqual(['ensure:daemon-b']);
+        expect(here()).toEqual(HERE);
+    });
+
+    test('a run cancelled after the claim asks for the project on screen again', async () => {
+        const claims: string[] = [];
+        const controller = new AbortController();
+        const { deps, steps } = spyDeps(HERE, {
+            claim: async (project) => {
+                claims.push(project === null ? 'none' : `${project.endpointId}:${project.projectId}`);
+                controller.abort('back');
+                return true;
+            }
+        });
+        const { handle, done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps, controller);
+        await done;
+        await handle.back();
+        expect(claims).toEqual(['daemon-b:q1', 'local:p0']);
+        expect(steps).toEqual(['ensure:daemon-b']);
+    });
+
+    test('going back asks for the project it opens again, and a taken one leaves the start screen', async () => {
+        const claims: string[] = [];
+        const { deps, steps } = spyDeps(HERE, {
+            ...claiming(claims, ['local:p0']),
+            enter: async (endpointId, request) => {
+                steps.push(`enter:${endpointId}:${describeRequest(request)}`);
+                if (endpointId === 'daemon-b') {
+                    throw new Error('That project is gone');
+                }
+            }
+        });
+        const { handle, done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps);
+        await expect(done).rejects.toThrow('That project is gone');
+        steps.length = 0;
+        await handle.back();
+        expect(claims).toEqual(['claim:daemon-b:q1', 'claim:local:p0']);
+        expect(steps).toEqual(['start']);
+    });
+
+    test("a folder that turns out to be another window's project goes back to what was open", async () => {
+        const claims: string[] = [];
+        const { deps, steps, here } = spyDeps(HERE, claiming(claims, ['local:opened']));
+        await run(folder('local'), deps).done;
+        expect(claims).toEqual(['claim:local:opened', 'claim:local:p0']);
+        expect(steps).toEqual(['ensure:local', 'leave', 'enter:local:folder:/work/atlas:false', 'leave', 'ensure:local', 'enter:local:project:p0']);
+        expect(here()).toEqual(HERE);
+    });
+});
+
 describe('the cold start', () => {
     beforeEach(() => {
         useEndpoints.setState({ endpoints: [endpoint('local'), endpoint('daemon-b')], activeId: 'local' });
@@ -215,6 +287,36 @@ describe('the cold start', () => {
         expect(useWindow.getState().booting).toBe(false);
         // Kept for the start screen, which puts it on top of Recent with a way to try again.
         expect(useWindow.getState().bootFailure).toMatchObject({ endpointId: 'daemon-b', projectId: 'q1' });
+    });
+
+    test('a window the shell opened on a project opens that one, whatever was remembered', async () => {
+        const opened: string[] = [];
+        await bootWindow(
+            fakeStorage(stored({ last: { endpointId: 'local', projectId: 'p1' } })),
+            async (endpointId, projectId) => {
+                opened.push(`${endpointId}:${projectId}`);
+                return 'done';
+            },
+            true,
+            { kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }
+        );
+        expect(opened).toEqual(['daemon-b:q1']);
+    });
+
+    test('a window the shell opened on the start screen opens nothing', async () => {
+        const opened: string[] = [];
+        const outcome = await bootWindow(
+            fakeStorage(stored({ last: { endpointId: 'local', projectId: 'p1' } })),
+            async (endpointId, projectId) => {
+                opened.push(`${endpointId}:${projectId}`);
+                return 'done';
+            },
+            true,
+            { kind: 'start' }
+        );
+        expect(outcome).toBeNull();
+        expect(opened).toEqual([]);
+        expect(useWindow.getState().booting).toBe(false);
     });
 
     test("the bare project id of the first versions was this machine's", async () => {

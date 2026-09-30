@@ -2,6 +2,7 @@ import { notifyRequested } from '@/shell/notifications';
 import i18next from 'i18next';
 import { ChatClient } from '@ruimte/agents-react/chat/chat-client';
 import { BrowserClient } from '@/browser/browser-client';
+import { claimWindow } from '@/desktop/window-claim';
 import { DeviceClient } from '@/devices/device-client';
 import { chatPreferencesPayload, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { DiagramClient } from '@/diagram/diagram-client';
@@ -280,7 +281,7 @@ export const leaveWorkspace = async (): Promise<void> => {
     disposeConnection(workspace.connection);
 };
 
-/* The start screen, with nothing of the workspace left: no clients, no hold, empty stores. */
+/* The start screen, with nothing of the workspace left: no clients, no hold, empty stores, and no project this window keeps from another. */
 export const showStart = (): void => {
     const workspace = windowWorkspace();
     if (workspace) {
@@ -291,6 +292,7 @@ export const showStart = (): void => {
     stores.project.getState().setCurrent(null, 0, null);
     stores.project.getState().setSwitching(false);
     useWindow.getState().show({ kind: 'start' });
+    void claimWindow(null);
 };
 
 /* The workspace on screen as React reads it, and null on the start screen. */
@@ -392,6 +394,11 @@ const followRekey = (): void => {
     }
     stores.project.setState({ currentEndpointId: activeId });
     useWindow.getState().show({ kind: 'workspace', workspace: { connection: renamed } });
+    // The shell knows the project by the machine's name for it, which just moved.
+    const projectId = stores.project.getState().current?.projectId;
+    if (projectId) {
+        void claimWindow({ endpointId: activeId, projectId });
+    }
 };
 
 /* The active machine's clients exist from the first frame. The attention, the plans and the sessions of that machine hang on them. */

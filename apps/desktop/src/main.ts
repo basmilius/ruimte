@@ -8,6 +8,8 @@ import {
     createMenuCommands,
     createPageKeys,
     createUpdater,
+    createWindows,
+    type WindowOrigin,
     createWindowState,
     devToolsAccelerator,
     fileStorage,
@@ -15,9 +17,10 @@ import {
     staticMenuTemplate
 } from '@basmilius/desktop-shell';
 import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
+import { isWindowKey, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
-import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE } from './keep-awake';
+import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
@@ -60,8 +63,8 @@ const {
 } = require('electron') as typeof import('electron');
 
 /*
- * The desktop shell: one window, the client inside it, the daemon next to it. Nothing crosses
- * IPC that the WebSocket already carries; only window chrome, native dialogs and guest devtools.
+ * The desktop shell: a window per project, the client inside each, the daemon next to them. Nothing
+ * crosses IPC that the WebSocket already carries; only window chrome, native dialogs and guest devtools.
  */
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
@@ -88,15 +91,17 @@ const appUrl = devUrl ?? `http://127.0.0.1:${port}/`;
 const appOrigin = new URL(appUrl).origin;
 
 let daemon: ChildProcess | null = null;
-let mainWindow: Electron.BrowserWindow | null = null;
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
 
 /*
- * Every channel answers the app's own page and nothing else. A guest cannot reach one (its preload
+ * Every channel answers the app's own pages and nothing else. A guest cannot reach one (its preload
  * only talks to its host), but a page the window was navigated to would inherit the bridge.
  */
 const fromAppWindow = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean =>
-    isAppSender(mainWindow !== null && event.sender === mainWindow.webContents, event.senderFrame, appOrigin);
+    isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame, appOrigin);
+
+/* The window whose page a message came from, which is where its dialog, its sheet and its answer belong. */
+const senderWindow = (event: { sender: Electron.WebContents }): Electron.BrowserWindow | null => windows.fromPage(event.sender);
 
 const refuseOtherPages = (): never => {
     throw new Error('Only the app window may ask this');
@@ -281,7 +286,7 @@ const serviceController = createServiceController({
 });
 
 const pushServiceState = (state: BackgroundServiceState): BackgroundServiceState => {
-    mainWindow?.webContents.send('service:state', state);
+    windows.send('service:state', state);
     return state;
 };
 
@@ -355,17 +360,21 @@ const registerGuestPreload = (): void => {
 const isBrowserGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
 
+/* The theme a page last reported, which a window opened after it is built in, so it never flashes the other one. */
+let appTheme: AppTheme | null = null;
+
 const applyTheme = (theme: AppTheme): void => {
+    appTheme = theme;
     // Chromium answers `prefers-color-scheme` from this, so a page follows the app instead of the
     // system the app happens to run on. 'system' is only right while the app follows it as well.
     nativeTheme.themeSource = theme.followsSystem ? 'system' : theme.resolved;
-    // The overlay controls are native; they follow the client's theme by hand.
-    if (process.platform !== 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[theme.resolved] });
-    }
-    // The window's own ground, so a reload and a resize never flash the other theme's color.
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.setBackgroundColor(theme.background);
+    for (const window of windows.all()) {
+        // The overlay controls are native; they follow the client's theme by hand.
+        if (process.platform !== 'darwin') {
+            window.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[theme.resolved] });
+        }
+        // The window's own ground, so a reload and a resize never flash the other theme's color.
+        window.setBackgroundColor(theme.background);
     }
 };
 
@@ -431,63 +440,102 @@ const guardAppNavigation = (contents: Electron.WebContents): void => {
     });
 };
 
-/* What the client last asked for. Kept rather than applied once, since the power source it depends
-   on changes while the request stands. */
-let keepAwakeRequest: KeepAwakeRequest | null = null;
+/* What each window last asked for, by window id. Kept rather than applied once, since the power
+   source it depends on changes while the request stands. */
+const keepAwakeRequests = new Map<number, KeepAwakeRequest>();
 
 const holdKeepAwake = createKeepAwakeHold(powerSaveBlocker);
 
 const applyKeepAwake = (): void => {
+    const request = mergeKeepAwake(keepAwakeRequests.values());
     // `powerMonitor` only answers once the app is ready, and a request only arrives from a window after that.
-    const onBattery = keepAwakeRequest !== null && powerMonitor.isOnBatteryPower();
-    holdKeepAwake(keepAwakeBlocker(keepAwakeRequest, { platform: process.platform, onBattery }));
+    const onBattery = request !== null && powerMonitor.isOnBatteryPower();
+    holdKeepAwake(keepAwakeBlocker(request, { platform: process.platform, onBattery }));
 };
 
-const setKeepAwake = (request: KeepAwakeRequest | null): void => {
-    keepAwakeRequest = request;
+const setKeepAwake = (windowId: number, request: KeepAwakeRequest | null): void => {
+    if (request === null) {
+        keepAwakeRequests.delete(windowId);
+    } else {
+        keepAwakeRequests.set(windowId, request);
+    }
     applyKeepAwake();
 };
 
-onFromApp('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep === true ? LEGACY_KEEP_AWAKE : null));
-onFromApp('power:keep-awake-request', (_event, request: unknown) => setKeepAwake(keepAwakeRequestFrom(request)));
+onFromApp('power:keep-awake', (event, keep: boolean) => {
+    const window = senderWindow(event);
+    if (window) {
+        setKeepAwake(window.id, keep === true ? LEGACY_KEEP_AWAKE : null);
+    }
+});
+onFromApp('power:keep-awake-request', (event, request: unknown) => {
+    const window = senderWindow(event);
+    if (window) {
+        setKeepAwake(window.id, keepAwakeRequestFrom(request));
+    }
+});
 
 /*
- * What the client last said about its agents. The shell counts nothing itself: which node holds an
- * agent and which holds a shell somebody left attached is the client's own question, and asking it
- * twice is how the badge and the quit dialog would end up disagreeing with the toolbar.
+ * What each window last said about its agents, by window id. The shell counts nothing itself: which
+ * node holds an agent and which holds a shell somebody left attached is the client's own question,
+ * and asking it twice is how the badge and the quit dialog would end up disagreeing with the toolbar.
  */
+const agentActivities = new Map<number, AgentActivity>();
 let agentActivity: AgentActivity = { working: 0, attention: 0 };
 
-const setAgentActivity = (activity: AgentActivity): void => {
-    agentActivity = activity;
+const setAgentActivity = (windowId: number, activity: AgentActivity | null): void => {
+    if (activity === null) {
+        agentActivities.delete(windowId);
+    } else {
+        agentActivities.set(windowId, activity);
+    }
+    agentActivity = totalActivity(agentActivities.values());
     // A dock badge is macOS and Linux; Windows has none and Electron's call does nothing there.
     if (process.platform !== 'win32') {
-        app.setBadgeCount(activity.attention);
+        app.setBadgeCount(agentActivity.attention);
     }
 };
 
-onFromApp('agents:activity', (_event, activity: AgentActivity) => setAgentActivity(activity));
+onFromApp('agents:activity', (event, activity: AgentActivity) => {
+    const window = senderWindow(event);
+    if (window) {
+        setAgentActivity(window.id, typeof activity === 'object' && activity !== null ? activity : null);
+    }
+});
+
+/* A window that closes or reloads takes what it asked for with it; its page asks again once it is back. */
+const dropWindowShares = (windowId: number): void => {
+    setKeepAwake(windowId, null);
+    setAgentActivity(windowId, null);
+};
 
 /* Set once a person has said to quit with agents still working, so the question is asked once. */
 let quitConfirmed = false;
 
 const pageKeys = createPageKeys();
 
-/* The window opens where a person left it, maximized or in full screen included. */
+/* Every window opens where a person left it, maximized or in full screen included, under what it shows. */
 const windowState = createWindowState({
     storage: fileStorage(join(app.getPath('userData'), 'window-state.json')),
     displays: () => screen.getAllDisplays(),
     defaults: { width: 1440, height: 900 }
 });
 
-const createWindow = (): Electron.BrowserWindow => {
+/* The application menu each window's page last sent, by window id. The one in front is the one drawn. */
+const menuTemplates = new Map<number, Electron.MenuItemConstructorOptions[]>();
+
+const createWindow = (
+    key: string | null,
+    bounds: Partial<Electron.Rectangle> & { width: number; height: number },
+    origin: WindowOrigin
+): Electron.BrowserWindow => {
     const window = new BrowserWindow({
-        ...windowState.bounds('main'),
+        ...bounds,
         minWidth: 800,
         minHeight: 500,
         show: false,
-        ...titleBarOptions(true),
-        backgroundColor: '#131316',
+        ...titleBarOptions(appTheme?.resolved !== 'light'),
+        backgroundColor: appTheme?.background ?? '#131316',
         webPreferences: {
             preload: join(here, 'preload.cjs'),
             contextIsolation: true,
@@ -499,43 +547,45 @@ const createWindow = (): Electron.BrowserWindow => {
             additionalArguments: [`--ruimte-system-locale=${app.getSystemLocale()}`, `--ruimte-system-languages=${app.getPreferredSystemLanguages().join(',')}`]
         }
     });
-    windowState.track('main', window);
+    const id = window.id;
     const contents = window.webContents;
-    contents.session.setPermissionCheckHandler((requester, permission, _origin, details) => {
-        if (permission !== 'media') {
-            return true;
-        }
-        return requester === contents && details.isMainFrame && details.mediaType === 'audio';
-    });
-    contents.session.setPermissionRequestHandler((requester, permission, callback, details) => {
-        if (permission !== 'media') {
-            callback(true);
-            return;
-        }
-        const mediaTypes = 'mediaTypes' in details ? details.mediaTypes : undefined;
-        callback(requester === contents && details.isMainFrame && mediaTypes?.length === 1 && mediaTypes[0] === 'audio');
-    });
     window.once('ready-to-show', () => window.show());
     contents.on('before-input-event', (_event, input) => pageKeys.saw(input));
+    // Off macOS the last window closing quits the app, so it stays in the session as a quit would leave it.
+    window.on('close', () => {
+        if (process.platform !== 'darwin' && windows.all().every((other) => other === window)) {
+            windows.quit();
+        }
+    });
     window.on('closed', () => {
-        mainWindow = null;
-        setKeepAwake(null);
-        setAgentActivity({ working: 0, attention: 0 });
+        menuTemplates.delete(id);
+        dropWindowShares(id);
+        // The last window took the page that answers the menu with it, and Quit still has to be there.
+        if (windows.all().every((other) => other === window)) {
+            setStaticMenu();
+        }
     });
     // Reset client-owned state on main-frame reload; subframe loads must not release the power block.
-    window.webContents.on('did-start-loading', () => {
-        if (!window.webContents.isLoadingMainFrame()) {
+    contents.on('did-start-loading', () => {
+        if (!contents.isLoadingMainFrame()) {
             return;
         }
-        setKeepAwake(null);
-        setAgentActivity({ working: 0, attention: 0 });
-        setStaticMenu();
+        dropWindowShares(id);
+        menuTemplates.delete(id);
+        if (windows.focused() === window) {
+            setStaticMenu();
+        }
     });
     // Without a page nobody answers a command, but Quit still has to be there.
-    window.webContents.on('render-process-gone', () => setStaticMenu());
+    contents.on('render-process-gone', () => {
+        menuTemplates.delete(id);
+        if (windows.focused() === window) {
+            setStaticMenu();
+        }
+    });
     // In fullscreen macOS hides the traffic lights, so the client can take the room back.
-    window.on('enter-full-screen', () => window.webContents.send('window:fullscreen', true));
-    window.on('leave-full-screen', () => window.webContents.send('window:fullscreen', false));
+    window.on('enter-full-screen', () => contents.send('window:fullscreen', true));
+    window.on('leave-full-screen', () => contents.send('window:fullscreen', false));
     // Links a page opens in a new window go to the system browser, never to another Electron window.
     contents.setWindowOpenHandler(({ url }) => {
         if (isExternalLink(url)) {
@@ -549,13 +599,47 @@ const createWindow = (): Electron.BrowserWindow => {
             event.preventDefault();
         }
     });
+    // The smoke run opens its one window the way a start without a session does.
+    void window.loadURL(windowUrl(appUrl, key, origin === 'first' || smoke)).catch(() => undefined);
     return window;
+};
+
+/* A window per project, and the windows of the last session again at the next start. */
+const windows = createWindows({
+    state: windowState,
+    // Where the one window stood before there were several.
+    formerKey: 'main',
+    session: fileStorage(join(app.getPath('userData'), 'window-session.json')),
+    create: createWindow,
+    onFront: (window) => applyMenuOf(window)
+});
+
+/*
+ * The microphone is for the app's own pages, and only for audio. Set once on the session every
+ * window shares; a handler per window would leave only the last window able to ask.
+ */
+const sealAppSession = (): void => {
+    const own = session.defaultSession;
+    own.setPermissionCheckHandler((requester, permission, _origin, details) => {
+        if (permission !== 'media') {
+            return true;
+        }
+        return requester !== null && windows.fromPage(requester) !== null && details.isMainFrame && details.mediaType === 'audio';
+    });
+    own.setPermissionRequestHandler((requester, permission, callback, details) => {
+        if (permission !== 'media') {
+            callback(true);
+            return;
+        }
+        const mediaTypes = 'mediaTypes' in details ? details.mediaTypes : undefined;
+        callback(windows.fromPage(requester) !== null && details.isMainFrame && mediaTypes?.length === 1 && mediaTypes[0] === 'audio');
+    });
 };
 
 /* Opens the inspector for a guest page, on the element under `at` when a point comes with it. */
 const guestDevTools = (id: number, at?: { x: number; y: number }): void => {
     const guest = webContents.fromId(id);
-    if (!guest || !mainWindow) {
+    if (!guest) {
         return;
     }
     const existing = devtoolsWindows.get(id);
@@ -658,7 +742,7 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
      * AutoFill here routes to Apple's Passwords app only; Chrome's password manager is not in
      * Electron. No position: the menu belongs at the cursor, which is where Electron puts it.
      */
-    Menu.buildFromTemplate(template).popup({ window: mainWindow ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
+    Menu.buildFromTemplate(template).popup({ window: windows.fromContents(contents) ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
 };
 
 /* The frame each guest's last right-click landed in, so copy and select all act where the person pointed. */
@@ -681,7 +765,8 @@ const guestContextMenu = (contents: Electron.WebContents, params: Electron.Conte
     } else {
         menuFrames.delete(contents);
     }
-    mainWindow?.webContents.send('browser:context-menu', {
+    // The window the guest's page sits in draws the menu; a guest of no window of ours gets none.
+    windows.fromContents(contents)?.webContents.send('browser:context-menu', {
         webContentsId: contents.id,
         guest,
         x: params.x,
@@ -744,11 +829,12 @@ onFromApp('browser:context-action', (_event, request: BrowserContextAction) => {
     }
 });
 
-handleFromApp('dialog:pick-folder', async (_event, initialPath?: string) => {
-    if (!mainWindow) {
+handleFromApp('dialog:pick-folder', async (event, initialPath?: string) => {
+    const window = senderWindow(event);
+    if (!window) {
         return null;
     }
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const result = await dialog.showOpenDialog(window, {
         properties: ['openDirectory', 'createDirectory'],
         ...(initialPath ? { defaultPath: initialPath } : {})
     });
@@ -756,12 +842,13 @@ handleFromApp('dialog:pick-folder', async (_event, initialPath?: string) => {
 });
 
 /* Bytes the client made (an exported drawing) go where a native dialog says they go. */
-handleFromApp('dialog:save-file', async (_event, suggestedName: string, bytes: Uint8Array, mime: string) => {
-    if (!mainWindow) {
+handleFromApp('dialog:save-file', async (event, suggestedName: string, bytes: Uint8Array, mime: string) => {
+    const window = senderWindow(event);
+    if (!window) {
         return null;
     }
     const extension = suggestedName.split('.').pop() ?? '';
-    const result = await dialog.showSaveDialog(mainWindow, {
+    const result = await dialog.showSaveDialog(window, {
         defaultPath: suggestedName,
         ...(extension ? { filters: [{ name: mime, extensions: [extension] }] } : {})
     });
@@ -886,16 +973,14 @@ const speechHelper = speechHelperPath(app.isPackaged, join(process.resourcesPath
 const speechModel = new SpeechModel(
     ruimteHome,
     speechHelper,
-    (state) => {
-        if (mainWindow && !mainWindow.webContents.isDestroyed()) {
-            mainWindow.webContents.send('speech:state', state);
-        }
-    },
+    (state) => windows.send('speech:state', state),
     (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init)
 );
+/* The page that started the dictation that runs, which is the one its words go back to. There is one helper, so one at a time. */
+let speechOwner: Electron.WebContents | null = null;
 const speechService = new SpeechService(speechHelper, speechModel.directory, speechModel.cacheDirectory, (event) => {
-    if (mainWindow && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('speech:event', event);
+    if (speechOwner && !speechOwner.isDestroyed()) {
+        speechOwner.send('speech:event', event);
     }
 });
 app.on('before-quit', () => {
@@ -904,18 +989,19 @@ app.on('before-quit', () => {
 });
 app.on('web-contents-created', (_event, contents) => {
     contents.on('render-process-gone', () => {
-        if (contents === mainWindow?.webContents) {
+        if (contents === speechOwner) {
             speechService.dispose();
         }
     });
     contents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
-        if (isMainFrame && contents === mainWindow?.webContents) {
+        if (isMainFrame && contents === speechOwner) {
             speechService.dispose();
         }
     });
     contents.on('destroyed', () => {
-        if (!mainWindow || contents === mainWindow.webContents) {
+        if (contents === speechOwner) {
             speechService.dispose();
+            speechOwner = null;
         }
     });
 });
@@ -938,7 +1024,7 @@ handleFromApp('speech:remove', async () => {
     speechService.dispose();
     return speechModel.remove();
 });
-handleFromApp('speech:start', async (_event, id: unknown, language: unknown) => {
+handleFromApp('speech:start', async (event, id: unknown, language: unknown) => {
     await speechModel.initialized;
     if (!speechModel.state.enabled || speechModel.state.phase !== 'ready') {
         throw new Error('Enable speech to text in Settings first');
@@ -946,6 +1032,7 @@ handleFromApp('speech:start', async (_event, id: unknown, language: unknown) => 
     if (typeof id !== 'string' || typeof language !== 'string') {
         throw new Error('Invalid dictation request');
     }
+    speechOwner = event.sender;
     return speechService.start(id, language);
 });
 handleFromApp('speech:samples', async (_event, id: unknown, samples: unknown) => {
@@ -987,23 +1074,24 @@ handleFromApp('pulsar:login-listen', async () => {
     return { redirectUri: pendingLogin.redirectUri };
 });
 
-handleFromApp('pulsar:login-callback', async () => {
+handleFromApp('pulsar:login-callback', async (event) => {
     const login = pendingLogin;
     if (!login) {
         throw new Error('No sign-in is waiting');
     }
     try {
         const callback = await login.callback;
-        // The login ended in the system browser, which keeps the focus while the answer lands in this window.
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore();
+        // The login ended in the system browser, which keeps the focus while the answer lands in the window that asked.
+        const window = senderWindow(event);
+        if (window) {
+            if (window.isMinimized()) {
+                window.restore();
             }
-            mainWindow.show();
+            window.show();
             if (process.platform === 'darwin') {
                 app.focus({ steal: true });
             }
-            mainWindow.focus();
+            window.focus();
         }
         return callback;
     } finally {
@@ -1023,7 +1111,33 @@ handleFromApp('pulsar:refresh', () => pulsarSessions().refresh());
 handleFromApp('pulsar:restore', () => pulsarSessions().restore());
 handleFromApp('pulsar:sign-out', () => pulsarSessions().signOut());
 
-handleFromApp('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
+handleFromApp('window:is-fullscreen', (event) => senderWindow(event)?.isFullScreen() ?? false);
+
+/*
+ * What a window shows. A page asks before it shows a project, and a project is in one window at a
+ * time: when another window has it, that one comes to the front and the page stays where it was.
+ * Null lets the window's project go, as when it goes back to the start screen.
+ */
+handleFromApp('window:claim', (event, key: unknown) => {
+    const window = senderWindow(event);
+    return window !== null && (key === null || isWindowKey(key)) && windows.claim(window, key);
+});
+
+/* A new window on the start screen (null), or the window of a project, raised when one already has it. */
+onFromApp('window:open', (_event, key: unknown) => {
+    if (key === null || isWindowKey(key)) {
+        windows.open(key);
+    }
+});
+
+/*
+ * The project of the asking window, into a window of its own. Handed over in one tick, so there is
+ * no moment nobody holds it; the page that asked goes to the start screen once this answers true.
+ */
+handleFromApp('window:move-to-new', (event) => {
+    const window = senderWindow(event);
+    return window !== null && windows.move(window) !== null;
+});
 
 onFromApp('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
 
@@ -1035,7 +1149,9 @@ const updater = createUpdater({
     currentVersion: app.getVersion(),
     packaged: app.isPackaged,
     load: () => (require('electron-updater') as typeof import('electron-updater')).autoUpdater,
-    publish: (state) => mainWindow?.webContents.send('update:state', state),
+    publish: (state) => windows.send('update:state', state),
+    // Installing closes every window before the app's own before-quit, and the next start opens them again.
+    onQuit: (quitting) => (quitting ? windows.quit() : windows.resume()),
     // Refreshed with the check, so the notes of a version it finds are on disk before anyone asks.
     beforeCheck: () => void releaseNotes.list(true)
 });
@@ -1048,7 +1164,7 @@ handleFromApp('update:check', () => updater.check());
 
 handleFromApp('update:download', () => updater.download());
 
-onFromApp('update:install', () => updater.install());
+onFromApp('update:install', () => void updater.install());
 
 /* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
    only the versions between this one and the next, and a tag whose release is still a draft. */
@@ -1062,8 +1178,9 @@ handleFromApp('releases:list', (_event, refresh?: boolean) => releaseNotes.list(
 // What stands until the page sends its own menu, and again after a reload or a crash.
 const setStaticMenu = (): void => {
     const openSettings = (section: string | null): void => {
-        mainWindow?.show();
-        mainWindow?.webContents.send('menu:settings', section);
+        const window = windows.focused();
+        window?.show();
+        window?.webContents.send('menu:settings', section);
     };
     // Only where a service can run: anywhere else quitting already stops the machine.
     const quitItems: Electron.MenuItemConstructorOptions[] =
@@ -1077,7 +1194,7 @@ const setStaticMenu = (): void => {
             { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings(null) }
         ],
         quitItems,
-        toggleDevTools: () => mainWindow?.webContents.toggleDevTools()
+        toggleDevTools: () => windows.focused()?.webContents.toggleDevTools()
     });
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 };
@@ -1085,7 +1202,7 @@ const setStaticMenu = (): void => {
 /* A page in a browser node or an HTML preview never sees the key, so there the menu answers. */
 const runMenuCommand = createMenuCommands({
     pageKeys,
-    window: () => mainWindow,
+    window: () => windows.focused(),
     keyBypassesPage: () => {
         const focused = webContents.getFocusedWebContents();
         return focused !== null && (isBrowserGuest(focused) || isPreviewGuest(focused));
@@ -1094,22 +1211,36 @@ const runMenuCommand = createMenuCommands({
 
 const shellMenuItem = (action: MenuShellAction, label: string): Electron.MenuItemConstructorOptions | null => {
     if (action === 'devtools') {
-        return { label, accelerator: devToolsAccelerator(), click: () => mainWindow?.webContents.toggleDevTools() };
+        return { label, accelerator: devToolsAccelerator(), click: () => windows.focused()?.webContents.toggleDevTools() };
     }
     // Only where a service can run: anywhere else quitting already stops the machine.
     return action === 'stop-machine-and-quit' && support === 'supported' ? { label, click: () => stopMachine() } : null;
 };
 
-// The client builds the menu from what has the focus (`apps/client/src/shell/menu`); the shell draws it.
-onFromApp('menu:set', (_event, spec: MenuSpec) => {
-    const template = menuTemplateOf(spec, { run: runMenuCommand, shellItem: shellMenuItem });
+/* The menu of the window that came to the front, or the fixed one until its page sent one. */
+const applyMenuOf = (window: Electron.BrowserWindow): void => {
+    const template = menuTemplates.get(window.id);
     if (!template) {
+        setStaticMenu();
         return;
     }
     try {
         Menu.setApplicationMenu(Menu.buildFromTemplate(template));
     } catch (error) {
         console.error('[ruimte] menu refused', error);
+    }
+};
+
+// Every page builds the menu from what has the focus in it (`apps/client/src/shell/menu`); the shell draws the one in front.
+onFromApp('menu:set', (event, spec: MenuSpec) => {
+    const window = senderWindow(event);
+    const template = menuTemplateOf(spec, { run: runMenuCommand, shellItem: shellMenuItem });
+    if (!window || !template) {
+        return;
+    }
+    menuTemplates.set(window.id, template);
+    if (windows.focused() === window) {
+        applyMenuOf(window);
     }
 });
 
@@ -1175,7 +1306,7 @@ if (!app.requestSingleInstanceLock()) {
         /* Every webview says when it takes the focus: a press inside one never reaches the
            client's page, and the grid has to know which cell the keyboard went to. */
         if (contents.getType() === 'webview') {
-            contents.on('focus', () => mainWindow?.webContents.send('guest:focus', contents.id));
+            contents.on('focus', () => windows.fromContents(contents)?.webContents.send('guest:focus', contents.id));
         }
         if (isPreviewGuest(contents)) {
             routePreviewLinks(contents);
@@ -1188,17 +1319,24 @@ if (!app.requestSingleInstanceLock()) {
         contents.on('context-menu', (_e, params) => guestContextMenu(contents, params, 'browser'));
     });
 
+    /* Set once the first windows opened, so an `activate` during the start does not open them twice. */
+    let started = false;
+
     app.on('second-instance', () => {
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore();
+        const window = windows.focused();
+        if (window) {
+            if (window.isMinimized()) {
+                window.restore();
             }
-            mainWindow.focus();
+            window.focus();
+        } else if (started) {
+            windows.restore();
         }
     });
 
     void app.whenReady().then(async () => {
         setStaticMenu();
+        sealAppSession();
         sealPreviewSession();
         sealBrowserSession();
         registerGuestPreload();
@@ -1214,21 +1352,23 @@ if (!app.requestSingleInstanceLock()) {
             app.quit();
             return;
         }
-        mainWindow = createWindow();
-        await mainWindow.loadURL(appUrl);
         if (smoke) {
-            await runSmoke(mainWindow);
+            // One window on what the page remembers, whatever the last session left open.
+            const window = windows.open(null);
+            await new Promise<void>((resolve) => window.webContents.once('did-finish-load', () => resolve()));
+            await runSmoke(window);
             app.quit();
             return;
         }
+        windows.restore();
+        started = true;
         updater.start();
         watchPendingRestart();
     });
 
     app.on('activate', () => {
-        if (mainWindow === null && app.isReady()) {
-            mainWindow = createWindow();
-            void mainWindow.loadURL(appUrl);
+        if (started && windows.all().length === 0) {
+            windows.restore();
         }
     });
 
@@ -1243,9 +1383,11 @@ if (!app.requestSingleInstanceLock()) {
 
     app.on('before-quit', (event) => {
         // Ask once when quitting would stop working agents; the background service lets them survive.
-        if (!quitConfirmed && agentActivity.working > 0 && mainWindow !== null && !mainWindow.isDestroyed()) {
+        // Counted over every window, and a window that closed took its share with it.
+        const parent = windows.focused();
+        if (!quitConfirmed && agentActivity.working > 0 && parent !== null) {
             const survives = serviceController.survivesQuit(stopMachineOnQuit);
-            const choice = dialog.showMessageBoxSync(mainWindow, {
+            const choice = dialog.showMessageBoxSync(parent, {
                 type: 'question',
                 buttons: survives ? ['Quit', 'Cancel'] : ['Quit anyway', 'Keep working'],
                 defaultId: survives ? 0 : 1,
@@ -1257,11 +1399,15 @@ if (!app.requestSingleInstanceLock()) {
             });
             if (choice !== 0) {
                 stopMachineOnQuit = false;
+                // An update that went to install marked the quit already.
+                windows.resume();
                 event.preventDefault();
                 return;
             }
             quitConfirmed = true;
         }
+        // From here the quit goes ahead, so the windows it closes stay in the session for the next start.
+        windows.quit();
         serviceController.quit(stopMachineOnQuit);
     });
 }

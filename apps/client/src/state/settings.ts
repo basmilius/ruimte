@@ -7,7 +7,7 @@ import { FORMAT_LANGUAGE, formatRegionFrom } from '@basmilius/desktop-ui/format'
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 
-const STORAGE_KEY = 'ruimte.settings';
+export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
 
 export const MONO_FONTS = [
     { id: 'system', label: 'System', stack: 'ui-monospace, "SF Mono", Menlo, monospace' },
@@ -173,6 +173,8 @@ interface SettingsStore extends Settings {
     /* Bumped on every change, so a terminal knows to read the tokens again. */
     version: number;
     update(patch: Partial<Settings>): void;
+    /* Reads what another window wrote, which that window already applied to itself. */
+    reload(): void;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -267,7 +269,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
 
 const read = (): Settings => {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
         return settingsFrom(raw ? (JSON.parse(raw) as Partial<Settings>) : {});
     } catch {
         return DEFAULT_SETTINGS;
@@ -399,10 +401,15 @@ export const useSettings = create<SettingsStore>((set, get) => {
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
             next.filesTabLimit = clampSize(next.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit);
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
             } catch {
                 // Storage that refuses still leaves the setting on for this session.
             }
+            apply(next);
+            set({ ...next, version: get().version + 1 });
+        },
+        reload() {
+            const next = read();
             apply(next);
             set({ ...next, version: get().version + 1 });
         }

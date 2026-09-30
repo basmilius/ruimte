@@ -13,3 +13,4 @@ export * from './voice.ts';
 export * from './speech.ts';
 export * from './menu.ts';
 export * from './power.ts';
+export * from './window.ts';

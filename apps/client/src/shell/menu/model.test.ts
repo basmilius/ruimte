@@ -48,6 +48,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     fullscreen: false,
     keepAwake: null,
     settingsOpen: false,
+    windows: true,
     ...patch
 });
 
@@ -100,6 +101,14 @@ describe('the menus', () => {
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'command' && node.id === 'settings')).toBe(true);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'role' && node.role === 'quit')).toBe(true);
         expect(flatten(menu(spec, 'Help')).some((node) => node.kind === 'command' && node.id === 'about')).toBe(true);
+    });
+
+    test('a new window opens from anywhere, and only a project moves to one', () => {
+        expect(find(menuModel(START_SCREEN), 'window-new')?.accelerator).toBe('CommandOrControl+Shift+N');
+        expect(find(menuModel(START_SCREEN), 'window-move')).toBeUndefined();
+        expect(find(menuModel(context()), 'window-move')).toBeDefined();
+        expect(commandIds(menuModel(context({ windows: false })))).not.toContain('window-new');
+        expect(commandIds(menuModel(context({ windows: false })))).not.toContain('window-move');
     });
 
     test('the start screen has no view menu and nothing that needs a project', () => {

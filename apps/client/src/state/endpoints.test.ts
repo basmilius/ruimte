@@ -243,3 +243,59 @@ describe('a direct connection per machine', () => {
         expect(useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.direct).toBe(true);
     });
 });
+
+describe('another window writing the list', () => {
+    const items = new Map<string, string>();
+    /* What another window of the same origin leaves in the storage both read. */
+    const written = (endpoints: Endpoint[], activeId: string, localDirect = false): void => {
+        items.set('ruimte.endpoints', JSON.stringify({ version: 3, endpoints, activeId, localDirect }));
+    };
+
+    beforeEach(() => {
+        items.clear();
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => void items.set(key, value),
+            removeItem: (key: string) => void items.delete(key),
+            clear: () => items.clear(),
+            key: (index: number) => [...items.keys()][index] ?? null,
+            get length() {
+                return items.size;
+            }
+        };
+        useEndpoints.setState({
+            endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: 'daemon-here' }), row('daemon-a')],
+            activeId: 'daemon-a',
+            mismatched: {}
+        });
+    });
+
+    test('takes the rows it paired, and this window stays on its own machine', () => {
+        written([row('daemon-a'), row('daemon-b')], LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().reload();
+        const state = useEndpoints.getState();
+        expect(state.endpoints.map((endpoint) => endpoint.id)).toEqual([LOCAL_ENDPOINT_ID, 'daemon-a', 'daemon-b']);
+        expect(state.activeId).toBe('daemon-a');
+    });
+
+    test('keeps what this page learned about its own machine, with the switch the other window set', () => {
+        written([row('daemon-a')], 'daemon-a', true);
+        useEndpoints.getState().reload();
+        const local = useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID);
+        expect(local?.daemonId).toBe('daemon-here');
+        expect(local?.direct).toBe(true);
+    });
+
+    test('follows the active row onto the id of its daemon when the other window moved it there', () => {
+        useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID), row('lan-host', { daemonId: 'daemon-c' })], activeId: 'lan-host' });
+        written([row('daemon-c')], LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().reload();
+        expect(useEndpoints.getState().activeId).toBe('daemon-c');
+    });
+
+    test('goes back to its own machine when the active row was forgotten', () => {
+        written([], LOCAL_ENDPOINT_ID);
+        useEndpoints.getState().reload();
+        expect(useEndpoints.getState().activeId).toBe(LOCAL_ENDPOINT_ID);
+    });
+});

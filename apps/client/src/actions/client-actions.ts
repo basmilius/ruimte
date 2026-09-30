@@ -60,6 +60,7 @@ import {
 } from '@/project/view-deletion';
 import { lastFlagColor, rememberFlagColor } from '@/project/flag-color';
 import { offerViewUndo } from '@/project/view-trash';
+import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import type { ChatPromptClients } from '@ruimte/agents-react/prompts/logic/subjects';
 import { FILES_VIEW_ID } from '@/shell/files-view';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
@@ -1690,6 +1691,15 @@ export const selectAllAction = (store: StoreApi<CanvasState>): void => {
 /* The switch screen says how an open goes, so a refusal here stays quiet like every other person's action. */
 export const openProjectAction = (endpointId: string, projectId: string): void => {
     void runAsPerson('project.switch', { endpointId, projectId });
+};
+
+/* A click on a project row. Cmd-click (Ctrl-click off macOS) opens it in a window of its own. */
+export const openProjectClickAction = (event: { metaKey: boolean; ctrlKey: boolean }, endpointId: string, projectId: string): void => {
+    if (wantsNewWindow(event)) {
+        openInNewWindow(endpointId, projectId);
+        return;
+    }
+    openProjectAction(endpointId, projectId);
 };
 
 export const openFolderAction = (endpointId: string, folder: string, createFolder: boolean): void => {

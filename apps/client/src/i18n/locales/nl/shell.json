@@ -300,7 +300,9 @@
         "projects": "Projecten",
         "recent": "Recente projecten",
         "openFolder": "Map openen",
-        "closeTitle": "{{name}} sluiten?"
+        "closeTitle": "{{name}} sluiten?",
+        "openInNewWindow": "Openen in nieuw venster",
+        "moveToNewWindow": "Naar nieuw venster verplaatsen"
     },
     "projectSettings": {
         "title": "Projectinstellingen",
@@ -525,7 +527,9 @@
             "keepAwakeOff": "Deze computer laten slapen",
             "keepAwakeWorking": "Deze computer wakker houden terwijl agents werken",
             "keepAwakeAlways": "Deze computer altijd wakker houden",
-            "toggleFlag": "Vlag zetten of weghalen"
+            "toggleFlag": "Vlag zetten of weghalen",
+            "newWindow": "Een nieuw venster openen",
+            "moveToNewWindow": "Dit project naar een nieuw venster verplaatsen"
         },
         "sections": {
             "recent": "Recent",
@@ -703,6 +707,8 @@
         "launchStopNone": "Stoppen",
         "launchesStopAll": "Alle launches stoppen",
         "launchesOutput": "Output tonen",
-        "launchesEdit": "Launches bewerken…"
+        "launchesEdit": "Launches bewerken…",
+        "newWindow": "Nieuw venster",
+        "moveToNewWindow": "Naar nieuw venster verplaatsen"
     }
 }

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import {
+    AppWindow,
     ChartNoAxesColumn,
     ChevronRight,
     CircleQuestionMark,
@@ -76,6 +77,7 @@ import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@ruimte/agents-react/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { FolderMenuItems } from '@/shell/FolderMenuItems';
+import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useSettings } from '@/state/settings';
@@ -659,6 +661,17 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
                 </ContextMenu.Trigger>
             </MaybeTooltip>
             <ContextMenu.Popup>
+                {canOpenWindows() && (
+                    <>
+                        <ContextMenu.Item
+                            disabled={!group.active && !group.summary.available}
+                            onClick={() => (group.active ? void moveToNewWindow() : openInNewWindow(group.endpointId, group.summary.projectId))}
+                        >
+                            <Icon icon={AppWindow} size={14} /> {t(group.active ? 'projectMenu.moveToNewWindow' : 'projectMenu.openInNewWindow')}
+                        </ContextMenu.Item>
+                        <ContextMenu.Separator />
+                    </>
+                )}
                 <FolderMenuItems endpointId={group.endpointId} folder={group.summary.folder} connected={group.state !== 'offline'} />
             </ContextMenu.Popup>
         </ContextMenu.Root>

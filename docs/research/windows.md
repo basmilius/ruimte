@@ -1,5 +1,31 @@
 # A project in its own window: research and design
 
+> Implemented on 2026-09-30. The code is the reference now; this document stays for the reasoning.
+> Where the implementation went another way:
+>
+> - **Ownership is the shell's, not a BroadcastChannel's.** The shell keeps the windows
+>   (`createWindows` of `@basmilius/desktop-shell`), and a page asks it before it shows a project
+>   (`window:claim`, `apps/client/src/desktop/window-claim.ts`, called from `switchRun` in
+>   `project/open.ts`). A refusal raises the window that has the project, and the page stays where
+>   it was. Sections 2.5, 3.4 and the `holdProject` of section 7 are replaced by this. A browser tab
+>   gets no rule at all.
+> - **The address carries one key**, `?project=<endpointId>:<projectId>`, or `?start=1` for a window
+>   on the start screen (`state/window-target.ts`). A bare address is the cold start, which opens the
+>   remembered project; the shell loads it only for the first window of a start with no session to
+>   restore. The page keeps the address in step with what it shows.
+> - **The window session is the package's** (`window-session.json` beside `window-state.json`), not
+>   the `windows.json` of 6.7.
+> - **No close handshake.** A closing window flushes on `pagehide` (the project client now sends a save
+>   still waiting on its clock; drawings and diagrams already did on `beforeunload`), and the daemon
+>   ends nothing on a dropped socket. The `onWillClose` of 4.3 was not built.
+> - **Shared storage** reads again the endpoints, the settings, the theme, the chat defaults and the
+>   folded sidebar projects on the `storage` event (`state/shared-storage.ts`). The endpoint blob was
+>   not split; a reload keeps the page's own active machine instead.
+> - **The ways in**: New Window is `Cmd+Shift+N` (`Ctrl+Shift+N` off macOS), in the File menu and the
+>   palette. Move to New Window is in the File menu, the palette, the project switcher and the
+>   sidebar's project rows. Open in New Window is in the switcher, the start screen and the sidebar,
+>   and a Cmd-click (Ctrl-click) on a project in the switcher or on the start screen does the same.
+
 State of the working tree on 2026-09-11, `4c5d417`, with only `.ruimte/project.json` modified. Every
 path is relative to `/Users/bas/Development/Projects/ruimte`. Line numbers are from the working
 tree. Nothing here is implemented; this is the document an implementation agent executes.

@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ActionInput } from '@ruimte/actions';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
+import { AppWindow, ChevronDown, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
-import { openProjectAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
+import { openProjectClickAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { closingProject } from '@/project/open';
+import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectSettingsDialog, type ProjectSettingsSubject } from '@/shell/ProjectSettingsDialog';
@@ -27,6 +28,8 @@ interface ProjectRowProps {
     showMachine: boolean;
     actions?: {
         platform: string | null;
+        /* The project this window shows, which moves to a new window rather than opening in one. */
+        current: boolean;
         onSettings(): void;
         onClose(): void;
     };
@@ -49,7 +52,7 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
         <Menu.Item
             className={clsx('min-w-0 flex-1', (!summary.available || !row.connected) && 'opacity-50')}
             disabled={!summary.available}
-            onClick={() => openProjectAction(row.endpointId, summary.projectId)}
+            onClick={(event) => openProjectClickAction(event, row.endpointId, summary.projectId)}
         >
             <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} />
             <span className="min-w-0 truncate">{summary.name}</span>
@@ -92,6 +95,14 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
                     {summary.folder && (
                         <Menu.Item onClick={() => void reveal()}>
                             <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(actions.platform) })}
+                        </Menu.Item>
+                    )}
+                    {canOpenWindows() && (
+                        <Menu.Item
+                            disabled={!actions.current && !summary.available}
+                            onClick={() => (actions.current ? void moveToNewWindow() : openInNewWindow(row.endpointId, summary.projectId))}
+                        >
+                            <Icon icon={AppWindow} size={14} /> {t(actions.current ? 'projectMenu.moveToNewWindow' : 'projectMenu.openInNewWindow')}
                         </Menu.Item>
                     )}
                     <Menu.Item onClick={actions.onSettings}>
@@ -248,6 +259,7 @@ export function ProjectMenu() {
                             showMachine={showMachine}
                             actions={{
                                 platform: servers[row.endpointId]?.platform ?? null,
+                                current: isCurrent(row),
                                 onSettings: () => openSettings(row),
                                 onClose: () => void askClose(row)
                             }}

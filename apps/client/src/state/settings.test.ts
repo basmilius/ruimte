@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
-import { codeThemesOf, iceServersFrom, settingsFrom, type KeepAwakeMode, type Settings } from './settings';
+import { codeThemesOf, iceServersFrom, settingsFrom, useSettings, type KeepAwakeMode, type Settings } from './settings';
 
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
@@ -216,5 +216,22 @@ describe('sidebar scope', () => {
         expect(settingsFrom({ sidebarScope: 'all-open' }).sidebarScope).toBe('all-open');
         expect(settingsFrom({ sidebarScope: true as unknown as 'current' }).sidebarScope).toBe('current');
         expect(settingsFrom({ sidebarScope: 'all' as 'current' }).sidebarScope).toBe('current');
+    });
+});
+
+describe('a setting another window changed', () => {
+    test('is read again, and every surface that reads the version sees it moved', () => {
+        const items = new Map<string, string>([['ruimte.settings', JSON.stringify({ keepAwake: 'always', agentsShowViews: true })]]);
+        const before = globalThis.localStorage;
+        globalThis.localStorage = { getItem: (key: string) => items.get(key) ?? null } as Storage;
+        try {
+            const version = useSettings.getState().version;
+            useSettings.getState().reload();
+            expect(useSettings.getState().keepAwake).toBe('always');
+            expect(useSettings.getState().agentsShowViews).toBe(true);
+            expect(useSettings.getState().version).toBe(version + 1);
+        } finally {
+            globalThis.localStorage = before;
+        }
     });
 });

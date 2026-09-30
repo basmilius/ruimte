@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { Reachability } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
 
-const STORAGE_KEY = 'ruimte.endpoints';
+export const ENDPOINTS_STORAGE_KEY = 'ruimte.endpoints';
 // Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with; version 3 pins its key.
 const STORAGE_VERSION = 3;
 export const LOCAL_ENDPOINT_ID = 'local';
@@ -74,6 +74,11 @@ interface EndpointsStore {
     add(endpoint: Endpoint): void;
     remove(id: string): void;
     setActive(id: string): void;
+    /*
+     * Reads the rows another window wrote. The active one stays this window's own, and follows its
+     * row onto the daemon's id when the other window moved it there.
+     */
+    reload(): void;
     setLabel(id: string, label: string): void;
     learnDaemonId(id: string, daemonId: string): void;
     /* Trust on first use: the key is written once and never overwritten, so a later answer cannot replace it. */
@@ -136,7 +141,7 @@ export const storedLocalDirect = (raw: string | null): boolean => {
 const persist = (state: { endpoints: Endpoint[]; activeId: string }): void => {
     try {
         localStorage.setItem(
-            STORAGE_KEY,
+            ENDPOINTS_STORAGE_KEY,
             JSON.stringify({
                 version: STORAGE_VERSION,
                 endpoints: state.endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID),
@@ -153,7 +158,7 @@ const read = (): { endpoints: Endpoint[]; activeId: string } => {
     const local = localEndpoint();
     let raw: string | null = null;
     try {
-        raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY);
+        raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(ENDPOINTS_STORAGE_KEY);
     } catch {
         // Storage that refuses leaves this client with the daemon that served it.
     }
@@ -197,6 +202,24 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
         }
         set({ activeId: id });
         persist({ endpoints: get().endpoints, activeId: id });
+    },
+    reload() {
+        const stored = read();
+        const before = get();
+        // The page's own row knows what it learned this session, and only the Direct switch is kept in storage.
+        const ownLocal = before.endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID);
+        const endpoints = stored.endpoints.map((endpoint) => {
+            if (endpoint.id !== LOCAL_ENDPOINT_ID || !ownLocal) {
+                return endpoint;
+            }
+            const { direct: _direct, ...local } = ownLocal;
+            return endpoint.direct === true ? { ...local, direct: true } : local;
+        });
+        const known = (id: string | null | undefined): id is string => typeof id === 'string' && endpoints.some((endpoint) => endpoint.id === id);
+        const movedTo = before.endpoints.find((endpoint) => endpoint.id === before.activeId)?.daemonId;
+        const activeId = known(before.activeId) ? before.activeId : known(movedTo) ? movedTo : LOCAL_ENDPOINT_ID;
+        const mismatched = Object.fromEntries(Object.entries(before.mismatched).filter(([id]) => known(id)));
+        set({ endpoints, activeId, mismatched });
     },
     setLabel(id, label) {
         const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, label } : entry));

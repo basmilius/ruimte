@@ -17,6 +17,7 @@ import {
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
 import { canKeepAwake } from '@/desktop/bridge';
+import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
 import { openFocusedFind } from '@/find/hosts';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
 import { copyDiagram, exportDiagram, openDiagramJson } from '@/diagram/diagram-actions';
@@ -185,6 +186,12 @@ export const appCommands = (): Command[] => {
     /* The start screen is outside every project, so only the rows about the window are offered there. */
     const inWorkspace = windowWorkspace() !== null;
     return [
+        ...(canOpenWindows()
+            ? [{ id: 'window-new', label: i18next.t('shell:palette.commands.newWindow'), shortcut: APP_SHORTCUTS.newWindow, run: () => openNewWindow() }]
+            : []),
+        ...(inWorkspace && canMoveToNewWindow()
+            ? [{ id: 'window-move', label: i18next.t('shell:palette.commands.moveToNewWindow'), run: () => void moveToNewWindow() }]
+            : []),
         { id: 'open-folder', label: i18next.t('shell:palette.commands.openFolder'), run: () => useUi.getState().openFolderBrowser() },
         ...(folder
             ? [

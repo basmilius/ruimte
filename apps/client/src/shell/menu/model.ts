@@ -71,6 +71,8 @@ export interface MenuContext {
     keepAwake: KeepAwakeMode | null;
     /* The settings dialog is up, where Find searches the settings instead. */
     settingsOpen: boolean;
+    /* The shell opens windows of its own, a window per project. */
+    windows: boolean;
 }
 
 type CommandId = MenuActionId | PaletteId;
@@ -214,6 +216,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
         id: 'file',
         label: t('file'),
         items: [
+            ...only(context.windows, command('window-new', t('newWindow'), { shortcut: APP_SHORTCUTS.newWindow }), separator),
             ...only(
                 workspace,
                 submenu('new-view', t('newView'), [
@@ -234,6 +237,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
             ...only(workspace && context.folder, command('reveal', t('reveal', { app: context.fileManager }))),
             ...only(workspace, command('project-settings', t('projectSettings'))),
             separator,
+            ...only(workspace && context.windows, command('window-move', t('moveToNewWindow'))),
             ...only(workspace || desktop, close),
             ...only(
                 workspace,

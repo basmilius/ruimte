@@ -204,11 +204,18 @@ export class ProjectClient {
         const host = options.window === undefined ? (typeof window === 'undefined' ? null : window) : options.window;
         if (host) {
             /* localStorage is synchronous, so a page on its way out still keeps where it stood. A view
-               still waiting on its undo goes for good, and the save is on the wire before the page is gone. */
+               still waiting on its undo goes for good, and the save is on the wire before the page is
+               gone; so is an edit still waiting on the save clock, as when a window closes right after it. */
             const onLeave = (): void => {
                 this.flushLocal();
-                if (this.opened && this.documents.getState().trashed.length > 0) {
+                if (!this.opened) {
+                    return;
+                }
+                const trashed = this.documents.getState().trashed.length > 0;
+                if (trashed) {
                     this.documents.getState().purgeTrash();
+                }
+                if (trashed || this.saveTimer !== null || this.sink.getState().dirty) {
                     void this.flush().catch(() => undefined);
                 }
             };

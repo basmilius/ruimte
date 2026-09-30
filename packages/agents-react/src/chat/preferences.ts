@@ -114,6 +114,14 @@ export const useChatPreferences = create<ChatPreferences>(() => storage.read());
 
 export const readChatPreferences = (): ChatPreferences => useChatPreferences.getState();
 
+/* Where the remembered default is kept, which an app with more than one window of the same origin listens for. */
+export const CHAT_PREFERENCES_KEY = STORAGE_KEY;
+
+/* Reads the remembered default again, once another window of the same origin wrote it. */
+export const reloadChatPreferences = (): void => {
+    useChatPreferences.setState(storage.read(), true);
+};
+
 const write = (preferences: ChatPreferences): void => {
     const next = { ...preferences, changedAt: Date.now() };
     useChatPreferences.setState(next);

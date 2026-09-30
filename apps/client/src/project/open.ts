@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import type { ProjectClosingResult, ProjectSummary } from '@ruimte/contracts';
 import { useStore } from 'zustand';
+import { claimWindow } from '@/desktop/window-claim';
 import { ensureMachine } from '@/endpoint/reach';
 import { dropClientLocal } from '@/project/client-local';
 import { confirmLeavingConflict } from '@/project/leave-conflict';
@@ -13,6 +14,7 @@ import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useWindow, windowWorkspace } from '@/state/window';
+import { pageWindowTarget, type WindowTarget } from '@/state/window-target';
 import { transportFor } from '@/transport';
 import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/transport/connections';
 
@@ -34,7 +36,10 @@ export interface SwitchDeps {
     current(): Whereabouts | null;
     leave(): Promise<void>;
     enter(endpointId: string, request: OpenRequest): Promise<void>;
+    /* The start screen, which lets go of the project the window had with the shell as well. */
     toStart(): void;
+    /* Asks the shell for this window to show a project (`claimWindow`); false while another window has it. */
+    claim(project: Whereabouts | null): Promise<boolean>;
 }
 
 const REAL_DEPS: SwitchDeps = {
@@ -45,7 +50,8 @@ const REAL_DEPS: SwitchDeps = {
     },
     leave: leaveWorkspace,
     enter: enterWorkspace,
-    toStart: showStart
+    toStart: showStart,
+    claim: (project) => claimWindow(project)
 };
 
 const requestOf = (plan: SwitchPlan): OpenRequest => {
@@ -60,12 +66,43 @@ const requestOf = (plan: SwitchPlan): OpenRequest => {
 /*
  * The steps of one switch. The machine is reached before anything moves, since no machine keeps a
  * link while nothing is open on it; one that does not answer leaves the window where it was. Then
- * the open project is left (written and released) and the next one is built in a workspace of its
- * own. A run remembers what it left and what it entered, so going back undoes exactly that.
+ * the shell is asked for the project, since a project is in one window at a time: when another
+ * window has it, that one comes to the front and this one stays as it was. Then the open project
+ * is left (written and released) and the next one is built in a workspace of its own. A run
+ * remembers what it left and what it entered, so going back undoes exactly that.
  */
 export const switchRun = (plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): SwitchRun => {
     let left: Whereabouts | null = null;
     let entered = false;
+    /* What the window showed when it asked the shell for the next project, which going back asks for again. */
+    let claimedOver: { here: Whereabouts | null } | null = null;
+
+    const back = async (): Promise<void> => {
+        if (entered) {
+            await deps.leave();
+        }
+        if (left === null) {
+            if (entered) {
+                deps.toStart();
+            } else if (claimedOver !== null) {
+                await deps.claim(claimedOver.here);
+            }
+            return;
+        }
+        try {
+            // Another window may have taken the project up while this one was on its way elsewhere.
+            if (!(await deps.claim(left))) {
+                deps.toStart();
+                return;
+            }
+            await deps.ensure(left.endpointId, new AbortController().signal);
+            await deps.enter(left.endpointId, { projectId: left.projectId });
+        } catch {
+            // The project that was open cannot come back, and a window never shows a workspace without one.
+            deps.toStart();
+        }
+    };
+
     return {
         async steps({ signal, opening }) {
             const id = await deps.ensure(plan.endpointId, signal);
@@ -77,6 +114,15 @@ export const switchRun = (plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): Switc
             if (plan.kind === 'project' && here?.endpointId === id && here.projectId === plan.projectId) {
                 return;
             }
+            if (plan.kind === 'project') {
+                if (!(await deps.claim({ endpointId: id, projectId: plan.projectId }))) {
+                    return;
+                }
+                claimedOver = { here };
+            }
+            if (signal.aborted) {
+                return;
+            }
             if (here) {
                 await deps.leave();
                 left = here;
@@ -86,25 +132,15 @@ export const switchRun = (plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): Switc
             }
             await deps.enter(id, requestOf(plan));
             entered = true;
+            // A folder names its project only once it is open, and that project may be another window's.
+            const opened = plan.kind === 'folder' ? deps.current() : null;
+            if (opened !== null && !(await deps.claim(opened))) {
+                await back();
+                entered = false;
+                left = null;
+            }
         },
-        async back() {
-            if (entered) {
-                await deps.leave();
-            }
-            if (left === null) {
-                if (entered) {
-                    deps.toStart();
-                }
-                return;
-            }
-            try {
-                await deps.ensure(left.endpointId, new AbortController().signal);
-                await deps.enter(left.endpointId, { projectId: left.projectId });
-            } catch {
-                // The project that was open cannot come back, and a window never shows a workspace without one.
-                deps.toStart();
-            }
-        }
+        back
     };
 };
 
@@ -216,27 +252,33 @@ export const deleteProject = async (endpointId: string, projectId: string, remov
 };
 
 /*
- * The cold start: the last project the window had open, through the same switch as any other, so a
- * machine that takes a while reads as waiting and one that does not answer says why. Anything else
- * (nothing remembered, a machine this client no longer knows, the idle row of the web client) is
- * the start screen straight away.
+ * The first thing a window opens, through the same switch as any other, so a machine that takes a
+ * while reads as waiting and one that does not answer says why. A window the shell opened on a
+ * project opens that one, and one it opened on the start screen stays there. A bare address is the
+ * cold start: the last project the window had open. Anything else (nothing remembered, a machine
+ * this client no longer knows, the idle row of the web client) is the start screen straight away.
  */
 export const bootWindow = async (
     storage: LastProjectStorage | null = browserStorage(),
     open: (endpointId: string, projectId: string) => Promise<SwitchOutcome> = openProject,
-    local = hasLocalMachine()
+    local = hasLocalMachine(),
+    target: WindowTarget = pageWindowTarget()
 ): Promise<SwitchOutcome | null> => {
-    const last = readLastProject(storage);
+    const wanted = target.kind === 'project' ? target : target.kind === 'last' ? readLastProject(storage) : null;
     const known =
-        last !== null && isRealMachine(last.endpointId, local) && useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === last.endpointId);
+        wanted !== null && isRealMachine(wanted.endpointId, local) && useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === wanted.endpointId);
     try {
         if (!known) {
             return null;
         }
-        const outcome = await open(last.endpointId, last.projectId);
+        const outcome = await open(wanted.endpointId, wanted.projectId);
         if (outcome === 'failed') {
             const state = projectSwitch.state;
-            useWindow.getState().setBootFailure({ ...last, reason: state.kind === 'failed' ? state.reason : i18next.t('project:error.openFailed') });
+            useWindow.getState().setBootFailure({
+                endpointId: wanted.endpointId,
+                projectId: wanted.projectId,
+                reason: state.kind === 'failed' ? state.reason : i18next.t('project:error.openFailed')
+            });
         }
         return outcome;
     } finally {
