@@ -158,7 +158,9 @@ export const scanSkillRoots = async (roots: SkillRoot[]): Promise<ChatSkill[]> =
         } catch {
             continue;
         }
-        const skills = await Promise.all(entries.filter((entry) => entry.isDirectory()).map((entry) => readSkill(root, entry.name)));
+        // A skill manager links each skill in from a shared folder; a link to anything but a skill folder reads as no skill.
+        const folders = entries.filter((entry) => entry.isDirectory() || entry.isSymbolicLink());
+        const skills = await Promise.all(folders.map((entry) => readSkill(root, entry.name)));
         for (const skill of skills) {
             if (skill && !found.has(skill.name)) {
                 found.set(skill.name, skill);

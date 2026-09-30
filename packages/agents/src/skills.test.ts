@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -25,6 +25,8 @@ beforeAll(async () => {
     await writeSkill(join(project, '.claude', 'skills'), 'deploy', '---\nname: deploy\ndescription: Ship it.\n---\n');
     await writeSkill(join(home, '.agents', 'skills'), 'oklch', '---\nname: oklch\ndescription: Colors.\n---\n');
     await writeSkill(join(project, '.agents', 'skills'), 'codex-only', '---\nname: codex-only\ndescription: For Codex.\n---\n');
+    await writeSkill(join(home, 'shared'), 'linked', '---\nname: linked\ndescription: Linked in.\n---\n');
+    await symlink(join(home, 'shared', 'linked'), join(home, '.claude', 'skills', 'linked'));
 
     const install = join(home, '.claude', 'plugins', 'cache', 'frontend-design');
     await writeSkill(join(install, 'skills'), 'frontend-design', '---\nname: frontend-design\ndescription: Visual design.\n---\n');
@@ -57,10 +59,15 @@ describe('parseFrontmatter', () => {
 describe('discoverSkills', () => {
     test('Claude sees the user folder, the project folder and the plugins', async () => {
         const skills = await discoverSkills('claude', join(project, 'src'), { home });
-        expect(skills.map((skill) => skill.name)).toEqual(['deploy', 'folded', 'frontend-design:frontend-design', 'nameless', 'unslop']);
+        expect(skills.map((skill) => skill.name)).toEqual(['deploy', 'folded', 'frontend-design:frontend-design', 'linked', 'nameless', 'unslop']);
         expect(skills.find((skill) => skill.name === 'deploy')?.source).toBe('project');
         expect(skills.find((skill) => skill.name === 'unslop')?.source).toBe('user');
         expect(skills.find((skill) => skill.name === 'frontend-design:frontend-design')?.source).toBe('plugin');
+    });
+
+    test('a skill folder linked in from elsewhere is a user skill', async () => {
+        const skills = await discoverSkills('claude', project, { home });
+        expect(skills.find((skill) => skill.name === 'linked')?.source).toBe('user');
     });
 
     test('a folded description comes back as one line', async () => {
