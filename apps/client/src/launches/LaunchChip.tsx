@@ -12,11 +12,7 @@ import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launche
 import { useProjectRepos } from '@/state/git-repos';
 import { useUi } from '@/state/ui';
 
-/*
- * The launches of the project on screen: one button, sized like the icon buttons beside it, that
- * opens a menu with all of them. The dot on it is the worst state among them. It sits in the application's bar and not in
- * a view's, since a launch belongs to the project.
- */
+/* Launches belong to the project, so the button lives in the application bar. */
 export function LaunchChip() {
     const { t } = useTranslation('launches');
     const anchor = useRef<HTMLDivElement>(null);
@@ -44,7 +40,9 @@ export function LaunchChip() {
                 >
                     <span className="relative flex">
                         <Icon icon={Play} size={16} />
-                        {view !== null && <LaunchDot view={view} className="pointer-events-none absolute -top-0.5 -right-1" />}
+                        {view !== null && view.phase !== 'idle' && view.phase !== 'held' && (
+                            <LaunchDot view={view} className="pointer-events-none absolute -top-0.5 -right-1" />
+                        )}
                     </span>
                     <Icon icon={ChevronDown} size={12} />
                 </IconButton>
