@@ -598,6 +598,8 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
             chooseSkill(chosen.name);
             return;
         }
+        // Whoever sends wants to see what comes back, wherever they were reading.
+        scrollTimelineToEnd(chatId, 'instant');
         if (commandQuery !== null && chosen && !chosen.local) {
             onSend(`/${chosen.name}`, {});
             clearDraft();
@@ -1075,7 +1077,10 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                         <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
                             {info.queuePaused === true && <p className="px-1.5 text-xs text-text-muted">{t('composer.queue.paused')}</p>}
                             {queue.map((message) => {
-                                const sendNow = (): void => void actions.sendNow(chatId, message.id).catch(() => undefined);
+                                const sendNow = (): void => {
+                                    scrollTimelineToEnd(chatId, 'instant');
+                                    void actions.sendNow(chatId, message.id).catch(() => undefined);
+                                };
                                 const unqueue = (): void => void actions.unqueue(chatId, message.id).catch(() => undefined);
                                 const edit = (): void => void takeBack(message);
                                 return (

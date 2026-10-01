@@ -53,11 +53,11 @@ export const subscribeTimelineEnd = (listener: () => void): (() => void) => {
 /* A thread nobody has scrolled is at its end, so the button stays away until there is a way back. */
 export const timelineAtEnd = (chatId: string): boolean => ends.get(chatId) ?? true;
 
-export const scrollTimelineToEnd = (chatId: string): void => {
+export const scrollTimelineToEnd = (chatId: string, behavior: ScrollBehavior = 'smooth'): void => {
     const scroller = scrollers.get(chatId);
     if (scroller) {
         scroller.follow(true);
-        scroller.element.scrollTo({ top: scroller.element.scrollHeight, behavior: 'smooth' });
+        scroller.element.scrollTo({ top: scroller.element.scrollHeight, behavior });
     }
 };
 
