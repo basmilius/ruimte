@@ -186,3 +186,18 @@ test('the sidebar request returns open projects without changing the registry', 
     expect(result.projects.find((project) => project.summary.projectId === projectId)?.views?.map((view) => view.name)).toEqual(['Main', 'Notes']);
     expect(await store.list()).toEqual(before);
 });
+
+test('a new chat reaches a client that has the chats project open', async () => {
+    const clients = twoClients();
+    const first = await request<{ summary: { projectId: string } }>(clients.a, 'project.newChat', {});
+    await request(clients.b, 'project.open', { projectId: first.summary.projectId });
+    clients.b.channel.frames.length = 0;
+
+    const { viewId } = await request<{ viewId: string }>(clients.a, 'project.newChat', {});
+
+    expect(
+        changesIn(clients.b.channel)
+            .at(-1)
+            ?.views.map((view) => view.id)
+    ).toContain(viewId);
+});

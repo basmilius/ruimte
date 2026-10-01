@@ -176,6 +176,7 @@
     "project.setIcon",
     "project.setIdentity",
     "project.delete",
+    "project.newChat",
     "drawing.paths",
     "drawing.open",
     "drawing.save",

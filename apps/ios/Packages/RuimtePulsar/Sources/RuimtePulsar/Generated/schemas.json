@@ -20691,6 +20691,9 @@
                     "chosen",
                     "folder"
                   ]
+                },
+                "scratch": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -21399,6 +21402,9 @@
                 "chosen",
                 "folder"
               ]
+            },
+            "scratch": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -21708,6 +21714,9 @@
               "chosen",
               "folder"
             ]
+          },
+          "scratch": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -28184,6 +28193,9 @@
               "chosen",
               "folder"
             ]
+          },
+          "scratch": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -28681,6 +28693,9 @@
               "chosen",
               "folder"
             ]
+          },
+          "scratch": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -28720,6 +28735,319 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.project.newChat.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "provider": {
+        "type": "string",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot",
+          "apple"
+        ]
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      }
+    }
+  },
+  "request.project.newChat.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastOpenedAt": {
+            "type": "number"
+          },
+          "closedAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "icon": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "lucide"
+                  },
+                  "value": {
+                    "type": "string",
+                    "enum": [
+                      "box",
+                      "boxes",
+                      "package",
+                      "layers",
+                      "code",
+                      "terminal",
+                      "cpu",
+                      "circuit-board",
+                      "memory-stick",
+                      "pc-case",
+                      "laptop",
+                      "monitor",
+                      "smartphone",
+                      "tablet",
+                      "webcam",
+                      "printer",
+                      "hard-drive",
+                      "usb",
+                      "database",
+                      "server",
+                      "container",
+                      "network",
+                      "router",
+                      "ethernet-port",
+                      "cable",
+                      "plug",
+                      "wifi",
+                      "radio-tower",
+                      "satellite-dish",
+                      "cloud",
+                      "globe",
+                      "rocket",
+                      "zap",
+                      "flame",
+                      "sparkles",
+                      "star",
+                      "heart",
+                      "flag",
+                      "bookmark",
+                      "folder",
+                      "file-text",
+                      "book",
+                      "puzzle",
+                      "palette",
+                      "brush",
+                      "camera",
+                      "music",
+                      "video",
+                      "gamepad-2",
+                      "bot",
+                      "brain",
+                      "beaker",
+                      "wrench",
+                      "hammer",
+                      "shield",
+                      "key",
+                      "compass",
+                      "map",
+                      "leaf",
+                      "coffee",
+                      "pin",
+                      "target",
+                      "lightbulb",
+                      "archive",
+                      "inbox",
+                      "house",
+                      "briefcase",
+                      "code-xml",
+                      "braces",
+                      "square-terminal",
+                      "file-code",
+                      "binary",
+                      "regex",
+                      "variable",
+                      "blocks",
+                      "component",
+                      "git-branch",
+                      "git-merge",
+                      "git-pull-request",
+                      "git-fork",
+                      "bug",
+                      "test-tube-diagonal",
+                      "flask-conical",
+                      "workflow",
+                      "webhook",
+                      "bot-message-square",
+                      "brain-circuit",
+                      "wand-sparkles",
+                      "messages-square",
+                      "scan-eye",
+                      "audio-waveform",
+                      "app-window",
+                      "layout-dashboard",
+                      "layout-template",
+                      "panels-top-left",
+                      "mouse-pointer-click",
+                      "shopping-cart",
+                      "store",
+                      "mail",
+                      "server-cog",
+                      "cloud-cog",
+                      "gauge",
+                      "activity",
+                      "scroll-text",
+                      "bell",
+                      "lock",
+                      "fingerprint-pattern",
+                      "chart-line",
+                      "chart-column",
+                      "chart-pie",
+                      "table",
+                      "sheet",
+                      "calculator",
+                      "sigma",
+                      "atom",
+                      "dna",
+                      "telescope",
+                      "orbit",
+                      "microchip",
+                      "keyboard",
+                      "mouse",
+                      "headphones",
+                      "watch",
+                      "battery",
+                      "bluetooth",
+                      "thermometer",
+                      "pen-tool",
+                      "pencil-ruler",
+                      "shapes",
+                      "frame",
+                      "swatch-book",
+                      "type",
+                      "image",
+                      "film",
+                      "clapperboard",
+                      "mic",
+                      "notebook",
+                      "notebook-pen",
+                      "library-big",
+                      "newspaper",
+                      "graduation-cap",
+                      "languages",
+                      "quote",
+                      "presentation",
+                      "megaphone",
+                      "list-todo",
+                      "square-kanban",
+                      "clipboard-list",
+                      "calendar",
+                      "milestone",
+                      "trophy",
+                      "hourglass",
+                      "timer",
+                      "users",
+                      "handshake",
+                      "wallet",
+                      "sprout",
+                      "trees",
+                      "mountain",
+                      "sun",
+                      "moon",
+                      "plane",
+                      "ship",
+                      "anchor",
+                      "life-buoy",
+                      "pizza",
+                      "gift",
+                      "dumbbell",
+                      "bike",
+                      "paw-print"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "image"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value",
+                  "version"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "initial"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              }
+            ]
+          },
+          "nameSource": {
+            "type": "string",
+            "enum": [
+              "chosen",
+              "folder"
+            ]
+          },
+          "scratch": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectId",
+          "name",
+          "color",
+          "folder",
+          "lastOpenedAt",
+          "available",
+          "icon",
+          "nameSource"
+        ]
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "summary",
+      "viewId"
+    ]
   },
   "request.drawing.paths.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -47079,6 +47407,9 @@
               "chosen",
               "folder"
             ]
+          },
+          "scratch": {
+            "type": "boolean"
           }
         },
         "required": [

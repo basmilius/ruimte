@@ -22,6 +22,7 @@ import {
     type ProjectContent,
     type ProjectDocument,
     type ProjectIcon,
+    type ProjectIconChoice,
     type ProjectLocal,
     type ProjectNameSource,
     type ProjectOpenPayload,
@@ -69,6 +70,7 @@ import { errorText } from '../error-text.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
 import { Serializer } from '@ruimte/agents/serializer';
+import { scratchFolderOf } from './scratch-project.ts';
 
 type ProjectErrorCode =
     | 'project-not-found'
@@ -191,6 +193,7 @@ const diagramIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'di
  */
 export class ProjectStore {
     readonly home: string;
+    readonly scratchFolder: string;
     /* Every known project's last document, which outlives `release`: the sessions of a project keep running after a client lets go of it. */
     readonly index = new ProjectIndex();
     private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
@@ -221,6 +224,7 @@ export class ProjectStore {
 
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
+        this.scratchFolder = scratchFolderOf(home);
         this.seams = seams;
         this.writeIO = writeIO;
     }
@@ -388,7 +392,8 @@ export class ProjectStore {
             closedAt: entry.closedAt ?? null,
             available,
             icon,
-            nameSource: nameSourceOf(entry.name, entry.folder)
+            nameSource: nameSourceOf(entry.name, entry.folder),
+            ...(entry.folder === this.scratchFolder ? { scratch: true } : {})
         };
     }
 
@@ -517,6 +522,54 @@ export class ProjectStore {
             document: fromPortable(document, entry.folder),
             local: await this.readLocal(entry.projectId)
         };
+    }
+
+    /*
+     * The project in a folder the daemon owns, made from `seed` when the registry or the folder lacks
+     * it. A folder that went missing comes back under the project id it had. Nothing is opened or
+     * held: whoever wants it on screen opens it like any other project.
+     */
+    ensureProject(folder: string, seed: { name: string; icon: ProjectIconChoice }): Promise<ProjectSummary> {
+        return this.locked(async () => {
+            const entries = await this.loadRegistry();
+            const known = entries.find((candidate) => candidate.folder === folder);
+            if (known) {
+                await this.recover(known);
+                if (await exists(this.documentPath(known))) {
+                    return this.summarize(known);
+                }
+            }
+            await mkdir(folder, { recursive: true });
+            const entry: RegistryEntry = known ?? {
+                projectId: newId(),
+                name: seed.name,
+                color: DEFAULT_COLOR,
+                folder,
+                lastOpenedAt: Date.now(),
+                closedAt: null,
+                icon: seed.icon
+            };
+            const path = this.documentPath(entry);
+            const loaded = await this.loadFiles(path, entry, null);
+            const content: ProjectContent = { name: entry.name, color: entry.color, icon: entry.icon ?? seed.icon, views: [] };
+            const written = await this.writeFiles(path, toPortable(content, folder), [], loaded.rev);
+            await writeGitignoreIfMissing(path);
+            const state = this.open.get(entry.projectId);
+            if (state) {
+                state.lastText = written.text;
+                state.lastPrivate = written.private;
+                state.rev = loaded.rev;
+                state.shared = [];
+                state.drawingIds = new Set();
+                state.diagramIds = new Set();
+            }
+            this.index.set(entry.projectId, folder, content);
+            if (!known) {
+                await this.saveRegistry([...entries, entry]);
+                this.publish(entry);
+            }
+            return this.summarize(entry);
+        });
     }
 
     /* `origin` is the client that sent the save: it already holds the document, and every other client is told. */

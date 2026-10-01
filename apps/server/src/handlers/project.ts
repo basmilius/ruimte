@@ -1,5 +1,6 @@
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import { newScratchChat } from '../projects/scratch-project.ts';
 
 export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectStore): void => {
     dispatcher.register('project.sidebar', () => translate(() => store.sidebar()));
@@ -42,6 +43,8 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
     dispatcher.register('project.setIcon', (payload) => translate(async () => ({ summary: await store.setIcon(payload) })));
 
     dispatcher.register('project.setIdentity', (payload) => translate(async () => ({ summary: await store.setIdentity(payload) })));
+
+    dispatcher.register('project.newChat', (payload) => translate(() => newScratchChat(store, payload)));
 
     dispatcher.register('project.delete', (payload) =>
         translate(async () => {

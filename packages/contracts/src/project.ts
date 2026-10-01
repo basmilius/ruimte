@@ -916,7 +916,10 @@ export const ProjectSummarySchema = z.object({
     available: z.boolean(),
     // The choice from the file, or what the folder declares, or the initial on the project color.
     icon: ProjectIconSchema,
-    nameSource: ProjectNameSourceSchema
+    nameSource: ProjectNameSourceSchema,
+    /* The one project per machine the daemon keeps for chats outside any project (`project.newChat`).
+       Its folder is the daemon's, so a client shows no path of it. Absent on every other project. */
+    scratch: z.boolean().optional()
 });
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 
@@ -954,6 +957,20 @@ export const ProjectSavePayloadSchema = z.object({
     shared: SharedViewIdsSchema
 });
 export type ProjectSavePayload = z.infer<typeof ProjectSavePayloadSchema>;
+
+/* A chat outside any project: a chat view in the machine's scratch project, made by the daemon so
+   every client holding that project sees it at once. */
+export const ProjectNewChatPayloadSchema = z.object({
+    provider: AgentKindSchema.optional(),
+    account: ProviderAccountIdSchema.optional()
+});
+export type ProjectNewChatPayload = z.infer<typeof ProjectNewChatPayloadSchema>;
+
+export const ProjectNewChatResultSchema = z.object({
+    summary: ProjectSummarySchema,
+    viewId: z.string().min(1)
+});
+export type ProjectNewChatResult = z.infer<typeof ProjectNewChatResultSchema>;
 
 export const ProjectSaveResultSchema = z.object({
     rev: z.number().int().nonnegative()
