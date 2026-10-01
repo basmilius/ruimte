@@ -66,11 +66,11 @@ export const BENCHMARK_MODELS: readonly BenchmarkSource[] = [
         provider: 'claude',
         legacy: false,
         efforts: [
-            { effort: 'low', id: null, name: null },
-            { effort: 'medium', id: null, name: null },
-            { effort: 'high', id: null, name: null },
-            { effort: 'xhigh', id: null, name: null },
-            { effort: 'max', id: null, name: null }
+            { effort: 'low', id: 'bbc2ffea-cf6b-43be-8c41-1769347e234d', name: 'Claude Sonnet 5.5 (Adaptive Reasoning, Low Effort, Default Fallback)' },
+            { effort: 'medium', id: '042e8a37-fcd0-40f4-8f41-99215fb68eda', name: 'Claude Sonnet 5.5 (Adaptive Reasoning, Medium Effort, Default Fallback)' },
+            { effort: 'high', id: '268525e2-f873-4178-bc07-e6a0ee1f002d', name: 'Claude Sonnet 5.5 (Adaptive Reasoning, High Effort, Default Fallback)' },
+            { effort: 'xhigh', id: '975aeaef-50bd-4a65-9c73-f1015adcd4d4', name: 'Claude Sonnet 5.5 (Adaptive Reasoning, Xhigh Effort, Default Fallback)' },
+            { effort: 'max', id: 'b171d979-5ec1-45de-b8b9-db1ee65e77ec', name: 'Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort, Default Fallback)' }
         ]
     },
     {
@@ -141,11 +141,11 @@ export const BENCHMARK_MODELS: readonly BenchmarkSource[] = [
         provider: 'codex',
         legacy: false,
         efforts: [
-            { effort: 'low', id: null, name: null },
-            { effort: 'medium', id: null, name: null },
-            { effort: 'high', id: null, name: null },
-            { effort: 'xhigh', id: null, name: null },
-            { effort: 'max', id: null, name: null }
+            { effort: 'low', id: 'e76e0fe5-93ca-4272-9359-2eb1740467d1', name: 'GPT-6.1 Sol (Low)' },
+            { effort: 'medium', id: 'a2e51d62-ea4e-4f15-8be0-be9dc1fb489d', name: 'GPT-6.1 Sol (Medium)' },
+            { effort: 'high', id: '3b84fee3-b70a-41bc-819e-5fbdef9a0042', name: 'GPT-6.1 Sol (High)' },
+            { effort: 'xhigh', id: '092a3b0e-c5c8-45dc-bf1b-53673c8ff352', name: 'GPT-6.1 Sol (Xhigh)' },
+            { effort: 'max', id: 'b25ac058-1e33-4c31-bbc9-a20c3ad0717a', name: 'GPT-6.1 Sol (Max)' }
         ]
     },
     {
