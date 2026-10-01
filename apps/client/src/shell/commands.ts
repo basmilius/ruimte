@@ -508,6 +508,11 @@ export const appCommands = (): Command[] => {
             run: () => useUi.getState().setUsageOpen(true)
         },
         {
+            id: 'models',
+            label: i18next.t('shell:menu.compareModels'),
+            run: () => useUi.getState().setModelsOpen(true)
+        },
+        {
             id: 'sidebar',
             label: i18next.t('shell:palette.commands.toggleSidebar'),
             shortcut: APP_SHORTCUTS.sidebar,

@@ -66,7 +66,6 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     'focus-down': focusTowards('down'),
     prompts: () => void focusPromptStack(),
     'release-notes': () => openReleaseNotes(null),
-    models: () => useUi.getState().setModelsOpen(true),
     'view-fork': withActiveView(({ view, forkTurn }) => {
         if (forkTurn !== null) {
             useUi.getState().setForkDialog({ chatId: view.id, turnId: forkTurn });
