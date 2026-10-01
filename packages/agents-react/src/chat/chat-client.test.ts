@@ -32,6 +32,8 @@ class FakeTransport implements ChatTransport {
     attachResult: ((payload: ChatRequestMap['chat.attach']['payload']) => Partial<ChatRequestMap['chat.attach']['result']>) | null = null;
     // What `chat.history` answers, or the error it fails with.
     history: ChatHistoryResult | ChatTransportError = { items: [], history: { start: 0, cursor: null } };
+    // A request the host turns down, with the error it answers.
+    refusals: Partial<Record<AgentRequestType, ChatTransportError>> = {};
     private readonly statusHandlers = new Set<(status: ChatTransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -39,6 +41,10 @@ class FakeTransport implements ChatTransport {
         this.calls.push({ type, payload });
         if (this.status !== 'open') {
             return Promise.reject(new ChatTransportError('not-connected', 'offline'));
+        }
+        const refusal = this.refusals[type];
+        if (refusal) {
+            return Promise.reject(refusal);
         }
         const chatId = (payload as { chatId?: string }).chatId ?? '';
         switch (type) {
@@ -280,6 +286,30 @@ describe('ChatClient', () => {
         expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', historyLimit: 60 });
         expect(sink.resets).toHaveLength(2);
         expect(sink.prepended).toEqual([]);
+    });
+
+    test('a chat pointed at another CLI before it spoke opens again from scratch and keeps its row until then', async () => {
+        const { transport, sink, client } = setup();
+        // As the host's log answers: a chat nothing happened in stands at seq 0, and so does the one made in its place.
+        transport.attachResult = (payload) => (payload.since === undefined ? { seq: 0 } : { items: [], seq: 0, events: [] });
+        await client.open('fresh', { provider: 'claude', cwd: '/tmp' });
+
+        await client.retarget('fresh', 'codex', { model: 'gpt-5.5', options: {} });
+
+        expect(transport.of('chat.create').at(-1)?.payload).toMatchObject({ chatId: 'fresh', provider: 'codex', cwd: '/tmp' });
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'fresh', historyLimit: 60 });
+        expect(sink.resets.map((reset) => reset.chatId)).toEqual(['fresh', 'fresh']);
+        expect(sink.forgotten).toEqual([]);
+        expect(client.isMounted('fresh')).toBe(true);
+    });
+
+    test('a chat that does not open again on the other CLI loses its row', async () => {
+        const { transport, sink, client } = setup();
+        await client.open('fresh', { provider: 'claude' });
+        transport.refusals['chat.create'] = new ChatTransportError('account-missing', 'No account');
+
+        await expect(client.retarget('fresh', 'codex', { model: 'gpt-5.5', options: {} })).rejects.toThrow('No account');
+        expect(sink.forgotten).toEqual(['fresh']);
     });
 
     test('letting go of the machine detaches every chat and kills none', async () => {

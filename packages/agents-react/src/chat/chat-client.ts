@@ -121,18 +121,24 @@ export class ChatClient {
     /*
      * Points a chat that has not spoken yet at another CLI. The host fixes a chat's provider when
      * it registers the chat, so the only way over is to drop the empty one and register it again.
+     * The row stays until the attach of the new one replaces it, so a view keeps what it drew.
      */
     async retarget(chatId: string, provider: AgentKind, selection: ModelSelection): Promise<void> {
         const entry = this.mounted.get(chatId);
         if (!entry) {
             return;
         }
-        // The account belonged to the CLI the chat leaves.
-        const { attached: _attached, account: _account, ...options } = entry;
+        // The account belonged to the CLI the chat leaves, and the seq to its stream: the new chat's
+        // stream starts over, so offering it the old seq would read as nothing missed and reset nothing.
+        const { attached: _attached, account: _account, seq: _seq, ...options } = entry;
         this.mounted.delete(chatId);
         await this.transport.request('chat.kill', { chatId });
-        this.sink.forget(chatId);
-        await this.open(chatId, { ...options, provider, selection });
+        try {
+            await this.open(chatId, { ...options, provider, selection });
+        } catch (e) {
+            this.sink.forget(chatId);
+            throw e;
+        }
     }
 
     /*

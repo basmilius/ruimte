@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
@@ -32,6 +32,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     const status = useTransportStatus();
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
+    const switched = useRef<Promise<void>>(Promise.resolve());
     const { trail } = useSubagentTrail(id);
     const shown = trail.at(-1);
 
@@ -62,9 +63,12 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         };
     }, [id, generation]);
 
+    // The chat is gone on the machine until it opened again on the other CLI, so a send or another switch meanwhile waits for that.
     const retarget = (provider: AgentKind, selection: ModelSelection): void => {
-        performAsPerson('chat.setProvider', { chatId: id, provider, model: null, selection }).catch((e: unknown) =>
-            setFailure(e instanceof Error ? e.message : t('chat.retargetFailed'))
+        switched.current = switched.current.then(() =>
+            performAsPerson('chat.setProvider', { chatId: id, provider, model: null, selection })
+                .then(() => undefined)
+                .catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.retargetFailed')))
         );
     };
 
@@ -76,8 +80,10 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         if (host && !host.titleSource && title) {
             renameHost(id, title, 'auto');
         }
-        performAsPerson('chat.send', { chatId: id, prompt: text, ...extras }).catch((e: unknown) =>
-            setFailure(e instanceof Error ? e.message : t('chat.sendFailed'))
+        void switched.current.then(() =>
+            performAsPerson('chat.send', { chatId: id, prompt: text, ...extras }).catch((e: unknown) =>
+                setFailure(e instanceof Error ? e.message : t('chat.sendFailed'))
+            )
         );
     };
 
