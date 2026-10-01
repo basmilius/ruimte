@@ -48,7 +48,8 @@
         "needs-you": "Wacht op jou",
         "idle": "Inactief",
         "error": "Fout",
-        "exited": "Sessie beëindigd"
+        "exited": "Sessie beëindigd",
+        "delegating": "Sub-agents bezig"
     },
     "node": {
         "failed": "Deze node kon niet worden getekend",

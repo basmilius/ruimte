@@ -6,6 +6,7 @@ import {
     buildSidebar,
     buildSidebarEverywhere,
     heaviestStatus,
+    heaviestWork,
     isSessionKind,
     rowAfterArrow,
     rowOrder,
@@ -147,6 +148,24 @@ describe('heaviestStatus', () => {
         expect(heaviestStatus([node('a', 'running'), node('b', 'error')])).toBe('error');
         expect(heaviestStatus([node('a', 'idle'), node('b', null)])).toBe('idle');
         expect(heaviestStatus([node('a')])).toBeNull();
+    });
+});
+
+describe('heaviestWork', () => {
+    test('a turn beats sub-agents that go on alone', () => {
+        expect(
+            heaviestWork([
+                { ...node('a'), work: 'delegating' },
+                { ...node('b'), work: 'turn' }
+            ])
+        ).toBe('turn');
+        expect(
+            heaviestWork([
+                { ...node('a'), work: null },
+                { ...node('b'), work: 'delegating' }
+            ])
+        ).toBe('delegating');
+        expect(heaviestWork([node('a'), { ...node('b'), work: null }])).toBeNull();
     });
 });
 

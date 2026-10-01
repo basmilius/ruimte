@@ -48,7 +48,8 @@
         "needs-you": "Needs you",
         "idle": "Idle",
         "error": "Error",
-        "exited": "Session ended"
+        "exited": "Session ended",
+        "delegating": "Sub-agents working"
     },
     "node": {
         "failed": "This node failed to render",

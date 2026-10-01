@@ -1104,8 +1104,8 @@ export class ChatCore {
      * rest on connect.
      */
     private announceStatus(chatId: string, info: ChatInfo): void {
-        // A limit and the resume owed after it are what a header shows of an idle chat, so they count as a change too.
-        const said = JSON.stringify([info.status, info.limit ?? null, info.resumeAt ?? null, info.resumeAtReset ?? null]);
+        // A limit, the resume owed after it and subagents still at work are what a header shows of an idle chat, so they count as a change too.
+        const said = JSON.stringify([info.status, info.limit ?? null, info.resumeAt ?? null, info.resumeAtReset ?? null, info.delegating ?? false]);
         if (this.announced.get(chatId) === said) {
             return;
         }

@@ -9220,6 +9220,9 @@
           ]
         }
       },
+      "delegating": {
+        "type": "boolean"
+      },
       "usage": {
         "type": "object",
         "properties": {
@@ -10706,6 +10709,9 @@
                 "startedAt"
               ]
             }
+          },
+          "delegating": {
+            "type": "boolean"
           },
           "usage": {
             "type": "object",
@@ -14254,6 +14260,9 @@
                         ]
                       }
                     },
+                    "delegating": {
+                      "type": "boolean"
+                    },
                     "usage": {
                       "type": "object",
                       "properties": {
@@ -14637,6 +14646,9 @@
                           "startedAt"
                         ]
                       }
+                    },
+                    "delegating": {
+                      "type": "boolean"
                     },
                     "usage": {
                       "type": "object",
@@ -16483,6 +16495,9 @@
           ]
         }
       },
+      "delegating": {
+        "type": "boolean"
+      },
       "usage": {
         "type": "object",
         "properties": {
@@ -17159,6 +17174,9 @@
               ]
             }
           },
+          "delegating": {
+            "type": "boolean"
+          },
           "usage": {
             "type": "object",
             "properties": {
@@ -17655,6 +17673,9 @@
                     "startedAt"
                   ]
                 }
+              },
+              "delegating": {
+                "type": "boolean"
               },
               "usage": {
                 "type": "object",
@@ -38942,6 +38963,9 @@
                 ]
               }
             },
+            "delegating": {
+              "type": "boolean"
+            },
             "usage": {
               "type": "object",
               "properties": {
@@ -41953,6 +41977,9 @@
                       ]
                     }
                   },
+                  "delegating": {
+                    "type": "boolean"
+                  },
                   "usage": {
                     "type": "object",
                     "properties": {
@@ -42336,6 +42363,9 @@
                         "startedAt"
                       ]
                     }
+                  },
+                  "delegating": {
+                    "type": "boolean"
                   },
                   "usage": {
                     "type": "object",
@@ -43770,6 +43800,9 @@
                 "startedAt"
               ]
             }
+          },
+          "delegating": {
+            "type": "boolean"
           },
           "usage": {
             "type": "object",

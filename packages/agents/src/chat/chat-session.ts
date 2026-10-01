@@ -465,6 +465,7 @@ export class ChatSession {
                 queue: [],
                 queuePaused: false,
                 background: [],
+                delegating: undefined,
                 effectiveRuntimeMode: undefined,
                 permissionMode: undefined,
                 slashCommands: [],
@@ -1577,9 +1578,22 @@ export class ChatSession {
     }
 
     private emit(events: ChatEvent[]): void {
-        for (const event of events) {
+        const delegating = this.delegatingChange(events);
+        for (const event of delegating === null ? events : [...events, delegating]) {
             this.options.emit(event);
         }
+    }
+
+    /* Said on the info as well as by the rows, since a client with the thread closed sees only the info. */
+    private delegatingChange(events: ChatEvent[]): ChatEvent | null {
+        if (!events.some((event) => event.type === 'item' && isBackgroundWork(event.item))) {
+            return null;
+        }
+        const delegating = runningInBackground(this.thread.list()).length > 0;
+        if (delegating === (this.thread.info.delegating ?? false)) {
+            return null;
+        }
+        return this.thread.patchInfo({ delegating: delegating || undefined });
     }
 }
 

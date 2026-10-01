@@ -159,6 +159,8 @@ export const ChatInfoSchema = z.object({
     queue: z.array(ChatQueuedMessageSchema).optional(),
     queuePaused: z.boolean().optional(),
     background: z.array(ChatBackgroundTaskSchema).optional(),
+    // Whether a subagent or workflow of the CLI's own still runs in the background; absent reads as none.
+    delegating: z.boolean().optional(),
     usage: ChatUsageSchema,
     // The name the CLI gave the session, when it gives one; a node that nobody named takes it.
     suggestedTitle: SuggestedTitleSchema.optional(),

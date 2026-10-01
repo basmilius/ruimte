@@ -435,6 +435,31 @@ describe('background work recovered from a stored chat', () => {
     });
 });
 
+describe('subagents still at work after the turn', () => {
+    test('say so on the info until the last one settles, once per change', async () => {
+        const infos: ChatInfo[] = [];
+        const run = rig({ emit: (event) => (event.type === 'info' ? infos.push(event.info) : undefined) });
+        run.session.send('go');
+        await flush();
+        run.event({
+            type: 'tool.started',
+            ref: 'toolu_agent',
+            name: 'Agent',
+            input: { description: 'Scan', subagent_type: 'Explore', prompt: 'look around', run_in_background: true },
+            parentRef: null
+        });
+        run.event({ type: 'task.started', ref: 'toolu_agent', description: 'Scan', subagentType: 'Explore', prompt: null, background: true });
+        run.event({ type: 'turn.done', state: 'done', costUsd: 0 });
+        expect(run.session.info).toMatchObject({ status: 'idle', delegating: true });
+        const said = infos.length;
+        run.event({ type: 'task.progress', ref: 'toolu_agent', summary: 'Running Grep', lastTool: 'Grep', usage: null });
+        expect(infos).toHaveLength(said);
+        run.event({ type: 'task.done', ref: 'toolu_agent', summary: 'Found it', ok: true });
+        expect(run.session.info.delegating).toBeUndefined();
+        await run.session.dispose();
+    });
+});
+
 describe('provider acceptance of a wake', () => {
     test('persists before sending and clears delivery only for its own acknowledgement', async () => {
         const saved = Promise.withResolvers<void>();

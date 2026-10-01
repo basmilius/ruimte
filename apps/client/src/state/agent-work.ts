@@ -14,20 +14,34 @@ export const sessionWorking = (session: SessionState | undefined): boolean => se
 /* The same question of a chat, which carries the status on its thread rather than on a session. */
 export const chatWorking = (chat: Pick<ChatState, 'info'> | undefined): boolean => chat?.info.status === 'running';
 
+/* A chat between turns whose CLI still runs subagents or a workflow in the background. Waiting on a person outranks it. */
+export const chatDelegating = (chat: Pick<ChatState, 'info'> | undefined): boolean => chat?.info.status === 'idle' && chat.info.delegating === true;
+
 /* Whether any agent is working, over every machine this window is watching. */
 export const agentsWorking = (sessions: SessionsByKey, chats: ChatStatuses): boolean =>
-    Object.values(sessions).some(sessionWorking) || Object.values(chats).some(chatWorking);
+    Object.values(sessions).some(sessionWorking) || Object.values(chats).some((chat) => chatWorking(chat) || chatDelegating(chat));
+
+/* A turn of the node's own agent, or only the subagents it left running, which a node draws in gray. */
+export type AgentWork = 'turn' | 'delegating';
 
 /*
- * Whether this node is the one with the working agent in it. Only a terminal and a chat can be,
+ * What the agent in this node is working on, if anything. Only a terminal and a chat can say,
  * since everything else on a canvas carries a status no CLI ever reported.
  */
-export const nodeWorking = (node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean => {
+export const nodeWork = (node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): AgentWork | null => {
     if (node.kind === 'terminal') {
-        return sessionWorking(sessions[endpointKey(endpointId, node.id)]);
+        return sessionWorking(sessions[endpointKey(endpointId, node.id)]) ? 'turn' : null;
     }
-    if (node.kind === 'chat') {
-        return chatWorking(chats[endpointKey(endpointId, node.id)]);
+    if (node.kind !== 'chat') {
+        return null;
     }
-    return false;
+    const chat = chats[endpointKey(endpointId, node.id)];
+    if (chatWorking(chat)) {
+        return 'turn';
+    }
+    return chatDelegating(chat) ? 'delegating' : null;
 };
+
+/* Whether this node has an agent at work in it, its own turn or only its subagents. */
+export const nodeWorking = (node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): boolean =>
+    nodeWork(node, sessions, chats, endpointId) !== null;

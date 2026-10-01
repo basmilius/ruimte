@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import type { SidebarTarget } from './sidebar-target';
+import type { AgentWork } from '@/state/agent-work';
 import type { ProjectSummary } from '@ruimte/contracts';
 import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
 
@@ -11,8 +12,8 @@ export interface SidebarNode {
     /* The CLI behind a chat or an agent terminal, whose mark the row wears instead of the kind's. */
     provider: AgentKind | null;
     status: AgentStatus | null;
-    /* An agent is in the middle of a turn, which `running` alone does not say of a terminal. Unknown for another project's rows. */
-    working?: boolean;
+    /* What its agent works on, which `running` alone does not say of a terminal. Unknown for another project's rows. */
+    work?: AgentWork | null;
     /* A chat with something typed and never sent. */
     draft: boolean;
     /* The machine warns about the processes of this node. */
@@ -129,6 +130,14 @@ export const heaviestStatus = (nodes: readonly SidebarNode[]): AgentStatus | nul
         }
         return heaviest === null || WEIGHT[node.status] > WEIGHT[heaviest] ? node.status : heaviest;
     }, null);
+
+/* A turn speaks for a folded canvas before sub-agents that go on alone. */
+export const heaviestWork = (nodes: readonly SidebarNode[]): AgentWork | null => {
+    if (nodes.some((node) => node.work === 'turn')) {
+        return 'turn';
+    }
+    return nodes.some((node) => node.work === 'delegating') ? 'delegating' : null;
+};
 
 /* Whether a node belongs in "Needs you": waiting, and not put aside for now. */
 export const waitsOnYou = (node: SidebarNode): boolean => node.status === 'needs-you' && !node.snoozedUntil;

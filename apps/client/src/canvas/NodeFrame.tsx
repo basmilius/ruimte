@@ -36,7 +36,8 @@ import { useUnseen } from '@/state/attention';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useOptionalConnection } from '@/transport/context';
 import { isNodeActive, maximizedNodeOf, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
-import { useNodeStatus, useNodeWorking } from '@/state/chats';
+import type { AgentWork } from '@/state/agent-work';
+import { useNodeStatus, useNodeWork } from '@/state/chats';
 import { ProcessAlertMark } from '@/processes/ProcessAlertMark';
 import { useNodeAlerts } from '@/processes/use-node-alerts';
 import { useHasContextLinks } from '@/context/sources';
@@ -97,7 +98,7 @@ const STATUS_CLASS: Record<AgentStatus, string> = {
     exited: 'bg-text-faint'
 };
 
-/* A node at rest carries no mark. Running is `WorkingMark`, and only while an agent works, since an attached shell reads running too. */
+/* A node at rest carries no mark. Work is `WorkingMark`, and only while an agent works, since an attached shell reads running too. */
 const STATUS_MARK: Partial<Record<AgentStatus, { icon: LucideIcon; className: string }>> = {
     'needs-you': { icon: Hand, className: 'text-status-needs-you' },
     error: { icon: CircleX, className: 'text-status-error' },
@@ -139,10 +140,10 @@ export function StatusDot({ status, className, plain = false }: { status: AgentS
     return <Tooltip label={label}>{dot}</Tooltip>;
 }
 
-function StatusMark({ status, working }: { status: AgentStatus; working: boolean }) {
+function StatusMark({ status, work }: { status: AgentStatus; work: AgentWork | null }) {
     const { t } = useTranslation('canvas');
-    if (status === 'running') {
-        return working ? <WorkingMark /> : null;
+    if (status === 'running' || status === 'idle') {
+        return work === null ? null : <WorkingMark delegating={work === 'delegating'} />;
     }
     const mark = STATUS_MARK[status];
     if (mark === undefined) {
@@ -259,7 +260,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
     const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
     const status = useNodeStatus(node);
-    const working = useNodeWorking(node);
+    const work = useNodeWork(node);
     const endpointId = useEndpointId();
     const unseen = useUnseen(id);
     const processAlerts = useNodeAlerts(id);
@@ -405,7 +406,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                             <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>
                         </Tooltip>
                     )}
-                    {status && !renaming && <StatusMark status={status} working={working} />}
+                    {status && !renaming && <StatusMark status={status} work={work} />}
                     {/* Up close this is already gone, since looking clears it. It is for the canvas
                         zoomed out over everything and for the window standing beside another app. */}
                     {task && !renaming && <TaskMark task={task} />}

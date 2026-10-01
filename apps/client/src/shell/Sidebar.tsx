@@ -37,7 +37,7 @@ import { isCanvasView, isSessionView, type AgentKind, type AgentStatus, type Can
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@ruimte/agents-react/chat/drafts';
-import { nodeWorking } from '@/state/agent-work';
+import { nodeWork, type AgentWork } from '@/state/agent-work';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
@@ -54,6 +54,7 @@ import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
 import {
     buildSidebar,
+    heaviestWork,
     isSessionKind,
     rowAfterArrow,
     rowOrder,
@@ -226,10 +227,10 @@ function SidebarGlow() {
 
 /* A row at rest carries no dot. A green one on every idle chat read as news that never went away,
    while a turn that ended unseen has its own mark. */
-function RowStatus({ status, working }: { status: AgentStatus | null | undefined; working: boolean | undefined }) {
+function RowStatus({ status, work }: { status: AgentStatus | null | undefined; work: AgentWork | null | undefined }) {
     // Another project's rows cannot tell a working agent from a shell at its prompt, so they keep the dot.
-    if (status === 'running' && working !== undefined) {
-        return working ? <WorkingMark plain /> : null;
+    if ((status === 'running' || status === 'idle') && work !== undefined) {
+        return work === null ? null : <WorkingMark plain delegating={work === 'delegating'} />;
     }
     return status && status !== 'idle' ? <StatusDot status={status} plain /> : null;
 }
@@ -329,7 +330,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow, snoozable }: RowProps & { ro
                     {node.finished && <UnseenMark />}
                     {node.alert && <ProcessWarningMark />}
                     {node.snoozedUntil && <SnoozedMark until={node.snoozedUntil} />}
-                    <RowStatus status={node.status} working={node.working} />
+                    <RowStatus status={node.status} work={node.work} />
                 </span>
             </ContextMenu.Trigger>
             <NodeMenuPopup
@@ -620,7 +621,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
                 {view.self?.finished && <UnseenMark />}
                 {view.self?.snoozedUntil && <SnoozedMark until={view.self.snoozedUntil} />}
-                <RowStatus status={row.status} working={view.self ? view.self.working : view.nodes.some((node) => node.working)} />
+                <RowStatus status={row.status} work={view.self ? view.self.work : heaviestWork(view.nodes)} />
                 {/* Last of the row, after every dot: where a view lives says something about the
                     project and not about what is happening in it, and the dots are the news. Only a
                     shared row is marked, since private is what a view is until someone says
@@ -784,7 +785,7 @@ function BackgroundRow({ row, group, tabbable, onFocus, onArrow, snoozable }: Ro
                         {row.type === 'node' && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
                         <span className="grow" />
                         <span className={SNOOZE_MARKS}>
-                            {group.state === 'ready' && <RowStatus status={status} working={undefined} />}
+                            {group.state === 'ready' && <RowStatus status={status} work={undefined} />}
                             {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
                         </span>
                     </>
@@ -844,7 +845,7 @@ export function Sidebar() {
                     kind: node.kind,
                     provider: node.provider ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
-                    working: nodeWorking(node, sessions, chats, endpointId),
+                    work: nodeWork(node, sessions, chats, endpointId),
                     draft: node.kind === 'chat' && drafts.includes(node.id),
                     alert: (warnings[endpointId] ?? []).some((alert) => alert.nodeId === node.id),
                     finished: isUnseen(unseen, endpointId, node.id),

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import { agentsWorking, nodeWorking } from '@/state/agent-work';
+import { agentsWorking, nodeWork, nodeWorking } from '@/state/agent-work';
 import type { ChatState } from '@ruimte/agents-react/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
@@ -15,7 +15,7 @@ const agent = (status: AgentStatus, live = true): AgentInfo => ({
 
 const session = (agentInfo?: AgentInfo, attached = true): SessionState => ({ attached, agent: agentInfo });
 
-const chat = (status: AgentStatus): ChatState => ({
+const chat = (status: AgentStatus, delegating?: boolean): ChatState => ({
     info: {
         chatId: 'c1',
         provider: 'claude',
@@ -28,6 +28,7 @@ const chat = (status: AgentStatus): ChatState => ({
         running: true,
         activeTurnId: null,
         slashCommands: [],
+        delegating,
         usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
         createdAt: 0
     },
@@ -59,6 +60,10 @@ describe('what counts as an agent working', () => {
         expect(agentsWorking({}, { 'local:c1': chat('idle') })).toBe(false);
     });
 
+    test('a chat between turns does while sub-agents of its CLI go on', () => {
+        expect(agentsWorking({}, { 'local:c1': chat('idle', true) })).toBe(true);
+    });
+
     test('one agent on another machine is enough, since the window is watching it either way', () => {
         expect(agentsWorking({ 'local:t1': session(agent('idle')), 'Xk3p:t2': session(agent('running')) }, {})).toBe(true);
     });
@@ -85,6 +90,13 @@ describe('which node the working agent is in', () => {
     test('a chat reads its thread', () => {
         expect(nodeWorking(thread, {}, { 'local:c1': chat('running') }, 'local')).toBe(true);
         expect(nodeWorking(thread, {}, { 'local:c1': chat('needs-you') }, 'local')).toBe(false);
+    });
+
+    test('a chat between turns works through its sub-agents, unless it waits on a person', () => {
+        expect(nodeWork(thread, {}, { 'local:c1': chat('running', true) }, 'local')).toBe('turn');
+        expect(nodeWork(thread, {}, { 'local:c1': chat('idle', true) }, 'local')).toBe('delegating');
+        expect(nodeWork(thread, {}, { 'local:c1': chat('needs-you', true) }, 'local')).toBeNull();
+        expect(nodeWorking(thread, {}, { 'local:c1': chat('idle', true) }, 'local')).toBe(true);
     });
 
     test('a node that is no agent never works, whatever status it carries', () => {
