@@ -527,7 +527,8 @@
             "keepAwakeAlways": "Always keep this computer awake",
             "toggleFlag": "Flag or unflag",
             "newWindow": "Open a new window",
-            "moveToNewWindow": "Move this project to a new window"
+            "moveToNewWindow": "Move this project to a new window",
+            "onboarding": "Set up Ruimte"
         },
         "sections": {
             "recent": "Recent",
@@ -707,6 +708,7 @@
         "launchesOutput": "Show Output",
         "launchesEdit": "Edit Launches…",
         "newWindow": "New Window",
-        "moveToNewWindow": "Move to New Window"
+        "moveToNewWindow": "Move to New Window",
+        "onboarding": "Set Up Ruimte…"
     }
 }

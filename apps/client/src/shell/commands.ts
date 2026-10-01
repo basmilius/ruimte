@@ -30,8 +30,10 @@ import { launchViews } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
+import { openOnboarding } from '@/onboarding/open';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
+import { hasLocalMachine } from '@/state/local-machine';
 import { providersOf } from '@ruimte/agents-react/state/providers';
 import { useSettings } from '@/state/settings';
 import { fileManagerName, serverInfoOf } from '@/state/server';
@@ -562,6 +564,8 @@ export const appCommands = (): Command[] => {
             id: 'settings-computer',
             label: i18next.t('shell:palette.commands.computerUse'),
             run: () => useUi.getState().setSettings({ open: true, section: 'computer' })
-        }
+        },
+        // About the machine this window runs beside, so only a client with one has it.
+        ...(hasLocalMachine() ? [{ id: 'onboarding', label: i18next.t('shell:palette.commands.onboarding'), run: () => openOnboarding() }] : [])
     ];
 };

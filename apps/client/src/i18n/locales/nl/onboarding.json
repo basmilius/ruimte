@@ -1,0 +1,91 @@
+{
+    "list": "{{rest}} en {{last}}",
+    "description": "Ruimte instellen op deze machine: hoe het werkt, de agent-CLI's en computer use.",
+    "welcome": {
+        "title": "Welkom bij Ruimte",
+        "bodyThree": "Space for AI Engineering. Drie korte taken helpen je op weg. Doe ze in elke volgorde, of kom er later op terug.",
+        "bodyTwo": "Space for AI Engineering. Twee korte taken helpen je op weg. Doe ze in elke volgorde, of kom er later op terug.",
+        "start": "Aan de slag",
+        "notNow": "Niet nu"
+    },
+    "hub": {
+        "title": "Ruimte instellen",
+        "count": "{{done}} van {{total}} klaar",
+        "progress": "Taken klaar",
+        "tasks": "Taken",
+        "closeNote": "Sluit dit wanneer je wilt. Het blijft onder Instellingen › Over.",
+        "next": "Volgende: {{task}}",
+        "finish": "Afronden"
+    },
+    "tasks": {
+        "intro": {
+            "title": "Hoe Ruimte werkt",
+            "header": "Duurt een minuut.",
+            "sub": "Ongeveer een minuut",
+            "done": "Gezien"
+        },
+        "providers": {
+            "title": "Providers koppelen",
+            "header": "Ruimte zocht naar agent-CLI's op {{machine}}.",
+            "sub": "Nog niet ingesteld",
+            "done": "{{clis}} ingelogd"
+        },
+        "computer": {
+            "title": "Computer use",
+            "header": "Optioneel. Kan later aan.",
+            "sub": "Optioneel · vraagt toestemming",
+            "done": "Toegestaan"
+        }
+    },
+    "intro": {
+        "views": {
+            "title": "Een project is een zijbalk met weergaven",
+            "body": "De meeste weergaven zijn een canvas waarop terminals, chats, browsers en bestanden naast elkaar staan. Een chat of een terminal kan ook een eigen weergave zijn."
+        },
+        "agents": {
+            "title": "Agents zijn de CLI's op je machine",
+            "body": "Claude Code, Codex en de andere doen het werk. Elke CLI houdt zijn eigen login bij, en sessies lopen door als je het venster sluit."
+        },
+        "machines": {
+            "title": "Meerdere accounts, meerdere machines",
+            "body": "Voeg per CLI meer dan één account toe en kies er per chat een. Koppel een andere machine één keer en de projecten erop openen als lokale."
+        },
+        "gotIt": "Begrepen"
+    },
+    "providers": {
+        "info": "Ruimte start de agent-CLI's die op deze machine staan. De CLI houdt de login bij en Ruimte vraagt alleen wie er is ingelogd. Inloggen opent een terminal. Je hebt één provider nodig om te beginnen.",
+        "checkAgain": "Opnieuw controleren",
+        "looking": "Zoeken naar agent-CLI's",
+        "none": "Ruimte vond nog geen agent-CLI's op deze machine.",
+        "notLoggedIn": "Niet ingelogd. Inloggen opent een terminal.",
+        "chatAndTerminal": "chat en terminal",
+        "terminalOnly": "alleen terminal",
+        "apple": "Gebruik het model op deze Mac voor chats en tools.",
+        "missing_one": "Installeer hem en start Ruimte op deze machine opnieuw.",
+        "missing_other": "Installeer ze en start Ruimte op deze machine opnieuw.",
+        "doneWhen": "Klaar zodra er één provider is ingelogd"
+    },
+    "computer": {
+        "info": "Agents kunnen de apps op een computer zien en bedienen. Ze komen pas bij een app nadat jij die toestaat. De schakelaar geldt per machine.",
+        "skip": "Nu overslaan"
+    },
+    "done": {
+        "title": "Je bent klaar",
+        "start": "Ruimte gaan gebruiken",
+        "reopen": "Open deze lijst opnieuw via Instellingen › Over.",
+        "summary": {
+            "loggedInAndComputer_one": "{{clis}} is ingelogd en computer use staat aan.",
+            "loggedInAndComputer_other": "{{clis}} zijn ingelogd en computer use staat aan.",
+            "loggedIn_one": "{{clis}} is ingelogd.",
+            "loggedIn_other": "{{clis}} zijn ingelogd.",
+            "computer": "Computer use staat aan.",
+            "logInLater": "{{clis}} kun je later inloggen onder Instellingen › Providers.",
+            "noProvider": "Log in bij een agent-CLI onder Instellingen › Providers voor je eerste chat.",
+            "computerLater": "Computer use kun je later aanzetten onder Instellingen › Computer Use."
+        }
+    },
+    "about": {
+        "label": "Ruimte instellen",
+        "description": "De korte taken van de eerste start: hoe Ruimte werkt, de agent-CLI's op deze machine en computer use."
+    }
+}

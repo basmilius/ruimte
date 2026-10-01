@@ -44,7 +44,8 @@
             "link": "Het venster om een machine te koppelen kon niet worden getekend",
             "shortcutHints": "De sneltoetshints konden niet worden getekend",
             "deviceTools": "De apparaattools konden niet worden getekend",
-            "login": "De terminal voor het inloggen kon niet worden getekend"
+            "login": "De terminal voor het inloggen kon niet worden getekend",
+            "onboarding": "Het instellen van Ruimte kon niet worden getekend"
         }
     },
     "answer": {

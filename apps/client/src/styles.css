@@ -28,6 +28,26 @@
     --color-iron-950: #020513;
 }
 
+/* The night sky behind the welcome and About (`ui/Eclipse.tsx`). It is a picture rather than a surface,
+   so it stays dark in the light theme too: what is written on it sits under `data-theme="dark"`, and
+   only its fade into a pane follows the theme. */
+:root {
+    --eclipse-core: #14182c;
+    --eclipse-deep: #07080d;
+    /* A star's channels; each star brings its own alpha. */
+    --eclipse-star-white: 255 255 255;
+    --eclipse-star-cool: 190 215 255;
+    --eclipse-star-warm: 255 230 200;
+    --eclipse-glint: rgb(200 220 255 / 0.75);
+    --eclipse-glow-warm: rgb(255 214 150 / 0.22);
+    --eclipse-glow-white: rgb(255 255 255 / 0.18);
+    --eclipse-ring-warm: rgb(255 236 205 / 0.95);
+    --eclipse-ring-cool: rgb(121 184 255 / 0.8);
+    --eclipse-orbit: 255 255 255;
+    --eclipse-moon-cool: #79b8ff;
+    --eclipse-moon-warm: #ff9f0a;
+}
+
 /* Ruimte's own tokens, beside the ones @basmilius/desktop-ui defines. */
 :root, [data-theme="light"] {
     --canvas-bg: #eeeef1;
@@ -80,6 +100,12 @@
     --note-gray: #ececef;
     /* The band under the points no other point beats; ink at a low alpha, never the accent. */
     --chart-frontier: rgb(0 0 0 / 0.07);
+    /* Where the sky behind a pane runs out. On a light pane it ends past the words written on it and
+       before the ones under it, since a dark word on half a sky reads as badly as a light one. */
+    --eclipse-fade-start: 68%;
+    --eclipse-fade-end: 94%;
+    /* The room under the words on a sky, before a pane's own content starts. */
+    --eclipse-clearance: 104px;
     /* The ten colors a drawing may name. The file holds the name, never the value, so a sketch
        reads in both themes and follows the accent when it asks for it. */
     --draw-ink: var(--text);
@@ -164,6 +190,9 @@
     --note-pink: #43212c;
     --note-gray: #26262d;
     --chart-frontier: rgb(255 255 255 / 0.08);
+    --eclipse-fade-start: 52%;
+    --eclipse-fade-end: 100%;
+    --eclipse-clearance: 30px;
     --draw-red: #ff7b72;
     --draw-orange: #ffa657;
     --draw-yellow: #e3b341;
@@ -506,6 +535,51 @@
     .file-preview-page { width: 100%; height: 100%; border: 0; background: #ffffff; }
     .file-preview-webview { background: transparent; }
     .file-preview-webview[data-loaded] { background: #ffffff; }
+
+    /* ---------------------------------------------------------------- Eclipse */
+
+    /* Every part sits on a point given in pixels and is centered on it by a negative margin, since the
+       animations turn and scale it with `rotate` and `scale` and leave `transform` alone. */
+    .eclipse { position: absolute; inset-inline: 0; top: 0; overflow: hidden; pointer-events: none; }
+    .eclipse-sky { background: radial-gradient(70% 80% at 50% 30%, var(--eclipse-core) 0%, var(--eclipse-deep) 72%); }
+    /* The sky over a pane, which runs out into the surface of the dialog it sits in. */
+    .eclipse-sky-fade {
+        background: radial-gradient(70% 90% at 50% var(--eclipse-center), var(--eclipse-core) 0%, var(--eclipse-deep) 60%, var(--surface-raised) 100%);
+        mask-image: linear-gradient(#000 var(--eclipse-fade-start), transparent var(--eclipse-fade-end));
+    }
+    .eclipse-part { position: absolute; left: 50%; border-radius: 999px; }
+    .eclipse-star { position: absolute; border-radius: 999px; animation: eclipse-twinkle var(--eclipse-duration) ease-in-out var(--eclipse-delay) infinite; }
+    .eclipse-star[data-glint] { animation-name: eclipse-glint; }
+    .eclipse-star[data-tone="white"] { background: rgb(var(--eclipse-star-white) / var(--eclipse-alpha)); }
+    .eclipse-star[data-tone="cool"] { background: rgb(var(--eclipse-star-cool) / var(--eclipse-alpha)); }
+    .eclipse-star[data-tone="warm"] { background: rgb(var(--eclipse-star-warm) / var(--eclipse-alpha)); }
+    .eclipse-glow-warm { background: radial-gradient(closest-side, var(--eclipse-glow-warm), transparent); animation: eclipse-breathe 9s ease-in-out infinite; }
+    .eclipse-glow-white { background: radial-gradient(closest-side, var(--eclipse-glow-white), transparent); animation: eclipse-breathe 7s ease-in-out -3s infinite; }
+    /* Two arcs of light rather than whole circles: a cone of color, masked down to a 3px ring. */
+    .eclipse-ring { mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); }
+    .eclipse-ring-warm { background: conic-gradient(from 200deg, transparent 0deg, var(--eclipse-ring-warm) 70deg, transparent 150deg); animation: eclipse-spin 70s linear infinite; }
+    .eclipse-ring-cool { background: conic-gradient(from 20deg, transparent 0deg, var(--eclipse-ring-cool) 70deg, transparent 150deg); animation: eclipse-spin 110s linear infinite reverse; }
+    .eclipse-orbit { border: 1px solid rgb(var(--eclipse-orbit) / var(--eclipse-alpha)); }
+    .eclipse-orbit[data-spin] { animation: eclipse-spin var(--eclipse-duration) linear infinite; }
+    .eclipse-orbit[data-spin="reverse"] { animation-direction: reverse; }
+    .eclipse-moon { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 999px; }
+    .eclipse-moon-cool { background: var(--eclipse-moon-cool); box-shadow: 0 0 14px var(--eclipse-moon-cool); }
+    .eclipse-moon-warm { background: var(--eclipse-moon-warm); box-shadow: 0 0 12px var(--eclipse-moon-warm); }
+    @keyframes eclipse-spin {
+        to { rotate: 360deg; }
+    }
+    @keyframes eclipse-breathe {
+        0%, 100% { opacity: 0.7; scale: 1; }
+        50% { opacity: 1; scale: 1.07; }
+    }
+    @keyframes eclipse-twinkle {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.12; }
+    }
+    @keyframes eclipse-glint {
+        0%, 100% { opacity: 0.35; scale: 1; box-shadow: 0 0 0 transparent; }
+        50% { opacity: 1; scale: 1.9; box-shadow: 0 0 7px 1px var(--eclipse-glint); }
+    }
 
     /* ---------------------------------------------------------------- Motion */
 

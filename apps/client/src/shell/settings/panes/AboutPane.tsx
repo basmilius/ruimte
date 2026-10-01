@@ -7,6 +7,8 @@ import { formatDayWithYear, useFormatLocale } from '@basmilius/desktop-ui/format
 import { SettingsRow, TopIcon } from '@basmilius/desktop-ui/settings';
 import { Segmented, Switch, Button, copyText, Icon, Pill } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { openOnboarding } from '@/onboarding/open';
+import { hasLocalMachine } from '@/state/local-machine';
 import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
@@ -138,6 +140,20 @@ export function AboutPane() {
                         label={t('about.updates.auto.label')}
                         description={t('about.updates.auto.description')}
                         control={<Switch checked={autoDownload} onCheckedChange={setAuto} label={t('about.updates.auto.label')} />}
+                    />
+                </SettingsSection>
+            )}
+            {hasLocalMachine() && (
+                <SettingsSection>
+                    <SettingsRow
+                        searchId="about.onboarding"
+                        label={t('onboarding:about.label')}
+                        description={t('onboarding:about.description')}
+                        control={
+                            <Button variant="secondary" onClick={() => openOnboarding()}>
+                                {t('common:action.open')}
+                            </Button>
+                        }
                     />
                 </SettingsSection>
             )}

@@ -527,7 +527,8 @@
             "keepAwakeAlways": "Deze computer altijd wakker houden",
             "toggleFlag": "Vlag zetten of weghalen",
             "newWindow": "Een nieuw venster openen",
-            "moveToNewWindow": "Dit project naar een nieuw venster verplaatsen"
+            "moveToNewWindow": "Dit project naar een nieuw venster verplaatsen",
+            "onboarding": "Ruimte instellen"
         },
         "sections": {
             "recent": "Recent",
@@ -707,6 +708,7 @@
         "launchesOutput": "Output tonen",
         "launchesEdit": "Launches bewerken…",
         "newWindow": "Nieuw venster",
-        "moveToNewWindow": "Naar nieuw venster verplaatsen"
+        "moveToNewWindow": "Naar nieuw venster verplaatsen",
+        "onboarding": "Ruimte instellen…"
     }
 }

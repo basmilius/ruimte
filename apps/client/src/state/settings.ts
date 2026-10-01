@@ -161,6 +161,11 @@ export interface Settings {
        overrules both. The two are apart because a person can read one language in another country's
        notation, which is what an English app on a Dutch Mac already was. */
     formatRegion: string;
+    /* Whether this client has met the onboarding: put off, closed or finished. A client from before it
+       has nothing stored, which reads as not met, so every install meets it once. */
+    onboardingSeen: boolean;
+    /* Whether "How Ruimte works" was read here, the one task no machine can tell. */
+    onboardingIntroSeen: boolean;
 }
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
@@ -211,7 +216,9 @@ const DEFAULT_SETTINGS: Settings = {
     browserSwipe: true,
     directStunServers: DEFAULT_STUN_SERVER,
     language: LANGUAGE_SYSTEM,
-    formatRegion: FORMAT_LANGUAGE
+    formatRegion: FORMAT_LANGUAGE,
+    onboardingSeen: false,
+    onboardingIntroSeen: false
 };
 
 // Rounded as well as clamped. The stepper used to move in halves, so a browser can still hand back
@@ -264,7 +271,9 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // and every save writes the whole blob; a new key leaves that value behind instead of recognizing it.
     directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers,
     language: languageFrom(stored.language),
-    formatRegion: formatRegionFrom(stored.formatRegion)
+    formatRegion: formatRegionFrom(stored.formatRegion),
+    onboardingSeen: stored.onboardingSeen === true,
+    onboardingIntroSeen: stored.onboardingIntroSeen === true
 });
 
 const read = (): Settings => {
@@ -358,7 +367,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 browserSwipe,
                 directStunServers,
                 language,
-                formatRegion
+                formatRegion,
+                onboardingSeen,
+                onboardingIntroSeen
             } = get();
             const next: Settings = {
                 sidebarScope,
@@ -395,6 +406,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 directStunServers,
                 language,
                 formatRegion,
+                onboardingSeen,
+                onboardingIntroSeen,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

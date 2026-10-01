@@ -23,6 +23,7 @@ export const NAMESPACES = [
     'agents',
     'conflicts',
     'computer',
+    'onboarding',
     'state',
     'launches'
 ] as const;

@@ -119,6 +119,9 @@ export interface LoginRequest {
     name: string;
 }
 
+/* Where the onboarding stands while it is up: the welcome, or the list of tasks behind it. */
+export type OnboardingStep = 'welcome' | 'hub';
+
 export type ViewDialog =
     | { kind: 'settings'; viewId: string }
     /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
@@ -156,6 +159,7 @@ interface UiStore {
     usageOpen: boolean;
     modelsOpen: boolean;
     login: LoginRequest | null;
+    onboarding: OnboardingStep | null;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
@@ -210,6 +214,7 @@ interface UiStore {
     setUsageOpen(open: boolean): void;
     setModelsOpen(open: boolean): void;
     setLogin(login: LoginRequest | null): void;
+    setOnboarding(step: OnboardingStep | null): void;
     askProjectSettings(asked: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
@@ -250,6 +255,7 @@ export const useUi = create<UiStore>((set, get) => ({
     usageOpen: false,
     modelsOpen: false,
     login: null,
+    onboarding: null,
     paletteSeed: '',
     paletteBrowseAt: 0,
     paletteBrowseMachine: null,
@@ -291,6 +297,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setLogin(login) {
         set({ login });
+    },
+    setOnboarding(step) {
+        set({ onboarding: step });
     },
     askProjectSettings(asked) {
         set({ projectSettingsAsked: asked });

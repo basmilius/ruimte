@@ -235,3 +235,15 @@ describe('a setting another window changed', () => {
         }
     });
 });
+
+describe('the onboarding', () => {
+    test('is unseen on a client that stored nothing about it, an install from before it included', () => {
+        expect(settingsFrom({}).onboardingSeen).toBe(false);
+        expect(settingsFrom({ accent: 'blue', keepAwake: 'always' }).onboardingIntroSeen).toBe(false);
+    });
+
+    test('stays seen only on a stored true', () => {
+        expect(settingsFrom({ onboardingSeen: true, onboardingIntroSeen: true })).toMatchObject({ onboardingSeen: true, onboardingIntroSeen: true });
+        expect(settingsFrom({ onboardingSeen: 'yes' as unknown as boolean }).onboardingSeen).toBe(false);
+    });
+});

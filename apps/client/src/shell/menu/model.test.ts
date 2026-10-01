@@ -141,6 +141,13 @@ describe('the menus', () => {
         expect(commandIds(spec)).not.toContain('release-notes');
     });
 
+    test('setting up Ruimte opens from Help in the desktop app, on the start screen too, and never on the station', () => {
+        for (const spec of [menuModel(context()), menuModel(START_SCREEN)]) {
+            expect(menu(spec, 'Help').some((node) => node.kind === 'command' && node.id === 'onboarding')).toBe(true);
+        }
+        expect(commandIds(menuModel(context({ host: 'station' })))).not.toContain('onboarding');
+    });
+
     test('the station prints its keys, except the ones a browser tab keeps, and undoes its own history', () => {
         const spec = menuModel(context({ host: 'station', apple: true, cells: 2 }));
         expect(find(spec, 'palette')).toMatchObject({ keys: '⌘K' });

@@ -1,0 +1,91 @@
+{
+    "list": "{{rest}} and {{last}}",
+    "description": "Set up Ruimte on this machine: how it works, the agent CLIs and computer use.",
+    "welcome": {
+        "title": "Welcome to Ruimte",
+        "bodyThree": "Space for AI Engineering. Three short tasks get you started. Do them in any order, or come back to them later.",
+        "bodyTwo": "Space for AI Engineering. Two short tasks get you started. Do them in any order, or come back to them later.",
+        "start": "Get started",
+        "notNow": "Not now"
+    },
+    "hub": {
+        "title": "Set up Ruimte",
+        "count": "{{done}} of {{total}} done",
+        "progress": "Tasks done",
+        "tasks": "Tasks",
+        "closeNote": "Close this any time. It stays under Settings › About.",
+        "next": "Next: {{task}}",
+        "finish": "Finish"
+    },
+    "tasks": {
+        "intro": {
+            "title": "How Ruimte works",
+            "header": "Takes a minute.",
+            "sub": "About a minute",
+            "done": "Seen"
+        },
+        "providers": {
+            "title": "Connect providers",
+            "header": "Ruimte looked for agent CLIs on {{machine}}.",
+            "sub": "Not set up yet",
+            "done": "{{clis}} logged in"
+        },
+        "computer": {
+            "title": "Computer use",
+            "header": "Optional. Can be turned on later.",
+            "sub": "Optional · needs permission",
+            "done": "Allowed"
+        }
+    },
+    "intro": {
+        "views": {
+            "title": "A project is a sidebar of views",
+            "body": "Most views are a canvas where terminals, chats, browsers and files sit next to each other. A chat or a terminal can also stand alone as a view."
+        },
+        "agents": {
+            "title": "Agents are the CLIs on your machine",
+            "body": "Claude Code, Codex and the others do the work. Each CLI keeps its own login, and sessions keep running when you close the window."
+        },
+        "machines": {
+            "title": "Several accounts, several machines",
+            "body": "Add more than one account per CLI and pick one per chat. Pair another machine once and its projects open like local ones."
+        },
+        "gotIt": "Got it"
+    },
+    "providers": {
+        "info": "Ruimte starts the agent CLIs installed on this machine. The CLI keeps the login and Ruimte only asks who is signed in. Logging in opens a terminal. You need one provider to start.",
+        "checkAgain": "Check again",
+        "looking": "Looking for agent CLIs",
+        "none": "Ruimte found no agent CLIs on this machine yet.",
+        "notLoggedIn": "Not logged in. Logging in opens a terminal.",
+        "chatAndTerminal": "chat and terminal",
+        "terminalOnly": "terminal only",
+        "apple": "Use the model on this Mac for chats and tools.",
+        "missing_one": "Install it, then restart Ruimte on this machine.",
+        "missing_other": "Install them, then restart Ruimte on this machine.",
+        "doneWhen": "Done once one provider is logged in"
+    },
+    "computer": {
+        "info": "Agents can see and operate the apps on a computer. They only reach an app after you allow it. The switch is per machine.",
+        "skip": "Skip for now"
+    },
+    "done": {
+        "title": "You're all set",
+        "start": "Start using Ruimte",
+        "reopen": "Reopen this list from Settings › About.",
+        "summary": {
+            "loggedInAndComputer_one": "{{clis}} is logged in and computer use is on.",
+            "loggedInAndComputer_other": "{{clis}} are logged in and computer use is on.",
+            "loggedIn_one": "{{clis}} is logged in.",
+            "loggedIn_other": "{{clis}} are logged in.",
+            "computer": "Computer use is on.",
+            "logInLater": "{{clis}} can be logged in later under Settings › Providers.",
+            "noProvider": "Log in to an agent CLI under Settings › Providers before your first chat.",
+            "computerLater": "Computer use can be turned on later under Settings › Computer Use."
+        }
+    },
+    "about": {
+        "label": "Set up Ruimte",
+        "description": "The short tasks of the first start: how Ruimte works, the agent CLIs on this machine and computer use."
+    }
+}

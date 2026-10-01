@@ -380,6 +380,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
         id: 'help',
         label: t('help'),
         items: [
+            ...only(desktop, command('onboarding', t('onboarding'))),
             ...only(context.releaseNotes, command('release-notes', t('releaseNotes'))),
             command('settings-keyboard', t('keyboardShortcuts')),
             ...only(!apple || !desktop, separator, command('about', t('about')))

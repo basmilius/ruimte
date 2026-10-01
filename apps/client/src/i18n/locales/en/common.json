@@ -44,7 +44,8 @@
             "link": "The dialog for linking a machine failed to render",
             "shortcutHints": "The shortcut hints failed to render",
             "deviceTools": "The device tools failed to render",
-            "login": "The login terminal failed to render"
+            "login": "The login terminal failed to render",
+            "onboarding": "The setup of Ruimte failed to render"
         }
     },
     "answer": {
