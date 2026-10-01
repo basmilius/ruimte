@@ -60,14 +60,29 @@ describe('searchFiles', () => {
         expect(files.some((file) => file.startsWith('.hidden'))).toBe(false);
     });
 
-    test('inside a repo it follows .gitignore and sees untracked files', async () => {
+    test('inside a repo it sees untracked files and what .gitignore keeps out, minus dot names and build output', async () => {
         await git(root, 'init', '-q');
-        await writeFile(join(root, '.gitignore'), '*.log\nnode_modules\n');
-        const { files } = await searchFiles(root, '');
+        await mkdir(join(root, 'reports', 'old'), { recursive: true });
+        await writeFile(join(root, 'reports', 'old', 'summary.html'), '');
+        await writeFile(join(root, '.env.local'), '');
+        await writeFile(join(root, '.gitignore'), '*.log\nnode_modules\nreports/\n.hidden\n*.local\n');
+        const { files } = await searchFiles(root, '', 200);
         expect(files).toContain('src/index.ts');
         expect(files).toContain('.gitignore');
-        expect(files).not.toContain('secret.log');
+        expect(files).toContain('secret.log');
+        expect(files).toContain('reports/old/summary.html');
+        expect(files).not.toContain('.env.local');
         expect(files.some((file) => file.startsWith('node_modules'))).toBe(false);
+        expect(files.some((file) => file.startsWith('.hidden'))).toBe(false);
+    });
+
+    test('an ignored file ranks behind a kept one on the same score', async () => {
+        await git(root, 'init', '-q');
+        await writeFile(join(root, 'notes.log'), '');
+        await writeFile(join(root, 'notes.md'), '');
+        await writeFile(join(root, '.gitignore'), '*.log\n');
+        const { files } = await searchFiles(root, 'notes', 2);
+        expect(files).toEqual(['notes.md', 'notes.log']);
     });
 
     test('ranks the query and honors the limit', async () => {
