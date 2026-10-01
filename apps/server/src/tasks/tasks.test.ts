@@ -238,13 +238,15 @@ describe('a task wakes the chat that gave it', () => {
         }
     });
 
-    test('a lead cleared after delegating is a new conversation, which the task no longer wakes', async () => {
+    test('clearing a lead with a settled task discards its pending wake', async () => {
         const daemon = await boot();
         daemon.worker.start();
         await leadWorking(daemon);
         const child = await delegate(daemon, 'Lexer', 'fix the tokenizer');
-        await daemon.chats.clear('chat-lead', true);
         await daemon.until(() => daemon.tasks.get(child.taskId)?.status === 'done');
+        await daemon.worker.settled();
+        expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'pending' });
+        await daemon.chats.clear('chat-lead', true);
         await daemon.worker.settled();
         expect(daemon.tasks.get(child.taskId)).toMatchObject({ status: 'done', wake: 'none' });
         expect(wakeTurns(daemon)).toEqual([]);
