@@ -32,7 +32,7 @@ import { FOLLOW_THRESHOLD_PX, replyHeader, rowRhythm } from './rows/row-rhythm';
 import { QuoteButton } from './QuoteButton';
 import { QuoteTakerContext, type QuoteTaker } from './quote-selection';
 import { useToggleSet } from './useToggleSet';
-import { WelcomeGreeting, WelcomeStarters } from './Welcome';
+import { WelcomeGreeting } from './Welcome';
 import { Row } from './rows/Rows';
 import { ReplyHeader } from './rows/MessageRows';
 import { useChatRow, useChats } from '../../state/chats';
@@ -479,8 +479,8 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
                             }
                         }}
                     >
-                        {/* A welcome centers the greeting, the composer and the ways to start as one group. The
-                            composer keeps its place in the tree, so the first message does not mount it again. */}
+                        {/* A welcome centers the greeting and the composer as one group. The composer keeps its
+                            place in the tree, so the first message does not mount it again. */}
                         <div ref={contentRef} className={clsx('relative flex min-h-full flex-col', welcome && 'justify-center')}>
                             <ContextMenu.Trigger
                                 ref={threadRef}
@@ -548,7 +548,6 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
                             >
                                 <QuoteTakerContext.Provider value={registerQuoteTaker}>{composer}</QuoteTakerContext.Provider>
                             </div>
-                            {welcome && composer && <WelcomeStarters chatId={chatId} />}
                         </div>
                     </div>
                     <TimelineMenuPopup target={target} thread={threadRef} chatId={onMainAgent ? chatId : null} />
