@@ -160,7 +160,6 @@ export function AboutPane() {
 
     return (
         <>
-            {import.meta.env.DEV && <UpdatePreviewBar />}
             {updates.supported && (
                 <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
                     <UpdateStatusRow releases={releases} notesVersion={notesLink?.version ?? null} />
@@ -219,6 +218,7 @@ export function AboutPane() {
                     />
                 </SettingsSection>
             )}
+            {import.meta.env.DEV && <UpdatePreviewBar />}
             <p className="text-center text-xs text-text-faint">FSL-1.1-MIT · Copyright 2026 Bas Milius</p>
         </>
     );
