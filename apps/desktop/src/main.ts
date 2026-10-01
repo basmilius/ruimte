@@ -19,7 +19,7 @@ import {
 } from '@basmilius/desktop-shell';
 import type { ThemeState } from '@basmilius/desktop-shell/bridge';
 import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
-import { isWindowKey, totalActivity, windowUrl } from './app-windows';
+import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
@@ -501,11 +501,16 @@ const windowState = createWindowState({
 /* The application menu each window's page last sent, by window id. The one in front is the one drawn. */
 const menuTemplates = new Map<number, Electron.MenuItemConstructorOptions[]>();
 
+/* The view the window `window:open` is about to make shows first. `windows.open` calls `createWindow` in the same tick, which takes it. */
+let openingView: string | null = null;
+
 const createWindow = (
     key: string | null,
     bounds: Partial<Electron.Rectangle> & { width: number; height: number },
     origin: WindowOrigin
 ): Electron.BrowserWindow => {
+    const view = openingView;
+    openingView = null;
     const window = new BrowserWindow({
         ...bounds,
         minWidth: 800,
@@ -570,7 +575,7 @@ const createWindow = (
         }
     });
     // The smoke run opens its one window the way a start without a session does.
-    void window.loadURL(windowUrl(appUrl, key, origin === 'first' || smoke)).catch(() => undefined);
+    void window.loadURL(windowUrl(appUrl, key, origin === 'first' || smoke, view)).catch(() => undefined);
     return window;
 };
 
@@ -1093,10 +1098,29 @@ handleFromApp('window:claim', (event, key: unknown) => {
     return window !== null && (key === null || isWindowKey(key)) && windows.claim(window, key);
 });
 
-/* A new window on the start screen (null), or the window of a project, raised when one already has it. */
-onFromApp('window:open', (_event, key: unknown) => {
-    if (key === null || isWindowKey(key)) {
+/*
+ * A new window on the start screen (null), or the window of a project, raised when one already has it.
+ * A view goes along to the window that shows the project: in the address of a new one, as a message
+ * to one that is already there.
+ */
+onFromApp('window:open', (_event, key: unknown, view: unknown) => {
+    if (key !== null && !isWindowKey(key)) {
+        return;
+    }
+    const shown = key !== null && isWindowView(view) ? view : null;
+    const holder = key === null ? null : (windows.all().find((window) => windows.keyOf(window) === key) ?? null);
+    if (holder !== null) {
         windows.open(key);
+        if (shown !== null) {
+            holder.webContents.send('window:show-view', shown);
+        }
+        return;
+    }
+    openingView = shown;
+    try {
+        windows.open(key);
+    } finally {
+        openingView = null;
     }
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { isWindowKey, totalActivity, windowUrl } from './app-windows';
+import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 
 describe('windowUrl', () => {
     const base = 'http://127.0.0.1:4210/';
@@ -18,6 +18,20 @@ describe('windowUrl', () => {
 
     test('a key wins over a first window', () => {
         expect(windowUrl(base, 'local:p1', true)).toContain('project=');
+    });
+
+    test('carries the view a project window shows first, and no view without a project', () => {
+        expect(new URL(windowUrl(base, 'local:p1', false, 'chat-1')).searchParams.get('view')).toBe('chat-1');
+        expect(windowUrl(base, null, false, 'chat-1')).toBe('http://127.0.0.1:4210/?start=1');
+    });
+});
+
+describe('isWindowView', () => {
+    test('takes a non-empty string and nothing else', () => {
+        expect(isWindowView('chat-1')).toBe(true);
+        expect(isWindowView('')).toBe(false);
+        expect(isWindowView(undefined)).toBe(false);
+        expect(isWindowView('x'.repeat(257))).toBe(false);
     });
 });
 

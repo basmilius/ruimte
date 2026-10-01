@@ -8,6 +8,7 @@ import { confirmLeavingConflict } from '@/project/leave-conflict';
 import { browserStorage, readLastProject, type LastProjectStorage } from '@/project/last-project';
 import { closeListedProjectLocally, listProjects } from '@/project/list';
 import { closingCount } from '@/project/project-sessions';
+import { showViewOnceThere } from '@/project/show-view-once';
 import { ProjectSwitch, type SwitchOutcome, type SwitchRun, type SwitchState, type SwitchTarget } from '@/project/project-switch';
 import { useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
@@ -272,6 +273,9 @@ export const bootWindow = async (
             return null;
         }
         const outcome = await open(wanted.endpointId, wanted.projectId);
+        if (outcome === 'done' && target.kind === 'project' && target.viewId !== undefined) {
+            showViewOnceThere(target.viewId);
+        }
         if (outcome === 'failed') {
             const state = projectSwitch.state;
             useWindow.getState().setBootFailure({

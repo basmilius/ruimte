@@ -1,15 +1,16 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
+import { desktop } from '@/desktop/bridge';
 import { ensureMachine } from '@/endpoint/reach';
 import { listProjects } from '@/project/list';
 import { isOpenHere, openProject } from '@/project/open';
+import { showViewOnceThere } from '@/project/show-view-once';
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
 import { mergeMachines } from '@/shell/settings/machine-list';
-import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
 import { hasLocalMachine } from '@/state/local-machine';
-import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useWindow, windowWorkspace, workspaceOf } from '@/state/window';
@@ -48,36 +49,31 @@ export const useOffersNewChat = (): boolean => {
     return offersNewChat(newChatMachine(workspaceEndpointId), refused);
 };
 
-/* Puts the view in front once the document has it: the change that adds it may land just after the reply that names it. */
-const showViewOnceThere = (viewId: string): void => {
-    const show = (): boolean => {
-        const state = useDocument.getState();
-        if (!state.views.some((view) => view.id === viewId)) {
-            return false;
-        }
-        state.setActiveView(viewId);
-        return true;
-    };
-    if (show()) {
+/*
+ * The chat on screen. A window with another project leaves it to the shell, which raises the window
+ * that has the Chats project or opens one on it, with the chat in front either way. The start screen
+ * takes the project itself, and hands the chat on when the claim found it in another window.
+ */
+const showNewChat = async (endpointId: string, projectId: string, viewId: string): Promise<void> => {
+    if (isOpenHere(endpointId, projectId)) {
+        showViewOnceThere(viewId);
         return;
     }
-    const projectId = useProject.getState().current?.projectId ?? null;
-    const stop = useDocument.subscribe(() => {
-        if (useProject.getState().current?.projectId !== projectId || show()) {
-            stop();
-        }
-    });
-};
-
-/* The chat on screen: in this window when it has the project already or can take it. */
-const showNewChat = async (endpointId: string, projectId: string, viewId: string): Promise<void> => {
-    if (!isOpenHere(endpointId, projectId)) {
-        const outcome = await openProject(endpointId, projectId);
-        if (outcome !== 'done' || !isOpenHere(endpointId, projectId)) {
-            return;
-        }
+    const key = endpointKey(endpointId, projectId);
+    const shell = desktop();
+    if (windowWorkspace() !== null && shell?.openWindow) {
+        shell.openWindow(key, viewId);
+        return;
     }
-    showViewOnceThere(viewId);
+    const outcome = await openProject(endpointId, projectId);
+    if (outcome !== 'done') {
+        return;
+    }
+    if (isOpenHere(endpointId, projectId)) {
+        showViewOnceThere(viewId);
+        return;
+    }
+    shell?.openWindow?.(key, viewId);
 };
 
 /* A chat outside any project on one machine, which makes it in its Chats project and shows it. */

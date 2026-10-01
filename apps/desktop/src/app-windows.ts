@@ -1,11 +1,11 @@
-import { WINDOW_PROJECT_PARAM, WINDOW_START_PARAM, type AgentActivity } from '@ruimte/desktop-bridge';
+import { WINDOW_PROJECT_PARAM, WINDOW_START_PARAM, WINDOW_VIEW_PARAM, type AgentActivity } from '@ruimte/desktop-bridge';
 
 /*
  * The address a window loads for its key. Without a key it opens on the start screen, except the
  * one window of a start without a session (`first`): that one loads the bare address, where the
  * page opens the project it remembers, as the app did before it had more than one window.
  */
-export const windowUrl = (base: string, key: string | null, first: boolean): string => {
+export const windowUrl = (base: string, key: string | null, first: boolean, view: string | null = null): string => {
     if (key === null && first) {
         return base;
     }
@@ -14,12 +14,18 @@ export const windowUrl = (base: string, key: string | null, first: boolean): str
         url.searchParams.set(WINDOW_START_PARAM, '1');
     } else {
         url.searchParams.set(WINDOW_PROJECT_PARAM, key);
+        if (view !== null) {
+            url.searchParams.set(WINDOW_VIEW_PARAM, view);
+        }
     }
     return url.toString();
 };
 
 /* A key a page may ask for: the page's own, never read here. */
 export const isWindowKey = (value: unknown): value is string => typeof value === 'string' && value !== '' && value.length <= 512;
+
+/* A view a page asks a window to show, as opaque to the shell as a key. */
+export const isWindowView = (value: unknown): value is string => typeof value === 'string' && value !== '' && value.length <= 256;
 
 const count = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0);
 

@@ -158,8 +158,12 @@ export interface DesktopBridge {
        one window at a time: false when another window has it, which the shell brings to the front, and
        then this page stays where it was. Optional for the same reason `onBrowserContextMenu` is. */
     claimWindow?(key: string | null): Promise<boolean>;
-    /* Opens a window on a project, or raises the window that has it; null opens one on the start screen. */
-    openWindow?(key: string | null): void;
+    /* Opens a window on a project, or raises the window that has it; null opens one on the start screen.
+       The view is what that window shows of the project, which a shell from before views ignores. */
+    openWindow?(key: string | null, view?: string): void;
+    /* Another window asked this one to show a view of its project (`openWindow` with a view). Optional
+       for the same reason `onBrowserContextMenu` is. */
+    onShowView?(listener: (view: string) => void): () => void;
     /* Hands this window's project to a new window, which has it before this one lets go. True once it
        did, and then this page goes to the start screen. */
     moveToNewWindow?(): Promise<boolean>;

@@ -6,6 +6,11 @@ describe('readWindowTarget', () => {
         expect(readWindowTarget('?project=local%3Ap1')).toEqual({ kind: 'project', endpointId: 'local', projectId: 'p1' });
     });
 
+    test('reads the view a window opened on a project shows first', () => {
+        expect(readWindowTarget('?project=local%3Ap1&view=chat-1')).toEqual({ kind: 'project', endpointId: 'local', projectId: 'p1', viewId: 'chat-1' });
+        expect(readWindowTarget('?start=1&view=chat-1')).toEqual({ kind: 'start' });
+    });
+
     test('reads the start screen', () => {
         expect(readWindowTarget('?start=1')).toEqual({ kind: 'start' });
     });
@@ -27,6 +32,10 @@ describe('windowSearch', () => {
 
     test('moving to the start screen drops the project', () => {
         expect(windowSearch('?project=local%3Ap1', null)).toBe('?start=1');
+    });
+
+    test('claiming a project drops the view the shell asked for, so a reload keeps what the window shows', () => {
+        expect(windowSearch('?project=local%3Ap1&view=chat-1', 'local:p1')).toBe('?project=local%3Ap1');
     });
 
     test('keeps what else the address carried', () => {

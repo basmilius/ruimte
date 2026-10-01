@@ -1,5 +1,7 @@
 import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
+import { desktop } from '@/desktop/bridge';
 import { callerName, showViewNotice } from '@/project/show-view';
+import { showViewOnceThere } from '@/project/show-view-once';
 import { useSettings } from '@/state/settings';
 import { watchPool } from '@/transport/pool-watch';
 import { useDocument } from '@/state/document';
@@ -44,7 +46,14 @@ const onShowView = (endpointId: string, payload: ProjectShowViewEvent): void => 
  * to the clients that have that project open, and this side still checks it is about the project
  * on screen, since the socket may outlive a switch to another project.
  */
-export const startShowViewWatch = (): (() => void) =>
-    watchPool((link, endpointId) => ({
+export const startShowViewWatch = (): (() => void) => {
+    const stopLinks = watchPool((link, endpointId) => ({
         subscriptions: [link.on('project.showView', (payload) => onShowView(endpointId, payload))]
     }));
+    // Another window of the app, raising this one for a view of the project it has: a new chat, for one.
+    const stopShell = desktop()?.onShowView?.((viewId) => showViewOnceThere(viewId)) ?? (() => undefined);
+    return () => {
+        stopLinks();
+        stopShell();
+    };
+};
