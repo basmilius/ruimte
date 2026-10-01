@@ -191,6 +191,7 @@ import {
     SessionExitEventSchema,
     SessionInfoSchema,
     SessionListResultSchema,
+    SessionLoginPayloadSchema,
     SessionOutputEventSchema,
     SessionResizePayloadSchema,
     SessionResyncEventSchema,
@@ -274,6 +275,8 @@ export const REQUEST_SCHEMAS = {
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
     // A person approving the command the session holds: it is written down and typed. Nothing held is no error.
     'session.runHeld': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    // Ends once the client that asked leaves; `login-unavailable` for a CLI without a login of its own.
+    'session.login': { payload: SessionLoginPayloadSchema, result: SessionInfoSchema },
     'browser.open': { payload: BrowserOpenPayloadSchema, result: BrowserInfoSchema },
     'browser.detach': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
     'browser.kill': { payload: BrowserTargetPayloadSchema, result: EmptySchema },

@@ -91,6 +91,16 @@ describe('session requests', () => {
         expect(payload.safeParse({ sessionId: 'n1', cols: 0, rows: 24 }).success).toBe(false);
     });
 
+    test('session.login names a CLI and a size, the account is optional', () => {
+        const { payload, result } = REQUEST_SCHEMAS['session.login'];
+        expect(payload.safeParse({ sessionId: 'login-1', kind: 'claude', cols: 80, rows: 24 }).success).toBe(true);
+        expect(payload.safeParse({ sessionId: 'login-1', kind: 'codex', account: 'codex_work', cols: 80, rows: 24 }).success).toBe(true);
+        expect(payload.safeParse({ sessionId: 'login-1', kind: 'vim', cols: 80, rows: 24 }).success).toBe(false);
+        expect(payload.safeParse({ sessionId: 'login-1', kind: 'claude', account: '~/.claude', cols: 80, rows: 24 }).success).toBe(false);
+        expect(payload.safeParse({ sessionId: 'login-1', kind: 'claude' }).success).toBe(false);
+        expect(result.safeParse(info).success).toBe(true);
+    });
+
     test('session.attach', () => {
         const { payload, result } = REQUEST_SCHEMAS['session.attach'];
         expect(payload.safeParse({ sessionId: 'n1', cols: 120, rows: 40 }).success).toBe(true);

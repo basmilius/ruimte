@@ -107,6 +107,7 @@
     "session.clear",
     "session.list",
     "session.runHeld",
+    "session.login",
     "browser.open",
     "browser.detach",
     "browser.kill",

@@ -25,7 +25,8 @@ type SessionErrorCode =
     | 'agent-not-found'
     | 'agent-live'
     | 'agent-resuming'
-    | 'shell-busy';
+    | 'shell-busy'
+    | 'login-unavailable';
 
 /*
  * How long a typed resume has to produce a live agent before another one is allowed. A CLI that is
@@ -65,6 +66,14 @@ interface CreateSessionOptions {
     env?: Record<string, string>;
     // Not on the wire: starts on an empty screen instead of the last one of this id.
     fresh?: boolean;
+    // Not on the wire: a session no node stands for, opened for one client, such as a login. Its command
+    // is the daemon's own and never held, it ends when that client leaves, and Processes names it `label`.
+    forClient?: ClientSession;
+}
+
+export interface ClientSession {
+    clientId: string;
+    label: string;
 }
 
 export interface SessionManagerOptions {
@@ -143,6 +152,8 @@ export class SessionManager {
     private readonly resuming = new Map<string, number>();
     // Per session, the agents (main and subagents) whose question or approval still waits on the person.
     private readonly waiting = new Map<string, ReadonlySet<string>>();
+    // The sessions that live for one client, by session id; nothing else would ever end them.
+    private readonly clientSessions = new Map<string, ClientSession>();
     private readonly now: () => number;
     private readonly claudeTitles: SessionManagerOptions['claudeTitles'] | null;
     private readonly codexTitles: SessionManagerOptions['codexTitles'] | null;
@@ -264,7 +275,10 @@ export class SessionManager {
             restoredScreen = (await this.snapshots?.read(options.sessionId)) ?? undefined;
         }
 
-        const held = options.command && this.commands?.approved(options.sessionId, options.command) === false ? options.command : null;
+        const held =
+            options.command && options.forClient === undefined && this.commands?.approved(options.sessionId, options.command) === false
+                ? options.command
+                : null;
         const shell = options.shell ?? defaultShell(this.env);
         const session = this.spawn({
             id: options.sessionId,
@@ -283,6 +297,9 @@ export class SessionManager {
         session.heldCommand = held;
         this.sessions.set(session.id, session);
         this.tokens.set(session.hookToken, session.id);
+        if (options.forClient) {
+            this.clientSessions.set(session.id, options.forClient);
+        }
         this.broadcastListChanged();
         return this.info(session);
     }
@@ -454,6 +471,7 @@ export class SessionManager {
         this.broadcastListChanged();
     }
 
+    /* A client that leaves; the sessions opened for it alone go with it, since no node will ever end them. */
     detachAll(clientId: string): void {
         let changed = false;
         for (const session of this.sessions.values()) {
@@ -462,9 +480,19 @@ export class SessionManager {
                 changed = true;
             }
         }
+        for (const [sessionId, owner] of [...this.clientSessions]) {
+            if (owner.clientId === clientId) {
+                void this.kill(sessionId).catch(() => undefined);
+            }
+        }
         if (changed) {
             this.broadcastListChanged();
         }
+    }
+
+    /* What Processes calls a session no node stands for, or null for a node's own. */
+    labelOf(sessionId: string): string | null {
+        return this.clientSessions.get(sessionId)?.label ?? null;
     }
 
     /* Input from a client; a keystroke, unlike what its emulator answers by itself, sizes the PTY to that client's node. */
@@ -565,7 +593,8 @@ export class SessionManager {
     async snapshotAll(): Promise<SessionSnapshot[]> {
         const result: SessionSnapshot[] = [];
         for (const session of [...this.sessions.values()]) {
-            const screen = this.deleted.has(session) ? null : session.changedScreen();
+            // A session opened for one client is never attached again after that client, so its screen is worth nothing on disk.
+            const screen = this.deleted.has(session) || this.clientSessions.has(session.id) ? null : session.changedScreen();
             if (screen === null) {
                 continue;
             }
@@ -791,6 +820,7 @@ export class SessionManager {
         this.sessions.delete(session.id);
         this.resuming.delete(session.id);
         this.waiting.delete(session.id);
+        this.clientSessions.delete(session.id);
         this.titleReadAt.delete(session.id);
         const retry = this.titleRetries.get(session.id);
         if (retry?.timer) {

@@ -59,6 +59,18 @@ export const SessionCreatePayloadSchema = z.object({
 });
 export type SessionCreatePayload = z.infer<typeof SessionCreatePayloadSchema>;
 
+// A shell in the home folder that runs a CLI's own login under one of its accounts, for a person
+// who asked for it outside any project. The daemon picks the command, so nothing is ever held.
+export const SessionLoginPayloadSchema = z.object({
+    sessionId: SessionIdSchema,
+    kind: AgentKindSchema,
+    // Absent is the CLI's default account.
+    account: ProviderAccountIdSchema.optional(),
+    cols,
+    rows
+});
+export type SessionLoginPayload = z.infer<typeof SessionLoginPayloadSchema>;
+
 export const SessionAttachPayloadSchema = z
     .object({
         sessionId: SessionIdSchema,

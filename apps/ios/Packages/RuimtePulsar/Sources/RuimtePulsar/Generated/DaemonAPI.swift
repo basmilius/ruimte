@@ -15,6 +15,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `sessionClear` = "session.clear"
     case `sessionList` = "session.list"
     case `sessionRunHeld` = "session.runHeld"
+    case `sessionLogin` = "session.login"
     case `browserOpen` = "browser.open"
     case `browserDetach` = "browser.detach"
     case `browserKill` = "browser.kill"

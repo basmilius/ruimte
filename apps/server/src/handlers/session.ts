@@ -1,11 +1,38 @@
+import type { AgentKind } from '@ruimte/contracts';
 import { translate, type Dispatcher } from '../dispatcher.ts';
-import type { SessionManager } from '../sessions/manager.ts';
+import { SessionError, type SessionManager } from '../sessions/manager.ts';
 
 /* Owes ending the agents a session's node opened, before that session goes; a shell that already exited ends nothing, so a restart does not. */
 export type BeforeKill = (nodeId: string) => Promise<unknown>;
 
-export const registerSessionHandlers = (dispatcher: Dispatcher, manager: SessionManager, beforeKill?: BeforeKill): void => {
+/* The CLIs as a login names them: the CLI's own login command, if it has one, and its name. */
+export interface LoginCommands {
+    commandOf(kind: AgentKind): string | undefined;
+    nameOf(kind: AgentKind): string;
+}
+
+export const registerSessionHandlers = (dispatcher: Dispatcher, manager: SessionManager, beforeKill?: BeforeKill, logins?: LoginCommands): void => {
     dispatcher.register('session.create', (payload) => translate(() => manager.create(payload)));
+
+    /* No `cwd`, so the shell starts in the home folder. The default account is named outright, since a
+       launch without one would take the person's pick for new agents instead. */
+    dispatcher.register('session.login', (payload, client) =>
+        translate(() => {
+            const command = logins?.commandOf(payload.kind);
+            if (logins === undefined || command === undefined) {
+                throw new SessionError('login-unavailable', `${logins?.nameOf(payload.kind) ?? payload.kind} has no login of its own`);
+            }
+            return manager.create({
+                sessionId: payload.sessionId,
+                cols: payload.cols,
+                rows: payload.rows,
+                command,
+                agent: { kind: payload.kind, account: payload.account ?? payload.kind },
+                fresh: true,
+                forClient: { clientId: client.id, label: `${logins.nameOf(payload.kind)} login` }
+            });
+        })
+    );
 
     dispatcher.register('session.attach', (payload, client) =>
         translate(() => manager.attach(payload.sessionId, client.id, payload.follow ? undefined : payload.cols, payload.follow ? undefined : payload.rows))

@@ -6098,6 +6098,236 @@
     "type": "object",
     "properties": {}
   },
+  "request.session.login.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "x-open-enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot",
+          "apple"
+        ]
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      },
+      "cols": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "rows": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "sessionId",
+      "kind",
+      "cols",
+      "rows"
+    ]
+  },
+  "request.session.login.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "pid": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "cols": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "rows": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "createdAt": {
+        "type": "number"
+      },
+      "attached": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "exited": {
+        "type": "boolean"
+      },
+      "exitCode": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "agent": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "x-open-enum": [
+                  "claude",
+                  "codex",
+                  "gemini",
+                  "copilot",
+                  "apple"
+                ]
+              },
+              "agentSessionId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "transcriptPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "suggestedTitle": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "status": {
+                "type": "string",
+                "x-open-enum": [
+                  "running",
+                  "needs-you",
+                  "idle",
+                  "error",
+                  "exited"
+                ]
+              },
+              "live": {
+                "type": "boolean"
+              },
+              "updatedAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "agentSessionId",
+              "transcriptPath",
+              "status",
+              "live",
+              "updatedAt"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "approvals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "toolName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "summary": {
+              "type": "string"
+            },
+            "choices": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "remember",
+                      "deny"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "label"
+                ]
+              }
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "expiresAt": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "requestId",
+            "sessionId",
+            "toolName",
+            "summary",
+            "choices",
+            "createdAt",
+            "expiresAt"
+          ]
+        }
+      },
+      "heldCommand": {
+        "type": "string"
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+      }
+    },
+    "required": [
+      "sessionId",
+      "cwd",
+      "pid",
+      "cols",
+      "rows",
+      "createdAt",
+      "attached",
+      "exited"
+    ]
+  },
   "request.browser.open.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

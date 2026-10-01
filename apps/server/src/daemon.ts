@@ -504,7 +504,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 pid: session.pid,
                 exited: session.exited,
                 agent: session.agent ?? null,
-                label: launches.labelOf(session.sessionId) ?? undefined
+                label: launches.labelOf(session.sessionId) ?? manager.labelOf(session.sessionId) ?? undefined
             })),
         chats: () => chats.processTargets(),
         contextUrl: () => manager.contextUrl,
@@ -669,7 +669,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const dispatcher = new Dispatcher();
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
-    registerSessionHandlers(dispatcher, manager, endChildren.owe);
+    registerSessionHandlers(dispatcher, manager, endChildren.owe, { commandOf: (kind) => providers.get(kind).home?.loginCommand, nameOf: nameOfCli });
     registerBrowserHandlers(dispatcher, browsers, browserPages, () => identity.streamingAllowed);
     registerDeviceHandlers(dispatcher, devices, () => identity.streamingAllowed);
     registerDeviceControlHandlers(dispatcher, deviceControl);
