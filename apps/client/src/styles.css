@@ -104,8 +104,8 @@
        before the ones under it, since a dark word on half a sky reads as badly as a light one. */
     --eclipse-fade-start: 68%;
     --eclipse-fade-end: 94%;
-    /* The room under the words on a sky, before a pane's own content starts. */
-    --eclipse-clearance: 104px;
+    /* The room under the words on a sky, on top of the gap a pane keeps between its blocks. */
+    --eclipse-clearance: 80px;
     /* The ten colors a drawing may name. The file holds the name, never the value, so a sketch
        reads in both themes and follows the accent when it asks for it. */
     --draw-ink: var(--text);
@@ -192,7 +192,7 @@
     --chart-frontier: rgb(255 255 255 / 0.08);
     --eclipse-fade-start: 52%;
     --eclipse-fade-end: 100%;
-    --eclipse-clearance: 30px;
+    --eclipse-clearance: 6px;
     --draw-red: #ff7b72;
     --draw-orange: #ffa657;
     --draw-yellow: #e3b341;

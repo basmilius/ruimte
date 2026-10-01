@@ -32,6 +32,11 @@ const PANES: Record<SettingsSectionId, ComponentType> = {
     about: lazyNamed(() => import('@/shell/settings/panes/AboutPane'), 'AboutPane')
 };
 
+// From the pane's own module, so a hero loads with its pane.
+const HEROES: Partial<Record<SettingsSectionId, ComponentType>> = {
+    about: lazyNamed(() => import('@/shell/settings/panes/AboutPane'), 'AboutHero')
+};
+
 /* The index plus the shortcuts, whose words and keys are only known once the lists are built. */
 const findSettings = (query: string): SearchResult[] => {
     const apple = isApplePlatform();
@@ -45,7 +50,8 @@ const entryOf = (meta: SettingsSectionMeta): SettingsSectionEntry => ({
     label: sectionLabel(meta.id),
     description: sectionDescription(meta.id),
     pane: PANES[meta.id],
-    split: meta.split
+    split: meta.split,
+    hero: HEROES[meta.id]
 });
 
 /* Ruimte's sections, search and account in the settings dialog of @basmilius/desktop-ui. Opens on the section the caller asked for, or the last one. */
