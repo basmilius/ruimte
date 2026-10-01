@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ActionInput } from '@ruimte/actions';
 import { useTranslation } from 'react-i18next';
-import { AppWindow, ExternalLink, FolderOpen, MessageSquarePlus, Settings2, X } from 'lucide-react';
+import { AppWindow, ExternalLink, FolderOpen, MessageSquarePlus, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { chatsProjects, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { newChat, useOffersNewChat } from '@/project/new-chat';
@@ -74,6 +74,44 @@ function ProjectActions({
                 <Icon icon={X} size={14} /> {t('projectMenu.closeProject')}
             </Menu.Item>
         </>
+    );
+}
+
+/*
+ * The Chats project of this machine, with a new chat on the edge where a project row has its actions.
+ * A machine that has made no chat yet has no Chats project to open, so it only offers the new chat.
+ */
+function ChatsRow({ chats, offersChat }: { chats: ProjectMenuRow | null; offersChat: boolean }) {
+    const { t } = useTranslation('shell');
+
+    if (chats === null) {
+        return (
+            <Menu.Item onClick={newChat}>
+                <Icon icon={MessageSquarePlus} size={14} /> {t('chats.newChat')}
+            </Menu.Item>
+        );
+    }
+    const open = (
+        <Menu.Item onClick={(event) => openProjectClickAction(event, chats.endpointId, chats.summary.projectId)}>
+            <ProjectGlyph
+                projectId={chats.summary.projectId}
+                endpointId={chats.endpointId}
+                icon={chats.summary.icon}
+                color={chats.summary.color}
+                size={14}
+                scratch
+            />{' '}
+            {t('chats.name')}
+        </Menu.Item>
+    );
+    if (!offersChat) {
+        return open;
+    }
+    return (
+        <Menu.Row aria-label={t('chats.name')}>
+            {open}
+            <Menu.RowAction icon={Plus} label={t('chats.newChat')} onClick={newChat} />
+        </Menu.Row>
     );
 }
 
@@ -257,28 +295,8 @@ export function ProjectMenu() {
                         </Tooltip>
                     )
                 }
+                before={chats !== null || offersChat ? <ChatsRow chats={chats} offersChat={offersChat} /> : undefined}
             >
-                {/* todo(Bas): one row Chats above Recent with New chat as its trailing button, and Recent and
-                    Open folder in one group, once ProjectSwitcher can draw that (basmilius/desktop#22, #23). */}
-                {chats !== null && (
-                    <Menu.Item onClick={(event) => openProjectClickAction(event, chats.endpointId, chats.summary.projectId)}>
-                        <ProjectGlyph
-                            projectId={chats.summary.projectId}
-                            endpointId={chats.endpointId}
-                            icon={chats.summary.icon}
-                            color={chats.summary.color}
-                            size={14}
-                            scratch
-                        />{' '}
-                        {t('chats.name')}
-                    </Menu.Item>
-                )}
-                {offersChat && (
-                    <Menu.Item onClick={newChat}>
-                        <Icon icon={MessageSquarePlus} size={14} /> {t('chats.newChat')}
-                    </Menu.Item>
-                )}
-                {(chats !== null || offersChat) && <Menu.Separator />}
                 <Menu.Item onClick={() => useUi.getState().openFolderBrowser()}>
                     <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
                 </Menu.Item>
