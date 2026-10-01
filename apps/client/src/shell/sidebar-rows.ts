@@ -46,6 +46,8 @@ export interface SidebarView {
     nodes: SidebarNode[];
     /* The node a standalone view is, so its row carries the status and the draft dot of that node. */
     self: SidebarNode | null;
+    /* A chat nobody wrote in yet, which has no row until its first message, even while it is on screen. */
+    hidden?: boolean;
 }
 
 export interface SidebarViewRow {
@@ -151,7 +153,7 @@ export const waitsOnYou = (node: SidebarNode): boolean => node.status === 'needs
 export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSection[] => {
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];
-    for (const view of project.views) {
+    for (const view of project.views.filter((candidate) => !candidate.hidden)) {
         for (const node of [...view.nodes, ...(view.self ? [view.self] : [])]) {
             if (waitsOnYou(node)) {
                 waiting.push({ type: 'node', rowId: `needs:${node.id}`, node, viewId: view.id, viewName: view.name });
@@ -164,6 +166,10 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
 
     const rows: SidebarRow[] = [];
     for (const [index, view] of project.views.entries()) {
+        // Skipped rather than left out of the list, so every other row keeps its index in the file.
+        if (view.hidden) {
+            continue;
+        }
         const expandable = view.kind === 'canvas' && view.nodes.length > 0;
         const expanded = expandable && expandedIds.has(view.id);
         rows.push({

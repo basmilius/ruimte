@@ -33,7 +33,7 @@ import {
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
-import { isCanvasView, isSessionView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
+import { isCanvasView, isEmptyChatView, isSessionView, type AgentKind, type AgentStatus, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { moveViewAction, renameNodeAction, renameViewAction } from '@/actions/client-actions';
 import { useDrafts } from '@ruimte/agents-react/chat/drafts';
@@ -873,7 +873,8 @@ export function Sidebar() {
                     path: view.kind === 'file' ? view.path : null,
                     nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
                     // Only a session view is a node of its own; a divider and a drawing have no status.
-                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null
+                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null,
+                    hidden: isEmptyChatView(view)
                 };
             })
         }),
@@ -898,7 +899,7 @@ export function Sidebar() {
           : buildSidebar({ project, expandedIds });
     const rows = rowOrder(sections);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
-    const empty = !combined && project.views.length === 0;
+    const empty = !combined && project.views.every((view) => view.hidden);
     useEffect(() => {
         if (rovingId !== null && !rows.includes(rovingId) && roving !== null && listHadFocus.current && document.activeElement === document.body) {
             listRef.current?.querySelector<HTMLElement>(`[data-sidebar-row="${CSS.escape(roving)}"]`)?.focus();
@@ -1018,7 +1019,9 @@ export function Sidebar() {
                         </div>
                     )}
                     {empty ? (
-                        <p className="px-2 py-4 text-center text-xs text-text-muted">{t('sidebar.noViews')}</p>
+                        <p className="px-2 py-4 text-center text-xs text-text-muted">
+                            {t(isScratchProject(currentProject) ? 'sidebar.noChats' : 'sidebar.noViews')}
+                        </p>
                     ) : (
                         sections.map((section, sectionIndex) => {
                             // Only the list of views takes a drop, and only the one the row came out of; the

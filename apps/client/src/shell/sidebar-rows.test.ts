@@ -311,3 +311,19 @@ describe('needs you over every project', () => {
         expect(sections[0]!.rows.map((row) => row.rowId)).toEqual(['needs:claude']);
     });
 });
+
+describe('a chat nobody wrote in yet', () => {
+    test('has no row, on screen or not, and the rows after it keep their place in the file', () => {
+        const hidden = { ...standalone('fresh', 'needs-you'), hidden: true };
+        const project: SidebarProject = { views: [standalone('first'), hidden, standalone('last')], activeViewId: 'fresh', openViewIds: ['fresh'] };
+
+        const sections = buildSidebar({ project, expandedIds: new Set() });
+
+        expect(sections.map((section) => section.kind)).toEqual(['views']);
+        expect(sections[0]!.rows.map((row) => (row.type === 'view' ? [row.view.id, row.index] : null))).toEqual([
+            ['first', 0],
+            ['last', 2]
+        ]);
+        expect(sections[0]!.viewCount).toBe(3);
+    });
+});
