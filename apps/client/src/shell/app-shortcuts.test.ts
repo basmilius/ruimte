@@ -31,6 +31,12 @@ describe('the shortcuts of the window', () => {
         expect(appShortcutFor(key(newWindow), mac)).toBeNull();
     });
 
+    test('a new chat starts from the start screen and every project alike', () => {
+        expect(appShortcutFor(key({ metaKey: true, altKey: true, key: 'n', code: 'KeyN' }), mac)).toBe('new-chat');
+        expect(appShortcutFor(key({ ctrlKey: true, altKey: true, key: 'n', code: 'KeyN' }), other)).toBe('new-chat');
+        expect(appShortcutFor(key({ altKey: true, key: 'n', code: 'KeyN' }), mac)).toBeNull();
+    });
+
     test('the sidebar is chrome of the window, and so is its shortcut', () => {
         expect(appShortcutFor(key({ metaKey: true, key: 'b', code: 'KeyB' }), mac)).toBe('sidebar');
     });

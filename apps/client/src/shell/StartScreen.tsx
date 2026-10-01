@@ -2,11 +2,12 @@ import { useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { isRecentProject } from '@ruimte/contracts';
-import { AppWindow, FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
+import { AppWindow, FolderOpen, LogIn, MessageSquarePlus, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
+import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProject } from '@/project/open';
 import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
 import { canOpenWindows, openInNewWindow } from '@/project/windows';
@@ -197,6 +198,7 @@ function StartContent() {
     const accountMachines = usePulsarMachines((s) => s.machines);
     const failure = useWindow((s) => s.bootFailure);
     const [dialog, setDialog] = useState<'add' | 'link' | null>(null);
+    const offersChat = useOffersNewChat();
 
     const station = !hasLocalMachine();
     const boot = stationBoot({ station, accountStatus, machines: accountMachines });
@@ -221,6 +223,18 @@ function StartContent() {
     const hasRecent = failure !== null || listed.length > 0;
 
     const openFolder = (): void => useUi.getState().openFolderBrowser();
+
+    const chatTile = (disabled: boolean) =>
+        offersChat && (
+            <Tile
+                icon={<Icon icon={MessageSquarePlus} size={16} />}
+                title={t('chats.newChat')}
+                description={t('chats.newChatHint')}
+                shortcut={APP_SHORTCUTS.newChat}
+                disabled={disabled}
+                onClick={newChat}
+            />
+        );
 
     const machineList = (
         <Section label={t('start.machines')}>
@@ -252,6 +266,7 @@ function StartContent() {
                     />
                     <p className="px-1 pb-2 text-center text-xs text-text-muted">{t('start.projectIsAFolder')}</p>
                     <div className="grid gap-2">
+                        {chatTile(false)}
                         <Tile
                             icon={<Icon icon={MonitorSmartphone} size={16} />}
                             title={t('start.connectMachine')}
@@ -284,6 +299,7 @@ function StartContent() {
                                     disabled={waiting}
                                     onClick={openFolder}
                                 />
+                                {chatTile(waiting)}
                                 <Tile
                                     icon={<Icon icon={MonitorSmartphone} size={16} />}
                                     title={t('start.connectMachine')}

@@ -198,7 +198,7 @@ export const closeProject = async (): Promise<void> => {
     }
 };
 
-const isOpenHere = (endpointId: string, projectId: string): boolean => {
+export const isOpenHere = (endpointId: string, projectId: string): boolean => {
     const { current, currentEndpointId } = useProject.getState();
     return windowWorkspace() !== null && current?.projectId === projectId && currentEndpointId === endpointId;
 };

@@ -431,6 +431,11 @@
         "targetBranch": "De doelbranch",
         "notCheckedOut": "{{branch}} staat nergens checked out."
     },
+    "chats": {
+        "name": "Chats",
+        "newChat": "Nieuwe chat",
+        "newChatHint": "Voor een vraag of een klusje"
+    },
     "start": {
         "failed": "Het startscherm kon niet worden getekend",
         "start": "Starten",
@@ -708,6 +713,7 @@
         "launchesOutput": "Output tonen",
         "launchesEdit": "Launches bewerken…",
         "newWindow": "Nieuw venster",
+        "newChat": "Nieuwe chat",
         "moveToNewWindow": "Naar nieuw venster verplaatsen",
         "onboarding": "Ruimte instellen…"
     }

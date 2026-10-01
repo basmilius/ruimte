@@ -73,6 +73,8 @@ export interface MenuContext {
     settingsOpen: boolean;
     /* The shell opens windows of its own, a window per project. */
     windows: boolean;
+    /* A chat outside any project can start from this window (`project/new-chat.ts`). */
+    newChat: boolean;
 }
 
 type CommandId = MenuActionId | PaletteId;
@@ -216,7 +218,9 @@ export const menuModel = (context: MenuContext): MenuSpec => {
         id: 'file',
         label: t('file'),
         items: [
-            ...only(context.windows, command('window-new', t('newWindow'), { shortcut: APP_SHORTCUTS.newWindow }), separator),
+            ...only(context.windows, command('window-new', t('newWindow'), { shortcut: APP_SHORTCUTS.newWindow })),
+            ...only(context.newChat, command('chat-new', t('newChat'), { shortcut: APP_SHORTCUTS.newChat })),
+            ...only(context.windows || context.newChat, separator),
             ...only(
                 workspace,
                 submenu('new-view', t('newView'), [

@@ -431,6 +431,11 @@
         "targetBranch": "The target branch",
         "notCheckedOut": "{{branch}} is not checked out anywhere."
     },
+    "chats": {
+        "name": "Chats",
+        "newChat": "New chat",
+        "newChatHint": "For a question or a quick task"
+    },
     "start": {
         "failed": "The start screen failed to render",
         "start": "Start",
@@ -708,6 +713,7 @@
         "launchesOutput": "Show Output",
         "launchesEdit": "Edit Launches…",
         "newWindow": "New Window",
+        "newChat": "New Chat",
         "moveToNewWindow": "Move to New Window",
         "onboarding": "Set Up Ruimte…"
     }

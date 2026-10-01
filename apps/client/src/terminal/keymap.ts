@@ -55,7 +55,8 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     ...Object.values(FOCUS_SHORTCUTS),
     APP_SHORTCUTS.settings,
     APP_SHORTCUTS.sidebar,
-    APP_SHORTCUTS.newWindow
+    APP_SHORTCUTS.newWindow,
+    APP_SHORTCUTS.newChat
 ];
 
 /* Off macOS these are control characters a program reads (Ctrl+B the tmux prefix, Ctrl+W delete-word,

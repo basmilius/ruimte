@@ -9,7 +9,9 @@ export const APP_SHORTCUTS = {
     settingsSearch: shortcut('Mod+F'),
     sidebar: shortcut('Mod+B'),
     // The desktop app's own; a browser keeps it for a private window.
-    newWindow: shortcut('Mod+Shift+N')
+    newWindow: shortcut('Mod+Shift+N'),
+    // Alt+N alone is the canvas's note, and Mod+N a browser keeps for itself.
+    newChat: shortcut('Mod+Alt+N')
 } as const;
 
 /*

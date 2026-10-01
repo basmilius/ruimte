@@ -49,6 +49,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     keepAwake: null,
     settingsOpen: false,
     windows: true,
+    newChat: true,
     ...patch
 });
 
@@ -109,6 +110,12 @@ describe('the menus', () => {
         expect(find(menuModel(context()), 'window-move')).toBeDefined();
         expect(commandIds(menuModel(context({ windows: false })))).not.toContain('window-new');
         expect(commandIds(menuModel(context({ windows: false })))).not.toContain('window-move');
+    });
+
+    test('a new chat starts from the start screen and a project alike, unless the machine refused one', () => {
+        expect(find(menuModel(START_SCREEN), 'chat-new')?.accelerator).toBe('CommandOrControl+Alt+N');
+        expect(find(menuModel(context()), 'chat-new')).toBeDefined();
+        expect(commandIds(menuModel(context({ newChat: false })))).not.toContain('chat-new');
     });
 
     test('the start screen has no view menu and nothing that needs a project', () => {

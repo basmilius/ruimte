@@ -40,6 +40,7 @@ export type MenuActionId = (typeof MENU_ACTION_IDS)[number];
 /* The commands the menu borrows from the palette (`appCommands()` in `shell/commands.ts`), run by the same row. */
 export const PALETTE_IDS = [
     'open-folder',
+    'chat-new',
     'reveal',
     'find',
     'find-in-files',

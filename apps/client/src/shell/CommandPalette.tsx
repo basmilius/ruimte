@@ -32,6 +32,7 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { ensureMachine } from '@/endpoint/reach';
 import { createViewAction, openFolderAction, openProjectAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
+import { newChatOn } from '@/project/new-chat';
 import { revealNode, showFileOnCanvas, showView } from '@/project/views';
 import { openInNewWindow, wantsNewWindow } from '@/project/windows';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
@@ -229,6 +230,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     const browseAt = useUi((s) => s.paletteBrowseAt);
     /* The machine the switcher asked the browser to open on, for a machine it lists nothing of. */
     const browseTarget = useUi((s) => s.paletteBrowseMachine);
+    const browseFor = useUi((s) => s.paletteBrowseFor);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const accountStatus = usePulsarAccount((s) => s.status);
     const accountMachines = usePulsarMachines((s) => s.machines);
@@ -306,12 +308,14 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
         setFailure(null);
         const isOpen = (endpointId: string): boolean => connectionOf(endpointId).status === 'open';
         const step: BrowseStep | null = browseNow
-            ? browseTarget !== null
-                ? pickMachine(browseTarget, isOpen(browseTarget))
-                : openBrowse(
-                      activeId,
-                      machines.map((row) => ({ endpointId: row.endpointId, open: isOpen(row.endpointId) }))
-                  )
+            ? browseFor === 'chat'
+                ? { endpointId: activeId, machines: true, path: '' }
+                : browseTarget !== null
+                  ? pickMachine(browseTarget, isOpen(browseTarget))
+                  : openBrowse(
+                        activeId,
+                        machines.map((row) => ({ endpointId: row.endpointId, open: isOpen(row.endpointId) }))
+                    )
             : pathStep(next);
         setBrowse(step);
         setQuery(browseNow ? '' : next);
@@ -481,6 +485,11 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     const chooseMachine = useCallback(
         (endpointId: string): void => {
             setFailure(null);
+            if (browseFor === 'chat') {
+                setOpen(false);
+                void newChatOn(endpointId);
+                return;
+            }
             if (connectionOf(endpointId).status === 'open') {
                 void startBrowsing(endpointId);
                 return;
@@ -490,7 +499,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
             setIndex(0);
             setBrowse(pickMachine(endpointId, false));
         },
-        [connectionOf, startBrowsing]
+        [browseFor, connectionOf, setOpen, startBrowsing]
     );
 
     const retry = (): void => {

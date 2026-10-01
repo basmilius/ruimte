@@ -174,6 +174,8 @@ interface UiStore {
     paletteBrowseAt: number;
     /* The machine the folder browser was asked to open on, or null to open on the machines as usual. */
     paletteBrowseMachine: string | null;
+    /* What picking a machine is for: its folders, or a new chat on it, which needs no folder at all. */
+    paletteBrowseFor: 'folder' | 'chat';
     /* What the file mode does with the file that is chosen; null in every other mode. */
     filePick: FilePick | null;
     settings: SettingsState;
@@ -231,6 +233,8 @@ interface UiStore {
     /* The palette browsing folders, from its own command or from the project menu. Nothing is
        typed. With one machine it opens on that machine's start folder, with more on the machines. */
     openFolderBrowser(machineId?: string): void;
+    /* The machines, for a new chat on the one that is picked. */
+    openChatMachines(): void;
     /* The palette listing the files of the open folder, to make one of them a node or a view. */
     openFilePicker(pick: FilePick): void;
     setPaletteMode(mode: PaletteMode): void;
@@ -259,6 +263,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteSeed: '',
     paletteBrowseAt: 0,
     paletteBrowseMachine: null,
+    paletteBrowseFor: 'folder',
     filePick: null,
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
@@ -348,6 +353,18 @@ export const useUi = create<UiStore>((set, get) => ({
             paletteSeed: '',
             paletteBrowseAt: get().paletteBrowseAt + 1,
             paletteBrowseMachine: machineId ?? null,
+            paletteBrowseFor: 'folder',
+            filePick: null
+        });
+    },
+    openChatMachines() {
+        set({
+            paletteOpen: true,
+            paletteMode: 'default',
+            paletteSeed: '',
+            paletteBrowseAt: get().paletteBrowseAt + 1,
+            paletteBrowseMachine: null,
+            paletteBrowseFor: 'chat',
             filePick: null
         });
     },

@@ -17,6 +17,7 @@ import {
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
 import { canKeepAwake } from '@/desktop/bridge';
+import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
 import { openFocusedFind } from '@/find/hosts';
 import { askDeleteView, askOpenAsView, askViewSettings, canOpenAsView, newSubheaderView } from '@/project/views';
@@ -195,6 +196,9 @@ export const appCommands = (): Command[] => {
             ? [{ id: 'window-move', label: i18next.t('shell:palette.commands.moveToNewWindow'), run: () => void moveToNewWindow() }]
             : []),
         { id: 'open-folder', label: i18next.t('shell:palette.commands.openFolder'), run: () => useUi.getState().openFolderBrowser() },
+        ...(offersNewChat(newChatMachine(), useNewChat.getState().refused)
+            ? [{ id: 'chat-new', label: i18next.t('shell:chats.newChat'), hint: i18next.t('shell:chats.name'), shortcut: APP_SHORTCUTS.newChat, run: newChat }]
+            : []),
         ...(folder
             ? [
                   {

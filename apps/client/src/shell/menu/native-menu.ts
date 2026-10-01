@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { useEffect } from 'react';
 import { desktop } from '@/desktop/bridge';
 import { useLaunches } from '@/launches/state';
+import { useNewChat } from '@/project/new-chat';
 import { runMenuCommand } from '@/shell/menu/actions';
 import { menuContext } from '@/shell/menu/context';
 import { menuModel } from '@/shell/menu/model';
@@ -52,6 +53,7 @@ export const useNativeMenu = (): void => {
             useServers.subscribe(schedule),
             useWindow.subscribe(schedule),
             useLaunches.subscribe(schedule),
+            useNewChat.subscribe(schedule),
             subscribeCanvases(schedule),
             bridge.onMenuCommand?.(runMenuCommand) ?? (() => undefined)
         ];
