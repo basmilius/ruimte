@@ -385,7 +385,7 @@ export class ChatCore {
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             ...(this.onLimits ? { onLimits: this.onLimits } : {}),
             persist: () => this.persist(payload.chatId),
-            save: () => this.save(payload.chatId),
+            save: () => this.persistNow(payload.chatId),
             persistSoon: () => this.persistSoon(payload.chatId),
             ...(kind === 'claude' && claudeTitles
                 ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId, this.claudeProjectsDirOf(session.info)) }
@@ -1136,6 +1136,9 @@ export class ChatCore {
         const skip = (reason: string): ResumeDecision => ({ resumeTurnId: null, reason });
         if (turn === null) {
             return { resumeTurnId: null, reason: null };
+        }
+        if (turn.deliveryPending) {
+            return skip('the wake prompt was not acknowledged; its result waits for your next message');
         }
         if (!this.onInterruptedRun) {
             return skip('this machine does not resume turns');

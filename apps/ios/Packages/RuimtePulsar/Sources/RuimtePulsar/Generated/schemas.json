@@ -10270,6 +10270,9 @@
                 "resumePending": {
                   "type": "boolean"
                 },
+                "deliveryPending": {
+                  "type": "boolean"
+                },
                 "taskIds": {
                   "type": "array",
                   "items": {
@@ -11726,6 +11729,9 @@
                 "resumePending": {
                   "type": "boolean"
                 },
+                "deliveryPending": {
+                  "type": "boolean"
+                },
                 "taskIds": {
                   "type": "array",
                   "items": {
@@ -12778,6 +12784,9 @@
                 "resumePending": {
                   "type": "boolean"
                 },
+                "deliveryPending": {
+                  "type": "boolean"
+                },
                 "taskIds": {
                   "type": "array",
                   "items": {
@@ -13822,6 +13831,9 @@
                           "maximum": 9007199254740991
                         },
                         "resumePending": {
+                          "type": "boolean"
+                        },
+                        "deliveryPending": {
                           "type": "boolean"
                         },
                         "taskIds": {
@@ -15646,6 +15658,9 @@
                             "maximum": 9007199254740991
                           },
                           "resumePending": {
+                            "type": "boolean"
+                          },
+                          "deliveryPending": {
                             "type": "boolean"
                           },
                           "taskIds": {
@@ -18874,6 +18889,9 @@
                 "resumePending": {
                   "type": "boolean"
                 },
+                "deliveryPending": {
+                  "type": "boolean"
+                },
                 "taskIds": {
                   "type": "array",
                   "items": {
@@ -19046,6 +19064,32 @@
         "enum": [
           "claude-transcript",
           "codex-thread"
+        ]
+      },
+      "context": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "x-open-enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "copilot",
+              "apple"
+            ]
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "chatId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "provider",
+          "cwd"
         ]
       },
       "live": {
@@ -41160,6 +41204,9 @@
                       "resumePending": {
                         "type": "boolean"
                       },
+                      "deliveryPending": {
+                        "type": "boolean"
+                      },
                       "taskIds": {
                         "type": "array",
                         "items": {
@@ -42982,6 +43029,9 @@
                           "maximum": 9007199254740991
                         },
                         "resumePending": {
+                          "type": "boolean"
+                        },
+                        "deliveryPending": {
                           "type": "boolean"
                         },
                         "taskIds": {

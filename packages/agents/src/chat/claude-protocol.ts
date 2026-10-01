@@ -115,6 +115,7 @@ type Pending =
  * belongs to one process, so a resumed CLI that numbers its messages from the start gets its own.
  */
 export class ClaudeProtocol {
+    private promptId: string | null = null;
     private readonly pending = new Map<string, Pending>();
     private streamMessageId: string | null = null;
     private streamTextCount = 0;
@@ -135,6 +136,13 @@ export class ClaudeProtocol {
     // What this turn heard about a limit: the API error of a main-chain frame, and a window the plan refused, with its reset in seconds.
     private apiError: string | null = null;
     private refused: { resetsAt: number | null } | null = null;
+
+    beginPrompt(promptId: string): void {
+        this.promptId = promptId;
+        this.apiError = null;
+        this.refused = null;
+        this.lastUuid = null;
+    }
 
     handle(frame: unknown): BackendEvent[] {
         const events: BackendEvent[] = [];
@@ -308,6 +316,10 @@ export class ClaudeProtocol {
                 }
             }
         } else if (frame.subtype === 'task_notification') {
+            const ref = str(frame.tool_use_id);
+            if (ref) {
+                this.subagentModels.delete(ref);
+            }
             const taskId = str(frame.task_id);
             if (taskId) {
                 this.endBackground(taskId, events);
@@ -527,6 +539,9 @@ export class ClaudeProtocol {
     }
 
     private handleUser(frame: Frame, events: BackendEvent[]): void {
+        if (this.promptId !== null && frame.uuid === this.promptId) {
+            events.push({ type: 'turn.accepted', promptId: this.promptId });
+        }
         const message = isRecord(frame.message) ? frame.message : {};
         const content = Array.isArray(message.content) ? message.content : [];
         for (const block of content) {
@@ -535,6 +550,7 @@ export class ClaudeProtocol {
             }
             const ref = str(block.tool_use_id);
             if (ref) {
+                this.subagentModels.delete(ref);
                 const output = resultText(block.content);
                 const workflow = WORKFLOW_LAUNCHED.exec(output)?.[1];
                 if (workflow) {
@@ -547,6 +563,19 @@ export class ClaudeProtocol {
     }
 
     private handleResult(frame: Frame, events: BackendEvent[]): void {
+        const echoed = Array.isArray(frame.user_message_uuids) ? frame.user_message_uuids.filter((value): value is string => typeof value === 'string') : [];
+        const origin = str(frame.origin) ?? (isRecord(frame.origin) ? str(frame.origin.kind) : null);
+        if (this.promptId !== null && (echoed.length > 0 ? !echoed.includes(this.promptId) : origin !== null && origin !== 'human' && origin !== 'user')) {
+            if (typeof frame.total_cost_usd === 'number') {
+                events.push({ type: 'usage', costUsd: num(frame.total_cost_usd) });
+            }
+            if (frame.is_error === true) {
+                events.push({ type: 'note', level: 'warning', text: 'A background Claude turn failed; the submitted prompt is still pending.' });
+            }
+            return;
+        }
+        const promptId = this.promptId !== null && echoed.includes(this.promptId) ? this.promptId : null;
+        this.promptId = null;
         const failed = frame.is_error === true || (typeof frame.subtype === 'string' && frame.subtype.startsWith('error'));
         const errors = Array.isArray(frame.errors) ? frame.errors.filter((error): error is string => typeof error === 'string') : [];
         const lastUuid = this.lastUuid;
@@ -556,6 +585,7 @@ export class ClaudeProtocol {
         this.refused = null;
         events.push({
             type: 'turn.done',
+            ...(promptId === null ? {} : { promptId }),
             state: failed ? 'error' : 'done',
             costUsd: num(frame.total_cost_usd),
             ...(failed ? { error: errors[0] ?? str(frame.result) ?? `The turn ended with ${str(frame.subtype) ?? 'an error'}` } : {}),

@@ -434,3 +434,82 @@ describe('background work recovered from a stored chat', () => {
         await recovered.session.dispose();
     });
 });
+
+describe('provider acceptance of a wake', () => {
+    test('persists before sending and clears delivery only for its own acknowledgement', async () => {
+        const saved = Promise.withResolvers<void>();
+        const run = rig({ save: () => saved.promise });
+        Object.defineProperty(run.backend, 'acknowledgesTurns', { value: true });
+        const turnId = run.session.wake({ text: 'settled result', label: 'Task', taskIds: ['task'] })!;
+        await flush();
+        expect(run.sent).toEqual([]);
+        expect(run.session.thread.get(turnId)).toMatchObject({ deliveryPending: true });
+        saved.resolve();
+        await flush();
+        expect(run.sent).toHaveLength(1);
+        run.event({ type: 'turn.accepted', promptId: 'foreign' });
+        expect(run.session.thread.get(turnId)).toMatchObject({ deliveryPending: true });
+        run.event({ type: 'turn.accepted', promptId: run.sent[0]!.promptId! });
+        expect(run.session.thread.get(turnId)).not.toHaveProperty('deliveryPending', true);
+        run.event({ type: 'turn.done', state: 'error', costUsd: 0 });
+        expect(run.session.thread.get(turnId)).toMatchObject({ state: 'error' });
+        await run.session.dispose();
+    });
+
+    for (const failure of ['start', 'write', 'exit']) {
+        test(`keeps results and consumed notices across a ${failure} failure and restart`, async () => {
+            let notices = ['A native task was lost', 'A message from another node'];
+            const first = rig({ promptNotes: { next: () => ({ shown: [], heard: notices.splice(0) }), reset: () => undefined } }, failure === 'start');
+            Object.defineProperty(first.backend, 'acknowledgesTurns', { value: true });
+            if (failure === 'write') {
+                first.backend.sendTurn = () => {
+                    throw new Error('broken pipe');
+                };
+            }
+            const turnId = first.session.wake({ text: 'result', label: 'Task', taskIds: ['task'] })!;
+            if (failure === 'start') {
+                first.start.reject(new Error('failed start'));
+            }
+            await flush();
+            if (failure === 'exit') {
+                first.event({ type: 'exit', exitCode: 1 });
+            }
+            expect(first.session.thread.get(turnId)).toMatchObject({ state: 'error', deliveryPending: true });
+            expect(first.session.preambles.join('\n')).toContain('A message from another node');
+            const second = rig({
+                info: structuredClone(first.session.info),
+                items: structuredClone(first.session.thread.list()),
+                preambles: [...first.session.preambles]
+            });
+            second.session.send('continue consciously');
+            await flush();
+            expect(second.sent[0]?.preamble).toContain('A native task was lost');
+            expect(second.sent[0]?.preamble).toContain('A message from another node');
+            expect(second.session.preambles).toEqual([]);
+            second.session.clear(true);
+            expect(second.session.preambles).toEqual([]);
+            await first.session.dispose();
+            await second.session.dispose();
+        });
+    }
+});
+
+test('a legacy result proves wake acceptance, while a failed durable save sends nothing', async () => {
+    const legacy = rig();
+    Object.defineProperty(legacy.backend, 'acknowledgesTurns', { value: true });
+    const turnId = legacy.session.wake({ text: 'result', label: 'Task', taskIds: ['task'] })!;
+    await flush();
+    legacy.event({ type: 'turn.done', state: 'done', costUsd: 0 });
+    expect(legacy.session.thread.get(turnId)).not.toHaveProperty('deliveryPending', true);
+    const failed = rig({
+        save: async () => {
+            throw new Error('disk full');
+        }
+    });
+    const failedTurn = failed.session.wake({ text: 'result', label: 'Task', taskIds: ['task'] })!;
+    await flush();
+    expect(failed.sent).toEqual([]);
+    expect(failed.session.thread.get(failedTurn)).toMatchObject({ state: 'error', deliveryPending: true });
+    await legacy.session.dispose();
+    await failed.session.dispose();
+});

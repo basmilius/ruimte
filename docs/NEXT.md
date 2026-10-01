@@ -32,27 +32,25 @@ choosing media buffer sizes.
 
 Sources: `packages/agents/src/chat`, task coordination and the host's resume handlers.
 
-The implementation and CLI captures are recorded in
+The completed lifecycle fixes and CLI captures are recorded in
 [the orchestration report](reports/private/2026-09-30-orchestration-upstream.html#resultaat).
-The remaining checks need the desktop or a naturally occurring provider limit.
+The [October 1 follow-up plan](reports/private/2026-09-30-orchestration-upstream.html#vervolgplan) maps the remaining
+changes to the current code and defines their acceptance cases. B1 through B6 and R1 are complete;
+the audit's historical start prompt must not be run again.
 
-1. Complete the remaining Electron checks after the Ruimte Dev computer-use run. That run verified
-   child file approvals after root completion, reuse of the same child, Claude's effective mode
-   and its selected-mode explanation, Stop preserving the queue, Send now and new Send resuming
-   it, busy Clear cancellation and confirmation, and Clear's composer layout. It also verified
-   immediate Stop after a cold start, native Codex Shift+Stop with its provider limitation, and a
-   real workflow warning after five minutes followed by its own Stop button. Late child requests
-   in Codex and Claude no longer open phantom main turns; Clear's clipped composer is fixed.
-   Still check a deliberately slow CLI startup, the Shift+Stop confirmation for delegated Ruimte
-   children, Clear with delegated tasks, and desktop daemon restart while a delegated task waits
-   on native child work. Recovery must produce one failure/wake and a notice on the next prompt.
-2. Capture a real provider-limit/reset sequence when one occurs and add a versioned replay. A live
-   Codex 0.159.2 turn now has a quota fixture, with a weekly primary window at 16 percent; it did
-   not hit a limit. The bounded probe and reset regressions are in the report. Unknown reset times
-   keep the queue paused without scheduling a resume; empty snapshots drop stale reset times.
-   The deterministic tests do not establish the live refusal/reset frame sequence.
+The implementation, real Claude nesting/reuse and direct resume/compact captures, and verified
+mixed-provider child context are recorded in the
+[app acceptance results](reports/private/2026-09-30-orchestration-upstream.html#appacceptatie-1-oktober).
+No remaining implementation step from B1 through B6 or R1 is open.
 
-Done when the desktop checks pass and the live limit sequence has a versioned replay.
+1. Capture a natural provider-limit/reset sequence when one occurs, using the bounded probe in
+   the report. A quota read alone is not a refusal/reset replay. Do not consume budget to force
+   a limit. Unknown reset times keep the queue paused; this capture does not block other fixes.
+2. Preserve natural early-before-tool metadata or mid-run child model changes if they occur.
+   Current regressions cover those orderings deterministically; the latest live capture shows
+   normal nesting and reuse. This is supplementary evidence, not an implementation gate.
+
+The remaining full-client memory verification belongs to package 3.
 
 ## 2. Ownership and persistent files
 
@@ -82,9 +80,13 @@ a usable launch route.
    editor gate and repeated view switching.
 3. Measure the fixed ten-context WebGL budget on representative hardware and under context loss.
    Choose any cap/adaptation change from those results. A user setting is not automatically required.
-4. Extend the [recorded Codex and idle-load baseline](reports/private/2026-09-30-orchestration-upstream.html#metingen)
-   to many distinct native children and the desktop renderer. Profile Bun's retained process
-   memory before choosing a cache or allocation change; record RSS and collected heap separately.
+4. Finish the collected Electron heap and frame/latency measurement for the prepared 100-idle-chat
+   full-client fixture. The fixture opened in Ruimte Dev; after Inspect, the computer helper stopped
+   resolving the running dev app and reports taken-over. Resume computer use before continuing.
+   The [orchestration report](reports/private/2026-09-30-orchestration-upstream.html#afwerking-1-oktober)
+   records the completed 1,000-child deterministic probe, genuine nine-child Claude replay,
+   full Electron view-switch baseline and Bun/JSC/mimalloc attribution. Do not infer collected
+   Electron heap from RSS or change cache/GC policy before measuring this workload.
 5. Measure binary `bytes.read` throughput while terminals and chats are busy, on socket and direct
    connections. If one session can dominate the socket, add fair per-session limits that preserve
    replies/chat events and repair dropped terminal output through `session.resync`.
@@ -338,7 +340,7 @@ architectures/formats.
 
 ## Decisions and completion rules
 
-The decision-dependent steps are queue policy after ordinary Stop/errors, Clear's child semantics,
+The decision-dependent steps are automatic result redelivery after an accepted parent turn fails,
 shared-folder restore with concurrent edits, Claude account configuration sharing, ref-only merges,
 the protocol window, plugin scope and the later language-server execution rules. Decide each before
 its dependent implementation, while continuing the other steps. Measurements settle buffer, cap

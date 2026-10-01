@@ -117,6 +117,7 @@ describe('a Claude subagent', () => {
         const page = await makeReader().read('chat-1', CHILD_CALL);
 
         expect(page.source).toBe('claude-transcript');
+        expect(page.context).toEqual({ provider: 'claude', cwd: '/work/demo' });
         expect(page.live).toBe(false);
         expect(page.history).toEqual({ start: 0, cursor: null });
         expect(page.items.map((item) => item.kind)).toEqual(['user', 'thinking', 'tool', 'subagent', 'assistant']);
@@ -329,6 +330,7 @@ describe('a Codex subagent', () => {
         const page = await reader.read('chat-x', 'call-1', undefined, 4);
         expect(asked[0]).toEqual({ threadId: 'child-thread', limit: 4, sortDirection: 'desc' });
         expect(page).toMatchObject({ source: 'codex-thread', live: true, history: { cursor: 'codex:4' } });
+        expect(page.context).toEqual({ provider: 'codex', cwd: '/work/demo' });
         expect(page.history.start).toBeUndefined();
         // Two reasoning items stay two thinking items, so the ids do not depend on where a page starts.
         expect(page.items.map((item) => item.kind)).toEqual(['tool', 'tool', 'thinking', 'thinking']);

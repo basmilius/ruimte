@@ -1,12 +1,104 @@
 import { describe, expect, jest, test } from 'bun:test';
 import { ClaudeProtocol } from './claude-protocol.ts';
 import autoFallbackCapture from './fixtures/claude-2.1.285-auto-fallback.json';
+import resumedTaskCapture from './fixtures/claude-2.1.285-resume-task-notification.json';
+import compactCapture from './fixtures/claude-2.1.285-resume-direct-compact.json';
+import nativeChildrenCapture from './fixtures/claude-2.1.285-native-children.json';
 import { ChatThread } from './thread.ts';
 import { ThreadProjector } from './projector.ts';
 
 const usage = { input_tokens: 8, cache_creation_input_tokens: 2671, cache_read_input_tokens: 24869, output_tokens: 1 };
 
 describe('ClaudeProtocol', () => {
+    test.each(['task-notification', { kind: 'task-notification' }])(
+        'a background result with origin %j cannot finish compact or clear its refusal',
+        (origin) => {
+            const protocol = new ClaudeProtocol();
+            protocol.beginPrompt('compact-prompt');
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 500 } });
+            expect(
+                protocol.handle({ type: 'result', subtype: 'success', origin, num_turns: 0, total_cost_usd: 0.2 }).some((event) => event.type === 'turn.done')
+            ).toBe(false);
+            expect(protocol.handle({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 1000 } })).toEqual([
+                { type: 'compaction', preTokens: 1000 }
+            ]);
+            expect(
+                protocol.handle({ type: 'result', subtype: 'error_during_execution', is_error: true, user_message_uuids: ['compact-prompt'] })
+            ).toContainEqual(expect.objectContaining({ type: 'turn.done', promptId: 'compact-prompt', limit: { kind: 'usage', resetsAt: 500000 } }));
+        }
+    );
+
+    test('the live resumed task result leaves the user prompt pending until its replay and matching result', () => {
+        const protocol = new ClaudeProtocol();
+        const promptId = resumedTaskCapture.frames[2].uuid;
+        protocol.beginPrompt(promptId);
+        const events = resumedTaskCapture.frames.flatMap((frame) => protocol.handle(frame));
+        expect(events.filter((event) => event.type === 'turn.accepted')).toEqual([{ type: 'turn.accepted', promptId }]);
+        expect(events.filter((event) => event.type === 'turn.done')).toEqual([{ type: 'turn.done', promptId, state: 'done', costUsd: 0.0394587 }]);
+        expect(events).toContainEqual({ type: 'usage', costUsd: 0.0346902 });
+    });
+
+    test('live direct compact after resume ignores the preceding task notification', () => {
+        const protocol = new ClaudeProtocol();
+        const result = compactCapture.frames.find((frame) => frame.type === 'result' && 'user_message_uuids' in frame);
+        const promptId = result!.user_message_uuids![0];
+        protocol.beginPrompt(promptId);
+        const events = compactCapture.frames.flatMap((frame) => protocol.handle(frame));
+        expect(events.filter((event) => event.type === 'turn.done')).toEqual([expect.objectContaining({ promptId, state: 'done' })]);
+        expect(events.filter((event) => event.type === 'compaction')).toHaveLength(1);
+    });
+
+    test('live native children retain nine identities through nesting and SendMessage reuse', () => {
+        const protocol = new ClaudeProtocol();
+        const thread = new ChatThread({
+            chatId: 'native-fixture',
+            provider: 'claude',
+            cwd: '/tmp',
+            agentSessionId: null,
+            model: null,
+            selection: { model: 'claude-haiku-4-5', options: {} },
+            runtimeMode: 'supervised',
+            running: true,
+            status: 'idle',
+            activeTurnId: null,
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+            createdAt: 1
+        });
+        const projector = new ThreadProjector(thread, { providerName: 'Claude' });
+        const events = nativeChildrenCapture.frames.flatMap((frame) => protocol.handle(frame));
+        for (const event of events) {
+            projector.project(1, event);
+        }
+        const rows = thread.list().filter((item) => item.kind === 'subagent');
+        expect(rows).toHaveLength(9);
+        expect(new Set(rows.map((item) => item.native?.agentId)).size).toBe(9);
+        expect(rows.every((item) => item.status === 'done' && item.model === 'claude-haiku-4-5-20251001')).toBe(true);
+        const nested = rows.find((item) => item.summary === 'OCT1-NATIVE-NESTED');
+        expect(nested).toBeDefined();
+        expect(nested?.parentToolUseId).toBe(rows.find((item) => item.description?.includes('agent 8'))?.toolUseId);
+        for (const number of [1, 2]) {
+            const reused = rows.find((item) => item.description === `OCT1-NATIVE agent ${number}`);
+            expect(reused).toMatchObject({ status: 'done', result: `OCT1-NATIVE-REUSED-${number}` });
+        }
+        expect(events.filter((event) => event.type === 'task.started')).toHaveLength(11);
+        expect(events.filter((event) => event.type === 'task.done')).toHaveLength(11);
+    });
+
+    test('matches a normal result by prompt UUID and keeps legacy and genuine background results', () => {
+        const protocol = new ClaudeProtocol();
+        protocol.beginPrompt('current');
+        expect(protocol.handle({ type: 'result', subtype: 'success', user_message_uuids: ['older'] }).some((event) => event.type === 'turn.done')).toBe(false);
+        expect(protocol.handle({ type: 'result', subtype: 'success', origin: 'human', user_message_uuids: ['current'] })).toContainEqual(
+            expect.objectContaining({ type: 'turn.done', promptId: 'current' })
+        );
+        protocol.beginPrompt('legacy');
+        expect(protocol.handle({ type: 'result', subtype: 'success' })).toContainEqual({ type: 'turn.done', state: 'done', costUsd: 0 });
+        expect(protocol.handle({ type: 'result', subtype: 'success', origin: { kind: 'task-notification' } })).toContainEqual(
+            expect.objectContaining({ type: 'turn.done' })
+        );
+    });
+
     for (const [toolName, input] of [
         ['Bash', { command: 'echo test' }],
         ['AskUserQuestion', { questions: [{ question: 'Continue?', header: 'Pick', options: [{ label: 'Continue', description: '' }] }] }]

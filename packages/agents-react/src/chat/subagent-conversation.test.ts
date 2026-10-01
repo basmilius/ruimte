@@ -11,6 +11,7 @@ class FakeMachine implements ChatTransport {
     conversation: ChatItem[] = [];
     readonly asked: ChatSubagentPayload[] = [];
     fail: ChatTransportError | null = null;
+    context: ChatSubagentResult['context'];
     // Refuses only the next request, the way a record that was just rewritten refuses one cursor.
     failNext: ChatTransportError | null = null;
     private readonly handlers = new Map<string, Set<(payload: unknown) => void>>();
@@ -33,6 +34,7 @@ class FakeMachine implements ChatTransport {
             items: this.conversation.slice(start, end),
             history: { start, cursor: start > 0 ? String(start) : null },
             source: 'claude-transcript',
+            ...(this.context ? { context: this.context } : {}),
             live: true
         };
         return Promise.resolve(result as ChatRequestMap[T]['result']);
@@ -84,6 +86,23 @@ describe('mergeNewest', () => {
 });
 
 describe('SubagentConversation', () => {
+    test('keeps the child context through pagination and replaces it on a new read', async () => {
+        const machine = new FakeMachine();
+        machine.conversation = Array.from({ length: 70 }, (_, i) => note(`n${i}`));
+        machine.context = { provider: 'claude', cwd: '/child-worktree', chatId: 'child' };
+        const { conversation } = await open(machine);
+        expect(conversation.current.context).toEqual(machine.context);
+        await conversation.loadEarlier();
+        expect(conversation.current.context).toEqual(machine.context);
+        machine.context = { provider: 'codex', cwd: '/other-worktree', chatId: 'other-child' };
+        await conversation.refresh();
+        expect(conversation.current.context).toEqual(machine.context);
+        machine.context = undefined;
+        await conversation.refresh();
+        expect(conversation.current).toMatchObject({ source: 'claude-transcript', context: null });
+        conversation.dispose();
+    });
+
     test('opens on the newest page, holding it, and pages back to the start', async () => {
         const machine = new FakeMachine();
         machine.conversation = Array.from({ length: 130 }, (_, i) => note(`n${i}`));

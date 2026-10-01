@@ -231,7 +231,13 @@ export class SubagentReader {
         const projection = await this.claudeProjection(chat, toolUseId);
         const page = projection.page(limit, cursor);
         const seen = [...this.projections.values()].filter((entry) => entry.chatId === chat.info.chatId).flatMap((entry) => entry.projection.items());
-        return { items: page.items, history: page.history, source: 'claude-transcript', live: this.live(chat, toolUseId, seen) };
+        return {
+            items: page.items,
+            history: page.history,
+            source: 'claude-transcript',
+            context: { provider: 'claude', cwd: chat.info.cwd },
+            live: this.live(chat, toolUseId, seen)
+        };
     }
 
     private async claudeProjection(chat: SubagentChat, toolUseId: string): Promise<TranscriptProjection> {
@@ -333,6 +339,7 @@ export class SubagentReader {
             items,
             history: { cursor: nextCursor === null ? null : `${CODEX_CURSOR}${nextCursor}` },
             source: 'codex-thread',
+            context: { provider: 'codex', cwd: chat.info.cwd },
             live: chat.running && this.live(chat, toolUseId, [...this.codexRows.values()])
         };
     }

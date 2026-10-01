@@ -1,3 +1,5 @@
+import { errorText } from '../error-text.ts';
+import { randomUUID } from 'node:crypto';
 import { claudeArgs, claudeEnv, promptPrefix } from '../providers/claude.ts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { ChatChild } from './chat-process.ts';
@@ -16,6 +18,7 @@ export interface ClaudeBackendOptions {
  * effect. What the host tells the agent goes in the system prompt, which the CLI takes on its flag.
  */
 export class ClaudeBackend implements ChatBackend {
+    readonly acknowledgesTurns = true;
     private readonly launch: BackendLaunch;
     private readonly host: BackendHost;
     private readonly allowedTools: readonly string[];
@@ -57,6 +60,7 @@ export class ClaudeBackend implements ChatBackend {
             cwd: this.launch.cwd,
             env: { ...this.launch.env, ...claudeEnv(selection) },
             ...(this.launch.spawn ? { spawn: this.launch.spawn } : {}),
+            onError: (error) => this.failed(error),
             onExit: (exitCode, stderr) => this.handleExit(child, exitCode, stderr)
         });
         this.child = child;
@@ -67,7 +71,9 @@ export class ClaudeBackend implements ChatBackend {
     sendTurn(input: TurnInput): void {
         // The prefix is what the CLI must see first (ultrathink), then the note about the links, then what was typed.
         const prefix = `${promptPrefix(this.launch.selection)}${input.preamble === null ? '' : `${input.preamble}\n\n`}`;
-        this.write(buildUserMessage({ text: input.text, attachments: input.attachments, prefix, skills: input.skills }));
+        const promptId = input.promptId ?? randomUUID();
+        this.protocol.beginPrompt(promptId);
+        this.write(buildUserMessage({ text: input.text, attachments: input.attachments, prefix, skills: input.skills, promptId }));
     }
 
     /* Claude Code folds its context through a slash command, so the session sends it as a turn. */
@@ -89,8 +95,7 @@ export class ClaudeBackend implements ChatBackend {
         if (frame === null) {
             return false;
         }
-        this.write(frame);
-        return true;
+        return this.respond(requestId, frame);
     }
 
     respondQuestion(requestId: string, answers: Record<string, string>): boolean {
@@ -98,8 +103,7 @@ export class ClaudeBackend implements ChatBackend {
         if (frame === null) {
             return false;
         }
-        this.write(frame);
-        return true;
+        return this.respond(requestId, frame);
     }
 
     declineRequest(requestId: string, message: string): boolean {
@@ -107,8 +111,7 @@ export class ClaudeBackend implements ChatBackend {
         if (frame === null) {
             return false;
         }
-        this.write(frame);
-        return true;
+        return this.respond(requestId, frame);
     }
 
     stop(): void {
@@ -135,16 +138,20 @@ export class ClaudeBackend implements ChatBackend {
                 buffered += decoder.decode(value, { stream: true });
                 let newline = buffered.indexOf('\n');
                 while (newline >= 0) {
-                    this.handleLine(child, buffered.slice(0, newline));
+                    this.readLine(child, buffered.slice(0, newline));
                     buffered = buffered.slice(newline + 1);
                     newline = buffered.indexOf('\n');
                 }
             }
             if (buffered.trim() !== '') {
-                this.handleLine(child, buffered);
+                this.readLine(child, buffered);
             }
-        } catch {
-            // The process died mid-read; onExit reports it.
+        } catch (error) {
+            if (this.child === child) {
+                this.failed(error);
+            }
+        } finally {
+            reader.releaseLock();
         }
     }
 
@@ -168,17 +175,41 @@ export class ClaudeBackend implements ChatBackend {
         }
     }
 
+    private readLine(child: ChatChild, line: string): void {
+        try {
+            this.handleLine(child, line);
+        } catch (error) {
+            this.failed(error);
+        }
+    }
+
+    private failed(error: unknown): void {
+        this.protocol.forgetPending();
+        try {
+            this.host.onEvent({ type: 'failed', message: `Claude transport failed: ${errorText(error)}`, processAlive: this.running });
+        } catch (reportError) {
+            console.error('Reporting a Claude transport failure failed:', errorText(reportError));
+        }
+    }
+
+    private respond(requestId: string, frame: unknown): boolean {
+        try {
+            this.write(frame);
+            return true;
+        } catch (error) {
+            this.host.onEvent({ type: 'request.withdrawn', requestId });
+            this.failed(error);
+            return false;
+        }
+    }
+
     private write(frame: unknown): void {
         const child = this.child;
         if (!child || this.stdinClosed) {
-            return;
+            throw new Error('Claude stdin is closed');
         }
-        try {
-            child.process.stdin.write(`${JSON.stringify(frame)}\n`);
-            child.process.stdin.flush();
-        } catch {
-            // The exit handler reports a process that is gone.
-        }
+        child.process.stdin.write(`${JSON.stringify(frame)}\n`);
+        child.process.stdin.flush();
     }
 
     private closeStdin(): void {

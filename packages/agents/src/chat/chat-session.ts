@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type {
     ChatAttachment,
     ChatCheckpointDiff,
@@ -14,7 +15,7 @@ import type {
 import { notResumedNote } from '@ruimte/agent-contracts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
-import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
+import type { BackendEvent, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { commandLabel, isBackgroundWork, runningInBackground, type BackgroundWork } from './background-work.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
@@ -154,6 +155,7 @@ export class ChatSession {
     // Background subagents a load found running whose transcript did not show an end yet; no CLI here will report them.
     private readonly orphans = new Set<string>();
     private pendingPreambles: readonly string[];
+    private submission: { turnId: string; input: TurnInput } | null = null;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -176,7 +178,7 @@ export class ChatSession {
 
     /* What still waits for the next real prompt, for the record. */
     get preambles(): readonly string[] {
-        return this.pendingPreambles;
+        return [...this.pendingPreambles, ...(this.submission?.input.preamble ? [this.submission.input.preamble] : [])];
     }
 
     get pid(): number | null {
@@ -328,7 +330,7 @@ export class ChatSession {
         };
         // The prompt waits for the checkpoint, so the tree is the folder as it was before the agent edited it.
         this.turnReady = this.checkpoint(turnId);
-        this.startTurnWith((backend) => backend.sendTurn(input));
+        this.submit(turnId, input);
     }
 
     /* Asks the CLI to fold its context: a call of its own, or the slash command as a turn. */
@@ -447,6 +449,7 @@ export class ChatSession {
         this.options.promptNotes?.reset();
         // A cleared chat starts a new conversation, which what was waiting to be said no longer describes.
         this.pendingPreambles = [];
+        this.submission = null;
         this.staleResults = 0;
         this.sendAfterStop = false;
         this.restartPending = false;
@@ -589,12 +592,16 @@ export class ChatSession {
         if (context.note) {
             this.emit([this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: context.note })]);
         }
+        const input: TurnInput = { promptId: randomUUID(), text: words.prompt, preamble, attachments: [], mentions: [], skills: [] };
+        this.submission = { turnId, input };
         this.options.persist();
-        backend.sendTurn({ text: words.prompt, preamble, attachments: [], mentions: [], skills: [] });
-        const sent = this.thread.get(turnId);
-        if (sent?.kind === 'turn') {
-            this.emit([this.thread.upsert({ ...sent, resumePending: undefined })]);
-            this.options.persist();
+        await this.options.save?.();
+        if (this.backend !== backend || this.info.activeTurnId !== turnId || this.frozen) {
+            return;
+        }
+        backend.sendTurn(input);
+        if (!backend.acknowledgesTurns) {
+            this.acceptPrompt(input.promptId!);
         }
     }
 
@@ -639,6 +646,7 @@ export class ChatSession {
                 turnId,
                 state: 'running',
                 origin: 'agent',
+                deliveryPending: true,
                 label: wake.label,
                 ...(wake.taskIds.length === 0 ? {} : { taskIds: wake.taskIds }),
                 ...(wake.messageFrom === undefined || wake.messageFrom.length === 0 ? {} : { messageFrom: wake.messageFrom }),
@@ -654,7 +662,7 @@ export class ChatSession {
         ]);
         this.options.persist();
         this.turnReady = this.checkpoint(turnId);
-        this.startTurnWith((backend) => backend.sendTurn({ text: wake.text, preamble, attachments: [], mentions: [], skills: [] }));
+        this.submit(turnId, { text: wake.text, preamble, attachments: [], mentions: [], skills: [] });
         return turnId;
     }
 
@@ -1098,12 +1106,39 @@ export class ChatSession {
             return { preamble: null, note: null };
         }
         const host = this.options.promptNotes?.next() ?? { shown: [], heard: [] };
-        // Every caller persists right after opening its turn, so the record forgets them along with the turn it writes.
-        const preambles = this.pendingPreambles;
+        // Keep consumed notes in the submission until the CLI acknowledges them.
+        const preambles = this.preambles;
         this.pendingPreambles = [];
+        this.submission = null;
         const read = [...preambles, ...host.shown];
         const joined = (parts: string[]): string | null => (parts.length === 0 ? null : parts.join('\n\n'));
         return { preamble: joined([...read, ...host.heard]), note: joined(read) };
+    }
+
+    private submit(turnId: string, input: TurnInput): void {
+        this.pendingPreambles = this.preambles;
+        this.submission = { turnId, input: { ...input, promptId: randomUUID() } };
+        const submission = this.submission;
+        this.options.persist();
+        this.startTurnWith((backend) => {
+            backend.sendTurn(submission.input);
+            if (!backend.acknowledgesTurns) {
+                this.acceptPrompt(submission.input.promptId!);
+            }
+        });
+    }
+
+    private acceptPrompt(promptId: string): void {
+        const submission = this.submission;
+        if (submission?.input.promptId !== promptId) {
+            return;
+        }
+        this.submission = null;
+        const turn = this.thread.get(submission.turnId);
+        if (turn?.kind === 'turn' && (turn.deliveryPending || turn.resumePending)) {
+            this.emit([this.thread.upsert({ ...turn, deliveryPending: undefined, resumePending: undefined })]);
+        }
+        this.options.persist();
     }
 
     /* Runs one turn against the backend; a backend that will not start ends the turn with the reason. */
@@ -1115,7 +1150,7 @@ export class ChatSession {
         const pending = this.watchStart(turnId);
         const backend = this.ensureBackend();
         const generation = this.generation;
-        void Promise.all([backend, this.turnReady])
+        void Promise.all([backend, this.turnReady, this.options.save?.()])
             .then(([started]) => {
                 if (this.pendingStart !== pending || this.backend !== started || this.info.activeTurnId !== turnId || this.frozen) {
                     return;
@@ -1126,7 +1161,7 @@ export class ChatSession {
             .catch((error: unknown) => {
                 if (this.pendingStart === pending || (this.backend !== null && this.generation === generation && this.info.activeTurnId === turnId)) {
                     this.clearStartWarning();
-                    this.receive(generation, { type: 'failed', message: errorText(error) });
+                    this.receive(generation, { type: 'failed', message: errorText(error), processAlive: this.running });
                 }
             });
     }
@@ -1260,6 +1295,10 @@ export class ChatSession {
         if (this.frozen) {
             return;
         }
+        if (event.type === 'turn.accepted') {
+            this.acceptPrompt(event.promptId);
+            return;
+        }
         if (event.type === 'limits') {
             this.options.onLimits?.(this.launchedAccount === undefined ? event.update : { ...event.update, account: this.launchedAccount });
             return;
@@ -1279,21 +1318,29 @@ export class ChatSession {
             this.emit(this.projector.project(generation, { type: 'usage', contextTokens: event.contextTokens }));
             return;
         }
-        // A request that failed after the turn already ended has nothing left to report.
-        if (event.type === 'failed' && this.thread.info.activeTurnId === null) {
-            return;
-        }
         if (event.type === 'exit') {
             this.backend = null;
             this.starting = null;
         }
         // A turn we settled ourselves still has its own `result` coming; it may not close the turn after it.
-        if (event.type === 'turn.done' && this.staleResults > 0) {
+        if (event.type === 'turn.done' && event.promptId === undefined && this.staleResults > 0) {
             this.staleResults -= 1;
             return;
         }
         if (event.type === 'exit' || event.type === 'failed') {
             this.staleResults = 0;
+        }
+        if (event.type === 'turn.done') {
+            if (event.promptId !== undefined && this.submission !== null && this.submission.input.promptId !== event.promptId) {
+                return;
+            }
+            if (event.promptId !== undefined) {
+                this.staleResults = 0;
+            }
+            const promptId = event.promptId ?? this.submission?.input.promptId;
+            if (promptId !== undefined) {
+                this.acceptPrompt(promptId);
+            }
         }
         const openTurnId = this.thread.info.activeTurnId;
         if ((event.type === 'turn.done' && event.state !== 'done') || ((event.type === 'failed' || event.type === 'exit') && openTurnId !== null)) {

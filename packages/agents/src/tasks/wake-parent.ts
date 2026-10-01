@@ -61,8 +61,8 @@ export interface WakeParentDeps {
 }
 
 /*
- * Wake once after all ready tasks in a team settle. The thread records task ids before the store
- * marks them woken, making a restart between those writes idempotent.
+ * CLI acceptance lives in the saved turn before the task store consumes its result, so a restart
+ * between those writes can finish delivery without opening another turn.
  */
 export const wakeParentHandler =
     (deps: WakeParentDeps) =>
@@ -82,7 +82,8 @@ export const wakeParentHandler =
             await deps.tasks.dropWake(parentId);
             return;
         }
-        const named = new Set(chat.items().flatMap((item) => (item.kind === 'turn' ? (item.taskIds ?? []) : [])));
+        const items = chat.items();
+        const named = new Set(items.flatMap((item) => (item.kind === 'turn' && !item.deliveryPending ? (item.taskIds ?? []) : [])));
         const already = deps.tasks.pendingWake(parentId).filter((task) => named.has(task.id));
         if (already.length > 0) {
             await chat.persist?.();
@@ -91,6 +92,17 @@ export const wakeParentHandler =
         const tasks = deps.tasks.readyWake(parentId).filter((task) => !named.has(task.id));
         if (tasks.length === 0) {
             return held();
+        }
+        // An unacknowledged attempt waits for a person's next turn, rather than retrying on every chat event.
+        const blocked = items.some(
+            (item, index) =>
+                item.kind === 'turn' &&
+                item.deliveryPending &&
+                item.taskIds?.some((id) => tasks.some((task) => task.id === id)) &&
+                (item.state === 'running' || !items.slice(index + 1).some((later) => later.kind === 'turn' && later.origin !== 'agent'))
+        );
+        if (blocked) {
+            return 'wait';
         }
         const teamsOut = deps.tasks.openBatches(parentId).length;
         if (
@@ -104,6 +116,14 @@ export const wakeParentHandler =
             return 'wait';
         }
         await chat.persist?.();
+        if (
+            tasks.some((task) => {
+                const turn = chat.items().findLast((item) => item.kind === 'turn' && item.taskIds?.includes(task.id));
+                return turn?.kind === 'turn' && turn.deliveryPending;
+            })
+        ) {
+            return 'wait';
+        }
         await deps.tasks.markWoken(tasks.map((task) => task.id));
         return held();
     };

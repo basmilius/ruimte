@@ -24,6 +24,7 @@ export interface ChatSpawnOptions {
     cwd: string;
     env: Record<string, string>;
     onExit(exitCode: number | null): void;
+    onError?(error: Error): void;
 }
 
 export type SpawnChatProcess = (options: ChatSpawnOptions) => ChatProcess;
@@ -49,8 +50,7 @@ export const spawnChatProcess: SpawnChatProcess = (options) => {
     if (pid === undefined) {
         throw new Error(`Could not start ${command}: no such executable`);
     }
-    // A write to a CLI that just went fails on the pipe, which the exit already reports.
-    child.stdin.on('error', () => undefined);
+    child.stdin.on('error', (error) => options.onError?.(error));
     child.on('exit', (exitCode) => {
         // The last lines may still be on their way through the pipe; they belong before the exit.
         const report = (): void => {
@@ -137,6 +137,7 @@ export interface ChatChildOptions extends Omit<ChatSpawnOptions, 'onExit'> {
     spawn?: SpawnChatProcess;
     // `stderr` is the tail of what the CLI wrote there, for an exit with an error code only.
     onExit(exitCode: number | null, stderr: string | null): void;
+    onError?(error: Error): void;
 }
 
 /*
@@ -162,6 +163,7 @@ export class ChatChild {
             command: options.command,
             cwd: options.cwd,
             env: options.env,
+            ...(options.onError ? { onError: options.onError } : {}),
             onExit: (exitCode) => {
                 this.hasExited = true;
                 this.clearGrace();

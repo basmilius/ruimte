@@ -45,6 +45,7 @@ export interface BackendLaunch {
 }
 
 export interface TurnInput {
+    promptId?: string;
     text: string;
     // What the session wants in front of the text (a context change); the backend places it after its own prefix.
     preamble: string | null;
@@ -62,6 +63,7 @@ export type ApprovalDecision = 'allow' | 'allow-always' | 'deny';
  * a message id plus block ordinal, a native item id); the projector turns it into a thread item id.
  */
 export type BackendEvent =
+    | { type: 'turn.accepted'; promptId: string }
     // `title` is the name the CLI already has for the thread, as a resumed Codex thread carries it.
     | {
           type: 'session';
@@ -140,7 +142,7 @@ export type BackendEvent =
     // call did; `monitor` is set when the CLI's own frame already says it is one.
     | { type: 'background.started'; taskId: string; ref: string | null; monitor: boolean; description: string | null }
     | { type: 'background.ended'; taskId: string }
-    | { type: 'usage'; contextTokens?: number; contextWindow?: number }
+    | { type: 'usage'; contextTokens?: number; contextWindow?: number; costUsd?: number }
     // What the CLI said in passing about the plan it runs on; it belongs to the machine, not the chat.
     | { type: 'limits'; update: LimitsUpdate }
     | { type: 'compaction'; preTokens: number | null }
@@ -149,6 +151,7 @@ export type BackendEvent =
     // `native` is the CLI's own name for where the turn ended, which a fork of the chat is cut at.
     | {
           type: 'turn.done';
+          promptId?: string;
           state: 'done' | 'aborted' | 'error';
           costUsd: number;
           error?: string;
@@ -156,7 +159,7 @@ export type BackendEvent =
           limit?: ChatTurnLimit;
       }
     // The CLI could not be reached or refused the request; the turn ends and the chat needs a new one.
-    | { type: 'failed'; message: string }
+    | { type: 'failed'; message: string; processAlive?: boolean }
     // `stderr` is the last of what the CLI wrote there, for an exit with an error code.
     | { type: 'exit'; exitCode: number | null; stderr?: string };
 
@@ -165,6 +168,7 @@ export interface BackendHost {
 }
 
 export interface ChatBackend {
+    readonly acknowledgesTurns?: boolean;
     readonly running: boolean;
     // The CLI's process while it runs, so the process panel can put its tree under the node.
     readonly pid: number | null;

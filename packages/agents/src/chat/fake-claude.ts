@@ -944,6 +944,9 @@ export const fakeClaude: FakeCli = (io) => {
         onLine: (line) => {
             const frame = JSON.parse(line) as Record<string, unknown>;
             if (frame.type === 'user') {
+                if (args.includes('--replay-user-messages') && typeof frame.uuid === 'string') {
+                    out(frame);
+                }
                 const message = frame.message as { content: Array<{ text: string }> };
                 handleUser(message.content[0]?.text ?? '');
             } else if (frame.type === 'control_response') {

@@ -41,6 +41,8 @@ export interface CodexBackendOptions {
  * Codex keeps with the thread. The runtime modes are an approval policy plus a sandbox.
  */
 export class CodexBackend implements ChatBackend {
+    readonly acknowledgesTurns = true;
+    private promptId: string | null = null;
     private readonly launch: BackendLaunch;
     private readonly host: BackendHost;
     private readonly protocol: CodexProtocol;
@@ -83,6 +85,7 @@ export class CodexBackend implements ChatBackend {
             cwd: this.launch.cwd,
             env: this.launch.env,
             ...(this.launch.spawn ? { spawn: this.launch.spawn } : {}),
+            onError: (error) => this.fail(error),
             onFrame: (frame) => this.handleFrame(transport, frame),
             onExit: (exitCode, stderr) => this.handleExit(transport, exitCode, stderr)
         });
@@ -147,13 +150,43 @@ export class CodexBackend implements ChatBackend {
         const effort = this.launch.selection.options.effort;
         const tier = codexServiceTier(this.launch.selection);
         this.turnUnnamed = true;
-        this.request('turn/start', {
-            threadId: this.threadId,
-            input: [...textInput(parts.join('')), ...images.map((attachment) => ({ type: 'localImage', path: attachment.path }))],
-            model: this.launch.selection.model,
-            ...(typeof effort === 'string' ? { effort } : {}),
-            ...(tier === null ? {} : { serviceTier: tier })
-        });
+        this.promptId = input.promptId ?? null;
+        this.request(
+            'turn/start',
+            {
+                threadId: this.threadId,
+                input: [...textInput(parts.join('')), ...images.map((attachment) => ({ type: 'localImage', path: attachment.path }))],
+                model: this.launch.selection.model,
+                ...(typeof effort === 'string' ? { effort } : {}),
+                ...(tier === null ? {} : { serviceTier: tier })
+            },
+            () => this.acceptPrompt(input.promptId)
+        );
+    }
+
+    private acceptPrompt(promptId: string | undefined): void {
+        if (promptId !== undefined && this.promptId === promptId) {
+            this.emit({ type: 'turn.accepted', promptId });
+        }
+    }
+
+    private fail(error: unknown): void {
+        this.protocol.forgetPending();
+        this.emit({ type: 'failed', message: errorText(error), processAlive: this.running });
+    }
+
+    private respond(requestId: string, rpcId: number | string, result: unknown): boolean {
+        try {
+            if (!this.transport) {
+                throw new Error('Codex is not running');
+            }
+            this.transport.respond(rpcId, result);
+            return true;
+        } catch (error) {
+            this.emit({ type: 'request.withdrawn', requestId });
+            this.fail(error);
+            return false;
+        }
     }
 
     private async readImageSupport(transport: CodexTransport): Promise<boolean | null> {
@@ -248,8 +281,7 @@ export class CodexBackend implements ChatBackend {
         if (!answer) {
             return false;
         }
-        this.transport.respond(answer.rpcId, answer.result);
-        return true;
+        return this.respond(requestId, answer.rpcId, answer.result);
     }
 
     respondQuestion(requestId: string, answers: Record<string, string>): boolean {
@@ -261,8 +293,7 @@ export class CodexBackend implements ChatBackend {
             return false;
         }
         if (answer.kind === 'respond') {
-            this.transport.respond(answer.rpcId, answer.result);
-            return true;
+            return this.respond(requestId, answer.rpcId, answer.result);
         }
         const turnId = this.protocol.turnId;
         if (!turnId) {
@@ -283,8 +314,7 @@ export class CodexBackend implements ChatBackend {
         if (!this.transport || !answer) {
             return false;
         }
-        this.transport.respond(answer.rpcId, answer.result);
-        return true;
+        return this.respond(requestId, answer.rpcId, answer.result);
     }
 
     stop(): void {
@@ -298,17 +328,24 @@ export class CodexBackend implements ChatBackend {
     }
 
     /* A request whose failure the person has to hear about, since it is the turn that cannot go on. */
-    private request(method: string, params: unknown): void {
+    private request(method: string, params: unknown, accepted?: () => void): void {
         const transport = this.transport;
         if (!transport) {
             this.emit({ type: 'failed', message: `${method} failed: Codex is not running` });
             return;
         }
-        void transport.request(method, params).catch((error: unknown) => {
-            if (this.transport === transport) {
-                this.emit({ type: 'failed', message: errorText(error) });
-            }
-        });
+        void transport
+            .request(method, params)
+            .then(() => {
+                if (this.transport === transport) {
+                    accepted?.();
+                }
+            })
+            .catch((error: unknown) => {
+                if (this.transport === transport) {
+                    this.emit({ type: 'failed', message: errorText(error) });
+                }
+            });
     }
 
     private handleFrame(transport: CodexTransport, frame: CodexFrame): void {
@@ -319,6 +356,9 @@ export class CodexBackend implements ChatBackend {
         // A server request the protocol did not take still needs an answer, or Codex waits forever.
         if (frame.id !== undefined && events.length === 0 && (typeof frame.id === 'number' || typeof frame.id === 'string')) {
             transport.respondError(frame.id, -32601, `${this.client.title} does not handle ${String(frame.method)}`);
+        }
+        if (frame.method === 'turn/started' && this.protocol.turnId !== null) {
+            this.acceptPrompt(this.promptId ?? undefined);
         }
         for (const event of events) {
             this.emit(event);
@@ -346,6 +386,7 @@ export class CodexBackend implements ChatBackend {
         if (event.type === 'turn.done' || event.type === 'failed' || event.type === 'exit') {
             this.turnUnnamed = false;
             this.interruptOwed = false;
+            this.promptId = null;
         }
         this.host.onEvent(event);
     }

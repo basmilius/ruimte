@@ -1,6 +1,7 @@
 import type { ChatAttachment } from '@ruimte/agent-contracts';
 
 interface UserMessageInput {
+    promptId?: string;
     text: string;
     attachments?: ChatAttachment[];
     // Written before the text, for what the CLI has no flag for (`ultrathink`).
@@ -67,7 +68,7 @@ export const attachmentNote = (attachments: ChatAttachment[]): string =>
  * array of text blocks, which the CLI passes through unchanged (checked against claude 2.1.266).
  * The attachments are named by path in the leading block, so the invocation of a skill stays last.
  */
-export const buildUserMessage = ({ text, attachments = [], prefix = '', skills = [] }: UserMessageInput): Record<string, unknown> => {
+export const buildUserMessage = ({ text, attachments = [], prefix = '', skills = [], promptId }: UserMessageInput): Record<string, unknown> => {
     const content: unknown[] = [];
     const { lead, invocation } = splitSkillPrompt(text, skills);
     const note = attachmentNote(attachments);
@@ -79,5 +80,5 @@ export const buildUserMessage = ({ text, attachments = [], prefix = '', skills =
     if (invocation !== null) {
         content.push({ type: 'text', text: invocation });
     }
-    return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, session_id: '' };
+    return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, session_id: '', ...(promptId ? { uuid: promptId } : {}) };
 };

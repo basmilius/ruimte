@@ -8,6 +8,8 @@ export const SUBAGENT_PAGE = 60;
 export interface SubagentConversationState {
     status: 'loading' | 'ready' | 'failed';
     items: ChatItem[];
+    source: ChatSubagentResult['source'] | null;
+    context: NonNullable<ChatSubagentResult['context']> | null;
     /* Where the page before the oldest item on screen starts; null once the start is there. */
     cursor: string | null;
     live: boolean;
@@ -21,6 +23,8 @@ export interface SubagentConversationState {
 export const INITIAL_CONVERSATION: SubagentConversationState = {
     status: 'loading',
     items: [],
+    source: null,
+    context: null,
     cursor: null,
     live: false,
     loadingEarlier: false,
@@ -158,7 +162,15 @@ export class SubagentConversation {
         try {
             const page = await this.ask({ limit: SUBAGENT_PAGE, ...(watch ? { watch: true } : {}) });
             const merged = mergeNewest(this.state.items, this.state.cursor, page.items, page.history.cursor);
-            this.set({ status: 'ready', items: merged.items, cursor: merged.cursor, live: page.live, error: null });
+            this.set({
+                status: 'ready',
+                items: merged.items,
+                cursor: merged.cursor,
+                live: page.live,
+                source: page.source,
+                context: page.context ?? null,
+                error: null
+            });
         } catch (error) {
             if (this.state.status === 'ready' && isConnectionError(error)) {
                 // What is on screen stays; the socket that comes back asks again.

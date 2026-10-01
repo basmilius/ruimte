@@ -100,6 +100,7 @@
     "./chat/ui/rehype-chips": "./src/chat/ui/rehype-chips.ts",
     "./chat/ui/rehype-fade": "./src/chat/ui/rehype-fade.ts",
     "./chat/ui/remark-html-as-text": "./src/chat/ui/remark-html-as-text.ts",
+    "./chat/ui/reply-context": "./src/chat/ui/reply-context.ts",
     "./chat/ui/reveal": "./src/chat/ui/reveal.ts",
     "./chat/ui/rows/ForksRow": "./src/chat/ui/rows/ForksRow.tsx",
     "./chat/ui/rows/MessageRows": "./src/chat/ui/rows/MessageRows.tsx",

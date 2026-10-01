@@ -174,6 +174,7 @@ describe('a task wakes the chat that gave it', () => {
         const page = await daemon.chats.subagent('client-1', { chatId: 'chat-lead', toolUseId: rows[0]!.toolUseId });
         expect(page.items.some((item) => item.kind === 'assistant' && item.text.startsWith('echo: fix the tokenizer'))).toBe(true);
         expect(page.live).toBe(false);
+        expect(page.context).toEqual({ provider: 'claude', cwd: folder, chatId: children[0]!.childId });
 
         // What `tasks` shows the lead: nothing current once the wake went, and the history under --all.
         expect((await verb(daemon, 'chat-lead', 'task', ['list'])).map((line) => line.split('\t')[0])).toEqual(['note']);

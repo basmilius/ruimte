@@ -1,3 +1,4 @@
+import { errorText } from '../error-text.ts';
 import { ChatChild, type SpawnChatProcess } from './chat-process.ts';
 
 export type CodexFrame = Record<string, unknown>;
@@ -18,6 +19,7 @@ interface CodexTransportOptions {
     spawn?: SpawnChatProcess;
     // Notifications and server requests; responses to our own requests settle their promise instead.
     onFrame(frame: CodexFrame): void;
+    onError?(error: Error): void;
     // `stderr` is the tail of what the app-server wrote there, for an exit with an error code only.
     onExit(exitCode: number | null, stderr: string | null): void;
 }
@@ -54,6 +56,7 @@ export class CodexTransport {
             cwd: options.cwd,
             env: options.env,
             ...(options.spawn ? { spawn: options.spawn } : {}),
+            onError: (error) => this.failed(error),
             onExit: (exitCode, stderr) => this.handleExit(exitCode, stderr)
         });
         void this.readLines();
@@ -75,7 +78,12 @@ export class CodexTransport {
             }
             const id = this.nextId++;
             this.pending.set(id, { resolve, reject, method });
-            this.write({ id, method, params });
+            try {
+                this.write({ id, method, params });
+            } catch (error) {
+                this.pending.delete(id);
+                reject(error);
+            }
         });
     }
 
@@ -115,13 +123,30 @@ export class CodexTransport {
 
     private write(frame: CodexFrame): void {
         if (this.closed) {
-            return;
+            throw new Error('Codex stdin is closed');
         }
+        this.child.process.stdin.write(`${JSON.stringify(frame)}\n`);
+        this.child.process.stdin.flush();
+    }
+
+    private failed(error: unknown): void {
+        const failure = new Error(`Codex transport failed: ${errorText(error)}`);
+        for (const settle of this.pending.values()) {
+            settle.reject(failure);
+        }
+        this.pending.clear();
         try {
-            this.child.process.stdin.write(`${JSON.stringify(frame)}\n`);
-            this.child.process.stdin.flush();
-        } catch {
-            // The exit handler reports a process that is gone.
+            this.options.onError?.(failure);
+        } catch (reportError) {
+            console.error('Reporting a Codex transport failure failed:', errorText(reportError));
+        }
+    }
+
+    private readLine(line: string): void {
+        try {
+            this.handleLine(line);
+        } catch (error) {
+            this.failed(error);
         }
     }
 
@@ -138,16 +163,20 @@ export class CodexTransport {
                 buffered += decoder.decode(value, { stream: true });
                 let newline = buffered.indexOf('\n');
                 while (newline >= 0) {
-                    this.handleLine(buffered.slice(0, newline));
+                    this.readLine(buffered.slice(0, newline));
                     buffered = buffered.slice(newline + 1);
                     newline = buffered.indexOf('\n');
                 }
             }
             if (buffered.trim() !== '') {
-                this.handleLine(buffered);
+                this.readLine(buffered);
             }
-        } catch {
-            // The process died mid-read; onExit reports it.
+        } catch (error) {
+            if (!this.closed) {
+                this.failed(error);
+            }
+        } finally {
+            reader.releaseLock();
         }
     }
 

@@ -9,6 +9,7 @@ const CLAUDE_CHAT_ARGS = [
     'stream-json',
     '--verbose',
     '--include-partial-messages',
+    '--replay-user-messages',
     '--permission-prompt-tool',
     'stdio'
 ];

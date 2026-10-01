@@ -436,6 +436,8 @@ export const ChatTurnItemSchema = z.object({
     attempt: z.number().int().positive().optional(),
     // A written resume attempt whose CLI has not accepted its prompt yet; retries reuse it.
     resumePending: z.boolean().optional(),
+    // Kept until the CLI acknowledges the wake prompt, so a saved turn cannot consume an unsent result.
+    deliveryPending: z.boolean().optional(),
     // The tasks whose results woke the chat for this turn; only a turn the daemon opened carries them.
     taskIds: z.array(z.string()).optional(),
     // The nodes whose messages woke the chat for this turn, which is where waking on a message stops: a turn with one wakes nobody.
@@ -623,6 +625,7 @@ export const ChatSubagentResultSchema = z.object({
     items: z.array(ChatItemSchema),
     history: ChatSubagentPageSchema,
     source: ChatSubagentSourceSchema,
+    context: z.object({ provider: AgentKindSchema, cwd: z.string(), chatId: ChatIdSchema.optional() }).optional(),
     // Whether the subagent is still writing, so a client knows to keep reading.
     live: z.boolean()
 });

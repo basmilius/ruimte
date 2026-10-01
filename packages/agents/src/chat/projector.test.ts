@@ -40,6 +40,13 @@ const idleSetup = () => {
 };
 
 describe('ThreadProjector', () => {
+    test('keeps a model snapshot that arrives before its subagent row', () => {
+        const { thread, project } = setup();
+        project({ type: 'task.model', ref: 'early-child', model: 'child-model' });
+        project({ type: 'task.started', ref: 'early-child', description: 'Child', subagentType: null, prompt: null, background: true });
+        expect(thread.get('1:early-child')).toMatchObject({ model: 'child-model' });
+    });
+
     test('a session event fills in what the CLI told about itself', () => {
         const { thread, project } = setup();
         project({ type: 'session', agentSessionId: 'sid', model: 'sonnet', slashCommands: ['compact'] });
@@ -898,4 +905,56 @@ describe('the wire', () => {
         }
         expect([...kinds].sort()).toEqual(['approval', 'assistant', 'compaction', 'note', 'question', 'subagent', 'thinking', 'tool', 'turn']);
     });
+});
+
+test('a nested start and model snapshot arriving before its tool retain their known parent and native identity', () => {
+    const { thread, project, projector } = setup();
+    project({ type: 'tool.started', ref: 'parent', name: 'Agent', input: {}, parentRef: null });
+    project({
+        type: 'task.started',
+        ref: 'child',
+        taskId: 'native-child',
+        description: 'Nested',
+        subagentType: 'research',
+        prompt: 'inspect',
+        background: true,
+        depth: 2
+    });
+    project({ type: 'task.model', ref: 'child', model: 'first-model' });
+    expect(thread.get('1:child')).toBeUndefined();
+    project({ type: 'tool.started', ref: 'child', name: 'Agent', input: {}, parentRef: 'parent' });
+    expect(thread.get('1:child')).toMatchObject({
+        parentToolUseId: 'parent',
+        model: 'first-model',
+        description: 'Nested',
+        prompt: 'inspect',
+        background: true,
+        native: { agentId: 'native-child' }
+    });
+    project({ type: 'task.model', ref: 'child', model: 'updated-model' });
+    expect(thread.get('1:child')).toMatchObject({ parentToolUseId: 'parent', model: 'updated-model' });
+    project({ type: 'task.model', ref: 'never-placed', model: 'old' });
+    projector.reset();
+    project({ type: 'tool.started', ref: 'never-placed', name: 'Agent', input: {}, parentRef: null });
+    expect(thread.get('1:never-placed')).not.toHaveProperty('model');
+});
+
+test('a live transport failure withdraws requests without declaring its background agent dead or opening a phantom turn', () => {
+    const { thread, project } = idleSetup();
+    project({ type: 'task.started', ref: 'native', description: 'Native child', subagentType: null, prompt: null, background: true });
+    project({
+        type: 'approval.requested',
+        requestId: 'background-approval',
+        ref: null,
+        toolName: 'Bash',
+        input: {},
+        description: null,
+        canAllowAlways: false,
+        background: true
+    });
+    project({ type: 'failed', message: 'pipe unavailable', processAlive: true });
+    expect(thread.list().some((item) => item.kind === 'turn')).toBe(false);
+    expect(thread.get('1:native')).toMatchObject({ status: 'running' });
+    expect(thread.pending()).toEqual([]);
+    expect(thread.info).toMatchObject({ activeTurnId: null, status: 'error' });
 });

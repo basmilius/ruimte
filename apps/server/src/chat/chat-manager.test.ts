@@ -751,7 +751,8 @@ describe('ChatManager', () => {
         expect(stored?.items.map((item) => item.kind)).toEqual(['turn', 'user']);
         expect(stored?.info.activeTurnId).not.toBeNull();
         manager.cancel('chat-open');
-        await recorder.until(idle);
+        await recorder.until(() => recorder.info?.activeTurnId === null);
+        expect(recorder.ofKind('turn')[0]).toMatchObject({ state: 'aborted' });
     });
 
     test('kill drops the thread and its record, after the write that was still out', async () => {

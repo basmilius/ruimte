@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useContext, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bot, Brain, Check, ChevronDown, CircleAlert, File, Info, MessageCircleQuestionMark, TriangleAlert, X } from 'lucide-react';
@@ -20,6 +20,7 @@ import { Icon, Tooltip, useTickingText } from '@basmilius/desktop-ui';
 import { toolSummary } from '../../logic/tools';
 import { ROW_GUTTER } from '../icons';
 import { useOpenForFind } from '../find-reveal';
+import { ReplyContext } from '../reply-context';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
 const USER_FOLD_LINES = 8;
@@ -27,6 +28,13 @@ const USER_FOLD_CHARS = 600;
 
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
 const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
+
+const useReplyAuthor = (chatId: string) => {
+    const { id } = useChatScope();
+    const context = useContext(ReplyContext);
+    const author = chatHost().useReplyAuthor(id, context?.chatId ?? chatId);
+    return context !== null && context.chatId === undefined ? null : author;
+};
 
 /*
  * A file attached to a message that is not a picture. `download` is what saves a blob URL: the shell
@@ -146,10 +154,10 @@ export function ReportRow({ id, text }: { id: string; text: string }) {
 /* The heading of a reply, named after its author when the host names one and after the agent the chat runs otherwise. */
 function ReplyHeading({ chatId }: { chatId: string }) {
     const { t } = useTranslation('agent-chat');
-    const { id } = useChatScope();
-    const author = chatHost().useReplyAuthor(id, chatId);
+    const context = useContext(ReplyContext);
+    const author = useReplyAuthor(chatId);
     const kind = useChatRow(chatId, (row) => row?.info.provider);
-    const name = useProviders((s) => s.providers.find((provider) => provider.kind === kind)?.name);
+    const name = useProviders((s) => s.providers.find((provider) => provider.kind === (context?.provider ?? kind))?.name);
     return <MessageHeading>{author?.name ?? name ?? t('rows.reply.agent')}</MessageHeading>;
 }
 
@@ -158,8 +166,7 @@ function ReplyHeading({ chatId }: { chatId: string }) {
  * reader hears the name from the reply's own heading, so this line is for the eye only.
  */
 export function ReplyHeader({ chatId, at }: { chatId: string; at: number | null }) {
-    const { id } = useChatScope();
-    const author = chatHost().useReplyAuthor(id, chatId);
+    const author = useReplyAuthor(chatId);
     if (author === null) {
         return null;
     }
