@@ -258,9 +258,8 @@ export function ProjectMenu() {
                     )
                 }
             >
-                {/* todo(Bas): one row for Chats between the open projects and Recent, with New chat as the button
-                    where a project has its ellipsis, once ProjectSwitcher in @basmilius/desktop-ui can draw a row
-                    there with a button that acts at once. */}
+                {/* todo(Bas): Chats and New chat above Recent, with Recent and Open folder in one group, once
+                    ProjectSwitcher can draw that (basmilius/desktop#22). */}
                 {chats !== null && (
                     <Menu.Item onClick={(event) => openProjectClickAction(event, chats.endpointId, chats.summary.projectId)}>
                         <ProjectGlyph
