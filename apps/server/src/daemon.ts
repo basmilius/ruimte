@@ -125,6 +125,7 @@ import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
 import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
+import { dropEmptyMark } from './projects/scratch-project.ts';
 import { probeCodexNoDaemon, takesNoteOnLine } from './providers/launch.ts';
 import { ModelCatalogFeed } from './providers/model-catalogs.ts';
 import { ProviderRegistry } from './providers/registry.ts';
@@ -665,6 +666,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     chats.observe((event) => push.consume(event));
     manager.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
+    chats.observe((event) => {
+        if (event.event === 'chat.event' && event.payload.event.type === 'item' && event.payload.event.item.kind === 'user') {
+            dropEmptyMark(projects, event.payload.chatId).catch((e: unknown) => console.error('Listing a written chat failed:', errorText(e)));
+        }
+    });
 
     const dispatcher = new Dispatcher();
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
@@ -686,7 +692,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerPlanHandlers(dispatcher, plans);
-    registerProjectHandlers(dispatcher, projects);
+    registerProjectHandlers(dispatcher, projects, async (chatId) => (await chats.readChat(chatId))?.items.some((item) => item.kind === 'user') ?? false);
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
     registerLaunchHandlers(dispatcher, launchStore, launches);

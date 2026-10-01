@@ -193,7 +193,8 @@ test('a new chat reaches a client that has the chats project open', async () => 
     await request(clients.b, 'project.open', { projectId: first.summary.projectId });
     clients.b.channel.frames.length = 0;
 
-    const { viewId } = await request<{ viewId: string }>(clients.a, 'project.newChat', {});
+    // Another CLI than the empty chat's, so this makes a chat rather than showing that one again.
+    const { viewId } = await request<{ viewId: string }>(clients.a, 'project.newChat', { provider: 'codex' });
 
     expect(
         changesIn(clients.b.channel)

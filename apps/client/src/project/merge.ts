@@ -272,14 +272,18 @@ const mergeCanvas = (base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
     return { ok: true, view, patch: empty ? null : patch };
 };
 
-/* What a view is called and what it wears, apart from what it holds. The name goes with its source, since a rename sets both. */
-const VIEW_LABELS: readonly (readonly string[])[] = [['name', 'titleSource'], ['icon']];
+/*
+ * What a view is called and what it wears, apart from what it holds. The name goes with its source,
+ * since a rename sets both. The mark of an empty chat goes with them: the daemon drops it on the first
+ * message, the moment that message renames the view here.
+ */
+const VIEW_LABELS: readonly (readonly string[])[] = [['name', 'titleSource'], ['icon'], ['empty']];
 
 const fieldsOf = (view: ProjectView, keys: readonly string[]): Record<string, unknown> =>
     Object.fromEntries(keys.map((key) => [key, (view as Record<string, unknown>)[key]]));
 
 const withoutLabels = (view: ProjectView): Record<string, unknown> => {
-    const { name: _name, titleSource: _titleSource, icon: _icon, ...rest } = view as Record<string, unknown>;
+    const { name: _name, titleSource: _titleSource, icon: _icon, empty: _empty, ...rest } = view as Record<string, unknown>;
     return rest;
 };
 
@@ -300,7 +304,7 @@ const mergeLabels = (base: ProjectView, mine: ProjectView, theirs: ProjectView, 
         if (!same(was, here)) {
             return keys[0] === 'name'
                 ? refuse(`the view ${base.id} was renamed to "${String(there.name)}" there and to "${String(here.name)}" here`)
-                : refuse(`the icon of the view ${base.id} changed both here and there`);
+                : refuse(`the ${keys[0]} of the view ${base.id} changed both here and there`);
         }
         // A label theirs dropped goes as a missing key, the shape the stores and the file both use.
         view = Object.fromEntries(Object.entries({ ...view, ...there }).filter(([key, value]) => !keys.includes(key) || value !== undefined));

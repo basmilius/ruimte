@@ -502,7 +502,13 @@ export const ProjectSubheaderViewSchema = z.object({
 });
 export type ProjectSubheaderView = z.infer<typeof ProjectSubheaderViewSchema>;
 
-export const ProjectChatViewSchema = ViewBaseSchema.extend({ kind: z.literal('chat'), node: StandaloneNodeSchema });
+export const ProjectChatViewSchema = ViewBaseSchema.extend({
+    kind: z.literal('chat'),
+    node: StandaloneNodeSchema,
+    // A chat the daemon made in the machine's Chats project that nobody wrote in yet. It is not listed and the next
+    // new chat reuses it; the daemon drops the mark with the first message.
+    empty: z.boolean().optional()
+});
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 
 export const ProjectTerminalViewSchema = ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema });
@@ -606,6 +612,8 @@ export const viewIconOf = (view: ProjectView): ProjectIconChoice | null => (isDi
  */
 export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView =>
     view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
+
+export const isEmptyChatView = (view: ProjectView): view is ProjectChatView => view.kind === 'chat' && view.empty === true;
 
 /* The views a person can put on screen. A divider marks the list rather than standing in it, and
    this version has nothing to draw a view of an unknown kind with. */

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ProjectCanvasView, ProjectContent, ProjectNode, ProjectView } from '@ruimte/contracts';
+import type { ProjectCanvasView, ProjectChatView, ProjectContent, ProjectNode, ProjectView } from '@ruimte/contracts';
 import { mergeProject, type CanvasPatch, type ProjectMerge } from './merge';
 
 const node = (id: string, patch: Partial<ProjectNode> = {}): ProjectNode => ({
@@ -190,6 +190,17 @@ describe('what is a conflict', () => {
             ok: false,
             reason: 'the color of the project changed'
         });
+    });
+
+    test('a chat renamed by its first message here, while the daemon lists it there', () => {
+        const chat = (fields: Partial<ProjectChatView> = {}): ProjectChatView => ({ kind: 'chat', id: 'chat', name: 'New chat', node: {}, ...fields });
+        const base = content([chat({ empty: true })]);
+        const mine = content([chat({ empty: true, name: 'Fix the build', titleSource: 'auto' })]);
+        const theirs = content([chat()]);
+
+        const merged = mergeProject(base, mine, theirs);
+
+        expect(merged.ok && merged.content.views).toEqual([chat({ name: 'Fix the build', titleSource: 'auto' })]);
     });
 
     test('a view renamed here and there to different names', () => {

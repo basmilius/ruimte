@@ -50,3 +50,11 @@ test('a row carries the flag of its view, and none for a color this version cann
 test('an empty sidebar result is valid for a machine with no open projects', () => {
     expect(ProjectSidebarResultSchema.safeParse({ projects: [] }).success).toBe(true);
 });
+
+test('a chat nobody wrote in yet is not listed', () => {
+    const views: ProjectView[] = [
+        { id: 'written', kind: 'chat', name: 'Plan', node: {} },
+        { id: 'empty', kind: 'chat', name: 'New chat', node: {}, empty: true }
+    ];
+    expect(projectSidebarViews(views, []).map((view) => view.id)).toEqual(['written']);
+});

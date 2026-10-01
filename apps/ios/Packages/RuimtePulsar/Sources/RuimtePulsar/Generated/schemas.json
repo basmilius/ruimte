@@ -22837,6 +22837,9 @@
                           "type": "string"
                         }
                       }
+                    },
+                    "empty": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -25876,6 +25879,9 @@
                           "type": "string"
                         }
                       }
+                    },
+                    "empty": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -45573,6 +45579,9 @@
                           "type": "string"
                         }
                       }
+                    },
+                    "empty": {
+                      "type": "boolean"
                     }
                   },
                   "required": [

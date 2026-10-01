@@ -6,7 +6,7 @@ import type { ProjectChatView } from '@ruimte/contracts';
 import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import { initRepo } from '../git/test-repo.ts';
 import { ProjectStore } from './project-store.ts';
-import { newScratchChat, scratchFolderOf } from './scratch-project.ts';
+import { dropEmptyMark, newScratchChat, reusableChat, scratchFolderOf } from './scratch-project.ts';
 
 let root: string;
 let store: ProjectStore;
@@ -28,7 +28,7 @@ afterEach(async () => {
 
 describe('a new chat outside any project', () => {
     test('two at once make one project and a folder for each chat', async () => {
-        const [first, second] = await Promise.all([newScratchChat(store, {}), newScratchChat(store, { provider: 'codex' })]);
+        const [first, second] = await Promise.all([newScratchChat(store, { provider: 'claude' }), newScratchChat(store, { provider: 'codex' })]);
 
         expect(first.summary.projectId).toBe(second.summary.projectId);
         expect(first.viewId).not.toBe(second.viewId);
@@ -39,7 +39,7 @@ describe('a new chat outside any project', () => {
         const views = await chatViews(first.summary.projectId);
         expect(views.map((view) => [view.id, view.node.cwd, view.node.provider])).toEqual(
             expect.arrayContaining([
-                [first.viewId, join(scratch, first.viewId), undefined],
+                [first.viewId, join(scratch, first.viewId), 'claude'],
                 [second.viewId, join(scratch, second.viewId), 'codex']
             ])
         );
@@ -78,5 +78,54 @@ describe('a new chat outside any project', () => {
             ['Chats', true],
             ['repo', undefined]
         ]);
+    });
+
+    test('a new chat shows the one nobody wrote in yet, to two clients asking at once too', async () => {
+        const first = await newScratchChat(store, {});
+        const [second, third] = await Promise.all([newScratchChat(store, {}), newScratchChat(store, {})]);
+
+        expect([second.viewId, third.viewId]).toEqual([first.viewId, first.viewId]);
+        expect((await chatViews(first.summary.projectId)).map((view) => [view.id, view.empty])).toEqual([[first.viewId, true]]);
+    });
+
+    test('a chat that was written in is listed and a new one is made beside it', async () => {
+        const first = await newScratchChat(store, {});
+
+        const second = await newScratchChat(store, {}, (chatId) => Promise.resolve(chatId === first.viewId));
+
+        expect(second.viewId).not.toBe(first.viewId);
+        expect((await chatViews(first.summary.projectId)).map((view) => [view.id, view.empty])).toEqual([
+            [first.viewId, undefined],
+            [second.viewId, true]
+        ]);
+    });
+
+    test('the first message lists the chat, and drops nothing anywhere else', async () => {
+        const first = await newScratchChat(store, {});
+
+        await dropEmptyMark(store, first.viewId);
+        await dropEmptyMark(store, 'chat-elsewhere');
+
+        expect((await chatViews(first.summary.projectId)).map((view) => view.empty)).toEqual([undefined]);
+        expect((await newScratchChat(store, {})).viewId).not.toBe(first.viewId);
+    });
+});
+
+describe('the empty chat a new chat reuses', () => {
+    const view = (id: string, node: ProjectChatView['node'], empty?: boolean): ProjectChatView => ({
+        kind: 'chat',
+        id,
+        name: 'New chat',
+        node,
+        ...(empty ? { empty } : {})
+    });
+
+    test('is one nobody wrote in, of the CLI and account asked for when the request names them', () => {
+        const views = [view('written', {}), view('codex', { provider: 'codex' }, true), view('claude', { provider: 'claude', account: 'work' }, true)];
+
+        expect(reusableChat(views, {})?.id).toBe('codex');
+        expect(reusableChat(views, { provider: 'claude' })?.id).toBe('claude');
+        expect(reusableChat(views, { provider: 'claude', account: 'home' })).toBeNull();
+        expect(reusableChat([view('written', {})], {})).toBeNull();
     });
 });

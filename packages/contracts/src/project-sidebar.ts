@@ -3,6 +3,7 @@ import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
 import { flagOf } from './project-flags.ts';
 import {
     isCanvasView,
+    isEmptyChatView,
     isSessionView,
     NodeTitleSourceSchema,
     ProjectIconChoiceSchema,
@@ -48,28 +49,31 @@ export const ProjectSidebarResultSchema = z.object({
 export type ProjectSidebarView = z.infer<typeof ProjectSidebarViewSchema>;
 export type ProjectSidebarResult = z.infer<typeof ProjectSidebarResultSchema>;
 
-// Keep canvas geometry, note text and embedded files off background sidebar requests.
+/* Keep canvas geometry, note text and embedded files off background sidebar requests. A chat nobody
+   wrote in yet is not listed, so the rows a client builds for its own project read the same. */
 export const projectSidebarViews = (views: readonly ProjectView[], shared: readonly string[], flags?: ProjectFlags): ProjectSidebarView[] =>
-    views.map((view) => {
-        const provider = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
-        const flag = flagOf(flags, view.id);
-        return {
-            id: view.id,
-            name: view.name ?? '',
-            titleSource: 'titleSource' in view ? view.titleSource : undefined,
-            kind: view.kind,
-            icon: viewIconOf(view),
-            provider,
-            path: view.kind === 'file' ? view.path : null,
-            shared: shared.includes(view.id),
-            ...(flag === null ? {} : { flag }),
-            nodes: isCanvasView(view)
-                ? view.nodes.flatMap((node) =>
-                      node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'browser' || node.kind === 'device'
-                          ? [{ id: node.id, title: node.title, titleSource: node.titleSource, kind: node.kind, provider: node.provider ?? null }]
-                          : []
-                  )
-                : [],
-            self: isSessionView(view) ? { id: view.id, title: view.name, titleSource: view.titleSource, kind: view.kind, provider } : null
-        };
-    });
+    views
+        .filter((view): boolean => !isEmptyChatView(view))
+        .map((view) => {
+            const provider = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
+            const flag = flagOf(flags, view.id);
+            return {
+                id: view.id,
+                name: view.name ?? '',
+                titleSource: 'titleSource' in view ? view.titleSource : undefined,
+                kind: view.kind,
+                icon: viewIconOf(view),
+                provider,
+                path: view.kind === 'file' ? view.path : null,
+                shared: shared.includes(view.id),
+                ...(flag === null ? {} : { flag }),
+                nodes: isCanvasView(view)
+                    ? view.nodes.flatMap((node) =>
+                          node.kind === 'terminal' || node.kind === 'chat' || node.kind === 'browser' || node.kind === 'device'
+                              ? [{ id: node.id, title: node.title, titleSource: node.titleSource, kind: node.kind, provider: node.provider ?? null }]
+                              : []
+                      )
+                    : [],
+                self: isSessionView(view) ? { id: view.id, title: view.name, titleSource: view.titleSource, kind: view.kind, provider } : null
+            };
+        });
