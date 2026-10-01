@@ -149,22 +149,18 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                         <Menu.Label>{t('dock.savedLayouts')}</Menu.Label>
                         {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">{t('dock.noLayouts')}</div>}
                         {layouts.map((layout) => (
-                            <Menu.Item key={layout.name} className="group" onClick={() => applyLayoutAction(layout.name)}>
-                                <Icon icon={LayoutTemplate} size={14} className="text-text-faint" />
-                                <span className="truncate">{layout.name}</span>
-                                <IconButton
+                            <Menu.Row key={layout.name} aria-label={layout.name}>
+                                <Menu.Item onClick={() => applyLayoutAction(layout.name)}>
+                                    <Icon icon={LayoutTemplate} size={14} className="text-text-faint" />
+                                    <span className="truncate">{layout.name}</span>
+                                </Menu.Item>
+                                <Menu.RowAction
                                     icon={X}
-                                    size="2xs"
                                     label={t('common:action.delete')}
-                                    className="ml-auto opacity-0 hover:bg-surface-active group-hover:opacity-100 group-data-[highlighted]:opacity-100"
-                                    render={<span role="button" />}
-                                    onClick={(e) => {
-                                        // The row applies; only the corner deletes.
-                                        e.stopPropagation();
-                                        deleteLayoutAction(layout.name);
-                                    }}
+                                    closeOnClick={false}
+                                    onClick={() => deleteLayoutAction(layout.name)}
                                 />
-                            </Menu.Item>
+                            </Menu.Row>
                         ))}
                         <Menu.Separator />
                         <Menu.Item onClick={() => useUi.getState().setLayoutDialogOpen(true)}>

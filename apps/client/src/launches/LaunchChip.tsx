@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, OctagonX, Pencil, Play, Plus, RotateCw, Search, Square, SquareTerminal, type LucideIcon } from 'lucide-react';
+import { ChevronDown, OctagonX, Pencil, Play, Plus, RotateCw, Search, Square, SquareTerminal } from 'lucide-react';
 import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
-import { Button, Icon, IconButton, Menu, Popover, PromptDialog, Tooltip, useNow } from '@basmilius/desktop-ui';
+import { Button, Icon, IconButton, Menu, Popover, PromptDialog, useNow } from '@basmilius/desktop-ui';
 import { formatAgo } from '@basmilius/desktop-ui/format';
 import { chooseLaunch, showLaunchOutput, startLaunch, stopLaunch } from '@/launches/actions';
 import { LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
@@ -203,55 +203,49 @@ function LaunchRow({ view }: { view: LaunchView }) {
     const hint = rowHint(view, now, t);
 
     return (
-        <div className="project-menu-row flex min-w-0 items-stretch" role="group">
-            <Menu.Item className="min-w-0 flex-1" onClick={() => chooseLaunch(launch.id)}>
+        <Menu.Row aria-label={launch.name}>
+            <Menu.Item onClick={() => chooseLaunch(launch.id)}>
                 <LaunchStatusIcon view={view} size={14} />
                 <span className="min-w-0 truncate">{launch.name}</span>
                 {hint !== null && <Menu.Hint className="max-w-48 truncate">{hint}</Menu.Hint>}
             </Menu.Item>
             {view.phase === 'stopping' ? (
-                <RowAction icon={OctagonX} label={t('forceStop', { name: launch.name })} keepOpen onClick={() => void stopLaunch(launch.id, true)} />
+                <Menu.RowAction
+                    icon={OctagonX}
+                    label={t('forceStop', { name: launch.name })}
+                    closeOnClick={false}
+                    onClick={() => void stopLaunch(launch.id, true)}
+                />
             ) : view.live ? (
                 <>
-                    <RowAction
+                    <Menu.RowAction
                         icon={RotateCw}
                         label={t('restart', { name: launch.name })}
-                        keepOpen
+                        closeOnClick={false}
                         onClick={() => void startLaunch(launch.id, { restart: true })}
                     />
-                    <RowAction icon={Square} label={t('stop', { name: launch.name })} keepOpen fill onClick={() => void stopLaunch(launch.id)} />
+                    <Menu.RowAction
+                        icon={Square}
+                        iconClassName="fill-current"
+                        label={t('stop', { name: launch.name })}
+                        closeOnClick={false}
+                        onClick={() => void stopLaunch(launch.id)}
+                    />
                 </>
             ) : (
-                <RowAction icon={Play} label={t('start', { name: launch.name })} keepOpen fill onClick={() => void startLaunch(launch.id)} />
+                <Menu.RowAction
+                    icon={Play}
+                    iconClassName="fill-current"
+                    label={t('start', { name: launch.name })}
+                    closeOnClick={false}
+                    onClick={() => void startLaunch(launch.id)}
+                />
             )}
-            <RowAction
+            <Menu.RowAction
                 icon={Pencil}
                 label={t('editLaunch', { name: launch.name })}
                 onClick={() => useLaunches.getState().setDialog({ kind: 'edit', launchId: launch.id })}
             />
-        </div>
-    );
-}
-
-/* A button at the end of a row, an item of the menu like the row itself so the whole reads as one and the arrow keys reach it. */
-function RowAction({
-    icon,
-    label,
-    fill = false,
-    keepOpen = false,
-    onClick
-}: {
-    icon: LucideIcon;
-    label: string;
-    fill?: boolean;
-    keepOpen?: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <Tooltip label={label}>
-            <Menu.Item className="project-menu-actions shrink-0" aria-label={label} closeOnClick={!keepOpen} onClick={onClick}>
-                <Icon icon={icon} size={14} className={fill ? 'fill-current' : undefined} />
-            </Menu.Item>
-        </Tooltip>
+        </Menu.Row>
     );
 }
