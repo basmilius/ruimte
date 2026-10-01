@@ -17,7 +17,7 @@ import { sessionClient } from '@/terminal';
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
-import { bindTerminalKeys, createTerminal, fitToHost } from '@/terminal/xterm';
+import { bindTerminalKeys, createTerminal, fitToHost, followAncestorScale } from '@/terminal/xterm';
 import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
@@ -80,6 +80,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.loadAddon(fit);
         term.loadAddon(new WebLinksAddon());
         term.open(host);
+        followAncestorScale(term);
         // Every client attached to a session sees the sequence; only the node a person works in writes this machine's clipboard.
         term.parser.registerOscHandler(52, (data) => {
             const text = osc52Text(data);
