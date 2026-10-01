@@ -172,20 +172,6 @@ export function AboutPane() {
                     />
                 </SettingsSection>
             )}
-            {hasLocalMachine() && (
-                <SettingsSection>
-                    <SettingsRow
-                        searchId="about.onboarding"
-                        label={t('onboarding:about.label')}
-                        description={t('onboarding:about.description')}
-                        control={
-                            <Button variant="secondary" onClick={() => openOnboarding()}>
-                                {t('common:action.open')}
-                            </Button>
-                        }
-                    />
-                </SettingsSection>
-            )}
             <SettingsSection
                 title={t('about.details.title')}
                 action={
@@ -219,6 +205,20 @@ export function AboutPane() {
                     />
                 ))}
             </SettingsSection>
+            {hasLocalMachine() && (
+                <SettingsSection>
+                    <SettingsRow
+                        searchId="about.onboarding"
+                        label={t('onboarding:about.label')}
+                        description={t('onboarding:about.description')}
+                        control={
+                            <Button variant="secondary" onClick={() => openOnboarding()}>
+                                {t('common:action.open')}
+                            </Button>
+                        }
+                    />
+                </SettingsSection>
+            )}
             <p className="text-center text-xs text-text-faint">FSL-1.1-MIT · Copyright 2026 Bas Milius</p>
         </>
     );
