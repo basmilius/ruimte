@@ -95,6 +95,13 @@ describe('the chip headline', () => {
         expect(headline({ a: status('a', { state: 'exited', exitCode: 0 }), b: status('b') })).toBe('b');
     });
 
+    test('never shows a launch only because it waits on approval', () => {
+        const held = doc([launch('a'), launch('b')], ['b']);
+        expect(headlineOf(launchViews(held, {}))?.phase).toBe('held');
+        expect(headlineOf(launchViews(held, { b: status('b') }))?.launch.id).toBe('b');
+        expect(headlineOf(launchViews(held, { b: status('b', { state: 'exited', exitCode: 0 }) }))?.phase).toBe('held');
+    });
+
     test('takes the first launch on a tie, skips groups and is null without launches', () => {
         expect(headline({ a: status('a'), b: status('b') })).toBe('a');
         expect(headline({})).toBe('a');

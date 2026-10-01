@@ -7,7 +7,7 @@ import type { LaunchPhase, LaunchView } from '@/launches/model';
 
 const STATUS_ICON: Record<Exclude<LaunchPhase, 'starting' | 'stopping'>, { icon: LucideIcon; className: string }> = {
     idle: { icon: Circle, className: 'text-text-faint' },
-    held: { icon: CircleAlert, className: 'text-status-needs-you' },
+    held: { icon: CircleAlert, className: 'text-text-faint' },
     running: { icon: CircleDot, className: 'text-positive' },
     passed: { icon: CircleCheck, className: 'text-positive' },
     failed: { icon: CircleX, className: 'text-status-error' }
@@ -20,8 +20,6 @@ const dotClass = (view: LaunchView): string => {
         return clsx('border-2 bg-transparent', view.phase === 'passed' ? 'border-positive' : 'border-status-error');
     }
     switch (view.phase) {
-        case 'held':
-            return 'bg-status-needs-you';
         case 'starting':
         case 'stopping':
             return 'bg-status-running animate-pulse';

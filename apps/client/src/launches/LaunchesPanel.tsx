@@ -114,11 +114,7 @@ function LaunchPicker({ view }: { view: LaunchView }) {
                 >
                     <LaunchStatusIcon view={view} size={14} />
                     <span className="min-w-0 truncate text-text">{view.launch.name}</span>
-                    {detail !== '' && (
-                        <span className={clsx('min-w-0 shrink-[4] truncate', view.phase === 'held' ? 'text-status-needs-you' : 'text-text-faint')}>
-                            {detail}
-                        </span>
-                    )}
+                    {detail !== '' && <span className="min-w-0 shrink-[4] truncate text-text-faint">{detail}</span>}
                     {others.count > 0 && (
                         <span
                             className={clsx('shrink-0 rounded-sm bg-surface-active px-1 tabular-nums', others.failed ? 'text-status-error' : 'text-text-muted')}

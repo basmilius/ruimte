@@ -92,8 +92,11 @@ export const membersOf = (launch: LaunchConfigEntry, document: LaunchesDocument)
 export const chosenLaunch = (document: LaunchesDocument, chosenId: string | undefined): LaunchConfigEntry | null =>
     document.launches.find((launch) => launch.id === chosenId) ?? document.launches[0] ?? null;
 
-/* Failing outranks what waits on a person, which outranks what is busy; green, and then nothing, count least. */
-const PHASE_RANK: Record<LaunchPhase, number> = { failed: 5, held: 4, starting: 3, stopping: 3, running: 2, passed: 1, idle: 0 };
+/*
+ * Failing outranks what is busy; green, and then nothing, count least. A launch nobody approved yet
+ * counts as nothing: the approval only matters once a person starts it.
+ */
+const PHASE_RANK: Record<LaunchPhase, number> = { failed: 4, starting: 3, stopping: 3, running: 2, passed: 1, held: 0, idle: 0 };
 
 /*
  * The state of the whole project in one view: the launch in the worst phase, so the chip shows what
