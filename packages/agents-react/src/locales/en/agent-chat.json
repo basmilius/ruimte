@@ -160,6 +160,18 @@
     "workingFor": "Working for"
   },
   "timeline": {
+    "welcome": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Still up?",
+      "starters": {
+        "label": "Ways to start",
+        "explain": "Explain an error or a log",
+        "script": "Write a small script",
+        "think": "Think something through with me"
+      }
+    },
     "empty": {
       "ready": "{{model}} is ready. Ask it anything.",
       "ask": "Ask anything.",

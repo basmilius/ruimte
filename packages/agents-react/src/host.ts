@@ -234,6 +234,8 @@ export interface ChatHost {
     useContextSources(chatId: string): ReadonlyArray<{ title: string }>;
     /* Whether the folder a chat works in is the app's business only, so an empty thread does not name it. */
     useHidesFolder(chatId: string): boolean;
+    /* Whether a chat before its first message opens on a greeting with the composer under it, rather than an empty thread over a docked composer. */
+    useWelcome(chatId: string): boolean;
     tasks: {
         useTasks(scopeId: string): Readonly<Record<string, SubagentTask>> | undefined;
         /* Null for a row with no task behind it. */
@@ -293,6 +295,7 @@ const DEFAULT_HOST: ChatHost = {
     useChatPlace: () => NOWHERE,
     useContextSources: () => NO_SOURCES,
     useHidesFolder: () => false,
+    useWelcome: () => false,
     tasks: { useTasks: () => undefined, useTask: () => null },
     confirm: { stopSubagents: (_scopeId, _chatId, run) => run(), stopTask: (_scopeId, _childId, _title, run) => run() },
     fork: null,

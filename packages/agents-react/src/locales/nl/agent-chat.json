@@ -160,6 +160,18 @@
     "workingFor": "Werkt al"
   },
   "timeline": {
+    "welcome": {
+      "morning": "Goedemorgen",
+      "afternoon": "Goedemiddag",
+      "evening": "Goedenavond",
+      "night": "Nog wakker?",
+      "starters": {
+        "label": "Zo kun je beginnen",
+        "explain": "Leg een foutmelding of log uit",
+        "script": "Schrijf een klein script",
+        "think": "Denk met me mee over iets"
+      }
+    },
     "empty": {
       "ready": "{{model}} staat klaar. Vraag maar raak.",
       "ask": "Vraag maar raak.",

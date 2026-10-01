@@ -122,6 +122,8 @@ export const connectChatHost = (): void => {
         openSettings: (section) => useUi.getState().setSettings({ open: true, section }),
         useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),
         // A chat on screen belongs to the project the window shows, and the Chats project shows none of its folders.
-        useHidesFolder: () => useProject((s) => isScratchProject(s.current))
+        useHidesFolder: () => useProject((s) => isScratchProject(s.current)),
+        // A chat of the Chats project is a conversation of its own, so it opens the way one does.
+        useWelcome: () => useProject((s) => isScratchProject(s.current))
     });
 };

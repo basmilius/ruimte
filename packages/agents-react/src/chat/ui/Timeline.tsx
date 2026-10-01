@@ -32,6 +32,7 @@ import { FOLLOW_THRESHOLD_PX, replyHeader, rowRhythm } from './rows/row-rhythm';
 import { QuoteButton } from './QuoteButton';
 import { QuoteTakerContext, type QuoteTaker } from './quote-selection';
 import { useToggleSet } from './useToggleSet';
+import { WelcomeGreeting, WelcomeStarters } from './Welcome';
 import { Row } from './rows/Rows';
 import { ReplyHeader } from './rows/MessageRows';
 import { useChatRow, useChats } from '../../state/chats';
@@ -178,8 +179,11 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
     }, [order, items, groups.ids, turns.ids, subagents.ids, activeTurnId, forkedTurns]);
     const cards = chatHost().useThreadCards(scopeId, chatId);
     const rows = useMemo(() => withThreadCards(threadRows, cards), [threadRows, cards]);
+    const welcomes = chatHost().useWelcome(chatId);
 
     const empty = rows.length === 0;
+    // A chat that took a turn before is one whose thread has not come in yet, not one to greet.
+    const welcome = welcomes && empty && (info === null || (info.usage.turns === 0 && info.activeTurnId === null));
     const marks = useMemo(() => bookmarkRows(rows, bookmarks ?? [], items ?? {}), [rows, bookmarks, items]);
     const ticks = useMemo(() => ticksOf(rows, marks), [rows, marks]);
     // A message a jump is on its way to; it may first have to open the turn its reply folded into.
@@ -217,7 +221,7 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
     }, []);
 
     // Oversized prompts scroll in full instead of sticking with their top outside the viewport.
-    const stickyComposer = composerHeight < frame.height - FOLLOW_THRESHOLD_PX;
+    const stickyComposer = !welcome && composerHeight < frame.height - FOLLOW_THRESHOLD_PX;
     const coveredHeight = stickyComposer ? composerHeight : 0;
     const coveredHeightRef = useRef(coveredHeight);
     coveredHeightRef.current = coveredHeight;
@@ -475,17 +479,21 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
                             }
                         }}
                     >
-                        <div ref={contentRef} className="relative flex min-h-full flex-col">
+                        {/* A welcome centers the greeting, the composer and the ways to start as one group. The
+                            composer keeps its place in the tree, so the first message does not mount it again. */}
+                        <div ref={contentRef} className={clsx('relative flex min-h-full flex-col', welcome && 'justify-center')}>
                             <ContextMenu.Trigger
                                 ref={threadRef}
-                                className="chat-thread flex grow flex-col px-4 pt-4"
+                                className={clsx('chat-thread flex flex-col px-4 pt-4', !welcome && 'grow')}
                                 style={{ paddingLeft }}
                                 inert={overlay ? true : undefined}
                                 onContextMenu={(e) =>
                                     setTarget(readTimelineTarget(e.target as HTMLElement, threadRef.current, withCurrentText(rows, fullItems())))
                                 }
                             >
-                                {empty ? (
+                                {welcome ? (
+                                    <WelcomeGreeting chatId={chatId} />
+                                ) : empty ? (
                                     <EmptyThread chatId={chatId} />
                                 ) : (
                                     <div className="chat-column-content relative w-full shrink-0" style={{ height: virtualizer.getTotalSize() }}>
@@ -540,6 +548,7 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
                             >
                                 <QuoteTakerContext.Provider value={registerQuoteTaker}>{composer}</QuoteTakerContext.Provider>
                             </div>
+                            {welcome && composer && <WelcomeStarters chatId={chatId} />}
                         </div>
                     </div>
                     <TimelineMenuPopup target={target} thread={threadRef} chatId={onMainAgent ? chatId : null} />
