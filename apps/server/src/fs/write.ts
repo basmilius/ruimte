@@ -23,7 +23,7 @@ export interface WriteBoundary {
 const realOrNull = (path: string): Promise<string | null> => realpath(path).catch(() => null);
 
 /* The boundary as real paths, so neither `..` nor a symlinked folder decides what is inside. */
-const realRoots = async (boundary: WriteBoundary): Promise<string[]> => {
+export const realRoots = async (boundary: WriteBoundary): Promise<string[]> => {
     const folders = await Promise.all(boundary.folders.map(realOrNull));
     const worktreesRoot = await realOrNull(boundary.worktreesRoot);
     const listed = worktreesRoot === null ? [] : (await Promise.all(boundary.folders.map(boundary.worktreesOf))).flat();

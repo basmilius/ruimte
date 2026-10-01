@@ -32671,6 +32671,24 @@
       }
     ]
   },
+  "request.fs.delete.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "request.fs.delete.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.fs.write.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

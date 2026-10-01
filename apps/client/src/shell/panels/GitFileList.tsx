@@ -13,6 +13,7 @@ import {
     EyeOff,
     FileDiff,
     FileText,
+    FileX,
     Folder,
     FolderGit2,
     GitBranch,
@@ -34,7 +35,7 @@ import {
     statusColor,
     type GitTreeRow
 } from '@/shell/panels/git-tree';
-import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
+import { directoryHandle, extendsSelection, menuTargetsOf, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import type { GitCheckout } from '@/state/git-repos';
@@ -74,6 +75,9 @@ const GIT_TREE_CSS = `
 `;
 
 /* A file git no longer has on disk: opening it or revealing it would point at nothing. */
+/* A file git has never committed: untracked, or added to the index and not in HEAD. */
+const isNewFile = (file: GitFile): boolean => file.state === 'untracked' || (file.state === 'staged' && file.status === 'A');
+
 const isGone = (file: GitFile): boolean => file.status.startsWith('D');
 
 /* The absolute path of a row on the daemon's machine, which is what reveal and copy take. */
@@ -121,7 +125,8 @@ interface ListProps {
     /* The file itself rather than its diff, in a tab of its own. */
     onOpenFile(cwd: string, file: GitFile): void;
     onStage(cwd: string, paths: string[], staged: boolean): void;
-    onDiscard(cwd: string, file: GitFile): void;
+    onDiscard(cwd: string, files: GitFile[]): void;
+    onDelete(cwd: string, files: GitFile[]): void;
 }
 
 /*
@@ -132,7 +137,7 @@ interface ListProps {
  * A row opens its diff in the preview panel; a right click stages it, discards it behind a confirm,
  * and offers the things a row has no room for: the file itself, the two reveals, the paths.
  */
-export function GitFileList({ checkouts, collapsed, reading, reposTruncated, busy, onOpen, onOpenFile, onStage, onDiscard }: ListProps) {
+export function GitFileList({ checkouts, collapsed, reading, reposTruncated, busy, onOpen, onOpenFile, onStage, onDiscard, onDelete }: ListProps) {
     const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -204,7 +209,8 @@ export function GitFileList({ checkouts, collapsed, reading, reposTruncated, bus
                                 onOpen={(file) => onOpen(checkout.path, file)}
                                 onOpenFile={(file) => onOpenFile(checkout.path, file)}
                                 onStage={(paths, next) => onStage(checkout.path, paths, next)}
-                                onDiscard={(file) => onDiscard(checkout.path, file)}
+                                onDiscard={(files) => onDiscard(checkout.path, files)}
+                                onDelete={(files) => onDelete(checkout.path, files)}
                             />
                         ))}
                     </section>
@@ -233,7 +239,8 @@ interface TreeProps {
     onOpen(file: GitFile): void;
     onOpenFile(file: GitFile): void;
     onStage(paths: string[], staged: boolean): void;
-    onDiscard(file: GitFile): void;
+    onDiscard(files: GitFile[]): void;
+    onDelete(files: GitFile[]): void;
 }
 
 /*
@@ -242,14 +249,30 @@ interface TreeProps {
  * it in one group closes it in the other, while the same folder name in another repository stays its
  * own. Each tree is exactly as tall as its rows, so all of them scroll as one list.
  */
-function GitRepoTree({ state, checkout, files, named, folder, platform, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: TreeProps) {
+function GitRepoTree({
+    state,
+    checkout,
+    files,
+    named,
+    folder,
+    platform,
+    collapsed,
+    reading,
+    busy,
+    onOpen,
+    onOpenFile,
+    onStage,
+    onDiscard,
+    onDelete
+}: TreeProps) {
     const { t } = useTranslation('panels');
     const staged = state === 'staged';
     const conflicted = state === 'conflicted';
     const root = checkout.path;
     /* While the folder holds one repository the folds are keyed as they always were. */
     const scope = named ? checkout.label : '';
-    const [menuPath, setMenuPath] = useState<string | null>(null);
+    /* The rows the open context menu acts on: one, or the whole selection when the row is part of one. */
+    const [menuPaths, setMenuPaths] = useState<string[]>([]);
     const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
     const filesRef = useRef<ReadonlyMap<string, GitFile>>(new Map());
     const collapsedRef = useRef<ReadonlySet<string>>(new Set());
@@ -360,8 +383,12 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
         [model]
     );
 
-    /* The tree follows the preview: the file whose diff is open is the row that reads as selected. */
+    /* The tree follows the preview: the file whose diff is open is the row that reads as selected. A
+       selection of several rows is a person's own, and a refresh of the list does not take it away. */
     useEffect(() => {
+        if (model.getSelectedPaths().length > 1) {
+            return;
+        }
         for (const path of model.getSelectedPaths()) {
             model.getItem(path)?.deselect();
         }
@@ -371,6 +398,9 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
     }, [files, model, reading]);
 
     const onClick = (event: ReactMouseEvent<HTMLElement>): void => {
+        if (extendsSelection(event)) {
+            return;
+        }
         const path = rowPathOf(event);
         const file = path === null ? undefined : byPath.get(path);
         if (file !== undefined) {
@@ -378,6 +408,30 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
         }
     };
 
+    const manyTargets = menuPaths.length > 1;
+    const menuPath = manyTargets ? null : (menuPaths[0] ?? null);
+    /* Every file the selection stands for: a folder in it is the files under it. */
+    const menuFiles = useMemo(() => {
+        const found = new Map<string, GitFile>();
+        for (const row of menuPaths) {
+            const direct = byPath.get(row);
+            for (const file of direct === undefined ? pathsUnder(files, dirPathOf(row)).map((path) => byPath.get(path)) : [direct]) {
+                if (file !== undefined) {
+                    found.set(file.path, file);
+                }
+            }
+        }
+        return [...found.values()];
+    }, [byPath, files, menuPaths]);
+    const newFiles = menuFiles.filter(isNewFile);
+    const copyFiles = (line: (file: GitFile) => string | null, separator: string): void => {
+        copyText(
+            menuFiles
+                .map(line)
+                .filter((text): text is string => text !== null)
+                .join(separator)
+        );
+    };
     const menuFile = menuPath === null ? undefined : byPath.get(menuPath);
     const menuDir = menuFile === undefined && menuPath !== null ? dirPathOf(menuPath) : null;
     const menuDirKey = menuDir === null ? null : scope === '' ? menuDir : `${scope}/${menuDir}`;
@@ -423,10 +477,55 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
                 </div>
             )}
             <ContextMenu.Root>
-                <ContextMenu.Trigger render={<div />} style={{ height }} onContextMenu={(event) => setMenuPath(rowPathOf(event))}>
+                <ContextMenu.Trigger
+                    render={<div />}
+                    style={{ height }}
+                    onContextMenu={(event) => {
+                        const row = rowPathOf(event);
+                        setMenuPaths(row === null ? [] : menuTargetsOf(row, model.getSelectedPaths()));
+                    }}
+                >
                     <FileTree model={model} className={clsx('panel-tree', named && 'panel-tree-indented')} onClick={onClick} />
                 </ContextMenu.Trigger>
                 <ContextMenu.Popup>
+                    {manyTargets && menuFiles.length > 0 && (
+                        <>
+                            {!conflicted && (
+                                <ContextMenu.Item
+                                    disabled={busy}
+                                    onClick={() =>
+                                        onStage(
+                                            menuFiles.map((file) => file.path),
+                                            !staged
+                                        )
+                                    }
+                                >
+                                    <Icon icon={staged ? Minus : Plus} size={14} />
+                                    {t(staged ? 'git.list.unstageMany' : 'git.list.stageMany', { count: menuFiles.length })}
+                                </ContextMenu.Item>
+                            )}
+                            {!conflicted && (
+                                <ContextMenu.Item disabled={busy} onClick={() => onDiscard(menuFiles)}>
+                                    <Icon icon={Trash2} size={14} /> {t('git.list.discardMany', { count: menuFiles.length })}
+                                </ContextMenu.Item>
+                            )}
+                            {newFiles.length > 0 && (
+                                <ContextMenu.Item disabled={busy} onClick={() => onDelete(newFiles)}>
+                                    <Icon icon={FileX} size={14} /> {t('git.list.deleteMany', { count: newFiles.length })}
+                                </ContextMenu.Item>
+                            )}
+                            <ContextMenu.Separator />
+                            <ContextMenu.Item onClick={() => copyFiles((file) => absolutePathOf(root, file.path), '\n')}>
+                                <Icon icon={Copy} size={14} /> {t('files.copyPaths')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Item onClick={() => copyFiles((file) => file.path, '\n')}>
+                                <Icon icon={Copy} size={14} /> {t('files.copyRelativePaths')}
+                            </ContextMenu.Item>
+                            <ContextMenu.Item onClick={() => copyFiles((file) => mentionOf(folder, absolutePathOf(root, file.path)), ' ')}>
+                                <Icon icon={AtSign} size={14} /> {t('files.copyMentions')}
+                            </ContextMenu.Item>
+                        </>
+                    )}
                     {menuFile !== undefined && (
                         <>
                             <ContextMenu.Item onClick={() => onOpen(menuFile)}>
@@ -443,8 +542,13 @@ function GitRepoTree({ state, checkout, files, named, folder, platform, collapse
                             {/* A conflict is resolved by staging it or by a merge tool; discarding one side of it
                                         silently is the one way out that loses work nobody can name afterwards. */}
                             {!conflicted && (
-                                <ContextMenu.Item disabled={busy} onClick={() => onDiscard(menuFile)}>
+                                <ContextMenu.Item disabled={busy} onClick={() => onDiscard([menuFile])}>
                                     <Icon icon={Trash2} size={14} /> {t('git.list.discard')}
+                                </ContextMenu.Item>
+                            )}
+                            {isNewFile(menuFile) && (
+                                <ContextMenu.Item disabled={busy} onClick={() => onDelete([menuFile])}>
+                                    <Icon icon={FileX} size={14} /> {t('git.list.deleteFile')}
                                 </ContextMenu.Item>
                             )}
                             <ContextMenu.Separator />

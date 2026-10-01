@@ -203,6 +203,13 @@ export const FsWriteResultSchema = z.object({
 });
 export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
 
+/* Moves a file or folder to the machine's trash. Only inside an open project or one of its
+   worktrees, and never the project folder itself, `.git` or `.ruimte`. */
+export const FsDeletePayloadSchema = z.object({
+    path: z.string().min(1)
+});
+export type FsDeletePayload = z.infer<typeof FsDeletePayloadSchema>;
+
 // What `GET /fs/file` serves; a read result names one of these before the client asks for the bytes.
 // Not every client draws every one: HEIC and TIFF are left to the platform's own decoder.
 export const FS_IMAGE_MIMES = [

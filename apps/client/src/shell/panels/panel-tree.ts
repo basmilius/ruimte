@@ -42,3 +42,9 @@ export const rowPathOf = (event: { nativeEvent: Event }): string | null => {
     }
     return null;
 };
+
+/* The rows a context menu acts on: the whole selection when the row is part of one, else the row. */
+export const menuTargetsOf = (row: string, selected: readonly string[]): string[] => (selected.includes(row) && selected.length > 1 ? [...selected] : [row]);
+
+/* A click that extends the selection, which the tree handles and a panel must not read as "open this". */
+export const extendsSelection = (event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): boolean => event.shiftKey || event.metaKey || event.ctrlKey;

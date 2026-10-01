@@ -2924,6 +2924,16 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ path: filePath }),
         output: z.object({ path: z.string() })
     },
+    'file.delete': {
+        title: 'Delete files and folders',
+        description: 'Moves files and folders of the project to the machine’s trash, where they can be restored from.',
+        effect: 'shared',
+        domain: 'files',
+        actors: PERSON,
+        input: z.object({ paths: z.array(filePath).min(1) }),
+        // What was trashed: a folder stands for what was selected inside it too.
+        output: z.object({ paths: z.array(z.string()) })
+    },
     'file.copyPath': {
         title: 'Copy a path',
         description: 'Copies the path of a file to the clipboard, whole or relative to the project folder.',

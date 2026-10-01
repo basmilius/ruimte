@@ -15,6 +15,7 @@ const fakes = (answers: Answers = {}, overrides: Partial<FilesMachine> = {}) => 
     const open = new Map<string, number | null>();
     const copied: string[] = [];
     const revealed: string[] = [];
+    const forgotten: string[] = [];
     const machine: Partial<FilesMachine> = {
         transport: () =>
             ({
@@ -32,10 +33,11 @@ const fakes = (answers: Answers = {}, overrides: Partial<FilesMachine> = {}) => 
         isOpen: (path) => open.has(path),
         open: (path, line) => void open.set(path, line),
         close: (path) => void open.delete(path),
+        forget: (path) => void forgotten.push(path),
         reveal: (path) => void revealed.push(path),
         ...overrides
     };
-    return { asked, open, copied, revealed, registry: createClientActionRegistry(useDocument, { files: machine }) };
+    return { asked, open, copied, revealed, forgotten, registry: createClientActionRegistry(useDocument, { files: machine }) };
 };
 
 const completed = <Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> => {
@@ -125,6 +127,18 @@ describe('file actions', () => {
         completed(await registry.execute('file.copyPath', { path: '/repo/src/a.ts', relative: true }, VOICE_ACTION_CALL));
         completed(await registry.execute('file.copyPath', { path: 'src/a.ts', relative: false }, PERSON_ACTION_CALL));
         expect(copied).toEqual(['src/a.ts', '/repo/src/a.ts']);
+    });
+
+    test('only a person deletes, by asking the machine and then forgetting the tabs of what is gone', async () => {
+        const { registry, asked, forgotten } = fakes({ 'fs.delete': () => ({}) });
+        expect(await registry.execute('file.delete', { paths: ['src/a.ts'] }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'forbidden-action' } });
+        expect(asked).toEqual([]);
+        completed(await registry.execute('file.delete', { paths: ['src/a.ts', 'src', 'src', 'docs/b.md'] }, PERSON_ACTION_CALL));
+        expect(asked).toEqual([
+            { type: 'fs.delete', payload: { path: '/repo/src' } },
+            { type: 'fs.delete', payload: { path: '/repo/docs/b.md' } }
+        ]);
+        expect(forgotten).toEqual(['/repo/src', '/repo/docs/b.md']);
     });
 
     test('a machine that is not connected is said so', async () => {

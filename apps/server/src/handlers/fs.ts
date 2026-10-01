@@ -1,5 +1,6 @@
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { browseDirectories } from '../fs/browse.ts';
+import { deletePath } from '../fs/delete.ts';
 import { listDirectory } from '../fs/list.ts';
 import { readFile } from '../fs/read.ts';
 import { revealInFileManager } from '../fs/reveal.ts';
@@ -30,6 +31,13 @@ export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatche
 
     dispatcher.register('fs.write', (payload, client) =>
         translate(async () => writeTextFile(payload.path, payload.text, payload.expectedMtime, await boundaryOf(client.id)))
+    );
+
+    dispatcher.register('fs.delete', (payload, client) =>
+        translate(async () => {
+            await deletePath(payload.path, await boundaryOf(client.id));
+            return {};
+        })
     );
 
     dispatcher.register('fs.watch', async (payload, client) => {

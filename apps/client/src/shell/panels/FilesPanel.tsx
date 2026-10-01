@@ -26,7 +26,8 @@ import {
     Frame,
     MoreHorizontal,
     RefreshCw,
-    Search
+    Search,
+    Trash2
 } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
@@ -50,7 +51,7 @@ import {
     withoutClosedBranches,
     type EntryCache
 } from '@/shell/panels/files-tree';
-import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
+import { directoryHandle, extendsSelection, menuTargetsOf, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
@@ -58,11 +59,12 @@ import { useGit } from '@/state/git';
 import { useEndpointId } from '@/state/keys';
 import { useGitStatus } from '@/state/git-watch';
 import { useProject } from '@/state/project';
+import { useToasts } from '@/state/toasts';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { copyText, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu } from '@basmilius/desktop-ui';
+import { copyText, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -123,6 +125,10 @@ export function FilesPanel() {
     /* The file the tree last followed the preview to, so a click of the person's own is never undone. */
     const revealedRef = useRef<string | null>(null);
     const [menuPath, setMenuPath] = useState<string | null>(null);
+    /* The rows the open context menu acts on: one, or the whole selection when the row is part of one. */
+    const [menuTargets, setMenuTargets] = useState<string[]>([]);
+    const [deleting, setDeleting] = useState<{ absolutes: string[]; directory: boolean } | null>(null);
+    const [deleteBusy, setDeleteBusy] = useState(false);
     /* The reveal that was answered, so a listing arriving later does not scroll the tree again. */
     const answeredReveal = useRef(0);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
@@ -368,6 +374,9 @@ export function FilesPanel() {
     /* One click opens a file, the way every row in this app opens what it points at. A directory
        is left to the tree, which folds it open on the same click. */
     const onClick = (event: ReactMouseEvent<HTMLElement>): void => {
+        if (extendsSelection(event)) {
+            return;
+        }
         openPath(rowPathOf(event));
     };
 
@@ -416,10 +425,38 @@ export function FilesPanel() {
     /* Directories too, the way a row dragged into the composer mentions one. */
     const menuMention = folder && menuPath ? mentionOf(folder, absoluteOf(folder, menuPath)) : null;
 
+    const manyTargets = menuTargets.length > 1;
+
+    /* What every selected row stands for, as the lines a person pastes: one row per line. */
+    const copyTargets = (line: (absolute: string, treePath: string) => string | null): void => {
+        if (folder) {
+            copyText(
+                menuTargets
+                    .map((treePath) => line(absoluteOf(folder, treePath).replace(/\/+$/, ''), treePath))
+                    .filter((text): text is string => text !== null)
+                    .join('\n')
+            );
+        }
+    };
+
     const onMenuPath = (act: (absolute: string, treePath: string) => void) => (): void => {
         if (folder && menuPath) {
             act(absoluteOf(folder, menuPath), menuPath);
         }
+    };
+
+    const confirmDelete = (): void => {
+        if (deleting === null) {
+            return;
+        }
+        setDeleteBusy(true);
+        performAsPerson('file.delete', { paths: deleting.absolutes })
+            .then(() => setDeleting(null))
+            .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : t('error.generic');
+                useToasts.getState().show({ title: t('files.deleteFailed'), description: message, kind: 'error', output: message });
+            })
+            .finally(() => setDeleteBusy(false));
     };
 
     /* The diff of the row the menu is on, which only a file git says changed has. */
@@ -517,9 +554,19 @@ export function FilesPanel() {
                         onContextMenu={(event) => {
                             const path = rowPathOf(event);
                             setMenuPath(path);
-                            if (path) {
+                            if (path === null) {
+                                setMenuTargets([]);
+                                return;
+                            }
+                            const targets = menuTargetsOf(path, selectionRef.current);
+                            if (targets.length === 1 && !selectionRef.current.includes(path)) {
+                                // A right click outside the selection acts on its own row, so the selection lets go first.
+                                for (const selected of activeModel.getSelectedPaths()) {
+                                    activeModel.getItem(selected)?.deselect();
+                                }
                                 activeModel.getItem(path)?.select();
                             }
+                            setMenuTargets(targets);
                         }}
                     >
                         <FileTree
@@ -532,52 +579,123 @@ export function FilesPanel() {
                         />
                     </ContextMenu.Trigger>
                     <ContextMenu.Popup>
-                        <ContextMenu.Item onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
-                            <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
-                        </ContextMenu.Item>
-                        {changedStatus !== null && (
-                            <ContextMenu.Item onClick={openChanges}>
-                                <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
-                            </ContextMenu.Item>
-                        )}
-                        <ContextMenu.Item
-                            onClick={onMenuPath((absolute) => {
-                                void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
-                            })}
-                        >
-                            <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
-                        </ContextMenu.Item>
-                        {menuPath !== null && !isDirectoryPath(menuPath) && (
+                        {manyTargets ? (
                             <>
+                                <ContextMenu.Item
+                                    onClick={() =>
+                                        folder &&
+                                        setDeleting({
+                                            absolutes: menuTargets.map((treePath) => absoluteOf(folder, treePath).replace(/\/+$/, '')),
+                                            directory: false
+                                        })
+                                    }
+                                >
+                                    <Icon icon={Trash2} size={14} /> {t('files.deleteMany', { count: menuTargets.length })}
+                                </ContextMenu.Item>
                                 <ContextMenu.Separator />
-                                {onCanvas && (
-                                    <ContextMenu.Item onClick={onMenuPath((absolute) => void showFileOnCanvas(absolute))}>
-                                        <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
-                                    </ContextMenu.Item>
-                                )}
-                                <ContextMenu.Item onClick={onMenuPath((absolute) => void createViewAction('file', { path: absolute }))}>
-                                    <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
+                                <ContextMenu.Item onClick={() => copyTargets((absolute) => basenameOf(absolute))}>
+                                    <Icon icon={Copy} size={14} /> {t('files.copyNames')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item onClick={() => copyTargets((absolute) => absolute)}>
+                                    <Icon icon={Copy} size={14} /> {t('files.copyPaths')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    onClick={() => copyTargets((_absolute, treePath) => (isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
+                                >
+                                    <Icon icon={Copy} size={14} /> {t('files.copyRelativePaths')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item onClick={() => copyTargets((absolute) => mentionOf(folder, absolute))}>
+                                    <Icon icon={AtSign} size={14} /> {t('files.copyMentions')}
                                 </ContextMenu.Item>
                             </>
-                        )}
-                        <ContextMenu.Separator />
-                        <ContextMenu.Item onClick={onMenuPath((absolute) => copyText(basenameOf(absolute)))}>
-                            <Icon icon={Copy} size={14} /> {t('files.copyName')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Item onClick={onMenuPath((absolute) => copyText(absolute))}>
-                            <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Item onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}>
-                            <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
-                        </ContextMenu.Item>
-                        {menuMention !== null && (
-                            <ContextMenu.Item onClick={() => copyText(menuMention)}>
-                                <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
-                            </ContextMenu.Item>
+                        ) : (
+                            <>
+                                <ContextMenu.Item onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
+                                    <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
+                                </ContextMenu.Item>
+                                {changedStatus !== null && (
+                                    <ContextMenu.Item onClick={openChanges}>
+                                        <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
+                                    </ContextMenu.Item>
+                                )}
+                                <ContextMenu.Item
+                                    onClick={onMenuPath((absolute) => {
+                                        void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
+                                    })}
+                                >
+                                    <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
+                                </ContextMenu.Item>
+                                {menuPath !== null && !isDirectoryPath(menuPath) && (
+                                    <>
+                                        <ContextMenu.Separator />
+                                        {onCanvas && (
+                                            <ContextMenu.Item onClick={onMenuPath((absolute) => void showFileOnCanvas(absolute))}>
+                                                <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
+                                            </ContextMenu.Item>
+                                        )}
+                                        <ContextMenu.Item onClick={onMenuPath((absolute) => void createViewAction('file', { path: absolute }))}>
+                                            <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
+                                        </ContextMenu.Item>
+                                    </>
+                                )}
+                                <ContextMenu.Separator />
+                                <ContextMenu.Item onClick={onMenuPath((absolute) => copyText(basenameOf(absolute)))}>
+                                    <Icon icon={Copy} size={14} /> {t('files.copyName')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item onClick={onMenuPath((absolute) => copyText(absolute))}>
+                                    <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
+                                >
+                                    <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
+                                </ContextMenu.Item>
+                                {menuMention !== null && (
+                                    <ContextMenu.Item onClick={() => copyText(menuMention)}>
+                                        <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
+                                    </ContextMenu.Item>
+                                )}
+                                {menuPath !== null && (
+                                    <>
+                                        <ContextMenu.Separator />
+                                        <ContextMenu.Item
+                                            onClick={onMenuPath((absolute, treePath) =>
+                                                setDeleting({ absolutes: [absolute.replace(/\/+$/, '')], directory: isDirectoryPath(treePath) })
+                                            )}
+                                        >
+                                            <Icon icon={Trash2} size={14} /> {t('files.delete')}
+                                        </ContextMenu.Item>
+                                    </>
+                                )}
+                            </>
                         )}
                     </ContextMenu.Popup>
                 </ContextMenu.Root>
             )}
+            <PromptDialog
+                open={deleting !== null}
+                title={
+                    deleting === null
+                        ? t('files.deleteDialog.fallback')
+                        : deleting.absolutes.length > 1
+                          ? t('files.deleteDialog.manyTitle', { count: deleting.absolutes.length })
+                          : t(deleting.directory ? 'files.deleteDialog.folderTitle' : 'files.deleteDialog.fileTitle', {
+                                name: basenameOf(deleting.absolutes[0] ?? '')
+                            })
+                }
+                description={
+                    deleting !== null && deleting.absolutes.length > 1
+                        ? t('files.deleteDialog.manyDescription')
+                        : deleting?.directory
+                          ? t('files.deleteDialog.folderDescription')
+                          : t('files.deleteDialog.fileDescription')
+                }
+                confirmLabel={t('files.deleteDialog.confirm')}
+                danger
+                busy={deleteBusy}
+                onConfirm={confirmDelete}
+                onOpenChange={() => setDeleting(null)}
+            />
         </div>
     );
 }

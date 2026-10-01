@@ -172,7 +172,24 @@
         }
     },
     "files": {
+        "copyMentions": "Copy mentions",
         "copyName": "Copy name",
+        "copyNames": "Copy names",
+        "copyPaths": "Copy paths",
+        "copyRelativePaths": "Copy relative paths",
+        "delete": "Move to trash",
+        "deleteDialog": {
+            "confirm": "Move to trash",
+            "fallback": "Move this to the trash?",
+            "fileDescription": "The file goes to the trash of the machine this project runs on, where it can be restored from.",
+            "fileTitle": "Move {{name}} to the trash?",
+            "folderDescription": "The folder and everything in it go to the trash of the machine this project runs on, where they can be restored from.",
+            "folderTitle": "Move {{name}} to the trash?",
+            "manyDescription": "The files and folders, with everything in the folders, go to the trash of the machine this project runs on, where they can be restored from.",
+            "manyTitle": "Move {{count}} items to the trash?"
+        },
+        "deleteFailed": "Could not move it to the trash",
+        "deleteMany": "Move {{count}} items to trash",
         "empty": "This folder is empty.",
         "filter": "Filter files",
         "noMatch": "No files match the filter.",
@@ -274,14 +291,6 @@
                 "description": "Starts from the current commit and switches to it.",
                 "title": "Create a branch"
             },
-            "diverged": {
-                "description": "Your branch and the remote have each gained commits the other does not have.",
-                "merge": "Merge",
-                "mergeHint": "Keeps both histories and writes a merge commit.",
-                "rebase": "Rebase",
-                "rebaseHint": "Replays your commits on top of the remote, leaving one line of history.",
-                "title": "How should {{branch}} come together?"
-            },
             "deleteBranch": {
                 "anyway": "Delete anyway",
                 "confirm": "Delete branch",
@@ -290,11 +299,29 @@
                 "title": "Delete {{branch}}?",
                 "unmerged": "This branch has commits that no other branch has. Deleting it loses them."
             },
+            "deleteFile": {
+                "confirm": "Move to trash",
+                "description": "The file is new, so there is nothing in git to restore it from. It goes to the trash of the machine this project runs on.",
+                "descriptionMany": "The files are new, so there is nothing in git to restore them from. They go to the trash of the machine this project runs on.",
+                "fallback": "Move this file to the trash?",
+                "title": "Move {{name}} to the trash?",
+                "titleMany": "Move {{count}} files to the trash?"
+            },
             "discard": {
                 "confirm": "Discard",
                 "description": "Reverts the file to HEAD. The changes are stashed first, so \"git stash pop\" restores them.",
+                "descriptionMany": "Reverts the files to HEAD. The changes are stashed first, so \"git stash pop\" restores them.",
                 "fallback": "Discard this file?",
-                "title": "Discard {{name}}?"
+                "title": "Discard {{name}}?",
+                "titleMany": "Discard {{count}} files?"
+            },
+            "diverged": {
+                "description": "Your branch and the remote have each gained commits the other does not have.",
+                "merge": "Merge",
+                "mergeHint": "Keeps both histories and writes a merge commit.",
+                "rebase": "Rebase",
+                "rebaseHint": "Replays your commits on top of the remote, leaving one line of history.",
+                "title": "How should {{branch}} come together?"
             },
             "filter": "Filter",
             "forcePush": {
@@ -350,7 +377,10 @@
         },
         "list": {
             "collapseFolder": "Collapse this folder",
+            "deleteFile": "Move to trash",
+            "deleteMany": "Move {{count}} new files to trash",
             "discard": "Discard changes",
+            "discardMany": "Discard {{count}} files",
             "expandFolder": "Expand this folder",
             "noChanges": "No changes.",
             "noRepo": "This folder is not a git repository.",
@@ -358,10 +388,12 @@
             "stage": "Stage",
             "stageGroup": "Stage everything in {{group}}",
             "stageHere": "Stage everything here",
+            "stageMany": "Stage {{count}} files",
             "stageResolved": "Stage as resolved",
             "unstage": "Unstage",
             "unstageGroup": "Unstage everything in {{group}}",
-            "unstageHere": "Unstage everything here"
+            "unstageHere": "Unstage everything here",
+            "unstageMany": "Unstage {{count}} files"
         },
         "log": {
             "copySubject": "Copy subject",
@@ -389,11 +421,14 @@
         },
         "panel": {
             "collapseAll": "Collapse all folders",
+            "deleteDone": "Moved {{path}} to the trash",
+            "deleteFailed": "Could not delete the file",
             "discardFailed": "Discard failed",
             "discardNothing": "{{path}} had nothing to discard",
             "discardRestore": "Restore {{stash}} with \"git stash pop\".",
             "discardStashed": "Stashed {{path}}",
             "expandAll": "Expand all folders",
+            "manyFiles": "{{count}} files",
             "noFolder": "No project is open.",
             "statusFailed": "Could not read the status."
         },

@@ -172,7 +172,24 @@
         }
     },
     "files": {
+        "copyMentions": "Mentions kopiëren",
         "copyName": "Naam kopiëren",
+        "copyNames": "Namen kopiëren",
+        "copyPaths": "Paden kopiëren",
+        "copyRelativePaths": "Relatieve paden kopiëren",
+        "delete": "Naar de prullenbak",
+        "deleteDialog": {
+            "confirm": "Naar de prullenbak",
+            "fallback": "Dit naar de prullenbak verplaatsen?",
+            "fileDescription": "Het bestand gaat naar de prullenbak van de machine waarop dit project draait en is daar terug te halen.",
+            "fileTitle": "{{name}} naar de prullenbak verplaatsen?",
+            "folderDescription": "De map en alles erin gaan naar de prullenbak van de machine waarop dit project draait en zijn daar terug te halen.",
+            "folderTitle": "{{name}} naar de prullenbak verplaatsen?",
+            "manyDescription": "De bestanden en mappen, met alles in die mappen, gaan naar de prullenbak van de machine waarop dit project draait en zijn daar terug te halen.",
+            "manyTitle": "{{count}} items naar de prullenbak verplaatsen?"
+        },
+        "deleteFailed": "Kon niet naar de prullenbak verplaatsen",
+        "deleteMany": "{{count}} items naar de prullenbak",
         "empty": "Deze map is leeg.",
         "filter": "Bestanden filteren",
         "noMatch": "Geen bestanden die aan het filter voldoen.",
@@ -274,14 +291,6 @@
                 "description": "Begint bij de huidige commit en gaat er meteen naartoe.",
                 "title": "Een branch aanmaken"
             },
-            "diverged": {
-                "description": "Jouw branch en de remote hebben allebei commits die de ander niet heeft.",
-                "merge": "Mergen",
-                "mergeHint": "Houdt beide geschiedenissen en schrijft een merge commit.",
-                "rebase": "Rebasen",
-                "rebaseHint": "Zet jouw commits boven op die van de remote, zodat de geschiedenis één lijn blijft.",
-                "title": "Hoe moet {{branch}} samenkomen?"
-            },
             "deleteBranch": {
                 "anyway": "Toch verwijderen",
                 "confirm": "Branch verwijderen",
@@ -290,11 +299,29 @@
                 "title": "{{branch}} verwijderen?",
                 "unmerged": "Deze branch heeft commits die geen andere branch heeft. Verwijderen betekent dat die verloren gaan."
             },
+            "deleteFile": {
+                "confirm": "Naar de prullenbak",
+                "description": "Het bestand is nieuw, dus git kan het niet terugzetten. Het gaat naar de prullenbak van de machine waarop dit project draait.",
+                "descriptionMany": "De bestanden zijn nieuw, dus git kan ze niet terugzetten. Ze gaan naar de prullenbak van de machine waarop dit project draait.",
+                "fallback": "Dit bestand naar de prullenbak verplaatsen?",
+                "title": "{{name}} naar de prullenbak verplaatsen?",
+                "titleMany": "{{count}} bestanden naar de prullenbak verplaatsen?"
+            },
             "discard": {
                 "confirm": "Weggooien",
                 "description": "Zet het bestand terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" zet ze terug.",
+                "descriptionMany": "Zet de bestanden terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" haalt ze terug.",
                 "fallback": "Dit bestand weggooien?",
-                "title": "{{name}} weggooien?"
+                "title": "{{name}} weggooien?",
+                "titleMany": "{{count}} bestanden weggooien?"
+            },
+            "diverged": {
+                "description": "Jouw branch en de remote hebben allebei commits die de ander niet heeft.",
+                "merge": "Mergen",
+                "mergeHint": "Houdt beide geschiedenissen en schrijft een merge commit.",
+                "rebase": "Rebasen",
+                "rebaseHint": "Zet jouw commits boven op die van de remote, zodat de geschiedenis één lijn blijft.",
+                "title": "Hoe moet {{branch}} samenkomen?"
             },
             "filter": "Filteren",
             "forcePush": {
@@ -350,7 +377,10 @@
         },
         "list": {
             "collapseFolder": "Deze map inklappen",
+            "deleteFile": "Naar de prullenbak",
+            "deleteMany": "{{count}} nieuwe bestanden naar de prullenbak",
             "discard": "Wijzigingen weggooien",
+            "discardMany": "{{count}} bestanden weggooien",
             "expandFolder": "Deze map uitklappen",
             "noChanges": "Geen wijzigingen.",
             "noRepo": "Deze map is geen git repository.",
@@ -358,10 +388,12 @@
             "stage": "Stage",
             "stageGroup": "Alles in {{group}} stagen",
             "stageHere": "Alles hier stagen",
+            "stageMany": "{{count}} bestanden stagen",
             "stageResolved": "Stagen als opgelost",
             "unstage": "Unstage",
             "unstageGroup": "Alles in {{group}} unstagen",
-            "unstageHere": "Alles hier unstagen"
+            "unstageHere": "Alles hier unstagen",
+            "unstageMany": "{{count}} bestanden unstagen"
         },
         "log": {
             "copySubject": "Onderwerp kopiëren",
@@ -389,11 +421,14 @@
         },
         "panel": {
             "collapseAll": "Alle mappen inklappen",
+            "deleteDone": "{{path}} naar de prullenbak verplaatst",
+            "deleteFailed": "Kon het bestand niet verwijderen",
             "discardFailed": "Weggooien mislukt",
             "discardNothing": "{{path}} had niets om weg te gooien",
             "discardRestore": "Zet {{stash}} terug met \"git stash pop\".",
             "discardStashed": "{{path}} gestasht",
             "expandAll": "Alle mappen uitklappen",
+            "manyFiles": "{{count}} bestanden",
             "noFolder": "Er is geen project geopend.",
             "statusFailed": "Kon de status niet lezen."
         },

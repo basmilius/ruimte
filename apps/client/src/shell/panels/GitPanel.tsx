@@ -53,7 +53,8 @@ type Dialog =
     | { kind: 'stash'; cwd: string }
     | { kind: 'pick-stash'; cwd: string }
     | { kind: 'switch'; cwd: string; ref: GitRef }
-    | { kind: 'discard'; cwd: string; file: GitFile }
+    | { kind: 'discard'; cwd: string; files: GitFile[] }
+    | { kind: 'delete-file'; cwd: string; files: GitFile[] }
     | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string }
     | { kind: 'pull-request'; cwd: string; subject: string };
 
@@ -241,13 +242,17 @@ export function GitPanel() {
         });
     };
 
-    const discard = (path: string, file: GitFile): void => {
+    /* What a toast calls the files it acted on: the path of one, the count of several. */
+    const nameOf = (files: readonly GitFile[]): string => (files.length === 1 ? files[0]!.path : t('git.panel.manyFiles', { count: files.length }));
+
+    const discard = (path: string, files: GitFile[]): void => {
         setDialog(null);
         setBusy(true);
-        performAsPerson('git.discard', { repository: path, paths: [file.path] })
+        const name = nameOf(files);
+        performAsPerson('git.discard', { repository: path, paths: files.map((file) => file.path) })
             .then(({ stash }) => {
                 useToasts.getState().show({
-                    title: stash === null ? t('git.panel.discardNothing', { path: file.path }) : t('git.panel.discardStashed', { path: file.path }),
+                    title: stash === null ? t('git.panel.discardNothing', { path: name }) : t('git.panel.discardStashed', { path: name }),
                     ...(stash === null ? {} : { description: t('git.panel.discardRestore', { stash }) }),
                     kind: 'success'
                 });
@@ -255,6 +260,27 @@ export function GitPanel() {
             .catch((error: unknown) => {
                 const message = error instanceof Error ? error.message : t('error.generic');
                 useToasts.getState().show({ title: t('git.panel.discardFailed'), description: message, kind: 'error', output: message });
+            })
+            .finally(() => {
+                setBusy(false);
+                void refresh(path);
+            });
+    };
+
+    /* A file that was added to the index is taken out of it first, or the index would keep a file that is gone. */
+    const deleteNew = (path: string, files: GitFile[]): void => {
+        setDialog(null);
+        setBusy(true);
+        const staged = files.filter((file) => file.state === 'staged').map((file) => file.path);
+        const unstaged = staged.length > 0 ? performAsPerson('git.unstage', { repository: path, paths: staged }) : Promise.resolve();
+        unstaged
+            .then(() => performAsPerson('file.delete', { paths: files.map((file) => `${path}/${file.path}`) }))
+            .then(() => {
+                useToasts.getState().show({ title: t('git.panel.deleteDone', { path: nameOf(files) }), kind: 'success' });
+            })
+            .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : t('error.generic');
+                useToasts.getState().show({ title: t('git.panel.deleteFailed'), description: message, kind: 'error', output: message });
             })
             .finally(() => {
                 setBusy(false);
@@ -523,7 +549,8 @@ export function GitPanel() {
                     onOpen={openDiff}
                     onOpenFile={openFile}
                     onStage={stage}
-                    onDiscard={(path, file) => setDialog({ kind: 'discard', cwd: path, file })}
+                    onDiscard={(path, files) => setDialog({ kind: 'discard', cwd: path, files })}
+                    onDelete={(path, files) => setDialog({ kind: 'delete-file', cwd: path, files })}
                 />
                 {checkouts.length > 0 && (
                     <CommitBox messageKey={messageKey} checkouts={checkouts} named={named} capabilities={capabilities} busy={busy} onCommit={commit} />
@@ -641,14 +668,46 @@ export function GitPanel() {
             />
             <PromptDialog
                 open={dialog?.kind === 'discard'}
-                title={dialog?.kind === 'discard' ? t('git.dialog.discard.title', { name: basenameOf(dialog.file.path) }) : t('git.dialog.discard.fallback')}
-                description={t('git.dialog.discard.description')}
+                title={
+                    dialog?.kind !== 'discard'
+                        ? t('git.dialog.discard.fallback')
+                        : dialog.files.length > 1
+                          ? t('git.dialog.discard.titleMany', { count: dialog.files.length })
+                          : t('git.dialog.discard.title', { name: basenameOf(dialog.files[0]!.path) })
+                }
+                description={
+                    dialog?.kind === 'discard' && dialog.files.length > 1 ? t('git.dialog.discard.descriptionMany') : t('git.dialog.discard.description')
+                }
                 confirmLabel={t('git.dialog.discard.confirm')}
                 danger
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'discard') {
-                        discard(dialog.cwd, dialog.file);
+                        discard(dialog.cwd, dialog.files);
+                    }
+                }}
+                onOpenChange={() => setDialog(null)}
+            />
+            <PromptDialog
+                open={dialog?.kind === 'delete-file'}
+                title={
+                    dialog?.kind !== 'delete-file'
+                        ? t('git.dialog.deleteFile.fallback')
+                        : dialog.files.length > 1
+                          ? t('git.dialog.deleteFile.titleMany', { count: dialog.files.length })
+                          : t('git.dialog.deleteFile.title', { name: basenameOf(dialog.files[0]!.path) })
+                }
+                description={
+                    dialog?.kind === 'delete-file' && dialog.files.length > 1
+                        ? t('git.dialog.deleteFile.descriptionMany')
+                        : t('git.dialog.deleteFile.description')
+                }
+                confirmLabel={t('git.dialog.deleteFile.confirm')}
+                danger
+                busy={busy}
+                onConfirm={() => {
+                    if (dialog?.kind === 'delete-file') {
+                        deleteNew(dialog.cwd, dialog.files);
                     }
                 }}
                 onOpenChange={() => setDialog(null)}

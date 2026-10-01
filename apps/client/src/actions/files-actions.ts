@@ -6,6 +6,7 @@ import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { textDrafts } from '@/state/text-drafts';
 import { machineFor } from '@/transport/connections';
 
 type Requester = Pick<Transport, 'request'>;
@@ -20,6 +21,8 @@ export interface FilesMachine {
     isOpen(path: string): boolean;
     open(path: string, line: number | null): void;
     close(path: string): void;
+    /* Closes the tabs of a path that is gone, folder contents included, dropping drafts nobody can save any more. */
+    forget(path: string): void;
     reveal(path: string): void;
 }
 
@@ -36,6 +39,15 @@ const LIVE_MACHINE: FilesMachine = {
     isOpen: (path) => useFiles.getState().tabs.some((tab) => tab.key === path),
     open: (path, line) => useFiles.getState().open(path, useSettings.getState().filesTabLimit, undefined, line ?? undefined),
     close: (path) => useFiles.getState().close(path),
+    forget: (path) => {
+        const endpointId = currentEndpointId();
+        for (const tab of useFiles.getState().tabs) {
+            if (tab.path === path || tab.path.startsWith(`${path}/`)) {
+                textDrafts.discard(endpointId, tab.path);
+                useFiles.getState().close(tab.key);
+            }
+        }
+    },
     reveal: (path) => useFiles.getState().revealInFiles(path)
 };
 
@@ -66,8 +78,8 @@ const resolvedPath = (machine: FilesMachine, path: string, actor: ActionActorKin
 
 /*
  * What a person does with the files of a project, as actions: the files panel, its search, find in
- * files and the menus a file has on a tab, a node and a view of its own. None of them writes, renames
- * or deletes a file; the product has no such action. Revealing a file in the machine's file manager
+ * files and the menus a file has on a tab, a node and a view of its own. None of them writes or
+ * renames a file, and only a person deletes one, to the trash. Revealing a file in the machine's file manager
  * stays the menu's own: it acts on the screen of whichever machine the project runs on.
  */
 export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandlers<void> {
@@ -170,6 +182,15 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
             }
             machine.reveal(absolute);
             return { output: { path: absolute } };
+        },
+        'file.delete': async ({ paths }, { actor }) => {
+            const absolutes = [...new Set(paths.map((path) => resolvedPath(machine, path, actor.kind)))];
+            const targets = absolutes.filter((path) => !absolutes.some((other) => path.startsWith(`${other}/`)));
+            for (const target of targets) {
+                await requested(() => connected().request('fs.delete', { path: target }));
+                machine.forget(target);
+            }
+            return { output: { paths: targets } };
         },
         'file.copyPath': async ({ path, relative }, { actor }) => {
             const absolute = resolvedPath(machine, path, actor.kind);
