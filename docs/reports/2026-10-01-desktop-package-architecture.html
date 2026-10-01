@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Architectuur en plan voor de desktoppackages</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #353e53;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+.metadata { display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 13px; color: var(--muted); }
+.finding-label { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+article { margin-top: 28px; scroll-margin-top: 24px; }
+article + article { border-top: 1px solid var(--line); padding-top: 28px; }
+article h3 { margin-top: 12px; }
+.acceptance { background: var(--panel); padding: 18px 20px; border-radius: 12px; }
+.source-ref { font-size: .8em; white-space: nowrap; }
+.source-table { table-layout: fixed; }
+.source-table th:first-child { width: 60px; }
+.source-table th:last-child { width: 150px; }
+.source-table td code { font-size: 12px; }
+.source-table tr:target { background: var(--highlight); }
+.revision-list { display: block; margin: 0 0 18px; }
+.revision-list span { display: block; overflow-wrap: anywhere; }
+footer p { margin-bottom: 6px; }
+@media (max-width: 700px) { .intro { font-size: 19px; } }
+@media print {
+  @page { size: A4; margin: 16mm; }
+  body { font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 36px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 16px; }
+  table { font-size: 10px; }
+  .metadata, .caption, .eyebrow, footer { font-size: 10px; }
+  .source-table td code { font-size: 9px; }
+  .step { padding-top: 16px; margin-top: 16px; }
+  article { margin-top: 20px; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Ga naar het advies</a>
+<header>
+  <p class="eyebrow">Ruimte · Architectuuradvies · 1 oktober 2026</p>
+  <h1>De desktoppackages verder verdiepen</h1>
+  <p class="intro">Verplaats gedeeld interactiegedrag naar Desktop UI en gedeeld Electron-gedrag naar Desktop Shell. Laat Ruimte het projectbeleid en de registratie van vertrouwde IPC-kanalen houden.</p>
+  <div class="metadata"><span>Onderzocht: Desktop UI 0.9.0 · Desktop Shell 0.8.0</span><span>Ruimte <code>b45fec10</code> · Alleen advies en een migratieplan</span></div>
+  <nav aria-label="Inhoud van het rapport">
+    <a href="#verdeling">Packageverdeling</a><a href="#desktop-shell">Desktop Shell</a><a href="#desktop-ui">Desktop UI</a><a href="#ruimte">Wat in Ruimte blijft</a><a href="#plan">Uitvoeringsplan</a><a href="#bronnen">Bronnen en scope</a>
+  </nav>
+</header>
+<main>
+<section id="advies" class="recommendation">
+  <h2>Begin met gedrag dat beide apps al hebben</h2>
+  <p>De beste kandidaten voor <code>@basmilius/desktop-shell</code> zijn de volledige navigatiebescherming, het ophalen van de login-shell-PATH en de conversie van sneltoetsen naar native accelerators. Ruimte en AfterMotion implementeren deze nu ieder zelf. Voor <code>@basmilius/desktop-ui</code> is selectie in een zoeklijst de sterkste kandidaat: de command palette, modelpicker en composer-suggesties herhalen hetzelfde interactiegedrag.</p>
+  <p>De modules voor windows, theme, menu en updates bestaan al in Desktop Shell. Bouw daarop voort. De huidige UI-primitieven, formatters, shortcuts, lazy-loading en settingsdialog hebben hun plek al in Desktop UI. De winst zit in het verbergen van extra kennis die aanroepers nu nog zelf moeten hebben.</p>
+  <div class="split">
+    <div class="panel"><h3>Direct voorbereiden</h3><p>Maak Ruimtes volledige desktopbridge één contract. Werk daarna de gedeelde navigatiebescherming uit, met de twee apps als concrete adapters.</p></div>
+    <div class="panel"><h3>Daarna verdiepen</h3><p>Consolideer native sneltoetsen en zoeklijstinteractie. Pak workspace-persistence en de publieke chatinterface op als afzonderlijk werk in Ruimte.</p></div>
+  </div>
+  <p class="caption">Dit rapport beschrijft voorstellen. De genoemde nieuwe modules en methoden zijn nog geen bestaande exports. De bevindingen zijn gebaseerd op broncode-inspectie; er zijn geen functionele bugs of prestatieverbeteringen gemeten.</p>
+</section>
+
+<section id="verdeling">
+  <h2>Wat gaat naar welke package?</h2>
+  <p>De modulegrens hoort op de plek waar iets werkelijk varieert. Desktop UI verbergt de interactie met een lijst; de app bepaalt wat erin staat. Desktop Shell verbergt de verschillen tussen Electron-events; de app bepaalt welke adressen toegestaan zijn. Een kleine interface neemt zo veel werk over, terwijl het appbeleid lokaal blijft.</p>
+  <div class="table" role="region" aria-label="Voorgestelde verdeling van modules over packages" tabindex="0">
+    <table class="wide">
+      <caption>Beslissingen per module</caption>
+      <thead><tr><th scope="col">Gedrag</th><th scope="col">Bestemming</th><th scope="col">Waarom daar?</th><th scope="col">Wat de app blijft leveren</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Pijltjestoetsen, actieve rij, scroll, kiezen en ARIA voor zoekresultaten</th><td><code>@basmilius/desktop-ui</code></td><td>Interactieregels onafhankelijk van modellen, bestanden of projecten.</td><td>Items, identiteit, labels, presentatie en wat kiezen doet.</td></tr>
+        <tr><th scope="row">Navigatie-, redirect- en subframe-events correct bewaken</th><td><code>@basmilius/desktop-shell</code></td><td>Electron-mechaniek die beide apps delen; een kleine interface verbergt verschillende eventpaden.</td><td>Origin, subframebeleid en afhandeling van externe links.</td></tr>
+        <tr><th scope="row">Login-shell-PATH ophalen, begrenzen en uitlezen</th><td><code>@basmilius/desktop-shell</code></td><td>Hetzelfde desktopprobleem in beide apps, los van hun achtergrondproces.</td><td>Shell en platform; de app past de uitkomst toe op haar procesomgeving.</td></tr>
+        <tr><th scope="row">Een shortcut naar Electron-accelerator omzetten</th><td><code>@basmilius/desktop-shell/bridge</code></td><td>De betekenis van het doel is native-menu-encoding; de renderer moet de conversie veilig kunnen importeren.</td><td>De shortcutwaarde en het platform.</td></tr>
+        <tr><th scope="row">Gemeenschappelijke IPC-shapes voor menu, theme, windows en updates</th><td><code>@basmilius/desktop-shell/bridge</code></td><td>Vaste shapes die beide apps delen. Dit entry point heeft geen Electron-runtime.</td><td>Eigen menucommands, featurekeuzes en app-specifieke extensions.</td></tr>
+        <tr><th scope="row">Het volledige contract van <code>window.ruimteDesktop</code></th><td><code>@ruimte/desktop-bridge</code></td><td>Shell en client spreken dezelfde Ruimte-interface; Speech, Pulsar en servicebeleid horen daarbij.</td><td>De preloadimplementatie en validatie van onbekende payloads.</td></tr>
+        <tr><th scope="row">IPC-kanalen registreren en hun afzender controleren</th><td><code>apps/desktop</code></td><td>De app kent haar vertrouwde windows en de bevoegdheden van iedere pagina.</td><td>Deze registratie blijft expliciet appcode.</td></tr>
+        <tr><th scope="row">Projecten gezamenlijk opslaan, vrijgeven en opnieuw openen</th><td><code>apps/client</code>, binnen de workspace-module</td><td>Verbindt Ruimtes projectbestand met canvas-, drawing- en diagramfiles.</td><td>De bestaande clients worden interne dependencies van dit gedrag.</td></tr>
+        <tr><th scope="row">Chatruntime en gebruikelijke chatsamenstelling</th><td><code>@ruimte/agents-react</code></td><td>Chatgedrag hergebruikt door Ruimte en AfterMotion, boven op Desktop UI.</td><td>Hostactions, resources, projectinformatie en bewuste UI-slots.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">Desktop UI blijft vrij van Electron en Ruimtes domein. Desktop Shell krijgt geen React-runtime of Ruimte-contracts. De browserveilige bridge is de plek voor shapes die een preload en renderer ook nodig hebben. <a class="source-ref" href="#source-S09" aria-label="Bron S09">[S09]</a> <a class="source-ref" href="#source-S28" aria-label="Bron S28">[S28]</a></p>
+</section>
+
+<section id="desktop-shell">
+  <h2>Desktop Shell: drie verplaatsingen en één contract</h2>
+  <p>De package heeft al factories voor windows, bounds, theme, menucommands en updates, plus pure web guards. Daarmee is de basis aanwezig. De voorstellen hieronder vullen aantoonbaar gedeeld gedrag aan. <a class="source-ref" href="#source-S01" aria-label="Bron S01">[S01]</a></p>
+
+  <article id="shell-navigation">
+    <div class="finding-label"><span class="badge confirmed">Geverifieerde doublure</span><span class="badge info">Eerste library-refactor</span></div>
+    <h3>1. Een complete module voor navigatiebescherming</h3>
+    <p>De pure beslissingen leven al in Desktop Shell. Beide apps schrijven de eventafhandeling opnieuw: bij een gekozen externe navigatie wordt de systeem-browser geopend, bij een redirect wordt alleen tegengehouden en bij een subframe wordt een afzonderlijk beleid toegepast. <a class="source-ref" href="#source-S02" aria-label="Bron S02">[S02]</a> <a class="source-ref" href="#source-S03" aria-label="Bron S03">[S03]</a></p>
+    <p>Voeg bijvoorbeeld <code>protectPage(contents, policy)</code> toe in <code>packages/desktop-shell/src/page-navigation.ts</code>. De module registreert en verwijdert de listeners, onderscheidt hoofdframe en subframe en past iedere beslissing op het juiste event toe. De app levert alleen haar navigatieregels aan.</p>
+    <pre><code>const releaseGuard = protectPage(contents, {
+    main: (url) =&gt; appWindowNavigation(url, appOrigin),
+    subframe: (url, from) =&gt; appSubframeNavigation(url, appOrigin, from),
+    openExternal: (url) =&gt; shell.openExternal(url)
+});</code></pre>
+    <p>Ruimte levert haar HTTP-origin en beperkingen voor subframes. AfterMotion levert haar custom scheme en de regel dat een sandbox-frame in zijn sandbox blijft. Die regels hebben verschillende betekenissen en blijven daarom bij de apps. Ruimtes browser- en previewpartitions, guestpermissions en het parkeren van webviews blijven eveneens in Ruimte. <a class="source-ref" href="#source-S04" aria-label="Bron S04">[S04]</a> <a class="source-ref" href="#source-S05" aria-label="Bron S05">[S05]</a></p>
+    <p class="acceptance"><strong>Acceptatie.</strong> Beide apps gebruiken dezelfde eventimplementatie. Gekozen externe links, externe redirects, <code>about:blank</code>, <code>about:srcdoc</code> en AfterMotions sandbox hebben het huidige gedrag. Loslaten verwijdert de geregistreerde listeners. Tests gebruiken een fake event-emitter; de app registreert haar IPC nog steeds zelf.</p>
+  </article>
+
+  <article id="shell-path">
+    <div class="finding-label"><span class="badge confirmed">Geverifieerde doublure</span><span class="badge">Kleine, zelfstandige stap</span></div>
+    <h3>2. Login-shell-PATH als afgerond gedrag</h3>
+    <p>Ruimte en AfterMotion starten een login-shell met een marker rond de PATH en een timeout. Een desktopapp die via de Dock start, krijgt zo de omgeving waarin de agent-CLI's beschikbaar zijn. Ruimte bewaart de uitkomst voor later gebruik. <a class="source-ref" href="#source-S06" aria-label="Bron S06">[S06]</a> <a class="source-ref" href="#source-S07" aria-label="Bron S07">[S07]</a></p>
+    <p>Verplaats ophalen en parsing naar <code>packages/desktop-shell/src/login-path.ts</code>, met een functie zoals <code>readLoginPath</code>. Lever de procesexecutor aan voor tests en houd het resultaat een string of <code>null</code>. De app bepaalt wanneer zij leest, hoe zij cachet en welke procesomgeving zij ermee bouwt.</p>
+    <p>Ruimtes Bun-daemon, launchd/systemd-definitie en homefolder blijven Ruimte. AfterMotions utility process en extra omgevingsvariabelen blijven AfterMotion. De gedeelde module hoeft die processen niet te kennen.</p>
+    <p class="acceptance"><strong>Acceptatie.</strong> Beide apps gebruiken dezelfde begrensde uitlezing. Tests dekken ontbrekende shell, Windows, timeout, mislukte start en extra uitvoer uit shellconfiguratie. De fallback-PATH en het aantal reads per app blijven zoals bedoeld.</p>
+  </article>
+
+  <article id="shell-shortcuts">
+    <div class="finding-label"><span class="badge confirmed">Geverifieerde doublure</span><span class="badge">Browserveilig entry point</span></div>
+    <h3>3. Native shortcut-encoding bij Desktop Shell</h3>
+    <p>Beide menumodellen bevatten dezelfde <code>ELECTRON_KEYS</code> en <code>toAccelerator</code>. De conversie kent de Electron-spelling voor onder meer pijltjes en de plus-toets. Op macOS worden toetsen zonder Cmd/Ctrl niet als accelerator aangeboden, zodat het menu ze niet uit tekstvelden neemt. <a class="source-ref" href="#source-S08" aria-label="Bron S08">[S08]</a> <a class="source-ref" href="#source-S10" aria-label="Bron S10">[S10]</a></p>
+    <p>Begin met één pure <code>acceleratorOf</code> in <code>packages/desktop-shell/src/bridge/shortcut.ts</code>. Exporteer die via <code>/bridge</code>. Laat de functie een structureel compatibele shortcutwaarde aannemen, zodat de shell geen runtime-import van Desktop UI nodig heeft.</p>
+    <p>Parsing van <code>Mod+K</code>, keyboardmatching en het tekenen van keycaps blijven bij Desktop UI. Welke commands bestaan en wanneer ze beschikbaar zijn blijven bij de apps. De conversie naar het native doel en het voorkomen van dubbele native uitvoering zijn Desktop Shell-gedrag; dat laatste zit al in <code>createMenuCommands</code>. <a class="source-ref" href="#source-S11" aria-label="Bron S11">[S11]</a> <a class="source-ref" href="#source-S29" aria-label="Bron S29">[S29]</a></p>
+    <p class="acceptance"><strong>Acceptatie.</strong> De twee lokale converters verdwijnen. De bestaande menutests blijven dezelfde accelerators opleveren voor Cmd/Ctrl, Meta, pijltjes en Plus. macOS, Windows en Linux behouden hun gedrag bij een page-key en een native-menucommand.</p>
+    <p class="caption">Een declaratief <code>shortcut</code>-veld in <code>MenuSpec</code> kan later nog meer kennis verbergen. Het huidige plan houdt de accelerator-string intact. Daarmee vraagt de eerste migratie geen nieuw preloadprotocol van een shell die al draait.</p>
+  </article>
+
+  <article id="shell-bridge">
+    <div class="finding-label"><span class="badge confirmed">Twee bestaande contracten</span><span class="badge info">Additief ontwerpen</span></div>
+    <h3>4. Deel de gemeenschappelijke bridge, behoud app-extensions</h3>
+    <p>AfterMotion heeft zijn volledige <code>AftermotionDesktop</code>-type al in de eigen bridgepackage. Ruimtes volledige <code>DesktopBridge</code> staat nog in de client. Menu-, theme- en update-shapes worden al via Desktop Shell gedeeld. <a class="source-ref" href="#source-S12" aria-label="Bron S12">[S12]</a> <a class="source-ref" href="#source-S13" aria-label="Bron S13">[S13]</a> <a class="source-ref" href="#source-S09" aria-label="Bron S09">[S09]</a></p>
+    <p>Maak eerst het Ruimte-contract compleet in <code>@ruimte/desktop-bridge</code>. Ontwerp daarna in <code>@basmilius/desktop-shell/bridge</code> een kleine gemeenschappelijke interface voor de overeenkomende delen: folderdialog, externe links, menu, theme, windowclaim en updates. Een generiek menu-actiontype houdt de eigen shellcommands van iedere app mogelijk.</p>
+    <p>Metadata verschilt nu ook: AfterMotion heeft appversie en devstatus, Ruimte geeft systeemlocale en talen door. Deel de overeenkomende velden en maak die verschillen bewuste extensions. Neem de bestaande optionaliteit voor oudere preloads over.</p>
+    <p><code>ruimteDesktop</code> en <code>aftermotionDesktop</code> blijven eigen globals. Ruimtes Speech, OpenAI Live, Pulsar, lokale secret en achtergrondservice blijven eigen contracten. AfterMotions server-MessagePort blijft zijn eigen contract. Een gedeelde interface mag deze functies niet vereisen.</p>
+    <p class="acceptance"><strong>Acceptatie.</strong> De twee preloads worden op hun eigen samengestelde type gecontroleerd. De bridge blijft importeerbaar zonder Electron-runtime. Een client met een oudere preload biedt alleen aanwezige functies aan, inclusief de bestaande keep-awake-fallback. <a class="source-ref" href="#source-S14" aria-label="Bron S14">[S14]</a></p>
+  </article>
+</section>
+
+<section id="desktop-ui">
+  <h2>Desktop UI: verberg de interactie met zoekresultaten</h2>
+  <div class="finding-label"><span class="badge confirmed">Herhaald gedrag</span><span class="badge info">Domeinvrije UI-module</span></div>
+  <p>De command palette, modelpicker en composer-suggesties beheren actieve indices en toetsen zelf. Palette en modelpicker regelen ook het scrollen naar de actieve rij. De modelpicker wordt door AfterMotion gebruikt; dit gedrag heeft dus meerdere concrete aanroepers. <a class="source-ref" href="#source-S15" aria-label="Bron S15">[S15]</a> <a class="source-ref" href="#source-S16" aria-label="Bron S16">[S16]</a> <a class="source-ref" href="#source-S17" aria-label="Bron S17">[S17]</a> <a class="source-ref" href="#source-S18" aria-label="Bron S18">[S18]</a></p>
+  <div class="split">
+    <div class="panel"><h3>Desktop UI neemt over</h3><ul><li>Selectie met toetsen en pointer.</li><li>Een geldige actieve rij na veranderende resultaten.</li><li>Scroll naar de actieve rij zonder de invoerfocus kwijt te raken.</li><li>De relaties tussen invoer, lijst en opties voor toegankelijkheid.</li><li>Het standaardgedrag bij een lege lijst.</li></ul></div>
+    <div class="panel"><h3>De aanroeper houdt</h3><ul><li>Zoeken op de machine en omgaan met de verbinding.</li><li>Matchen, rangschikken en groeperen van resultaten.</li><li>Modellen, accounts, bestanden en projectspecifieke labels.</li><li>Grep-, browse- en machinekeuzemodi.</li><li>Wat Enter of Tab doet met een gekozen domeinresultaat.</li></ul></div>
+  </div>
+  <h3>Een kleine interface, met echte adapters</h3>
+  <p>Werk bijvoorbeeld een <code>Results</code>-module uit met compound parts voor input, lijst en item. Een aanroeper geeft items, hun stabiele identiteit en een <code>onChoose</code>-callback aan. De module levert focus- en selectiegedrag. Controleer eerst welke bestaande Base UI-primitief dit al ondersteunt; bouw de librarymodule daarop.</p>
+  <pre><code>&lt;Results.Root items={items} itemKey={keyOf} onChoose={choose}&gt;
+    &lt;Results.Input value={query} onValueChange={setQuery} /&gt;
+    &lt;Results.List&gt;
+        {(item) =&gt; &lt;Results.Item item={item}&gt;{labelOf(item)}&lt;/Results.Item&gt;}
+    &lt;/Results.List&gt;
+&lt;/Results.Root&gt;</code></pre>
+  <p class="caption">Dit is een ontwerpillustratie. Props en partnamen worden tijdens het ontwerp op beide apps getoetst. Een gewone input en CodeMirror hebben verschillend eventgedrag; voeg een headless interface pas toe wanneer de composer die daadwerkelijk nodig heeft.</p>
+  <p>De grens zit bij de interactie met de resultaten. Als de aanroeper zelf nog indices begrenst, pijltjes afhandelt, ARIA-relaties opbouwt en scrollt, verbergt de nieuwe module te weinig. Een wrapper om de bestaande listbox-markup neemt dat werk nog niet over.</p>
+  <p class="acceptance"><strong>Acceptatie.</strong> Migreer eerst de modelpicker, daarna de palette en vervolgens de composer. Tests controleren kiezen met het toetsenbord, een lege lijst, verdwijnende resultaten, pointerselectie en focusbehoud. De bestaande appgedragingen voor Tab, grepresultaten en modelkeuze blijven zichtbaar getest.</p>
+  <h3>Wat al goed in Desktop UI zit</h3>
+  <p>Behoud de huidige ownership van formatters, shortcutmatching, keycaps, settingsdialog, menus, lazy-loading, prefetching en de algemene controls. Ruimtes <code>Panel</code>, <code>CommandPalette</code> en canvasdock blijven appmodules: zij weten welke panels, commands en editors bestaan. Ze gebruiken de algemene controls van Desktop UI. <a class="source-ref" href="#source-S30" aria-label="Bron S30">[S30]</a> <a class="source-ref" href="#source-S19" aria-label="Bron S19">[S19]</a></p>
+</section>
+
+<section id="ruimte">
+  <h2>Wat in Ruimte blijft, en daar dieper kan worden</h2>
+  <p>Een kleiner <code>main.ts</code> is geen zelfstandig doel. Een goede verplaatsing heeft een concrete interface die gedrag verbergt. Houd de volgende modules bij hun domein.</p>
+  <div class="table" role="region" aria-label="Domeinmodules die in Ruimte blijven" tabindex="0">
+    <table class="wide">
+      <thead><tr><th scope="col">Module</th><th scope="col">Eigenaarschap</th><th scope="col">Verbetering binnen die plek</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Workspace-persistence</th><td><code>apps/client</code></td><td>Laat één module de gezamenlijke flush, release en resume verzorgen. <code>connections.ts</code> en windowverplaatsing kennen nu dezelfde clients en volgorde. <a class="source-ref" href="#source-S20" aria-label="Bron S20">[S20]</a> <a class="source-ref" href="#source-S21" aria-label="Bron S21">[S21]</a></td></tr>
+        <tr><th scope="row">Live projectinhoud</th><td><code>apps/client/src/state</code></td><td>Behoud <code>exportViews</code> en <code>fileViews</code> als bewuste lezingen. Ze verbergen live canvaseditors en de tijdelijke trash; opslag en UI lezen niet altijd hetzelfde snapshot. <a class="source-ref" href="#source-S22" aria-label="Bron S22">[S22]</a></td></tr>
+        <tr><th scope="row">Chatruntime en ChatView</th><td><code>@ruimte/agents-react</code></td><td>Verberg setup van clients, providers en subscriptions en de gebruikelijke Timeline/Composer/diffpool-samenstelling. Verminder bestandsgebonden publieke exports met een migratiepad. <a class="source-ref" href="#source-S23" aria-label="Bron S23">[S23]</a> <a class="source-ref" href="#source-S31" aria-label="Bron S31">[S31]</a> <a class="source-ref" href="#source-S24" aria-label="Bron S24">[S24]</a></td></tr>
+        <tr><th scope="row">Lokale dictation-lifecycle</th><td><code>apps/desktop</code></td><td>Een eigen module kan model-readiness, helper en de eigenaar van een sessie samen beheren. Ze blijft Ruimte zolang een tweede app dit gedrag niet gebruikt. <a class="source-ref" href="#source-S25" aria-label="Bron S25">[S25]</a></td></tr>
+        <tr><th scope="row">Keep-awake en agentactivity</th><td><code>apps/client</code> en <code>apps/desktop</code></td><td>De client beslist wat werk is; de shell weegt powerrequests. Alleen de generieke OS-hold kan later een librarymodule worden bij een tweede concrete aanroeper. <a class="source-ref" href="#source-S14" aria-label="Bron S14">[S14]</a> <a class="source-ref" href="#source-S26" aria-label="Bron S26">[S26]</a></td></tr>
+        <tr><th scope="row">Pulsar, service-overname en browserguests</th><td>Ruimte-apps en bestaande Ruimte-packages</td><td>Accounttokens, daemonownership, browsernodes en previewpartitions hangen aan het product. Verplaats ze niet mee met algemene window- of navigatiecode. <a class="source-ref" href="#source-S05" aria-label="Bron S05">[S05]</a> <a class="source-ref" href="#source-S13" aria-label="Bron S13">[S13]</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Voor workspace-persistence kan de externe interface beperkt blijven tot <code>flush()</code>, <code>leave()</code> en <code>dispose()</code>. De bestaande <code>ProjectSwitch</code> blijft annulering en teruggaan verzorgen. Binnen de workspace blijven <code>ProjectClient</code> en de bestaande <code>FileEditorClient</code> hun opslaggedrag uitvoeren.</p>
+  <p><code>agents-react</code> heeft nu 157 exportpaden. <a class="source-ref" href="#source-S32" aria-label="Bron S32">[S32]</a> Een test vereist bovendien dat ieder bronbestand onder zijn eigen pad wordt geëxporteerd. Dat bindt de interface aan de bestandsindeling. Vervang die verplichting bij een gerichte migratie door een snapshot van bewust publieke feature-entrypoints. Bestaande paden blijven tijdelijk aliases, zodat Ruimte en AfterMotion afzonderlijk kunnen migreren. <a class="source-ref" href="#source-S24" aria-label="Bron S24">[S24]</a></p>
+  <p class="caption">Dit advies behandelt omvangrijke files niet als fout. De bestaande Transport, ActionRegistry, FileEditorClient, BrowserDriver en ServiceController zijn bruikbare voorbeelden van modules die complexiteit al verbergen.</p>
+</section>
+
+<section id="plan">
+  <h2>Een plan met afzonderlijk reviewbare stappen</h2>
+  <p>Begin additief. Elke librarywijziging krijgt een concrete aanroeper in beide apps, een acceptatievoorwaarde en een eigen release/adoptiestap. De apps gebruiken nu gepubliceerde npm-versies; een wijziging in de desktop-repository bereikt Ruimte pas nadat Ruimte haar dependency bijwerkt.</p>
+  <ol class="steps">
+    <li class="step"><div><h3>Ruimtes desktopcontract compleet maken</h3><p><span class="badge">Ruimte</span> Verplaats de volledige <code>DesktopBridge</code> en bijbehorende client-only bridge-shapes naar <code>packages/desktop-bridge/src/desktop.ts</code>. Laat client en preload hetzelfde contract gebruiken. Houd methods, globals en kanalen gelijk.</p><p><strong>Resultaat.</strong> Een typecheck van de preload op het gedeelde contract, plus fixtures voor de bestaande oudere bridgevarianten. Ruimtes webclient en oude shell blijven hun huidige capabilities houden.</p><p class="caption">Geen dependency op een nieuwe desktop-release. Dit bereidt de gedeelde contractstap voor.</p></div></li>
+    <li class="step"><div><h3>Navigatiebescherming en PATH in Desktop Shell onderbrengen</h3><p><span class="badge">Desktop Shell</span> Werk twee zelfstandige voorstellen uit: <code>protectPage</code> en <code>readLoginPath</code>. Leg per voorstel de huidige aanroepers en het afwijkende appbeleid vast. Migreer Ruimte en AfterMotion naar de nieuwe exports.</p><p><strong>Resultaat.</strong> Twee afgeronde modules met de acceptatievoorwaarden uit <a href="#shell-navigation">navigatie</a> en <a href="#shell-path">PATH</a>. De twee apps slagen voor hun bestaande checks; Desktop Shell houdt haar eigen tests en build.</p><p class="caption">Deze twee voorstellen kunnen onafhankelijk worden uitgewerkt. Ze veranderen geen rendererprotocol.</p></div></li>
+    <li class="step"><div><h3>Browserveilige shortcutconversie en gedeelde bridge-shapes toevoegen</h3><p><span class="badge">Desktop Shell /bridge</span> Consolideer <code>toAccelerator</code> eerst zonder de menuwire te veranderen. Deel daarna de werkelijk overeenkomende bridge-shapes, met Ruimte- en AfterMotion-extensions erboven.</p><p><strong>Resultaat.</strong> Eén native shortcutconversie; geen React-runtime in Desktop Shell en geen Electron-runtime in de bridge. Beide preloads worden gecontroleerd op hun samengestelde contract. Het Ruimte-contract uit stap 1 maakt de verschillen zichtbaar.</p><p class="caption">Versie en migratienotitie worden op de uiteindelijke wijziging van de exports gebaseerd. Behoud accelerator-strings tijdens deze stap.</p></div></li>
+    <li class="step"><div><h3>Zoeklijstinteractie in Desktop UI verdiepen</h3><p><span class="badge">Desktop UI</span> Kies een bestaande Base UI-primitief als basis en ontwerp de Results-interface op de modelpicker en palette. Migreer de modelpicker als eerste concrete aanroeper. Controleer AfterMotion, dat deze picker gebruikt. Pak daarna palette en composer aan.</p><p><strong>Resultaat.</strong> Aanroepers onderhouden geen eigen selectie-index en standaard arrow/scroll/ARIA-gedrag meer. Domeinzoekwerk en bijzondere acties blijven lokaal. Desktop UI documenteert de nieuwe export en neemt die bewust op in het exportsnapshot.</p><p class="caption">Kan onafhankelijk van de Desktop Shell-stappen. CodeMirror-integratie volgt op een werkende gewone inputadapter.</p></div></li>
+    <li class="step"><div><h3>Workspace-persistence in Ruimte samenbrengen</h3><p><span class="badge">Ruimte client</span> Geef de bestaande workspace-module eigenaarschap over gezamenlijk opslaan, vrijgeven en dispose. Laat windowverplaatsing en projectwissel dezelfde interface gebruiken.</p><p><strong>Resultaat.</strong> Opslagvolgorde staat op één plek. Tests met echte editorstores en een in-memory transportadapter dekken edits in meerdere cellen, een wissel tijdens opslaan en reconnect. ProjectSwitch behoudt zijn huidige rollbackgedrag.</p><p class="caption">Onafhankelijk van de desktop-libraryreleases; een afzonderlijke domeinrefactor.</p></div></li>
+    <li class="step"><div><h3>De publieke chatinterface versmallen</h3><p><span class="badge">@ruimte/agents-react</span> Bied een chatruntime en ChatView aan voor het gebruikelijke geval. Behoud bewuste slots en laag-niveau-exports waar de twee apps die nodig hebben. Maak geen extra transportlaag: gebruik de bestaande ChatTransport-seam.</p><p><strong>Resultaat.</strong> Een nieuwe aanroeper kan een chat opbouwen zonder handmatig clients, providers, subscriptions en diffpool te verbinden. Tests volgen attach/detach, reconnect, draftbehoud en hostactions via de nieuwe interface.</p><p class="caption">Maak eerst een lijst van gebruikte publieke paden. Migreer beide apps via aliases voordat oude paden verdwijnen. De Results-module uit stap 4 kan de interne composer vereenvoudigen.</p></div></li>
+  </ol>
+  <h3>Hoe dit langs de repositories gaat</h3>
+  <p>Voor Desktop UI en Desktop Shell volgt het werk de bestaande libraryworkflow: een issue per behoefte in <code>basmilius/desktop</code>, met het probleem, de gewenste ervaring en impact op AfterMotion. De libraryimplementatie gebeurt daar. Beide apps testen met een gelinkte checkout; daarna wordt de library gereleased en nemen de apps die versie afzonderlijk over. Dit rapport opent nog geen issues en voert het plan niet uit. <a class="source-ref" href="#source-S27" aria-label="Bron S27">[S27]</a></p>
+  <p>Gedragstests aan de nieuwe interface vervangen overlappende tests op helpers die verdwijnen. Houd security- en compatibiliteitsgevallen expliciet. Voer per repository de vereiste typechecks, lint, tests en builds uit zodra de betreffende code verandert.</p>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen, bewijs en open ontwerpkeuzes</h2>
+  <p>De bevindingen komen uit statische inspectie. Ruimtes working tree was schoon bij de start. De desktop-checkout had alleen een ongetrackte <code>.ruimte/</code>-directory; de bekeken broncode had daar geen lokale tracked wijzigingen. De geïnstalleerde Desktop UI 0.9.0 en Desktop Shell 0.8.0 zijn vergeleken met de beschikbare desktop-checkout.</p>
+  <div class="metadata revision-list"><span>Ruimte <code>b45fec105e1d2eed5866049d0bde0c30a8d499a2</code></span><span>Desktop <code>f433db21cf1ea42e80be718ebf1ab71d36dca87e</code></span><span>AfterMotion <code>c601681bee8a3bd3ebd51768e20db11ba8cada95</code></span></div>
+  <p>De methode is ontleend aan de <a href="https://github.com/mattpocock/skills/tree/main/skills/engineering/codebase-design">codebase-design-skill</a>: beoordeel hoeveel gedrag een interface verbergt, of dependencies werkelijk variëren en of tests de gekozen seam volgen. De packagevoorstellen en volgorde zijn conclusies uit deze codebase-inspectie.</p>
+  <div class="split">
+    <div class="panel"><h3>Geverifieerd in de code</h3><p>Dubbele navigation-wiring, PATH-uitlezing en acceleratorconversie. Herhaalde zoeklijstinteractie. Een volledige bridge in de client. Twee plekken die workspace-clients gezamenlijk flushen. De exportverplichting en 157 paden van agents-react.</p></div>
+    <div class="panel"><h3>Bij het ontwerp nog beslissen</h3><p>De precieze Results-props en Base UI-basis. De omvang van de gemeenschappelijke bridge. Of de composer een eigen headless adapter vereist. Welke chat-subpaths blijvende uitbreidingspunten zijn. Daarvoor bevat dit rapport ontwerpvoorstellen, geen bestaande exports.</p></div>
+  </div>
+  <details open><summary>Bewijs: navigatie heeft app-specifiek beleid</summary><p>Ruimte staat app-URL's, <code>about:blank</code> en <code>about:srcdoc</code> in subframes toe. AfterMotion geeft een sandbox-frame een striktere regel en leest daarvoor ook de huidige frame-URL. De gedeelde module moet daarom de eventmechaniek verbergen en deze policy aangeleverd krijgen. <a class="source-ref" href="#source-S04" aria-label="Bron S04">[S04]</a> <a class="source-ref" href="#source-S05" aria-label="Bron S05">[S05]</a></p><pre><code>export const appSubframeNavigation = (url: string, appOrigin: string, from = &#x27;&#x27;): NavigationVerdict =&gt; {
+    if (isSandboxUrl(from)) {
+        return isSandboxUrl(url) ? &#x27;allow&#x27; : &#x27;refuse&#x27;;
+    }
+    return isAppUrl(url, appOrigin) || isSandboxUrl(url) || url === &#x27;about:blank&#x27; || url === &#x27;about:srcdoc&#x27; ? &#x27;allow&#x27; : &#x27;refuse&#x27;;
+};</code></pre></details>
+  <details open><summary>Bewijs: de publieke chatinterface volgt alle bronbestanden</summary><p>De onderstaande test legt vast dat ieder bronbestand een eigen publiek pad krijgt. Dat is een bewuste bestaande conventie. Een versmalling vraagt dus een wijziging van die conventie en een migratie voor beide apps. <a class="source-ref" href="#source-S24" aria-label="Bron S24">[S24]</a></p><pre><code>test(&#x27;every source file is exported under its own path&#x27;, () =&gt; {
+    const manifest = JSON.parse(readFileSync(join(HERE, &#x27;../package.json&#x27;), &#x27;utf8&#x27;)) as { exports: Record&lt;string, string&gt; };
+    const exported = new Set(Object.values(manifest.exports));
+    const missing = sources().filter((path) =&gt; !path.endsWith(&#x27;.test.ts&#x27;) &amp;&amp; !exported.has(`./src/${path}`));
+    expect(missing).toEqual([]);
+});</code></pre></details>
+  <details open><summary>Bronverwijzingen en revisies</summary><p class="caption">Ruimte- en Desktop-links verwijzen naar hun vastgelegde GitHub-revisie. AfterMotion-links verwijzen naar de sibling-checkout op deze machine; pad en regel staan er steeds bij. De kern van het bewijs hierboven blijft leesbaar zonder die checkouts.</p><div class="table" role="region" aria-label="Bronnen van de code-inspectie" tabindex="0"><table class="source-table wide"><thead><tr><th scope="col">Bron</th><th scope="col">Onderbouwing en vindplaats</th><th scope="col">Repository en revisie</th></tr></thead><tbody><tr id="source-S01"><th scope="row">S01</th><td>Bestaande shellfactories en pure web guards<br><a href="https://github.com/basmilius/desktop/blob/f433db21cf1ea42e80be718ebf1ab71d36dca87e/packages/desktop-shell/src/index.ts#L1"><code>packages/desktop-shell/src/index.ts:1</code></a></td><td>Desktop<br><code>f433db21</code></td></tr><tr id="source-S02"><th scope="row">S02</th><td>Eventafhandeling voor navigatie in Ruimte<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/desktop/src/main.ts#L394"><code>apps/desktop/src/main.ts:394</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S03"><th scope="row">S03</th><td>Eventafhandeling voor navigatie in AfterMotion<br><a href="../../../aftermotion/apps/desktop/src/main.ts"><code>apps/desktop/src/main.ts:320</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S04"><th scope="row">S04</th><td>Subframebeleid met sandbox en huidige frame-URL<br><a href="../../../aftermotion/apps/desktop/src/web-guards.ts"><code>apps/desktop/src/web-guards.ts:33</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S05"><th scope="row">S05</th><td>Partitions, subframebeleid en guestpermissions<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/desktop/src/web-guards.ts#L21"><code>apps/desktop/src/web-guards.ts:21</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S06"><th scope="row">S06</th><td>Login-shell-PATH en cache<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/desktop/src/main.ts#L131"><code>apps/desktop/src/main.ts:131</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S07"><th scope="row">S07</th><td>Login-shell-PATH voor de serveromgeving<br><a href="../../../aftermotion/apps/desktop/src/main.ts"><code>apps/desktop/src/main.ts:240</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S08"><th scope="row">S08</th><td>Conversie van shortcuts naar native accelerators<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/shell/menu/model.ts#L97"><code>apps/client/src/shell/menu/model.ts:97</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S09"><th scope="row">S09</th><td>Browserveilige gedeelde IPC-shapes<br><a href="https://github.com/basmilius/desktop/blob/f433db21cf1ea42e80be718ebf1ab71d36dca87e/packages/desktop-shell/src/bridge/index.ts#L1"><code>packages/desktop-shell/src/bridge/index.ts:1</code></a></td><td>Desktop<br><code>f433db21</code></td></tr><tr id="source-S10"><th scope="row">S10</th><td>Dezelfde conversie in AfterMotion<br><a href="../../../aftermotion/apps/client/src/shell/menu/model.ts"><code>apps/client/src/shell/menu/model.ts:41</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S11"><th scope="row">S11</th><td>Parsing, matching en labels van shortcuts<br><a href="https://github.com/basmilius/desktop/blob/f433db21cf1ea42e80be718ebf1ab71d36dca87e/packages/desktop-ui/src/shortcut.ts#L1"><code>packages/desktop-ui/src/shortcut.ts:1</code></a></td><td>Desktop<br><code>f433db21</code></td></tr><tr id="source-S12"><th scope="row">S12</th><td>Volledig AftermotionDesktop-contract<br><a href="../../../aftermotion/packages/desktop-bridge/src/desktop.ts"><code>packages/desktop-bridge/src/desktop.ts:1</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S13"><th scope="row">S13</th><td>Volledig DesktopBridge-contract in de client<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/desktop/bridge.ts#L109"><code>apps/client/src/desktop/bridge.ts:109</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S14"><th scope="row">S14</th><td>Keep-awake-request en oudere bridgefallback<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/state/keep-awake.ts#L31"><code>apps/client/src/state/keep-awake.ts:31</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S15"><th scope="row">S15</th><td>Combobox, actieve selectie en toetsen<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/shell/CommandPalette.tsx#L873"><code>apps/client/src/shell/CommandPalette.tsx:873</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S16"><th scope="row">S16</th><td>Modelpicker: scrollen en keyboardselectie<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/packages/agents-react/src/chat/ui/Pickers.tsx#L78"><code>packages/agents-react/src/chat/ui/Pickers.tsx:78</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S17"><th scope="row">S17</th><td>Herhaalde selectie in composer-suggesties<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/packages/agents-react/src/chat/ui/Composer.tsx#L753"><code>packages/agents-react/src/chat/ui/Composer.tsx:753</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S18"><th scope="row">S18</th><td>Tweede app gebruikt de ModelPicker<br><a href="../../../aftermotion/apps/client/src/engines/BuilderPicker.tsx"><code>apps/client/src/engines/BuilderPicker.tsx:1</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S19"><th scope="row">S19</th><td>Panel kent Ruimtes panels en hun inhoud<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/shell/Panel.tsx#L1"><code>apps/client/src/shell/Panel.tsx:1</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S20"><th scope="row">S20</th><td>Workspace-clients en beforeLeave/afterResume<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/transport/connections.ts#L166"><code>apps/client/src/transport/connections.ts:166</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S21"><th scope="row">S21</th><td>Workspace flushen voor windowverplaatsing<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/project/windows.ts#L39"><code>apps/client/src/project/windows.ts:39</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S22"><th scope="row">S22</th><td>Verschillende lezingen voor UI en projectfile<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/state/document.ts#L924"><code>apps/client/src/state/document.ts:924</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S23"><th scope="row">S23</th><td>Opbouw van chat in de Ruimte-app<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/client/src/nodes/ChatBody.tsx#L1"><code>apps/client/src/nodes/ChatBody.tsx:1</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S24"><th scope="row">S24</th><td>Exportverplichting voor ieder bronbestand<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/packages/agents-react/src/boundary.test.ts#L33"><code>packages/agents-react/src/boundary.test.ts:33</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S25"><th scope="row">S25</th><td>Eigenaar en lifecycle van lokale dictation<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/desktop/src/main.ts#L949"><code>apps/desktop/src/main.ts:949</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S26"><th scope="row">S26</th><td>Powerbeleid en OS-hold in de shell<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/apps/desktop/src/keep-awake.ts#L1"><code>apps/desktop/src/keep-awake.ts:1</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S27"><th scope="row">S27</th><td>Libraryworkflow en impact op AfterMotion<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/CLAUDE.md#L107"><code>CLAUDE.md:107</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr><tr id="source-S28"><th scope="row">S28</th><td>Shellgrens: app registreert IPC achter sendercheck<br><a href="https://github.com/basmilius/desktop/blob/f433db21cf1ea42e80be718ebf1ab71d36dca87e/CLAUDE.md#L39"><code>CLAUDE.md:39</code></a></td><td>Desktop<br><code>f433db21</code></td></tr><tr id="source-S29"><th scope="row">S29</th><td>Menucommands en dubbele native uitvoering<br><a href="https://github.com/basmilius/desktop/blob/f433db21cf1ea42e80be718ebf1ab71d36dca87e/packages/desktop-shell/src/menu.ts#L1"><code>packages/desktop-shell/src/menu.ts:1</code></a></td><td>Desktop<br><code>f433db21</code></td></tr><tr id="source-S30"><th scope="row">S30</th><td>Bestaande Desktop UI-exports<br><a href="https://github.com/basmilius/desktop/blob/f433db21cf1ea42e80be718ebf1ab71d36dca87e/packages/desktop-ui/src/index.ts#L1"><code>packages/desktop-ui/src/index.ts:1</code></a></td><td>Desktop<br><code>f433db21</code></td></tr><tr id="source-S31"><th scope="row">S31</th><td>Chatsamenstelling in AfterMotion<br><a href="../../../aftermotion/apps/client/src/chat/ChatThread.tsx"><code>apps/client/src/chat/ChatThread.tsx:1</code></a></td><td>AfterMotion<br><code>c601681b</code></td></tr><tr id="source-S32"><th scope="row">S32</th><td>157 publieke exportpaden<br><a href="https://github.com/basmilius/ruimte/blob/b45fec105e1d2eed5866049d0bde0c30a8d499a2/packages/agents-react/package.json#L1"><code>packages/agents-react/package.json:1</code></a></td><td>Ruimte<br><code>b45fec10</code></td></tr></tbody></table></div></details>
+</section>
+</main>
+<footer><p>Ruimte · Architectuuradvies en migratieplan · 1 oktober 2026</p><p>Standalone HTML, gebaseerd op de html-report-skill. Iron 700 uit Ruimtes brandtokens bepaalt de kleur. Het plan is voorgesteld; alleen dit rapport is gemaakt.</p><p>Gecontroleerd op desktop en mobiel, in light en dark mode, met toetsenbord en in print. Lokale links en interne verwijzingen zijn gecontroleerd.</p></footer>
+
+</body>
+</html>

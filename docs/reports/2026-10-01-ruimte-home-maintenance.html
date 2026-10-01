@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Onderhoud van ~/.ruimte</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+.prompt { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; font-size: 13px; }
+.prompt code { white-space: inherit; overflow-wrap: inherit; }
+.prompt-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }
+.prompt-tools p { margin: 0; }
+.source-list li { margin-bottom: 18px; }
+.numeric { text-align: right; white-space: nowrap; }
+.scope { max-width: 860px; }
+@media print {
+  .prompt { font-size: 10px; }
+  .prompt-tools { display: none; }
+  details > * { display: block; }
+  footer { padding: 8px 0; break-inside: avoid; }
+  footer p { margin: 0; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#besluit">Ga naar het voorstel</a>
+<header>
+  <p class="eyebrow">Ruimte / Implementatieplan / 1 oktober 2026</p>
+  <h1>Onderhoud van <code>~/.ruimte</code></h1>
+  <p class="intro">Laat de daemon verlopen screenshots en verlaten tijdelijke bestanden opruimen. Maak het wissen na definitieve node-verwijdering volledig, ook na een herstart.</p>
+  <p class="status">Voorstel voor implementatie</p>
+  <p class="caption scope">Scope: <code>$RUIMTE_HOME</code>, de bijbehorende desktop- en helperopslag en een afzonderlijk vervolg voor daemonlogs. Bronrevisie <code>b45fec105e1d2eed5866049d0bde0c30a8d499a2</code>, werkboom schoon bij inventarisatie. Dit rapport voert geen opruiming uit.</p>
+  <nav aria-label="Inhoud">
+    <a href="#besluit">Voorstel</a><a href="#huidig">Huidige situatie</a><a href="#beleid">Bewaarbeleid</a><a href="#aanpak">Implementatie</a><a href="#acceptatie">Acceptatiecriteria</a><a href="#startprompt">Startprompt</a><a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+  <section id="besluit" class="recommendation">
+    <h2>Voeg gericht onderhoud toe</h2>
+    <p>Er is al opruiming bij het maken van screenshots en het verwijderen van geladen sessies. De aanvulling is een kleine onderhoudsronde bij start en iedere 24 uur, plus herstelbare opruiming na een definitieve verwijdering. De ronde verwerkt alleen expliciet aangewezen bestanden.</p>
+    <p>De eerste oplevering bestaat uit stappen 1 tot en met 3 hieronder. Logrotatie volgt in een afzonderlijke patch. Een opslagpaneel, automatische verwijdering van modellen en een maximale leeftijd voor gesprekken vallen buiten deze eerste oplevering.</p>
+    <p>Bewaartermijnen gelden voor tijdelijke data. Gesprekken, gebruikshistorie, browserlogins, projectbestanden, sleutels en worktrees behouden hun bestaande levensduur. Een project onder Recent blijft een bewaard project.</p>
+  </section>
+
+  <section id="huidig">
+    <h2>Wat de applicatie nu bewaart</h2>
+    <p><span class="badge confirmed">Gemeten</span> Lokale momentopname op 1 oktober 2026 met <code>du -k -d 1</code>. De waarden hieronder zijn toegewezen schijfruimte, afgerond in binaire eenheden. Ze voorspellen niet hoeveel onderhoud kan vrijmaken.</p>
+    <div class="stats">
+      <div><strong>2,74 GiB</strong><span><code>~/.ruimte</code> totaal</span></div>
+      <div><strong>2,43 GiB</strong><span><code>~/.ruimte/models</code></span></div>
+      <div><strong>3,41 GiB</strong><span><code>~/.ruimte-dev</code> totaal</span></div>
+    </div>
+    <div class="table" role="region" aria-label="Schijfruimte per directory" tabindex="0">
+      <table>
+        <caption>Enkele relevante directories op deze Mac</caption>
+        <thead><tr><th scope="col">Directory</th><th scope="col" class="numeric">Productie</th><th scope="col" class="numeric">Dev</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>models/</code></th><td class="numeric">2,43 GiB</td><td class="numeric">3,05 GiB</td></tr>
+          <tr><th scope="row"><code>browser/</code></th><td class="numeric">157,4 MiB</td><td class="numeric">286,8 MiB</td></tr>
+          <tr><th scope="row"><code>screenshots/</code></th><td class="numeric">1,3 MiB</td><td class="numeric">56,0 MiB</td></tr>
+          <tr><th scope="row"><code>chats/</code></th><td class="numeric">18,5 MiB</td><td class="numeric">1,7 MiB</td></tr>
+          <tr><th scope="row"><code>usage/</code></th><td class="numeric">16,6 MiB</td><td class="numeric">16,5 MiB</td></tr>
+          <tr><th scope="row"><code>checkpoints/</code></th><td class="numeric">3,4 MiB</td><td class="numeric">0,4 MiB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Het grootste productieonderdeel is het lokale spraakmodel. De desktop houdt de gedownloade bestanden bij uitschakelen en heeft een expliciete verwijderactie. De grootte van <code>models/</code> op zichzelf bewijst geen lekkage. <a href="#bron-modellen">Bronnen voor modellen</a>.</p>
+
+    <div class="table" role="region" aria-label="Bestaande opruiming en aanvullingen" tabindex="0">
+      <table class="wide">
+        <caption>Geverifieerd in de code, zonder opruiming op de echte home uit te voeren</caption>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Bestaand gedrag</th><th scope="col">Aanvulling</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Browser/device-screenshots</th><td>Bestanden met een herkenbare timestamp ouder dan 24 uur verdwijnen bij de volgende opname. <a href="../../apps/server/src/shots.ts"><code>shots.ts:5 tot 28</code></a></td><td>Dezelfde regel zelfstandig aanroepen bij start en dagelijks.</td></tr>
+          <tr><th scope="row">Computer-use-screenshots</th><td>De helper verwijdert PNG's met een mtime ouder dan 1 uur bij de volgende opname. <a href="../../apps/computer-use/Sources/RuimteComputerUse/WindowCapture.swift"><code>WindowCapture.swift:136</code></a></td><td>Opruiming mogelijk maken zonder nieuwe opname. Houd rekening met wie de map op dat moment gebruikt.</td></tr>
+          <tr><th scope="row">Chats en terminalschermen</th><td>Het wissen van een geladen sessie neemt opslag mee. Chatlogs boven ongeveer 1 MiB worden samengevoegd met het record; de gespreksinhoud blijft bestaan. <a href="#bron-sessies">Bronnen voor sessies</a>.</td><td>Maak definitieve verwijdering ook voor koude sessies volledig en test gelijktijdige writes.</td></tr>
+          <tr><th scope="row">Prompts, lineage, outbox, berichten, taken</th><td><code>onPlaces</code> past deze gegevens aan wanneer een index verandert. Een taak blijft bijvoorbeeld bestaan zolang de ouder hem nog moet kunnen lezen. <a href="../../apps/server/src/outbox/wiring.ts"><code>wiring.ts:232</code></a>, <a href="../../packages/agents/src/tasks/task-store.ts"><code>task-store.ts:194</code></a>.</td><td>Gebruik bestaande store-regels. Wis geen voltooide taak alleen vanwege zijn leeftijd.</td></tr>
+          <tr><th scope="row">Tijdelijke writes en downloads</th><td>Atomic writes gebruiken een unieke <code>.pid-counter.tmp</code>. Een crash kan die achterlaten. Speech-downloads schrijven naar <code>.part</code> en verwijderen dat bestand in <code>finally</code>. <a href="../../packages/agents/src/fs.ts"><code>fs.ts:25 tot 87</code></a>, <a href="../../apps/desktop/src/speech-model.ts"><code>speech-model.ts:133</code></a>.</td><td>Herstel na een crash met beleid van de eigenaar. Een actieve writer gaat altijd voor.</td></tr>
+          <tr><th scope="row">Daemonlog op macOS</th><td>Desktop opent <code>daemon.log</code> in append-modus; launchd schrijft via de service naar dezelfde loglocatie. Linux gebruikt de systemd-journal. <a href="#bron-log">Bronnen voor logging</a>.</td><td>Onderzoek logrotatie in een aparte patch; de log staat buiten <code>RUIMTE_HOME</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <details open>
+      <summary>Waarom koude verwijdering apart getest moet worden</summary>
+      <p><span class="badge confirmed">Statisch vastgesteld</span> <code>SessionManager.kill</code> vraagt een geladen sessie voordat hij de snapshot wist. <code>ChatCore.kill</code> doet dat ook; <code>loaded()</code> wacht alleen op een lopende create. De gedeelde <code>endSession</code>-route vangt iedere fout af.</p>
+      <pre><code>SessionManager.kill: await creating; require(sessionId); delete snapshot/agent record
+ChatCore.kill:       await loaded; require(chatId); delete record/log/attachments
+ChatCore.loaded:     await creating.get(chatId)
+endSession:          await manager.kill / chats.kill; catch(() =&gt; undefined)</code></pre>
+      <p>Dat geeft een concrete route waardoor bestanden van een niet geladen sessie kunnen blijven staan. Dit is nog niet met een integratietest gereproduceerd. Bovendien gebruiken node-verwijdering, view-verwijdering en projectsluiting dezelfde ender. Leg die callers eerst naast elkaar voordat je de wisregel verruimt. <a href="#bron-sessies">Bronnen voor deze route</a>.</p>
+    </details>
+    <details open>
+      <summary>Het projectindex is geen volledige verklaring van verwijdering</summary>
+      <p><span class="badge confirmed">Statisch vastgesteld</span> <code>warmIndex()</code> probeert alle geregistreerde projecten te lezen, ook de gesloten projecten. Een ontbrekend of ongeldig bestand wordt overgeslagen. Daarom is <code>index.locate(id) === null</code> onvoldoende om opslag te wissen. <code>project.delete</code> met <code>removeFiles=false</code> bewaart het projectbestand zelfs terwijl de registratie verdwijnt. <a href="../../apps/server/src/projects/project-store.ts"><code>project-store.ts:849 tot 905</code></a>.</p>
+      <p>De scan in deze inventarisatie vond geen <code>.tmp</code>, <code>.part</code> of <code>.partial</code> in de productiehome. In dev lagen negen lege Apple Foundation-<code>.lock</code>-bestanden. Dat zijn processlocks, geen aangetoonde afvalbestanden; hun grootte is geen reden om ze te verwijderen. <a href="../../apps/foundation-models/Sources/FoundationModelsHelper/SessionStore.swift"><code>SessionStore.swift:59 tot 77</code></a>.</p>
+    </details>
+  </section>
+
+  <section id="beleid">
+    <h2>Een regel per eigenaar</h2>
+    <p><span class="badge info">Voorstel</span> De termijnen en grenzen hieronder vormen het voorgestelde beleid. De bestaande screenshottermijnen blijven gelijk. Er komt geen recursieve scan die alle oude bestanden onder de home verwijdert.</p>
+    <div class="table" role="region" aria-label="Voorgesteld bewaarbeleid" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Data</th><th scope="col">Wanneer opruimen</th><th scope="col">Eigenaar en voorwaarde</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>screenshots/*.png</code></th><td>Herkenbare opname ouder dan 24 uur.</td><td>Daemon. Behoud de bestaande timestampregel; onbekende namen blijven staan.</td></tr>
+          <tr><th scope="row"><code>computer-use/screenshots/*.png</code></th><td>Mtime ouder dan 1 uur.</td><td>Helper als die draait. De daemon mag alleen zonder opname opruimen als toegang tot de map en concurrentie met de helper veilig zijn geregeld.</td></tr>
+          <tr><th scope="row">Bekende atomic-write-<code>.tmp</code></th><td>Ouder dan 24 uur, zonder actieve writer.</td><td>De store die het bestandsformaat schrijft. Exacte naamregel en toegestane directory, uitsluiten of serialiseren van lopende writes. Bij onzeker eigenaarschap overslaan.</td></tr>
+          <tr><th scope="row">Speech-<code>.part</code></th><td>Ouder dan 24 uur, nadat duidelijk is dat geen download loopt.</td><td>Desktop/<code>SpeechModel</code>. Alleen part-bestanden voor de bekende modelbestanden. Geen scan door de daemon.</td></tr>
+          <tr><th scope="row">Chat/terminal-records en sidecars</th><td>Na een bevestigde definitieve verwijdering van de node of view.</td><td>SessionManager/ChatCore en hun host. Geen TTL. Achtergebleven historische bestanden zonder betrouwbaar verwijderbewijs blijven staan.</td></tr>
+          <tr><th scope="row">Checkpoint-indexen</th><td>Met expliciete worktree-verwijdering, zoals nu al gebeurt.</td><td>Worktrees. De index van een gewone repository heeft geen vervaldatum; de periodieke ronde voert geen git-onderhoud uit. <a href="../../apps/server/src/git/worktrees.ts"><code>worktrees.ts:367</code></a>.</td></tr>
+          <tr><th scope="row">Modellen, browserprofiel, usage, accounts, sleutels en approvals</th><td>Alleen volgens hun bestaande, expliciete lifecycle.</td><td>Geen verwijdering op leeftijd. Usage bewaart ook gebruik van verdwenen transcriptbestanden. <a href="../../packages/agents/src/usage/scanner.ts"><code>scanner.ts:140</code></a>.</td></tr>
+          <tr><th scope="row">Worktrees, <code>tools/</code>, sockets, locks en <code>.corrupt-*</code></th><td>Geen algemene regel in deze patch.</td><td>Worktrees kunnen werk bevatten, locks beschermen processen en corrupte bestanden kunnen hersteldata zijn. De lifecycle van <code>tools/</code> is in dit onderzoek niet vastgesteld.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Een geldig verwijderbewijs komt uit een succesvolle, expliciete node/view-verwijdering. Een onleesbaar project, een leeg index, een ontbrekende bijlageverwijzing of een oud mtime is daarvoor onvoldoende. De onderhoudsronde start geen processen en verleent geen toegang tot apps.</p>
+  </section>
+
+  <section id="aanpak">
+    <h2>Implementatie in kleine stappen</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Screenshots onafhankelijk van een nieuwe opname opruimen</h3>
+        <p>Maak de bestaande wisregels afzonderlijk aanroepbaar en houd één bron voor iedere bewaartermijn. Voeg in de daemon een kleine onderhoudsmodule toe, bijvoorbeeld onder <code>apps/server/src/maintenance/</code>, die uitsluitend de goedgekeurde taken uitvoert.</p>
+        <p>Start één ronde nadat de betrokken stores en writers bekend zijn, zonder de eerste clientverbinding op de scan te laten wachten. Plan daarna iedere 24 uur een ronde. Laat hoogstens één ronde tegelijk lopen en stop de timer in <code>shutdown</code>. Gebruik een geïnjecteerde klok en scheduler.</p>
+        <p>Maak de computer-use-regel bruikbaar bij helperstart en periodiek terwijl hij draait. Verleen geen apprechten en start de helper niet voor onderhoud. Stel vast of de daemon de map veilig kan opruimen wanneer de helper uit staat; als dat niet kan, blijft opruiming bij de volgende helperstart een expliciet beschreven beperking.</p>
+        <p><strong>Klaar als:</strong> verlopen screenshots verdwijnen zonder nieuwe opname, verse screenshots blijven staan en ontbrekende of ontoegankelijke directories houden de daemon niet tegen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Crashresten opruimen bij de writer die ze kent</h3>
+        <p>Inventariseer exacte tijdelijke naamregels en directories. Begin bij atomic writes van de daemon en part-bestanden van <code>SpeechModel</code>. Neem helperformats alleen mee als diens eigen code ze herkent en de actieve writer kan uitsluiten. Een suffix als <code>.tmp</code> is op zichzelf geen toestemming om te wissen.</p>
+        <p>Controleer reguliere bestanden en de bovenliggende directory met <code>lstat</code>/gecontroleerde paden. Volg geen symlinks. Hercontroleer het bestand vlak voor wissen en coördineer met de writer, zodat een intussen vernieuwd bestand behouden blijft. Deel een kleine filesystemhelper alleen als meerdere eigenaren die werkelijk nodig hebben; het bewaarbeleid blijft bij de eigenaar.</p>
+        <p>Laat onderbreking, <code>ENOENT</code>, een niet leesbare directory en een onzekere eigenaar tot overslaan leiden. Rapporteer tellingen en fouten per onderdeel, zonder sleutels, transcriptinhoud of tokens in logs.</p>
+        <p><strong>Klaar als:</strong> verlaten tijdelijke bestanden ouder dan 24 uur verdwijnen, terwijl lopende writes/downloads en onbekende bestanden behouden blijven. Twee rondes achter elkaar geven dezelfde uitkomst.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Definitieve verwijdering ook na een restart afmaken</h3>
+        <p>Test eerst de koude route in <code>SessionManager.kill</code>, <code>ChatCore.kill</code> en de ender in <code>daemon.ts</code>. Maak het verwijderen van bewaarde opslag onafhankelijk van een geladen proces. Wacht relevante writes af en gebruik de bestaande bescherming tegen een snapshot die na verwijderen terugkomt.</p>
+        <p>Breng de callers voor node/view-verwijdering, projectsluiting en stoppen in kaart. Houd procesbeëindiging en definitief wissen afzonderlijk waar de intentie verschilt. Verander bestaand close/stop-gedrag niet stilzwijgend. Pas de nieuwe duurzame opruiming alleen toe bij een succesvolle definitieve node/view-verwijdering.</p>
+        <p>Leg de verwijderopdracht onder <code>RUIMTE_HOME</code> vast als de bronwijziging definitief wordt. Beoordeel hergebruik van de bestaande durable outbox voordat je een tweede wachtrij maakt. Werk iedere opdracht idempotent af via de stores; na een crash mag dezelfde opdracht opnieuw lopen. Leg ook vast hoe een mislukte projectwrite de opdracht intrekt en hoe een opnieuw aangemaakte node met hetzelfde id beschermd blijft.</p>
+        <p>Neem terminalscherm en agentrecord samen mee. Voor een chat horen record, log, bijlagen, bookmarks en plannen bij elkaar; laat lineage, notices, tasks en outbox hun bestaande regels volgen. Apple Foundation-transcripts zijn bewaarde gesprekken en gaan uitsluitend mee via een expliciete owner-route, na het stoppen van de helper en zonder een actieve lock te breken.</p>
+        <p><strong>Klaar als:</strong> definitief verwijderen van een koude node dezelfde bestanden opruimt als verwijderen van een geladen node. Een crash laat geen onherstelbare half-afgemaakte opdracht achter, en onbekende historische opslag blijft intact.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Logrotatie als afzonderlijke vervolgpatch</h3>
+        <p>Op macOS staat <code>daemon.log</code> onder <code>~/Library/Logs/Ruimte</code> voor de service; de child-daemon van de desktop gebruikt <code>app.getPath('logs')</code>. Controleer of die routes in alle builds naar dezelfde plaats wijzen. Linux gebruikt de journal en krijgt geen nieuw globaal journalbeleid.</p>
+        <p>Een bruikbaar startvoorstel is een actief log van 10 MiB en drie archieven. Dit zijn beleidskeuzes, geen gemeten noodzaak. Bepaal eerst wie het open descriptor beheert bij launchd en bij de desktop. Alleen het bestand hernoemen begrenst een lopende writer niet: die kan naar de oude inode blijven schrijven. Kies één aanpak voor heropenen of veilig begrenzen, met een expliciete afweging van mogelijk logverlies bij truncatie.</p>
+        <p><strong>Klaar als:</strong> een langdurig schrijvend proces blijft loggen na meerdere rotaties, de schijfruimte blijft begrensd en service/child-daemon houden hun bestaande start- en updategedrag. Doe dit in een aparte integratietest en patch.</p>
+      </div></li>
+    </ol>
+    <p>Werk bij iedere oplevering de opslagbeschrijving in <a href="../../apps/server/README.md"><code>apps/server/README.md</code></a> bij. Houd daemonbeleid in de server, speechbeleid in de desktop en helperbeleid in de helper. <code>packages/agents</code> blijft bruikbaar zonder Ruimte-app of Bun-runtime.</p>
+  </section>
+
+  <section id="acceptatie">
+    <h2>Wat de tests moeten aantonen</h2>
+    <p>Gebruik kleine fixtures en geïnjecteerde klokken. Tests raken geen echte <code>~/.ruimte</code> of <code>~/.ruimte-dev</code>. Een echte shell, watcher, socket of proces hoort volgens de repositoryregels in <code>*.integration.test.ts</code>.</p>
+    <div class="table" role="region" aria-label="Acceptatiescenario's" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Scenario</th><th scope="col">Vereiste uitkomst</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">24 uur / 1 uur</th><td>Ouder dan de termijn verdwijnt; precies op de grens en jonger blijft behouden. De klok is geïnjecteerd.</td></tr>
+          <tr><th scope="row">Start, dagelijks, stop</th><td>Een ronde bij start, daarna via de scheduler. Geen overlappende rondes, geen nieuwe ronde na stop en een lopende ronde eindigt gecontroleerd.</td></tr>
+          <tr><th scope="row">Ontbrekende map, fout, onbekende naam</th><td>Ontbreken is normaal. Een fout in één onderdeel houdt de andere onderdelen niet tegen. Onbekende formats blijven staan.</td></tr>
+          <tr><th scope="row">Symlink of veranderd bestand</th><td>Geen toegang buiten de bedoelde directory, ook bij een symlink in een bovenliggende map. Een kandidaat die intussen vernieuwd is blijft behouden.</td></tr>
+          <tr><th scope="row">Actieve writer/download/lock</th><td>Geen actieve tijdelijke write, speech-download of Apple Foundation-processlock wordt verwijderd. Onderhoud start geen helper.</td></tr>
+          <tr><th scope="row">Koude node definitief verwijderen</th><td>Vooraf aanwezige records en sidecars verdwijnen zonder een terminal/chat/CLI te starten. De operatie is herhaalbaar.</td></tr>
+          <tr><th scope="row">Write loopt tijdens verwijderen</th><td>Een late write zet geen record, snapshot of bijlage terug. De wisopdracht blijft bij een fout opnieuw uitvoerbaar.</td></tr>
+          <tr><th scope="row">Crash of mislukte projectwrite</th><td>Herstart hervat een bevestigde wisopdracht. Een niet bevestigde verwijdering wist geen data; een nieuwe node met hetzelfde id blijft behouden.</td></tr>
+          <tr><th scope="row">Gesloten/onleesbaar/vergeten project</th><td>Geen periodieke wisactie op grond van afwezigheid in het index. <code>removeFiles=false</code> blijft behoudend. Test alle gedeelde ender-callers.</td></tr>
+          <tr><th scope="row">Beschermde data</th><td>Modellen, usage, browsercookies, credentials, approvals, worktrees, checkpoint-indexen van gewone repos en herstelbestanden behouden dezelfde bytes.</td></tr>
+          <tr><th scope="row">Custom home en dev</th><td>Alleen de ingestelde home wordt geraakt. Geen aanname over macOS of een geïnstalleerde desktop in daemoncode.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Voer de betrokken Bun-tests uit en daarna <code>bun run check</code> en <code>bun run format:check</code>. Gebruik <code>bun run test:integration</code> voor echte procesfixtures wanneer die aan de implementatie worden toegevoegd. Voor wijzigingen aan Swift komt de relevante helpertest erbij; bouw een runtime-afhankelijke test niet om tot een timingtest in de standaard Bun-run.</p>
+    <p><span class="badge warning">Nog te bepalen in stap 3</span> Het moment waarop een wisopdracht definitief wordt, bescherming tegen hergebruik van een node-id en de owner-route voor Apple Foundation-opslag. Als bestaand stop/close-gedrag een productkeuze vereist, leg de concrete botsing uit voordat je die semantiek verandert. Dat blokkeert screenshot- en tijdelijke-bestandsopruiming niet.</p>
+  </section>
+
+  <section id="startprompt">
+    <h2>Startprompt voor een schone agent</h2>
+    <p>Deze prompt geeft een nieuwe agent context, scope, beperkingen en verificatie. Hij vraagt implementatie van de eerste drie stappen; logrotatie is de afzonderlijke vervolgpatch. Er wordt met dit rapport geen agent gestart.</p>
+    <div class="prompt-tools interactive-only">
+      <button id="copy-prompt" type="button" aria-describedby="copy-status">Kopieer startprompt</button>
+      <p id="copy-status" class="caption" role="status" aria-live="polite">Je kunt de tekst ook selecteren en kopiëren.</p>
+    </div>
+    <noscript><p class="caption">Selecteer de onderstaande tekst en kopieer hem naar de nieuwe agent.</p></noscript>
+    <pre class="prompt long-excerpt" tabindex="0" aria-label="Volledige startprompt"><code id="prompt-text">Je werkt in de Ruimte-repository. Implementeer het onderhoudsplan in
+`docs/reports/2026-10-01-ruimte-home-maintenance.html`.
+Lees eerst dat rapport, de geldende projectinstructies en de huidige code.
+Het rapport is gebaseerd op b45fec105e1d2eed5866049d0bde0c30a8d499a2;
+controleer of de beschreven routes sindsdien veranderd zijn.
+
+Doel
+Voorkom dat tijdelijke bestanden blijven liggen en dat definitief verwijderde
+nodes hun opslag achterlaten. Voeg onderhoud toe bij daemonstart en dagelijks.
+Werk met de ingestelde RUIMTE_HOME, ook in dev en op een machine zonder desktop.
+
+Voer de eerste drie stappen van het plan uit:
+1. Maak screenshotopruiming zelfstandig aanroepbaar en plan haar bij start en
+   dagelijks. Behoud 24 uur voor browser/device en 1 uur voor computer use.
+   Laat de helper zijn eigen screenshotdirectory opruimen; start hem daarvoor
+   niet en verleen geen computer-use-toegang. Leg een alternatief vast als de
+   daemon deze map niet veilig kan opruimen terwijl de helper uit staat.
+2. Ruim alleen bekende tijdelijke bestanden op, ouder dan 24 uur en aantoonbaar
+   niet meer in gebruik. Geef daemon, desktop en helper elk hun eigen beleid.
+   Gebruik exacte naamregels en een lijst van toegestane directories. De
+   desktop beheert speech-downloads; de daemon wist geen actieve `.part`.
+   Voor een bestand waarvan je geen exclusief eigenaarschap kunt bewijzen:
+   overslaan en als beperking melden. Neem geen algemene `.lock`-regel op.
+3. Maak het wissen na definitieve node/view-verwijdering volledig en idempotent,
+   ook na een restart als de terminal of chat nog niet geladen is. Onderzoek
+   SessionManager.kill, ChatCore.kill/loaded en de gedeelde endSession-route.
+   Scheid stoppen van definitief wissen waar callers dat nodig hebben. Wacht
+   lopende writes af, zodat records na verwijderen niet terugkomen. Neem
+   chat-sidecars, bijlagen, plannen, bookmarks en relevante daemonrecords mee.
+   Apple Foundation-opslag alleen via de eigenaar en zonder actieve locks te
+   breken. Leg onafgemaakte verwijdering duurzaam vast en hervat die na een
+   crash, met controle op nieuwe aanmaak van dezelfde node-id.
+
+Grenzen
+- Leeftijd maakt gesprekken, usage, browserprofielen, modellen, worktrees,
+  command approvals, sleutels of projectdata nooit verwijderbaar.
+- Een gesloten, niet geopende, ontbrekende of onleesbare projectmap is geen
+  bewijs van definitieve verwijdering. warmIndex slaat onleesbare projecten
+  over. Wis geen opslag op basis van alleen index.locate(id) === null.
+- project.delete met removeFiles=false vergeet het project maar bewaart het
+  projectbestand. Behandel dat niet als definitieve verwijdering van nodes.
+- Loop niet door symlinks. Controleer ook de bovenliggende directory voordat
+  je iets wist; raak geen pad buiten de bedoelde home aan.
+- Onderhoud start geen CLI, shell, browser, helper of agent, verandert geen
+  werkboom en voert geen git gc uit.
+- Bewaar bestaande stop/close-semantiek. Maak een eventueel verschil tussen
+  stoppen en wissen expliciet en test de verschillende callers.
+- packages/agents blijft zelfstandig: geen imports uit apps en geen Bun-API&#x27;s.
+- Gebruik geen echte ~/.ruimte of ~/.ruimte-dev als testfixture.
+
+Stap 4, logrotatie, is een afzonderlijke vervolgpatch. Werk die nu niet uit.
+Het rapport benoemt het descriptorprobleem voor launchd/desktop en laat een
+langdurig schrijvende procesfixture als voorwaarde voor die patch gelden.
+
+Verificatie
+Gebruik geïnjecteerde klokken/filesystemen voor leeftijd, falende directories,
+symlinks, overlappende rondes, stop en een bestand dat intussen vernieuwd is.
+Test koude verwijdering, tegelijk schrijven en verwijderen, opnieuw proberen,
+crashherstel, behoud van gesloten/onleesbare projecten en de beschermde data.
+Een echte shell, watcher, socket of proces hoort in *.integration.test.ts.
+Voer de relevante Bun-tests uit. Run daarna `bun run check` en
+`bun run format:check`; formatteer alleen gewijzigde code als dat nodig is.
+Lees de README-opslagbeschrijving na en werk die bij voor het nieuwe beleid.
+
+Lever op
+De code, gerichte tests en bijgewerkte documentatie. Meld wat er is veranderd,
+welke controles zijn uitgevoerd, eventuele resterende beperkingen en welke
+bewaartermijnen gelden. Commit, push of publiceer alleen als dat gevraagd wordt.
+</code></pre>
+  </section>
+
+  <section id="bronnen">
+    <h2>Bronnen en reikwijdte</h2>
+    <p>De bronlinks zijn relatief aan dit rapport en blijven bruikbaar in een checkout. De genoemde regels verwijzen naar de bronrevisie bovenaan; ze kunnen bij latere wijzigingen verschuiven. Uitspraken over gedrag zijn uit code afgeleid. Deze inventarisatie heeft geen onderhoudsimplementatie of integratietests uitgevoerd.</p>
+    <ul class="source-list">
+      <li id="bron-shots"><a href="../../apps/server/src/shots.ts"><code>apps/server/src/shots.ts:5 tot 28</code></a> en <a href="../../apps/computer-use/Sources/RuimteComputerUse/WindowCapture.swift"><code>WindowCapture.swift:119 tot 146</code></a>. Screenshottermijnen en de opruiming bij een nieuwe opname.</li>
+      <li id="bron-sessies"><a href="../../apps/server/src/sessions/manager.ts"><code>SessionManager.kill:513</code></a>, <a href="../../apps/server/src/sessions/snapshot-store.ts"><code>snapshot-store.ts:35, 71</code></a>, <a href="../../apps/server/src/agents/agent-store.ts"><code>agent-store.ts:69</code></a>, <a href="../../packages/agents/src/chat/chat-core.ts"><code>ChatCore.kill:739, loaded:909, persistNow:1039</code></a>, <a href="../../packages/agents/src/chat/chat-log.ts"><code>chat-log.ts:15, 142</code></a> en <a href="../../apps/server/src/chat/chat-manager.ts"><code>chat-manager.ts:517</code></a>. Bestaand wissen, snapshot-races, logcompactie en host-sidecars.</li>
+      <li><a href="../../apps/server/src/daemon.ts"><code>daemon.ts:410 tot 447, 1128</code></a>, <a href="../../apps/server/src/actions/node-actions.ts"><code>node-actions.ts:333</code></a>, <a href="../../apps/server/src/actions/view-actions.ts"><code>view-actions.ts:176</code></a> en <a href="../../apps/server/src/projects/project-store.ts"><code>project-store.ts:820, 849, 885</code></a>. De gedeelde ender, sluiten/verwijderen, warmIndex en shutdown.</li>
+      <li><a href="../../apps/server/src/outbox/wiring.ts"><code>outbox/wiring.ts:232 tot 247</code></a>, <a href="../../packages/agents/src/tasks/task-store.ts"><code>task-store.ts:194</code></a> en <a href="../../packages/agents/src/fs.ts"><code>fs.ts:25 tot 87</code></a>. Bestaande lifecycle en atomic writes.</li>
+      <li id="bron-modellen"><a href="../../apps/desktop/src/speech-model.ts"><code>speech-model.ts:49, 99, 133, 195</code></a>, <a href="../../packages/agents/src/usage/scanner.ts"><code>usage/scanner.ts:140</code></a>, <a href="../../apps/server/src/browser/manager.ts"><code>browser/manager.ts:494</code></a> en <a href="../../apps/server/src/git/worktrees.ts"><code>worktrees.ts:342 tot 371</code></a>. Modellen, usage, browserprofiel en checkpoint-opruiming bij expliciete worktree-verwijdering.</li>
+      <li><a href="../../apps/foundation-models/Sources/FoundationModelsHelper/SessionStore.swift"><code>SessionStore.swift:37 tot 77, 120</code></a>. Eigenaar, flock en tijdelijke writes van Apple Foundation-gesprekken.</li>
+      <li id="bron-log"><a href="../../apps/desktop/src/main.ts"><code>desktop/main.ts:187 tot 196</code></a>, <a href="../../packages/service/src/platform.ts"><code>platform.ts:34 tot 39</code></a> en <a href="../../packages/service/src/definitions.ts"><code>definitions.ts</code></a>. Append-descriptor van de desktop, macOS-logpad, launchd-output en systemd-journal.</li>
+      <li><a href="../../apps/server/README.md"><code>apps/server/README.md</code></a>, <a href="../../CLAUDE.md"><code>CLAUDE.md</code></a>, <a href="../../package.json"><code>package.json</code></a> en <a href="../../bunfig.toml"><code>bunfig.toml</code></a>. Home-indeling, modulegrenzen en projectchecks.</li>
+    </ul>
+    <p class="caption">Lokale meting: productie 2.871.316 KiB totaal / 2.545.356 KiB modellen; dev 3.571.504 KiB totaal / 3.200.364 KiB modellen. Er is geen verwachte besparing berekend, geen browserprofielinhoud gelezen en niets in de twee homes verwijderd.</p>
+  </section>
+</main>
+<footer><p>Ruimte · 1 oktober 2026 · Links, ankers, licht/donker, 390 px en A4 gecontroleerd. Tekstcontrast minimaal 4,89:1. Kopieeractie en selectie getest met een nagebootst klembord.</p></footer>
+<script>
+{
+  const button = document.getElementById('copy-prompt');
+  const prompt = document.getElementById('prompt-text');
+  const status = document.getElementById('copy-status');
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(prompt.textContent);
+      status.textContent = 'Startprompt gekopieerd.';
+    } catch {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(prompt);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      status.textContent = 'De startprompt is geselecteerd. Kopieer met Command+C of Ctrl+C.';
+    }
+  });
+}
+</script>
+
+</body>
+</html>
