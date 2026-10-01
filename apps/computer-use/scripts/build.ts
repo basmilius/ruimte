@@ -50,7 +50,7 @@ const run = (command: string[], capture = false): string => {
         console.error(`${command.join(' ')} exited with ${result.exitCode}`);
         process.exit(result.exitCode || 1);
     }
-    return capture ? result.stdout.toString().trim() : '';
+    return result.stdout?.toString().trim() ?? '';
 };
 
 const signingIdentity = (): { identity: string; label: string } => {
@@ -69,10 +69,12 @@ const signingIdentity = (): { identity: string; label: string } => {
 
 const swiftBuild = ['swift', 'build', '-c', 'release', '--arch', swiftArch[values.arch] ?? values.arch];
 const products = development ? [executable, 'cu'] : [executable];
-for (const product of products) {
-    run([...swiftBuild, '--product', product]);
-}
 const binPath = run([...swiftBuild, '--show-bin-path'], true);
+for (const product of products) {
+    if (development || process.env.RUIMTE_SWIFT_CACHE_HIT !== 'true' || !existsSync(join(binPath, product))) {
+        run([...swiftBuild, '--product', product]);
+    }
+}
 
 // A dev helper still running keeps the old build until it quits.
 const previousCu = join(app, 'Contents', 'MacOS', 'cu');

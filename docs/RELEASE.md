@@ -6,6 +6,17 @@ draft release. macOS is built for Apple silicon only: `minimumSystemVersion` is 
 Intel Macs that reach macOS 26 are frozen there, because 27 is Apple silicon only. Linux is built
 for x64 and arm64 on Ubuntu 22.04 runners, as AppImage, deb and rpm; see `docs/LINUX.md`.
 
+## Build caches
+
+CI's integration job, the macOS desktop release and the macOS npm build share the native build
+caches through `.github/actions/cache-native-builds`. CI on `main` fills them: GitHub lets a release
+tag restore `main`'s caches, but isolates caches written under different tags.
+
+Rust caches its dependencies and recompiles the helpers. Swift release products are reused only
+when the helper sources, manifests, build scripts, macOS, Xcode and SDK match exactly. A missing
+product is built again. The daemon is always compiled with the current release version, and the
+computer use app is assembled with that version before signing and notarization.
+
 ## npm
 
 Publishing a release also publishes `ruimte` on npm, Ruimte for a machine without the app, with the

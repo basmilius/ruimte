@@ -93,6 +93,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      # A dispatch can rebuild a tag from before the cache action existed.
+      - uses: ./.github/actions/cache-native-builds
+        if: runner.os == 'macOS' && hashFiles('.github/actions/cache-native-builds/action.yml') != ''
       - run: bun install --frozen-lockfile
       - name: Compile the daemon
         env:
