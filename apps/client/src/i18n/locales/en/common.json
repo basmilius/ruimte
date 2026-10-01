@@ -43,7 +43,8 @@
             "machineUpdate": "The machine update prompt failed to render",
             "link": "The dialog for linking a machine failed to render",
             "shortcutHints": "The shortcut hints failed to render",
-            "deviceTools": "The device tools failed to render"
+            "deviceTools": "The device tools failed to render",
+            "login": "The login terminal failed to render"
         }
     },
     "answer": {

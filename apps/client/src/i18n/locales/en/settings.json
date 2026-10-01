@@ -803,7 +803,6 @@
         },
         "account": {
             "login": {
-                "needsProject": "Open a project on this machine to log in. The login runs in a terminal node on its canvas.",
                 "needsCanvas": "Open a canvas to log in. The login runs in a terminal node on it.",
                 "failed": "Could not open the login",
                 "nodeTitle": "{{account}} login"

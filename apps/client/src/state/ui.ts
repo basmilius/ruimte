@@ -1,4 +1,4 @@
-import type { ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
+import type { AgentKind, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
 import { create } from 'zustand';
 
 export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'providers' | 'voice' | 'computer' | 'agents' | 'usage' | 'machines' | 'about';
@@ -110,6 +110,15 @@ interface SettingsState {
     searchAt: number;
 }
 
+/* A CLI's own login in a terminal of its own, for a machine no canvas on screen can hold a terminal node of. */
+export interface LoginRequest {
+    endpointId: string;
+    kind: AgentKind;
+    accountId: string;
+    /* What a person calls the account. */
+    name: string;
+}
+
 export type ViewDialog =
     | { kind: 'settings'; viewId: string }
     /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
@@ -146,6 +155,7 @@ interface UiStore {
     paletteMode: PaletteMode;
     usageOpen: boolean;
     modelsOpen: boolean;
+    login: LoginRequest | null;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
@@ -199,6 +209,7 @@ interface UiStore {
     chooseLaunch(projectKey: string, launchId: string): void;
     setUsageOpen(open: boolean): void;
     setModelsOpen(open: boolean): void;
+    setLogin(login: LoginRequest | null): void;
     askProjectSettings(asked: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
@@ -238,6 +249,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteMode: 'default',
     usageOpen: false,
     modelsOpen: false,
+    login: null,
     paletteSeed: '',
     paletteBrowseAt: 0,
     paletteBrowseMachine: null,
@@ -276,6 +288,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setModelsOpen(open) {
         set({ modelsOpen: open });
+    },
+    setLogin(login) {
+        set({ login });
     },
     askProjectSettings(asked) {
         set({ projectSettingsAsked: asked });

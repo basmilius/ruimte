@@ -48,6 +48,12 @@ const ModelsDialog = lazyDialog(
     useUi,
     (s) => s.modelsOpen
 );
+const LoginDialog = lazyDialog(
+    () => import('@/chat/LoginDialog'),
+    'LoginDialog',
+    useUi,
+    (s) => s.login !== null
+);
 const ReleaseNotesDialog = lazyDialog(
     () => import('@/shell/ReleaseNotesDialog'),
     'ReleaseNotesDialog',
@@ -139,6 +145,9 @@ export function App() {
                     </ErrorBoundary>
                     <ErrorBoundary label={failed('link')} compact className={FLOATING_FAILURE}>
                         <LinkRequestDialog />
+                    </ErrorBoundary>
+                    <ErrorBoundary label={failed('login')} compact className={FLOATING_FAILURE}>
+                        <LoginDialog />
                     </ErrorBoundary>
                     <ErrorBoundary label={failed('shortcutHints')} compact className={FLOATING_FAILURE}>
                         <ShortcutHints />

@@ -6,7 +6,7 @@ import { performAsPerson, PERSON_PROMPT_CLIENTS } from '@/actions/client-actions
 import { askBeforeStoppingSubagents, askBeforeStoppingTask } from '@/agents/end-children';
 import { FEATURED_ACCENTS, NODE_ACCENTS, accentLabel, type AccentId } from '@/canvas/accents';
 import { searchFiles } from '@/chat/file-search';
-import { openLogin, useLoginBlocked } from '@/chat/login';
+import { openLogin } from '@/chat/login';
 import { isApplePlatform } from '@/desktop/bridge';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
@@ -99,7 +99,6 @@ export const connectChatHost = (): void => {
             stopTask: (endpointId, childId, title, run) => void askBeforeStoppingTask(transportFor(endpointId), childId, title, run)
         },
         openLogin,
-        useLoginBlocked,
         useProjectLook: (endpointId, projectId) => {
             const summary = useProjectList(
                 (s) => s.projects.find((row) => row.endpointId === endpointId && projectId !== null && row.summary.projectId === projectId)?.summary

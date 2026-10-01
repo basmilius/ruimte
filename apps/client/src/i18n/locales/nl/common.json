@@ -43,7 +43,8 @@
             "machineUpdate": "De vraag over de update van de machine kon niet worden getekend",
             "link": "Het venster om een machine te koppelen kon niet worden getekend",
             "shortcutHints": "De sneltoetshints konden niet worden getekend",
-            "deviceTools": "De apparaattools konden niet worden getekend"
+            "deviceTools": "De apparaattools konden niet worden getekend",
+            "login": "De terminal voor het inloggen kon niet worden getekend"
         }
     },
     "answer": {

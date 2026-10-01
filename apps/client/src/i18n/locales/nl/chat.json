@@ -21,5 +21,15 @@
     "image": {
         "gone": "Dat bestand staat er niet meer",
         "notShown": "Een {{format}}-afbeelding, een formaat dat deze app niet toont"
+    },
+    "login": {
+        "title": "Inloggen bij {{account}}",
+        "description": "{{cli}} draait zijn eigen login in deze terminal. Die sluit vanzelf zodra je bent ingelogd.",
+        "landed": "Ingelogd",
+        "landedAs": "Ingelogd als {{email}}",
+        "ended": "De login is gestopt.",
+        "dropped": "De verbinding met de machine viel weg, en daarmee stopte de login.",
+        "outdated": "Deze machine heeft eerst een update nodig voordat je hier kunt inloggen. Werk Ruimte daar bij, of log in vanuit een project dat erop open staat.",
+        "failed": "De login kon niet starten: {{reason}}"
     }
 }

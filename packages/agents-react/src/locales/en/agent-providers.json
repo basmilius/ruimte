@@ -60,10 +60,10 @@
       "title": "Login",
       "signedInAs": "Logged in as {{email}}",
       "signedIn": "Logged in",
-      "planDetail": "{{plan}} plan. Log in again opens a terminal node with the CLI's own login.",
-      "detail": "Log in again opens a terminal node with the CLI's own login.",
+      "planDetail": "{{plan}} plan. Log in again opens a terminal with the CLI's own login.",
+      "detail": "Log in again opens a terminal with the CLI's own login.",
       "signedOut": "Not logged in",
-      "signedOutDetail": "Opens a terminal node that runs the CLI's login with this folder.",
+      "signedOutDetail": "Opens a terminal that runs the CLI's login with this folder.",
       "logIn": "Log in",
       "logInAgain": "Log in again"
     },
@@ -105,7 +105,7 @@
   },
   "add": {
     "title": "Add a {{provider}} account",
-    "description": "Ruimte makes a folder for it on the machine, then opens a terminal node where you log in.",
+    "description": "Ruimte makes a folder for it on the machine, then opens a terminal where you log in.",
     "name": "Name",
     "namePlaceholder": "Work",
     "color": "Color",

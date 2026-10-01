@@ -60,10 +60,10 @@
       "title": "Login",
       "signedInAs": "Ingelogd als {{email}}",
       "signedIn": "Ingelogd",
-      "planDetail": "{{plan}}-abonnement. Opnieuw inloggen opent een terminal-node met de login van de CLI zelf.",
-      "detail": "Opnieuw inloggen opent een terminal-node met de login van de CLI zelf.",
+      "planDetail": "{{plan}}-abonnement. Opnieuw inloggen opent een terminal met de login van de CLI zelf.",
+      "detail": "Opnieuw inloggen opent een terminal met de login van de CLI zelf.",
       "signedOut": "Niet ingelogd",
-      "signedOutDetail": "Opent een terminal-node die de login van de CLI met deze map draait.",
+      "signedOutDetail": "Opent een terminal die de login van de CLI met deze map draait.",
       "logIn": "Inloggen",
       "logInAgain": "Opnieuw inloggen"
     },
@@ -105,7 +105,7 @@
   },
   "add": {
     "title": "Een {{provider}}-account toevoegen",
-    "description": "Ruimte maakt er een map voor op de machine en opent dan een terminal-node waarin je inlogt.",
+    "description": "Ruimte maakt er een map voor op de machine en opent dan een terminal waarin je inlogt.",
     "name": "Naam",
     "namePlaceholder": "Werk",
     "color": "Kleur",

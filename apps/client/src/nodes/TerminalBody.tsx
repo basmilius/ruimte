@@ -13,13 +13,11 @@ import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
-import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
-import { createTerminal, fitToHost } from '@/terminal/xterm';
+import { bindTerminalKeys, createTerminal, fitToHost } from '@/terminal/xterm';
 import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
@@ -27,8 +25,6 @@ import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 import { Button, copyText, readClipboardText, Icon, ContextMenu } from '@basmilius/desktop-ui';
 
 const RESIZE_DEBOUNCE_MS = 50;
-/* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
-const SHIFT_ENTER = '\x1b\r';
 
 /* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
@@ -121,52 +117,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         refitRef.current = refit;
         const releaseWebgl = webglBudget.register(id, term, refit);
 
-        term.attachCustomKeyEventHandler((e) => {
-            const apple = isApplePlatform();
-            if (e.key === 'Escape') {
-                // Escape is the program's (an interrupt, a mode change); only the leave shortcut returns
-                // to the canvas, and it does so by falling through to the window listener unwritten.
-                if (isLeaveNodeShortcut(e, apple)) {
-                    return false;
-                }
-                // The canvas listens on window, where any Escape would clear the selection.
-                e.stopPropagation();
-                return true;
-            }
-            // A focused terminal has the keyboard the way a native one does: every shortcut the app does
-            // not need to move between views stops here instead of reaching the window listeners. The
-            // ones it does need are the window's alone, or xterm would write Cmd+Shift+Enter as a return.
-            if (isAppShortcut(e, apple)) {
-                return false;
-            }
-            e.stopPropagation();
-            if (e.type !== 'keydown') {
-                return true;
-            }
-            if (isClearShortcut(e, apple)) {
-                e.preventDefault();
-                clearTerminalAction(id);
-                return false;
-            }
-            // Neither written nor prevented, so the browser's own paste lands in xterm's textarea.
-            if (isTerminalPaste(e, apple)) {
-                return false;
-            }
-            if (apple) {
-                const motion = macMotionSequence(e, term.modes.applicationCursorKeysMode);
-                if (motion) {
-                    e.preventDefault();
-                    sessionClient.write(id, motion);
-                    return false;
-                }
-            }
-            if (e.key === 'Enter' && e.shiftKey) {
-                e.preventDefault();
-                sessionClient.write(id, SHIFT_ENTER);
-                return false;
-            }
-            return true;
-        });
+        bindTerminalKeys(term, { write: (data) => sessionClient.write(id, data), clear: () => clearTerminalAction(id), leaves: true });
         term.onData((data) => sessionClient.write(id, data));
 
         let cancelled = false;

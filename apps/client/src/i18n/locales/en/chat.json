@@ -21,5 +21,15 @@
     "image": {
         "gone": "That file is no longer there",
         "notShown": "A {{format}} image, a format this app does not show"
+    },
+    "login": {
+        "title": "Log in to {{account}}",
+        "description": "{{cli}} runs its own login in this terminal. It closes by itself once you are logged in.",
+        "landed": "Logged in",
+        "landedAs": "Logged in as {{email}}",
+        "ended": "The login ended.",
+        "dropped": "The connection to the machine dropped, which ended the login.",
+        "outdated": "This machine needs an update before you can log in from here. Update Ruimte on it, or log in from a project that is open on it.",
+        "failed": "The login could not start: {{reason}}"
     }
 }
