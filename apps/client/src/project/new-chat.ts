@@ -76,24 +76,29 @@ const showNewChat = async (endpointId: string, projectId: string, viewId: string
     shell?.openWindow?.(key, viewId);
 };
 
-/* A chat outside any project on one machine, which makes it in its Chats project and shows it. */
-export const newChatOn = async (endpointId: string): Promise<void> => {
+/*
+ * A chat outside any project on one machine, which makes it in its Chats project and shows it. The
+ * machine shows the chat nobody wrote in yet instead when there is one. False when no chat came.
+ */
+export const newChatOn = async (endpointId: string): Promise<boolean> => {
     let id = endpointId;
     try {
         id = await ensureMachine(endpointId);
         const transport = transportFor(id);
         if (!transport) {
-            return;
+            return false;
         }
         const { summary, viewId } = await transport.request('project.newChat', {});
         void listProjects(id).catch(() => undefined);
         await showNewChat(id, summary.projectId, viewId);
+        return true;
     } catch (e) {
         if (e instanceof TransportError && REFUSALS.includes(e.code)) {
             refuse(endpointId, id);
-            return;
+            return false;
         }
         useToasts.getState().show({ kind: 'error', title: i18next.t('common:state.error'), description: e instanceof Error ? e.message : String(e) });
+        return false;
     }
 };
 

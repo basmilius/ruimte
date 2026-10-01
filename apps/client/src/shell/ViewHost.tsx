@@ -1,9 +1,10 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { isFilesView, type CellView } from '@/shell/files-view';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { Canvas } from '@/canvas/Canvas';
+import { newChatOn } from '@/project/new-chat';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { useDiagram } from '@/state/diagram';
@@ -15,7 +16,7 @@ import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
-import { useProject } from '@/state/project';
+import { isScratchProject, useProject } from '@/state/project';
 import { useFiles } from '@/state/files';
 import { ErrorBoundary, lazyNamed } from '@basmilius/desktop-ui';
 
@@ -130,6 +131,27 @@ export function ViewSurface({ view }: { view: CellView }) {
     );
 }
 
+/*
+ * The Chats project has no kinds of view to pick from, so an empty window holds a chat: a new one, or
+ * the one nobody wrote in yet, which the machine hands out again. Asked once each time the window is
+ * empty; until the chat is on screen nothing is drawn, and a machine that gave none gets the tiles.
+ */
+function ChatsStart() {
+    const endpointId = useProject((s) => s.currentEndpointId);
+    const asked = useRef(false);
+    const [failed, setFailed] = useState(false);
+
+    useEffect(() => {
+        if (endpointId === null || asked.current) {
+            return;
+        }
+        asked.current = true;
+        void newChatOn(endpointId).then((shown) => setFailed(!shown));
+    }, [endpointId]);
+
+    return failed ? <ProjectStartScreen /> : <div className="absolute inset-0 bg-surface" />;
+}
+
 /* The main column: the grid of cells of the open project. */
 export function ViewHost() {
     const { t } = useTranslation('shell');
@@ -137,9 +159,10 @@ export function ViewHost() {
        no view of its own and still has something on screen. */
     const empty = useDocument((s) => s.layout === null);
     const projectId = useProject((s) => s.current?.projectId);
+    const scratch = useProject((s) => isScratchProject(s.current));
     return empty ? (
         <ErrorBoundary label={t('projectStart.failed')} resetKeys={[projectId]}>
-            <ProjectStartScreen />
+            {scratch ? <ChatsStart key={projectId} /> : <ProjectStartScreen />}
         </ErrorBoundary>
     ) : (
         <SplitGrid />
