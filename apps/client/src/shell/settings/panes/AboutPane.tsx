@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { desktop, isDesktop, type Release, type UpdateState } from '@/desktop/bridge';
 import { formatDayWithYear, useFormatLocale } from '@basmilius/desktop-ui/format';
 import { SettingsRow, TopIcon } from '@basmilius/desktop-ui/settings';
-import { Segmented, Switch, Button, copyText, Icon, Pill } from '@basmilius/desktop-ui';
+import { Segmented, Switch, Button, copyText, Icon } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { openOnboarding } from '@/onboarding/open';
 import { hasLocalMachine } from '@/state/local-machine';
@@ -13,15 +13,25 @@ import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
 import { previewUpdate, type UpdatePreview } from '@/state/update-preview';
-import { describeUpdate, hasUpdate, setAutoDownload, useUpdates } from '@/state/updates';
+import { describeUpdate, setAutoDownload, useUpdates } from '@/state/updates';
 import { useFocusedMachine } from '@/transport/connections';
 import { BrandSymbol } from '@/ui/Brand';
+import { Eclipse, type EclipseOrbit } from '@/ui/Eclipse';
 
 /* The three links, each with its words under `about.links.<id>`. */
 const LINKS = [
     { id: 'website', href: 'https://ruimte.app' },
     { id: 'source', href: 'https://github.com/basmilius/ruimte' },
     { id: 'report', href: 'https://github.com/basmilius/ruimte/issues/new' }
+];
+
+/* The welcome's sky, wider: two more orbits, the outer one turning back with a warm moon on it. */
+const ABOUT_ORBITS: readonly EclipseOrbit[] = [
+    { size: 230, alpha: 0.1 },
+    { size: 350, alpha: 0.07, spin: 140, moon: { tone: 'cool', left: 88, top: 24 } },
+    { size: 520, alpha: 0.05 },
+    { size: 720, alpha: 0.04, spin: -200, moon: { tone: 'warm', left: 10, top: 70 } },
+    { size: 980, alpha: 0.03 }
 ];
 
 const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' };
@@ -96,7 +106,6 @@ export function AboutPane() {
     const previousSeen = useReleaseNotes((s) => s.previousSeen);
     const withNotes = updates.supported && canShowReleaseNotes();
     const notesLink = withNotes ? notesView(releases ?? [], updates.currentVersion, updates, previousSeen).link : null;
-    const offered = hasUpdate(updates);
 
     useEffect(() => {
         if (withNotes) {
@@ -115,83 +124,96 @@ export function AboutPane() {
     };
 
     return (
-        <>
-            {import.meta.env.DEV && <UpdatePreviewBar />}
-            <header className="flex min-w-0 flex-wrap items-center gap-4.5 rounded-xl border border-border bg-surface bg-clip-padding p-5.5">
-                <BrandSymbol size={64} className="rounded-2xl" />
-                <div className="min-w-0 grow">
-                    <h3 className="text-lg font-semibold text-text">Ruimte</h3>
-                    <p className="mt-0.5 text-xs text-text-muted">{t('about.tagline')}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                    <span className="text-xs text-text-muted tabular-nums">{t('about.version', { version: version ?? t('about.unknownVersion') })}</span>
-                    {offered && (
-                        <Pill shape="tag" tone="accent">
-                            {t(`about.status.${updates.status}`)}
-                        </Pill>
-                    )}
+        // The padding and the gaps of a pane the dialog lays out itself, by hand, since this one scrolls itself (`ABOUT_SECTION`).
+        <div
+            className="scroll-fade-top min-h-0 grow overflow-y-auto"
+            onScroll={(event) => event.currentTarget.toggleAttribute('data-fade-start', event.currentTarget.scrollTop > 0)}
+        >
+            <header className="relative">
+                <Eclipse
+                    sky="fade"
+                    center={132}
+                    glows={[360, 170]}
+                    rings={[112, 144]}
+                    orbits={ABOUT_ORBITS}
+                    stars={{ count: 58, seed: 132 }}
+                    className="h-[400px]"
+                />
+                {/* The icon sits on the eclipse, whose point is 132px down. */}
+                <div className="relative flex flex-col items-center px-8 pt-[96px] pb-(--eclipse-clearance) text-center">
+                    <div data-theme="dark" className="flex flex-col items-center gap-1.5">
+                        <BrandSymbol size={72} className="mb-2 rounded-[17px] shadow-float" />
+                        <h3 className="text-lg font-semibold text-text">Ruimte</h3>
+                        <p className="text-xs text-text-muted">{t('about.tagline')}</p>
+                        <p className="mt-2.5 text-xs text-text-muted tabular-nums">{t('about.version', { version: version ?? t('about.unknownVersion') })}</p>
+                    </div>
                 </div>
             </header>
-            {updates.supported && (
-                <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
-                    <UpdateStatusRow releases={releases} notesVersion={notesLink?.version ?? null} />
-                    <SettingsRow
-                        searchId="about.updates.auto"
-                        label={t('about.updates.auto.label')}
-                        description={t('about.updates.auto.description')}
-                        control={<Switch checked={autoDownload} onCheckedChange={setAuto} label={t('about.updates.auto.label')} />}
-                    />
+            <div className="relative flex flex-col gap-7 px-8 pb-10 max-[960px]:px-4">
+                {import.meta.env.DEV && <UpdatePreviewBar />}
+                {updates.supported && (
+                    <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
+                        <UpdateStatusRow releases={releases} notesVersion={notesLink?.version ?? null} />
+                        <SettingsRow
+                            searchId="about.updates.auto"
+                            label={t('about.updates.auto.label')}
+                            description={t('about.updates.auto.description')}
+                            control={<Switch checked={autoDownload} onCheckedChange={setAuto} label={t('about.updates.auto.label')} />}
+                        />
+                    </SettingsSection>
+                )}
+                {hasLocalMachine() && (
+                    <SettingsSection>
+                        <SettingsRow
+                            searchId="about.onboarding"
+                            label={t('onboarding:about.label')}
+                            description={t('onboarding:about.description')}
+                            control={
+                                <Button variant="secondary" onClick={() => openOnboarding()}>
+                                    {t('common:action.open')}
+                                </Button>
+                            }
+                        />
+                    </SettingsSection>
+                )}
+                <SettingsSection
+                    title={t('about.details.title')}
+                    action={
+                        <Button variant="secondary" onClick={copyDetails}>
+                            <Icon icon={Copy} size={12} /> {t('about.details.copy')}
+                        </Button>
+                    }
+                >
+                    {details.map((row) => (
+                        <SettingsRow
+                            key={row.label}
+                            label={row.label}
+                            description={row.description}
+                            control={
+                                <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-xs text-text-muted'}>
+                                    {row.value}
+                                </span>
+                            }
+                        />
+                    ))}
                 </SettingsSection>
-            )}
-            {hasLocalMachine() && (
-                <SettingsSection>
-                    <SettingsRow
-                        searchId="about.onboarding"
-                        label={t('onboarding:about.label')}
-                        description={t('onboarding:about.description')}
-                        control={
-                            <Button variant="secondary" onClick={() => openOnboarding()}>
-                                {t('common:action.open')}
-                            </Button>
-                        }
-                    />
+                <SettingsSection title={t('about.links.title')}>
+                    {LINKS.map((link) => (
+                        <SettingsRow
+                            key={link.href}
+                            label={t(`about.links.${link.id}.label`)}
+                            description={t(`about.links.${link.id}.description`)}
+                            control={
+                                <Button variant="secondary" size="sm" href={link.href}>
+                                    {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
+                                </Button>
+                            }
+                        />
+                    ))}
                 </SettingsSection>
-            )}
-            <SettingsSection
-                title={t('about.details.title')}
-                action={
-                    <Button variant="secondary" onClick={copyDetails}>
-                        <Icon icon={Copy} size={12} /> {t('about.details.copy')}
-                    </Button>
-                }
-            >
-                {details.map((row) => (
-                    <SettingsRow
-                        key={row.label}
-                        label={row.label}
-                        description={row.description}
-                        control={
-                            <span className={row.mono ? 'max-w-72 truncate font-mono text-code text-text-muted' : 'text-xs text-text-muted'}>{row.value}</span>
-                        }
-                    />
-                ))}
-            </SettingsSection>
-            <SettingsSection title={t('about.links.title')}>
-                {LINKS.map((link) => (
-                    <SettingsRow
-                        key={link.href}
-                        label={t(`about.links.${link.id}.label`)}
-                        description={t(`about.links.${link.id}.description`)}
-                        control={
-                            <Button variant="secondary" size="sm" href={link.href}>
-                                {t('common:action.open')} <Icon icon={ArrowUpRight} size={12} />
-                            </Button>
-                        }
-                    />
-                ))}
-            </SettingsSection>
-            <p className="text-center text-xs text-text-faint">FSL-1.1-MIT · Copyright 2026 Bas Milius</p>
-        </>
+                <p className="text-center text-xs text-text-faint">FSL-1.1-MIT · Copyright 2026 Bas Milius</p>
+            </div>
+        </div>
     );
 }
 

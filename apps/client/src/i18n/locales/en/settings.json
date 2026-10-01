@@ -421,11 +421,6 @@
     "about": {
         "tagline": "Space for AI Engineering.",
         "version": "Version {{version}}",
-        "status": {
-            "available": "Update available",
-            "downloading": "Downloading",
-            "ready": "Ready to install"
-        },
         "unknownVersion": "unknown",
         "details": {
             "title": "Details",

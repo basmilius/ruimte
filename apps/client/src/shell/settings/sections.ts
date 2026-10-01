@@ -49,7 +49,8 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 ];
 
 /* At the foot of the navigation, under the groups: the app itself, then the account block. */
-export const ABOUT_SECTION: SettingsSectionMeta = { id: 'about', icon: Info };
+// Split so the pane scrolls itself and its sky runs to the edges, until a title bar can float over a pane (basmilius/desktop#20).
+export const ABOUT_SECTION: SettingsSectionMeta = { id: 'about', icon: Info, split: true };
 export const ACCOUNT_SECTION: SettingsSectionMeta = { id: 'machines', icon: Server, split: true };
 
 export const ALL_SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [...SETTINGS_GROUPS.flatMap((group) => group.sections), ABOUT_SECTION, ACCOUNT_SECTION];
