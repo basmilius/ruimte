@@ -530,7 +530,11 @@ export function Timeline({ chatId, composer, overlay }: { chatId: string; compos
                             <QuoteButton thread={threadRef} frame={contentRef} taker={quoteTakerRef} />
                             <div
                                 ref={composerRef}
-                                className={clsx('relative z-10 shrink-0', composer && 'px-3 pb-3 pt-3')}
+                                // The card is translucent so the thread shows through it, but the pb-3 strip under it must stay opaque.
+                                className={clsx(
+                                    'relative z-10 shrink-0',
+                                    composer && 'px-3 pb-3 pt-3 bg-[linear-gradient(to_bottom,transparent_calc(100%-12px),var(--surface)_calc(100%-12px))]'
+                                )}
                                 style={{ position: stickyComposer ? 'sticky' : 'relative', bottom: 0 }}
                             >
                                 <QuoteTakerContext.Provider value={registerQuoteTaker}>{composer}</QuoteTakerContext.Provider>
