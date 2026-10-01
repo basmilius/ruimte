@@ -206,6 +206,9 @@ const ICON_IN_BUTTON: Record<string, number> = { 'icon-btn-sm': 14, 'icon-btn-xs
 /* Sizes between the steps of 12, 14, 16 and 20, which is what an icon anywhere keeps to. */
 const OFF_SCALE_ICON = new Set([13, 15, 17, 18]);
 
+/* The app icon is a picture sized to the type beside it, not a glyph on the icon scale. */
+const NOT_AN_ICON = new Set(['BrandSymbol']);
+
 const isIconButton = (classes: string): boolean => classes.split(/\s+/).includes('icon-btn');
 
 const attributeOf = (node: JSXElement, name: string): unknown =>
@@ -393,7 +396,7 @@ describe('the conventions of the client', () => {
             .filter(({ path }) => path.endsWith('.tsx'))
             .flatMap(({ path, text }) =>
                 nodesIn(programOf(path, text)).flatMap((node) => {
-                    if (node.type !== 'JSXElement') {
+                    if (node.type !== 'JSXElement' || NOT_AN_ICON.has(nameOf((node as JSXElement).openingElement.name))) {
                         return [];
                     }
                     const size = iconSizeOf(node as JSXElement);
