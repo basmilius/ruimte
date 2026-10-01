@@ -258,8 +258,8 @@ export function ProjectMenu() {
                     )
                 }
             >
-                {/* todo(Bas): Chats and New chat above Recent, with Recent and Open folder in one group, once
-                    ProjectSwitcher can draw that (basmilius/desktop#22). */}
+                {/* todo(Bas): one row Chats above Recent with New chat as its trailing button, and Recent and
+                    Open folder in one group, once ProjectSwitcher can draw that (basmilius/desktop#22, #23). */}
                 {chats !== null && (
                     <Menu.Item onClick={(event) => openProjectClickAction(event, chats.endpointId, chats.summary.projectId)}>
                         <ProjectGlyph
