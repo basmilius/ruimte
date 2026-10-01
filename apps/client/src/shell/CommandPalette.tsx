@@ -661,7 +661,12 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
            looked for by its own name, and which daemon it is on is what tells two of them apart. */
         const projectMachines = new Set(projects.map((row) => row.endpointId));
         const switches: Entry[] = projects
-            .filter((row) => row.summary.available && !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId))
+            .filter(
+                (row) =>
+                    row.summary.available &&
+                    row.summary.scratch !== true &&
+                    !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId)
+            )
             .map(({ endpointId, summary }) => {
                 const where = summary.folder;
                 const label = endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? t('start.anotherMachine');

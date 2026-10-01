@@ -60,3 +60,10 @@ test('the active project remains visible until its project-list response arrives
     const current = { endpointId: 'mac', summary: summary('Skills', false) };
     expect(sidebarSelection([], [endpoint('mac')], current).map((row) => row.summary.projectId)).toEqual(['Skills']);
 });
+
+test('the Chats project is only in the sidebar of the window that shows it', () => {
+    const chats = { endpointId: 'mac', summary: { ...summary('chats'), scratch: true } };
+    const rows = [{ endpointId: 'mac', summary: summary('Skills') }, chats];
+    expect(sidebarSelection(rows, [endpoint('mac')], null).map((row) => row.summary.projectId)).toEqual(['Skills']);
+    expect(sidebarSelection(rows, [endpoint('mac')], chats).map((row) => row.summary.projectId)).toEqual(['chats', 'Skills']);
+});

@@ -125,8 +125,20 @@ const knownRows = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonl
     });
 };
 
+/* A machine's Chats project has a place of its own and never stands among the projects. */
+const projectRows = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] =>
+    knownRows(rows, endpoints, connected).filter((row) => row.summary.scratch !== true);
+
+/* The Chats project of every machine that has one, in the order of the machines. */
+export const chatsProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] => {
+    const order = endpoints.map((endpoint) => endpoint.id);
+    return knownRows(rows, endpoints, connected)
+        .filter((row) => row.summary.scratch === true)
+        .sort((a, b) => order.indexOf(a.endpointId) - order.indexOf(b.endpointId));
+};
+
 export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows => {
-    const listed = knownRows(rows, endpoints, connected);
+    const listed = projectRows(rows, endpoints, connected);
     return {
         open: listed.filter((row) => !isRecentProject(row.summary)).sort((a, b) => b.summary.lastOpenedAt - a.summary.lastOpenedAt),
         recent: listed.filter((row) => isRecentProject(row.summary)).sort((a, b) => (b.summary.closedAt ?? 0) - (a.summary.closedAt ?? 0))
@@ -141,7 +153,7 @@ const touchedAt = (summary: ProjectSummary): number => Math.max(summary.lastOpen
  * that was just closed sits on top and a wrong click is one click back.
  */
 export const recentProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] =>
-    knownRows(rows, endpoints, connected).sort((a, b) => touchedAt(b.summary) - touchedAt(a.summary));
+    projectRows(rows, endpoints, connected).sort((a, b) => touchedAt(b.summary) - touchedAt(a.summary));
 
 /* The rows worth offering. A project whose file its machine no longer finds cannot be opened. The
    one that is open keeps its row, or its settings and the way to close it would go with it. */

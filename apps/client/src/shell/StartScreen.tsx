@@ -6,7 +6,7 @@ import { AppWindow, FolderOpen, LogIn, MessageSquarePlus, MonitorSmartphone, Rot
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
+import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
 import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProject } from '@/project/open';
 import { openProjectAction, openProjectClickAction } from '@/actions/client-actions';
@@ -86,6 +86,22 @@ function RecentRow({ row }: { row: ProjectMenuRow }) {
             </ContextMenu.Trigger>
             <RecentRowMenu row={row} />
         </ContextMenu.Root>
+    );
+}
+
+/* The machine's Chats project, above Recent and apart from the projects. It names no folder, so its second line is the machine, and only where there is more than one. */
+function ChatsRow({ row, showMachine }: { row: ProjectMenuRow; showMachine: boolean }) {
+    const { t } = useTranslation('shell');
+    const { summary } = row;
+    const where = [showMachine ? row.machineLabel : null, row.connected ? null : t('start.notConnected')].filter((part) => part !== null).join(' · ');
+    return (
+        <button className={ROW} onClick={(event) => openProjectClickAction(event, row.endpointId, summary.projectId)}>
+            <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} size={16} scratch />
+            <span className="flex min-w-0 grow flex-col">
+                <span className={clsx('truncate text-sm', row.connected ? 'text-text' : 'text-text-muted')}>{t('chats.name')}</span>
+                {where !== '' && <span className="truncate text-xs text-text-faint">{where}</span>}
+            </span>
+        </button>
     );
 }
 
@@ -203,6 +219,7 @@ function StartContent() {
     const station = !hasLocalMachine();
     const boot = stationBoot({ station, accountStatus, machines: accountMachines });
     const recent = useMemo(() => recentProjects(rows, endpoints, connected), [rows, endpoints, connected]);
+    const chats = useMemo(() => openableRows(chatsProjects(rows, endpoints, connected)), [rows, endpoints, connected]);
     const machines = useMemo(
         () => mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
         [endpoints, accountMachines, accountStatus]
@@ -217,10 +234,11 @@ function StartContent() {
     // On the desktop signing in is one way in among the others, offered only while it can be done.
     const offerSignIn = boot === null && accountStatus === 'signed-out';
     // A fresh desktop install: nothing to go back to and only this machine, so there is one thing to do.
-    const firstStart = boot === null && listed.length === 0 && failure === null && machines.length <= 1;
+    const firstStart = boot === null && listed.length === 0 && chats.length === 0 && failure === null && machines.length <= 1;
 
     // Nothing to go back to leaves the second column empty, and a lone column belongs in the middle.
     const hasRecent = failure !== null || listed.length > 0;
+    const secondColumn = hasRecent || chats.length > 0;
 
     const openFolder = (): void => useUi.getState().openFolderBrowser();
 
@@ -277,7 +295,7 @@ function StartContent() {
                     {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                 </div>
             ) : (
-                <div className={clsx('grid grow grid-cols-1 items-start gap-10', hasRecent ? 'md:grid-cols-2' : 'mx-auto w-full max-w-md')}>
+                <div className={clsx('grid grow grid-cols-1 items-start gap-10', secondColumn ? 'md:grid-cols-2' : 'mx-auto w-full max-w-md')}>
                     <div className="flex min-w-0 flex-col gap-8">
                         {boot === 'machines' && machineList}
                         <Section label={t('start.start')}>
@@ -312,16 +330,25 @@ function StartContent() {
                         </Section>
                         {boot === null && machineList}
                     </div>
-                    {hasRecent && (
+                    {secondColumn && (
                         <div className="flex min-w-0 flex-col gap-8">
-                            <Section label={t('start.recent')}>
+                            {chats.length > 0 && (
                                 <div className="flex flex-col gap-px">
-                                    {failure !== null && <FailedRow failure={failure} row={failedRow} />}
-                                    {listed.map((row) => (
-                                        <RecentRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} />
+                                    {chats.map((row) => (
+                                        <ChatsRow key={row.endpointId} row={row} showMachine={chats.length > 1} />
                                     ))}
                                 </div>
-                            </Section>
+                            )}
+                            {hasRecent && (
+                                <Section label={t('start.recent')}>
+                                    <div className="flex flex-col gap-px">
+                                        {failure !== null && <FailedRow failure={failure} row={failedRow} />}
+                                        {listed.map((row) => (
+                                            <RecentRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} />
+                                        ))}
+                                    </div>
+                                </Section>
+                            )}
                         </div>
                     )}
                 </div>

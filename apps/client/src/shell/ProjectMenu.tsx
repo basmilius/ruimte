@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ActionInput } from '@ruimte/actions';
 import { useTranslation } from 'react-i18next';
-import { AppWindow, ExternalLink, FolderOpen, Settings2, X } from 'lucide-react';
+import { AppWindow, ExternalLink, FolderOpen, MessageSquarePlus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
+import { chatsProjects, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
+import { newChat, useOffersNewChat } from '@/project/new-chat';
 import { openProjectClickAction, performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { closingProject } from '@/project/open';
 import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
@@ -97,6 +98,11 @@ export function ProjectMenu() {
     }, [rows, endpoints, connected, currentKey]);
     const showMachine = endpoints.length > 1;
     const machineId = currentEndpointId ?? activeId;
+    const chats = useMemo(
+        () => chatsProjects(rows, endpoints, connected).find((row) => row.endpointId === machineId && row.summary.available) ?? null,
+        [rows, endpoints, connected, machineId]
+    );
+    const offersChat = useOffersNewChat();
     const machine = machineId === LOCAL_ENDPOINT_ID ? null : (endpoints.find((endpoint) => endpoint.id === machineId) ?? null);
     const servers = useServers((s) => s.byEndpoint);
     const machineIcon = servers[machineId]?.icon ?? null;
@@ -227,13 +233,14 @@ export function ProjectMenu() {
                         ? null
                         : {
                               id: `${currentEndpointId}:${current.projectId}`,
-                              name: current.name,
+                              name: current.scratch === true ? t('chats.name') : current.name,
                               icon: (
                                   <ProjectGlyph
                                       projectId={current.projectId}
                                       endpointId={currentEndpointId ?? undefined}
                                       icon={current.icon}
                                       color={current.color}
+                                      scratch={current.scratch === true}
                                   />
                               )
                           }
@@ -251,6 +258,28 @@ export function ProjectMenu() {
                     )
                 }
             >
+                {/* todo(Bas): one row for Chats between the open projects and Recent, with New chat as the button
+                    where a project has its ellipsis, once ProjectSwitcher in @basmilius/desktop-ui can draw a row
+                    there with a button that acts at once. */}
+                {chats !== null && (
+                    <Menu.Item onClick={(event) => openProjectClickAction(event, chats.endpointId, chats.summary.projectId)}>
+                        <ProjectGlyph
+                            projectId={chats.summary.projectId}
+                            endpointId={chats.endpointId}
+                            icon={chats.summary.icon}
+                            color={chats.summary.color}
+                            size={14}
+                            scratch
+                        />{' '}
+                        {t('chats.name')}
+                    </Menu.Item>
+                )}
+                {offersChat && (
+                    <Menu.Item onClick={newChat}>
+                        <Icon icon={MessageSquarePlus} size={14} /> {t('chats.newChat')}
+                    </Menu.Item>
+                )}
+                {(chats !== null || offersChat) && <Menu.Separator />}
                 <Menu.Item onClick={() => useUi.getState().openFolderBrowser()}>
                     <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
                 </Menu.Item>

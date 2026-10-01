@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { ProjectIcon } from '@ruimte/contracts';
+import { MessagesSquare } from 'lucide-react';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { useTheme } from '@/state/theme';
 import { useMachineUrl } from '@/transport/machine-url';
@@ -13,13 +14,27 @@ interface ProjectGlyphProps {
     color: string;
     size?: number;
     className?: string;
+    /* The machine's Chats project, which is no folder and wears a mark of its own whatever its icon says. */
+    scratch?: boolean;
 }
 
 /* A project's icon at one size: what was picked, what the folder declares, or its initial. */
-export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className }: ProjectGlyphProps) {
+export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className, scratch = false }: ProjectGlyphProps) {
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };
-    const image = useMachineUrl(icon.kind === 'image' ? { kind: 'projectIcon', projectId, theme, version: icon.version } : null, endpointId);
+    const image = useMachineUrl(icon.kind === 'image' && !scratch ? { kind: 'projectIcon', projectId, theme, version: icon.version } : null, endpointId);
+
+    if (scratch) {
+        return (
+            <span
+                aria-hidden
+                className={clsx('flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border-strong text-text-muted', className)}
+                style={box}
+            >
+                <Icon icon={MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
+            </span>
+        );
+    }
 
     if (icon.kind === 'lucide') {
         return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;

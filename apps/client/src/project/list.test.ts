@@ -5,6 +5,7 @@ import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
 import { pool } from '../transport';
 import {
+    chatsProjects,
     closeListedProjectLocally,
     listProjects,
     menuProjects,
@@ -141,6 +142,32 @@ describe('the switcher as one list', () => {
             { endpointId: 'local', summary: summary('p1', 10) }
         ];
         expect(menuProjects(rows, endpoints, []).open.map((row) => row.summary.projectId)).toEqual(['p1']);
+    });
+});
+
+describe('the Chats project of a machine', () => {
+    const endpoints = [endpoint('local', 'This machine'), endpoint('daemon-b', 'Work laptop')];
+    const chats = (closedAt: number | null = null): ProjectSummary => ({ ...summary('chats', 50, closedAt), scratch: true });
+
+    test('stands in no list of projects, open or closed', () => {
+        const rows = [
+            { endpointId: 'local', summary: chats() },
+            { endpointId: 'daemon-b', summary: chats(400) },
+            { endpointId: 'local', summary: summary('p1', 10) }
+        ];
+        const { open, recent } = menuProjects(rows, endpoints, []);
+        expect(open.map((row) => row.summary.projectId)).toEqual(['p1']);
+        expect(recent).toEqual([]);
+        expect(recentProjects(rows, endpoints, []).map((row) => row.summary.projectId)).toEqual(['p1']);
+    });
+
+    test('has a place of its own, one per machine in the order of the machines', () => {
+        const rows = [
+            { endpointId: 'daemon-b', summary: chats() },
+            { endpointId: 'local', summary: summary('p1', 10) },
+            { endpointId: 'local', summary: chats(400) }
+        ];
+        expect(chatsProjects(rows, endpoints, []).map((row) => row.endpointId)).toEqual(['local', 'daemon-b']);
     });
 });
 

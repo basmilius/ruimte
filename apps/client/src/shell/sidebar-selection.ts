@@ -1,4 +1,4 @@
-import { menuProjects, openableRows } from '@/project/list';
+import { chatsProjects, menuProjects, openableRows } from '@/project/list';
 import type { ProjectRow } from '@/state/project-list';
 import type { Endpoint } from '@/state/endpoints';
 
@@ -9,5 +9,10 @@ export const sidebarSelection = (rows: ProjectRow[], endpoints: Endpoint[], curr
         listed.push(current);
     }
     const currentKey = current ? `${current.endpointId}:${current.summary.projectId}` : null;
-    return openableRows(menuProjects(listed, endpoints, []).open, currentKey);
+    const projects = openableRows(menuProjects(listed, endpoints, []).open, currentKey);
+    // The Chats project stays out of every other window's sidebar, and its own lists its chats.
+    if (current?.summary.scratch === true && endpoints.some((endpoint) => endpoint.id === current.endpointId)) {
+        return [...chatsProjects([current], endpoints, []), ...projects];
+    }
+    return projects;
 };

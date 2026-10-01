@@ -84,6 +84,7 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
                         icon={target.summary.icon}
                         color={target.summary.color}
                         size={24}
+                        scratch={target.summary.scratch === true}
                     />
                 ) : (
                     <MachineGlyph icon={aboutMachine ? machineIcon : null} size={24} className="text-text-faint" />
