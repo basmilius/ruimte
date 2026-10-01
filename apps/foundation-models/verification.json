@@ -344,8 +344,6 @@
     "state": "Experimental opt-in implementation; next phase is repeatable task-quality evaluation",
     "baseline": "a42db32a",
     "branch": "main",
-    "fixture": "docs/reports/fixtures/apple-workday",
-    "startPrompt": "docs/reports/2026-09-25-apple-foundation-startprompt.txt",
     "modelTestsRunDuringDocumentationUpdate": false,
     "proposedNotImplemented": [
       "Fixed repeated everyday-task evaluation",

@@ -251,10 +251,7 @@ without losing work. Installing apps and device logs remain out of scope.
 
 ## 12. Multiple windows
 
-Use [the old window design](research/windows.md) as research, not a current implementation script.
-It predates the background service, project merge fixes and the grid of views within one project.
-
-1. Rewrite its file map and acceptance cases against today's code. Keep one start screen or one
+1. Write a file map and acceptance cases against today's code. Keep one start screen or one
    project per window; views of that project may still occupy a grid.
 2. Replace Electron's singleton window with a window registry and resolve window-specific IPC,
    menus, dialogs, browser guests and notification routing from the sender/owning window.
@@ -332,8 +329,7 @@ step on an engineering assumption alone.
 3. Keep Windows deferred under [issue #15](https://github.com/basmilius/ruimte/issues/15). First prove
    a ConPTY helper behind the existing PTY adapter; then shell/path/process assumptions, filesystem
    watching, service/CLI packaging and an unsigned installer. Use
-   [the platform audit](reports/2026-09-24-cross-platform.html) as the checklist,
-   not `research/windows.md`, which is about multiple application windows.
+   [the platform audit](reports/2026-09-24-cross-platform.html) as the checklist.
 
 Done when each supported platform has CI and recorded packaged-app checks for its claimed
 architectures/formats.
