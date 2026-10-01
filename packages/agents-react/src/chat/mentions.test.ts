@@ -7,6 +7,7 @@ import {
     findSkillQuery,
     insertMention,
     insertSkill,
+    pastedMentions,
     presentMentions,
     presentSkills,
     tokenizeChips
@@ -156,5 +157,19 @@ describe('chipRanges', () => {
     test('finds nothing in empty text or for values that are gone', () => {
         expect(chipRanges('', ['a.ts'])).toEqual([]);
         expect(chipRanges('nothing here', ['gone.ts'], ['gone'])).toEqual([]);
+    });
+});
+
+describe('pastedMentions', () => {
+    test('reads the paths of a text that is only @paths, one per line or space apart', () => {
+        expect(pastedMentions('@README.md\n@src/sample.txt\n')).toEqual(['README.md', 'src/sample.txt']);
+        expect(pastedMentions('@a.ts @a.ts @b.ts')).toEqual(['a.ts', 'b.ts']);
+    });
+
+    test('leaves any other text alone', () => {
+        expect(pastedMentions('')).toEqual([]);
+        expect(pastedMentions('look at @README.md')).toEqual([]);
+        expect(pastedMentions('mail me@example.com')).toEqual([]);
+        expect(pastedMentions('@')).toEqual([]);
     });
 });

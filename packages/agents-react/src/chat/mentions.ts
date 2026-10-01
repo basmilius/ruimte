@@ -101,6 +101,18 @@ export const chipText = (segment: ChipSegment): string => {
     return segment.text;
 };
 
+/*
+ * The paths in a pasted text that is nothing but `@path` tokens, which is what copying mentions from
+ * a list of files puts on the clipboard. Any other text, an email address included, is text.
+ */
+export const pastedMentions = (text: string): string[] => {
+    const tokens = text.trim().split(/\s+/);
+    if (tokens.some((token) => !/^@[^\s@]+$/.test(token))) {
+        return [];
+    }
+    return [...new Set(tokens.map((token) => token.slice(1)))];
+};
+
 export interface TextRange {
     from: number;
     to: number;

@@ -35,6 +35,7 @@ import {
     findSkillQuery,
     insertMention,
     insertSkill,
+    pastedMentions,
     presentMentions,
     presentSkills,
     type MentionQuery,
@@ -864,6 +865,13 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
         const inline = pasteInlineRef.current;
         pasteInlineRef.current = false;
         const clip = data.getData('text/plain');
+        const mentions = capabilities?.mentions === false ? [] : pastedMentions(clip);
+        if (mentions.length > 0) {
+            // The editor's own change reads the draft as it was rendered, so the mentions join it after that change.
+            view.dispatch(view.state.replaceSelection(clip), { scrollIntoView: true, userEvent: 'input.paste' });
+            setDraft((current) => ({ ...current, mentions: [...current.mentions, ...mentions.filter((path) => !current.mentions.includes(path))] }));
+            return true;
+        }
         // Without attachments there is nowhere else for the text to go, so it pastes as it always did.
         if (inline || capabilities?.attachments === false || !pasteBecomesAttachment(clip)) {
             return false;
