@@ -192,21 +192,28 @@ decision-dependent step until concurrent edits have a defined treatment.
 
 ## 9. Accounts
 
-Source: [the account report](reports/2026-09-25-provider-accounts.html) and
-`packages/agents/src/providers/accounts`.
+Source: `packages/agents/src/providers/accounts`. Nobody has used a second real account yet.
 
-1. Verify two real Claude account folders retain separate logins after daemon/app restart, and a
-   real Codex conversation continues on another account through its shadow home. Record versions
-   and outcomes without reading vendor credentials.
+1. Verify two real Claude account folders retain separate logins after daemon/app restart, each
+   showing its own email after a restart of the Mac, and a real Codex conversation continues on
+   another account in the same thread through its shadow home ("Continue on account"). Record
+   versions and outcomes without reading vendor credentials.
 2. Verify login started from iPhone and station. Codex's device-auth route is a candidate; establish
    what Claude's browser callback requires when the browser and CLI are on different machines.
    Implement only the missing flow, preserving the distinction from Ruimte's own account login.
 3. Decide which skills, `CLAUDE.md` and settings an additional Claude account should share with
    `~/.claude`. Implement that policy without sharing authentication or overwriting an explicit
    account configuration.
-4. Complete the iOS account follow-up from the report: Continue on account after a limit, limit
-   information in its account menu, and a remembered default keyed by machine and CLI. Recheck
-   each against current iOS behavior before writing it.
+4. Complete the iOS account follow-up: Continue on account after a limit (`chat.continueOn` is
+   generated but no screen calls it), limit information in its account menu, and a remembered
+   default keyed by machine and CLI. Recheck each against current iOS behavior before writing it.
+5. Drop the background behind the machine tiles in the Account pane, as the other settings icons did.
+
+Known limits, accepted for now: a Claude chat cannot move to an account with another folder after
+its first turn (fork instead); Gemini and Copilot only have their default account until it is known
+which variable points at their folder; a non-default account is read for limits on the clock only
+when used in the last 24 hours, a time the daemon keeps in memory only; "Show folder" copies the
+path, since the desktop bridge cannot reveal a folder.
 
 Done when the real-account checks pass and mobile/web login either succeeds or has a precise
 remaining provider limitation. Folder-isolation tests alone cannot establish login isolation.
