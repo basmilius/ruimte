@@ -32,7 +32,7 @@ import { useLaunches } from '@/launches/state';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { openOnboarding } from '@/onboarding/open';
-import { useProject } from '@/state/project';
+import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 import { hasLocalMachine } from '@/state/local-machine';
 import { providersOf } from '@ruimte/agents-react/state/providers';
@@ -175,7 +175,9 @@ export const OPENING_COMMAND_IDS: readonly string[] = ['add-chat', 'add-terminal
 export const appCommands = (): Command[] => {
     const canvas = focusedCanvas().getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
-    const folder = useProject.getState().current?.folder ?? null;
+    const current = useProject.getState().current;
+    const folder = shownFolderOf(current);
+    const scratch = isScratchProject(current);
     const { activeViewId, views, layout, maximized } = useDocument.getState();
     const filling = maximizedCell(layout, maximized) !== null;
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
@@ -433,7 +435,7 @@ export const appCommands = (): Command[] => {
                       : []),
                   ...(diagram && activeView
                       ? [
-                            ...(useProject.getState().current?.folder
+                            ...(folder
                                 ? [
                                       {
                                           id: 'diagram-open-json',
@@ -522,10 +524,14 @@ export const appCommands = (): Command[] => {
             shortcut: APP_SHORTCUTS.sidebar,
             run: () => useUi.getState().toggleSidebar()
         },
-        { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
-        { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
+        ...(scratch
+            ? []
+            : [
+                  { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
+                  { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') }
+              ]),
         { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') },
-        ...(inWorkspace ? launchCommands() : []),
+        ...(inWorkspace && !scratch ? launchCommands() : []),
         { id: 'theme', label: i18next.t('shell:palette.commands.toggleTheme'), run: () => useTheme.getState().toggle() },
         ...(canKeepAwake()
             ? [

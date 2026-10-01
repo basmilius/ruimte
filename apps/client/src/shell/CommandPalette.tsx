@@ -83,7 +83,7 @@ import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
-import { useProject } from '@/state/project';
+import { shownFolderOf, useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
@@ -218,7 +218,7 @@ function PaletteBody({ browseSeen, onClosed }: { browseSeen: number; onClosed():
     const order = useCanvas((s) => s.order);
     const views = useDocument((s) => s.views);
     const activeViewId = useDocument((s) => s.activeViewId);
-    const folder = useProject((s) => s.current?.folder ?? null);
+    const folder = useProject((s) => shownFolderOf(s.current));
     const projects = useProjectList((s) => s.projects);
     const currentProjectId = useProject((s) => s.current?.projectId ?? null);
     const currentEndpointId = useProject((s) => s.currentEndpointId);

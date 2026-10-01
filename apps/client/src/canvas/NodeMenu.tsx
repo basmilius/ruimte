@@ -36,7 +36,7 @@ import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { maximizedNodeOf, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useFiles } from '@/state/files';
-import { useProject } from '@/state/project';
+import { isScratchProject, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
@@ -65,6 +65,7 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
     const platform = useServer((s) => s.platform);
     const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
+    const scratch = useProject((s) => isScratchProject(s.current));
     const transport = useTransport();
     const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' ? id : null);
@@ -130,8 +131,12 @@ export function NodeMenuPopup({ id, onRename, snooze }: { id: string; onRename()
         }
         await linkNodesAction(viewId, id, chatId);
     };
-    // The folder the node works in: its own, or the project's when it has none.
-    const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : (node.worktree?.path ?? null);
+    // The folder the node works in: its own, or the project's when it has none. The Chats project shows none of its folders.
+    const workingFolder = scratch
+        ? null
+        : node.kind === 'terminal' || node.kind === 'chat'
+          ? (node.cwd ?? chatCwd ?? projectFolder)
+          : (node.worktree?.path ?? null);
     // What the node holds is stored against the project folder; the menu acts on the daemon's path.
     const filePath = node.kind === 'file' && node.path ? resolveStoredPath(projectFolder, node.path) : null;
 

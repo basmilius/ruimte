@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { PANELS } from '@/shell/panels';
-import { useUi } from '@/state/ui';
+import { toolbarPanels } from '@/shell/panels';
+import { isScratchProject, useProject } from '@/state/project';
+import { useShownPanel, useUi } from '@/state/ui';
 import { IconButton } from '@basmilius/desktop-ui';
 
 /* The panel toggles. They stay in the toolbar whether a panel is open or not, so a toggle never
@@ -8,11 +9,12 @@ import { IconButton } from '@basmilius/desktop-ui';
    and nothing that belongs to the toolbar. */
 export function PanelControls() {
     const { t } = useTranslation('shell');
-    const panel = useUi((s) => s.panel);
+    const panel = useShownPanel();
+    const scratch = useProject((s) => isScratchProject(s.current));
 
     return (
         <>
-            {PANELS.filter((entry) => entry.toolbar).map((entry) => (
+            {toolbarPanels(scratch).map((entry) => (
                 <IconButton
                     key={entry.kind}
                     icon={entry.icon}

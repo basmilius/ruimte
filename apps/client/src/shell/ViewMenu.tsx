@@ -10,7 +10,7 @@ import { newSubheaderView, showView } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
-import { useProject } from '@/state/project';
+import { shownFolderOf, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { Tile, cameThroughPortal, Icon, Menu, Kbd, ContextMenu } from '@basmilius/desktop-ui';
 import { labelCollator } from '@basmilius/desktop-ui/format';
@@ -46,7 +46,7 @@ const inOrder = (entries: (NewViewEntry | false)[]): ReactNode[] => {
 /* Dividers are left out of the start screen because there are no views to group yet. */
 export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
     const { t } = useTranslation('shell');
-    const hasFolder = useProject((s) => s.current?.folder != null);
+    const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const providers = useProviders((s) => s.providers);
     const agents = useMemo(() => providers.filter((provider) => provider.installed && provider.capabilities.chat), [providers]);
     return (
@@ -151,7 +151,7 @@ export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
 export function NewViewItems() {
     const { t } = useTranslation('shell');
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
-    const hasFolder = useProject((s) => s.current?.folder != null);
+    const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const pickAgent = (target: AgentTarget, provider: ProviderInfo): void => void createViewAction(target, { provider: provider.kind });
     return (
         <>

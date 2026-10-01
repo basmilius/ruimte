@@ -37,7 +37,7 @@ import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
-import { useUi } from '@/state/ui';
+import { useShownPanel, useUi } from '@/state/ui';
 
 // The grid beside the panel keeps at least this much, whatever the drag asks for.
 const MIN_GRID_WIDTH = 360;
@@ -56,7 +56,7 @@ export function PlanPanel() {
     const { t } = useTranslation('shell');
     const anchor = useUi((s) => s.planAnchor);
     const open = useUi((s) => s.planOpen);
-    const rightOfIt = useUi((s) => s.panel.open);
+    const rightOfIt = useShownPanel().open;
     const stored = useUi((s) => s.planWidth);
     const endpointId = useEndpointId();
     const plans = useChatPlans(anchor?.chatId ?? '');

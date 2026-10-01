@@ -9,7 +9,7 @@ import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { useProject } from '@/state/project';
+import { shownFolderOf, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useUi } from '@/state/ui';
 import { Icon, IconButton, Kbd, SectionLabel, Tile } from '@basmilius/desktop-ui';
@@ -48,7 +48,7 @@ export function EmptyCanvas() {
     const viewport = useCanvas((s) => s.viewport);
     const layouts = useCanvas((s) => s.layouts);
     const views = useDocument((s) => s.views);
-    const hasFolder = useProject((s) => s.current?.folder != null);
+    const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const sections = useMemo(() => emptyCanvasSections({ providers, loaded, hasFolder, layouts, views }), [providers, loaded, hasFolder, layouts, views]);

@@ -30,7 +30,7 @@ import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { hasActiveCanvas, useDocument } from '@/state/document';
-import { useProject } from '@/state/project';
+import { isScratchProject, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useSessionRow } from '@/state/sessions';
 import { fileManagerName, useServer } from '@/state/server';
@@ -67,6 +67,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
     const onCanvas = useDocument(hasActiveCanvas);
     const folder = useProject((state) => state.current?.folder ?? null);
+    const scratch = useProject((state) => isScratchProject(state.current));
     const platform = useServer((state) => state.platform);
     /* What the daemon knows about the session, which is newer than what the view was opened with. */
     const chat = useChatRow(viewId, (row) => row?.info);
@@ -77,8 +78,8 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const transport = useTransport();
 
     const { asChat, asTerminal } = sessionHandoffs(kind, view, chat, { agent, account: sessionAccount }, providers);
-    // The node of a session view works somewhere; without a folder of its own that is the project's.
-    const workingFolder = view?.kind === 'chat' || view?.kind === 'terminal' ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
+    // The node of a session view works somewhere; without a folder of its own that is the project's. The Chats project shows none.
+    const workingFolder = !scratch && (view?.kind === 'chat' || view?.kind === 'terminal') ? (view.node.cwd ?? chat?.cwd ?? folder) : null;
     // What a file view holds is stored against the project folder; the menu acts on the daemon's path.
     const filePath = view?.kind === 'file' ? resolveStoredPath(folder, view.path) : null;
     const offers = viewOffers({
@@ -91,7 +92,8 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
         asChat,
         asTerminal,
         workingFolder,
-        filePath
+        filePath,
+        scratch
     });
     const drawn = offers.duplicate;
     const offerShare = view !== undefined && offers.share;

@@ -53,6 +53,7 @@ function EmptyThread({ chatId }: { chatId: string }) {
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const model = useModelName(info?.provider, info?.selection.model ?? '');
     const sources = chatHost().useContextSources(chatId);
+    const hidesFolder = chatHost().useHidesFolder(chatId);
     return (
         <div className="flex grow items-center justify-center">
             <div className="flex max-w-sm flex-col items-center gap-3 px-6 py-8 text-center">
@@ -65,7 +66,7 @@ function EmptyThread({ chatId }: { chatId: string }) {
                         <span className="max-w-full text-xs text-text-muted">{sources.map((source) => source.title).join(', ')}</span>
                     </div>
                 )}
-                {info?.cwd && (
+                {info?.cwd && !hidesFolder && (
                     <div className="flex max-w-full flex-col items-center gap-1">
                         <SectionLabel>{t('timeline.empty.worksIn')}</SectionLabel>
                         <span className="max-w-full font-mono text-xs break-all text-text-muted">{info.cwd}</span>

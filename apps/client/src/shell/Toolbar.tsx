@@ -14,8 +14,9 @@ import { IS_STATION } from '@/station';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
 import { useDocument } from '@/state/document';
-import { useProject } from '@/state/project';
-import { useUi } from '@/state/ui';
+import { toolbarPanels } from '@/shell/panels';
+import { isScratchProject, useProject } from '@/state/project';
+import { useShownPanel, useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
 import { ButtonGroup, IconButton, Separator } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -33,7 +34,10 @@ export function Toolbar() {
     const diagramDirty = useDiagram((s) => s.dirty);
     const dirty = projectDirty || drawingDirty || diagramDirty;
     const switching = useProject((s) => s.switching);
-    const panel = useUi((s) => s.panel);
+    const panel = useShownPanel();
+    // The Chats project has no folder to show, so no files, git, devices or launches either.
+    const scratch = useProject((s) => isScratchProject(s.current));
+    const hasPanelButtons = toolbarPanels(scratch).length > 0;
     const voiceOpen = useVoice((s) => s.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     /* The files are in no document, so the switcher has nothing to name while they hold the cell;
@@ -68,12 +72,16 @@ export function Toolbar() {
                     <span className="sr-only">{dirty ? t('toolbar.unsaved') : t('toolbar.saved')}</span>
                 </span>
             </div>
-            <LaunchChip />
-            <Separator />
-            <ButtonGroup>
-                <PanelControls />
-            </ButtonGroup>
-            <Separator />
+            {!scratch && <LaunchChip />}
+            {hasPanelButtons && (
+                <>
+                    <Separator />
+                    <ButtonGroup>
+                        <PanelControls />
+                    </ButtonGroup>
+                    <Separator />
+                </>
+            )}
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}

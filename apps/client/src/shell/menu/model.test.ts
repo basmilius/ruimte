@@ -50,6 +50,7 @@ const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
     settingsOpen: false,
     windows: true,
     newChat: true,
+    scratch: false,
     ...patch
 });
 
@@ -116,6 +117,16 @@ describe('the menus', () => {
         expect(find(menuModel(START_SCREEN), 'chat-new')?.accelerator).toBe('CommandOrControl+Alt+N');
         expect(find(menuModel(context()), 'chat-new')).toBeDefined();
         expect(commandIds(menuModel(context({ newChat: false })))).not.toContain('chat-new');
+    });
+
+    test('the Chats project has no panels for a folder, no launches and no folder to reveal', () => {
+        const spec = menuModel(context({ scratch: true, folder: false }));
+        expect(labels(spec)).not.toContain('Run');
+        const ids = commandIds(spec);
+        for (const id of ['panel-files', 'panel-git', 'panel-devices', 'launch-run', 'reveal', 'find-in-files', 'view-new-file']) {
+            expect(ids).not.toContain(id);
+        }
+        expect(ids).toContain('panel-processes');
     });
 
     test('the start screen has no view menu and nothing that needs a project', () => {

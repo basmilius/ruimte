@@ -22,6 +22,8 @@ export interface ViewOffersInput {
     workingFolder: string | null;
     /* The daemon's path of what a file view holds. */
     filePath: string | null;
+    /* The view is in the Chats project, whose folders are the daemon's and are not to be shared. */
+    scratch?: boolean;
 }
 
 export interface ViewOffers {
@@ -48,9 +50,9 @@ export const viewOffers = (input: ViewOffersInput): ViewOffers => {
         fork: input.kind === 'chat' && input.offersFork,
         putOnCanvas: !drawn && input.kind !== 'file' && input.hasCanvas,
         showOnCanvas: (input.kind === 'drawing' || input.kind === 'diagram') && input.onCanvas,
-        reveal: input.workingFolder !== null,
+        reveal: input.workingFolder !== null && input.scratch !== true,
         // A divider goes where the group under it goes and is nobody's to share.
-        share: input.kind !== 'separator' && input.kind !== 'subheader' && (input.shared || input.canShare)
+        share: input.kind !== 'separator' && input.kind !== 'subheader' && input.scratch !== true && (input.shared || input.canShare)
     };
 };
 

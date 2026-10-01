@@ -4,7 +4,7 @@ import { createNodeAction, createTextAction, fitAction, groupSelectionAction, se
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import type { Point } from '@/canvas/math';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
-import { useProject } from '@/state/project';
+import { shownFolderOf, useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { Icon, Kbd, ContextMenu } from '@basmilius/desktop-ui';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -15,7 +15,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     const canvasStore = useCanvasStore();
     const hasSelection = useCanvas((s) => s.selection.length > 0);
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
-    const hasFolder = useProject((s) => s.current?.folder != null);
+    const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const add = (kind: 'terminal' | 'chat' | 'browser' | 'group' | 'note'): void => {
         void createNodeAction(kind, { at: at() });
     };

@@ -15,7 +15,7 @@ import { focusedCanvas, maximizedNodeOf, maximizeTargetOf } from '@/state/canvas
 import { useChats } from '@ruimte/agents-react/state/chats';
 import { activeViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
-import { useProject } from '@/state/project';
+import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { providersOf } from '@ruimte/agents-react/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
@@ -47,10 +47,12 @@ export const activeViewFacts = (): ActiveViewFacts | null => {
     const endpointId = currentEndpointId();
     const chatRow = useChats.getState().byKey[endpointKey(endpointId, view.id)];
     const session = useSessions.getState().byKey[endpointKey(endpointId, view.id)];
-    const folder = useProject.getState().current?.folder ?? null;
+    const current = useProject.getState().current;
+    const folder = current?.folder ?? null;
     const shared = documentState.shared.includes(view.id);
     const { asChat, asTerminal } = sessionHandoffs(view.kind, view, chatRow?.info, session, providersOf(endpointId).providers);
-    const workingFolder = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
+    const scratch = isScratchProject(current);
+    const workingFolder = !scratch && (view.kind === 'chat' || view.kind === 'terminal') ? (view.node.cwd ?? chatRow?.info.cwd ?? folder) : null;
     const settled = chatRow ? lastSettledTurn(chatRow.structure, chatRow.order) : null;
     const forkTurn = settled !== null && forkRefusal(chatRow?.info ?? null, chatRow?.structure[settled]) === null ? settled : null;
     const offers = viewOffers({
@@ -64,7 +66,8 @@ export const activeViewFacts = (): ActiveViewFacts | null => {
         asTerminal,
         workingFolder,
         // A file view's own actions stay in its view menu; the application menu has none of them.
-        filePath: null
+        filePath: null,
+        scratch
     });
     return { view, offers, shared, asChat, asTerminal, workingFolder, forkTurn };
 };
@@ -101,7 +104,8 @@ export const menuContext = (host: MenuHost): MenuContext => {
         host,
         apple: isApplePlatform(),
         workspace: windowWorkspace() !== null,
-        folder: (useProject.getState().current?.folder ?? null) !== null,
+        folder: shownFolderOf(useProject.getState().current) !== null,
+        scratch: isScratchProject(useProject.getState().current),
         fileManager: fileManagerName(serverInfoOf(endpointId).platform),
         view: facts?.view.kind ?? null,
         offers: facts?.offers ?? null,

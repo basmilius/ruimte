@@ -9,7 +9,7 @@ import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { clampColumnSize, ErrorBoundary, CloseButton, SlidingColumn, lazyNamed, PanelHeader, SectionLabel } from '@basmilius/desktop-ui';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { useUi, type PanelKind } from '@/state/ui';
+import { useShownPanel, useUi, type PanelKind } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
@@ -37,7 +37,7 @@ function PanelBody({ kind }: { kind: PanelKind }) {
 /* Keep the inner column at its stored width while the outer split animates, avoiding content reflow. */
 export function Panel() {
     const { t } = useTranslation('shell');
-    const panel = useUi((s) => s.panel);
+    const panel = useShownPanel();
     const open = panel.open;
     const [leadingHeaderSlot, setLeadingHeaderSlot] = useState<HTMLElement | null>(null);
     const [titleSignal, setTitleSignal] = useState<HTMLElement | null>(null);

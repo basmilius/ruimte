@@ -1,5 +1,7 @@
 import type { AgentKind, ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
+import { useMemo } from 'react';
 import { create } from 'zustand';
+import { isScratchProject, useProject } from '@/state/project';
 
 export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'providers' | 'voice' | 'computer' | 'agents' | 'usage' | 'machines' | 'about';
 
@@ -59,6 +61,15 @@ export interface PanelState {
 export type PlanAnchor = NonNullable<ProjectPanels['plan']>;
 
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
+
+/* What the Chats project has no panel for: its folder is the daemon's, and so are its repository and what runs in it. */
+export const SCRATCH_HIDDEN_PANELS: readonly PanelKind[] = ['files', 'git', 'devices', 'launches'];
+
+export const panelHidden = (kind: PanelKind, scratch: boolean): boolean => scratch && SCRATCH_HIDDEN_PANELS.includes(kind);
+
+/* The panel as the window shows it: one the project has no place for reads as closed, whatever its file stored. */
+export const shownPanel = (panel: PanelState, scratch: boolean): PanelState =>
+    panel.open && panelHidden(panel.kind, scratch) ? { ...panel, open: false } : panel;
 
 /* The kind on its own for an open panel, `closed:` in front for one that is not, so a toggle still
    knows which panel it reopens. The shape the legacy key was written in. */
@@ -419,3 +430,9 @@ export const useUi = create<UiStore>((set, get) => ({
         });
     }
 }));
+
+export const useShownPanel = (): PanelState => {
+    const panel = useUi((s) => s.panel);
+    const scratch = useProject((s) => isScratchProject(s.current));
+    return useMemo(() => shownPanel(panel, scratch), [panel, scratch]);
+};

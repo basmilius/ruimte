@@ -10,6 +10,7 @@ import { openLogin } from '@/chat/login';
 import { isApplePlatform } from '@/desktop/bridge';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
+import { isScratchProject, useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
@@ -107,11 +108,20 @@ export const connectChatHost = (): void => {
                 ? null
                 : {
                       name: summary.name,
-                      mark: createElement(ProjectGlyph, { projectId: summary.projectId, endpointId, icon: summary.icon, color: summary.color, size: 16 })
+                      mark: createElement(ProjectGlyph, {
+                          projectId: summary.projectId,
+                          endpointId,
+                          icon: summary.icon,
+                          color: summary.color,
+                          size: 16,
+                          scratch: summary.scratch === true
+                      })
                   };
         },
         fork: (chatId, turnId) => useUi.getState().setForkDialog({ chatId, turnId }),
         openSettings: (section) => useUi.getState().setSettings({ open: true, section }),
-        useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true)
+        useResumeAtReset: (endpointId) => useServers((s) => s.byEndpoint[endpointId]?.resumeAtReset === true),
+        // A chat on screen belongs to the project the window shows, and the Chats project shows none of its folders.
+        useHidesFolder: () => useProject((s) => isScratchProject(s.current))
     });
 };

@@ -31,7 +31,10 @@ export interface MenuContext {
     apple: boolean;
     /* A project is open in this window; the start screen has none. */
     workspace: boolean;
+    /* The project has a folder a person may see; the Chats project has none. */
     folder: boolean;
+    /* The project is the machine's Chats project, which has no panels for a folder and no launches. */
+    scratch: boolean;
     fileManager: string;
     /* The kind of the view in the focused cell. */
     view: ProjectView['kind'] | null;
@@ -289,9 +292,12 @@ export const menuModel = (context: MenuContext): MenuSpec => {
                 workspace,
                 command('sidebar', t('sidebar'), { shortcut: APP_SHORTCUTS.sidebar, checked: context.sidebar }),
                 separator,
-                command('panel-files', t('files'), { checked: context.panel === 'files' }),
-                command('panel-git', t('git'), { checked: context.panel === 'git' }),
-                command('panel-devices', t('devices'), { checked: context.panel === 'devices' }),
+                ...only(
+                    !context.scratch,
+                    command('panel-files', t('files'), { checked: context.panel === 'files' }),
+                    command('panel-git', t('git'), { checked: context.panel === 'git' }),
+                    command('panel-devices', t('devices'), { checked: context.panel === 'devices' })
+                ),
                 command('panel-toggle', t('togglePanel'), { shortcut: CANVAS_SHORTCUTS.togglePanel }),
                 separator,
                 command('split-right', t('splitRight'), { shortcut: CANVAS_SHORTCUTS.splitRight, enabled: context.split.right }),
@@ -399,7 +405,7 @@ export const menuModel = (context: MenuContext): MenuSpec => {
         viewMenu,
         ...(kindMenu ? [kindMenu] : []),
         goMenu,
-        ...(workspace ? [runMenu] : []),
+        ...(workspace && !context.scratch ? [runMenu] : []),
         windowMenu,
         helpMenu
     ];

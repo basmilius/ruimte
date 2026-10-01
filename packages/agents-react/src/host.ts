@@ -232,6 +232,8 @@ export interface ChatHost {
     useChatPlace(chatId: string): ChatPlace;
     /* What a chat may read besides its folder, named under an empty thread. */
     useContextSources(chatId: string): ReadonlyArray<{ title: string }>;
+    /* Whether the folder a chat works in is the app's business only, so an empty thread does not name it. */
+    useHidesFolder(chatId: string): boolean;
     tasks: {
         useTasks(scopeId: string): Readonly<Record<string, SubagentTask>> | undefined;
         /* Null for a row with no task behind it. */
@@ -290,6 +292,7 @@ const DEFAULT_HOST: ChatHost = {
     useProjectLook: () => null,
     useChatPlace: () => NOWHERE,
     useContextSources: () => NO_SOURCES,
+    useHidesFolder: () => false,
     tasks: { useTasks: () => undefined, useTask: () => null },
     confirm: { stopSubagents: (_scopeId, _chatId, run) => run(), stopTask: (_scopeId, _childId, _title, run) => run() },
     fork: null,

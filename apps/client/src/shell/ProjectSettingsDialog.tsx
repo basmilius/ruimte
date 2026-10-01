@@ -54,6 +54,8 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
     const { busy, failure, run, fail } = useAsyncAction(t('projectName.failed'));
     const iconGroups = useProjectIconGroups();
     const trimmedName = name.trim();
+    /* The Chats project's name is the app's word and its folder the daemon's, so only its symbol is a person's to pick. */
+    const scratch = project.scratch === true;
 
     const pickFile = async (file: File | undefined): Promise<void> => {
         if (!file) {
@@ -78,27 +80,29 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
 
     return (
         <>
-            <Field label={t('projectSettings.name')} className="mt-4">
-                <Input
-                    autoFocus
-                    maxLength={MAX_TITLE_LENGTH}
-                    aria-label={t('projectName.label')}
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    onKeyDown={(event) => {
-                        event.stopPropagation();
-                        if (event.key === 'Enter') {
-                            void save();
-                        }
-                    }}
-                />
-            </Field>
+            {!scratch && (
+                <Field label={t('projectSettings.name')} className="mt-4">
+                    <Input
+                        autoFocus
+                        maxLength={MAX_TITLE_LENGTH}
+                        aria-label={t('projectName.label')}
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        onKeyDown={(event) => {
+                            event.stopPropagation();
+                            if (event.key === 'Enter') {
+                                void save();
+                            }
+                        }}
+                    />
+                </Field>
+            )}
 
             <SectionLabel render={<div />} className="mt-5 mb-1.5">
                 {t('common:icon.label')}
             </SectionLabel>
             <div className="flex items-center gap-3">
-                <ProjectGlyph projectId={project.projectId} endpointId={endpointId} icon={project.icon} color={project.color} size={32} />
+                <ProjectGlyph projectId={project.projectId} endpointId={endpointId} icon={project.icon} color={project.color} size={32} scratch={scratch} />
                 <div className="flex min-w-0 flex-col">
                     <span className="truncate text-sm text-text">{project.name}</span>
                     <span className="truncate text-sm text-text-faint">
@@ -136,12 +140,16 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 }}
             />
             <div className="mt-4 flex items-center gap-2">
-                <Button disabled={busy} onClick={() => fileRef.current?.click()}>
-                    <Icon icon={ImageUp} size={12} /> {t('projectSettings.chooseImage')}
-                </Button>
-                <Button disabled={busy} onClick={() => void run(actions.useFolderIcon)}>
-                    <Icon icon={FolderSearch} size={12} /> {t('projectSettings.useFolderIcon')}
-                </Button>
+                {!scratch && (
+                    <>
+                        <Button disabled={busy} onClick={() => fileRef.current?.click()}>
+                            <Icon icon={ImageUp} size={12} /> {t('projectSettings.chooseImage')}
+                        </Button>
+                        <Button disabled={busy} onClick={() => void run(actions.useFolderIcon)}>
+                            <Icon icon={FolderSearch} size={12} /> {t('projectSettings.useFolderIcon')}
+                        </Button>
+                    </>
+                )}
                 <span className="grow" />
                 <Button variant="primary" disabled={busy || trimmedName === ''} onClick={() => void save()}>
                     {t('common:action.done')}

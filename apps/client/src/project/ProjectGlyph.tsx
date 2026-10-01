@@ -31,7 +31,7 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
                 className={clsx('flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border-strong text-text-muted', className)}
                 style={box}
             >
-                <Icon icon={MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
+                <Icon icon={icon.kind === 'lucide' ? PROJECT_ICON_GLYPHS[icon.value] : MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
             </span>
         );
     }

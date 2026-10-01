@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { parsePanel, parseWidth, useUi } from './ui';
+import { parsePanel, parseWidth, shownPanel, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
@@ -116,5 +116,18 @@ describe('ui', () => {
         });
         unsubscribe();
         expect(notified).toBe(1);
+    });
+});
+
+describe('the panel a window shows', () => {
+    test('a panel the Chats project has no place for reads as closed, and keeps its kind for the next project', () => {
+        for (const kind of ['files', 'git', 'devices', 'launches'] as const) {
+            expect(shownPanel({ open: true, kind }, true)).toEqual({ open: false, kind });
+            expect(shownPanel({ open: true, kind }, false)).toEqual({ open: true, kind });
+        }
+    });
+
+    test('the processes panel is in the Chats project like anywhere else', () => {
+        expect(shownPanel({ open: true, kind: 'processes' }, true)).toEqual({ open: true, kind: 'processes' });
     });
 });

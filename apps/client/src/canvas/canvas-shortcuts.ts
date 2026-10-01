@@ -31,6 +31,7 @@ import { openFocusedFind } from '@/find/hosts';
 import { focusedCanvas, maximizeTargetOf } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { drawingHasSomethingToClear, focusedDrawing } from '@/state/drawing';
+import { isScratchProject, useProject } from '@/state/project';
 import { focusViewRow } from '@/shell/sidebar-focus';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { transportFor } from '@/transport';
@@ -316,6 +317,10 @@ export const useCanvasShortcuts = (): void => {
             }
             // From anywhere but a popup, a terminal included: restarting the server is what you do while typing.
             if (is(CANVAS_SHORTCUTS.launchRun) || is(CANVAS_SHORTCUTS.launchStop)) {
+                // The Chats project has no launches, and its keys fall through to whatever has the focus.
+                if (isScratchProject(useProject.getState().current)) {
+                    return;
+                }
                 if (!isInFloatingLayer(e.target)) {
                     e.preventDefault();
                     if (is(CANVAS_SHORTCUTS.launchStop)) {

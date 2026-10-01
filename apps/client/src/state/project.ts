@@ -75,3 +75,9 @@ export const createProjectStore = (): StoreApi<ProjectState> =>
 export const defaultProjectStore = createProjectStore();
 
 export const useProject = storeHook(defaultProjectStore);
+
+/* The machine's Chats project, whose folder is the daemon's and is never shown. */
+export const isScratchProject = (current: ProjectSummary | null): boolean => current?.scratch === true;
+
+/* The folder of the open project as a person may see and use it: none for the Chats project. */
+export const shownFolderOf = (current: ProjectSummary | null): string | null => (current === null || isScratchProject(current) ? null : current.folder);

@@ -92,7 +92,8 @@ import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/wind
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { useSettings } from '@/state/settings';
-import { useProject } from '@/state/project';
+import { isScratchProject, useProject } from '@/state/project';
+import { newChat } from '@/project/new-chat';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useServers } from '@/state/server';
@@ -123,6 +124,10 @@ const ROW_ICON: Record<CanvasNodeKind, typeof Terminal> = {
 };
 
 const ROW = 'w-full gap-2 text-left text-sm';
+
+const NEW_VIEW_BUTTON =
+    'flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active';
+
 /* Where a dragged row would land. It sits in the gap, so the rows around it do not move while
    the pointer travels. */
 const INSERT_LINE = 'pointer-events-none -my-px h-0.5 shrink-0 rounded-full bg-accent';
@@ -671,6 +676,7 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
                             endpointId={group.endpointId}
                             icon={group.summary.icon}
                             size={14}
+                            scratch={group.summary.scratch === true}
                             color={group.active ? 'var(--accent)' : group.summary.color}
                             className="col-start-1 row-start-1 group-hover:hidden group-focus-visible:hidden"
                         />
@@ -705,7 +711,9 @@ function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { grou
                         <ContextMenu.Separator />
                     </>
                 )}
-                <FolderMenuItems endpointId={group.endpointId} folder={group.summary.folder} connected={group.state !== 'offline'} />
+                {group.summary.scratch !== true && (
+                    <FolderMenuItems endpointId={group.endpointId} folder={group.summary.folder} connected={group.state !== 'offline'} />
+                )}
             </ContextMenu.Popup>
         </ContextMenu.Root>
     );
@@ -1175,16 +1183,24 @@ export function Sidebar() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
-                    <Menu.Root>
-                        <MaybeTooltip label={combined ? t('sidebar.newViewIn', { project: currentProject?.name }) : null}>
-                            <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active">
-                                <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
-                            </Menu.Trigger>
-                        </MaybeTooltip>
-                        <Menu.Popup side="top" className="min-w-52">
-                            <NewViewItems />
-                        </Menu.Popup>
-                    </Menu.Root>
+                    {/* The views of the Chats project are its chats, so its plus makes one; a canvas or a terminal
+                        there still comes from the File menu and the palette. */}
+                    {isScratchProject(currentProject) ? (
+                        <button type="button" className={NEW_VIEW_BUTTON} onClick={newChat}>
+                            <Icon icon={Plus} size={14} /> {t('chats.newChat')}
+                        </button>
+                    ) : (
+                        <Menu.Root>
+                            <MaybeTooltip label={combined ? t('sidebar.newViewIn', { project: currentProject?.name }) : null}>
+                                <Menu.Trigger className={NEW_VIEW_BUTTON}>
+                                    <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
+                                </Menu.Trigger>
+                            </MaybeTooltip>
+                            <Menu.Popup side="top" className="min-w-52">
+                                <NewViewItems />
+                            </Menu.Popup>
+                        </Menu.Root>
+                    )}
                     <ConnectionDot />
                     <UsageLimitsCard>
                         <IconButton icon={ChartNoAxesColumn} label={t('sidebar.usage')} tooltip={false} onClick={() => useUi.getState().setUsageOpen(true)} />
