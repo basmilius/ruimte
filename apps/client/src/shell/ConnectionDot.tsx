@@ -6,7 +6,7 @@ import { describeConnection, describeLastSeen, describeMachine, describePing, de
 import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { pingNow, useLatency } from '@/transport/ping';
 import { SLOW_PING_MS } from '@/transport/ping-monitor';
-import { useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import type { ConnectionState, TransportStatus } from '@/transport';
 
@@ -92,6 +92,11 @@ export function ConnectionDot() {
     const activeId = useEndpoints((s) => s.activeId);
     const latency = useLatency(activeId);
     const slow = connection.status === 'open' && latency !== null && latency > SLOW_PING_MS;
+
+    // The machine this app runs on is up by definition, so the dot only speaks when something is wrong.
+    if (activeId === LOCAL_ENDPOINT_ID && connection.status === 'open' && connection.noLink !== true && !slow) {
+        return null;
+    }
 
     return (
         <Tooltip label={<ConnectionDetails connection={connection} />}>
