@@ -13,7 +13,7 @@ import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
-import { type CellAt } from '@/shell/split';
+import { cellCount, type CellAt } from '@/shell/split';
 import { CloseButton, Icon, IconButton, Separator, ContextMenu, Popover, Tooltip } from '@basmilius/desktop-ui';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
@@ -82,12 +82,17 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const actions = useRef<HTMLSpanElement>(null);
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const maximized = useDocument((s) => s.maximized === view.id);
+    /* The last cell stays (`split.close`), so its bar has nothing to offer there. */
+    const closable = useDocument((s) => s.layout !== null && cellCount(s.layout) > 1);
     const files = isFilesView(view);
     const hasViewToolbar = useHasViewToolbar(view);
     /* The files never fold: their controls are the tab strip, and a strip inside a popover is a list
        of files you have to open a menu to see. It gives way by scrolling sideways instead. */
     const folded = useFolded(bar, actions, hasViewToolbar && !files);
     const leads = useViewToolbarLeads(view);
+    /* A lone cell with nothing to do takes no bar. The wrapper stays, so the body keeps its place
+       in the tree and a session inside it survives the bar coming and going. */
+    const bare = !closable && !hasViewToolbar;
     const inSubagents = useShowsSubagents(view);
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
     const visibleTitle = view.kind === 'browser' ? title : view.name;
@@ -102,101 +107,105 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     );
     return (
         <FileToolbarSlotProvider value={{ host, mount: setHost }}>
-            <ContextMenu.Root>
-                {/* The size of the toolbar under a panel's header (`FILE_TOOLBAR`): a cell is a body
+            {!bare && (
+                <ContextMenu.Root>
+                    {/* The size of the toolbar under a panel's header (`FILE_TOOLBAR`): a cell is a body
                     with a bar over it, the way the files and the git panel are. Written out rather
                     than reused, because that bar has one background and this one has two. */}
-                <ContextMenu.Trigger
-                    render={<header />}
-                    ref={bar}
-                    draggable={grabbable}
-                    aria-label={t('cellToolbar.drag', { name: visibleTitle ?? t('cellToolbar.view') })}
-                    className={clsx(
-                        'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
-                        focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
-                    )}
-                    onPointerDown={(event) => setGrabbable(!(event.target as HTMLElement | null)?.closest(CONTROLS))}
-                    onPointerUp={() => setGrabbable(true)}
-                    onDragStart={(event) => {
-                        event.dataTransfer.setData(VIEW_DRAG_TYPE, view.id);
-                        event.dataTransfer.effectAllowed = 'move';
-                        setDragging(view.id);
-                    }}
-                    onDragEnd={() => setDragging(null)}
-                >
-                    {/* The title is what gives way: it truncates down to its glyph before anything else
+                    <ContextMenu.Trigger
+                        render={<header />}
+                        ref={bar}
+                        draggable={grabbable}
+                        aria-label={t('cellToolbar.drag', { name: visibleTitle ?? t('cellToolbar.view') })}
+                        className={clsx(
+                            'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
+                            focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
+                        )}
+                        onPointerDown={(event) => setGrabbable(!(event.target as HTMLElement | null)?.closest(CONTROLS))}
+                        onPointerUp={() => setGrabbable(true)}
+                        onDragStart={(event) => {
+                            event.dataTransfer.setData(VIEW_DRAG_TYPE, view.id);
+                            event.dataTransfer.effectAllowed = 'move';
+                            setDragging(view.id);
+                        }}
+                        onDragEnd={() => setDragging(null)}
+                    >
+                        {/* The title is what gives way: it truncates down to its glyph before anything else
                     in the bar has to move. */}
-                    <span className={clsx('flex min-w-5 items-center gap-2 pl-1', folded || !hasViewToolbar ? 'grow' : 'shrink')}>
-                        {maximized && (
-                            <Tooltip label={t('cellToolbar.maximized')}>
-                                <span role="img" aria-label={t('cellToolbar.maximized')} className="inline-flex shrink-0 text-text-muted">
-                                    <Icon icon={Expand} size={14} />
-                                </span>
-                            </Tooltip>
-                        )}
-                        {/* The tabs beside it say which files are open, so the glyph stands alone:
+                        <span className={clsx('flex min-w-5 items-center gap-2 pl-1', folded || !hasViewToolbar ? 'grow' : 'shrink')}>
+                            {maximized && (
+                                <Tooltip label={t('cellToolbar.maximized')}>
+                                    <span role="img" aria-label={t('cellToolbar.maximized')} className="inline-flex shrink-0 text-text-muted">
+                                        <Icon icon={Expand} size={14} />
+                                    </span>
+                                </Tooltip>
+                            )}
+                            {/* The tabs beside it say which files are open, so the glyph stands alone:
                             a name here would take the room the strip needs. */}
-                        {files ? (
-                            <Icon icon={Files} size={14} className="shrink-0" />
-                        ) : (
+                            {files ? (
+                                <Icon icon={Files} size={14} className="shrink-0" />
+                            ) : (
+                                <>
+                                    <ViewGlyph
+                                        id={view.id}
+                                        kind={view.kind}
+                                        icon={viewIconOf(view)}
+                                        provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                                        path={view.kind === 'file' ? view.path : null}
+                                    />
+                                    <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
+                                        <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
+                                    </SubagentTitleCrumb>
+                                </>
+                            )}
+                        </span>
+                        {hasViewToolbar && !folded && (
                             <>
-                                <ViewGlyph
-                                    id={view.id}
-                                    kind={view.kind}
-                                    icon={viewIconOf(view)}
-                                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
-                                    path={view.kind === 'file' ? view.path : null}
-                                />
-                                <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
-                                    <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
-                                </SubagentTitleCrumb>
-                            </>
-                        )}
-                    </span>
-                    {hasViewToolbar && !folded && (
-                        <>
-                            {leads && !inSubagents && <Separator />}
-                            {/* At least as wide as the controls at their smallest, so a bar too narrow
+                                {leads && !inSubagents && <Separator />}
+                                {/* At least as wide as the controls at their smallest, so a bar too narrow
                             for them overflows, and that is how it knows to fold. The files never fold,
                             so their strip may shrink and scroll. The bar centers what it holds, so a
                             tab strip that runs its full height has to say so. */}
-                            <span ref={actions} className={clsx('flex grow items-center', files ? 'min-w-0 self-stretch' : 'min-w-min')}>
-                                {controls}
-                            </span>
-                        </>
-                    )}
-                    {hasViewToolbar && folded && (
-                        <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-                            <IconButton
-                                icon={MoreHorizontal}
-                                size="sm"
-                                label={t('cellToolbar.moreActions')}
-                                className="cursor-default"
-                                render={<Popover.Trigger />}
-                            />
-                            {/* A popover and not a menu: a browser's address field is among these,
+                                <span ref={actions} className={clsx('flex grow items-center', files ? 'min-w-0 self-stretch' : 'min-w-min')}>
+                                    {controls}
+                                </span>
+                            </>
+                        )}
+                        {hasViewToolbar && folded && (
+                            <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+                                <IconButton
+                                    icon={MoreHorizontal}
+                                    size="sm"
+                                    label={t('cellToolbar.moreActions')}
+                                    className="cursor-default"
+                                    render={<Popover.Trigger />}
+                                />
+                                {/* A popover and not a menu: a browser's address field is among these,
                             and a menu would take its keys for moving between items. */}
-                            <Popover.Popup sideOffset={6} align="end" className="flex min-w-72 items-center gap-2 p-2 text-xs">
-                                {controls}
-                            </Popover.Popup>
-                        </Popover.Root>
-                    )}
-                    {/* Folded and closed, the controls still have to be mounted somewhere: a file's
+                                <Popover.Popup sideOffset={6} align="end" className="flex min-w-72 items-center gap-2 p-2 text-xs">
+                                    {controls}
+                                </Popover.Popup>
+                            </Popover.Root>
+                        )}
+                        {/* Folded and closed, the controls still have to be mounted somewhere: a file's
                     renderer portals into their host, and with no host it would draw a bar of its
                     own inside the cell. */}
-                    {hasViewToolbar && folded && !menuOpen && (
-                        <span hidden className="hidden">
-                            {controls}
-                        </span>
-                    )}
-                    <CloseButton label={t('cellToolbar.closeCell')} size="sm" className="cursor-default" onClick={() => closeCellAction(view.id)} />
-                </ContextMenu.Trigger>
-                <ContextMenu.Popup>
-                    <SplitItems at={at} separated />
-                    {/* The files are no view of the project: nothing to rename, share or delete. */}
-                    {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
-                </ContextMenu.Popup>
-            </ContextMenu.Root>
+                        {hasViewToolbar && folded && !menuOpen && (
+                            <span hidden className="hidden">
+                                {controls}
+                            </span>
+                        )}
+                        {closable && (
+                            <CloseButton label={t('cellToolbar.closeCell')} size="sm" className="cursor-default" onClick={() => closeCellAction(view.id)} />
+                        )}
+                    </ContextMenu.Trigger>
+                    <ContextMenu.Popup>
+                        <SplitItems at={at} separated />
+                        {/* The files are no view of the project: nothing to rename, share or delete. */}
+                        {!files && <ViewMenuItems viewId={view.id} kind={view.kind} />}
+                    </ContextMenu.Popup>
+                </ContextMenu.Root>
+            )}
             {children}
         </FileToolbarSlotProvider>
     );

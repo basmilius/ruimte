@@ -145,7 +145,6 @@ function Cell({
     at,
     viewId,
     focused,
-    split,
     filling,
     hidden,
     onZone
@@ -153,8 +152,6 @@ function Cell({
     at: CellAt;
     viewId: string;
     focused: boolean;
-    /* More than one cell on screen, which is what gives a cell a bar of its own. */
-    split: boolean;
     /* Maximized: drawn over the whole grid, while its own place in the column stays held. */
     filling: boolean;
     /* Behind a maximized cell. Still mounted, so its session and its page keep running. */
@@ -291,15 +288,9 @@ function Cell({
                     placeFilesAction(paths, viewId, here);
                 }}
             >
-                {/* One cell means the window's toolbar speaks for the view, and a second bar under it
-                    would say the same thing twice. */}
-                {split ? (
-                    <CellToolbar at={at} view={view} focused={focused}>
-                        {body}
-                    </CellToolbar>
-                ) : (
-                    body
-                )}
+                <CellToolbar at={at} view={view} focused={focused}>
+                    {body}
+                </CellToolbar>
             </div>
         </CellViewContext.Provider>
     );
@@ -378,7 +369,6 @@ function Column({ layout, at, maximized }: { layout: SplitLayout; at: number; ma
                             at={{ column: at, cell: index }}
                             viewId={cell.viewId}
                             focused={isSameCell(layout.focus, { column: at, cell: index })}
-                            split={cellCount(layout) > 1}
                             filling={maximized !== null && isSameCell(maximized, { column: at, cell: index })}
                             hidden={maximized !== null && !isSameCell(maximized, { column: at, cell: index })}
                             onZone={(zone, box) => setDrop(zone === null ? null : { zone, box })}

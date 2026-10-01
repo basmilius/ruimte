@@ -4,9 +4,7 @@ import { useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
 import { useDictation } from '@/dictation/controller';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { isFilesView, type CellView } from '@/shell/files-view';
-import { useCellView } from '@/shell/use-cell-view';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
-import { useDocument } from '@/state/document';
 import { useHasPlans } from '@/state/plans';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */
@@ -63,6 +61,3 @@ export const useViewToolbarLeads = (view: CellView | null): boolean => {
 };
 
 export const useIsFork = (view: CellView | null): boolean => useChatRow(view?.kind === 'chat' ? view.id : '', (row) => row?.info.forkOf !== undefined);
-
-/* The view the window's toolbar speaks for: the one in the focused cell. */
-export const useToolbarView = (): CellView | null => useCellView(useDocument((s) => s.activeViewId));

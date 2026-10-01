@@ -8,14 +8,11 @@ import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
 import { FILES_VIEW_ID } from '@/shell/files-view';
-import { ViewToolbar } from '@/shell/ViewToolbar';
-import { useHasViewToolbar, useShowsSubagents, useToolbarView, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
-import { cellCount } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -39,17 +36,9 @@ export function Toolbar() {
     const panel = useUi((s) => s.panel);
     const voiceOpen = useVoice((s) => s.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
-    const bodyFocused = useDocument((s) => s.bodyFocused);
     /* The files are in no document, so the switcher has nothing to name while they hold the cell;
        the tabs beside it say which file is up. */
     const hasView = useDocument((s) => s.activeViewId !== null && s.activeViewId !== FILES_VIEW_ID);
-    /* With the views side by side every cell carries its own bar, and this one goes back to being
-       the application's: two bars speaking for two different views would read as one bar for both. */
-    const split = useDocument((s) => (s.layout === null ? false : cellCount(s.layout) > 1));
-    const view = useToolbarView();
-    const hasViewToolbar = useHasViewToolbar(split ? null : view);
-    const leads = useViewToolbarLeads(split ? null : view);
-    const inSubagents = useShowsSubagents(split ? null : view);
     const inset = useTrafficLightInset();
 
     return (
@@ -60,9 +49,7 @@ export function Toolbar() {
             {/* The web client's menu goes where the wordmark went, so it stays one press away. */}
             {!sidebarOpen && IS_STATION && <StationMenu variant="symbol" />}
             {!sidebarOpen && <SidebarToggle />}
-            {/* With the view putting something in the bar, the slack belongs to that part, so the
-                breadcrumb stops at its own width and the address field of a page can run. */}
-            <div className={clsx('flex min-w-0 items-center gap-2', !hasViewToolbar && 'grow')}>
+            <div className="flex min-w-0 grow items-center gap-2">
                 {/* The machine sits inside the switcher's own trigger, so the pill is one breadcrumb
                     rather than a label with a button behind it. */}
                 <ProjectMenu />
@@ -81,13 +68,6 @@ export function Toolbar() {
                     <span className="sr-only">{dirty ? t('toolbar.unsaved') : t('toolbar.saved')}</span>
                 </span>
             </div>
-            {/* A view of its own has no node header, so what that header carried sits here, fenced
-                off from the panels, and from the breadcrumb as well where it starts beside it. A
-                chat showing its sub-agents opens its breadcrumb with its own name, which needs no
-                fence either. */}
-            {leads && !inSubagents && <Separator />}
-            {!split && <ViewToolbar view={view} focused={bodyFocused} chatTitle={sidebarOpen ? (view?.name ?? undefined) : undefined} />}
-            {hasViewToolbar && <Separator />}
             <LaunchChip />
             <Separator />
             <ButtonGroup>

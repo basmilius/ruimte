@@ -17,17 +17,7 @@ import { useHasPlans } from '@/state/plans';
 import { Pill, Tooltip } from '@basmilius/desktop-ui';
 import { hostIdOf, KINDS_WITH_TOOLBAR, modeOf, useIsFork, useShowsSubagents } from '@/shell/view-toolbar';
 
-// A single view uses the window toolbar; split views render the same controls in each cell toolbar.
-export function ViewToolbar({
-    view,
-    focused,
-    chatTitle
-}: {
-    view: CellView | null;
-    focused: boolean;
-    /* For a bar that does not draw the view's name itself, so the breadcrumb of a chat opens with it. */
-    chatTitle?: string;
-}) {
+export function ViewToolbar({ view, focused }: { view: CellView | null; focused: boolean }) {
     const host = useNodeHost(hostIdOf(view));
     const { mount } = useFileToolbarSlot();
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
@@ -74,7 +64,7 @@ export function ViewToolbar({
         }
         return (
             <div className="flex min-w-0 grow items-center gap-1.5">
-                {hasSubagents && <SubagentBreadcrumb chatId={view.id} title={chatTitle} className="grow" />}
+                {hasSubagents && <SubagentBreadcrumb chatId={view.id} className="grow" />}
                 {forked && <ForkPill chatId={view.id} />}
                 {planned && <PlanPill chatId={view.id} />}
                 {operating && <ComputerIndicator nodeId={view.id} />}
