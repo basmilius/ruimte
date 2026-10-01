@@ -1,43 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import clsx from 'clsx';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ComputerGrant, ComputerRevokePayload, ComputerUseStatus } from '@ruimte/contracts';
-import {
-    canSwitch,
-    COMPUTER_GRANTS,
-    computerSetupOf,
-    opensSystemSettings,
-    recheckOf,
-    setupLine,
-    showsGrants,
-    SYSTEM_SETTINGS_PANES,
-    type ComputerSetup,
-    type GrantState
-} from '@/computer/setup';
-import { desktop } from '@/desktop/bridge';
-import { activeLanguage } from '@/i18n/active';
+import type { ComputerGrant } from '@ruimte/contracts';
+import { canSwitch, showsGrants, type ComputerSetup } from '@/computer/setup';
+import { GrantRows, SetupLine } from '@/computer/ComputerSetupRows';
+import { useComputerMachine } from '@/computer/use-computer-machine';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
-import { Switch, Button, ErrorBoundary, Pill, FormError } from '@basmilius/desktop-ui';
+import { Switch, Button, ErrorBoundary, FormError } from '@basmilius/desktop-ui';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { ComputerAppGrants } from '@/shell/settings/panes/ComputerAppGrants';
-import { useComputer } from '@/state/computer';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
-import { useServers } from '@/state/server';
-import { transportFor } from '@/transport';
-import { useEndpointConnection } from '@/transport/status';
-import type { Transport } from '@/transport/transport';
-
-/* Accessibility shows up in a running helper, so while one is missing the row asks again this often. */
-const POLL_MS = 2_000;
-
-/* Asks quietly: a failed recheck changes nothing on screen, and the next one or the person's own press tries again. */
-const recheckOn = (endpointId: string, how: 'restart' | 'status'): void => {
-    transportFor(endpointId)
-        ?.request(how === 'restart' ? 'computer.restart' : 'computer.status', {})
-        .then((next) => useComputer.getState().setStatus(endpointId, next))
-        .catch(() => undefined);
-};
 
 export function ComputerPane() {
     const { t } = useTranslation('settings');
@@ -65,92 +37,9 @@ function ComputerSection() {
     );
 }
 
-const PHASE_DOTS: Record<ComputerSetup['phase'], string> = {
-    unknown: 'bg-text-faint',
-    unsupported: 'bg-text-faint',
-    unavailable: 'bg-text-faint',
-    off: 'bg-text-faint',
-    starting: 'bg-status-needs-you',
-    grants: 'bg-status-needs-you',
-    ready: 'bg-status-idle'
-};
-
-/* Where the machine stands, behind a dot in the color of what it asks of you. */
-function SetupLine({ setup }: { setup: ComputerSetup }) {
-    return (
-        <span className="flex items-start gap-2">
-            <span className="flex h-5 shrink-0 items-center">
-                <span className={clsx('h-2 w-2 rounded-full', PHASE_DOTS[setup.phase])} />
-            </span>
-            {setupLine(setup)}
-        </span>
-    );
-}
-
 function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boolean }) {
     const { t } = useTranslation('settings');
-    const connection = useEndpointConnection(endpoint.id);
-    const connected = connection.status === 'open';
-    const platform = useServers((s) => s.byEndpoint[endpoint.id]?.platform ?? null);
-    const status = useComputer((s) => s.statuses[endpoint.id] ?? null);
-    const grants = useComputer((s) => s.grants[endpoint.id] ?? null);
-    const setup = computerSetupOf(status, platform);
-    const bridge = desktop();
-    const local = opensSystemSettings(endpoint.id, platform, bridge?.openSystemSettings !== undefined);
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const recheck = connected ? recheckOf(setup) : null;
-
-    useEffect(() => {
-        if (recheck === null) {
-            return;
-        }
-        const timer = window.setInterval(() => recheckOn(endpoint.id, 'status'), POLL_MS);
-        return () => window.clearInterval(timer);
-    }, [recheck, endpoint.id]);
-
-    useEffect(() => {
-        if (recheck === null || !local) {
-            return;
-        }
-        // Coming back from System Settings is the moment a grant may have changed.
-        const onFocus = (): void => recheckOn(endpoint.id, recheck);
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, [recheck, local, endpoint.id]);
-
-    async function attempt(work: (link: Transport) => Promise<void>): Promise<void> {
-        const link = transportFor(endpoint.id);
-        if (!link) {
-            return;
-        }
-        setBusy(true);
-        setError(null);
-        try {
-            await work(link);
-        } catch (failure) {
-            setError(failure instanceof Error ? failure.message : String(failure));
-        } finally {
-            setBusy(false);
-        }
-    }
-
-    function run(work: (link: Transport) => Promise<ComputerUseStatus>): Promise<void> {
-        return attempt(async (link) => useComputer.getState().setStatus(endpoint.id, await work(link)));
-    }
-
-    function revoke(payload: ComputerRevokePayload): Promise<void> {
-        // The list itself comes back as `computer.grants`, to this window and every other.
-        return attempt(async (link) => {
-            await link.request('computer.revoke', payload);
-        });
-    }
-
-    async function openGrant(grant: ComputerGrant): Promise<void> {
-        // Asking first is what lists the helper in that pane, so the person finds a switch there instead of a + button.
-        await run((link) => link.request('computer.requestGrant', { grant }));
-        await bridge?.openSystemSettings?.(SYSTEM_SETTINGS_PANES[grant]);
-    }
+    const { connected, status, grants, setup, local, busy, error, setEnabled, openGrant, checkAgain, revoke } = useComputerMachine(endpoint.id);
 
     return (
         <>
@@ -164,7 +53,7 @@ function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boole
                             checked={status?.enabled === true}
                             label={t('computer.enable', { machine: endpoint.label })}
                             disabled={!connected || busy || !canSwitch(setup)}
-                            onCheckedChange={(enabled) => void run((link) => link.request('computer.setEnabled', { enabled, language: activeLanguage() }))}
+                            onCheckedChange={setEnabled}
                         />
                     }
                 >
@@ -172,24 +61,12 @@ function ComputerMachine({ endpoint, first }: { endpoint: Endpoint; first: boole
                 </SettingsRow>
             </SettingsSection>
             {connected && showsGrants(setup) && (
-                <GrantSection
-                    setup={setup}
-                    local={local}
-                    busy={busy}
-                    machine={endpoint.label}
-                    first={first}
-                    onOpen={(grant) => void openGrant(grant)}
-                    onCheck={() => void run((link) => link.request('computer.restart', {}))}
-                />
+                <GrantSection setup={setup} local={local} busy={busy} machine={endpoint.label} first={first} onOpen={openGrant} onCheck={checkAgain} />
             )}
-            {connected && status?.enabled === true && grants !== null && (
-                <ComputerAppGrants grants={grants} busy={busy} onRevoke={(payload) => void revoke(payload)} />
-            )}
+            {connected && status?.enabled === true && grants !== null && <ComputerAppGrants grants={grants} busy={busy} onRevoke={revoke} />}
         </>
     );
 }
-
-const GRANT_TONES = { granted: 'idle', missing: 'needsYou', unknown: 'muted' } as const;
 
 interface GrantSectionProps {
     setup: ComputerSetup;
@@ -218,29 +95,7 @@ function GrantSection({ setup, local, busy, machine, first, onOpen, onCheck }: G
                 )
             }
         >
-            {COMPUTER_GRANTS.map((grant) => {
-                const state: GrantState = setup[grant];
-                return (
-                    <SettingsRow
-                        key={grant}
-                        searchId={first ? `computer.grant.${grant}` : undefined}
-                        label={t(`computer.grant.${grant}.label`)}
-                        description={t(`computer.grant.${grant}.description`)}
-                        control={
-                            <>
-                                <Pill shape="tag" tone={GRANT_TONES[state]}>
-                                    {t(`computer.state.${state}`)}
-                                </Pill>
-                                {local && state === 'missing' && (
-                                    <Button variant="secondary" disabled={busy} onClick={() => onOpen(grant)}>
-                                        {t('computer.open')}
-                                    </Button>
-                                )}
-                            </>
-                        }
-                    />
-                );
-            })}
+            <GrantRows setup={setup} local={local} busy={busy} searchable={first} onOpen={onOpen} />
         </SettingsSection>
     );
 }
