@@ -32,7 +32,7 @@ interface EclipseProps {
 const around = (center: number, size: number): CSSProperties => ({ top: center, width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` });
 
 /*
- * The night sky of the welcome and of About: stars that twinkle, two glows that breathe, two arcs of
+ * The sky of the welcome and of About: stars that twinkle, two glows that breathe, two arcs of
  * light around the eclipse that turn against each other, and orbits with a moon on some. Decorative
  * only, so it is hidden from a screen reader, and it stands still for a person who asked for less motion.
  */

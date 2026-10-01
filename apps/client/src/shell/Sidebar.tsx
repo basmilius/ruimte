@@ -1,4 +1,14 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode } from 'react';
+import {
+    Fragment,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+    type KeyboardEvent as ReactKeyboardEvent,
+    type ReactElement,
+    type ReactNode
+} from 'react';
 import {
     AppWindow,
     ChartNoAxesColumn,
@@ -189,6 +199,28 @@ function RenameField({ value, onDone }: { value: string; onDone(next: string | n
                 }
             }}
         />
+    );
+}
+
+/* The diameters and strengths of the rings at the top of the sidebar. */
+const GLOW_ORBITS = [
+    { size: 130, alpha: 0.05 },
+    { size: 230, alpha: 0.035 },
+    { size: 340, alpha: 0.025 }
+] as const;
+
+/* A part centered on the middle of the sidebar's top edge, `size` pixels across. */
+const atTop = (size: number): CSSProperties => ({ width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` });
+
+/* The eclipse's orbits rising over the top edge, the way the welcome and About draw it. */
+function SidebarGlow() {
+    return (
+        <div aria-hidden className="sidebar-glow">
+            <span className="sidebar-glow-light" style={atTop(240)} />
+            {GLOW_ORBITS.map((orbit) => (
+                <span key={orbit.size} className="sidebar-glow-orbit" style={{ ...atTop(orbit.size), '--sidebar-glow-alpha': orbit.alpha } as CSSProperties} />
+            ))}
+        </div>
     );
 }
 
@@ -946,7 +978,8 @@ export function Sidebar() {
             className="sliding-column h-full shrink-0 overflow-hidden"
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
-            <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
+            <div className="relative isolate flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
+                <SidebarGlow />
                 <div
                     className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
                     style={{ paddingLeft: inset === undefined ? STRIP_PADDING_PX : inset + 8 }}

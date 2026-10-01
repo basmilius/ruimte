@@ -28,13 +28,37 @@
     --color-iron-950: #020513;
 }
 
-/* The night sky behind the welcome and About (`ui/Eclipse.tsx`). It is a picture rather than a surface,
-   so it stays dark in the light theme too: what is written on it sits under `data-theme="dark"`, and
-   only its fade into a pane follows the theme. */
-:root {
+/* The sky behind the welcome and About (`ui/Eclipse.tsx`): a night sky in the dark theme and a pale
+   morning one in the light theme, so the words on it follow the theme like any other. */
+:root, [data-theme="light"] {
+    --eclipse-core: #ffffff;
+    --eclipse-deep: #e8edfb;
+    /* The sky behind a pane, which runs out into the pane's surface. */
+    --eclipse-fade-core: #e8edfb;
+    --eclipse-fade-deep: #f4f6fd;
+    /* A star's channels; each star brings its own alpha. On a light sky every tone is the same ink. */
+    --eclipse-star-white: 40 60 130;
+    --eclipse-star-cool: 40 60 130;
+    --eclipse-star-warm: 40 60 130;
+    --eclipse-glint: rgb(47 125 246 / 0.75);
+    --eclipse-glow-warm: rgb(255 184 100 / 0.22);
+    --eclipse-glow-white: rgb(255 176 80 / 0.18);
+    --eclipse-ring-warm: rgb(232 140 30 / 0.95);
+    --eclipse-ring-cool: rgb(21 93 252 / 0.8);
+    --eclipse-orbit: 0 0 0;
+    --eclipse-moon-cool: #2f7df6;
+    --eclipse-moon-warm: #d98200;
+    /* The faint rings at the top of the sidebar (`shell/Sidebar.tsx`); the orbit is channels, each ring brings its alpha. */
+    --sidebar-glow-wash: rgb(21 93 252 / 0.08);
+    --sidebar-glow: rgb(21 93 252 / 0.07);
+    --sidebar-glow-orbit: 21 60 160;
+}
+
+[data-theme="dark"] {
     --eclipse-core: #14182c;
     --eclipse-deep: #07080d;
-    /* A star's channels; each star brings its own alpha. */
+    --eclipse-fade-core: #161b32;
+    --eclipse-fade-deep: #0b0c14;
     --eclipse-star-white: 255 255 255;
     --eclipse-star-cool: 190 215 255;
     --eclipse-star-warm: 255 230 200;
@@ -46,6 +70,9 @@
     --eclipse-orbit: 255 255 255;
     --eclipse-moon-cool: #79b8ff;
     --eclipse-moon-warm: #ff9f0a;
+    --sidebar-glow-wash: rgb(26 33 68 / 0.35);
+    --sidebar-glow: rgb(121 184 255 / 0.09);
+    --sidebar-glow-orbit: 255 255 255;
 }
 
 /* Ruimte's own tokens, beside the ones @basmilius/desktop-ui defines. */
@@ -100,12 +127,8 @@
     --note-gray: #ececef;
     /* The band under the points no other point beats; ink at a low alpha, never the accent. */
     --chart-frontier: rgb(0 0 0 / 0.07);
-    /* Where the sky behind a pane runs out. On a light pane it ends past the words written on it and
-       before the ones under it, since a dark word on half a sky reads as badly as a light one. */
-    --eclipse-fade-start: 68%;
-    --eclipse-fade-end: 94%;
-    /* The room under the words on a sky, on top of the gap a pane keeps between its blocks. */
-    --eclipse-clearance: 80px;
+    /* The word beside the icon at the top of the sidebar, between the text and its muted tone. */
+    --wordmark: #52525e;
     /* The ten colors a drawing may name. The file holds the name, never the value, so a sketch
        reads in both themes and follows the accent when it asks for it. */
     --draw-ink: var(--text);
@@ -190,9 +213,7 @@
     --note-pink: #43212c;
     --note-gray: #26262d;
     --chart-frontier: rgb(255 255 255 / 0.08);
-    --eclipse-fade-start: 52%;
-    --eclipse-fade-end: 100%;
-    --eclipse-clearance: 6px;
+    --wordmark: #b4b4c0;
     --draw-red: #ff7b72;
     --draw-orange: #ffa657;
     --draw-yellow: #e3b341;
@@ -544,8 +565,8 @@
     .eclipse-sky { background: radial-gradient(70% 80% at 50% 30%, var(--eclipse-core) 0%, var(--eclipse-deep) 72%); }
     /* The sky over a pane, which runs out into the surface of the dialog it sits in. */
     .eclipse-sky-fade {
-        background: radial-gradient(70% 90% at 50% var(--eclipse-center), var(--eclipse-core) 0%, var(--eclipse-deep) 60%, var(--surface-raised) 100%);
-        mask-image: linear-gradient(#000 var(--eclipse-fade-start), transparent var(--eclipse-fade-end));
+        background: radial-gradient(70% 90% at 50% var(--eclipse-center), var(--eclipse-fade-core) 0%, var(--eclipse-fade-deep) 60%, var(--surface-raised) 100%);
+        mask-image: linear-gradient(#000 52%, transparent);
     }
     .eclipse-part { position: absolute; left: 50%; border-radius: 999px; }
     .eclipse-star { position: absolute; border-radius: 999px; animation: eclipse-twinkle var(--eclipse-duration) ease-in-out var(--eclipse-delay) infinite; }
@@ -565,6 +586,21 @@
     .eclipse-moon { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 999px; }
     .eclipse-moon-cool { background: var(--eclipse-moon-cool); box-shadow: 0 0 14px var(--eclipse-moon-cool); }
     .eclipse-moon-warm { background: var(--eclipse-moon-warm); box-shadow: 0 0 12px var(--eclipse-moon-warm); }
+    /* The eclipse's orbits at the top edge of the sidebar, still and without arcs, behind the rows. */
+    .sidebar-glow {
+        position: absolute;
+        inset-inline: 0;
+        top: 0;
+        z-index: -1;
+        height: 130px;
+        overflow: hidden;
+        pointer-events: none;
+        background: radial-gradient(80% 100% at 50% 0%, var(--sidebar-glow-wash), transparent);
+        mask-image: linear-gradient(#000 5%, transparent);
+    }
+    .sidebar-glow > span { position: absolute; left: 50%; top: 0; border-radius: 999px; }
+    .sidebar-glow-light { background: radial-gradient(closest-side, var(--sidebar-glow), transparent); }
+    .sidebar-glow-orbit { border: 1px solid rgb(var(--sidebar-glow-orbit) / var(--sidebar-glow-alpha)); }
     @keyframes eclipse-spin {
         to { rotate: 360deg; }
     }

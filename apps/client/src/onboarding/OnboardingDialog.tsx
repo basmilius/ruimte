@@ -99,7 +99,7 @@ export function OnboardingDialog() {
     );
 }
 
-/* The night sky, the icon and two ways on. It stays dark in the light theme as well, so its words read the dark tokens. */
+/* The sky, the icon and two ways on. */
 function Welcome({ titleId }: { titleId: string }) {
     const { t } = useTranslation('onboarding');
     // Held from the welcome on, so the list opens on what the machine already said.
@@ -109,7 +109,7 @@ function Welcome({ titleId }: { titleId: string }) {
     const total = tasksOf(computerSetupOf(status, platform).phase).length;
 
     return (
-        <div data-theme="dark" className="relative flex min-w-0 grow items-center justify-center">
+        <div className="relative flex min-w-0 grow items-center justify-center">
             <Eclipse center={202} glows={[380, 200]} rings={[150, 190]} orbits={WELCOME_ORBITS} stars={{ count: 46, seed: 202 }} className="h-full" />
             <div className="relative flex flex-col items-center gap-4 px-8 text-center">
                 <BrandSymbol size={96} className="rounded-[22px] shadow-float" />

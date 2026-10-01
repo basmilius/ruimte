@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
     ChartNoAxesColumn,
     ChevronDown,
@@ -24,6 +24,7 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { AppIcon } from '../AppIcon.tsx';
 import { EASE } from '../film/playback.ts';
 import { type AgentStatus, ClaudeMark, StatusDot } from './canvas.tsx';
 import { Button, IconButton, ProjectGlyph, Separator, TrafficLights } from './primitives.tsx';
@@ -66,13 +67,37 @@ function Row({ row }: { readonly row: SidebarRow }) {
     );
 }
 
+const GLOW_ORBITS = [
+    { size: 130, alpha: 0.05 },
+    { size: 230, alpha: 0.035 },
+    { size: 340, alpha: 0.025 }
+] as const;
+
+const atTop = (size: number): CSSProperties => ({ width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` });
+
+/** `SidebarGlow` in `shell/Sidebar.tsx`. */
+function SidebarGlow() {
+    return (
+        <div aria-hidden className="sidebar-glow">
+            <span className="sidebar-glow-light" style={atTop(240)} />
+            {GLOW_ORBITS.map((orbit) => (
+                <span key={orbit.size} className="sidebar-glow-orbit" style={{ ...atTop(orbit.size), '--sidebar-glow-alpha': orbit.alpha } as CSSProperties} />
+            ))}
+        </div>
+    );
+}
+
 /** `shell/Sidebar.tsx`: the wordmark past the traffic lights, what waits on you, then the views. */
 export function Sidebar({ waiting, rows }: { readonly waiting: readonly SidebarRow[]; readonly rows: readonly (SidebarRow | 'separator')[] }) {
     return (
-        <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
+        <aside className="relative isolate flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
+            <SidebarGlow />
             <div className="relative flex h-12 shrink-0 items-center justify-between pr-2 pl-[92px]">
                 <TrafficLights className="absolute top-[18px] left-[17px]" />
-                <span className="inline-flex h-6 items-center font-brand text-[13px] font-semibold text-text-faint">Ruimte</span>
+                <span className="inline-flex h-6 items-center gap-1.75 font-brand text-[14px] font-semibold text-(--wordmark)">
+                    <AppIcon size={18} className="rounded-[4px]" />
+                    Ruimte
+                </span>
                 <IconButton icon={PanelLeftClose} />
             </div>
             <div className="mt-2 min-h-0 grow overflow-hidden px-2">

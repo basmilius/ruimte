@@ -99,7 +99,7 @@ const useShownVersion = (): string | undefined => {
     return isDesktop() && currentVersion ? currentVersion : (machineVersion ?? undefined);
 };
 
-/* The night sky of the welcome over the top of About, with the title bar of the dialog floating over it. */
+/* The sky of the welcome over the top of About, with the title bar of the dialog floating over it. */
 export function AboutHero() {
     const { t } = useTranslation('settings');
     const version = useShownVersion();
@@ -115,8 +115,8 @@ export function AboutHero() {
                 className="h-[400px]"
             />
             {/* The icon sits on the eclipse, whose point is 132px down. */}
-            <div className="relative flex flex-col items-center px-8 pt-[96px] pb-(--eclipse-clearance) text-center">
-                <div data-theme="dark" className="flex flex-col items-center gap-1.5">
+            <div className="relative flex flex-col items-center px-8 pt-[96px] pb-1.5 text-center">
+                <div className="flex flex-col items-center gap-1.5">
                     <BrandSymbol size={72} className="mb-2 rounded-[17px] shadow-float" />
                     <h3 className="text-lg font-semibold text-text">Ruimte</h3>
                     <p className="text-xs text-text-muted">{t('about.tagline')}</p>
