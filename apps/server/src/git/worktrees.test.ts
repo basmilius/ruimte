@@ -80,6 +80,14 @@ describe('Worktrees', () => {
         expect((await worktrees.add(repo, 'shared')).created).toBe(false);
     });
 
+    test('an agent that lands in a worktree a person made never becomes its owner', async () => {
+        const made = await worktrees.add(repo, 'feature', { madeBy: 'client', projectId: 'project-1' });
+        expect((await worktrees.add(repo, 'feature', { madeBy: 'verb', projectId: 'project-1' })).created).toBe(false);
+
+        await worktrees.claim(repo, made.worktree.path, 'chat-a');
+        expect((await worktrees.list(repo))[0]).not.toHaveProperty('nodeId');
+    });
+
     test('an existing branch gets a worktree without a new branch, and removing it leaves that branch alone', async () => {
         await git(['branch', 'existing']);
         const added = await worktrees.add(repo, 'existing');
@@ -98,7 +106,7 @@ describe('Worktrees', () => {
         await git(['checkout', '--quiet', '-b', 'feature']);
         await git(['commit', '--quiet', '--allow-empty', '--message', 'on feature']);
         const head = (await git(['rev-parse', 'HEAD'])).trim();
-        const added = await worktrees.add(repo, 'lexer', { madeBy: 'client', projectId: 'project-1' });
+        const added = await worktrees.add(repo, 'lexer', { madeBy: 'verb', projectId: 'project-1' });
         await worktrees.claim(repo, added.worktree.path, 'chat-lexer');
 
         const restarted = new Worktrees(home);
@@ -115,7 +123,7 @@ describe('Worktrees', () => {
         const file = restarted.registerOf(repo).file;
         expect(file.startsWith(join(home, 'worktrees', 'repo-'))).toBe(true);
         const onDisk = JSON.parse(await readFile(file, 'utf8'));
-        expect(onDisk.worktrees[added.worktree.path]).toMatchObject({ madeBy: 'client', branchMade: true });
+        expect(onDisk.worktrees[added.worktree.path]).toMatchObject({ madeBy: 'verb', branchMade: true });
     });
 
     test('a path inside a worktree names the same repository as the project folder', async () => {

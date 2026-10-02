@@ -270,13 +270,16 @@ export class Worktrees {
         return { path, branch, ...(record ? recordFields(record) : {}) };
     }
 
-    /* Writes down the node a worktree was made for, once the node has an id. */
+    /*
+     * Writes down the node a worktree was made for, once the node has an id. A worktree a person made
+     * stays theirs when an agent lands in it, or that agent could merge the person's work as its own.
+     */
     async claim(repo: string, path: string, nodeId: string): Promise<void> {
         const { main } = await this.read(repo);
         let changed = false;
         await this.registerOf(main).update((records) => {
             const record = records.get(path);
-            if (record && record.nodeId !== nodeId) {
+            if (record && record.madeBy !== 'client' && record.nodeId !== nodeId) {
                 records.set(path, { ...record, nodeId });
                 changed = true;
             }
