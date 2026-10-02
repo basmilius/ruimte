@@ -1,5 +1,14 @@
 import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfSync, sign } from 'node:crypto';
-import { CameraSchema, CanvasNodeSchema, NodeKindSchema, PROJECT_VIEW_KINDS, ProjectViewSchema, ProjectCanvasViewSchema } from '../src/project.ts';
+import {
+    CameraSchema,
+    CanvasNodeSchema,
+    NodeKindSchema,
+    PROJECT_ICON_NAMES,
+    PROJECT_VIEW_KINDS,
+    ProjectIconNameSchema,
+    ProjectViewSchema,
+    ProjectCanvasViewSchema
+} from '../src/project.ts';
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES } from '../src/bytes.ts';
@@ -232,7 +241,12 @@ const constantSource = Object.entries(constants)
  * so one closed literal it never saw would refuse every `chat.list` or `project.open` holding it. On the wire these
  * are any string, and the known words ride along as `x-open-enum` for the app to fall back from.
  */
-const openVocabularies: ReadonlySet<unknown> = new Set([agent.AgentKindSchema, agent.AgentStatusSchema, RuntimeModeSchema]);
+const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknown, readonly string[]>([
+    [agent.AgentKindSchema, agent.AgentKindSchema.options],
+    [agent.AgentStatusSchema, agent.AgentStatusSchema.options],
+    [RuntimeModeSchema, RuntimeModeSchema.options],
+    [ProjectIconNameSchema, PROJECT_ICON_NAMES]
+]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
 const apiRoots: Record<string, z.ZodType> = {};
 for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
@@ -248,8 +262,9 @@ for (const [name, schema] of Object.entries(apiRoots)) {
         io: 'input',
         unrepresentable: 'throw',
         override: ({ zodSchema, jsonSchema }) => {
-            if (openVocabularies.has(zodSchema) && Array.isArray(jsonSchema.enum)) {
-                jsonSchema['x-open-enum'] = jsonSchema.enum;
+            const known = openVocabularies.get(zodSchema);
+            if (known) {
+                jsonSchema['x-open-enum'] = [...known];
                 delete jsonSchema.enum;
             }
             if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {

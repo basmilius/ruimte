@@ -3396,7 +3396,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `id`: String
     public let `label`: String
     public let `nameSource`: PairResultEndpointNameSource?
-    public let `icon`: Presence<PairResultEndpointIcon>
+    public let `icon`: Presence<MachineIcon>
     public let `agentsDeleteAnyView`: Bool?
     public let `refuseStatements`: Bool?
     public let `streamingAllowed`: Bool?
@@ -3412,7 +3412,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `broker`: PairResultEndpointBroker?
     public let `brokerFixed`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<PairResultEndpointIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3438,7 +3438,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `id` = try container.decode(String.self, forKey: .`id`)
         `label` = try container.decode(String.self, forKey: .`label`)
         `nameSource` = try container.decodeIfPresent(PairResultEndpointNameSource.self, forKey: .`nameSource`)
-        `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(PairResultEndpointIcon.self, forKey: .`icon`))) : .missing
+        `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(MachineIcon.self, forKey: .`icon`))) : .missing
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `refuseStatements` = try container.decodeIfPresent(Bool.self, forKey: .`refuseStatements`)
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
@@ -3510,206 +3510,6 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
 public enum PairResultEndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
     case `chosen` = "chosen"
     case `default` = "default"
-}
-
-public struct PairResultEndpointIcon: Codable, Sendable, Equatable {
-    public let `kind`: String
-    public let `value`: PairResultEndpointIconValue
-
-    public init(`kind`: String = "lucide", `value`: PairResultEndpointIconValue) {
-        self.`kind` = `kind`
-        self.`value` = `value`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `kind` = try container.decode(String.self, forKey: .`kind`)
-        `value` = try container.decode(PairResultEndpointIconValue.self, forKey: .`value`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`kind`, forKey: .`kind`)
-        try container.encode(`value`, forKey: .`value`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `kind` = "kind"
-        case `value` = "value"
-    }
-}
-
-public enum PairResultEndpointIconValue: String, CaseIterable, Codable, Sendable, Equatable {
-    case `box` = "box"
-    case `boxes` = "boxes"
-    case `package` = "package"
-    case `layers` = "layers"
-    case `code` = "code"
-    case `terminal` = "terminal"
-    case `cpu` = "cpu"
-    case `circuitBoard` = "circuit-board"
-    case `memoryStick` = "memory-stick"
-    case `pcCase` = "pc-case"
-    case `laptop` = "laptop"
-    case `monitor` = "monitor"
-    case `smartphone` = "smartphone"
-    case `tablet` = "tablet"
-    case `webcam` = "webcam"
-    case `printer` = "printer"
-    case `hardDrive` = "hard-drive"
-    case `usb` = "usb"
-    case `database` = "database"
-    case `server` = "server"
-    case `container` = "container"
-    case `network` = "network"
-    case `router` = "router"
-    case `ethernetPort` = "ethernet-port"
-    case `cable` = "cable"
-    case `plug` = "plug"
-    case `wifi` = "wifi"
-    case `radioTower` = "radio-tower"
-    case `satelliteDish` = "satellite-dish"
-    case `cloud` = "cloud"
-    case `globe` = "globe"
-    case `rocket` = "rocket"
-    case `zap` = "zap"
-    case `flame` = "flame"
-    case `sparkles` = "sparkles"
-    case `star` = "star"
-    case `heart` = "heart"
-    case `flag` = "flag"
-    case `bookmark` = "bookmark"
-    case `folder` = "folder"
-    case `fileText` = "file-text"
-    case `book` = "book"
-    case `puzzle` = "puzzle"
-    case `palette` = "palette"
-    case `brush` = "brush"
-    case `camera` = "camera"
-    case `music` = "music"
-    case `video` = "video"
-    case `gamepad2` = "gamepad-2"
-    case `bot` = "bot"
-    case `brain` = "brain"
-    case `beaker` = "beaker"
-    case `wrench` = "wrench"
-    case `hammer` = "hammer"
-    case `shield` = "shield"
-    case `key` = "key"
-    case `compass` = "compass"
-    case `map` = "map"
-    case `leaf` = "leaf"
-    case `coffee` = "coffee"
-    case `pin` = "pin"
-    case `target` = "target"
-    case `lightbulb` = "lightbulb"
-    case `archive` = "archive"
-    case `inbox` = "inbox"
-    case `house` = "house"
-    case `briefcase` = "briefcase"
-    case `codeXml` = "code-xml"
-    case `braces` = "braces"
-    case `squareTerminal` = "square-terminal"
-    case `fileCode` = "file-code"
-    case `binary` = "binary"
-    case `regex` = "regex"
-    case `variable` = "variable"
-    case `blocks` = "blocks"
-    case `component` = "component"
-    case `gitBranch` = "git-branch"
-    case `gitMerge` = "git-merge"
-    case `gitPullRequest` = "git-pull-request"
-    case `gitFork` = "git-fork"
-    case `bug` = "bug"
-    case `testTubeDiagonal` = "test-tube-diagonal"
-    case `flaskConical` = "flask-conical"
-    case `workflow` = "workflow"
-    case `webhook` = "webhook"
-    case `botMessageSquare` = "bot-message-square"
-    case `brainCircuit` = "brain-circuit"
-    case `wandSparkles` = "wand-sparkles"
-    case `messagesSquare` = "messages-square"
-    case `scanEye` = "scan-eye"
-    case `audioWaveform` = "audio-waveform"
-    case `appWindow` = "app-window"
-    case `layoutDashboard` = "layout-dashboard"
-    case `layoutTemplate` = "layout-template"
-    case `panelsTopLeft` = "panels-top-left"
-    case `mousePointerClick` = "mouse-pointer-click"
-    case `shoppingCart` = "shopping-cart"
-    case `store` = "store"
-    case `mail` = "mail"
-    case `serverCog` = "server-cog"
-    case `cloudCog` = "cloud-cog"
-    case `gauge` = "gauge"
-    case `activity` = "activity"
-    case `scrollText` = "scroll-text"
-    case `bell` = "bell"
-    case `lock` = "lock"
-    case `fingerprintPattern` = "fingerprint-pattern"
-    case `chartLine` = "chart-line"
-    case `chartColumn` = "chart-column"
-    case `chartPie` = "chart-pie"
-    case `table` = "table"
-    case `sheet` = "sheet"
-    case `calculator` = "calculator"
-    case `sigma` = "sigma"
-    case `atom` = "atom"
-    case `dna` = "dna"
-    case `telescope` = "telescope"
-    case `orbit` = "orbit"
-    case `microchip` = "microchip"
-    case `keyboard` = "keyboard"
-    case `mouse` = "mouse"
-    case `headphones` = "headphones"
-    case `watch` = "watch"
-    case `battery` = "battery"
-    case `bluetooth` = "bluetooth"
-    case `thermometer` = "thermometer"
-    case `penTool` = "pen-tool"
-    case `pencilRuler` = "pencil-ruler"
-    case `shapes` = "shapes"
-    case `frame` = "frame"
-    case `swatchBook` = "swatch-book"
-    case `type` = "type"
-    case `image` = "image"
-    case `film` = "film"
-    case `clapperboard` = "clapperboard"
-    case `mic` = "mic"
-    case `notebook` = "notebook"
-    case `notebookPen` = "notebook-pen"
-    case `libraryBig` = "library-big"
-    case `newspaper` = "newspaper"
-    case `graduationCap` = "graduation-cap"
-    case `languages` = "languages"
-    case `quote` = "quote"
-    case `presentation` = "presentation"
-    case `megaphone` = "megaphone"
-    case `listTodo` = "list-todo"
-    case `squareKanban` = "square-kanban"
-    case `clipboardList` = "clipboard-list"
-    case `calendar` = "calendar"
-    case `milestone` = "milestone"
-    case `trophy` = "trophy"
-    case `hourglass` = "hourglass"
-    case `timer` = "timer"
-    case `users` = "users"
-    case `handshake` = "handshake"
-    case `wallet` = "wallet"
-    case `sprout` = "sprout"
-    case `trees` = "trees"
-    case `mountain` = "mountain"
-    case `sun` = "sun"
-    case `moon` = "moon"
-    case `plane` = "plane"
-    case `ship` = "ship"
-    case `anchor` = "anchor"
-    case `lifeBuoy` = "life-buoy"
-    case `pizza` = "pizza"
-    case `gift` = "gift"
-    case `dumbbell` = "dumbbell"
-    case `bike` = "bike"
-    case `pawPrint` = "paw-print"
 }
 
 public enum PairResultEndpointReachability: String, CaseIterable, Codable, Sendable, Equatable {

@@ -4883,178 +4883,8 @@
                   },
                   "value": {
                     "type": "string",
-                    "enum": [
-                      "box",
-                      "boxes",
-                      "package",
-                      "layers",
-                      "code",
-                      "terminal",
-                      "cpu",
-                      "circuit-board",
-                      "memory-stick",
-                      "pc-case",
-                      "laptop",
-                      "monitor",
-                      "smartphone",
-                      "tablet",
-                      "webcam",
-                      "printer",
-                      "hard-drive",
-                      "usb",
-                      "database",
-                      "server",
-                      "container",
-                      "network",
-                      "router",
-                      "ethernet-port",
-                      "cable",
-                      "plug",
-                      "wifi",
-                      "radio-tower",
-                      "satellite-dish",
-                      "cloud",
-                      "globe",
-                      "rocket",
-                      "zap",
-                      "flame",
-                      "sparkles",
-                      "star",
-                      "heart",
-                      "flag",
-                      "bookmark",
-                      "folder",
-                      "file-text",
-                      "book",
-                      "puzzle",
-                      "palette",
-                      "brush",
-                      "camera",
-                      "music",
-                      "video",
-                      "gamepad-2",
-                      "bot",
-                      "brain",
-                      "beaker",
-                      "wrench",
-                      "hammer",
-                      "shield",
-                      "key",
-                      "compass",
-                      "map",
-                      "leaf",
-                      "coffee",
-                      "pin",
-                      "target",
-                      "lightbulb",
-                      "archive",
-                      "inbox",
-                      "house",
-                      "briefcase",
-                      "code-xml",
-                      "braces",
-                      "square-terminal",
-                      "file-code",
-                      "binary",
-                      "regex",
-                      "variable",
-                      "blocks",
-                      "component",
-                      "git-branch",
-                      "git-merge",
-                      "git-pull-request",
-                      "git-fork",
-                      "bug",
-                      "test-tube-diagonal",
-                      "flask-conical",
-                      "workflow",
-                      "webhook",
-                      "bot-message-square",
-                      "brain-circuit",
-                      "wand-sparkles",
-                      "messages-square",
-                      "scan-eye",
-                      "audio-waveform",
-                      "app-window",
-                      "layout-dashboard",
-                      "layout-template",
-                      "panels-top-left",
-                      "mouse-pointer-click",
-                      "shopping-cart",
-                      "store",
-                      "mail",
-                      "server-cog",
-                      "cloud-cog",
-                      "gauge",
-                      "activity",
-                      "scroll-text",
-                      "bell",
-                      "lock",
-                      "fingerprint-pattern",
-                      "chart-line",
-                      "chart-column",
-                      "chart-pie",
-                      "table",
-                      "sheet",
-                      "calculator",
-                      "sigma",
-                      "atom",
-                      "dna",
-                      "telescope",
-                      "orbit",
-                      "microchip",
-                      "keyboard",
-                      "mouse",
-                      "headphones",
-                      "watch",
-                      "battery",
-                      "bluetooth",
-                      "thermometer",
-                      "pen-tool",
-                      "pencil-ruler",
-                      "shapes",
-                      "frame",
-                      "swatch-book",
-                      "type",
-                      "image",
-                      "film",
-                      "clapperboard",
-                      "mic",
-                      "notebook",
-                      "notebook-pen",
-                      "library-big",
-                      "newspaper",
-                      "graduation-cap",
-                      "languages",
-                      "quote",
-                      "presentation",
-                      "megaphone",
-                      "list-todo",
-                      "square-kanban",
-                      "clipboard-list",
-                      "calendar",
-                      "milestone",
-                      "trophy",
-                      "hourglass",
-                      "timer",
-                      "users",
-                      "handshake",
-                      "wallet",
-                      "sprout",
-                      "trees",
-                      "mountain",
-                      "sun",
-                      "moon",
-                      "plane",
-                      "ship",
-                      "anchor",
-                      "life-buoy",
-                      "pizza",
-                      "gift",
-                      "dumbbell",
-                      "bike",
-                      "paw-print"
-                    ]
+                    "minLength": 1,
+                    "maxLength": 64
                   }
                 },
                 "required": [
@@ -20489,7 +20319,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -20775,7 +20607,9 @@
                               },
                               "value": {
                                 "type": "string",
-                                "enum": [
+                                "minLength": 1,
+                                "maxLength": 64,
+                                "x-open-enum": [
                                   "box",
                                   "boxes",
                                   "package",
@@ -21200,7 +21034,9 @@
                     },
                     "value": {
                       "type": "string",
-                      "enum": [
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "x-open-enum": [
                         "box",
                         "boxes",
                         "package",
@@ -21512,7 +21348,9 @@
                   },
                   "value": {
                     "type": "string",
-                    "enum": [
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "x-open-enum": [
                       "box",
                       "boxes",
                       "package",
@@ -21770,7 +21608,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -21980,7 +21820,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -22608,7 +22450,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -22876,7 +22720,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -23141,7 +22987,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -23366,7 +23214,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -23623,7 +23473,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -23844,7 +23696,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -24065,7 +23919,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -24812,7 +24668,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -25022,7 +24880,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -25650,7 +25510,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -25918,7 +25780,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -26183,7 +26047,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -26408,7 +26274,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -26665,7 +26533,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -26886,7 +26756,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -27107,7 +26979,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -27997,7 +27871,9 @@
                   },
                   "value": {
                     "type": "string",
-                    "enum": [
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "x-open-enum": [
                       "box",
                       "boxes",
                       "package",
@@ -28264,7 +28140,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -28497,7 +28375,9 @@
                   },
                   "value": {
                     "type": "string",
-                    "enum": [
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "x-open-enum": [
                       "box",
                       "boxes",
                       "package",
@@ -28827,7 +28707,9 @@
                   },
                   "value": {
                     "type": "string",
-                    "enum": [
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "x-open-enum": [
                       "box",
                       "boxes",
                       "package",
@@ -37436,7 +37318,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -37751,7 +37635,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -38029,7 +37915,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -44052,7 +43940,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -44522,7 +44412,9 @@
               },
               "value": {
                 "type": "string",
-                "enum": [
+                "minLength": 1,
+                "maxLength": 64,
+                "x-open-enum": [
                   "box",
                   "boxes",
                   "package",
@@ -44732,7 +44624,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -45360,7 +45254,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -45628,7 +45524,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -45893,7 +45791,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -46118,7 +46018,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -46375,7 +46277,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -46596,7 +46500,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -46817,7 +46723,9 @@
                         },
                         "value": {
                           "type": "string",
-                          "enum": [
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "x-open-enum": [
                             "box",
                             "boxes",
                             "package",
@@ -47236,7 +47144,9 @@
                   },
                   "value": {
                     "type": "string",
-                    "enum": [
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "x-open-enum": [
                       "box",
                       "boxes",
                       "package",

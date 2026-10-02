@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import type { ProjectIcon } from '@ruimte/contracts';
 import { MessagesSquare } from 'lucide-react';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { projectIconGlyphOf } from '@/project/project-icons';
 import { useTheme } from '@/state/theme';
 import { useMachineUrl } from '@/transport/machine-url';
 import { Icon } from '@basmilius/desktop-ui';
@@ -23,6 +23,7 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };
     const image = useMachineUrl(icon.kind === 'image' && !scratch ? { kind: 'projectIcon', projectId, theme, version: icon.version } : null, endpointId);
+    const picked = icon.kind === 'lucide' ? projectIconGlyphOf(icon.value) : null;
 
     if (scratch) {
         return (
@@ -31,13 +32,13 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
                 className={clsx('flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border-strong text-text-muted', className)}
                 style={box}
             >
-                <Icon icon={icon.kind === 'lucide' ? PROJECT_ICON_GLYPHS[icon.value] : MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
+                <Icon icon={picked ?? MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
             </span>
         );
     }
 
-    if (icon.kind === 'lucide') {
-        return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
+    if (picked) {
+        return <Icon icon={picked} size={size} className={clsx('shrink-0', className)} />;
     }
     if (icon.kind === 'image') {
         // The box holds its place while the bytes are on their way, so the name beside it does not jump.
@@ -59,7 +60,7 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
                 fontSize: Math.max(12, Math.round(size * 0.68))
             }}
         >
-            {icon.value}
+            {icon.kind === 'initial' ? icon.value : '?'}
         </span>
     );
 }

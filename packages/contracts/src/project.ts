@@ -227,7 +227,7 @@ export const ProjectLayoutSchema = z.object({
 });
 export type ProjectLayout = z.infer<typeof ProjectLayoutSchema>;
 
-// Persisted icon names form a closed, append-only set because unknown or renamed names render nothing.
+// The names this version offers and draws. Append-only: a renamed name draws nothing on an older Ruimte.
 export const PROJECT_ICON_NAMES = [
     'box',
     'boxes',
@@ -401,11 +401,22 @@ export const PROJECT_ICON_NAMES = [
     'paw-print'
 ] as const;
 
+export type ProjectIconName = (typeof PROJECT_ICON_NAMES)[number];
+
+export const isProjectIconName = (value: string): value is ProjectIconName => (PROJECT_ICON_NAMES as readonly string[]).includes(value);
+
+/*
+ * A Lucide name as the shared file and the wire carry it: any name, since the list grows with a
+ * release and one name an older Ruimte never saw would refuse its whole project list. A name this
+ * version does not know draws as if nobody picked one.
+ */
+export const ProjectIconNameSchema = z.string().min(1).max(64);
+
 // What a person picked, in the shared file next to the name. One of the Lucide names and nothing
 // else: a mark is drawn beside a name at 14 pixels, where the app's own line weight is what makes a
 // row of them read as a list. An image is never a blob here: it is a file at `.ruimte/icon.<ext>`,
 // which the derived chain finds on its own.
-export const ProjectIconChoiceSchema = z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) });
+export const ProjectIconChoiceSchema = z.object({ kind: z.literal('lucide'), value: ProjectIconNameSchema });
 export type ProjectIconChoice = z.infer<typeof ProjectIconChoiceSchema>;
 
 /*
@@ -414,11 +425,14 @@ export type ProjectIconChoice = z.infer<typeof ProjectIconChoiceSchema>;
  * from `GET /projects/<id>/icon?v=<version>` and the browser cache can hold them forever.
  */
 export const ProjectIconSchema = z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) }),
+    z.object({ kind: z.literal('lucide'), value: ProjectIconNameSchema }),
     z.object({ kind: z.literal('image'), value: z.string(), version: z.string() }),
     z.object({ kind: z.literal('initial'), value: z.string() })
 ]);
 export type ProjectIcon = z.infer<typeof ProjectIconSchema>;
+
+// The mark a project wears when nothing was picked and the folder declares none.
+export const initialIconOf = (name: string): ProjectIcon => ({ kind: 'initial', value: [...name.trim()][0]?.toUpperCase() ?? '?' });
 
 // Where the name on screen came from: a person typed it, or it is the folder's own name.
 export const ProjectNameSourceSchema = z.enum(['chosen', 'folder']);
@@ -910,25 +924,30 @@ export const ProjectLocalV1Schema = z.object({
 });
 export type ProjectLocalV1 = z.infer<typeof ProjectLocalV1Schema>;
 
-export const ProjectSummarySchema = z.object({
-    projectId: ProjectIdSchema,
-    name: z.string(),
-    color: z.string(),
-    folder: z.string().min(1),
-    lastOpenedAt: z.number(),
-    /* When a person last closed this project, which is the only thing that moves it out of the list
+export const ProjectSummarySchema = z
+    .object({
+        projectId: ProjectIdSchema,
+        name: z.string(),
+        color: z.string(),
+        folder: z.string().min(1),
+        lastOpenedAt: z.number(),
+        /* When a person last closed this project, which is the only thing that moves it out of the list
        of projects in use and under Recent. Null while it belongs in the list; absent from a daemon
        that has no notion of closing, whose projects therefore all read as in use. */
-    closedAt: z.number().nullish(),
-    // False when a folder project's file has gone missing since it was last seen.
-    available: z.boolean(),
-    // The choice from the file, or what the folder declares, or the initial on the project color.
-    icon: ProjectIconSchema,
-    nameSource: ProjectNameSourceSchema,
-    /* The one project per machine the daemon keeps for chats outside any project (`project.newChat`).
+        closedAt: z.number().nullish(),
+        // False when a folder project's file has gone missing since it was last seen.
+        available: z.boolean(),
+        // The choice from the file, or what the folder declares, or the initial on the project color.
+        icon: ProjectIconSchema,
+        nameSource: ProjectNameSourceSchema,
+        /* The one project per machine the daemon keeps for chats outside any project (`project.newChat`).
        Its folder is the daemon's, so a client shows no path of it. Absent on every other project. */
-    scratch: z.boolean().optional()
-});
+        scratch: z.boolean().optional()
+    })
+    // A name a newer Ruimte picked reads as the initial, the one mark this side can derive without the folder.
+    .overwrite((summary) =>
+        summary.icon.kind === 'lucide' && !isProjectIconName(summary.icon.value) ? { ...summary, icon: initialIconOf(summary.name) } : summary
+    );
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 
 export const ProjectListResultSchema = z.object({

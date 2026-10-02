@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { Server } from 'lucide-react';
 import type { ProjectIconChoice } from '@ruimte/contracts';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { projectIconGlyphOf } from '@/project/project-icons';
 import { Icon } from '@basmilius/desktop-ui';
 
 interface MachineGlyphProps {
@@ -14,8 +14,6 @@ interface MachineGlyphProps {
 /* A machine's icon at one size. It picks from the same set a project does, minus the image kind.
    A machine has no folder to keep a file in, so there is nothing to fall back to but a server. */
 export function MachineGlyph({ icon, size = 16, className }: MachineGlyphProps) {
-    if (icon?.kind === 'lucide') {
-        return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
-    }
-    return <Icon icon={Server} size={size} className={clsx('shrink-0', className)} />;
+    const picked = icon?.kind === 'lucide' ? projectIconGlyphOf(icon.value) : null;
+    return <Icon icon={picked ?? Server} size={size} className={clsx('shrink-0', className)} />;
 }

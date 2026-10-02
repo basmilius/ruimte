@@ -12,6 +12,7 @@ import {
     ProjectIconChoiceSchema,
     UNKNOWN_KIND,
     duplicateIdIn,
+    initialIconOf,
     mergeFiles,
     migrateLocal,
     overlayOfLegacy,
@@ -386,7 +387,7 @@ export class ProjectStore {
         const available = await exists(this.documentPath(entry));
         const derived = await this.identity.resolve(entry.folder);
         const image = derived.icon ?? null;
-        const icon: ProjectIcon = entry.icon ?? (image ? imageIcon(image) : initialIcon(entry.name));
+        const icon: ProjectIcon = entry.icon ?? (image ? imageIcon(image) : initialIconOf(entry.name));
         return {
             projectId: entry.projectId,
             name: entry.name,
@@ -1210,8 +1211,6 @@ export class ProjectStore {
 }
 
 const imageIcon = (icon: DerivedIcon): ProjectIcon => ({ kind: 'image', value: icon.from, version: icon.version });
-
-const initialIcon = (name: string): ProjectIcon => ({ kind: 'initial', value: [...name.trim()][0]?.toUpperCase() ?? '?' });
 
 const sameIcon = (left: ProjectIcon | null, right: ProjectIcon | null): boolean =>
     left === right || (left !== null && right !== null && left.kind === right.kind && left.value === right.value);

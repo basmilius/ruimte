@@ -16,7 +16,7 @@ import {
 import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
 import { Favicon } from '@/browser/Favicon';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { projectIconGlyphOf } from '@/project/project-icons';
 import { FileIcon, Icon } from '@basmilius/desktop-ui';
 
 /* The default mark for a view, when nobody picked an icon. */
@@ -53,8 +53,9 @@ interface ViewGlyphProps {
  * and the kind itself as the floor.
  */
 export function ViewGlyph({ id, kind, icon = null, provider = null, path = null, size = 14, className }: ViewGlyphProps) {
-    if (icon?.kind === 'lucide') {
-        return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
+    const picked = icon?.kind === 'lucide' ? projectIconGlyphOf(icon.value) : null;
+    if (picked) {
+        return <Icon icon={picked} size={size} className={clsx('shrink-0', className)} />;
     }
     if (kind === 'browser') {
         return <Favicon id={id} size={size} />;

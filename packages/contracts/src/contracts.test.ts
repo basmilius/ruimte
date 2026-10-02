@@ -340,7 +340,9 @@ describe('project', () => {
         // No icon at all is the default: the row wears the mark of what it is.
         const bare = document([view]);
         expect(bare.success && bare.data.views[0]!.kind === 'canvas' && bare.data.views[0]!.icon).toBeUndefined();
-        expect(document([{ ...view, icon: { kind: 'lucide', value: 'unicorn' } }]).success).toBe(false);
+        // A name a newer Ruimte offers is kept, so the file goes back the way it came.
+        const later = document([{ ...view, icon: { kind: 'lucide', value: 'unicorn' } }]);
+        expect(later.success && later.data.views[0]!.kind === 'canvas' && later.data.views[0]!.icon).toEqual({ kind: 'lucide', value: 'unicorn' });
         expect(document([{ ...view, icon: { kind: 'image', value: '.ruimte/icon.svg', version: '1' } }]).success).toBe(false);
         // A divider has no room for a mark, so one written into the file is dropped on the way in.
         const withSeparator = document([view, { kind: 'separator', id: 's1', icon: { kind: 'lucide', value: 'rocket' } }]);
@@ -349,7 +351,7 @@ describe('project', () => {
         expect(withSubheader.success && withSubheader.data.views[1]).toEqual({ kind: 'subheader', id: 'h1', name: 'Agents' });
     });
 
-    test('a canvas file without an icon parses, and only a name from the closed list is allowed', () => {
+    test('a canvas file without an icon parses, and an icon is a Lucide name', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
         const before = { version: 3, rev: 4, name: 'p', color: 'violet', views: [view] };
         const parsed = ProjectDocumentSchema.safeParse(before);
@@ -358,8 +360,8 @@ describe('project', () => {
         expect(parsed.success && parsed.data.views[0]!.kind === 'canvas' && parsed.data.views[0]!.layouts).toEqual([]);
 
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'rocket' } }).success).toBe(true);
-        // Only the closed list, never an image blob in the shared file and never a mark of one's own.
-        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'unicorn' } }).success).toBe(false);
+        // Any name, since a newer Ruimte offers more, but never an image blob in the shared file and never a mark of one's own.
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'unicorn' } }).success).toBe(true);
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'image', value: 'data:image/png;base64,AA' } }).success).toBe(false);
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: '\u{1f680}' } }).success).toBe(false);
     });
@@ -376,6 +378,20 @@ describe('project', () => {
         expect(ProjectSummarySchema.safeParse(summary).success).toBe(false);
     });
 
+    test('a project list with a name a newer machine picked parses and wears the initial instead', () => {
+        const summary = { projectId: 'p1', name: 'ruimte', color: '#7c74ff', folder: '/repo', lastOpenedAt: 1, available: true, nameSource: 'folder' };
+        const result = REQUEST_SCHEMAS['project.list'].result.parse({
+            projects: [
+                { ...summary, icon: { kind: 'lucide', value: 'a-name-from-later' } },
+                { ...summary, projectId: 'p2', icon: { kind: 'lucide', value: 'rocket' } }
+            ]
+        });
+        expect(result.projects.map((project) => project.icon)).toEqual([
+            { kind: 'initial', value: 'R' },
+            { kind: 'lucide', value: 'rocket' }
+        ]);
+    });
+
     test('project.setIcon takes bytes or a null image and answers with the summary', () => {
         const { payload } = REQUEST_SCHEMAS['project.setIcon'];
         expect(payload.safeParse({ projectId: 'p1', image: null }).success).toBe(true);
@@ -388,7 +404,7 @@ describe('project', () => {
         expect(payload.safeParse({ projectId: 'p1', name: 'Renamed' }).success).toBe(true);
         expect(payload.safeParse({ projectId: 'p1', icon: { kind: 'lucide', value: 'rocket' } }).success).toBe(true);
         expect(payload.safeParse({ projectId: 'p1', icon: null }).success).toBe(true);
-        expect(payload.safeParse({ projectId: 'p1', icon: { kind: 'lucide', value: 'unicorn' } }).success).toBe(false);
+        expect(payload.safeParse({ projectId: 'p1', icon: { kind: 'lucide', value: '' } }).success).toBe(false);
         expect(payload.safeParse({ projectId: '', name: 'Renamed' }).success).toBe(false);
     });
 

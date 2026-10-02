@@ -171,9 +171,7 @@ import {
     Zap,
     type LucideIcon
 } from 'lucide-react';
-import { PROJECT_ICON_NAMES } from '@ruimte/contracts';
-
-export type ProjectIconName = (typeof PROJECT_ICON_NAMES)[number];
+import { isProjectIconName, type ProjectIconName } from '@ruimte/contracts';
 
 export type ProjectIconGroupId = 'general' | 'code' | 'ai' | 'web' | 'infra' | 'data' | 'hardware' | 'design' | 'writing' | 'planning' | 'life';
 
@@ -415,6 +413,9 @@ export const PROJECT_ICON_GLYPHS = Object.fromEntries(PROJECT_ICON_GROUPS.flatMa
     ProjectIconName,
     LucideIcon
 >;
+
+/* The glyph of a picked name, or null for one a newer Ruimte offers that this version cannot draw. */
+export const projectIconGlyphOf = (name: string): LucideIcon | null => (isProjectIconName(name) ? PROJECT_ICON_GLYPHS[name] : null);
 
 // The words a search finds an icon by beyond its own name.
 export const PROJECT_ICON_KEYWORDS: Partial<Record<ProjectIconName, readonly string[]>> = {

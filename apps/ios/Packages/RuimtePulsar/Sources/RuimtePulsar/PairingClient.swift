@@ -118,6 +118,6 @@ extension PairResultEndpoint {
 
     private var machineIcon: MachineIcon? {
         guard case .value(let icon) = icon else { return nil }
-        return MachineIcon(value: icon.value.rawValue)
+        return icon
     }
 }
