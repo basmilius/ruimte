@@ -104,6 +104,16 @@ describe('answerInto', () => {
         expect(openInDraft(next)).toEqual([]);
     });
 
+    test('emptying the last stretch leaves no blank line behind', () => {
+        const file = fileOf(answer({ base: 'a\nb\nc\n', ours: 'a\nb\nOURS\n', theirs: 'a\nb\n' }));
+        const [last] = conflictIndexes(file) as [number];
+        const draft = answerInto(undefined, file, new Map([[last, []]]));
+        expect(contentOf(file, draft.text)).toBe('a\nb\n');
+        expect(draft.spans.every((span) => span.to <= draft.text.length)).toBe(true);
+        const refilled = answerInto({ ...draft, spans: draft.spans.map((span) => ({ ...span, settled: false })) }, file, new Map([[last, ['OURS']]]));
+        expect(contentOf(file, refilled.text)).toBe('a\nb\nOURS\n');
+    });
+
     test('an answer for a stretch that is not a conflict changes nothing', () => {
         const file = fileOf(answer());
         const draft = draftWith(file, new Map());

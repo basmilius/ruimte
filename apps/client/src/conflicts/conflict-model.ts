@@ -88,6 +88,29 @@ export const draftWith = (file: ConflictFile, answered: ReadonlyMap<number, read
     };
 };
 
+/* What `replacementOf` reads of a document, which a CodeMirror `Text` and a wrapped string both have. */
+interface DraftText {
+    readonly length: number;
+    sliceString(from: number, to: number): string;
+}
+
+/* The edit that puts `lines` in place of a span of the merged file. */
+export const replacementOf = (
+    doc: DraftText,
+    span: { readonly from: number; readonly to: number },
+    lines: readonly string[]
+): { from: number; to: number; insert: string } => {
+    const ends = span.to >= doc.length;
+    if (lines.length === 0) {
+        // The last line carries no break of its own, so emptying it takes the one before it along.
+        const trailing = ends && span.from < span.to && span.from > 0 && doc.sliceString(span.from - 1, span.from) === '\n';
+        return { from: trailing ? span.from - 1 : span.from, to: span.to, insert: '' };
+    }
+    // A stretch that holds no line at the end of the file needs the break that would have preceded it.
+    const lead = span.from === span.to && span.from === doc.length && doc.length > 0 ? '\n' : '';
+    return { from: span.from, to: span.to, insert: `${lead}${lines.join('\n')}${ends ? '' : '\n'}` };
+};
+
 /*
  * Answers put into a file that is not on screen, the way the editor would put them in: only a
  * conflict still open takes one, so what a person already wrote in the file stays as they left it.
@@ -100,17 +123,19 @@ export const answerInto = (draft: ConflictDraft | undefined, file: ConflictFile,
         if (span === undefined || span.kind !== 'conflict' || span.settled) {
             continue;
         }
-        const ends = span.to >= text.length;
-        // A stretch that holds no line at the end of the file needs the break that would have preceded it.
-        const lead = lines.length > 0 && span.from === span.to && span.from === text.length && text.length > 0 ? '\n' : '';
-        const insert = lines.length === 0 ? '' : `${lead}${lines.join('\n')}${ends ? '' : '\n'}`;
-        const shift = insert.length - (span.to - span.from);
-        text = `${text.slice(0, span.from)}${insert}${text.slice(span.to)}`;
+        const source = text;
+        const change = replacementOf({ length: source.length, sliceString: (from, to) => source.slice(from, to) }, span, lines);
+        const shift = change.insert.length - (change.to - change.from);
+        text = `${source.slice(0, change.from)}${change.insert}${source.slice(change.to)}`;
         spans = spans.map((other) => {
             if (other.block === block) {
-                return { ...other, to: other.from + insert.length, settled: true };
+                return { ...other, from: change.from, to: change.from + change.insert.length, settled: true };
             }
-            return other.block > block ? { ...other, from: other.from + shift, to: other.to + shift } : other;
+            if (other.block > block) {
+                return { ...other, from: other.from + shift, to: other.to + shift };
+            }
+            // Emptying the last stretch takes the break before it, which the stretch before it ended on.
+            return { ...other, from: Math.min(other.from, change.from), to: Math.min(other.to, change.from) };
         });
     }
     return { text, spans };

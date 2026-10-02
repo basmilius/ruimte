@@ -1,6 +1,7 @@
-import { EditorState, StateEffect, StateField, type Extension, type Text } from '@codemirror/state';
+import { EditorState, StateEffect, StateField, type Extension, type Text, type TransactionSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import type { MergeBlockKind, MergeSpan } from '@ruimte/merge';
+import { replacementOf } from '@/conflicts/conflict-model';
 
 /* Where a block sits in the document being edited, and whether anyone has settled it yet. */
 export interface LiveSpan {
@@ -112,22 +113,19 @@ export const blockAt = (state: EditorState, position: number): number | null => 
 export const spanOf = (state: EditorState, block: number): LiveSpan | undefined => state.field(spansField).find((span) => span.block === block);
 
 /* One block replaced by the lines a person picked, and settled in the same step. */
-export const applyBlock = (view: EditorView, block: number, lines: readonly string[]): void => {
-    const span = spanOf(view.state, block);
+export const blockChange = (state: EditorState, block: number, lines: readonly string[]): TransactionSpec | null => {
+    const span = spanOf(state, block);
     if (span === undefined) {
-        return;
+        return null;
     }
-    const { doc } = view.state;
-    const ends = span.to >= doc.length;
-    const body = lines.join('\n');
-    // A stretch that holds no line at the end of the file needs the break that would have preceded it.
-    const lead = lines.length > 0 && span.from === span.to && span.from === doc.length && doc.length > 0 ? '\n' : '';
-    const insert = lines.length === 0 ? '' : `${lead}${body}${ends ? '' : '\n'}`;
-    view.dispatch({
-        changes: { from: span.from, to: span.to, insert },
-        effects: settleBlock.of(block),
-        scrollIntoView: true
-    });
+    return { changes: replacementOf(state.doc, span, lines), effects: settleBlock.of(block), scrollIntoView: true };
+};
+
+export const applyBlock = (view: EditorView, block: number, lines: readonly string[]): void => {
+    const change = blockChange(view.state, block, lines);
+    if (change !== null) {
+        view.dispatch(change);
+    }
 };
 
 /* Brings a block into view and puts the caret at its first line. */
