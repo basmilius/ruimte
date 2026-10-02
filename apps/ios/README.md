@@ -443,12 +443,19 @@ tests inject APNs transport and do not send real notifications.
 
 ## Xcode Cloud and TestFlight
 
-The shared `Ruimte` scheme and generated Xcode project are committed for Xcode Cloud
-onboarding. `ci_scripts/ci_post_clone.sh` generates the project and installs the required
-Metal component; `ci_pre_xcodebuild.sh` uses `CI_BUILD_NUMBER` for the build number.
-Configure the workflow in Xcode/App Store Connect with this project, an iOS simulator
-Test action, and a Release Archive action. Add a TestFlight post-action to the release-tag
-workflow after signing and App Store Connect configuration are complete.
+The app is an Xcode Cloud product in App Store Connect, built from this repository with
+the committed project and `Ruimte.xcodeproj/xcshareddata/xcodecloud/manifest.json`. Its
+`Release` workflow starts on every `v*` tag, the tag of a Ruimte release, and archives the
+app for TestFlight and the App Store. `ci_scripts/ci_post_clone.sh` sets `MARKETING_VERSION`
+from that tag, generates the project and installs the required Metal component, so the app
+carries the desktop's version; `ci_pre_xcodebuild.sh` uses `CI_BUILD_NUMBER` for the build
+number.
+
+Onboarding refuses a project whose Swift packages live in repositories the team cannot grant
+access to, and every package here is someone else's public repository. The product was made
+from a generated project without packages (`project.yml` with the `packages` and every
+`- package:` dependency taken out, and `Package.resolved` set aside), after which the real
+project was generated again. Workflows are edited through the App Store Connect API.
 
 The repository contains the existing Ruimte Icon Composer icon and a privacy manifest for
 local preferences, the shared notification store and elapsed connection timing. Review the archive's aggregated SDK
