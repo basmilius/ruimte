@@ -261,17 +261,19 @@ export class ProjectStore {
         readOnly = false
     ): Promise<{ content: ProjectContent; shared: string[]; rev: number; privateText: string | null }> {
         const fallback = { name: entry.name, color: entry.color };
-        if (read?.legacyRev !== null && read !== null) {
-            const tracked = await this.tracked(path);
-            /* The one file was this person's until the folder was split. Once a private file exists,
-               an old-format file is a colleague's on an older Ruimte, and what it holds is theirs. */
-            const migrating = tracked && !(await fileExists(privatePathOf(path)));
-            // `mergeFiles` drops a shared file view off the folder, so the one this person had stays theirs.
-            const own = !tracked ? read.file.views : migrating ? read.file.views.filter((view) => viewShareRefusal(view) === 'path-outside-project') : [];
-            const shared = tracked ? read.file.views.filter((view) => !own.includes(view)).map((view: ProjectView) => view.id) : [];
-            const file = { ...privateFileOf(own, read.legacyRev), order: read.file.views.map((view: ProjectView) => view.id) };
-            const merged = mergeFiles(read.file, migrating ? { ...file, overlay: overlayOfLegacy(read.file.views) } : file, fallback);
-            return { content: merged.content, shared, rev: read.legacyRev, privateText: null };
+        /* The one file was this person's until the folder was split. Once a private file exists, an
+           old-format file git tracks is a colleague's on an older Ruimte: what it holds is theirs and
+           shared, and the private file still holds this person's views, overlay and rev. */
+        if (read !== null && read.legacyRev !== null) {
+            const tracked = (await this.tracked(path)) && read.file.views.length > 0;
+            if (!tracked || !(await fileExists(privatePathOf(path)))) {
+                // `mergeFiles` drops a shared file view off the folder, so the one this person had stays theirs.
+                const own = tracked ? read.file.views.filter((view) => viewShareRefusal(view) === 'path-outside-project') : read.file.views;
+                const shared = tracked ? read.file.views.filter((view) => !own.includes(view)).map((view: ProjectView) => view.id) : [];
+                const file = { ...privateFileOf(own, read.legacyRev), order: read.file.views.map((view: ProjectView) => view.id) };
+                const merged = mergeFiles(read.file, tracked ? { ...file, overlay: overlayOfLegacy(read.file.views) } : file, fallback);
+                return { content: merged.content, shared, rev: read.legacyRev, privateText: null };
+            }
         }
         const outcome = readOnly ? await this.readPrivateWithoutRepair(privatePathOf(path)) : await readPrivateFile(privatePathOf(path));
         if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {

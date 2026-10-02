@@ -999,6 +999,43 @@ describe('what the shared file may decide', () => {
         expect(canvas(again.document).nodes[0]).not.toHaveProperty('resume');
         expect(canvas(again.document).nodes[0]).not.toHaveProperty('runtimeMode');
     });
+
+    /* This person's canvas after the split: a shared view with a mode and a session of theirs, and a view of their own. */
+    const splitMine = async (): Promise<string> => {
+        store.attachTracked(async () => true);
+        const opened = await store.openProject({ folder });
+        const mine = content();
+        canvas(mine).nodes[0] = { ...canvas(mine).nodes[0]!, runtimeMode: 'auto', resume: 'sess-mine' };
+        mine.views = [...mine.views, { kind: 'canvas', id: 'mine', name: 'Mine', nodes: [], texts: [], edges: [], layouts: [] }];
+        await store.save(opened.summary.projectId, 0, mine, ['main']);
+        return opened.summary.projectId;
+    };
+
+    const colleagueFile = (): string => JSON.stringify({ version: 2, rev: 9, name: 'repo', color: '#123456', views: [content().views[0]] });
+
+    test('a version-2 file pulled after the split keeps the private views, the overlay and the rev of this machine', async () => {
+        await splitMine();
+        store.closeAll();
+        await writeFile(sharedPath(), colleagueFile());
+
+        const again = await store.openProject({ folder });
+        expect(again.document.views.map((view) => view.id)).toEqual(['main', 'mine']);
+        expect(canvas(again.document).nodes[0]).toMatchObject({ runtimeMode: 'auto', resume: 'sess-mine' });
+        expect(again.document.rev).toBe(1);
+        expect((await privateFileOnDisk(folder)).views.map((view) => view.id)).toEqual(['mine']);
+        expect((await privateFileOnDisk(folder)).overlay.n1).toMatchObject({ runtimeMode: 'auto', resume: 'sess-mine' });
+    });
+
+    test('a version-2 file the watcher sees land keeps the private views too', async () => {
+        await splitMine();
+        await writeFile(sharedPath(), colleagueFile());
+        projectDirWatcher().emit('project.json');
+        await fake.settle();
+
+        expect(changed.at(-1)).toMatchObject({ event: 'project.changed', payload: { document: { views: [{ id: 'main' }, { id: 'mine' }] } } });
+        expect((await privateFileOnDisk(folder)).views.map((view) => view.id)).toEqual(['mine']);
+        expect((await privateFileOnDisk(folder)).overlay.n1).toMatchObject({ runtimeMode: 'auto', resume: 'sess-mine' });
+    });
 });
 
 describe('saves and outside edits', () => {
