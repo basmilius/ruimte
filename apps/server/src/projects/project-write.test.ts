@@ -21,6 +21,7 @@ let failAt: number;
 let operations: number;
 let afterOperation: boolean;
 let duringWrite: (() => Promise<void>) | null;
+let duringAt: number;
 const content: ProjectContent = {
     name: 'repo',
     color: '#353e53',
@@ -39,13 +40,14 @@ beforeEach(async () => {
     operations = 0;
     afterOperation = false;
     duringWrite = null;
+    duringAt = 3;
     const step = async (work: () => Promise<void>): Promise<void> => {
         operations += 1;
         if (failAt === operations && !afterOperation) {
             throw new Error('Injected write failure');
         }
         await work();
-        if (operations === 3 && duringWrite) {
+        if (operations === duringAt && duringWrite) {
             await duringWrite();
         }
         if (failAt === operations && afterOperation) {
@@ -117,9 +119,30 @@ describe('durable project saves', () => {
         await writeFile(path, 'outside edit');
         projects.closeAll();
         projects = new ProjectStore(home, new FakeWatch());
-        await expect(projects.openProject({ projectId })).rejects.toThrow('changed since');
+        const refused = await projects.openProject({ projectId }).catch((e: unknown) => e);
+        // A coded error, so a verb is refused instead of failing, and it names the file that lets the save go.
+        expect(refused).toMatchObject({ code: 'project-invalid' });
+        expect((refused as Error).message).toContain('changed since');
+        expect((refused as Error).message).toContain(pendingWritePathOf(path));
         expect(await readFile(path, 'utf8')).toBe('outside edit');
         expect(await stat(pendingWritePathOf(path))).toBeDefined();
+    });
+
+    test('a project file that changes before the first write is a conflict, and leaves nothing to recover', async () => {
+        const path = documentPathInFolder(folder);
+        duringAt = 1;
+        duringWrite = async () => {
+            const pulled = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), name: 'pulled' };
+            await writeFile(path, JSON.stringify(pulled, null, 2));
+        };
+        await expect(projects.save(projectId, 1, { ...content, color: '#654321' })).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await stat(pendingWritePathOf(path)).catch(() => null)).toBeNull();
+
+        duringWrite = null;
+        expect(await projects.read(projectId)).toMatchObject({ name: 'pulled' });
+        projects.closeAll();
+        projects = new ProjectStore(home, new FakeWatch());
+        expect((await projects.openProject({ projectId })).document.name).toBe('pulled');
     });
 
     test('a view edited while the project files are written is preserved beside the recovery record', async () => {

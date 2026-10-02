@@ -33,6 +33,15 @@ const removeDurable = async (path: string): Promise<void> => {
 export const PROJECT_WRITE_IO: ProjectWriteIO = { write: writeAtomic, remove: removeDurable };
 export const pendingWritePathOf = (path: string): string => join(privateDirOf(path), 'pending-save.json');
 
+/* A file moved under a save before its first write: nothing was written, so nothing waits on recovery. */
+export class ProjectWriteRaced extends Error {}
+
+/* An interrupted save that cannot finish without overwriting an edit made since. */
+export class ProjectWriteStuck extends Error {}
+
+const stuck = (path: string, why: string): ProjectWriteStuck =>
+    new ProjectWriteStuck(`The interrupted project save needs recovery: ${why}. Delete ${pendingWritePathOf(path)} to keep the project files as they are now.`);
+
 const bytesAt = async (path: string): Promise<Buffer | null> => {
     try {
         return await readFile(path);
@@ -57,27 +66,36 @@ const checkMove = async (path: string, move: PendingWrite['moves'][number]) => {
     const target = await bytesAt(to);
     const expected = Buffer.from(move.bytes, 'base64');
     if ((source && !source.equals(expected)) || (target && !target.equals(expected)) || (!source && !target)) {
-        throw new Error(`The interrupted project save needs recovery: the file of ${move.viewId} changed since it started`);
+        throw stuck(path, `the file of ${move.viewId} changed since it started`);
     }
     return { from, to, source, target, expected };
 };
 
-const complete = async (path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> => {
-    const files = [
-        { path, before: pending.before.text, after: pending.after.text },
-        { path: privatePathOf(path), before: pending.before.private, after: pending.after.private }
-    ];
-    // Recovery never overwrites an edit made after the interrupted save.
-    for (const file of files) {
+const filesOf = (path: string, pending: PendingWrite) => [
+    { path, before: pending.before.text, after: pending.after.text },
+    { path: privatePathOf(path), before: pending.before.private, after: pending.after.private }
+];
+
+/* Recovery never overwrites an edit made after the interrupted save. */
+const checkUnmoved = async (path: string, pending: PendingWrite): Promise<void> => {
+    for (const file of filesOf(path, pending)) {
         const current = await textAt(file.path);
         if (current !== file.before && current !== file.after) {
-            throw new Error(`The interrupted project save needs recovery: ${file.path} changed since it started`);
+            throw stuck(path, `${file.path} changed since it started`);
         }
     }
     for (const move of pending.moves) {
         await checkMove(path, move);
     }
-    for (const file of files) {
+};
+
+const complete = async (path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> => {
+    await checkUnmoved(path, pending);
+    await apply(path, pending, io);
+};
+
+const apply = async (path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> => {
+    for (const file of filesOf(path, pending)) {
         if ((await textAt(file.path)) !== file.after) {
             await mkdir(dirname(file.path), { recursive: true });
             await io.write(file.path, file.after, 0o644, { durable: true });
@@ -136,6 +154,17 @@ export const writeProjectFiles = async (
     }
     await mkdir(privateDirOf(path), { recursive: true });
     // The intent is durable before the first project file changes, including every view file's bytes.
-    await io.write(pendingWritePathOf(path), JSON.stringify({ version: 1, before, after, moves } satisfies PendingWrite), 0o600, { durable: true });
-    await complete(path, { version: 1, before, after, moves }, io);
+    const pending: PendingWrite = { version: 1, before, after, moves };
+    await io.write(pendingWritePathOf(path), JSON.stringify(pending), 0o600, { durable: true });
+    try {
+        await checkUnmoved(path, pending);
+    } catch (e) {
+        if (!(e instanceof ProjectWriteStuck)) {
+            throw e;
+        }
+        // A pull or a checkout between reading the files and writing the intent.
+        await io.remove(pendingWritePathOf(path));
+        throw new ProjectWriteRaced('The project files changed on disk while they were saved; nothing was written');
+    }
+    await apply(path, pending, io);
 };

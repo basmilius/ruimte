@@ -64,7 +64,7 @@ import {
     ICON_EXTENSION_BY_MIME,
     PROJECT_FILE
 } from './project-files.ts';
-import { PROJECT_WRITE_IO, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
+import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, servedIcon, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
@@ -86,6 +86,13 @@ type ProjectErrorCode =
     | 'bad-icon';
 
 export class ProjectError extends CodedError<ProjectErrorCode> {}
+
+const asProjectError = (e: unknown): unknown => {
+    if (e instanceof ProjectWriteRaced) {
+        return new ProjectError('rev-conflict', e.message);
+    }
+    return e instanceof ProjectWriteStuck ? new ProjectError('project-invalid', e.message) : e;
+};
 
 const RegistryEntrySchema = z.object({
     projectId: z.string().min(1),
@@ -316,7 +323,9 @@ export class ProjectStore {
         const split = splitContent(content, shared, rev);
         const sharedText = serializeSharedFile(split.shared);
         const privateText = serializePrivateFile(split.private);
-        await writeProjectFiles(path, { text: sharedText, private: privateText }, moved, shared, this.writeIO);
+        await writeProjectFiles(path, { text: sharedText, private: privateText }, moved, shared, this.writeIO).catch((e: unknown) => {
+            throw asProjectError(e);
+        });
         return { text: sharedText, private: privateText };
     }
 
@@ -1131,7 +1140,9 @@ export class ProjectStore {
 
     private async recover(entry: RegistryEntry): Promise<boolean> {
         const path = this.documentPath(entry);
-        const written = await recoverProjectWrite(path, this.writeIO);
+        const written = await recoverProjectWrite(path, this.writeIO).catch((e: unknown) => {
+            throw asProjectError(e);
+        });
         if (!written) {
             return false;
         }
