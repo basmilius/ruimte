@@ -50,6 +50,11 @@ The additional B01/B02 fixes and current verification are recorded in the
 No implementation step from those findings remains open. The natural captures and measurements
 below remain separate evidence tasks.
 
+The [next full scan](reports/private/2026-10-02-orchestration-scan-222325.html) rechecked those fixes and found
+a Claude queue-release bug (B01). Its [repair and verification](reports/private/2026-10-02-orchestration-scan-222325.html#herstel)
+are complete: withdrawal of the last request rechecks the queue, while live work, pending requests,
+Claude reports, Stop and unknown resets retain their existing guards. All 6,451 tests pass.
+
 1. Capture a natural provider-limit/reset sequence when one occurs, using the bounded probe in
    the report. A quota read alone is not a refusal/reset replay. Do not consume budget to force
    a limit. Unknown reset times keep the queue paused; this capture does not block other fixes.

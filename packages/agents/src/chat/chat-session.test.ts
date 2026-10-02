@@ -907,6 +907,153 @@ describe('backend replacement with live work', () => {
         await run.session.dispose();
     });
 
+    for (const change of ['model', 'mode'] as const) {
+        test(`withdrawing the last Claude question applies the new ${change} and sends the queued prompt once`, async () => {
+            const run = replacementRig();
+            const protocol = new ClaudeProtocol();
+            const frame = (input: unknown) => {
+                for (const event of protocol.handle(input)) {
+                    run.event(event, 0);
+                }
+            };
+            run.session.send('start');
+            await flush();
+            run.done();
+            for (const requestId of ['first', 'last']) {
+                frame({
+                    type: 'control_request',
+                    request_id: requestId,
+                    request: {
+                        subtype: 'can_use_tool',
+                        agent_id: 'child',
+                        tool_name: 'AskUserQuestion',
+                        input: { questions: [{ header: 'File', question: 'Which file?', options: [] }] }
+                    }
+                });
+            }
+            run.session.configure(change === 'model' ? { selection: { model: 'haiku', options: {} } } : { runtimeMode: 'auto' });
+            const queued = run.session.send('next', { mentions: ['README.md'] });
+            expect(queued.queued).toBe(true);
+            frame({ type: 'control_cancel_request', request_id: 'first' });
+            await flush();
+            expect(run.session.thread.pending()).toHaveLength(1);
+            expect(run.instances).toHaveLength(1);
+            expect(run.instances[0]!.stopped).toBe(false);
+            frame({ type: 'control_cancel_request', request_id: 'last' });
+            await flush();
+            expect(run.session.thread.pending()).toEqual([]);
+            expect(run.session.info.queue).toEqual([]);
+            expect(run.session.info.activeTurnId).toBe(queued.turnId);
+            expect(run.instances).toHaveLength(2);
+            expect(run.instances[0]!.stopped).toBe(true);
+            expect(run.instances[1]!.launch).toMatchObject({ selection: run.session.info.selection, runtimeMode: run.session.info.runtimeMode });
+            expect(run.instances[1]!.sent).toHaveLength(1);
+            expect(run.instances[1]!.sent[0]).toMatchObject({ text: 'next', mentions: ['README.md'] });
+            frame({ type: 'control_cancel_request', request_id: 'last' });
+            run.done();
+            await flush();
+            expect(run.instances[1]!.sent).toHaveLength(1);
+            await run.session.dispose();
+        });
+    }
+
+    for (const work of ['child', 'workflow', 'command'] as const) {
+        test(`request withdrawal waits for the remaining ${work} and Claude report`, async () => {
+            const run = replacementRig();
+            run.session.send('start');
+            await flush();
+            if (work === 'child') {
+                run.agent();
+            } else if (work === 'workflow') {
+                run.event({ type: 'tool.started', ref: 'work', name: 'Workflow', input: {}, parentRef: null });
+                run.event({ type: 'workflow.progress', ref: 'work', workflow: { name: 'Research', taskId: 'work', phases: [], agents: [] } });
+                run.event({ type: 'tool.done', ref: 'work', state: 'done', output: 'Workflow launched in background. Task ID: work' });
+            } else {
+                run.event({ type: 'background.started', taskId: 'work', ref: null, monitor: false, description: 'build' });
+            }
+            run.done();
+            run.event({ type: 'question.requested', requestId: 'question', background: true, questions: [] });
+            run.session.configure({ runtimeMode: 'auto' });
+            run.session.send('next');
+            run.event({ type: 'request.withdrawn', requestId: 'question' });
+            await flush();
+            expect(run.session.thread.pending()).toEqual([]);
+            expect(run.instances).toHaveLength(1);
+            expect(run.instances[0]!.stopped).toBe(false);
+            expect(run.session.info.queue?.map((message) => message.text)).toEqual(['next']);
+            if (work === 'command') {
+                run.event({ type: 'background.ended', taskId: 'work' });
+            } else {
+                run.event({
+                    type: 'task.done',
+                    ref: work === 'child' ? 'agent' : 'work',
+                    taskId: work === 'child' ? 'native-agent' : 'work',
+                    summary: 'Complete',
+                    ok: true
+                });
+            }
+            run.event({ type: 'request.withdrawn', requestId: 'question' });
+            await flush();
+            expect(run.instances).toHaveLength(1);
+            expect(run.session.replacementWouldWait).toBe(true);
+            run.event({ type: 'text.done', ref: 'report', text: 'Finished', parentRef: null });
+            run.done();
+            await flush();
+            expect(run.instances).toHaveLength(2);
+            expect(run.instances[1]!.sent.map((input) => input.text)).toEqual(['next']);
+            await run.session.dispose();
+        });
+    }
+
+    for (const pause of ['stop', 'unknown reset'] as const) {
+        test(`request withdrawal preserves the queue after ${pause}`, async () => {
+            const run = replacementRig();
+            run.session.send('start');
+            await flush();
+            run.event({ type: 'question.requested', requestId: 'question', background: true, questions: [] });
+            run.session.configure({ runtimeMode: 'auto' });
+            run.session.send('next');
+            if (pause === 'stop') {
+                run.session.cancel();
+            } else {
+                run.event({ type: 'turn.done', state: 'error', costUsd: 0, limit: { kind: 'usage' }, error: 'reset unknown' });
+            }
+            run.event({ type: 'request.withdrawn', requestId: 'question' });
+            await flush();
+            expect(run.session.thread.pending()).toEqual([]);
+            expect(run.session.info.activeTurnId).toBeNull();
+            expect(run.session.info.queuePaused).toBe(true);
+            expect(run.session.info.queue?.map((message) => message.text)).toEqual(['next']);
+            expect(run.instances).toHaveLength(1);
+            expect(run.instances[0]!.stopped).toBe(false);
+            run.session.sendNow(run.session.info.queue![0]!.id);
+            await flush();
+            expect(run.instances).toHaveLength(2);
+            expect(run.instances[1]!.sent.map((input) => input.text)).toEqual(['next']);
+            await run.session.dispose();
+        });
+    }
+
+    test('request withdrawal does not resend a prompt released by switching back to the running mode', async () => {
+        const run = replacementRig();
+        run.session.send('start');
+        await flush();
+        run.done();
+        run.event({ type: 'question.requested', requestId: 'question', background: true, questions: [] });
+        run.session.configure({ runtimeMode: 'auto' });
+        expect(run.session.send('next').queued).toBe(true);
+        run.session.configure({ runtimeMode: 'supervised' });
+        await flush();
+        run.event({ type: 'request.withdrawn', requestId: 'question' });
+        run.done();
+        await flush();
+        expect(run.instances).toHaveLength(1);
+        expect(run.instances[0]!.stopped).toBe(false);
+        expect(run.instances[0]!.sent.map((input) => input.text)).toEqual(['start', 'next']);
+        expect(run.session.info.queue).toEqual([]);
+        await run.session.dispose();
+    });
+
     test('an unexpected exit settles the old owner and leaves the queued prompt for an explicit retry', async () => {
         const run = replacementRig();
         run.session.send('start');

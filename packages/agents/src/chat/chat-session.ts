@@ -1492,8 +1492,8 @@ export class ChatSession {
             this.drainQueue(event.state === 'aborted' && this.sendAfterStop);
             this.sendAfterStop = false;
         } else if (
-            !reportsOnBackgroundWork(this.info.provider) &&
-            (event.type === 'task.done' || event.type === 'tool.done' || event.type === 'background.ended' || event.type === 'request.withdrawn')
+            event.type === 'request.withdrawn' ||
+            (!reportsOnBackgroundWork(this.info.provider) && (event.type === 'task.done' || event.type === 'tool.done' || event.type === 'background.ended'))
         ) {
             this.drainQueue();
         }
