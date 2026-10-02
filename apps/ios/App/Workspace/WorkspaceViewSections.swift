@@ -35,11 +35,19 @@ enum WorkspaceViewSections {
         return sections.filter { !$0.items.isEmpty }
     }
 
+    /// Whether a view stands in the list. A chat of the Chats project nobody wrote in yet stays out, as the desktop's
+    /// sidebar leaves it out, unless it is the one open.
+    static func isListed(_ view: JSONValue, selectedID: String?) -> Bool {
+        view["empty"]?.boolValue != true || view.text("kind") != "chat" || view.stableID == selectedID
+    }
+
+    /// Moves rows of one section as the list shows it. A view the list leaves out keeps its slot, so only the slots of
+    /// the rows on screen take the new order.
     static func moving(
         _ views: [JSONValue], sectionID: WorkspaceViewSection.ID, expectedIDs: [String],
-        from offsets: IndexSet, to destination: Int
+        from offsets: IndexSet, to destination: Int, listed: (JSONValue) -> Bool = { _ in true }
     ) -> [JSONValue]? {
-        guard let section = split(views).first(where: { $0.id == sectionID }),
+        guard let section = split(views.filter(listed)).first(where: { $0.id == sectionID }),
             section.items.map(\.stableID) == expectedIDs,
             destination >= 0, destination <= section.items.count,
             !offsets.isEmpty, offsets.allSatisfy({ section.items.indices.contains($0) })

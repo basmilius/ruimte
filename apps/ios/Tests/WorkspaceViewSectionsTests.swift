@@ -115,6 +115,19 @@ final class WorkspaceViewSectionsTests: XCTestCase {
         XCTAssertEqual(WorkspaceViewIcon.name(for: chosen.setting("kind", .string("unknown"))), "circle-question-mark")
     }
 
+    func testAChatNobodyWroteInKeepsItsSlotWhileTheListedRowsMove() throws {
+        let empty = view("new").setting("empty", .bool(true))
+        let views = [view("a"), empty, view("c"), view("d")]
+        let listed = { WorkspaceViewSections.isListed($0, selectedID: nil) }
+        XCTAssertEqual(views.filter(listed).map(\.stableID), ["a", "c", "d"])
+        XCTAssertTrue(WorkspaceViewSections.isListed(empty, selectedID: "new"))
+        let moved = try XCTUnwrap(
+            WorkspaceViewSections.moving(
+                views, sectionID: .leading, expectedIDs: ["a", "c", "d"], from: [2], to: 0, listed: listed))
+        XCTAssertEqual(moved.map(\.stableID), ["d", "new", "a", "c"])
+        XCTAssertEqual(moved[1], empty)
+    }
+
     private func view(_ id: String, _ name: String? = nil) -> JSONValue {
         .object(["id": .string(id), "kind": .string("chat"), "name": .string(name ?? id)])
     }

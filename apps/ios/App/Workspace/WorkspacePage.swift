@@ -226,12 +226,8 @@ struct WorkspacePage: View {
         }
     }
 
-    /// A chat of the Chats project nobody wrote in yet stays out of the list, as the desktop's sidebar leaves it out,
-    /// unless it is the one open.
     private var listedViews: [JSONValue] {
-        workspace.views.filter {
-            $0["empty"]?.boolValue != true || $0.text("kind") != "chat" || $0.stableID == navigation.selectedViewID
-        }
+        workspace.views.filter { WorkspaceViewSections.isListed($0, selectedID: navigation.selectedViewID) }
     }
 
     private func viewList(query: String) -> some View {
@@ -293,13 +289,15 @@ struct WorkspacePage: View {
                     .onMove { indices, destination in
                         guard query.isEmpty else { return }
                         let expectedIDs = section.items.map(\.stableID)
+                        let selectedID = navigation.selectedViewID
                         Task {
                             await workspace.edit { document in
                                 guard
                                     let reordered = WorkspaceViewSections.moving(
                                         document.list("views"), sectionID: section.id,
                                         expectedIDs: expectedIDs,
-                                        from: indices, to: destination)
+                                        from: indices, to: destination,
+                                        listed: { WorkspaceViewSections.isListed($0, selectedID: selectedID) })
                                 else { return document }
                                 return document.setting("views", .array(reordered))
                             }
