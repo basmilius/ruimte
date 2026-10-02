@@ -3,7 +3,7 @@ import type { DrawingElement } from '@ruimte/contracts';
 import { DEFAULT_SVG_MARGIN, approximateMeasure, boundsOfElements, toSvg } from '@ruimte/drawing';
 import { desktop } from '@/desktop/bridge';
 import { measureLineIn, paintElements, paintOptions } from '@/drawing/paint';
-import { readCanvasBackground, readFontStacks, readPaper, readPalette } from '@/drawing/palette';
+import { readCanvasBackground } from '@/drawing/palette';
 import type { DrawingState } from '@/state/drawing';
 
 /* A PNG is written at twice the size, so it still reads when it is dropped into a document. */
@@ -26,14 +26,18 @@ export const exportTargets = (store: DrawingSource): DrawingElement[] => {
     return selected.length > 0 ? selected : elements;
 };
 
-export const drawingSvg = (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): string =>
-    toSvg(elements, {
-        palette: readPalette(),
-        paper: readPaper(),
+/* The theme as the painter reads it, so the file and a PNG of the same drawing wear the same colors. */
+export const drawingSvg = (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): string => {
+    const { palette, paper, edge, fonts } = paintOptions();
+    return toSvg(elements, {
+        palette,
+        paper,
+        edge,
         background: store.getState().exportBackground ? readCanvasBackground() : null,
         // Wrapped where the screen wraps, so the file shows the lines the person saw.
-        measure: (element) => measureLineIn(element, readFontStacks()) ?? approximateMeasure(element.size, element.font)
+        measure: (element) => measureLineIn(element, fonts) ?? approximateMeasure(element.size, element.font)
     });
+};
 
 /* The same painter the screen uses, on a canvas of its own, at the size the file is written in. */
 export const drawingPng = async (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): Promise<Blob | null> => {
