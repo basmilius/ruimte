@@ -25,17 +25,36 @@ export interface GrepState {
     busy: boolean;
 }
 
-/* What was searched for, kept with the answer: it is what says whether the answer is the one the
-   person is waiting for, without a second state that has to be set in step with this one. */
-interface Answer {
+/* What was searched for, where and how, kept with the answer: it is what says whether the answer is
+   the one the person is waiting for, without a second state that has to be set in step with this one. */
+export interface GrepAnswer {
+    folder: string;
     query: string;
+    options: GrepOptions;
     matches: readonly FsGrepMatch[];
     files: number;
     truncated: boolean;
     failure: string | null;
 }
 
-const NOTHING: Answer = { query: '', matches: [], files: 0, truncated: false, failure: null };
+const NOTHING: GrepAnswer = { folder: '', query: '', options: DEFAULT_GREP_OPTIONS, matches: [], files: 0, truncated: false, failure: null };
+
+/* The answer as the list shows it. The hits of the search before this one stay up while the next
+   answer is on its way: a list that empties on every keystroke flickers, and what is shown is never
+   presented as current. */
+export const grepState = (answer: GrepAnswer, folder: string | null, query: string, options: GrepOptions): GrepState => {
+    const trimmed = query.trim();
+    if (folder === null || trimmed === '') {
+        return { matches: [], files: 0, truncated: false, failure: null, busy: false };
+    }
+    const current =
+        answer.folder === folder &&
+        answer.query === trimmed &&
+        answer.options.caseSensitive === options.caseSensitive &&
+        answer.options.wholeWord === options.wholeWord &&
+        answer.options.regex === options.regex;
+    return { matches: answer.matches, files: answer.files, truncated: answer.truncated, failure: answer.failure, busy: !current };
+};
 
 /* One file's hits under the name they share, in the order the search walked them. */
 export interface GrepGroup {
@@ -66,8 +85,9 @@ export const firstContextLine = (match: FsGrepMatch): number => match.line - mat
  * debounce, and an answer that a later keystroke has already outrun is dropped rather than shown.
  */
 export const useGrepSearch = (folder: string | null, query: string, options: GrepOptions): GrepState => {
-    const [answer, setAnswer] = useState<Answer>(NOTHING);
+    const [answer, setAnswer] = useState<GrepAnswer>(NOTHING);
     const generation = useRef(0);
+    const { caseSensitive, wholeWord, regex } = options;
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -75,35 +95,24 @@ export const useGrepSearch = (folder: string | null, query: string, options: Gre
         if (folder === null || trimmed === '') {
             return;
         }
+        const asked = { folder, query: trimmed, options: { caseSensitive, wholeWord, regex } };
         const timer = window.setTimeout(() => {
-            performAsPerson('file.grep', {
-                query: trimmed,
-                limit: GREP_LIMIT,
-                caseSensitive: options.caseSensitive,
-                wholeWord: options.wholeWord,
-                regex: options.regex
-            })
+            performAsPerson('file.grep', { query: trimmed, limit: GREP_LIMIT, caseSensitive, wholeWord, regex })
                 .then((result) => {
                     if (mine === generation.current) {
-                        setAnswer({ ...result, query: trimmed, failure: null });
+                        setAnswer({ ...result, ...asked, failure: null });
                     }
                 })
                 .catch((e: unknown) => {
                     if (mine === generation.current) {
-                        setAnswer({ ...NOTHING, query: trimmed, failure: e instanceof Error ? e.message : i18next.t('shell:findInFiles.badSearch') });
+                        setAnswer({ ...NOTHING, ...asked, failure: e instanceof Error ? e.message : i18next.t('shell:findInFiles.badSearch') });
                     }
                 });
         }, GREP_DEBOUNCE_MS);
         return () => {
             window.clearTimeout(timer);
         };
-    }, [folder, query, options.caseSensitive, options.wholeWord, options.regex]);
+    }, [folder, query, caseSensitive, wholeWord, regex]);
 
-    const trimmed = query.trim();
-    if (folder === null || trimmed === '') {
-        return { ...NOTHING, busy: false };
-    }
-    /* The hits of the query before this one stay up while the next answer is on its way: a list
-       that empties on every keystroke flickers, and what is shown is never presented as current. */
-    return { ...answer, busy: answer.query !== trimmed };
+    return grepState(answer, folder, query, options);
 };
