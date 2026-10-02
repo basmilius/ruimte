@@ -297,10 +297,13 @@ export const toPortable = (content: ProjectContent, folder: string | null): Proj
             if (rel === '') {
                 return '.';
             }
-            return rel.startsWith('..') || isAbsolute(rel) ? cwd : `./${toPosix(rel)}`;
+            return climbsOut(rel) ? cwd : `./${toPosix(rel)}`;
         })
     };
 };
+
+/* Whether a path `relative` gave leaves the folder it was taken from; a folder named `..cache` does not. */
+export const climbsOut = (rel: string): boolean => rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
 
 /* A relative folder that climbs out of the project is one `toPortable` never writes, so it is somebody else's and goes. */
 export const fromPortable = <T extends ProjectContent>(content: T, folder: string | null): T => {
@@ -315,7 +318,7 @@ export const fromPortable = <T extends ProjectContent>(content: T, folder: strin
             }
             const resolved = resolve(folder, cwd);
             const rel = relative(folder, resolved);
-            return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel) ? undefined : resolved;
+            return climbsOut(rel) ? undefined : resolved;
         })
     };
 };

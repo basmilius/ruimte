@@ -67,7 +67,7 @@ import {
 import { PROJECT_WRITE_IO, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { ProjectIndex } from './project-index.ts';
-import { IdentityCache, readIdeaName, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
+import { IdentityCache, readIdeaName, servedIcon, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
 import { ClientSinks } from '../client-sinks.ts';
@@ -844,13 +844,7 @@ export class ProjectStore {
             return null;
         }
         const icon = (await this.identity.resolve(entry.folder)).icon;
-        if (!icon) {
-            return null;
-        }
-        if (theme === 'dark' && icon.darkPath && icon.darkMime) {
-            return { path: icon.darkPath, mime: icon.darkMime };
-        }
-        return { path: icon.lightPath, mime: icon.mime };
+        return icon ? await servedIcon(entry.folder, icon, theme) : null;
     }
 
     /*

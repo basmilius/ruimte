@@ -2,7 +2,7 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { clipText } from '@ruimte/contracts';
 import { looksLikeSvg, sniffMime } from '../fs/sniff.ts';
-import { PROJECT_DIR } from './project-files.ts';
+import { climbsOut, PROJECT_DIR } from './project-files.ts';
 
 // A logo is a few kilobytes; anything past this is a photo that happens to be called icon.png.
 export const ICON_MAX_BYTES = 256 * 1024;
@@ -97,7 +97,7 @@ export const sniffIconMime = (bytes: Uint8Array): string | null => {
 /* True while `path` stays inside `folder`, symlinks resolved. */
 const isInside = (folder: string, path: string): boolean => {
     const rel = relative(folder, path);
-    return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+    return rel !== '' && !climbsOut(rel);
 };
 
 /*
@@ -177,6 +177,15 @@ const toDerived = async (folder: string, candidate: string, light: { path: strin
         darkPath: dark?.path ?? null,
         darkMime: dark?.mime ?? null
     };
+};
+
+/*
+ * The file to serve for a derived icon, held against the folder again: the cache is minutes old,
+ * and a symlink swapped in since must not reach a file outside it.
+ */
+export const servedIcon = async (folder: string, icon: DerivedIcon, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null> => {
+    const file = await readImage(folder, theme === 'dark' && icon.darkPath !== null ? darkVariantOf(icon.from) : icon.from);
+    return file === null ? null : { path: file.path, mime: file.mime };
 };
 
 /* The `href` of the first `<link rel="icon">` in an HTML head, or null. */

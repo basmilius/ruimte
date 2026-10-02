@@ -37,6 +37,7 @@ afterAll(async () => {
 describe('repoLabel', () => {
     test('a repository under the folder reads as its path there', () => {
         expect(repoLabel('/work/app', '/work/app/packages/ui')).toBe('packages/ui');
+        expect(repoLabel('/work/app', '/work/app/..vendored/ui')).toBe('..vendored/ui');
     });
 
     test('the folder itself reads as its own name', () => {

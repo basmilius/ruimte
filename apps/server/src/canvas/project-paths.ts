@@ -1,11 +1,9 @@
 import { realpath, stat } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
+import { climbsOut } from '../projects/project-files.ts';
 import { VerbRefusal } from './verb.ts';
 
-export const isInside = (root: string, path: string): boolean => {
-    const rel = relative(root, path);
-    return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
-};
+export const isInside = (root: string, path: string): boolean => !climbsOut(relative(root, path));
 
 const realOrNull = (path: string): Promise<string | null> => realpath(path).catch(() => null);
 

@@ -656,7 +656,8 @@ describe('portable paths', () => {
                             { id: 'a', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo/apps' },
                             { id: 'b', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo' },
                             { id: 'c', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/elsewhere' },
-                            { id: 'd', kind: 'chat', title: '', x: 0, y: 0, w: 1, h: 1 }
+                            { id: 'd', kind: 'chat', title: '', x: 0, y: 0, w: 1, h: 1 },
+                            { id: 'f', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo/..cache' }
                         ],
                         texts: [],
                         edges: [],
@@ -667,11 +668,11 @@ describe('portable paths', () => {
             },
             '/repo'
         );
-        expect(canvas(portable).nodes.map((node) => node.cwd)).toEqual(['./apps', '.', '/elsewhere', undefined]);
+        expect(canvas(portable).nodes.map((node) => node.cwd)).toEqual(['./apps', '.', '/elsewhere', undefined, './..cache']);
         // A standalone view carries a folder too, and travels the same way.
         expect(portable.views[1]).toMatchObject({ node: { cwd: './apps/server' } });
         const back = fromPortable(portable, '/repo');
-        expect(canvas(back).nodes.map((node) => node.cwd)).toEqual(['/repo/apps', '/repo', '/elsewhere', undefined]);
+        expect(canvas(back).nodes.map((node) => node.cwd)).toEqual(['/repo/apps', '/repo', '/elsewhere', undefined, '/repo/..cache']);
         expect(back.views[1]).toMatchObject({ node: { cwd: '/repo/apps/server' } });
     });
 

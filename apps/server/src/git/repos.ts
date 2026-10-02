@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { basename, join, relative } from 'node:path';
 import type { GitRepo, GitReposResult } from '@ruimte/contracts';
-import { parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { climbsOut, parseSharedFile, PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 import { readIdeaName } from '../projects/project-identity.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git } from './run.ts';
@@ -23,7 +23,7 @@ const SKIPPED = new Set(['node_modules', 'vendor', 'dist', 'build', 'target', 'c
    folder sits inside it instead of the other way round. */
 export const repoLabel = (folder: string, path: string): string => {
     const within = relative(folder, path);
-    return within === '' || within.startsWith('..') ? basename(path) : within;
+    return within === '' || climbsOut(within) ? basename(path) : within;
 };
 
 /*
@@ -111,7 +111,7 @@ const scan = async (folder: string, dir: string, depth: number, found: Set<strin
 /* Whether a path sits inside the project folder, which every repository but the root has to. */
 const isInside = (folder: string, path: string): boolean => {
     const within = relative(folder, path);
-    return within !== '' && !within.startsWith('..');
+    return within !== '' && !climbsOut(within);
 };
 
 /*

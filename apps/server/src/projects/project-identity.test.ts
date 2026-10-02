@@ -113,6 +113,12 @@ describe('deriveIdentity', () => {
         expect((await deriveIdentity(folder)).icon?.from).toBe('public/brand.svg');
     });
 
+    test('a folder whose name starts with two dots is still inside', async () => {
+        await put('index.html', '<html><head><link rel="icon" href="/..brand/logo.svg" /></head></html>');
+        await put('..brand/logo.svg', SVG);
+        expect((await deriveIdentity(folder)).icon?.from).toBe('..brand/logo.svg');
+    });
+
     test('a folder that cannot be read is unresolved, which is not the same as empty', async () => {
         const derived = await deriveIdentity(join(root, 'gone'));
         expect(derived).toEqual({ icon: null, unresolved: true });

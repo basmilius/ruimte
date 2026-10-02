@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthStore } from '../auth/auth-store.ts';
@@ -76,6 +76,17 @@ describe('the icon route', () => {
         const dark = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&theme=dark`);
         expect((await light.arrayBuffer()).byteLength).toBe(PNG.length);
         expect((await dark.arrayBuffer()).byteLength).toBe(PNG.length + 1);
+    });
+
+    test('a folder swapped for a symlink out of the project since the icon was found serves nothing', async () => {
+        expect((await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`)).status).toBe(200);
+        const outside = join(root, 'outside');
+        await mkdir(outside);
+        await writeFile(join(outside, 'icon.png'), Buffer.concat([PNG, Buffer.from('secret')]));
+        await rename(join(folder, '.ruimte'), join(folder, '.ruimte-moved'));
+        await symlink(outside, join(folder, '.ruimte'));
+
+        expect((await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`)).status).toBe(404);
     });
 
     test('answers 404 for another path and a project with no image', async () => {
