@@ -20,6 +20,8 @@ const openProject = (): { endpointId: string; projectId: string } | null => {
     return current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId };
 };
 
+const FAILED_TOAST = 'launch-failed:';
+
 const launchName = (endpointId: string, status: LaunchStatus): string => {
     const document = useLaunches.getState().documents[`${endpointId}:${status.projectId}`];
     return document?.launches.find((launch) => launch.id === status.launchId)?.name ?? status.launchId;
@@ -39,11 +41,12 @@ const announceFailure = (endpointId: string, previous: LaunchStatus | undefined,
         code: status.exitCode ?? '?',
         duration: formatDuration((status.endedAt ?? Date.now()) - status.startedAt)
     });
-    const id = `launch-failed:${status.launchId}`;
-    const show = (): void => showLaunchOutput(status.launchId);
+    const owner = { endpointId, projectId: status.projectId };
+    const id = `${FAILED_TOAST}${endpointId}:${status.projectId}:${status.launchId}`;
+    const show = (): void => showLaunchOutput(status.launchId, owner);
     const again = (): void => {
         useToasts.getState().dismiss(id);
-        void startLaunch(status.launchId);
+        void startLaunch(status.launchId, { owner });
     };
     useToasts.getState().show({
         id,
@@ -60,7 +63,7 @@ const announceFailure = (endpointId: string, previous: LaunchStatus | undefined,
     }
     const notification = new Notification(title, {
         body: description,
-        tag: `ruimte-launch-${endpointId}-${status.launchId}`
+        tag: `ruimte-launch-${endpointId}-${status.projectId}-${status.launchId}`
     });
     notification.onclick = () => {
         window.focus();
@@ -103,6 +106,13 @@ export const startLaunchWatch = (): (() => void) => {
             return;
         }
         last = key;
+        // What was asked or offered about the project before acts on nothing once this one is on screen.
+        useLaunches.getState().setAsk(null);
+        for (const toast of useToasts.getState().toasts) {
+            if (toast.id.startsWith(FAILED_TOAST)) {
+                useToasts.getState().dismiss(toast.id);
+            }
+        }
         if (open !== null) {
             readDocument(open.endpointId, open.projectId);
         }

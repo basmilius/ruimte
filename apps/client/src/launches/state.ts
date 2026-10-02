@@ -8,10 +8,17 @@ import { hasLocalMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 
+/* The project a launch belongs to. Ids such as `dev` repeat from project to project, so whatever
+   outlives a switch of project (a toast, a notification, a question) names its own. */
+export interface LaunchOwner {
+    endpointId: string;
+    projectId: string;
+}
+
 /* A start that came back with a question for the person who asked. */
 export type LaunchAsk =
-    | { kind: 'held'; launchId: string; restart: boolean; held: LaunchHeld[]; replace: boolean }
-    | { kind: 'busy'; launchId: string; restart: boolean; busy: LaunchBusy; approve: boolean };
+    | { kind: 'held'; owner: LaunchOwner; launchId: string; restart: boolean; held: LaunchHeld[]; replace: boolean }
+    | { kind: 'busy'; owner: LaunchOwner; launchId: string; restart: boolean; busy: LaunchBusy; approve: boolean };
 
 /* The dialog the chip or the menu asked for: the editor on a launch (null is a new one), or the import. */
 export type LaunchDialog = { kind: 'edit'; launchId: string | null } | { kind: 'import' };

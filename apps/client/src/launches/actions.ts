@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import { isCanvasView } from '@ruimte/contracts';
 import { createNodeAction } from '@/actions/client-actions';
 import { chosenLaunch } from '@/launches/model';
-import { useLaunches } from '@/launches/state';
+import { useLaunches, type LaunchOwner } from '@/launches/state';
 import { revealNode } from '@/project/views';
 import { useDocument } from '@/state/document';
 import { endpointKey } from '@/state/keys';
@@ -17,13 +17,21 @@ interface Target {
     key: string;
 }
 
-/* Launches belong to the project on screen, on the machine it came from. */
-const target = (): Target | null => {
-    const { current, currentEndpointId } = defaultProjectStore.getState();
-    if (current === null || currentEndpointId === null) {
+/* Launches belong to the project on screen, on the machine it came from. One that names its owner acts
+   only while that project is the one on screen, and does nothing once a person switched away. */
+export const launchTarget = (onScreen: LaunchOwner | null, owner?: LaunchOwner): Target | null => {
+    if (onScreen === null) {
         return null;
     }
-    return { endpointId: currentEndpointId, projectId: current.projectId, key: endpointKey(currentEndpointId, current.projectId) };
+    if (owner !== undefined && (owner.endpointId !== onScreen.endpointId || owner.projectId !== onScreen.projectId)) {
+        return null;
+    }
+    return { ...onScreen, key: endpointKey(onScreen.endpointId, onScreen.projectId) };
+};
+
+const target = (owner?: LaunchOwner): Target | null => {
+    const { current, currentEndpointId } = defaultProjectStore.getState();
+    return launchTarget(current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId }, owner);
 };
 
 const failed = (title: string, e: unknown): void => {
@@ -39,11 +47,13 @@ export interface StartOptions {
     approve?: boolean;
     /* Stop the launch that holds its port first. */
     replace?: boolean;
+    /* The project it was asked from, for an ask that can outlive a switch of project. */
+    owner?: LaunchOwner;
 }
 
 /* Starts a launch, or starts it again; what it has to ask a person first comes back as the store's `ask`. */
 export const startLaunch = async (launchId: string, options: StartOptions = {}): Promise<void> => {
-    const at = target();
+    const at = target(options.owner);
     const link = at === null ? null : transportFor(at.endpointId);
     if (at === null || link === null) {
         return;
@@ -54,10 +64,11 @@ export const startLaunch = async (launchId: string, options: StartOptions = {}):
     const payload = { projectId: at.projectId, launchId, approve: options.approve, replace: options.replace };
     try {
         const result = await link.request(restart ? 'launch.restart' : 'launch.start', payload);
+        const owner = { endpointId: at.endpointId, projectId: at.projectId };
         if (result.outcome === 'held' && result.held !== undefined) {
-            useLaunches.getState().setAsk({ kind: 'held', launchId, restart, held: result.held, replace: options.replace === true });
+            useLaunches.getState().setAsk({ kind: 'held', owner, launchId, restart, held: result.held, replace: options.replace === true });
         } else if (result.outcome === 'busy' && result.busy !== undefined) {
-            useLaunches.getState().setAsk({ kind: 'busy', launchId, restart, busy: result.busy, approve: options.approve === true });
+            useLaunches.getState().setAsk({ kind: 'busy', owner, launchId, restart, busy: result.busy, approve: options.approve === true });
         }
     } catch (e) {
         failed(i18next.t('launches:startFailed', { name: nameOf(at, launchId) }), e);
@@ -130,7 +141,10 @@ export const stopChosenLaunch = (): void => {
 };
 
 /* The launch's output in the panel, which also makes it the one on the chip. */
-export const showLaunchOutput = (launchId?: string): void => {
+export const showLaunchOutput = (launchId?: string, owner?: LaunchOwner): void => {
+    if (owner !== undefined && target(owner) === null) {
+        return;
+    }
     if (launchId !== undefined) {
         chooseLaunch(launchId);
     }

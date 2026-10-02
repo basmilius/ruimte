@@ -80,7 +80,8 @@ export function LaunchChip() {
                                     void startLaunch(ask.launchId, {
                                         restart: ask.restart,
                                         approve: true,
-                                        replace: ask.replace
+                                        replace: ask.replace,
+                                        owner: ask.owner
                                     });
                                 }
                             }}
@@ -109,7 +110,8 @@ export function LaunchChip() {
                         void startLaunch(ask.launchId, {
                             restart: ask.restart,
                             approve: ask.approve,
-                            replace: true
+                            replace: true,
+                            owner: ask.owner
                         });
                     }
                 }}
