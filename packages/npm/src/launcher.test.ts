@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { binaryPathOf, exitCodeOf, LauncherError, platformPackageOf, WINDOWS_REFUSAL, type Resolve } from './launcher';
+import { binaryPathOf, exitCodeOf, INTEL_NODE_REFUSAL, LauncherError, MUSL_REFUSAL, platformPackageOf, WINDOWS_REFUSAL, type Resolve } from './launcher';
 
 const installed =
     (...names: string[]): Resolve =>
@@ -25,7 +25,10 @@ describe('platformPackageOf', () => {
     test('names a platform or architecture it has no build for', () => {
         expect(() => platformPackageOf({ platform: 'freebsd', arch: 'x64' })).toThrow('Ruimte has no build for freebsd on x64.');
         expect(() => platformPackageOf({ platform: 'linux', arch: 'ia32' })).toThrow(LauncherError);
-        expect(() => platformPackageOf({ platform: 'darwin', arch: 'x64' })).toThrow('Ruimte has no build for darwin on x64.');
+    });
+
+    test('a Node for Intel on a Mac is told which Node to use, since on Apple silicon it runs under Rosetta', () => {
+        expect(() => platformPackageOf({ platform: 'darwin', arch: 'x64' })).toThrow(INTEL_NODE_REFUSAL);
     });
 });
 
@@ -39,6 +42,22 @@ describe('binaryPathOf', () => {
         expect(() => binaryPathOf({ platform: 'darwin', arch: 'arm64' }, installed('@ruimte/linux-x64'))).toThrow(
             'The package @ruimte/darwin-arm64 is missing.'
         );
+    });
+
+    test('on musl it says the package was left out for its libc, not for a flag', () => {
+        const missing = installed();
+        expect(() => binaryPathOf({ platform: 'linux', arch: 'x64' }, missing, () => 'musl')).toThrow(MUSL_REFUSAL);
+        expect(() => binaryPathOf({ platform: 'linux', arch: 'x64' }, missing, () => 'glibc')).toThrow('--omit=optional');
+    });
+
+    test('asks for the libc only when the package is missing', () => {
+        let asked = false;
+        const libc = () => {
+            asked = true;
+            return 'glibc' as const;
+        };
+        binaryPathOf({ platform: 'linux', arch: 'arm64' }, installed('@ruimte/linux-arm64'), libc);
+        expect(asked).toBe(false);
     });
 
     test('refuses Windows before it looks for a package', () => {

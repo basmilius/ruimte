@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { accessSync, chmodSync, constants } from 'node:fs';
 import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
-import { binaryPathOf, exitCodeOf, LauncherError } from './launcher';
+import { binaryPathOf, exitCodeOf, LauncherError, type Libc } from './launcher';
 
 /*
  * `npx ruimte` and `bunx ruimte`: runs the binary from the platform package with the same arguments.
@@ -12,9 +12,18 @@ import { binaryPathOf, exitCodeOf, LauncherError } from './launcher';
 
 const require = createRequire(import.meta.url);
 
+/* glibc reports its version in a process report and musl does not, which is how npm tells the two apart as well. */
+const libc = (): Libc => {
+    if (process.platform !== 'linux') {
+        return null;
+    }
+    const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } } | undefined;
+    return report?.header?.glibcVersionRuntime ? 'glibc' : 'musl';
+};
+
 let binary: string;
 try {
-    binary = binaryPathOf({ platform: process.platform, arch: process.arch }, (request) => require.resolve(request));
+    binary = binaryPathOf({ platform: process.platform, arch: process.arch }, (request) => require.resolve(request), libc);
 } catch (e) {
     console.error(e instanceof LauncherError ? e.message : String(e));
     process.exit(1);
