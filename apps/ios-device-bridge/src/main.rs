@@ -1,4 +1,9 @@
-use std::{fs::File, os::fd::FromRawFd, time::Duration};
+use std::{
+    fs::File,
+    net::{IpAddr, SocketAddr},
+    os::fd::FromRawFd,
+    time::Duration,
+};
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -130,6 +135,8 @@ enum MediaUdp {
     Kernel {
         socket: UdpSocket,
         buffer: Box<[u8]>,
+        /// The device's address in the tunnel; a datagram from anyone else never reaches the depacketizer.
+        device: IpAddr,
     },
 }
 
@@ -148,10 +155,11 @@ impl AsRef<[u8]> for MediaDatagram<'_> {
 }
 
 impl MediaUdp {
-    fn kernel(socket: UdpSocket) -> Self {
+    fn kernel(socket: UdpSocket, device: IpAddr) -> Self {
         Self::Kernel {
             socket,
             buffer: vec![0_u8; 65_535].into_boxed_slice(),
+            device,
         }
     }
 
@@ -162,13 +170,19 @@ impl MediaUdp {
                 .await
                 .map(|datagram| MediaDatagram::Owned(datagram.data))
                 .context("the display stream closed"),
-            Self::Kernel { socket, buffer } => {
-                let length = socket
-                    .recv(buffer)
+            Self::Kernel {
+                socket,
+                buffer,
+                device,
+            } => loop {
+                let (length, sender) = socket
+                    .recv_from(buffer)
                     .await
                     .context("the wireless display stream closed")?;
-                Ok(MediaDatagram::Borrowed(&buffer[..length]))
-            }
+                if sender.ip() == *device {
+                    return Ok(MediaDatagram::Borrowed(&buffer[..length]));
+                }
+            },
         }
     }
 
@@ -481,19 +495,19 @@ async fn open_wireless_stream(
     let client = DisplayServiceClient::connect_rsd(&mut provider, &mut handshake)
         .await
         .context("the wireless device does not expose its display service")?;
-    let bind_address = match session.host_ip {
-        std::net::IpAddr::V4(_) => "0.0.0.0:0",
-        std::net::IpAddr::V6(_) => "[::]:0",
-    };
+    // Only the tunnel's own address, so nobody else on the network reaches the receivers.
+    let bind_address = SocketAddr::new(session.host_ip, 0);
     let audio_udp = MediaUdp::kernel(
         UdpSocket::bind(bind_address)
             .await
             .context("could not bind the wireless audio receiver")?,
+        session.device_ip,
     );
     let video_udp = MediaUdp::kernel(
         UdpSocket::bind(bind_address)
             .await
             .context("could not bind the wireless video receiver")?,
+        session.device_ip,
     );
     let mut stream = negotiate_screen_media(
         DeviceServices {
@@ -835,9 +849,11 @@ async fn negotiate_screen_media(
 mod tests {
     use super::{
         ACCESS_UNIT_DELIMITER, AccessUnitAssembler, Arguments, Command, DeviceButton, DeviceInput,
-        MAX_FRAME_BYTES, PointerPhase, normalized_touch_coordinate, touch_state,
+        MAX_FRAME_BYTES, MediaUdp, PointerPhase, normalized_touch_coordinate, touch_state,
     };
     use clap::Parser;
+    use std::net::{IpAddr, Ipv6Addr};
+    use tokio::net::UdpSocket;
 
     const TRAILING_SLICE_HEADER: [u8; 2] = [0x02, 0x01];
 
@@ -954,5 +970,19 @@ mod tests {
                 .iter()
                 .all(|message| serde_json::from_str::<DeviceInput>(message).is_ok())
         );
+    }
+
+    #[tokio::test]
+    async fn a_wireless_receiver_takes_datagrams_from_the_device_alone() {
+        // A dual-stack socket hears both families, so a sender on another address can reach it.
+        let socket = UdpSocket::bind("[::]:0").await.unwrap();
+        let port = socket.local_addr().unwrap().port();
+        let mut receiver = MediaUdp::kernel(socket, IpAddr::V6(Ipv6Addr::LOCALHOST));
+        let stranger = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        stranger.send_to(b"stranger", ("127.0.0.1", port)).unwrap();
+        let device = std::net::UdpSocket::bind("[::1]:0").unwrap();
+        device.send_to(b"device", ("::1", port)).unwrap();
+        let datagram = receiver.recv().await.unwrap();
+        assert_eq!(datagram.as_ref(), b"device");
     }
 }
