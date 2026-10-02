@@ -231,6 +231,12 @@ export async function startVoice(): Promise<void> {
             outputWaveform?.stop();
             outputWaveform = new WaveformMonitor((outputBands) => useVoice.setState({ outputBands }));
             void outputWaveform.start(stream).catch(() => undefined);
+        },
+        () => {
+            if (session === next) {
+                stopVoice();
+                useVoice.setState({ phase: 'error', error: i18next.t('voice:error.connectionLost') });
+            }
         }
     );
     completionDelivery = new VoiceCompletionDelivery((event) => next.send(event));

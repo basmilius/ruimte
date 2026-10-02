@@ -46,7 +46,8 @@
     "error": {
         "start": "GPT-Live kon niet starten",
         "session": "GPT-Live meldde een fout in de sessie",
-        "noSession": "Ruimte kon geen microfoonsessie opzetten"
+        "noSession": "Ruimte kon geen microfoonsessie opzetten",
+        "connectionLost": "De verbinding met GPT-Live viel weg"
     },
     "untitledProject": "Naamloos project",
     "waveformLines": "Jouw stem boven de lijn en Voice Control eronder",

@@ -21,16 +21,43 @@ const gatheringComplete = (peer: RTCPeerConnection): Promise<void> => {
     });
 };
 
+export interface LiveSessionParts {
+    peer: RTCPeerConnection;
+    audio: HTMLAudioElement;
+}
+
 export class LiveSession {
-    readonly #peer = new RTCPeerConnection();
-    readonly #events = this.#peer.createDataChannel('oai-events');
-    readonly #audio = new Audio();
+    readonly #peer: RTCPeerConnection;
+    readonly #events: RTCDataChannel;
+    readonly #audio: HTMLAudioElement;
     readonly #onEvent: (event: LiveEvent) => void;
     readonly #onOutputStream: (stream: MediaStream) => void;
+    #closed = false;
 
-    constructor(onEvent: (event: LiveEvent) => void, onOutputStream: (stream: MediaStream) => void) {
+    /* `onLost` is called once when the connection goes without `close`, as after a sleep or a dropped network. */
+    constructor(
+        onEvent: (event: LiveEvent) => void,
+        onOutputStream: (stream: MediaStream) => void,
+        onLost: () => void,
+        parts: LiveSessionParts = { peer: new RTCPeerConnection(), audio: new Audio() }
+    ) {
+        this.#peer = parts.peer;
+        this.#events = this.#peer.createDataChannel('oai-events');
+        this.#audio = parts.audio;
         this.#onEvent = onEvent;
         this.#onOutputStream = onOutputStream;
+        const lost = (): void => {
+            if (!this.#closed) {
+                this.#closed = true;
+                onLost();
+            }
+        };
+        this.#peer.addEventListener('connectionstatechange', () => {
+            if (this.#peer.connectionState === 'failed' || this.#peer.connectionState === 'closed') {
+                lost();
+            }
+        });
+        this.#events.addEventListener('close', lost);
         this.#audio.autoplay = true;
         this.#peer.addEventListener('track', (event) => {
             const stream = event.streams[0] ?? new MediaStream([event.track]);
@@ -77,6 +104,7 @@ export class LiveSession {
     }
 
     close(): void {
+        this.#closed = true;
         this.send({ type: 'session.close' });
         this.#events.close();
         this.#peer.close();

@@ -46,7 +46,8 @@
     "error": {
         "start": "GPT-Live could not start",
         "session": "GPT-Live reported a session error",
-        "noSession": "Ruimte could not create a microphone session"
+        "noSession": "Ruimte could not create a microphone session",
+        "connectionLost": "The connection to GPT-Live dropped"
     },
     "untitledProject": "Untitled project",
     "waveformLines": "Your voice above the line and Voice Control below it",
