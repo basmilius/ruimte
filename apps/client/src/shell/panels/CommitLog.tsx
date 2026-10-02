@@ -5,10 +5,11 @@ import { GIT_GROUP } from '@/shell/panels/classes';
 import { performAsPerson } from '@/actions/client-actions';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog, type LogRow } from '@/shell/panels/commit-log';
 import { useTransport } from '@/transport/context';
-import { Button, copyText, Icon, ListRow, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu } from '@basmilius/desktop-ui';
+import { Button, copyText, Icon, ListRow, Pill, PanelEmpty, SectionLabel, Tooltip, ContextMenu, useNow } from '@basmilius/desktop-ui';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
+const MINUTE_MS = 60_000;
 
 /* A commit on two branches names both; beyond that the names cost the subject more than they tell. */
 const REFS_SHOWN = 2;
@@ -47,7 +48,7 @@ export function CommitLog({ sources, reading, onOpen }: CommitLogProps) {
     const asked = sources.map((source) => `${source.cwd}\u0000${source.revision}`).join('\u0001');
     const [held, setHeld] = useState<{ asked: string; logs: LoadedLog[]; failed: boolean } | null>(null);
     const [paging, setPaging] = useState(false);
-    const [now] = useState(() => Math.floor(Date.now() / 1000));
+    const now = Math.floor(useNow(MINUTE_MS) / 1000);
     // The same path on another machine is another log, so a switch reads it again.
     const transport = useTransport();
     const shown = held !== null && held.asked === asked ? held : null;

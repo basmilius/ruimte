@@ -15,9 +15,11 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { ButtonGroup, EmptyState, Menu, Separator, lazyNamed } from '@basmilius/desktop-ui';
+import { ButtonGroup, EmptyState, Menu, Separator, lazyNamed, useNow } from '@basmilius/desktop-ui';
 
 const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
+
+const MINUTE_MS = 60_000;
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
@@ -178,7 +180,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
     const { t } = useTranslation('panels');
     const layout = useSettings((s) => s.diffLayout);
     const wrap = useSettings((s) => s.codeWrap);
-    const [now] = useState(() => Math.floor(Date.now() / 1000));
+    const now = Math.floor(useNow(MINUTE_MS) / 1000);
     const [nonce, setNonce] = useState(0);
     /* A commit never changes, so only the changes of a checkout follow the tree. */
     const signal = useGitSignal(commit === undefined ? cwd : null);
