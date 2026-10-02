@@ -26,19 +26,8 @@ interface SwitcherItem extends ProjectSwitcherItem {
     row: ProjectMenuRow;
 }
 
-function ProjectActions({
-    row,
-    platform,
-    current,
-    onSettings,
-    onClose
-}: {
-    row: ProjectMenuRow;
-    platform: string | null;
-    current: boolean;
-    onSettings(): void;
-    onClose(): void;
-}) {
+/* What a row offers for its folder and its window; a recent project offers only these. */
+function ProjectPlaceActions({ row, platform, current }: { row: ProjectMenuRow; platform: string | null; current: boolean }) {
     const { t } = useTranslation('shell');
     const { summary } = row;
 
@@ -66,6 +55,28 @@ function ProjectActions({
                     <Icon icon={AppWindow} size={14} /> {t(current ? 'projectMenu.moveToNewWindow' : 'projectMenu.openInNewWindow')}
                 </Menu.Item>
             )}
+        </>
+    );
+}
+
+function ProjectActions({
+    row,
+    platform,
+    current,
+    onSettings,
+    onClose
+}: {
+    row: ProjectMenuRow;
+    platform: string | null;
+    current: boolean;
+    onSettings(): void;
+    onClose(): void;
+}) {
+    const { t } = useTranslation('shell');
+
+    return (
+        <>
+            <ProjectPlaceActions row={row} platform={platform} current={current} />
             <Menu.Item onClick={onSettings}>
                 <Icon icon={Settings2} size={14} /> {t('projectMenu.projectSettings')}
             </Menu.Item>
@@ -236,7 +247,7 @@ export function ProjectMenu() {
         }
     };
 
-    const switcherItem = (row: ProjectMenuRow, withActions: boolean): SwitcherItem => ({
+    const switcherItem = (row: ProjectMenuRow, recent: boolean): SwitcherItem => ({
         id: `${row.endpointId}:${row.summary.projectId}`,
         name: row.summary.name,
         icon: <ProjectGlyph projectId={row.summary.projectId} endpointId={row.endpointId} icon={row.summary.icon} color={row.summary.color} />,
@@ -251,7 +262,9 @@ export function ProjectMenu() {
         hint: showMachine ? row.machineLabel : undefined,
         disabled: !row.summary.available,
         muted: !row.connected,
-        actions: withActions ? (
+        actions: recent ? (
+            <ProjectPlaceActions row={row} platform={servers[row.endpointId]?.platform ?? null} current={false} />
+        ) : (
             <ProjectActions
                 row={row}
                 platform={servers[row.endpointId]?.platform ?? null}
@@ -259,7 +272,7 @@ export function ProjectMenu() {
                 onSettings={() => openSettings(row)}
                 onClose={() => void askClose(row)}
             />
-        ) : undefined,
+        ),
         row
     });
 
@@ -283,8 +296,8 @@ export function ProjectMenu() {
                               )
                           }
                 }
-                projects={open.map((row) => switcherItem(row, true))}
-                recentProjects={recent.map((row) => switcherItem(row, false))}
+                projects={open.map((row) => switcherItem(row, false))}
+                recentProjects={recent.map((row) => switcherItem(row, true))}
                 onSelect={({ row }, event) => openProjectClickAction(event, row.endpointId, row.summary.projectId)}
                 leading={
                     machine && (
