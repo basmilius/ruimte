@@ -39,6 +39,7 @@ import {
     PushAttentionEntrySchema
 } from './push.ts';
 import { RenderSceneResultSchema } from './render.ts';
+import { SnoozeClearPayloadSchema, SnoozeListSchema, SnoozeSetPayloadSchema } from './snooze.ts';
 import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
 import {
     AgentResumePayloadSchema,
@@ -254,6 +255,7 @@ export * from './server.ts';
 export * from './session.ts';
 export * from './render.ts';
 export * from './push.ts';
+export * from './snooze.ts';
 export * from './stored-path.ts';
 export * from './task.ts';
 export * from './text.ts';
@@ -270,6 +272,10 @@ export const REQUEST_SCHEMAS = {
     'push.read': { payload: PushReadPayloadSchema, result: EmptySchema },
     'push.subscribe': { payload: PushSubscribePayloadSchema, result: EmptySchema },
     'push.unsubscribe': { payload: PushUnsubscribePayloadSchema, result: EmptySchema },
+    'snooze.list': { payload: EmptySchema, result: SnoozeListSchema },
+    // Setting a moment already past ends the snooze, as clearing it does.
+    'snooze.set': { payload: SnoozeSetPayloadSchema, result: EmptySchema },
+    'snooze.clear': { payload: SnoozeClearPayloadSchema, result: EmptySchema },
     'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
     'session.detach': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.write': { payload: SessionWritePayloadSchema, result: EmptySchema },
@@ -451,6 +457,8 @@ export type RequestMap = {
 
 export const EVENT_SCHEMAS = {
     'push.attention': PushAttentionEntrySchema,
+    // Every snooze the machine holds, to every client, whenever one is set, cleared or ends.
+    'snooze.changed': SnoozeListSchema,
     'push.notification': z.object({
         projectId: z.string().min(1),
         viewId: z.string().min(1),

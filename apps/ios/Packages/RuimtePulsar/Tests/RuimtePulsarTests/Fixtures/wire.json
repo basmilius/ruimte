@@ -99,6 +99,9 @@
     "push.read",
     "push.subscribe",
     "push.unsubscribe",
+    "snooze.list",
+    "snooze.set",
+    "snooze.clear",
     "session.attach",
     "session.detach",
     "session.write",
@@ -266,6 +269,7 @@
   ],
   "eventTypes": [
     "push.attention",
+    "snooze.changed",
     "push.notification",
     "session.output",
     "session.resync",
