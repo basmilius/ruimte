@@ -520,6 +520,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             })),
         chats: () => chats.processTargets(),
         contextUrl: () => manager.contextUrl,
+        projectOf: (nodeId) => projects.index.locate(nodeId)?.projectId ?? null,
         // Without a SessionEnd a clean exit and a crash look the same, so only these CLIs can be missed.
         reportsEnd: (kind) => HOOK_EVENTS[kind]?.includes('SessionEnd') === true
     });

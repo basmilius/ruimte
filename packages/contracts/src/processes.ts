@@ -50,6 +50,8 @@ export const ProcessGroupSchema = z.object({
     nodeId: z.string().nullable(),
     /* What to call a group no node stands for, such as a launch: its name. */
     label: z.string().optional(),
+    /* The project that places the node, so a row of a project this window does not show can still name it. */
+    projectId: z.string().optional(),
     /* Sums over the readable processes; null when not one of them could be read. */
     cpu: z.number().nullable(),
     memory: z.number().nullable(),

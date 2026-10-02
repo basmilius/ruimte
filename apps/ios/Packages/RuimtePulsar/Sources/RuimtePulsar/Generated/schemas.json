@@ -36311,6 +36311,9 @@
                     "label": {
                       "type": "string"
                     },
+                    "projectId": {
+                      "type": "string"
+                    },
                     "cpu": {
                       "type": [
                         "number",
@@ -49717,6 +49720,9 @@
               ]
             },
             "label": {
+              "type": "string"
+            },
+            "projectId": {
               "type": "string"
             },
             "cpu": {

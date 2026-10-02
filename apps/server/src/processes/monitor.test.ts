@@ -64,6 +64,7 @@ const monitorWith = (sampler: ProcessSampler | null, signals: [number, string][]
         sessions: () => [{ id: 'term-1', pid: 200, exited: false, agent: null }],
         chats: () => [],
         contextUrl: () => null,
+        projectOf: (nodeId) => (nodeId === 'term-1' ? 'project-1' : null),
         reportsEnd: () => true,
         daemonPid: 100,
         uid: 501,
@@ -138,6 +139,16 @@ describe('the tempo and the series', () => {
         sampler.advance(COARSE_INTERVAL_MS, { sleepMs: 8 * 3_600_000 });
         monitor.sampleNow(true);
         expect(monitor.follow('a', { scope: 'ruimte', sort: 'cpu' }).coarse).toHaveLength(0);
+    });
+
+    test('a node group names the project that places it, and only a node group does', () => {
+        const monitor = monitorWith(new FakeSampler());
+        monitor.sampleNow(true);
+        const groups = monitor.follow('a', { scope: 'ruimte', sort: 'cpu' }).sample?.groups ?? [];
+        expect(groups.map((group) => [group.id, group.projectId])).toEqual([
+            ['terminal:term-1', 'project-1'],
+            ['daemon', undefined]
+        ]);
     });
 
     test('a platform without a sampler says so', () => {

@@ -54,6 +54,7 @@ import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
+import { useProjectList } from '@/state/project-list';
 import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/processes';
 import { useServer } from '@/state/server';
 import { useToasts } from '@/state/toasts';
@@ -196,6 +197,11 @@ export function ProcessesPanel() {
     const sort = useProcesses((s) => s.sort);
     const row = useProcesses((s) => s.byEndpoint[endpointId] ?? EMPTY_PROCESSES);
     const alerts = useProcessAlerts(endpointId);
+    const projectRows = useProjectList((s) => s.projects);
+    const projectNames = useMemo(
+        () => new Map(projectRows.filter((entry) => entry.endpointId === endpointId).map((entry) => [entry.summary.projectId, entry.summary.name])),
+        [projectRows, endpointId]
+    );
     // Titles come from the project; these two subscriptions are what redraws a row after a rename.
     useDocument((s) => s.views);
     useCanvas((s) => s.nodes);
@@ -410,7 +416,11 @@ export function ProcessesPanel() {
                             ) : (
                                 <span className="min-w-0 truncate text-sm text-text">{title}</span>
                             )}
-                            {!known && <span className="min-w-0 shrink truncate text-xs text-text-faint">{t('processes.anotherProject')}</span>}
+                            {!known && (
+                                <span className="min-w-0 shrink truncate text-xs text-text-faint">
+                                    {(group.projectId === undefined ? undefined : projectNames.get(group.projectId)) ?? t('processes.anotherProject')}
+                                </span>
+                            )}
                             {group.hidden > 0 && <span className="shrink-0 text-xs text-text-faint tabular-nums">+{group.hidden}</span>}
                             {here.length > 0 && <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />}
                             <span className="grow" />
