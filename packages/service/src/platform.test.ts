@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { daemonServiceSpec, platformServiceManager, serviceDefinition, serviceLogFile } from './platform';
+import { serviceLogFile } from './definitions';
+import { daemonServiceSpec, platformServiceManager, serviceDefinition } from './platform';
 
 const SERVICE = { program: '/opt/ruimte/bin/ruimte', args: ['--port', '4210'], home: '/home/ada', ruimteHome: '/home/ada/.ruimte', path: '/usr/bin:/bin' };
 

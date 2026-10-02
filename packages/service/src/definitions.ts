@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+
 /*
  * The text of the background service: a launchd property list on macOS and a systemd user unit on
  * Linux. Pure, so the files are snapshots in a test rather than something found out on a machine.
@@ -8,6 +10,12 @@ export const LAUNCH_AGENT_LABEL = 'app.ruimte.daemon';
 
 /* The unit's name under ~/.config/systemd/user. */
 export const SYSTEMD_UNIT_NAME = 'ruimte-daemon.service';
+
+/*
+ * The one log to look in, whichever installed the service. launchd only, as the spec says: systemd
+ * writes to the journal and its unit never reads this path.
+ */
+export const serviceLogFile = (home: string): string => join(home, 'Library', 'Logs', 'Ruimte', 'daemon.log');
 
 export interface ServiceSpec {
     /* The launchd label; the unit name has no use for one. */

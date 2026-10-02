@@ -1,6 +1,6 @@
 import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
-import { LAUNCH_AGENT_LABEL, launchAgentPlist, systemdUnit, type ServiceSpec } from './definitions';
+import { LAUNCH_AGENT_LABEL, launchAgentPlist, serviceLogFile, systemdUnit, type ServiceSpec } from './definitions';
 import { launchdManager, systemdManager, type ServiceManager } from './manager';
 import { diskFiles, runCommand } from './system';
 
@@ -31,12 +31,6 @@ export const platformServiceManager = (platform: NodeJS.Platform): ServiceManage
     }
     return null;
 };
-
-/*
- * The one log to look in, whichever installed the service. launchd only, as the spec says: systemd
- * writes to the journal and its unit never reads this path.
- */
-export const serviceLogFile = (home: string): string => join(home, 'Library', 'Logs', 'Ruimte', 'daemon.log');
 
 export interface DaemonService {
     /* The daemon binary and its arguments, absolute. */

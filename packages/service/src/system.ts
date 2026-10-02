@@ -24,5 +24,8 @@ export const diskFiles: ServiceFiles = {
     },
     remove(path) {
         rmSync(path, { force: true });
+    },
+    makeDirectory(path) {
+        mkdirSync(path, { recursive: true });
     }
 };

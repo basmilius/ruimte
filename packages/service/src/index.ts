@@ -1,4 +1,4 @@
-export { LAUNCH_AGENT_LABEL, SYSTEMD_UNIT_NAME, definitionRunsProgram, launchAgentPlist, systemdUnit, type ServiceSpec } from './definitions';
+export { LAUNCH_AGENT_LABEL, SYSTEMD_UNIT_NAME, definitionRunsProgram, launchAgentPlist, serviceLogFile, systemdUnit, type ServiceSpec } from './definitions';
 export {
     launchdManager,
     systemdManager,
@@ -9,5 +9,5 @@ export {
     type ServiceManager,
     type SystemdOptions
 } from './manager';
-export { daemonServiceSpec, platformServiceManager, serviceDefinition, serviceLogFile, type DaemonService } from './platform';
+export { daemonServiceSpec, platformServiceManager, serviceDefinition, type DaemonService } from './platform';
 export { diskFiles, runCommand } from './system';

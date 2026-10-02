@@ -1,5 +1,5 @@
-import { join } from 'node:path';
-import { LAUNCH_AGENT_LABEL, SYSTEMD_UNIT_NAME } from './definitions';
+import { dirname, join } from 'node:path';
+import { LAUNCH_AGENT_LABEL, serviceLogFile, SYSTEMD_UNIT_NAME } from './definitions';
 
 /*
  * The service manager of the platform behind one small interface, so the app's decisions are tested
@@ -20,6 +20,8 @@ export interface ServiceFiles {
     read(path: string): string | null;
     write(path: string, text: string): void;
     remove(path: string): void;
+    /* With every parent, and nothing when it is there already. */
+    makeDirectory(path: string): void;
 }
 
 export interface ServiceManager {
@@ -80,6 +82,8 @@ export const launchdManager = (options: LaunchdOptions): ServiceManager => {
         path,
         isInstalled: () => options.files.read(path) !== null,
         install(definition) {
+            // launchd opens the log but makes no folder for it, and a job whose log cannot open never starts.
+            options.files.makeDirectory(dirname(serviceLogFile(options.home)));
             if (options.files.read(path) !== definition) {
                 options.files.write(path, definition);
             }

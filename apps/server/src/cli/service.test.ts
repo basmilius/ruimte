@@ -52,7 +52,8 @@ const setup = (options: { existing?: string; linger?: boolean; health?: BuildIde
     const files: ServiceFiles = {
         read: (path) => disk.get(path) ?? null,
         write: (path, text) => void disk.set(path, text),
-        remove: (path) => void disk.delete(path)
+        remove: (path) => void disk.delete(path),
+        makeDirectory: () => undefined
     };
     const manager = fakeManager(files, options.linger);
     if (options.existing !== undefined) {

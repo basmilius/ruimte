@@ -19,12 +19,14 @@ const fakeRunner = (answers: Record<string, CommandResult | CommandResult[]> = {
 
 const memoryFiles = () => {
     const files = new Map<string, string>();
+    const directories = new Set<string>();
     const api: ServiceFiles = {
         read: (path) => files.get(path) ?? null,
         write: (path, text) => void files.set(path, text),
-        remove: (path) => void files.delete(path)
+        remove: (path) => void files.delete(path),
+        makeDirectory: (path) => void directories.add(path)
     };
-    return { files, api };
+    return { files, directories, api };
 };
 
 const noSleep = async (): Promise<void> => {};
@@ -42,6 +44,13 @@ describe('launchdManager', () => {
         expect(disk.files.get(PLIST)).toBe('<plist/>');
         expect(manager.isInstalled()).toBe(true);
         expect(runner.calls).toEqual([]);
+    });
+
+    test('makes the folder of the log, which launchd does not and refuses to start the job without', () => {
+        const disk = memoryFiles();
+        const manager = launchdManager({ uid: 501, home: '/Users/bas', run: fakeRunner().run, files: disk.api, sleep: noSleep });
+        manager.install('<plist/>');
+        expect([...disk.directories]).toEqual(['/Users/bas/Library/Logs/Ruimte']);
     });
 
     test('starts a job that is not loaded with bootstrap, and one that is with kickstart', () => {
