@@ -13,4 +13,14 @@ case "${CI_TAG:-}" in
         ;;
 esac
 xcodegen generate --spec apps/ios/project.yml
-xcodebuild -downloadComponent MetalToolchain
+# The Xcode Cloud image may carry the toolchain already, and xcodebuild then answers with an error.
+if ! output=$(xcodebuild -downloadComponent MetalToolchain 2>&1); then
+    case "$output" in
+        *"already imported"*) ;;
+        *)
+            echo "$output" >&2
+            exit 1
+            ;;
+    esac
+fi
+echo "$output"
