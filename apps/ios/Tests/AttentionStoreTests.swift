@@ -68,7 +68,7 @@ final class AttentionStoreTests: XCTestCase {
         switch type {
         case "push.attention": return snapshot
         case "session.list": return .object(["sessions": .array([])])
-        default:
+        case "chat.list":
             chatLists += 1
             defer {
                 listed = true
@@ -76,6 +76,7 @@ final class AttentionStoreTests: XCTestCase {
                 waiter = nil
             }
             return .object(["chats": .array([])])
+        default: return .object([:])
         }
     }
 
