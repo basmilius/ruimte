@@ -65,6 +65,7 @@ export interface ConnectionServices {
     worktrees?: Subscribable;
     plans?: Subscribable;
     computer?: Subscribable;
+    snoozes?: Subscribable;
 }
 
 export interface OpenConnection {
@@ -135,7 +136,8 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.tasks?.subscribe(clientId, sink) ?? (() => undefined),
             services.worktrees?.subscribe(clientId, sink) ?? (() => undefined),
             services.plans?.subscribe(clientId, sink) ?? (() => undefined),
-            services.computer?.subscribe(clientId, sink) ?? (() => undefined)
+            services.computer?.subscribe(clientId, sink) ?? (() => undefined),
+            services.snoozes?.subscribe(clientId, sink) ?? (() => undefined)
         ];
 
         channel.onDrain(() => {

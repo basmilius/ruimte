@@ -14,6 +14,7 @@ import type { EventMap, AgentStatus, PushSubscribePayload, PushAttentionEntry } 
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { PushAttention } from './attention.ts';
+import type { SnoozeChange } from './snoozes.ts';
 import { encryptPush } from './encrypt.ts';
 import { clipText } from '@ruimte/contracts';
 
@@ -27,6 +28,14 @@ interface PushServiceOptions {
     titleFor?: (nodeId: string) => string | null;
     send?: (push: PushEnvelope) => Promise<number>;
     onError?: (error: unknown) => void;
+    snoozes?: Snoozes;
+}
+
+/* What the push side reads of `SnoozeStore`. */
+interface Snoozes {
+    isSnoozed(nodeId: string): boolean;
+    noteStatus(nodeId: string, needsYou: boolean): void;
+    observe(listener: (change: SnoozeChange) => void): () => void;
 }
 
 interface NodeState {
@@ -67,6 +76,7 @@ export class PushService {
         this.options = options;
         this.now = options.now ?? Date.now;
         this.attention = new PushAttention(options.attentionPath, this.now);
+        options.snoozes?.observe((change) => this.snoozeChanged(change));
     }
 
     observeAttention(listener: (entry: PushAttentionEntry) => void): () => void {
@@ -170,6 +180,10 @@ export class PushService {
                     return;
                 }
                 seen.add(item.requestId);
+                // The end of the snooze says the node waits; an approval card from before it has run out by then.
+                if (this.snoozed(chatId)) {
+                    return;
+                }
                 this.enqueue({
                     kind: 'approval',
                     target: 'chat',
@@ -196,6 +210,7 @@ export class PushService {
 
     private status(target: PushAlertContent['target'], nodeId: string, status: AgentStatus, title: string): void {
         title = this.options.titleFor?.(nodeId) || title;
+        this.options.snoozes?.noteStatus(nodeId, status === 'needs-you');
         const previous = this.nodes.get(nodeId);
         const startedAt =
             status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
@@ -210,20 +225,52 @@ export class PushService {
                 this.read(nodeId, entry.issuedAt);
             }
         }
-        if (status === 'needs-you') {
-            this.enqueue({
-                kind: 'attention',
-                target,
-                nodeId,
-                title: clipText(title, 160),
-                body: 'The agent needs your attention.',
-                expiresAt: this.now() + PUSH_MAX_AGE_MS
-            });
+        if (status === 'needs-you' && !this.snoozed(nodeId)) {
+            this.needsYou(target, nodeId, title);
         }
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
             const phase = status === 'running' ? 'running' : status === 'needs-you' ? 'needs-you' : 'done';
             this.track(this.deliverActivity(nodeId, { title: clipText(title, 160), phase, startedAt }));
         }
+    }
+
+    private needsYou(target: PushAlertContent['target'], nodeId: string, title: string): void {
+        this.enqueue({
+            kind: 'attention',
+            target,
+            nodeId,
+            title: clipText(title, 160),
+            body: 'The agent needs your attention.',
+            expiresAt: this.now() + PUSH_MAX_AGE_MS
+        });
+    }
+
+    private snoozed(nodeId: string): boolean {
+        return this.options.snoozes?.isSnoozed(nodeId) ?? false;
+    }
+
+    private activityNodes(): { nodeId: string; target: PushAlertContent['target']; title: string; status: AgentStatus }[] {
+        return this.options.activityNodes?.() ?? [...this.nodes].map(([nodeId, node]) => ({ nodeId, ...node }));
+    }
+
+    /*
+     * A snoozed node takes back the alert it already raised, as the desktop closes its notification. Its
+     * end is a new wait for a node that still needs you, so the alert comes again, as on the desktop.
+     */
+    private snoozeChanged({ kind, nodeId }: SnoozeChange): void {
+        const node = this.activityNodes().find((entry) => entry.nodeId === nodeId);
+        if (kind === 'snoozed') {
+            if (node) {
+                this.options.snoozes?.noteStatus(nodeId, node.status === 'needs-you');
+            }
+            const entry = this.attention.snapshot().find((candidate) => candidate.nodeId === nodeId);
+            if (entry && entry.readThrough < entry.issuedAt) {
+                this.read(nodeId, entry.issuedAt);
+            }
+        } else if (node?.status === 'needs-you') {
+            this.needsYou(node.target, nodeId, this.options.titleFor?.(nodeId) || node.title);
+        }
+        this.synchronizeActivities();
     }
 
     /* Something a person has to step in on that no status says: a task that failed, a wake the daemon gave up on. */
@@ -239,7 +286,8 @@ export class PushService {
     }
 
     synchronizeActivities(): void {
-        const nodes = this.options.activityNodes?.() ?? [...this.nodes].map(([nodeId, node]) => ({ nodeId, ...node }));
+        // A snoozed wait counts as nothing at all until the snooze ends.
+        const nodes = this.activityNodes().filter((node) => node.status !== 'needs-you' || !this.snoozed(node.nodeId));
         const states = nodes.map((node) => node.status);
         const agents: NonNullable<PushActivityContent['agents']> = nodes
             .filter((node) => node.status === 'running' || node.status === 'needs-you')

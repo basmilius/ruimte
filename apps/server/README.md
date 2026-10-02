@@ -81,6 +81,7 @@ $RUIMTE_HOME/
   auth.json                        the clients paired with this daemon, by public key, and the one account the machine is on
   projects.json                    every canvas the daemon knows: id, name, color, folder, and when it was last closed
   providers.json                   the accounts of each agent CLI on this machine (`accounts.save`): per id a kind, a label, a color and the CLI's config folder, never a credential
+  snoozes.json                     the nodes a person put aside (`snooze.set`), per project and node with when each runs out; a node leaves push alerts and the Live Activity counts until then
   projects/
     <projectId>.local.json         camera, focus, grid and panels of a project, where a client that never saw it starts
   scratch/                         the Chats project of this machine (`project.newChat`), made the first time a chat outside any project is asked for

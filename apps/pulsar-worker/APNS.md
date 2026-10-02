@@ -61,6 +61,12 @@ Connected clients get `push.attention` events, and iOS reconciles a snapshot whe
 connects. A late acknowledgment cannot remove a newer notification. Signed payloads
 keep node IDs and read timestamps away from Pulsar and APNs.
 
+A snoozed node (`snooze.set`, kept in `snoozes.json`) reads its alert, so the phone
+drops it the way the desktop closes its notification, and raises none while the snooze
+holds. The machine's Live Activity counts it nowhere. When the snooze runs out or a
+person ends it while the node still needs you, a new alert goes out, the desktop's rule
+for the end of a snooze.
+
 Apple schedules background pushes opportunistically, so immediate removal is not
 guaranteed, least of all after a force quit or with Background App Refresh off.
 Opening Ruimte and connecting to the machine reconciles what was missed. A service

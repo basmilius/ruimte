@@ -11,7 +11,9 @@ import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { registerPushHandlers } from '../handlers/push.ts';
 import { makeHarness } from '../sessions/test-helpers.ts';
+import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { PushService } from './service.ts';
+import { SnoozeStore } from './snoozes.ts';
 
 const machine = generateKeyPair();
 const recipient = generateKeyPairSync('x25519');
@@ -559,4 +561,84 @@ test('a requested notification uses the connected event without also pushing to 
     expect(pushes).toEqual([]);
     off();
     disconnect();
+});
+
+describe('a snoozed node', () => {
+    let clock: ManualClock;
+    let snoozes: SnoozeStore;
+    let snoozing: PushService;
+
+    beforeEach(() => {
+        clock = new ManualClock();
+        snoozes = new SnoozeStore({ clock });
+        snoozing = new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => NOW,
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            },
+            snoozes
+        });
+    });
+
+    afterEach(async () => {
+        snoozes.stop();
+        await snoozing.settled();
+    });
+
+    const alerts = (): PushEnvelope[] => pushes.filter((push) => push.pushType === 'alert');
+
+    test('raises no alert while it waits, and raises one when the snooze runs out and it still waits', async () => {
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        status('running', 'node', snoozing);
+        status('needs-you', 'node', snoozing);
+        await snoozing.settled();
+        expect(alerts()).toEqual([]);
+        clock.advance(60_000);
+        await snoozing.settled();
+        expect(alerts().map((push) => decrypt(push))).toEqual([expect.objectContaining({ kind: 'attention', nodeId: 'node' })]);
+    });
+
+    test('takes back the alert it already raised', async () => {
+        await auth.setPush(sessionId, { ...subscription, readSync: true });
+        status('running', 'node', snoozing);
+        status('needs-you', 'node', snoozing);
+        await snoozing.settled();
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        await snoozing.settled();
+        expect(pushes.map((push) => push.pushType)).toEqual(['alert', 'background']);
+        expect(snoozing.attention.snapshot()[0]).toMatchObject({ readThrough: snoozing.attention.snapshot()[0]!.issuedAt });
+    });
+
+    test('a node answered under its snooze ends it, and nothing wakes when its time comes', async () => {
+        status('running', 'node', snoozing);
+        status('needs-you', 'node', snoozing);
+        await snoozing.settled();
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        status('running', 'node', snoozing);
+        expect(snoozes.list()).toEqual([]);
+        clock.advance(60_000);
+        await snoozing.settled();
+        expect(alerts()).toHaveLength(1);
+    });
+
+    test('leaves the machine activity until it runs out', async () => {
+        await auth.setPush(sessionId, { ...subscription, follow: [], followAll: true, activities: true, activityScope: 'machine' });
+        status('running', 'first', snoozing);
+        status('needs-you', 'first', snoozing);
+        snoozes.set('project', 'first', clock.now() + 60_000);
+        clock.advance(60_000);
+        await snoozing.settled();
+        const counts = pushes
+            .filter((push) => push.pushType === 'liveactivity')
+            .map((push) => [push.activity.phase, push.activity.runningCount, push.activity.attentionCount]);
+        expect(counts).toEqual([
+            ['running', 1, 0],
+            ['needs-you', 0, 1],
+            ['done', 0, 0],
+            ['needs-you', 0, 1]
+        ]);
+    });
 });

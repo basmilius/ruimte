@@ -1,5 +1,7 @@
 import { PushService } from './push/service.ts';
 import { registerPushHandlers } from './handlers/push.ts';
+import { SnoozeStore } from './push/snoozes.ts';
+import { registerSnoozeHandlers } from './handlers/snooze.ts';
 import { dirname, join, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import {
@@ -412,7 +414,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const taskWiring = outboxWiring.tasks;
     const endChildren = outboxWiring.endChildren;
     const summaries = outboxWiring.summaries;
-    projects.index.onPlaces = outboxWiring.places;
+    const snoozes = new SnoozeStore({ path: join(config.home, 'snoozes.json') });
+    projects.index.onPlaces = (projectId, ids) => {
+        outboxWiring.places(projectId, ids);
+        snoozes.places(projectId, ids);
+    };
     /* A node that has never been shown has no session, and a project going down is not the place to
        fail over one, so an id neither manager knows is already ended as far as the caller goes. */
     const endSession = async (kind: 'terminal' | 'chat', nodeId: string): Promise<void> => {
@@ -673,7 +679,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             ),
             ...chats.list().map((chat) => ({ nodeId: chat.chatId, target: 'chat' as const, title: chat.suggestedTitle ?? 'AI chat', status: chat.status }))
         ],
-        onError: (error) => console.error('Push delivery failed:', errorText(error))
+        onError: (error) => console.error('Push delivery failed:', errorText(error)),
+        snoozes
     });
     manager.observe((event) => push.consume(event));
     manager.observe((event) => taskWiring.terminals.sessionEvent(event));
@@ -688,6 +695,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     const dispatcher = new Dispatcher();
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
+    registerSnoozeHandlers(dispatcher, snoozes, (nodeId) => projects.index.locate(nodeId));
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe, { commandOf: (kind) => providers.get(kind).home?.loginCommand, nameOf: nameOfCli });
     registerBrowserHandlers(dispatcher, browsers, browserPages, () => identity.streamingAllowed);
@@ -864,6 +872,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const openConnection = connectionOpener({
         dispatcher,
         presence: push,
+        snoozes,
         sessions: manager,
         chats,
         browsers,
@@ -1181,6 +1190,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         shuttingDown = true;
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         selfUpdate.stop();
+        snoozes.stop();
         outboxWorker.stop();
         taskWiring.coordinator.stop();
         taskWiring.waiting.stop();
