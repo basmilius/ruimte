@@ -58,6 +58,29 @@ export const insertMention = (text: string, query: MentionQuery, path: string): 
 
 export const insertSkill = (text: string, query: MentionQuery, name: string): { text: string; caret: number } => insertToken(text, query, '$', name);
 
+/* What a file search answered, with the query it answered, since the query moves on while the answer is on its way. */
+export interface MentionSearch {
+    query: string | null;
+    files: string[];
+}
+
+export const NO_MENTION_SEARCH: MentionSearch = { query: null, files: [] };
+
+export type MentionPick<T> = { kind: 'chat'; chat: T } | { kind: 'file'; path: string };
+
+/* What Enter or Tab takes from the `@` list at `index`. Files still on screen from an older query are never taken. */
+export const mentionPick = <T>(index: number, chats: readonly T[], search: MentionSearch, query: string): MentionPick<T> | null => {
+    const chat = chats[index];
+    if (chat !== undefined) {
+        return { kind: 'chat', chat };
+    }
+    if (search.query !== query) {
+        return null;
+    }
+    const path = search.files[index - chats.length] ?? search.files[0];
+    return path === undefined ? null : { kind: 'file', path };
+};
+
 const findToken = (text: string, sigil: string, value: string, from: number): number => {
     const token = `${sigil}${value}`;
     let index = text.indexOf(token, from);

@@ -30,15 +30,18 @@ import { chatSuggestions } from '../chat-references';
 import { EMPTY_DRAFT, isEmptyDraft, joinDraftText, readDraft, takeBackIntoDraft, takeDraftOffers, writeDraft, type ChatDraft } from '../drafts';
 import {
     MENTION_DRAG_TYPE,
+    NO_MENTION_SEARCH,
     dropQuery,
     findMentionQuery,
     findSkillQuery,
     insertMention,
     insertSkill,
+    mentionPick,
     pastedMentions,
     presentMentions,
     presentSkills,
     type MentionQuery,
+    type MentionSearch,
     type TextRange
 } from '../mentions';
 import { RESUME_COMPACTION_TOKENS, resumeCompactionOffer } from '../logic/resume-compaction';
@@ -168,7 +171,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     const [mention, setMention] = useState<MentionQuery | null>(null);
     const [skillQuery, setSkillQuery] = useState<MentionQuery | null>(null);
     const [skills, setSkills] = useState<ChatSkill[]>([]);
-    const [searched, setSearched] = useState<string[]>([]);
+    const [searched, setSearched] = useState<MentionSearch>(NO_MENTION_SEARCH);
     const [notice, setNotice] = useState<string | null>(null);
     const [dragging, setDragging] = useState(false);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
@@ -283,7 +286,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
             search(scope.id, info.cwd, mention.query, MENTION_RESULTS)
                 .then((files) => {
                     if (!stale) {
-                        setSearched(files);
+                        setSearched({ query: mention.query, files });
                         setMenuIndex(0);
                     }
                 })
@@ -361,7 +364,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     const skillMenuOpen = !commandMenuOpen && skillQuery !== null && skillMatches.length > 0;
     const mentionMenuOpen = !commandMenuOpen && !skillMenuOpen && mention !== null;
     // Results belong to the query that asked for them; a closed picker shows none while the next answer is on its way.
-    const files = mention === null ? [] : searched;
+    const files = mention === null ? [] : searched.files;
     const chatMatches = useMemo(
         () => (mention === null ? [] : chatSuggestions(chats, mention.query, [chatId, ...draft.chats], CHAT_RESULTS)),
         [chatId, chats, draft.chats, mention]
@@ -502,14 +505,11 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     };
 
     const chooseMentionAt = (index: number): void => {
-        const chat = chatMatches[index];
-        if (chat) {
-            chooseChat(chat.id);
-            return;
-        }
-        const path = files[index - chatMatches.length] ?? files[0];
-        if (path !== undefined) {
-            chooseMention(path);
+        const pick = mention === null ? null : mentionPick(index, chatMatches, searched, mention.query);
+        if (pick?.kind === 'chat') {
+            chooseChat(pick.chat.id);
+        } else if (pick?.kind === 'file') {
+            chooseMention(pick.path);
         }
     };
 

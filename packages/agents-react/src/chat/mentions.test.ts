@@ -7,6 +7,8 @@ import {
     findSkillQuery,
     insertMention,
     insertSkill,
+    mentionPick,
+    NO_MENTION_SEARCH,
     pastedMentions,
     presentMentions,
     presentSkills,
@@ -23,6 +25,24 @@ describe('findMentionQuery', () => {
         expect(findMentionQuery('mail bas@x', 10)).toBeNull();
         expect(findMentionQuery('@done and more', 14)).toBeNull();
         expect(findMentionQuery('@src/chat', 4)).toBeNull();
+    });
+});
+
+describe('mentionPick', () => {
+    const chats = [{ id: 'chat-2' }];
+
+    test('picks a chat above the files, and a file the current query found', () => {
+        const search = { query: 'pack', files: ['package.json', 'packages/a.ts'] };
+        expect(mentionPick(0, chats, search, 'pack')).toEqual({ kind: 'chat', chat: { id: 'chat-2' } });
+        expect(mentionPick(2, chats, search, 'pack')).toEqual({ kind: 'file', path: 'packages/a.ts' });
+    });
+
+    test('picks no file while the answer for the query typed since is on its way', () => {
+        // `@` answered at once, then `@pack` and Enter came before its debounced search did.
+        const search = { query: '', files: ['README.md', 'src/main.ts'] };
+        expect(mentionPick(0, [], search, 'pack')).toBeNull();
+        expect(mentionPick(0, chats, search, 'pack')).toEqual({ kind: 'chat', chat: { id: 'chat-2' } });
+        expect(mentionPick(0, [], NO_MENTION_SEARCH, '')).toBeNull();
     });
 });
 
