@@ -162,12 +162,13 @@ private struct NativeTerminal: UIViewRepresentable {
 }
 
 @MainActor
-private final class TerminalContainer: UIScrollView {
+final class TerminalContainer: UIScrollView {
     let terminal = RemoteTerminalView(frame: .zero)
     private var cols = 80
     private var rows = 24
     private var chosenFont = 0.0
     private var chosenTheme = ""
+    private let focusTap = UITapGestureRecognizer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -176,6 +177,8 @@ private final class TerminalContainer: UIScrollView {
         isDirectionalLockEnabled = true
         terminal.accessibilityIdentifier = "terminal.screen"
         terminal.changeScrollback(10000)
+        focusTap.addTarget(self, action: #selector(focusTerminal))
+        addGestureRecognizer(focusTap)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
 
@@ -203,20 +206,38 @@ private final class TerminalContainer: UIScrollView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let character = ("W" as NSString).size(withAttributes: [.font: terminal.font])
-        let width = max(bounds.width, ceil(character.width * CGFloat(cols)) + 2)
-        let height = max(bounds.height, ceil(terminal.font.lineHeight * CGFloat(rows)))
-        terminal.frame = CGRect(x: 0, y: 0, width: width, height: height)
-        terminal.layoutIfNeeded()
-        if terminal.getTerminal().cols != cols || terminal.getTerminal().rows != rows {
-            terminal.resize(cols: cols, rows: rows)
+        let emulator = terminal.getTerminal()
+        if emulator.cols != cols || emulator.rows != rows {
+            // The view's own `resize` soft-resets as well, which drops the cursor, modes and scroll region a program
+            // on the remote set.
+            emulator.resize(cols: cols, rows: rows)
+            terminal.sizeChanged(source: emulator)
         }
-        contentSize = CGSize(width: width, height: height)
+        // SwiftTerm sizes its grid from the frame on its own, so the frame is the remote grid and nothing else. Half a
+        // cell over it keeps its division by the cell size from rounding a row or column away.
+        let grid = terminal.getOptimalFrameSize().size
+        let size = CGSize(
+            width: grid.width + grid.width / CGFloat(2 * cols), height: grid.height + grid.height / CGFloat(2 * rows))
+        if terminal.frame.size != size {
+            terminal.frame = CGRect(origin: .zero, size: size)
+        }
+        contentSize = size
+    }
+
+    override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+        if recognizer === focusTap { return !terminal.frame.contains(recognizer.location(in: self)) }
+        return super.gestureRecognizerShouldBegin(recognizer)
+    }
+
+    /// A grid smaller than the screen leaves room beside it, where a tap still brings up the keyboard.
+    @objc private func focusTerminal() {
+        guard terminal.isUserInteractionEnabled else { return }
+        terminal.becomeFirstResponder()
     }
 }
 
 @MainActor
-private final class RemoteTerminalView: TerminalView {
+final class RemoteTerminalView: TerminalView {
     var onClear: (() -> Void)?
     override var keyCommands: [UIKeyCommand]? {
         (super.keyCommands ?? []) + [

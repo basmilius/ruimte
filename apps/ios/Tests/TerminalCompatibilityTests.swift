@@ -5,6 +5,34 @@ import XCTest
 @testable import Ruimte
 
 final class TerminalCompatibilityTests: XCTestCase {
+    /// SwiftTerm's own view resize soft-resets the terminal, which a program on the remote never asked for.
+    @MainActor func testAContainerSizeChangeKeepsTheRemoteGridAndItsModes() {
+        for fontSize in [10.0, 14, 17, 26] {
+            let container = TerminalContainer(frame: CGRect(x: 0, y: 0, width: 402, height: 700))
+            container.configure(fontSize: fontSize, theme: "dark")
+            container.setDimensions(cols: 80, rows: 24)
+            container.layoutIfNeeded()
+            let terminal = container.terminal.getTerminal()
+            container.terminal.feed(text: "\u{1b}[?1h\u{1b}[?25l\u{1b}[5;10r")
+            for height in [700.0, 380, 874, 520] {
+                container.frame.size.height = height
+                container.layoutIfNeeded()
+                container.terminal.layoutIfNeeded()
+                XCTAssertEqual(terminal.cols, 80, "\(fontSize) pt at \(height)")
+                XCTAssertEqual(terminal.rows, 24, "\(fontSize) pt at \(height)")
+                XCTAssertTrue(terminal.applicationCursor, "\(fontSize) pt at \(height)")
+                XCTAssertEqual(terminal.buffer.scrollTop, 4, "\(fontSize) pt at \(height)")
+                XCTAssertEqual(terminal.buffer.scrollBottom, 9, "\(fontSize) pt at \(height)")
+            }
+            container.setDimensions(cols: 120, rows: 40)
+            container.layoutIfNeeded()
+            container.terminal.layoutIfNeeded()
+            XCTAssertEqual(terminal.cols, 120, "\(fontSize) pt")
+            XCTAssertEqual(terminal.rows, 40, "\(fontSize) pt")
+            XCTAssertTrue(terminal.applicationCursor, "\(fontSize) pt")
+        }
+    }
+
     @MainActor func testModernAttachOnlyFollowsAndDeliversOneSnapshot() async throws {
         let client = TerminalCompatibilityClient()
         let attachment = client.acquireAttachment("session", id: "terminal")
