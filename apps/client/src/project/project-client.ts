@@ -54,6 +54,7 @@ interface DocumentAccess {
         edits: number;
         loading: boolean;
         load(document: ProjectDocument | null, local: ProjectLocal | null): void;
+        reload(document: ProjectDocument, local: ProjectLocal | null): void;
         applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[], flags: ProjectFlags): void;
         heldNodeIds(): Set<string>;
         exportViews(): ProjectView[];
@@ -356,7 +357,7 @@ export class ProjectClient {
         this.baseRev = conflict.rev;
         this.baseShared = [...(conflict.shared ?? [])];
         if (choice === 'theirs') {
-            this.documents.getState().load(conflict, this.localOfScreen());
+            this.documents.getState().reload(conflict, this.localOfScreen());
             this.sink.setChosenIcon(conflict.icon ?? null);
             this.sink.setCurrent({ ...current, name: conflict.name, color: conflict.color, icon: conflict.icon ?? current.icon }, conflict.rev);
             return;
@@ -662,7 +663,7 @@ export class ProjectClient {
         this.base = contentOf(document);
         this.baseRev = document.rev;
         this.baseShared = [...(document.shared ?? [])];
-        this.documents.getState().load(document, this.localOfScreen());
+        this.documents.getState().reload(document, this.localOfScreen());
         this.sink.setChosenIcon(document.icon ?? null);
         this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
     }

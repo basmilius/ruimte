@@ -94,6 +94,7 @@ describe('a node leaving the document', () => {
     test('ends nothing when another project swaps in', () => {
         useDocument.getState().load(project([view('x', [node('t9')])]), { activeViewId: 'x', views: {} });
         expect(ended).toEqual([]);
+        expect(gone).toEqual([]);
     });
 
     test('names the machine it ran on, so the kill goes to that daemon', () => {
@@ -140,6 +141,13 @@ describe('a node another writer took out of the file', () => {
         useDocument.getState().applyMerge(without('t2'), {}, [], {});
         expect(ended).toEqual([]);
         expect(gone).toEqual(['local terminal:t2']);
+    });
+
+    test('is only let go of here when the project on screen is read again without it, never ended', () => {
+        useDocument.getState().reload(project(without('b1')), { activeViewId: 'a', views: {} });
+        expect(focusedCanvas().getState().nodes.b1).toBeUndefined();
+        expect(ended).toEqual([]);
+        expect(gone).toEqual(['local browser:b1']);
     });
 
     test('leaves a close made here right after it ending as before', () => {

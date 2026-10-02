@@ -92,6 +92,8 @@ export interface DocumentState {
     loading: boolean;
     /* True while another writer's change is taken in: a node it drops is gone from the file, not closed here. */
     merging: boolean;
+    /* True while the project on screen is read again whole from disk, which drops a node the same way a merge does. */
+    reloading: boolean;
     /* The views that live in the shared file, which is the one a team commits. Everything else is
        this person's, which is what a view is until someone shares it. */
     shared: string[];
@@ -105,6 +107,8 @@ export interface DocumentState {
     trashed: TrashedView[];
 
     load(document: ProjectDocument | null, local: ProjectLocal | null): void;
+    /* `load` for the project already on screen, as the file now has it. */
+    reload(document: ProjectDocument, local: ProjectLocal | null): void;
     /*
      * What another writer changed, taken in beside what this machine is editing: the merged list of
      * views, and what each canvas on screen has to take in. Not an edit, since it is already on disk,
@@ -472,6 +476,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             edits: 0,
             loading: false,
             merging: false,
+            reloading: false,
             shared: [],
             flags: {},
             trashed: [],
@@ -499,6 +504,12 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
                 set({ loading: false });
+            },
+
+            reload(document, local) {
+                set({ reloading: true });
+                get().load(document, local);
+                set({ reloading: false });
             },
 
             setShared(id, shared) {

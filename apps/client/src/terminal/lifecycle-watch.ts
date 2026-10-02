@@ -46,6 +46,16 @@ const liveNodes = (): Map<string, CanvasNodeKind> => {
 /* Ends every node that leaves the document, so no store talks to the transport itself. */
 export const watchNodes = (end: NodeEnder): (() => void) => {
     let previous = liveNodes();
+    /* What was live when the project on screen began to be read again from disk. */
+    let beforeReload: Map<string, CanvasNodeKind> | null = null;
+    const endMissing = (from: Map<string, CanvasNodeKind>, current: Map<string, CanvasNodeKind>, exit: NodeExit): void => {
+        for (const [key, kind] of from) {
+            if (!current.has(key)) {
+                const { endpointId, id } = splitKey(key);
+                end(endpointId, id, kind, exit);
+            }
+        }
+    };
     const step = (changed: boolean, settling: boolean, merging: boolean): void => {
         if (!changed) {
             return;
@@ -53,14 +63,22 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
         const current = liveNodes();
         // Another project swapping in is not the person closing nodes; those sessions keep running.
         if (!settling) {
-            for (const [key, kind] of previous) {
-                if (!current.has(key)) {
-                    const { endpointId, id } = splitKey(key);
-                    end(endpointId, id, kind, merging ? 'gone' : 'closed');
-                }
-            }
+            endMissing(previous, current, merging ? 'gone' : 'closed');
         }
         previous = current;
+    };
+    /* The same project read again settles like a swap while it loads, so it is weighed once the load is over. */
+    const followReload = (reloading: boolean, wasReloading: boolean): boolean => {
+        if (reloading && !wasReloading) {
+            beforeReload = previous;
+        }
+        if (reloading || !wasReloading || beforeReload === null) {
+            return false;
+        }
+        previous = liveNodes();
+        endMissing(beforeReload, previous, 'gone');
+        beforeReload = null;
+        return true;
     };
     /* The nodes of every canvas on screen, so a cell beside the focused one counts as well. */
     let nodesSeen = new Map<string, unknown>();
@@ -76,13 +94,16 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
     const offCanvas = subscribeCanvases(() =>
         step(nodesMoved(), canvasLoading() || useDocument.getState().loading, canvasMerging() || useDocument.getState().merging)
     );
-    const offDocument = useDocument.subscribe((state, before) =>
+    const offDocument = useDocument.subscribe((state, before) => {
+        if (followReload(state.reloading, before.reloading)) {
+            return;
+        }
         step(
             state.views !== before.views || state.trashed !== before.trashed || state.activeViewId !== before.activeViewId,
             state.loading || before.loading || canvasLoading(),
             state.merging || canvasMerging()
-        )
-    );
+        );
+    });
     /* Another machine is another project on another daemon. What this one holds keeps running, and
        what the next one holds was never this watcher's to end. */
     const offEndpoint = useEndpoints.subscribe((state, before) => {
