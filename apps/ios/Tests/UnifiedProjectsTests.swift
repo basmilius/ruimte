@@ -208,7 +208,7 @@ final class UnifiedProjectsTests: XCTestCase {
     ) -> JSONValue {
         .object([
             "projectId": .string(id), "name": .string("Project"), "color": .string("blue"),
-            "folder": .null,
+            "folder": .string("/work/project"),
             "lastOpenedAt": .number(opened), "closedAt": closed.map(JSONValue.number) ?? .null,
             "available": .bool(available),
             "icon": .object(["kind": .string("initial"), "value": .string("P")]),

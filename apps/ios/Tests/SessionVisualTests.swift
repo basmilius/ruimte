@@ -207,7 +207,8 @@ final class SessionVisualTests: XCTestCase {
         _ id: String, name: String, opened: Double, closed: Double? = nil, available: Bool = true
     ) -> JSONValue {
         .object([
-            "projectId": .string(id), "name": .string(name), "color": .string("#155dfc"), "folder": .null,
+            "projectId": .string(id), "name": .string(name), "color": .string("#155dfc"),
+            "folder": .string("/work/\(id)"),
             "lastOpenedAt": .number(opened), "closedAt": closed.map(JSONValue.number) ?? .null,
             "available": .bool(available),
             "icon": .object(["kind": .string("initial"), "value": .string(String(name.prefix(1)))]),

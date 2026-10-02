@@ -135,11 +135,12 @@ final class WorkspaceVisualTests: XCTestCase {
         return .object([
             "summary": .object([
                 "projectId": .string("visual-project"), "name": .string("Ruimte"), "color": .string("#155dfc"),
-                "folder": .null, "lastOpenedAt": .number(1), "closedAt": .null, "available": .bool(true),
-                "icon": .object(["kind": .string("initial"), "value": .string("R")]), "nameSource": .string("chosen"),
+                "folder": .string("/work/ruimte"), "lastOpenedAt": .number(1), "closedAt": .null,
+                "available": .bool(true), "icon": .object(["kind": .string("initial"), "value": .string("R")]),
+                "nameSource": .string("chosen"),
             ]),
             "document": .object([
-                "version": .number(2), "rev": .number(1), "name": .string("Ruimte"), "color": .string("#155dfc"),
+                "version": .number(3), "rev": .number(1), "name": .string("Ruimte"), "color": .string("#155dfc"),
                 "views": .array(views),
             ]),
             "local": .object(["activeViewId": .string("overview"), "views": .object([:])]),
