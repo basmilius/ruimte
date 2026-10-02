@@ -53,7 +53,8 @@ export const matchesIn = (text: string, pattern: RegExp, limit: number = MATCH_L
     let found = global.exec(text);
     while (found !== null && matches.length < limit) {
         if (found[0] === '') {
-            global.lastIndex += 1;
+            // A `u` pattern moves a lastIndex inside a surrogate pair back to its start, so one step would never leave it.
+            global.lastIndex = found.index + ((text.codePointAt(found.index) ?? 0) > 0xffff ? 2 : 1);
         } else {
             matches.push({ start: found.index, end: found.index + found[0].length });
         }

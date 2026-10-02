@@ -23,6 +23,12 @@ describe('matchesIn', () => {
         expect(matchesIn('baab', pattern('a*', { regex: true }))).toEqual([{ start: 1, end: 3 }]);
     });
 
+    test('an empty match before a character outside the basic plane steps over all of it', () => {
+        expect(matchesIn('a\n🚀 b', pattern('^', { regex: true }))).toEqual([]);
+        expect(matchesIn('😀', pattern('x*', { regex: true }))).toEqual([]);
+        expect(matchesIn('🚀bb', pattern('b*', { regex: true }))).toEqual([{ start: 2, end: 4 }]);
+    });
+
     test('stops at the limit', () => {
         expect(matchesIn('aaaa', pattern('a'), 2)).toHaveLength(2);
     });
