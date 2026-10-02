@@ -199,6 +199,7 @@
       "provider-linked",
       "last-identity",
       "rate-limited",
+      "clock-skew",
       "not-configured",
       "no-benchmarks",
       "internal"
@@ -223,6 +224,7 @@
               "provider-linked",
               "last-identity",
               "rate-limited",
+              "clock-skew",
               "not-configured",
               "no-benchmarks",
               "internal"

@@ -30,6 +30,7 @@ import { Miniflare, type WorkerOptions } from 'miniflare';
 import { BENCHMARK_MODELS } from './benchmark-models.ts';
 import { MAX_PAGES } from './benchmarks.ts';
 import { LIMITS, WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-window.ts';
+import { ROTATION_GRACE_MS } from './sessions.ts';
 
 /*
  * The Worker bundled the way wrangler would, in workerd through Miniflare, against an in-memory D1
@@ -670,7 +671,7 @@ describe('login', () => {
 });
 
 describe('sessions', () => {
-    test('a refresh rotates both tokens, and a spent refresh token ends the session', async () => {
+    test('a refresh rotates both tokens, and a spent refresh token past the grace ends the session', async () => {
         const session = await signIn(2001);
         const refreshed = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) });
         expect(refreshed.status).toBe(200);
@@ -679,6 +680,7 @@ describe('sessions', () => {
         expect((await dispatch('/v1/machines', { headers: bearer(session) })).status).toBe(401);
         expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(200);
 
+        await database(mf).run('UPDATE session SET rotated_at = rotated_at - ?1 WHERE refresh_hash = ?2', ROTATION_GRACE_MS + 1, sha256(next.refreshToken));
         const replay = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) });
         expect(replay.status).toBe(401);
         expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(401);
@@ -709,21 +711,24 @@ describe('sessions', () => {
     test('a signature from long ago is refused, and a signature for one token does not refresh another', async () => {
         const session = await signIn(2005);
         const old = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key, Date.now() - 11 * 60_000) });
-        expect(old.status).toBe(401);
+        expect(old.status).toBe(400);
+        expect(await errorCode(old)).toBe('clock-skew');
         const other = await signIn(2005, session.key);
         const moved = { ...refreshBody(other.refreshToken, session.key), refreshToken: session.refreshToken };
         expect((await dispatch('/v1/session/refresh', { method: 'POST', body: moved })).status).toBe(401);
         expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(200);
     });
 
-    test('a replayed refresh with the right key ends the session', async () => {
+    test('a replayed refresh with the right key gets the same rotation back while it is fresh', async () => {
         const session = await signIn(2006);
         const body = refreshBody(session.refreshToken, session.key);
         const first = await dispatch('/v1/session/refresh', { method: 'POST', body });
         expect(first.status).toBe(200);
         const next = (await first.json()) as SessionResult;
-        expect((await dispatch('/v1/session/refresh', { method: 'POST', body })).status).toBe(401);
-        expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(401);
+        const again = await dispatch('/v1/session/refresh', { method: 'POST', body });
+        expect(again.status).toBe(200);
+        expect(await again.json()).toEqual(next);
+        expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(200);
     });
 
     test('a session from before the binding has to sign in again', async () => {

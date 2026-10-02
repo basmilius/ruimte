@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import { createHash, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { MACHINE_ACTIVITY_NODE, pushCollapseIdMessage, pushMessage, type PushEnvelope } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { changePushDevice, registerPushDevice, sendPush, type PushDeliverySeams } from './push.ts';
 import { apnsPayload, deliverApns } from './apns.ts';
+import { d1, migratedDatabase } from './test/sqlite-d1.ts';
 
 const NOW = 1_900_000_000_000;
 const access = 'a'.repeat(43);
@@ -17,29 +16,6 @@ let sqlite: Database;
 let env: Env;
 let delivered: PushEnvelope[];
 let seams: PushDeliverySeams;
-
-// The route executes its real SQL on SQLite; only the D1 transport is adapted.
-const d1 = (database: Database): D1Database =>
-    ({
-        prepare(sql: string) {
-            const query = (values: unknown[] = []) => ({
-                bind(...bound: unknown[]) {
-                    return query(bound);
-                },
-                async first() {
-                    return database.query(sql).get(...(values as never[])) ?? null;
-                },
-                async run() {
-                    const result = database.query(sql).run(...(values as never[]));
-                    return { meta: { changes: result.changes }, success: true };
-                },
-                async all() {
-                    return { results: database.query(sql).all(...(values as never[])), success: true };
-                }
-            });
-            return query();
-        }
-    }) as unknown as D1Database;
 
 const request = (body: unknown, method = 'POST', token = access): Request =>
     new Request('https://pulsar.test/v1/push', {
@@ -67,12 +43,7 @@ const signed = (changes: Partial<PushEnvelope> = {}): PushEnvelope => {
 };
 
 beforeEach(() => {
-    sqlite = new Database(':memory:');
-    sqlite.exec('PRAGMA foreign_keys = ON');
-    const migrations = join(import.meta.dir, '../migrations');
-    for (const file of readdirSync(migrations).sort()) {
-        sqlite.exec(readFileSync(join(migrations, file), 'utf8'));
-    }
+    sqlite = migratedDatabase();
     sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run('account', 'github', 'subject', NOW);
     sqlite
         .query('INSERT INTO session (id, account_id, access_hash, access_expires_at, refresh_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')

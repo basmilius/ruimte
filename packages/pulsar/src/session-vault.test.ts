@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { AddressBookClient, AddressBookRequestError } from './address-book-client.ts';
-import type { SessionResult } from './address-book.ts';
+import { SESSION_REFRESH_MAX_SKEW_MS, type SessionResult } from './address-book.ts';
 import { SessionVault, type SessionSigner, type SessionStore, type StoredSession } from './session-vault.ts';
 import { sessionKeyMessage, sessionRefreshMessage } from './signing.ts';
 
@@ -73,6 +73,9 @@ const fakeAddressBook = () => {
             return Response.json(session());
         }
         if (url.pathname === '/v1/session/refresh') {
+            if (Math.abs(NOW - Number(body?.issuedAt)) > SESSION_REFRESH_MAX_SKEW_MS) {
+                return Response.json({ error: { code: 'clock-skew', message: 'The clock of this device is 11 minutes behind.' } }, { status: 400 });
+            }
             const signed = boundKey !== null && verifies(boundKey, sessionRefreshMessage(String(body?.refreshToken), Number(body?.issuedAt)), body?.signature);
             if (body?.refreshToken !== liveRefresh || !signed) {
                 return Response.json({ error: { code: 'unauthorized', message: 'Sign in again' } }, { status: 401 });
@@ -148,6 +151,22 @@ describe('SessionVault', () => {
         expect(await vault.refresh()).toBeNull();
         expect(store.held).toBeNull();
         expect(await vault.restore()).toBeNull();
+    });
+
+    test('a clock the address book calls off keeps the session and says so', async () => {
+        const book = fakeAddressBook();
+        const store = memoryStore();
+        await new SessionVault({ client: book.client, store, signer: keyed, now: () => NOW }).exchange(exchange);
+        const kept = store.held;
+
+        const behind = new SessionVault({ client: book.client, store, signer: keyed, now: () => NOW - 11 * 60_000 });
+        const refused = await behind.refresh().catch((e: unknown) => e);
+        expect(refused).toBeInstanceOf(AddressBookRequestError);
+        expect(refused).toMatchObject({ code: 'clock-skew', message: 'The clock of this device is 11 minutes behind.' });
+        expect(store.held).toEqual(kept);
+
+        const righted = new SessionVault({ client: book.client, store, signer: keyed, now: () => NOW });
+        expect((await righted.refresh())?.accessToken).toBe(token('2'));
     });
 
     test('a session past its end is forgotten without asking anybody', async () => {

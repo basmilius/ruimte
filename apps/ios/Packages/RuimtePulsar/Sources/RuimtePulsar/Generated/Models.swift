@@ -234,6 +234,7 @@ public enum AddressBookErrorCode: String, CaseIterable, Codable, Sendable, Equat
     case `providerLinked` = "provider-linked"
     case `lastIdentity` = "last-identity"
     case `rateLimited` = "rate-limited"
+    case `clockSkew` = "clock-skew"
     case `notConfigured` = "not-configured"
     case `noBenchmarks` = "no-benchmarks"
     case `internal` = "internal"

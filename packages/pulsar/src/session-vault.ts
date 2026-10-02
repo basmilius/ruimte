@@ -107,7 +107,8 @@ export class SessionVault {
     /*
      * A fresh access token. Null when there is no session any more (never signed in, ended, no key to
      * sign with, or the address book refused the token), which clears what was kept; a network failure
-     * throws and keeps the session, since the token is still good once the address book answers again.
+     * or a clock the address book calls off throws and keeps the session, since the token is still
+     * good once the address book answers again or the clock is right.
      */
     refresh(): Promise<SessionView | null> {
         this.refreshing ??= this.exclusive(() => this.rotate()).finally(() => {

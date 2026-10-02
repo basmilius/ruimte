@@ -15,6 +15,7 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     'provider-linked': 409,
     'last-identity': 409,
     'rate-limited': 429,
+    'clock-skew': 400,
     'not-configured': 503,
     'no-benchmarks': 503,
     internal: 500

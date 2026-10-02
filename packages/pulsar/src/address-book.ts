@@ -356,6 +356,8 @@ export const AddressBookErrorCodeSchema = z.enum([
     // Removing this identity would leave the account without a way in.
     'last-identity',
     'rate-limited',
+    // A signed time too far from the address book's: the device's clock is off, and the session is still good.
+    'clock-skew',
     'not-configured',
     // The benchmarks were never fetched yet, or never held a model this address book knows.
     'no-benchmarks',

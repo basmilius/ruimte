@@ -264,7 +264,16 @@ export const refreshSession = async (request: Request, env: Env): Promise<Respon
         return body.response;
     }
     const result = await rotateSession(env.DB, body.value);
+    if (result === 'clock-skew') {
+        return failure('clock-skew', clockSkewMessage(Date.now() - body.value.issuedAt));
+    }
     return result ? json(result) : failure('unauthorized', 'Sign in again');
+};
+
+/* What a person reads when the clock of their device is off: by how much, and which way. */
+export const clockSkewMessage = (offMs: number): string => {
+    const minutes = Math.round(Math.abs(offMs) / 60_000);
+    return `The clock of this device is ${minutes} minutes ${offMs > 0 ? 'behind' : 'ahead'}. Set it right and try again.`;
 };
 
 // `DELETE /v1/session`

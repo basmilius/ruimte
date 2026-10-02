@@ -3,6 +3,7 @@ import {
     randomToken,
     sessionRefreshMessage,
     sha256,
+    toBase64Url,
     type ProviderId,
     type SessionRefreshPayload,
     type SessionResult
@@ -63,23 +64,80 @@ export const createSession = async (db: D1Database, account: AccountRow, label: 
     return { accessToken, accessExpiresAt, refreshToken, expiresAt, account };
 };
 
+// How long a spent refresh token still gets its own rotation back, for an answer that got lost on its way.
+export const ROTATION_GRACE_MS = 5 * 60_000;
+
 /*
- * Refresh tokens rotate once. Reuse revokes the session, but only after the session key verifies, so
- * a stolen token without its private key cannot refresh or revoke the legitimate device.
+ * The pair a rotation hands out, derived from the refresh token it spends and a salt only the row
+ * holds: a retry of that rotation gets the very same pair, and neither the token nor the database
+ * alone yields it.
  */
-export const rotateSession = async (db: D1Database, payload: SessionRefreshPayload): Promise<SessionResult | null> => {
-    const now = Date.now();
-    if (Math.abs(now - payload.issuedAt) > SESSION_REFRESH_MAX_SKEW_MS) {
-        return null;
-    }
-    const hash = await sha256(payload.refreshToken);
-    const session = await db
+const rotationOf = async (spent: string, salt: string): Promise<{ accessToken: string; refreshToken: string }> => {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(spent), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const derive = async (purpose: string): Promise<string> =>
+        toBase64Url(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${purpose}\n${salt}`)));
+    return { accessToken: await derive('access'), refreshToken: await derive('refresh') };
+};
+
+interface SessionRow {
+    id: string;
+    session_key: string | null;
+    current: number;
+    refresh_hash: string;
+    access_expires_at: number;
+    expires_at: number;
+    rotated_at: number | null;
+    rotation_salt: string | null;
+    account_id: string;
+    provider: ProviderId;
+    login: string | null;
+    display_name: string | null;
+}
+
+const sessionOf = (db: D1Database, hash: string, now: number): Promise<SessionRow | null> =>
+    db
         .prepare(
-            `SELECT id, session_key, refresh_hash = ?1 AS current FROM session
+            `SELECT id, session_key, refresh_hash = ?1 AS current, refresh_hash, access_expires_at, expires_at, rotated_at, rotation_salt,
+                 account_id, ${accountProviderSql('session.account_id')} AS provider, ${accountLoginSql('session.account_id')} AS login,
+                 ${accountDisplayNameSql('session.account_id')} AS display_name
+             FROM session
              WHERE (refresh_hash = ?1 OR previous_refresh_hash = ?1) AND revoked_at IS NULL AND expires_at > ?2`
         )
         .bind(hash, now)
-        .first<{ id: string; session_key: string | null; current: number }>();
+        .first<SessionRow>();
+
+/* The rotation that spent this token once more, while it is fresh and still the one the row holds; null otherwise. */
+const replayed = async (session: SessionRow, spent: string, now: number): Promise<SessionResult | null> => {
+    if (session.rotated_at === null || session.rotation_salt === null || now - session.rotated_at > ROTATION_GRACE_MS) {
+        return null;
+    }
+    const again = await rotationOf(spent, session.rotation_salt);
+    // A Worker from before the salt rotates without one, which leaves the salt of an earlier rotation behind.
+    if ((await sha256(again.refreshToken)) !== session.refresh_hash) {
+        return null;
+    }
+    return {
+        ...again,
+        accessExpiresAt: session.access_expires_at,
+        expiresAt: session.expires_at,
+        account: { id: session.account_id, provider: session.provider, login: session.login, displayName: session.display_name }
+    };
+};
+
+/*
+ * Refresh tokens rotate once. A token spent before comes back as the same rotation for a short
+ * while, since the answer to the first may have been lost on the way; after that it is reuse and
+ * revokes the session. Both only once the session key verifies, so a stolen token without its
+ * private key cannot refresh or revoke the legitimate device. A clock too far off is said apart,
+ * so the device keeps a session that is fine once its clock is right.
+ */
+export const rotateSession = async (db: D1Database, payload: SessionRefreshPayload): Promise<SessionResult | 'clock-skew' | null> => {
+    const now = Date.now();
+    if (Math.abs(now - payload.issuedAt) > SESSION_REFRESH_MAX_SKEW_MS) {
+        return 'clock-skew';
+    }
+    const hash = await sha256(payload.refreshToken);
+    const session = await sessionOf(db, hash, now);
     if (!session?.session_key) {
         return null;
     }
@@ -87,34 +145,39 @@ export const rotateSession = async (db: D1Database, payload: SessionRefreshPaylo
         return null;
     }
     if (session.current !== 1) {
-        await revokeSession(db, session.id);
-        return null;
+        const again = await replayed(session, payload.refreshToken, now);
+        if (!again) {
+            await revokeSession(db, session.id);
+        }
+        return again;
     }
-    const accessToken = randomToken();
-    const nextRefreshToken = randomToken();
+    const salt = randomToken();
+    const { accessToken, refreshToken: nextRefreshToken } = await rotationOf(payload.refreshToken, salt);
     const accessExpiresAt = now + ACCESS_LIFETIME_MS;
     // Guarded on the hash again, so two refreshes that both read the row before either wrote rotate it once.
     const row = await db
         .prepare(
-            `UPDATE session SET access_hash = ?1, access_expires_at = ?2, refresh_hash = ?3, previous_refresh_hash = refresh_hash
+            `UPDATE session SET access_hash = ?1, access_expires_at = ?2, refresh_hash = ?3, previous_refresh_hash = refresh_hash, rotated_at = ?6, rotation_salt = ?7
              WHERE id = ?4 AND refresh_hash = ?5 AND revoked_at IS NULL
-             RETURNING expires_at, (SELECT id FROM account WHERE account.id = session.account_id) AS account_id,
-                 ${accountProviderSql('session.account_id')} AS provider,
-                 ${accountLoginSql('session.account_id')} AS login,
-                 ${accountDisplayNameSql('session.account_id')} AS display_name`
+             RETURNING expires_at`
         )
-        .bind(await sha256(accessToken), accessExpiresAt, await sha256(nextRefreshToken), session.id, hash)
-        .first<{ expires_at: number; account_id: string; provider: ProviderId; login: string | null; display_name: string | null }>();
+        .bind(await sha256(accessToken), accessExpiresAt, await sha256(nextRefreshToken), session.id, hash, now, salt)
+        .first<{ expires_at: number }>();
     if (!row) {
-        await revokeSession(db, session.id);
-        return null;
+        // The other refresh rotated first, so this one gets that rotation.
+        const winner = await sessionOf(db, hash, now);
+        const again = winner && winner.current !== 1 ? await replayed(winner, payload.refreshToken, now) : null;
+        if (!again) {
+            await revokeSession(db, session.id);
+        }
+        return again;
     }
     return {
         accessToken,
         accessExpiresAt,
         refreshToken: nextRefreshToken,
         expiresAt: row.expires_at,
-        account: { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name }
+        account: { id: session.account_id, provider: session.provider, login: session.login, displayName: session.display_name }
     };
 };
 
