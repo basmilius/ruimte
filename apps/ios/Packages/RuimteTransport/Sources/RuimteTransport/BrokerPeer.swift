@@ -30,7 +30,8 @@ public struct BrokerPeer {
     }
 
     public mutating func receive(_ raw: JSONValue) throws -> [Event] {
-        let frame = try WireSchema.validate("BrokerServerFrameSchema", raw)
+        // A newer broker may say more and any key can relay a newer envelope; neither is worth the socket.
+        guard let frame = try? WireSchema.validate("BrokerServerFrameSchema", raw) else { return [] }
         switch try string(frame, "type") {
         case "challenge":
             guard state == .announced else { return [] }

@@ -152,6 +152,26 @@ final class TransportTests: XCTestCase {
         XCTAssertThrowsError(try wrongHost.receive(challenge))
     }
 
+    func testBrokerPeerPassesOverFramesItCannotRead() throws {
+        var peer = BrokerPeer(host: "broker.test:443", signer: DeviceKey())
+        _ = try peer.start()
+        _ = try peer.receive(.object([
+            "type": .string("challenge"), "broker": .string("broker.test:443"),
+            "nonce": .string(String(repeating: "a", count: 22)),
+        ]))
+        XCTAssertEqual(try peer.receive(.object(["type": .string("ready")])), [.ready])
+        XCTAssertEqual(try peer.receive(.object(["type": .string("notice"), "text": .string("maintenance")])), [])
+        let later: JSONValue = .object([
+            "type": .string("relayed"), "from": .string(DeviceKey().publicKey),
+            "signature": .string(String(repeating: "s", count: 86)),
+            "envelope": .object([
+                "connectionId": .string("connection_1"), "signal": .object(["kind": .string("restart")]),
+            ]),
+        ])
+        XCTAssertEqual(try peer.receive(later), [])
+        XCTAssertTrue(peer.isReady)
+    }
+
     func testIceDeduplicationPreservesDifferentTurnCredentials() throws {
         let own: JSONValue = .object(["urls": .string("stun:turn.test:3478")])
         let route: JSONValue = .object([
