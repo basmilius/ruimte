@@ -689,7 +689,24 @@
                 "label": "Add to your account again",
                 "description": "Someone took this machine off your account, so it does not join on its own.",
                 "action": "Add"
+            },
+            "onYours": "This machine is on your account",
+            "onAnother": "This machine is on another account",
+            "onNone": "This machine is on no account yet",
+            "leave": {
+                "description": "A machine is on one account. Leaving it cuts off every client that came in through an account; a client paired by link keeps its access.",
+                "action": "Leave"
             }
+        },
+        "confirmLeave": {
+            "title": "Take {{machine}} off its account?",
+            "description": "Every client that came in through an account loses access now, and none gets in that way until the machine joins an account again. Clients paired by link keep their access.",
+            "action": "Leave account"
+        },
+        "left": {
+            "title": "{{machine}} is on no account now",
+            "revoked_one": "{{count}} client lost access",
+            "revoked_other": "{{count}} clients lost access"
         },
         "remove": {
             "title": "Remove",
@@ -701,7 +718,7 @@
             "account": {
                 "label": "Remove from account",
                 "local": "Every other client signed in to your account drops this machine. It stays here, since this app runs on it.",
-                "description": "Every client signed in to your account drops this machine, one that paired by link included. Pairing again by link puts it back.",
+                "description": "Every client signed in to your account drops this machine, one that paired by link included. The app on that machine puts it back.",
                 "action": "Remove"
             }
         },
@@ -740,7 +757,7 @@
             },
             "signedOut": {
                 "label": "Not signed in",
-                "description": "Machines you reach while signed in join your account on their own, and its machines show up here."
+                "description": "Once you sign in, the machine this app runs on joins your account on its own, and the account's machines show up here."
             },
             "signingIn": {
                 "label": "Signing in",
@@ -756,7 +773,7 @@
             "title": "Add a machine",
             "description": "Paste a pairing link from the other machine.",
             "linkLabel": "Pairing link",
-            "hint": "Find it under Show pairing link in the settings of that machine, or run `ruimte pair` there. A machine someone removed from your account goes back on it when you pair while signed in.",
+            "hint": "Find it under Show pairing link in the settings of that machine, or run `ruimte pair` there. Pairing lets this client in; only the app on that machine puts it on your account.",
             "codeHint": "For a machine without the app that ran `ruimte login`",
             "withCode": "Link a machine with a code",
             "pair": "Pair",

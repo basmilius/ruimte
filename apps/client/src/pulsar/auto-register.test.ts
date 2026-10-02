@@ -26,7 +26,13 @@ const emptyList: AccountList = { records: new Map(), removed: new Set() };
 
 const listWith = (machineId: string, record: MachineRecord): AccountList => ({ records: new Map([[machineId, record]]), removed: new Set() });
 
-const setup = (register: (payload: RegisterMachinePayload) => Promise<void> = async () => undefined) => {
+// What a machine answers when it will not sign: the code a transport error carries.
+const refusal = (code: string): Error => Object.assign(new Error(`Refused with ${code}`), { code });
+
+const setup = (
+    register: (payload: RegisterMachinePayload) => Promise<void> = async () => undefined,
+    sign: (endpointId: string) => Promise<void> = async () => undefined
+) => {
     let now = 1_000_000;
     const signed: string[] = [];
     const posted: RegisterMachinePayload[] = [];
@@ -34,6 +40,7 @@ const setup = (register: (payload: RegisterMachinePayload) => Promise<void> = as
         now: () => now,
         sign: async (endpointId) => {
             signed.push(endpointId);
+            await sign(endpointId);
             return registrationFor(endpointId);
         },
         register: async (payload) => {
@@ -197,6 +204,45 @@ describe('AutoRegistrar', () => {
         registrar.setAccount('account-2');
         expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('registered');
         expect(posted).toHaveLength(2);
+    });
+});
+
+describe('AutoRegistrar and the one account of a machine', () => {
+    test('a machine that lets only the app on it sign is left alone after one refusal, without a failure to show', async () => {
+        const { registrar, signed, posted } = setup(undefined, async () => {
+            throw refusal('forbidden');
+        });
+        expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('refused');
+        expect(await registrar.consider('studio', 'studio', emptyList, recordOf({ name: 'Studio 2' }))).toBe('skipped');
+        expect(signed).toEqual(['studio']);
+        expect(posted).toEqual([]);
+        expect(registrar.failedMachines().size).toBe(0);
+        expect(registrar.nextRetryAt()).toBeNull();
+    });
+
+    test('a machine that says it is on another account is not asked to sign', async () => {
+        const { registrar, signed } = setup();
+        expect(await registrar.consider(LOCAL_ENDPOINT_ID, 'macbook', emptyList, recordOf(), 'account-2')).toBe('skipped');
+        expect(signed).toEqual([]);
+    });
+
+    test('a machine on no account that the list already holds signs once, which puts it on this account', async () => {
+        const { registrar, posted } = setup();
+        const listed = listWith('macbook', recordOf());
+        expect(await registrar.consider(LOCAL_ENDPOINT_ID, 'macbook', listed, recordOf(), null)).toBe('registered');
+        expect(await registrar.consider(LOCAL_ENDPOINT_ID, 'macbook', listed, recordOf(), null)).toBe('skipped');
+        expect(await registrar.consider(LOCAL_ENDPOINT_ID, 'macbook', listed, recordOf(), 'account-1')).toBe('skipped');
+        expect(posted).toHaveLength(1);
+    });
+
+    test('a machine another account still lists fails like any registration, and is asked again later', async () => {
+        const { registrar, advance } = setup(async () => {
+            throw new AddressBookRequestError('machine-on-other-account', 409, 'This machine is on another account.');
+        });
+        expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('failed');
+        expect(registrar.failedMachines().has('studio')).toBe(true);
+        advance(REGISTER_RETRY_MIN_MS);
+        expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('failed');
     });
 });
 

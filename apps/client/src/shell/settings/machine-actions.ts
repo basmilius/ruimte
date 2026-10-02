@@ -4,6 +4,8 @@ export interface MachineContext {
     connected: boolean;
     signedIn: boolean;
     removedMachineIds: readonly string[];
+    // The account the machine says it is on, null for none; undefined when it did not say, as any machine but this one.
+    machineAccount?: string | null;
 }
 
 /* Why the settings of a machine cannot be changed right now, or `ready` when they can. */
@@ -18,17 +20,23 @@ export interface MachineDialogModel {
     canRemoveFromAccount: boolean;
     /* Only this machine survives a removal on a signed-in client, so it is the only row that needs a way back. */
     canAddToAccountAgain: boolean;
+    /* Only the app on a machine takes it off its account; leaving takes it off the list as well, so it replaces removing. */
+    canLeaveAccount: boolean;
 }
 
 /* What the detail of one machine offers, from what this client knows about it. */
-export const machineDialogModel = (entry: MachineEntry, context: MachineContext): MachineDialogModel => ({
-    settings: entry.endpoint === null ? 'not-opened' : context.connected ? 'ready' : 'not-answering',
-    direct: entry.endpoint !== null && entry.endpoint.httpBaseUrl !== '',
-    canOpen: entry.endpoint === null && (entry.machine?.brokerUrl ?? null) !== null,
-    canForget: entry.endpoint !== null && !entry.local,
-    canRemoveFromAccount: context.signedIn && entry.onAccount,
-    canAddToAccountAgain: context.signedIn && entry.endpoint !== null && !entry.onAccount && context.removedMachineIds.includes(entry.id)
-});
+export const machineDialogModel = (entry: MachineEntry, context: MachineContext): MachineDialogModel => {
+    const canLeaveAccount = entry.local && entry.endpoint !== null && typeof context.machineAccount === 'string';
+    return {
+        settings: entry.endpoint === null ? 'not-opened' : context.connected ? 'ready' : 'not-answering',
+        direct: entry.endpoint !== null && entry.endpoint.httpBaseUrl !== '',
+        canOpen: entry.endpoint === null && (entry.machine?.brokerUrl ?? null) !== null,
+        canForget: entry.endpoint !== null && !entry.local,
+        canRemoveFromAccount: context.signedIn && entry.onAccount && !canLeaveAccount,
+        canAddToAccountAgain: context.signedIn && entry.endpoint !== null && !entry.onAccount && context.removedMachineIds.includes(entry.id),
+        canLeaveAccount
+    };
+};
 
 export interface MachineActionDeps {
     forgetEndpoint(endpointId: string): Promise<void>;

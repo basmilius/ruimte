@@ -34,6 +34,9 @@ export interface ServerInfo {
     reachability: Reachability | null;
     /* The key the machine announces, which the record on an account carries; null until it answers. */
     publicKey: string | null;
+    /* The account the machine is on, null for none. Only the app on the machine is told, so it is
+       undefined for any other machine and for a daemon from before a machine had one account. */
+    accountId: string | null | undefined;
 }
 
 /* One object for a machine that has not said hello yet, so a selector gets a stable snapshot. */
@@ -53,7 +56,8 @@ const UNKNOWN: ServerInfo = {
     broker: null,
     brokerFixed: false,
     reachability: null,
-    publicKey: null
+    publicKey: null,
+    accountId: undefined
 };
 
 interface ServersStore {
@@ -75,8 +79,11 @@ interface ServersStore {
             | 'brokerFixed'
             | 'reachability'
             | 'publicKey'
+            | 'accountId'
         >
     ): void;
+    /* The account the machine is on now, after this client put it on one or took it off. */
+    setAccount(endpointId: string, accountId: string | null): void;
     /* What someone set on this machine, from `endpoint.changed` or from setting it here. A switch left out stays where it stands. */
     setIdentity(
         endpointId: string,
@@ -97,6 +104,10 @@ export const useServers = create<ServersStore>((set, get) => ({
     setEndpoint(endpointId, info) {
         const current = get().byEndpoint[endpointId] ?? UNKNOWN;
         set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
+    },
+    setAccount(endpointId, accountId) {
+        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
+        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, accountId } } });
     },
     setIdentity(endpointId, info) {
         const current = get().byEndpoint[endpointId] ?? UNKNOWN;

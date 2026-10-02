@@ -33,7 +33,8 @@ const load = (endpointId: string): void => {
                 broker: info.broker ?? null,
                 brokerFixed: info.brokerFixed === true,
                 reachability: info.reachability,
-                publicKey: info.publicKey ?? null
+                publicKey: info.publicKey ?? null,
+                accountId: info.accountId
             });
             void link
                 .request('provider.list', {})

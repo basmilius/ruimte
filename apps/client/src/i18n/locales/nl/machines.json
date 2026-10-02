@@ -220,7 +220,12 @@
         "signInFirst": "Log eerst in op je account",
         "statementMismatch": "Je account antwoordde met een statement voor iets anders",
         "signInAndConnect": "Log eerst in en verbind met de machine",
-        "noBroker": "{{name}} is nog niet met een broker verbonden en is dus alleen op zijn eigen netwerk te bereiken"
+        "noBroker": "{{name}} is nog niet met een broker verbonden en is dus alleen op zijn eigen netwerk te bereiken",
+        "refusal": {
+            "onlyOnMachine": "Alleen de app op die machine kan hem op een account zetten.",
+            "machineHasAccount": "Deze machine staat op een ander account. Haal hem daar eerst af, op de machine zelf.",
+            "listedElsewhere": "Een ander account heeft deze machine nog in zijn lijst. Verwijder hem daar eerst, vanaf een client die op dat account is ingelogd."
+        }
     },
     "signIn": {
         "wrongCallback": "Het antwoord van de browser hoort niet bij deze inlogpoging. Probeer het opnieuw.",

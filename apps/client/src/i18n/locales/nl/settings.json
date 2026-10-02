@@ -689,7 +689,24 @@
                 "label": "Opnieuw aan je account toevoegen",
                 "description": "Iemand heeft deze machine van je account gehaald, dus hij komt er niet vanzelf op terug.",
                 "action": "Toevoegen"
+            },
+            "onYours": "Deze machine staat op je account",
+            "onAnother": "Deze machine staat op een ander account",
+            "onNone": "Deze machine staat nog op geen account",
+            "leave": {
+                "description": "Een machine staat op één account. Verlaten sluit elke client af die via een account binnenkwam; een client die via een link gekoppeld is houdt zijn toegang.",
+                "action": "Verlaten"
             }
+        },
+        "confirmLeave": {
+            "title": "{{machine}} van zijn account halen?",
+            "description": "Elke client die via een account binnenkwam verliest nu zijn toegang, en er komt er geen meer zo binnen tot de machine weer op een account staat. Clients die via een link gekoppeld zijn houden hun toegang.",
+            "action": "Account verlaten"
+        },
+        "left": {
+            "title": "{{machine}} staat nu op geen account",
+            "revoked_one": "{{count}} client verloor zijn toegang",
+            "revoked_other": "{{count}} clients verloren hun toegang"
         },
         "remove": {
             "title": "Verwijderen",
@@ -701,7 +718,7 @@
             "account": {
                 "label": "Van account verwijderen",
                 "local": "Elke andere client die op je account is ingelogd laat deze machine vallen. Hier blijft hij staan, want deze app draait erop.",
-                "description": "Elke client die op je account is ingelogd laat deze machine vallen, ook een die via een link gekoppeld is. Opnieuw koppelen met een link zet hem terug.",
+                "description": "Elke client die op je account is ingelogd laat deze machine vallen, ook een die via een link gekoppeld is. De app op die machine zet hem terug.",
                 "action": "Verwijderen"
             }
         },
@@ -740,7 +757,7 @@
             },
             "signedOut": {
                 "label": "Niet ingelogd",
-                "description": "Machines die je bereikt terwijl je ingelogd bent, komen vanzelf op je account, en de machines daarvan verschijnen hier."
+                "description": "Zodra je inlogt, komt de machine waarop deze app draait vanzelf op je account, en de machines van het account verschijnen hier."
             },
             "signingIn": {
                 "label": "Bezig met inloggen",
@@ -756,7 +773,7 @@
             "title": "Een machine toevoegen",
             "description": "Plak een pairing link van de andere machine.",
             "linkLabel": "Pairing link",
-            "hint": "Je vindt hem onder Pairing link tonen in de instellingen van die machine, of door daar `ruimte pair` te draaien. Een machine die iemand van je account haalde, komt er weer op zodra je koppelt terwijl je ingelogd bent.",
+            "hint": "Je vindt hem onder Pairing link tonen in de instellingen van die machine, of door daar `ruimte pair` te draaien. Koppelen laat deze client binnen; alleen de app op die machine zet hem op je account.",
             "codeHint": "Voor een machine zonder de app die `ruimte login` draaide",
             "withCode": "Een machine koppelen met een code",
             "pair": "Koppelen",

@@ -47,7 +47,8 @@ describe('machineDialogModel', () => {
             canOpen: false,
             canForget: true,
             canRemoveFromAccount: true,
-            canAddToAccountAgain: false
+            canAddToAccountAgain: false,
+            canLeaveAccount: false
         });
     });
 
@@ -71,6 +72,20 @@ describe('machineDialogModel', () => {
         const model = machineDialogModel(here, { ...signedIn, removedMachineIds: ['home'] });
         expect(model.canForget).toBe(false);
         expect(model.canAddToAccountAgain).toBe(true);
+    });
+
+    test('this machine on an account offers to leave it, which replaces removing it from the list', () => {
+        const model = machineDialogModel({ ...here, onAccount: true }, { ...signedIn, machineAccount: 'account-1' });
+        expect(model.canLeaveAccount).toBe(true);
+        expect(model.canRemoveFromAccount).toBe(false);
+    });
+
+    test('nothing to leave on a machine on no account, one that does not say, or another machine', () => {
+        expect(machineDialogModel(here, { ...signedIn, machineAccount: null }).canLeaveAccount).toBe(false);
+        const silent = machineDialogModel({ ...here, onAccount: true }, signedIn);
+        expect(silent.canLeaveAccount).toBe(false);
+        expect(silent.canRemoveFromAccount).toBe(true);
+        expect(machineDialogModel(paired, { ...signedIn, machineAccount: 'account-1' }).canLeaveAccount).toBe(false);
     });
 
     test('a row opened from the account has no Direct to turn off', () => {

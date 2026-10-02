@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { accessRequestMessage, type AccessRequestPayload } from '@ruimte/pulsar';
+import { AddressBookClient, accessRequestMessage, type AccessRequestPayload } from '@ruimte/pulsar';
 import { createClientKeyLoader, type KeyStore } from '@/endpoint/client-key';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { requestSignalAccess } from './statements';
@@ -31,6 +31,20 @@ describe('requestSignalAccess', () => {
         expect(asked[0]!.nonce).toMatch(/^[A-Za-z0-9_-]{24}$/);
         expect(asked[1]!.nonce).not.toBe(asked[0]!.nonce);
         expect(await verifySignature(key.publicKey, accessRequestMessage('machine-1', key.publicKey, asked[0]!.nonce), asked[0]!.signature)).toBe(true);
+    });
+
+    test('the machine key, the account and their signature from the address book reach the offer', async () => {
+        const key = (await createClientKeyLoader(memoryStore())())!;
+        const v2 = { machinePublicKey: 'M'.repeat(43), accountId: 'account-1', accountSignature: 'a'.repeat(86) };
+        const book = new AddressBookClient({
+            baseUrl: 'https://pulsar.test',
+            fetch: async (_input, init) => {
+                const payload = JSON.parse(String(init.body)) as AccessRequestPayload;
+                return Response.json({ ...payload, issuedAt: 1, expiresAt: 2, signature: 's'.repeat(86), ...v2 });
+            }
+        });
+        const access = await requestSignalAccess('machine-1', key, 'Ruimte on macOS', (payload) => book.requestStatement('token', payload));
+        expect(access.statement).toMatchObject(v2);
     });
 
     test('a statement for another machine, key or nonce than the one asked for is not carried', async () => {

@@ -220,7 +220,12 @@
         "signInFirst": "Sign in to your account first",
         "statementMismatch": "Your account answered with a statement for something else",
         "signInAndConnect": "Sign in, and connect to the machine, first",
-        "noBroker": "{{name}} is not connected to a broker yet, so it can only be reached on its own network"
+        "noBroker": "{{name}} is not connected to a broker yet, so it can only be reached on its own network",
+        "refusal": {
+            "onlyOnMachine": "Only the app on that machine can put it on an account.",
+            "machineHasAccount": "This machine is on another account. Take it off that account on the machine itself first.",
+            "listedElsewhere": "Another account still lists this machine. Remove it there first, from a client signed in to that account."
+        }
     },
     "signIn": {
         "wrongCallback": "The answer from the browser does not belong to this sign-in. Try again.",

@@ -50,7 +50,10 @@ export const announcedRecordOf = (endpoint: Pick<Endpoint, 'brokerUrl' | 'daemon
     return { name: info.label, icon: info.icon, brokerUrl: endpoint.brokerUrl ?? null, publicKey };
 };
 
-export type RegisterOutcome = 'registered' | 'removed' | 'skipped' | 'failed';
+export type RegisterOutcome = 'registered' | 'removed' | 'refused' | 'skipped' | 'failed';
+
+// The code a failure carries: a transport error of the machine, or an address book error.
+const codeOf = (error: unknown): string | null => (error instanceof Error && 'code' in error && typeof error.code === 'string' ? error.code : null);
 
 interface Failure {
     count: number;
@@ -77,6 +80,8 @@ export class AutoRegistrar {
     private accountId: string | null = null;
     private readonly settled = new Set<string>();
     private readonly refused = new Set<string>();
+    // Machines on no account that this client put on the account, so a stale answer does not have them sign again.
+    private readonly bound = new Set<string>();
     private readonly synced = new Map<string, string>();
     private readonly inFlight = new Set<string>();
     private readonly failures = new Map<string, Failure>();
@@ -94,24 +99,40 @@ export class AutoRegistrar {
         this.accountId = accountId;
         this.settled.clear();
         this.refused.clear();
+        this.bound.clear();
         this.synced.clear();
         this.inFlight.clear();
         this.failures.clear();
     }
 
-    /* `current` is what the machine says about itself, null while this client has not heard it yet. */
-    async consider(endpointId: string, machineId: string, list: AccountList, current: MachineRecord | null): Promise<RegisterOutcome> {
+    /*
+     * `current` is what the machine says about itself, null while this client has not heard it yet.
+     * `machineAccount` is the account it says it is on, null for none; only the app on the machine is
+     * told, so it is undefined for any other. A machine on no account signs even when its record
+     * matches, which puts it on this account; one on another account is left to the person on it.
+     */
+    async consider(
+        endpointId: string,
+        machineId: string,
+        list: AccountList,
+        current: MachineRecord | null,
+        machineAccount?: string | null
+    ): Promise<RegisterOutcome> {
         const accountId = this.accountId;
         if (accountId === null || list.removed.has(machineId) || this.refused.has(machineId) || this.inFlight.has(machineId)) {
             return 'skipped';
         }
+        if (typeof machineAccount === 'string' && machineAccount !== accountId) {
+            return 'skipped';
+        }
+        const unbound = machineAccount === null && !this.bound.has(machineId);
         const currentKey = current === null ? null : recordKeyOf(current);
         const record = list.records.get(machineId);
         if (record) {
-            if (currentKey === null || currentKey === recordKeyOf(record) || this.synced.get(machineId) === currentKey) {
+            if (!unbound && (currentKey === null || currentKey === recordKeyOf(record) || this.synced.get(machineId) === currentKey)) {
                 return 'skipped';
             }
-        } else if (this.settled.has(machineId)) {
+        } else if (this.settled.has(machineId) && !unbound) {
             return 'skipped';
         }
         const failure = this.failures.get(machineId);
@@ -120,7 +141,19 @@ export class AutoRegistrar {
         }
         this.inFlight.add(machineId);
         try {
-            const registration = await this.deps.sign(endpointId, accountId);
+            let registration: RegisterMachinePayload;
+            try {
+                registration = await this.deps.sign(endpointId, accountId);
+            } catch (e) {
+                // Only the app on a machine puts it on an account, which a person did not ask this client to do.
+                if (this.accountId === accountId && codeOf(e) === 'forbidden') {
+                    this.refused.add(machineId);
+                    this.failures.delete(machineId);
+                    return 'refused';
+                }
+                throw e;
+            }
+            this.bound.add(machineId);
             await this.deps.register({ ...registration, automatic: true });
             if (this.accountId !== accountId) {
                 return 'skipped';

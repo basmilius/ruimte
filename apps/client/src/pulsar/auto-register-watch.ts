@@ -4,6 +4,7 @@ import { useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { pool, transportFor } from '@/transport';
 import { messageOf } from '@basmilius/desktop-ui';
+import { accountRefusalText } from './account-refusal';
 import { usePulsarAccount, withAccessToken } from './account';
 import { AutoRegistrar, announcedRecordOf } from './auto-register';
 import { refreshAccountMachines, usePulsarMachines } from './machines';
@@ -25,7 +26,12 @@ export const startAutoRegistration = (): (() => void) => {
             if (!link) {
                 throw new Error(i18next.t('machines:link.notInList'));
             }
-            return (await link.request('endpoint.signRegistration', { accountId })).registration;
+            const { registration } = await link.request('endpoint.signRegistration', { accountId });
+            // Signing put the machine on the account; only the app on it was told it was on none.
+            if (serverInfoOf(endpointId).accountId !== undefined) {
+                useServers.getState().setAccount(endpointId, accountId);
+            }
+            return registration;
         },
         register: async (payload) => {
             await withAccessToken((client, token) => client.registerMachine(token, payload));
@@ -38,7 +44,9 @@ export const startAutoRegistration = (): (() => void) => {
     const statusOffs = new Map<string, () => void>();
 
     const publishFailures = (): void => {
-        const byMachine = Object.fromEntries([...registrar.failedMachines()].map(([machineId, error]) => [machineId, messageOf(error)]));
+        const byMachine = Object.fromEntries(
+            [...registrar.failedMachines()].map(([machineId, error]) => [machineId, accountRefusalText(error) ?? messageOf(error)])
+        );
         const before = useRegistrationFailures.getState().byMachine;
         if (JSON.stringify(byMachine) !== JSON.stringify(before)) {
             useRegistrationFailures.setState({ byMachine });
@@ -69,7 +77,8 @@ export const startAutoRegistration = (): (() => void) => {
         const outcomes = await Promise.all(
             open.map(async (endpoint) => {
                 const machineId = endpoint.daemonId!;
-                const outcome = await registrar.consider(endpoint.id, machineId, list, announcedRecordOf(endpoint, serverInfoOf(endpoint.id)));
+                const info = serverInfoOf(endpoint.id);
+                const outcome = await registrar.consider(endpoint.id, machineId, list, announcedRecordOf(endpoint, info), info.accountId);
                 if (outcome === 'failed') {
                     console.warn(`Could not update machine ${machineId} on the account`, registrar.failedMachines().get(machineId));
                 }
