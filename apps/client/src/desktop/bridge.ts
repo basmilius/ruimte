@@ -3,6 +3,7 @@ import type {
     BackgroundServiceState,
     KeepAwakeRequest,
     MenuSpec,
+    MicrophoneBridge,
     OpenAiLivePreferences,
     ReleaseNotesState,
     SpeechBridge,
@@ -211,6 +212,9 @@ export interface DesktopBridge {
     /* Speech to text in a helper beside the app, on this machine. Optional for the same reason
        `onBrowserContextMenu` is; without it dictation is not offered. */
     speech?: SpeechBridge;
+    /* Who listens to the microphone, across windows. Optional for the same reason `onBrowserContextMenu`
+       is; without it each window only keeps its own listeners apart. */
+    microphone?: MicrophoneBridge;
     /* The background service. Optional for the same reason `onBrowserContextMenu` is; without it
        This machine offers no switch, which is also what a browser and the web client get. */
     backgroundService?: BackgroundServiceBridge;

@@ -11,6 +11,7 @@ export * from './update.ts';
 export * from './versions.ts';
 export * from './voice.ts';
 export * from './speech.ts';
+export * from './microphone.ts';
 export * from './menu.ts';
 export * from './power.ts';
 export * from './window.ts';

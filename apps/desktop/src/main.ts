@@ -1067,6 +1067,18 @@ handleFromApp('speech:cancel', (_event, id: unknown) => {
     speechService.cancel(id);
 });
 
+// The window that takes the microphone ends what listens in every other one, its dictation run included.
+onFromApp('microphone:claim', (event) => {
+    if (speechService.owner !== undefined && speechService.owner !== event.sender) {
+        speechService.dispose();
+    }
+    for (const window of windows.all()) {
+        if (!window.isDestroyed() && window.webContents !== event.sender) {
+            window.webContents.send('microphone:claimed');
+        }
+    }
+});
+
 handleFromApp('media:request-microphone', async () => {
     if (process.platform !== 'darwin') {
         return true;

@@ -105,6 +105,14 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
             return () => ipcRenderer.removeListener('speech:event', handler);
         }
     },
+    microphone: {
+        claim: (): void => ipcRenderer.send('microphone:claim'),
+        onClaimed: (listener: () => void): (() => void) => {
+            const handler = (): void => listener();
+            ipcRenderer.on('microphone:claimed', handler);
+            return () => ipcRenderer.removeListener('microphone:claimed', handler);
+        }
+    },
     backgroundService: {
         state: (): Promise<unknown> => ipcRenderer.invoke('service:state'),
         onState: (listener: (state: unknown) => void): (() => void) => {
