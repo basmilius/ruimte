@@ -97,7 +97,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
     /// Stops every piece on its way and asks nothing more; a read after it fails.
     public func cancel() {
         cancelled = true
-        inFlight.values.forEach { $0.cancel() }
+        for task in inFlight.values { task.cancel() }
         inFlight.removeAll()
     }
 
