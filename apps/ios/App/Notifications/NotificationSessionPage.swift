@@ -9,9 +9,13 @@ struct NotificationSessionPage: View {
     @State private var session: SharedMachineSession?
     @State private var target = "unknown"
     @State private var work = RemotePageState()
+    /// Once up, a screen stays through a reconnect, which it rides out itself; taking it down lost the keyboard, the
+    /// scroll position and the terminal with it.
+    @State private var screenShown = false
+    private var screenUp: Bool { session?.connected == true && ["machine", "chat", "terminal"].contains(target) }
     var body: some View {
         Group {
-            if let session, session.connected {
+            if let session, session.connected || screenShown {
                 if target == "machine" {
                     MachineActivityPage(session: session)
                 } else if target == "chat" {
@@ -40,6 +44,9 @@ struct NotificationSessionPage: View {
             }
         }
         .modifier(MobilePageSurface())
+        .onChange(of: screenUp, initial: true) { _, up in
+            if up { screenShown = true }
+        }
         .task {
             guard lease == nil else { return }
             guard let machine = runtime.machines.first(where: { $0.id == destination.machineID }) else {
