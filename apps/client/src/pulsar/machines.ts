@@ -98,9 +98,12 @@ const setReclaiming = (machineId: string, on: boolean): void => {
     }));
 };
 
-/* The machine has to answer to sign its registration, so the socket is held until it does. */
-const waitForOpen = (endpointId: string): Promise<void> =>
-    new Promise((resolve) => {
+/* As long as `ensureMachine` waits, so a machine that does not answer lets go of its link the same way. */
+const OPEN_TIMEOUT_MS = 45_000;
+
+/* The machine has to answer to sign its registration, so the socket is held until it does or the wait is over. */
+export const waitForOpen = (endpointId: string): Promise<void> =>
+    new Promise((resolve, reject) => {
         const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
         if (!endpoint) {
             resolve();
@@ -108,11 +111,20 @@ const waitForOpen = (endpointId: string): Promise<void> =>
         }
         const release = pool.hold(endpoint);
         let off: (() => void) | null = null;
+        const finish = (failure: Error | null): void => {
+            clearTimeout(timer);
+            off?.();
+            release();
+            if (failure === null) {
+                resolve();
+            } else {
+                reject(failure);
+            }
+        };
+        const timer = setTimeout(() => finish(new Error(i18next.t('machines:link.silent'))), OPEN_TIMEOUT_MS);
         const check = (): void => {
             if (pool.statusOf(endpointId).status === 'open') {
-                off?.();
-                release();
-                resolve();
+                finish(null);
             }
         };
         off = pool.subscribeStatus(endpointId, check);
