@@ -57,6 +57,16 @@ export type DiagramMeta = z.infer<typeof DiagramMetaSchema>;
 
 export const DIAGRAM_VERSION = 1;
 
+/*
+ * The most a diagram holds. The layout is computed whole on every change, on the daemon's one event
+ * loop as well, and edges that span many layers make it grow quickly: the worst graph of this size
+ * still lays out in about 75 ms, and a diagram anyone reads stays far below it.
+ */
+export const DIAGRAM_LIMITS = {
+    nodes: 100,
+    edges: 120
+};
+
 // What gets written; the daemon wraps it with the version and the rev, as it does for a drawing.
 export const DiagramContentSchema = z.object({
     meta: DiagramMetaSchema,
@@ -88,6 +98,12 @@ export const migrateDiagram = (value: unknown): DiagramDocument | null => {
  * would leave it believing the edge is there.
  */
 export const diagramProblemIn = (content: Pick<DiagramContent, 'nodes' | 'groups' | 'edges'>): string | null => {
+    if (content.nodes.length > DIAGRAM_LIMITS.nodes) {
+        return `A diagram holds at most ${DIAGRAM_LIMITS.nodes} nodes, and this one has ${content.nodes.length}`;
+    }
+    if (content.edges.length > DIAGRAM_LIMITS.edges) {
+        return `A diagram holds at most ${DIAGRAM_LIMITS.edges} edges, and this one has ${content.edges.length}`;
+    }
     // Nodes and groups share one namespace, so an id always says which box it means.
     const nodes = new Set<string>();
     for (const node of content.nodes) {

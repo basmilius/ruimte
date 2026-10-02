@@ -121,6 +121,35 @@ describe('the handles of the diagram store', () => {
         expect(store.getState().future).toHaveLength(0);
     });
 
+    test('a drag lays the graph out once a frame at most, from where the node is by then', () => {
+        const frames: (() => void)[] = [];
+        const store = createDiagramStore((callback) => frames.push(callback));
+        store.getState().load('view-1', doc(3, { id: 'a', label: 'Client' }, { id: 'b', label: 'Daemon' }), null);
+        const before = store.getState().layout;
+        for (let step = 0; step < 10; step++) {
+            store.getState().moveNode('b', [100 + step * 10, 100], step === 0);
+        }
+        expect(frames).toHaveLength(1);
+        expect(store.getState().layout).toBe(before);
+        expect(nodeOf(store, 'b').pos).toEqual([190, 100]);
+
+        frames.shift()!();
+        expect(store.getState().layout.nodes.find((box) => box.id === 'b')).toMatchObject({ x: 190, y: 100 });
+        store.getState().moveNode('b', [200, 100], false);
+        expect(frames).toHaveLength(1);
+    });
+
+    test('a frame that comes after an undo leaves the layout of the undo alone', () => {
+        const frames: (() => void)[] = [];
+        const store = createDiagramStore((callback) => frames.push(callback));
+        store.getState().load('view-1', doc(3, { id: 'a', label: 'Client' }, { id: 'b', label: 'Daemon' }), null);
+        store.getState().moveNode('b', [300, 300], true);
+        store.getState().undo();
+        const undone = store.getState().layout;
+        frames.shift()!();
+        expect(store.getState().layout).toBe(undone);
+    });
+
     test('an unknown node id changes nothing', () => {
         const store = loaded();
         store.getState().moveNode('nope', [1, 2], true);

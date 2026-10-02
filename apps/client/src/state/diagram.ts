@@ -10,7 +10,7 @@ export interface DiagramState extends CameraSlice {
     /* The diagram view this store holds, or null while none is on screen. */
     viewId: string | null;
     content: DiagramContent;
-    /* Computed from `content` whenever it changes, so a render never lays the graph out itself. */
+    /* Computed from `content` whenever it changes, once a frame during a drag, so a render never lays the graph out itself. */
     layout: DiagramLayout;
     rev: number;
     dirty: boolean;
@@ -55,13 +55,21 @@ const EMPTY_CONTENT = contentOf(EMPTY_DIAGRAM);
 
 export const DIAGRAM_HISTORY_LIMIT = 100;
 
-/* Every change to the content is an edit, laid out again; the client saves on the counter. */
+/* Every change to the content is an edit; the client saves on the counter. */
 const changed = (state: DiagramState, content: DiagramContent, first = true): Partial<DiagramState> => ({
     content,
-    layout: layoutOf(content),
     edits: state.edits + 1,
     ...(first ? { past: [...state.past.slice(-(DIAGRAM_HISTORY_LIMIT - 1)), state.content], future: [] } : {})
 });
+
+/* The next frame on screen; without one, as in a test, at once. */
+const nextFrame = (callback: () => void): void => {
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => callback());
+    } else {
+        callback();
+    }
+};
 
 /* The content with one node rewritten, or null when there is no such node or nothing would change. */
 const withNode = (content: DiagramContent, id: string, rewrite: (node: DiagramNode) => DiagramNode): DiagramContent | null => {
@@ -81,144 +89,168 @@ const withNode = (content: DiagramContent, id: string, rewrite: (node: DiagramNo
  * store, without tools or a selection, because a diagram is written rather than drawn: a person only
  * moves, renames and colors what an agent or the file put there.
  */
-export const createDiagramStore = (): StoreApi<DiagramState> =>
-    createStore<DiagramState>((set, get) => ({
-        // A diagram lays itself out and nothing in it is selected, so the whole of it is all there is to fit.
-        ...createCameraSlice<DiagramState>(set, get, {
-            boundsOfAll: (state) => (state.layout.nodes.length === 0 ? null : state.layout.bounds),
-            boundsOfSelection: () => null
-        }),
-
-        viewId: null,
-        content: EMPTY_CONTENT,
-        layout: layoutOf(EMPTY_CONTENT),
-        rev: 0,
-        dirty: false,
-        edits: 0,
-        past: [],
-        future: [],
-        loading: false,
-        conflict: null,
-        error: null,
-
-        load(viewId, document, local) {
-            const content = contentOf(document);
-            set({
-                loading: true,
-                viewId,
-                content,
-                layout: layoutOf(content),
-                rev: document.rev,
-                dirty: false,
-                edits: 0,
-                past: [],
-                future: [],
-                conflict: null,
-                error: null,
-                pendingCamera: null
-            });
-            const stored = local?.camera ?? null;
-            if (stored !== null) {
-                const camera = cameraOfView(stored, get().viewport);
-                set(camera === null ? { pendingCamera: { kind: 'view', view: stored } } : { camera });
+export const createDiagramStore = (frame: (callback: () => void) => void = nextFrame): StoreApi<DiagramState> =>
+    createStore<DiagramState>((set, get) => {
+        // The content the layout was computed from. A drag lays out once a frame at most, since a
+        // layout takes long enough to drop the frames of a pointer that moves every few milliseconds.
+        let laidOut = EMPTY_CONTENT;
+        let framed = false;
+        const layoutFor = (content: DiagramContent): DiagramLayout => {
+            laidOut = content;
+            return layoutOf(content);
+        };
+        const layoutNextFrame = (): void => {
+            if (framed) {
+                return;
             }
-            set({ loading: false });
-            if (stored === null) {
-                get().fitAll();
-            }
-        },
-
-        unload() {
-            set({
-                viewId: null,
-                content: EMPTY_CONTENT,
-                layout: layoutOf(EMPTY_CONTENT),
-                rev: 0,
-                dirty: false,
-                edits: 0,
-                past: [],
-                future: [],
-                conflict: null,
-                error: null
-            });
-        },
-
-        exportContent() {
-            return get().content;
-        },
-
-        replaceContent(content) {
-            set((state) => changed(state, content));
-        },
-        moveNode(id, [x, y], first) {
-            const state = get();
-            const pos: [number, number] = [Math.round(x), Math.round(y)];
-            const content = withNode(state.content, id, (node) => (node.pos?.[0] === pos[0] && node.pos[1] === pos[1] ? node : { ...node, pos }));
-            if (content !== null) {
-                set(changed(state, content, first));
-            }
-        },
-        resetPosition(id) {
-            const state = get();
-            const content = withNode(state.content, id, (node) => {
-                if (!node.pos) {
-                    return node;
+            framed = true;
+            frame(() => {
+                framed = false;
+                const { content } = get();
+                if (content !== laidOut) {
+                    set({ layout: layoutFor(content) });
                 }
-                const rest = { ...node };
-                delete rest.pos;
-                return rest;
             });
-            if (content !== null) {
-                set(changed(state, content));
-            }
-        },
-        undo() {
-            const state = get();
-            const previous = state.past.at(-1);
-            if (!previous) {
-                return;
-            }
-            set({
-                content: previous,
-                layout: layoutOf(previous),
-                past: state.past.slice(0, -1),
-                future: [state.content, ...state.future],
-                edits: state.edits + 1
-            });
-        },
-        redo() {
-            const state = get();
-            const next = state.future[0];
-            if (!next) {
-                return;
-            }
-            set({ content: next, layout: layoutOf(next), past: [...state.past, state.content], future: state.future.slice(1), edits: state.edits + 1 });
-        },
+        };
+        return {
+            // A diagram lays itself out and nothing in it is selected, so the whole of it is all there is to fit.
+            ...createCameraSlice<DiagramState>(set, get, {
+                boundsOfAll: (state) => (state.layout.nodes.length === 0 ? null : state.layout.bounds),
+                boundsOfSelection: () => null
+            }),
 
-        /* A diagram has no selection, so the palette's "zoom to selection" fits the whole of it. */
-        zoomToSelection() {
-            get().fitAll();
-        },
+            viewId: null,
+            content: EMPTY_CONTENT,
+            layout: layoutOf(EMPTY_CONTENT),
+            rev: 0,
+            dirty: false,
+            edits: 0,
+            past: [],
+            future: [],
+            loading: false,
+            conflict: null,
+            error: null,
 
-        setRev(rev) {
-            set({ rev });
-        },
-        setDirty(dirty) {
-            set({ dirty });
-        },
-        setConflict(conflict) {
-            set({ conflict });
-        },
-        setError(error) {
-            set({ error });
-        },
-        applyDocument(document) {
-            const content = contentOf(document);
-            // What is on disk now is another starting point, so the steps back from the old one are gone.
-            set({ loading: true, content, layout: layoutOf(content), rev: document.rev, dirty: false, conflict: null, past: [], future: [] });
-            set({ loading: false });
-        }
-    }));
+            load(viewId, document, local) {
+                const content = contentOf(document);
+                set({
+                    loading: true,
+                    viewId,
+                    content,
+                    layout: layoutFor(content),
+                    rev: document.rev,
+                    dirty: false,
+                    edits: 0,
+                    past: [],
+                    future: [],
+                    conflict: null,
+                    error: null,
+                    pendingCamera: null
+                });
+                const stored = local?.camera ?? null;
+                if (stored !== null) {
+                    const camera = cameraOfView(stored, get().viewport);
+                    set(camera === null ? { pendingCamera: { kind: 'view', view: stored } } : { camera });
+                }
+                set({ loading: false });
+                if (stored === null) {
+                    get().fitAll();
+                }
+            },
+
+            unload() {
+                set({
+                    viewId: null,
+                    content: EMPTY_CONTENT,
+                    layout: layoutFor(EMPTY_CONTENT),
+                    rev: 0,
+                    dirty: false,
+                    edits: 0,
+                    past: [],
+                    future: [],
+                    conflict: null,
+                    error: null
+                });
+            },
+
+            exportContent() {
+                return get().content;
+            },
+
+            replaceContent(content) {
+                set((state) => ({ ...changed(state, content), layout: layoutFor(content) }));
+            },
+            moveNode(id, [x, y], first) {
+                const state = get();
+                const pos: [number, number] = [Math.round(x), Math.round(y)];
+                const content = withNode(state.content, id, (node) => (node.pos?.[0] === pos[0] && node.pos[1] === pos[1] ? node : { ...node, pos }));
+                if (content !== null) {
+                    set(changed(state, content, first));
+                    layoutNextFrame();
+                }
+            },
+            resetPosition(id) {
+                const state = get();
+                const content = withNode(state.content, id, (node) => {
+                    if (!node.pos) {
+                        return node;
+                    }
+                    const rest = { ...node };
+                    delete rest.pos;
+                    return rest;
+                });
+                if (content !== null) {
+                    set({ ...changed(state, content), layout: layoutFor(content) });
+                }
+            },
+            undo() {
+                const state = get();
+                const previous = state.past.at(-1);
+                if (!previous) {
+                    return;
+                }
+                set({
+                    content: previous,
+                    layout: layoutFor(previous),
+                    past: state.past.slice(0, -1),
+                    future: [state.content, ...state.future],
+                    edits: state.edits + 1
+                });
+            },
+            redo() {
+                const state = get();
+                const next = state.future[0];
+                if (!next) {
+                    return;
+                }
+                set({ content: next, layout: layoutFor(next), past: [...state.past, state.content], future: state.future.slice(1), edits: state.edits + 1 });
+            },
+
+            /* A diagram has no selection, so the palette's "zoom to selection" fits the whole of it. */
+            zoomToSelection() {
+                get().fitAll();
+            },
+
+            setRev(rev) {
+                set({ rev });
+            },
+            setDirty(dirty) {
+                set({ dirty });
+            },
+            setConflict(conflict) {
+                set({ conflict });
+            },
+            setError(error) {
+                set({ error });
+            },
+            applyDocument(document) {
+                const content = contentOf(document);
+                // What is on disk now is another starting point, so the steps back from the old one are gone.
+                set({ loading: true, content, layout: layoutFor(content), rev: document.rev, dirty: false, conflict: null, past: [], future: [] });
+                set({ loading: false });
+            }
+        };
+    });
 
 export const defaultDiagramStore = createDiagramStore();
 

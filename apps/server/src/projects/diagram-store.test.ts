@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
+import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
@@ -112,6 +112,19 @@ describe('DiagramStore', () => {
         await expect(refused).rejects.toMatchObject({ code: 'diagram-invalid' });
         await expect(refused).rejects.toThrow('"ghost"');
         expect(await exists(diagramFile('view-a'))).toBe(false);
+    });
+
+    test('a diagram past the limits is refused on a save and on a read, and its file stays where it is', async () => {
+        const many = Array.from({ length: DIAGRAM_LIMITS.nodes + 1 }, (_, index) => node(`n${index}`));
+        await diagrams.open(projectId, 'view-a');
+        await expect(diagrams.save(projectId, 'view-a', 0, graph(many), 'c1')).rejects.toMatchObject({ code: 'diagram-invalid' });
+        expect(await exists(diagramFile('view-a'))).toBe(false);
+        diagrams.closeAll();
+
+        await mkdir(diagramsDir(), { recursive: true });
+        await writeFile(diagramFile('view-a'), serializeDiagram({ version: 1, rev: 1, ...graph(many) }));
+        await expect(diagrams.open(projectId, 'view-a')).rejects.toThrow(`at most ${DIAGRAM_LIMITS.nodes} nodes`);
+        expect(await exists(diagramFile('view-a'))).toBe(true);
     });
 
     test('a view that is not a diagram, a drawing among them, and a project that is not open, are refused', async () => {

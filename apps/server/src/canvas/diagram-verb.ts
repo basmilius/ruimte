@@ -1,4 +1,4 @@
-import { DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema } from '@ruimte/contracts';
+import { DIAGRAM_LIMITS, DiagramEdgeSchema, DiagramGroupSchema, DiagramMetaSchema, DiagramNodeSchema } from '@ruimte/contracts';
 import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@ruimte/diagram';
 import { z } from 'zod';
 import { defineActionVerb, runAction } from './action-verb.ts';
@@ -94,6 +94,7 @@ const DETAIL: readonly string[] = [
     'replace\tA write replaces the whole diagram. A node written without pos loses a position a person dragged it to; copy pos from the file to keep one',
     'strict\tA field that is not listed here is refused by its path, never dropped',
     'rules\tIds never repeat across nodes and groups; an edge or a group naming an id that is not a node is refused with that id, and nothing is written',
+    `limits\tAt most ${DIAGRAM_LIMITS.nodes} nodes and ${DIAGRAM_LIMITS.edges} edges; a larger diagram is refused, so split one that grows past that over more diagram views`,
     'edit\tA small change can also be an edit of .ruimte/diagrams/<viewId>.json with your own tools; the person sees it, but nothing checks it',
     `example\t${DIAGRAM_EXAMPLE}`
 ];

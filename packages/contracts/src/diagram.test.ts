@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { EMPTY_DIAGRAM, diagramProblemIn, migrateDiagram, type DiagramDocument } from './diagram.ts';
+import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, diagramProblemIn, migrateDiagram, type DiagramDocument } from './diagram.ts';
 import { ProjectDocumentSchema, isDiagramView, isOpenableView, isSessionView } from './project.ts';
 import { REQUEST_SCHEMAS } from './index.ts';
 
@@ -67,6 +67,24 @@ describe('the diagram document', () => {
                 groups: [...example.groups, { id: 'other', label: 'Other', wraps: ['projects'] }]
             })
         ).toContain('"projects"');
+    });
+});
+
+describe('the size of a diagram', () => {
+    const chain = (nodes: number, edges: number): DiagramDocument => ({
+        ...example,
+        groups: [],
+        nodes: Array.from({ length: nodes }, (_, index) => ({ id: `n${index}`, label: `Node ${index}` })),
+        edges: Array.from({ length: edges }, (_, index) => ({ from: `n${index % nodes}`, to: `n${(index + 1) % nodes}` }))
+    });
+
+    test('a diagram at the limits is fine', () => {
+        expect(diagramProblemIn(chain(DIAGRAM_LIMITS.nodes, DIAGRAM_LIMITS.edges))).toBeNull();
+    });
+
+    test('one node or one edge more is refused, saying how many fit', () => {
+        expect(diagramProblemIn(chain(DIAGRAM_LIMITS.nodes + 1, 1))).toContain(`at most ${DIAGRAM_LIMITS.nodes} nodes`);
+        expect(diagramProblemIn(chain(2, DIAGRAM_LIMITS.edges + 1))).toContain(`at most ${DIAGRAM_LIMITS.edges} edges`);
     });
 });
 
