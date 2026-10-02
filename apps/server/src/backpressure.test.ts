@@ -236,6 +236,40 @@ describe('OutputGate', () => {
         expect(gate.staleSessions()).toEqual([]);
     });
 
+    test('a session marked while a resync waits for a screen gets its own once that resync ends', async () => {
+        const socket = new FakeSocket();
+        const waiting: Array<() => void> = [];
+        const gate = new OutputGate({
+            socket,
+            screenOf: (sessionId, deliver) => {
+                waiting.push(() => deliver(`screen-${sessionId}`));
+                return true;
+            }
+        });
+        socket.status = -1;
+        gate.send(output('a', 'queued'));
+        gate.send(output('a', 'lost'));
+        socket.status = 1;
+        gate.onDrain();
+        expect(waiting).toHaveLength(1);
+
+        // `c` loses a frame while the screen of `a` is still being taken, and the socket drains again.
+        socket.status = -1;
+        gate.send(output('c', 'queued'));
+        gate.send(output('c', 'lost'));
+        socket.status = 1;
+        gate.onDrain();
+        waiting.shift()!();
+        await flush();
+        waiting.shift()?.();
+        await flush();
+
+        expect(socket.of('session.resync').map((payload) => payload.sessionId)).toEqual(['a', 'c']);
+        expect(gate.staleSessions()).toEqual([]);
+        gate.send(output('c', 'after'));
+        expect(socket.of('session.output').at(-1)).toEqual({ sessionId: 'c', data: 'after' });
+    });
+
     test('a resync that fills the queue again leaves the rest for the next drain', async () => {
         const { socket, gate } = setup();
         socket.buffered = HIGH_WATER_MARK + 1;

@@ -143,7 +143,8 @@ export class OutputGate {
         }
         this.resyncing = true;
         try {
-            for (const sessionId of [...this.stale]) {
+            // The marks are read again after every screen: a drain while one was being taken starts no loop of its own.
+            for (let sessionId = this.firstStale(); sessionId !== undefined; sessionId = this.firstStale()) {
                 if (this.paused) {
                     // The socket filled up again; whatever is still marked waits for the next drain.
                     return;
@@ -163,6 +164,10 @@ export class OutputGate {
         } finally {
             this.resyncing = false;
         }
+    }
+
+    private firstStale(): string | undefined {
+        return this.stale.values().next().value;
     }
 
     private write(frame: ServerFrame | Uint8Array, sessionId: string | null): number {
