@@ -84,7 +84,8 @@ export const newScratchChat = async (store: ProjectStore, payload: ProjectNewCha
             },
             empty: true
         };
-        return { content: { ...content, views: [...views, view] }, result: id };
+        // On top, so the list reads newest first.
+        return { content: { ...content, views: [view, ...views] }, result: id };
     });
     return { summary, viewId };
 };

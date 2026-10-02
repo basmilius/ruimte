@@ -88,15 +88,15 @@ describe('a new chat outside any project', () => {
         expect((await chatViews(first.summary.projectId)).map((view) => [view.id, view.empty])).toEqual([[first.viewId, true]]);
     });
 
-    test('a chat that was written in is listed and a new one is made beside it', async () => {
+    test('a chat that was written in is listed and a new one is made above it', async () => {
         const first = await newScratchChat(store, {});
 
         const second = await newScratchChat(store, {}, (chatId) => Promise.resolve(chatId === first.viewId));
 
         expect(second.viewId).not.toBe(first.viewId);
         expect((await chatViews(first.summary.projectId)).map((view) => [view.id, view.empty])).toEqual([
-            [first.viewId, undefined],
-            [second.viewId, true]
+            [second.viewId, true],
+            [first.viewId, undefined]
         ]);
     });
 
