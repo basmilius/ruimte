@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatInfo } from '@ruimte/agent-contracts';
+import type { ChatInfo, ChatItem } from '@ruimte/agent-contracts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { claudeProvider } from '../providers/claude-provider.ts';
 import { codexProvider } from '../providers/codex-provider.ts';
@@ -1018,3 +1018,73 @@ for (const unknown of [false, true]) {
         await run.session.dispose();
     });
 }
+
+describe('ids across a restart of the host', () => {
+    const codexRig = (chatInfo: ChatInfo, items: ChatItem[]) => {
+        let host: BackendHost | null = null;
+        const generations: number[] = [];
+        const session = new ChatSession({
+            info: chatInfo,
+            items,
+            provider: {
+                ...codexProvider,
+                createBackend: (launch, madeHost) => {
+                    host = madeHost;
+                    generations.push(launch.generation);
+                    return {
+                        running: true,
+                        pid: null,
+                        start: () => Promise.resolve(),
+                        sendTurn: () => undefined,
+                        compact: () => undefined,
+                        interrupt: () => undefined,
+                        respondApproval: () => true,
+                        respondQuestion: () => true,
+                        stop: () => undefined,
+                        dispose: () => Promise.resolve()
+                    };
+                }
+            },
+            command: ['unused'],
+            env: () => ({}),
+            emit: () => undefined,
+            persist: () => undefined,
+            persistSoon: () => undefined
+        });
+        return { session, generations, event: (event: BackendEvent) => host!.onEvent(event) };
+    };
+    // Codex numbers the requests of every process from 0, and the backend names one after its generation.
+    const approval = (generation: number): BackendEvent => ({
+        type: 'approval.requested',
+        requestId: `${generation}-0`,
+        ref: 'call_x',
+        toolName: 'Bash',
+        input: { command: 'ls' },
+        description: null,
+        canAllowAlways: false
+    });
+
+    test('an approval of a CLI started after a restart lands after the old one and leaves its decision alone', async () => {
+        const first = codexRig({ ...info(), provider: 'codex', selection: codexProvider.catalog.normalize(undefined), agentSessionId: 'thread-1' }, []);
+        first.session.send('one');
+        await flush();
+        first.event(approval(first.generations[0]!));
+        const oldId = `${first.generations[0]}-0`;
+        first.session.approve(oldId, 'allow');
+        first.event({ type: 'turn.done', state: 'done', costUsd: 0 });
+        await flush();
+        await first.session.dispose();
+
+        const second = codexRig(structuredClone(first.session.info), structuredClone(first.session.thread.list()));
+        second.session.settleStored(second.session.info.selection, { resumeTurnId: null, reason: null });
+        second.session.send('two');
+        await flush();
+        second.event(approval(second.generations[0]!));
+        const newId = `${second.generations[0]}-0`;
+
+        expect(newId).not.toBe(oldId);
+        expect(second.session.thread.list().at(-1)).toMatchObject({ kind: 'approval', requestId: newId, decision: 'pending' });
+        expect(second.session.thread.get(`approval-${oldId}`)).toMatchObject({ decision: 'allow' });
+        await second.session.dispose();
+    });
+});

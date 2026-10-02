@@ -116,6 +116,17 @@ const continuedNoteId = (turnId: string): string => `continued-${turnId}`;
 
 const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+/*
+ * Item and request ids carry the generation of the CLI that made them, and a restart of the host
+ * must not hand out one a stored thread already holds. Starting from the clock puts every run above
+ * the ones before it, as long as it handed out fewer than one per millisecond it ran.
+ */
+let lastGeneration = Date.now();
+const nextGeneration = (): number => {
+    lastGeneration = Math.max(lastGeneration + 1, Date.now());
+    return lastGeneration;
+};
+
 const sameFolders = (first: readonly string[], second: readonly string[]): boolean =>
     first.length === second.length && first.every((folder, i) => folder === second[i]);
 
@@ -132,8 +143,8 @@ export class ChatSession {
     private pendingStart: { turnId: string; warning: unknown } | null = null;
     private sendAfterStop = false;
     private readonly workflowWarnings = new Map<string, unknown>();
-    // Bumped per backend, so thread items of a resumed CLI never overwrite older ones.
-    private generation = 0;
+    // New per backend, so thread items of a resumed CLI never overwrite older ones.
+    private generation = nextGeneration();
     // Claude's task notification precedes the turn that reports its result.
     private awaitingBackgroundReport = false;
     // The selection the running CLI was started on; a window it reports is that one's, not a newer pick's.
@@ -464,7 +475,7 @@ export class ChatSession {
             throw new ChatError('chat-busy', `Chat ${this.id} is still working on the previous message`);
         }
         void this.dispose();
-        this.generation += 1;
+        this.generation = nextGeneration();
         this.projector.reset();
         // The fresh CLI hears what the host tells it at launch, as it would on a first turn.
         this.options.promptNotes?.reset();
@@ -1276,7 +1287,7 @@ export class ChatSession {
         } catch (error) {
             return Promise.reject(error instanceof Error ? error : new Error(String(error)));
         }
-        this.generation += 1;
+        this.generation = nextGeneration();
         const generation = this.generation;
         const info = this.thread.info;
         this.launchedSelection = info.selection;
