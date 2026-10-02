@@ -14,6 +14,7 @@ struct WorkspacePage: View {
     @State private var searching = false
     @State private var showUsage = false
     @State private var showProcesses = false
+    @State private var showLaunches = false
     @State private var openedViewID: String?
     @State private var newChat = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -65,6 +66,10 @@ struct WorkspacePage: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    // The Chats project's folder is the machine's own, so it has no launches.
+                    if !workspace.isScratch {
+                        Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                    }
                     Button("Processes", lucideIcon: "activity") { showProcesses = true }
                     Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
                 } label: {
@@ -103,6 +108,14 @@ struct WorkspacePage: View {
                 MachineUsagePage(client: workspace.client)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) { Button("Done") { showUsage = false } }
+                    }
+            }
+        }
+        .mobileSheet(isPresented: $showLaunches) {
+            NavigationStack {
+                LaunchesPage(client: workspace.client, projectID: workspace.projectID, folder: workspace.folder)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showLaunches = false } }
                     }
             }
         }

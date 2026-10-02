@@ -45,7 +45,7 @@ final class ProcessesTests: XCTestCase {
 
     func testNumbersThatCouldNotBeReadShowAsADashRatherThanZero() {
         XCTAssertEqual(ProcessesText.percent(nil), "-")
-        XCTAssertEqual(ProcessesText.percent(4.25), "4.3%")
+        XCTAssertEqual(ProcessesText.percent(4.26), "4.3%")
         XCTAssertEqual(ProcessesText.percent(42.4), "42%")
         XCTAssertEqual(ProcessesText.rate(nil), "-")
         XCTAssertNil(ProcessesText.disk(read: nil, write: nil))

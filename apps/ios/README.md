@@ -47,6 +47,16 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   file with the icon of its type. A file without a view of its own opens in Quick Look and can be
   shared to another app, once the machine serves it (images, video, sound and PDFs) and it fits in 32 MB.
 - Filesystem updates, usage and machine access management. Destructive actions require confirmation.
+- Launches of a project, behind More: each with its state (at rest, needs approval, starting, running, stopping,
+  passed, failed), how long it runs and on which port, grouped by the checkout it runs in. Launch, Restart and Stop,
+  and Force stop only while a launch is stopping, as on the desktop; Stop all from the plus menu. A tap shows the
+  launch's output, the machine's own terminal for it, followed and never resized; a group shows the member that runs
+  or failed. The phone is a person to the machine, as every paired client is, so a launch nobody approved here
+  shows the command, folder and every variable it would run with, and only Launch on that sheet sends the approval
+  (`approve` on `launch.start`). A launch that needs a port another launch holds asks before stopping that one. New
+  launches and edits save the whole list against the rev they were read at, which approves what they add or
+  change, as the sheet says; a conflict offers to start over from the latest. Find in this project imports what the
+  machine detects (`launches.detect`). An older machine says it needs an update.
 - Processes, on a machine's page and behind More in a project (`processes.subscribe` while the page is open): CPU,
   memory and disk of the machine against the share of Ruimte, over the last ten minutes or the last day, then a
   group per terminal, chat or launch with its processes, for what Ruimte started or everything. A warning sits under
