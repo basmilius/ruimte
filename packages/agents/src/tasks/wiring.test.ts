@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 import type { ChatTurnItem, Task } from '@ruimte/agent-contracts';
 import { fakeClaude } from '../chat/fake-claude.ts';
-import { inProcess } from '../chat/fake-cli.ts';
+import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { AgentHost } from '../host/agent-host.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
@@ -24,6 +24,8 @@ let worker: OutboxWorker<TaskWork>;
 let wiring: TaskWiring;
 let changed: Task[];
 let watchers: Array<{ check(): boolean; resolve(): void }>;
+let clock: ManualClock;
+let claude: InProcessCli;
 
 /* Settles once `check` holds, looked at after every chat event and every task written; no clock is involved. */
 const until = (check: () => boolean): Promise<void> => {
@@ -46,13 +48,13 @@ const look = (): void => {
 
 beforeEach(async () => {
     dataDir = await mkdtemp(join(tmpdir(), 'agents-tasks-'));
-    const claude = inProcess(fakeClaude);
+    claude = inProcess(fakeClaude);
     host = await AgentHost.open({ dataDir, env: { HOME: dataDir, PATH: process.env.PATH }, background: false, command: ['claude'], spawn: claude.spawn });
     tasks = new TaskStore(dataDir);
     await tasks.load();
     const outbox = new OutboxStore<TaskWork>({ dataDir, work: WorkSchema });
     await outbox.load();
-    const clock = new ManualClock();
+    clock = new ManualClock();
     changed = [];
     watchers = [];
     wiring = wireTasks({
@@ -143,4 +145,38 @@ test('done from the child wins, and an agent that is not a chat fails its task w
     expect(tasks.get(other.id)?.result).toMatchObject({ text: 'It ended without calling done.', source: 'exit' });
     await until(() => tasks.get(other.id)?.wake === 'sent');
     await worker.settled();
+});
+
+test('a terminal parent gets no note about a waiting child and is never woken, and no chat is made under its id', async () => {
+    const task = await wiring.verbs.open({ projectId: 'project', parentId: 'term', childId: 'child', title: 'Cleanup', prompt: 'clean up' });
+    await host.chats.send('child', 'tool: rm -rf build');
+    await until(() =>
+        host.chats
+            .get('child')!
+            .thread.list()
+            .some((item) => item.kind === 'approval' && item.decision === 'pending')
+    );
+    const spawned = claude.started.length;
+
+    clock.advance(15_000);
+    await worker.settled();
+    expect(host.chats.get('term')).toBeUndefined();
+
+    const approval = host.chats
+        .get('child')!
+        .thread.list()
+        .find((item) => item.kind === 'approval');
+    host.chats.approve('child', approval?.kind === 'approval' ? approval.requestId : '', 'allow');
+    await until(() => tasks.get(task.id)?.wake === 'none');
+    await worker.settled();
+
+    expect(tasks.get(task.id)).toMatchObject({ status: 'done', wake: 'none' });
+    expect(host.chats.get('term')).toBeUndefined();
+    expect(
+        await access(join(dataDir, 'chats', 'term.json')).then(
+            () => true,
+            () => false
+        )
+    ).toBe(false);
+    expect(claude.started.length).toBe(spawned);
 });

@@ -615,9 +615,15 @@ export class ChatCore {
         this.chats.get(chatId)?.addNote(level, text);
     }
 
-    /* Leaves a note and its preamble in a chat, loading that chat when nobody has; false when it was there already. */
+    /*
+     * Leaves a note and its preamble in a chat, loading that chat when nobody has; false when it was
+     * there already, or when the id has no chat at all (a terminal), which never gets one made for it.
+     */
     async deliverNote(chatId: string, delivery: { noteId: string; note: string; from?: string; preamble: string }): Promise<boolean> {
         await this.loaded(chatId);
+        if (!(await this.hasStored(chatId))) {
+            return false;
+        }
         if (!this.chats.has(chatId)) {
             await this.create({ chatId });
         }
