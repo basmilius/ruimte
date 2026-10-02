@@ -19,6 +19,7 @@ import {
 import { deviceTools, isCanvasView, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 import { createViewAction, placeViewOnCanvasAction } from '@/actions/client-actions';
 import { AndroidMark } from '@/devices/AndroidMark';
+import { controlDevice } from '@/devices/control';
 import { DeviceControls, DeviceSurface } from '@/devices/DeviceBody';
 import { deviceStateText, unavailableNotes } from '@/devices/device-text';
 import { PanelHeaderLeadingSlot, PanelHeaderSlot, PanelHeaderTitleHidden } from '@/shell/PanelHeaderSlot';
@@ -118,7 +119,7 @@ function DeviceMenuItems({ device, onOpen }: { device: DeviceInfo; onOpen?: (dev
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const control = (action: 'boot' | 'shutdown'): void => {
-        void deviceClientFor(endpointId)?.[action](device);
+        void controlDevice(deviceClientFor(endpointId), device, action);
     };
     return (
         <>
@@ -167,7 +168,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
             return;
         }
         setChanging(action);
-        void client[action](device).finally(() => setChanging(null));
+        void controlDevice(client, device, action).finally(() => setChanging(null));
     };
     return (
         <ContextMenu.Root>
@@ -335,10 +336,12 @@ function DevicePanelToolbar({ device, onClose }: { device: DeviceInfo; onClose: 
             return;
         }
         setShuttingDown(true);
-        void client
-            .shutdown(device)
-            .then(onClose)
-            .catch(() => undefined)
+        void controlDevice(client, device, 'shutdown')
+            .then((done) => {
+                if (done) {
+                    onClose();
+                }
+            })
             .finally(() => setShuttingDown(false));
     };
     return (

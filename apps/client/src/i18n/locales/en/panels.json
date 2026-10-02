@@ -18,7 +18,9 @@
         "openPreview": "Open read-only preview",
         "refresh": "Refresh devices",
         "shutdown": "Shut down device",
+        "shutdownFailed": "Could not shut down {{name}}",
         "start": "Start device",
+        "startFailed": "Could not start {{name}}",
         "starting": "Starting device",
         "state": {
             "changing": "Changing state",

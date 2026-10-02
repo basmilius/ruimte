@@ -18,7 +18,9 @@
         "openPreview": "Alleen-lezen voorbeeld openen",
         "refresh": "Apparaten vernieuwen",
         "shutdown": "Apparaat afsluiten",
+        "shutdownFailed": "Kon {{name}} niet afsluiten",
         "start": "Apparaat starten",
+        "startFailed": "Kon {{name}} niet starten",
         "starting": "Apparaat wordt gestart",
         "state": {
             "changing": "Bezig met wisselen",
