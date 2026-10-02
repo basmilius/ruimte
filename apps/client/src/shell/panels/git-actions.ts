@@ -84,11 +84,16 @@ export const manyTitle = (kind: GitActionKind, repo: string, done: number, total
     i18next.t(`panels:git.many.${kind}`, { repo, done, total, defaultValue: i18next.t('panels:git.many.working', { repo, done, total }) });
 
 /* What it says once that run is over. A repository that failed does not stop the others, so the end
-   is the only place the whole outcome can be read. */
-export const manySummary = (done: number, failed: readonly string[]): string =>
-    failed.length === 0
-        ? i18next.t('panels:git.many.done', { count: done })
-        : i18next.t('panels:git.many.failed', { count: failed.length, repos: failed.join(', ') });
+   is the only place the whole outcome can be read. A branch that moved on both sides waits for a choice. */
+export const manySummary = (done: number, failed: readonly string[], diverged: readonly string[] = []): string => {
+    if (failed.length > 0) {
+        return i18next.t('panels:git.many.failed', { count: failed.length, repos: failed.join(', ') });
+    }
+    if (diverged.length > 0) {
+        return i18next.t('panels:git.many.diverged', { count: diverged.length, repos: diverged.join(', ') });
+    }
+    return i18next.t('panels:git.many.done', { count: done });
+};
 
 /* One checkout as the commit box weighs it: what is staged in it decides whether it takes the commit. */
 export interface CommitCandidate {

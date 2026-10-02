@@ -103,6 +103,18 @@ export interface RunOptions {
     done?(result: GitActionResult): ToastAction | undefined;
 }
 
+/* How a run over several repositories ended. A branch that moved on both sides is a question and not a failure. */
+export interface ManyOutcome {
+    done: number;
+    failed: number;
+    diverged: ManyJob[];
+}
+
+export interface ManyOptions {
+    /* Asks how the branch of one repository that moved on both sides comes together, from the summary. */
+    choose?(job: ManyJob): void;
+}
+
 export interface GitActions {
     /*
      * One toast per run: it goes up the moment the request leaves, follows the phases the daemon
@@ -112,8 +124,85 @@ export interface GitActions {
      */
     run(payload: Omit<GitActionPayload, 'actionId'>, options?: RunOptions): Promise<ActionOutcome>;
     /* Every job in order under one toast, which is what pushing a folder of repositories is. */
-    runMany(jobs: readonly ManyJob[]): Promise<{ done: number; failed: number }>;
+    runMany(jobs: readonly ManyJob[], options?: ManyOptions): Promise<ManyOutcome>;
 }
+
+/*
+ * One repository after another, never two at once: a folder of nine pushes over one link, and nine
+ * toasts would say less than one that counts. A commit over several of them is the same run with the
+ * same message. A repository that fails does not stop it, so the summary at the end is where the
+ * whole outcome is read; cancel breaks off the turn that is running and leaves the rest alone.
+ */
+export const runManyJobs = async (
+    jobs: readonly ManyJob[],
+    toastByAction: Map<string, { toastId: string; title: string | null }>,
+    options: ManyOptions = {},
+    runKind: (payload: GitActionPayload) => Promise<GitActionResult> = runGitKind
+): Promise<ManyOutcome> => {
+    if (jobs.length === 0) {
+        return { done: 0, failed: 0, diverged: [] };
+    }
+    let stopped = false;
+    let running: string | null = null;
+    const toastId = useToasts.getState().show({
+        title: manyTitle(jobs[0]!.kind, jobs[0]!.label, 0, jobs.length),
+        kind: 'progress',
+        action: {
+            label: i18next.t('common:action.cancel'),
+            run: () => {
+                stopped = true;
+                if (running !== null) {
+                    cancelGitRunAction(running);
+                }
+            }
+        }
+    });
+    const failed: string[] = [];
+    const outputs: string[] = [];
+    const diverged: ManyJob[] = [];
+    let done = 0;
+    for (const [index, job] of jobs.entries()) {
+        if (stopped) {
+            break;
+        }
+        const actionId = nextActionId();
+        const title = manyTitle(job.kind, job.label, index, jobs.length);
+        running = actionId;
+        toastByAction.set(actionId, { toastId, title });
+        useToasts.getState().update(toastId, { title, description: undefined });
+        try {
+            await runKind({ cwd: job.cwd, kind: job.kind, actionId, ...job.extra });
+            done += 1;
+        } catch (error: unknown) {
+            if (error instanceof ActionRefusal && error.code === 'diverged') {
+                diverged.push(job);
+            } else {
+                const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
+                failed.push(job.label);
+                outputs.push(`${job.label}: ${message}`);
+            }
+        } finally {
+            running = null;
+            toastByAction.delete(actionId);
+        }
+    }
+    const choose = options.choose;
+    const asks = diverged.map((job) => ({ label: i18next.t('panels:git.many.choose', { repo: job.label }), run: () => choose?.(job) }));
+    const description = outputs.length > 0 ? outputs[0]!.split('\n')[0] : diverged.length > 0 ? i18next.t('panels:git.dialog.diverged.description') : undefined;
+    useToasts.getState().show({
+        id: toastId,
+        title: manySummary(
+            done,
+            failed,
+            diverged.map((job) => job.label)
+        ),
+        kind: failed.length === 0 && diverged.length === 0 ? 'success' : 'error',
+        ...(description === undefined ? {} : { description }),
+        ...(outputs.length === 0 ? {} : { output: outputs.join('\n\n') }),
+        ...(choose === undefined || asks.length === 0 ? {} : { actions: asks })
+    });
+    return { done, failed: failed.length, diverged };
+};
 
 /* Running the panel's actions and saying how they went. */
 export const useGitActions = (): GitActions => {
@@ -178,64 +267,10 @@ export const useGitActions = (): GitActions => {
         }
     }, []);
 
-    /*
-     * One repository after another, never two at once: a folder of nine pushes over one link, and
-     * nine toasts would say less than one that counts. A commit over several of them is the same run
-     * with the same message. A repository that fails does not stop it, so the summary at the end is
-     * where the whole outcome is read; cancel breaks off the turn that is running and leaves the rest
-     * alone.
-     */
-    const runMany = useCallback(async (jobs: readonly ManyJob[]): Promise<{ done: number; failed: number }> => {
-        if (jobs.length === 0) {
-            return { done: 0, failed: 0 };
-        }
-        let stopped = false;
-        let running: string | null = null;
-        const toastId = useToasts.getState().show({
-            title: manyTitle(jobs[0]!.kind, jobs[0]!.label, 0, jobs.length),
-            kind: 'progress',
-            action: {
-                label: i18next.t('common:action.cancel'),
-                run: () => {
-                    stopped = true;
-                    if (running !== null) {
-                        cancelGitRunAction(running);
-                    }
-                }
-            }
-        });
-        const failed: string[] = [];
-        const outputs: string[] = [];
-        let done = 0;
-        for (const [index, job] of jobs.entries()) {
-            if (stopped) {
-                break;
-            }
-            const actionId = nextActionId();
-            const title = manyTitle(job.kind, job.label, index, jobs.length);
-            running = actionId;
-            toastByAction.current.set(actionId, { toastId, title });
-            useToasts.getState().update(toastId, { title, description: undefined });
-            try {
-                await runGitKind({ cwd: job.cwd, kind: job.kind, actionId, ...job.extra });
-                done += 1;
-            } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
-                failed.push(job.label);
-                outputs.push(`${job.label}: ${message}`);
-            } finally {
-                running = null;
-                toastByAction.current.delete(actionId);
-            }
-        }
-        useToasts.getState().show({
-            id: toastId,
-            title: manySummary(done, failed),
-            kind: failed.length === 0 ? 'success' : 'error',
-            ...(outputs.length === 0 ? {} : { description: outputs[0]!.split('\n')[0], output: outputs.join('\n\n') })
-        });
-        return { done, failed: failed.length };
-    }, []);
+    const runMany = useCallback(
+        (jobs: readonly ManyJob[], options?: ManyOptions): Promise<ManyOutcome> => runManyJobs(jobs, toastByAction.current, options),
+        []
+    );
 
     return useMemo(() => ({ run, runMany }), [run, runMany]);
 };

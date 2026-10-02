@@ -406,8 +406,11 @@
             "yesterday": "Yesterday"
         },
         "many": {
+            "choose": "Choose for {{repo}}",
             "commit": "Committing {{repo}} ({{done}}/{{total}})",
             "commit-push": "Committing and pushing {{repo}} ({{done}}/{{total}})",
+            "diverged_one": "{{count}} repository needs a choice: {{repos}}",
+            "diverged_other": "{{count}} repositories need a choice: {{repos}}",
             "done_one": "Done in {{count}} repository",
             "done_other": "Done in {{count}} repositories",
             "failed_one": "{{count}} repository failed: {{repos}}",

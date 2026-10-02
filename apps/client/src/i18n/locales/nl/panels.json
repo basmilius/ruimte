@@ -406,8 +406,11 @@
             "yesterday": "Gisteren"
         },
         "many": {
+            "choose": "Kies voor {{repo}}",
             "commit": "{{repo}} committen ({{done}}/{{total}})",
             "commit-push": "{{repo}} committen en pushen ({{done}}/{{total}})",
+            "diverged_one": "{{count}} repository wacht op een keuze: {{repos}}",
+            "diverged_other": "{{count}} repositories wachten op een keuze: {{repos}}",
             "done_one": "Klaar in {{count}} repository",
             "done_other": "Klaar in {{count}} repositories",
             "failed_one": "{{count}} repository is mislukt: {{repos}}",

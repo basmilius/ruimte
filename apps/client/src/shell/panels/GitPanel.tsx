@@ -18,7 +18,7 @@ import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, typ
 import { PushMenu } from '@/shell/panels/PushMenu';
 import { activeDiff, allCollapseKeys } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
-import { useGitActions, type ActionOutcome } from '@/shell/panels/use-git-actions';
+import { useGitActions, type ActionOutcome, type ManyJob } from '@/shell/panels/use-git-actions';
 import { WorktreeSection } from '@/shell/panels/WorktreeSection';
 import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -223,9 +223,14 @@ export function GitPanel() {
             if (jobs.length === 0) {
                 return;
             }
+            // A branch that moved on both sides is asked about from the summary, the way one repository asks at once.
+            const choose = (job: ManyJob): void => {
+                const branch = checkouts.find((checkout) => checkout.path === job.cwd)?.status?.branch ?? '';
+                setDialog({ kind: 'diverged', cwd: job.cwd, action: job.kind, branch });
+            };
             setBusy(true);
             void run
-                .runMany(jobs)
+                .runMany(jobs, { choose })
                 .then(() => refresh())
                 .finally(() => setBusy(false));
         },
