@@ -421,7 +421,8 @@ struct ChatScreen: View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(spacing: 0) {
                 if prompts.active == nil {
-                    ChatLimitBanner(model: model, openFork: openFork)
+                    ChatLimitBanner(
+                        model: model, resumeAllowed: machineSession?.icons.resumeAtReset ?? false, openFork: openFork)
                     ChatActivityChips(model: model, tasks: machineSession?.tasks)
                     ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 }

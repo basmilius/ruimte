@@ -44,6 +44,12 @@ enum ChatLimits {
         return view.detail.map { "\(account) · \($0)" } ?? account
     }
 
+    /// The chat's own "Resume at reset". It only counts while the machine allows it, so with the machine's switch off
+    /// it stands off and cannot be turned; absent, it follows the machine.
+    static func resumeSwitch(info: JSONValue, machineAllows: Bool) -> (on: Bool, enabled: Bool) {
+        (machineAllows && info["resumeAtReset"]?.boolValue != false, machineAllows)
+    }
+
     /// How a session window reads in the account choice: "45% used · resets 14:00".
     static func sessionLine(_ window: AccountSessionWindow, now: Date = .now) -> String {
         let used = "\(Int((window.used * 100).rounded()))% used"
@@ -112,6 +118,15 @@ extension ChatModel {
         }
     }
 
+    func setResumeAtReset(_ on: Bool) async {
+        do {
+            _ = try await client.request("chat.configure", payload: target(["resumeAtReset": .bool(on)]))
+            error = nil
+        } catch {
+            self.error = ChatForking.message(for: error, action: "resume chats at a reset")
+        }
+    }
+
     /// From the next turn on, and the default for new agents of this CLI on this machine, as a model pick is.
     func chooseAccount(_ id: String) {
         let provider = provider
@@ -140,21 +155,26 @@ extension ChatModel {
 /// go on under when one has room.
 struct ChatLimitBanner: View {
     let model: ChatModel
+    /// The machine's own `resumeAtReset`, which the chat's switch only counts under.
+    let resumeAllowed: Bool
     let openFork: (String) -> Void
 
     var body: some View {
         TimelineView(.everyMinute) { context in
             if let view = ChatLimits.view(info: model.info, moment: { ChatLimits.moment($0, now: context.date) }) {
-                HStack(spacing: 10) {
-                    Image(lucide: "hourglass", size: 16).foregroundStyle(MobileStyle.faint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(view.title).font(.subheadline).foregroundStyle(MobileStyle.text)
-                        if let detail = ChatLimits.detail(view, account: model.accountName) {
-                            Text(detail).font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(lucide: "hourglass", size: 16).foregroundStyle(MobileStyle.faint)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(view.title).font(.subheadline).foregroundStyle(MobileStyle.text)
+                            if let detail = ChatLimits.detail(view, account: model.accountName) {
+                                Text(detail).font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        if let target = model.continueTarget { continueButton(target) }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    if let target = model.continueTarget { continueButton(target) }
+                    resumeToggle
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .glassEffect(.regular, in: .rect(cornerRadius: 20))
@@ -166,6 +186,22 @@ struct ChatLimitBanner: View {
                         await model.readLimits(unread: true)
                     }
                 }
+            }
+        }
+    }
+
+    private var resumeToggle: some View {
+        let state = ChatLimits.resumeSwitch(info: model.info, machineAllows: resumeAllowed)
+        return VStack(alignment: .leading, spacing: 2) {
+            Toggle(
+                "Resume at reset",
+                isOn: Binding(get: { state.on }, set: { on in Task { await model.setResumeAtReset(on) } })
+            )
+            .font(.subheadline)
+            .disabled(!state.enabled || !model.connected)
+            if !state.enabled {
+                Text("Turned off for this machine. Turn it on in Ruimte's settings on your computer, under Agents.")
+                    .font(.caption).foregroundStyle(MobileStyle.muted)
             }
         }
     }

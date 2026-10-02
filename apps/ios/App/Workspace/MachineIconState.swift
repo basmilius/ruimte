@@ -6,6 +6,9 @@ import RuimteTransport
 @MainActor @Observable
 final class MachineIconState {
     private(set) var icon: MachineIcon?
+    /// Whether the machine may take up a chat that stopped on a limit on a clock, `resumeAtReset` in `endpoint.info`.
+    /// Read beside the icon since both come from there; a machine from before the setting never does.
+    private(set) var resumeAtReset = false
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private var unsubscribe: (() -> Void)?
     @ObservationIgnored private var unobserve: (() -> Void)?
@@ -25,7 +28,7 @@ final class MachineIconState {
                 let endpoint = try? WireEvent.endpointChanged.validatePayload(value)
             else { return }
             cancelRefresh()
-            apply(endpoint)
+            apply(endpoint, complete: false)
         }
         unobserve = client.observeConnection { [weak self] connected in
             guard let self else { return }
@@ -38,7 +41,7 @@ final class MachineIconState {
                 do {
                     let endpoint = try await client.request("endpoint.info", payload: .object([:]))
                     guard !Task.isCancelled, self.connected, revision == operation else { return }
-                    apply(try WireRequest.endpointInfo.validateResult(endpoint))
+                    apply(try WireRequest.endpointInfo.validateResult(endpoint), complete: true)
                 } catch {
                     // An unavailable icon must not hide projects or change the connection's error state.
                 }
@@ -61,7 +64,14 @@ final class MachineIconState {
         task = nil
     }
 
-    private func apply(_ endpoint: JSONValue) {
+    /// `complete` is an answer to `endpoint.info`, where an absent switch is off; an event leaves out what it does not
+    /// change.
+    private func apply(_ endpoint: JSONValue, complete: Bool) {
+        if let resume = endpoint["resumeAtReset"]?.boolValue {
+            resumeAtReset = resume
+        } else if complete {
+            resumeAtReset = false
+        }
         guard let value = endpoint["icon"] else { return }
         if value == .null {
             icon = nil

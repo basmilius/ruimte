@@ -114,8 +114,10 @@ A chat whose last turn stopped on a usage limit or an overload says so over the 
 resets or when the machine takes the chat up again, and names the account that ran into it. After a usage limit,
 another account of the same CLI that is on, signed in and has room (the least of its session spent) is offered as
 Continue on; `chat.continueOn` goes on in the chat itself or in a fork, which then opens. Accounts the machine has
-not read yet are asked for with `usage.refreshLimits`, at most every five minutes per machine. The chat's own
-Resume at reset switch is not on the phone yet.
+not read yet are asked for with `usage.refreshLimits`, at most every five minutes per machine. The bar holds the
+chat's own Resume at reset switch (`resumeAtReset` in `chat.configure`), which follows the machine's setting from
+`endpoint.info` while the chat has none of its own. It only counts while the machine allows it, so with the
+machine's setting off it stands off and says where to turn it on.
 
 A chat whose agent keeps a plan shows its progress beside Sub-agents as the desktop pill: "6/11" with a double check
 on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last opened; the

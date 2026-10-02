@@ -66,6 +66,27 @@ final class MachineIconTests: XCTestCase {
         XCTAssertNil(client.connection)
     }
 
+    @MainActor func testTheMachinesResumeAtResetIsReadAndFollowed() async throws {
+        let client = IconMachine()
+        let state = MachineIconState(client: client, fallback: nil)
+        state.start()
+        defer { state.stop() }
+        await client.waitForRequest(1)
+        client.finish(0, icon: "laptop", extra: ["resumeAtReset": .bool(true)])
+        await settle()
+        XCTAssertTrue(state.resumeAtReset)
+        client.change(icon: "laptop")
+        XCTAssertTrue(state.resumeAtReset, "An event that leaves the switch out leaves it as it was")
+        client.change(icon: "laptop", extra: ["resumeAtReset": .bool(false)])
+        XCTAssertFalse(state.resumeAtReset)
+        client.setConnected(false)
+        client.setConnected(true)
+        await client.waitForRequest(2)
+        client.finish(1, icon: "laptop")
+        await settle()
+        XCTAssertFalse(state.resumeAtReset, "A machine from before the setting never resumes")
+    }
+
     @MainActor private func settle() async {
         for _ in 0..<20 { await Task.yield() }
     }
@@ -112,24 +133,26 @@ final class MachineIconTests: XCTestCase {
         await withCheckedContinuation { waiter = (count, $0) }
     }
 
-    func finish(_ index: Int, icon: String) {
+    func finish(_ index: Int, icon: String, extra: [String: JSONValue] = [:]) {
         pending.removeValue(forKey: index)?.resume(
-            returning: .object([
-                "id": .string("machine"), "label": .string("Machine"), "platform": .string("darwin"),
-                "version": .string("1"), "reachability": .string("lan"), "authenticated": .bool(true),
-                "icon": .object(["kind": .string("lucide"), "value": .string(icon)]),
-            ]))
+            returning: .object(
+                [
+                    "id": .string("machine"), "label": .string("Machine"), "platform": .string("darwin"),
+                    "version": .string("1"), "reachability": .string("lan"), "authenticated": .bool(true),
+                    "icon": .object(["kind": .string("lucide"), "value": .string(icon)]),
+                ].merging(extra) { _, new in new }))
     }
 
     func fail(_ index: Int) {
         pending.removeValue(forKey: index)?.resume(throwing: MachineClientError.disconnected)
     }
 
-    func change(icon: String?) {
+    func change(icon: String?, extra: [String: JSONValue] = [:]) {
         event?(
-            .object([
-                "id": .string("machine"), "label": .string("Machine"), "nameSource": .string("chosen"),
-                "icon": icon.map { .object(["kind": .string("lucide"), "value": .string($0)]) } ?? .null,
-            ]))
+            .object(
+                [
+                    "id": .string("machine"), "label": .string("Machine"), "nameSource": .string("chosen"),
+                    "icon": icon.map { .object(["kind": .string("lucide"), "value": .string($0)]) } ?? .null,
+                ].merging(extra) { _, new in new }))
     }
 }

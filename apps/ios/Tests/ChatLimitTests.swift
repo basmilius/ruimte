@@ -106,6 +106,24 @@ import XCTest
         XCTAssertNil(model.error)
     }
 
+    func testTheChatsResumeSwitchFollowsTheMachineAndCountsOnlyWhileItAllows() {
+        let absent = info(limit: nil)
+        XCTAssertTrue(ChatLimits.resumeSwitch(info: absent, machineAllows: true) == (true, true))
+        XCTAssertTrue(ChatLimits.resumeSwitch(info: absent, machineAllows: false) == (false, false))
+        let off = absent.setting("resumeAtReset", .bool(false))
+        XCTAssertTrue(ChatLimits.resumeSwitch(info: off, machineAllows: true) == (false, true))
+        let on = absent.setting("resumeAtReset", .bool(true))
+        XCTAssertTrue(ChatLimits.resumeSwitch(info: on, machineAllows: false) == (false, false))
+    }
+
+    func testTurningTheSwitchConfiguresTheChat() async {
+        let machine = LimitMachine()
+        let model = ChatModel(client: machine, chatID: "chat", machineID: "mac")
+        await model.setResumeAtReset(false)
+        XCTAssertEqual(machine.requests.last?.0, "chat.configure")
+        XCTAssertEqual(machine.requests.last?.1, .object(["chatId": .string("chat"), "resumeAtReset": .bool(false)]))
+    }
+
     func testAMachineWithoutContinueOnSaysItNeedsAnUpdate() async {
         let machine = LimitMachine()
         machine.unknown = true
