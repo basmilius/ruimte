@@ -133,8 +133,8 @@ describe('a queue behind a usage limit', () => {
             await flush();
             expect(second.sent).toEqual([]);
             if (allowed) {
-                expect(second.session.takeUpAfterLimit(limitedId)).toBe(true);
-                expect(second.session.takeUpAfterLimit(limitedId)).toBe(false);
+                expect(second.session.takeUpAfterLimit(limitedId)).toBe('opened');
+                expect(second.session.takeUpAfterLimit(limitedId)).toBe('lapsed');
                 await flush();
                 expect(second.sent).toHaveLength(1);
                 second.event({ type: 'turn.done', state: 'done', costUsd: 0 });
@@ -1007,7 +1007,7 @@ for (const unknown of [false, true]) {
             expect(run.session.info.resumeAt).toBeUndefined();
         } else {
             expect(owed).toEqual([{ at: 900000, resumeAt: 900000, queue: ['queued'] }]);
-            expect(run.session.takeUpAfterLimit(run.session.thread.list().find((item) => item.kind === 'turn')!.id)).toBe(true);
+            expect(run.session.takeUpAfterLimit(run.session.thread.list().find((item) => item.kind === 'turn')!.id)).toBe('opened');
             await flush();
             expect(run.sent).toHaveLength(2);
             expect(run.sent[1]?.text).not.toBe('queued');
@@ -1018,6 +1018,58 @@ for (const unknown of [false, true]) {
         await run.session.dispose();
     });
 }
+
+describe('a resume owed after a limit', () => {
+    const owing = () => {
+        const owed = { count: 0, lapsed: 0 };
+        const hooks = {
+            allowed: () => true,
+            now: () => 1000,
+            owe: async () => {
+                owed.count += 1;
+            },
+            lapse: async () => {
+                owed.lapsed += 1;
+            },
+            owed: () => owed.count > owed.lapsed
+        };
+        return { owed, hooks };
+    };
+
+    test('goes with a clear, so the empty chat shows no limit and a wake opens a turn', async () => {
+        const { owed, hooks } = owing();
+        const run = rig({ limitResume: hooks });
+        run.session.send('original');
+        await flush();
+        run.event({ type: 'turn.done', state: 'error', costUsd: 0, limit: { kind: 'usage', resetsAt: 100000 }, error: 'limit' });
+        await flush();
+        expect(run.session.info.resumeAt).toBe(100000);
+
+        run.session.clear(false);
+        await flush();
+        expect(run.session.info.resumeAt).toBeUndefined();
+        expect(run.session.info.limit).toBeUndefined();
+        expect(owed.lapsed).toBe(1);
+        expect(run.session.wake({ text: 'A task you gave has settled.', label: 'Lexer', taskIds: [] })).not.toBeNull();
+        await run.session.dispose();
+    });
+
+    test('takes its time off when it comes due and opens no turn', async () => {
+        const { hooks } = owing();
+        const run = rig({ limitResume: hooks });
+        run.session.send('original');
+        await flush();
+        const limitedId = run.session.info.activeTurnId!;
+        run.event({ type: 'turn.done', state: 'error', costUsd: 0, limit: { kind: 'usage', resetsAt: 100000 }, error: 'limit' });
+        await flush();
+        expect(run.session.info.resumeAt).toBe(100000);
+
+        expect(run.session.takeUpAfterLimit('turn-gone')).toBe('lapsed');
+        expect(run.session.info.resumeAt).toBeUndefined();
+        expect(run.session.takeUpAfterLimit(limitedId)).toBe('opened');
+        await run.session.dispose();
+    });
+});
 
 describe('a message sent while a settings change waits', () => {
     const replacingRig = (provider: typeof codexProvider) => {

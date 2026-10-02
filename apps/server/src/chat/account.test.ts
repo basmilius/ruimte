@@ -43,6 +43,7 @@ let daemon: TestDaemon;
 let accounts: ProviderAccountsService;
 let limitUpdates: LimitsUpdate[];
 let machine: { resumeAtReset: boolean };
+let clock: ManualClock;
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-chat-account-'));
@@ -69,10 +70,11 @@ beforeEach(async () => {
         },
         folders
     });
+    clock = new ManualClock();
     daemon = await bootTestDaemon({
         home,
         store,
-        clock: new ManualClock(),
+        clock,
         installed: ['claude', 'codex'],
         accounts,
         env,
@@ -257,6 +259,43 @@ describe('going on under another account after a limit', () => {
         daemon.chats.resumeSettingChanged();
         expect(owedResumes().filter((entry) => entry.target === 'chat-lead')).toEqual([]);
         expect(original.info.resumeAt).toBeUndefined();
+    });
+
+    test('a Codex chat whose CLI still runs a command in the background is refused, and keeps the resume it is owed', async () => {
+        machine.resumeAtReset = true;
+        await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
+        await say('chat-codex', `serve\nlimit:${RESET_AT / 1000}`);
+        await daemon.until(() => owedResumes().length === 1);
+        expect(daemon.chats.get('chat-codex')!.info.background).toHaveLength(1);
+
+        expect(await daemon.request('chat.continueOn', { chatId: 'chat-codex', account: 'codex_work' })).toMatchObject({
+            ok: false,
+            error: { code: 'chat-busy' }
+        });
+        expect(daemon.chats.get('chat-codex')!.info.account).toBeUndefined();
+        expect(turnsOf('chat-codex')).toHaveLength(1);
+        expect(owedResumes()).toHaveLength(1);
+    });
+
+    test('a resume that comes due while a change of account waits on a background command opens its turn once that command ends', async () => {
+        machine.resumeAtReset = true;
+        await daemon.chats.create({ chatId: 'chat-codex', provider: 'codex', cwd: folder });
+        await say('chat-codex', `serve\nlimit:${RESET_AT / 1000}`);
+        await daemon.until(() => owedResumes().length === 1);
+        daemon.chats.configure({ chatId: 'chat-codex', account: 'codex_work' });
+
+        clock.advance(RESET_AT - clock.now());
+        await daemon.worker.settled();
+        expect(turnsOf('chat-codex')).toHaveLength(1);
+        expect(owedResumes()).toHaveLength(1);
+        expect(daemon.chats.get('chat-codex')!.info.resumeAt).toBe(RESET_AT);
+
+        daemon.codex.started.at(-1)!.runLater();
+        await daemon.until(() => turnsOf('chat-codex').length === 2 && daemon.chats.get('chat-codex')?.info.activeTurnId === null);
+        await daemon.worker.settled();
+        expect(turnsOf('chat-codex')[1]).toMatchObject({ origin: 'agent', label: 'Usage limit reset' });
+        expect(owedResumes()).toEqual([]);
+        expect(daemon.chats.get('chat-codex')!.info.resumeAt).toBeUndefined();
     });
 
     test('is refused for a chat whose last turn did not stop on a limit, and for the account it already runs under', async () => {

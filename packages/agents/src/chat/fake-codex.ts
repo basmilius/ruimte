@@ -176,6 +176,12 @@ export const fakeCodexWith =
             }
             // Lines of their own, so a task brief around them still fails the way Codex 0.156.1 does.
             const lines = text.split('\n');
+            // A dev server Codex leaves running past the turn; its process ends once the test says later is.
+            if (lines.includes('serve')) {
+                const command = item('commandExecution', { command: "/bin/zsh -lc 'bun dev'", cwd: io.cwd, processId: `pty-${nonce}`, status: 'inProgress' });
+                started(command);
+                io.later(() => completed({ ...command, status: 'completed', aggregatedOutput: '', exitCode: 0 }));
+            }
             if (lines.includes('overloaded')) {
                 turnCompleted('failed', 'Selected model is at capacity. Please try a different model.', 'serverOverloaded');
                 return;

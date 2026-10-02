@@ -386,6 +386,10 @@ export class ChatManager extends ChatCore {
         if (turn === null) {
             throw new ChatError('not-limited', 'The last turn of this chat did not stop on a limit');
         }
+        // Another account needs another CLI, and the one there is still runs work or waits on a request.
+        if (session.replacementWouldWait) {
+            throw new ChatError('chat-busy', 'This chat still runs work in the background or waits on a request; go on under another account once that ends');
+        }
         this.switchAccount(session, account);
         const { provider: kind, account: to } = session.info;
         session.wake({

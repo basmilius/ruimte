@@ -25,6 +25,7 @@ import {
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import type { AgentEvent, AgentSink } from '../events.ts';
+import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
 import { AccountError, definedEnv, isDefaultAccountOf, launchEnv, storedAccount, type AccountLaunches } from '../providers/accounts/launch.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { SkillIndex } from '../skills.ts';
@@ -816,7 +817,7 @@ export class ChatCore {
      * Takes up a turn that stopped on a limit, once its reset or its retry came. Loads the chat when
      * nobody has; a chat whose opener was stopped since that turn is left as it is.
      */
-    async takeUpAfterLimit(chatId: string, turnId: string): Promise<void> {
+    async takeUpAfterLimit(chatId: string, turnId: string): Promise<OutboxOutcome> {
         await this.loaded(chatId);
         if (!this.chats.has(chatId)) {
             if (!(await this.store?.has(chatId))) {
@@ -825,12 +826,16 @@ export class ChatCore {
             await this.create({ chatId });
         }
         const session = this.chats.get(chatId);
-        const turn = session?.thread.get(turnId);
-        const ended = this.endedAt(chatId);
-        if (!session || turn === undefined || (ended !== null && ended >= turn.createdAt)) {
+        if (!session) {
             return;
         }
-        session.takeUpAfterLimit(turnId);
+        const turn = session.thread.get(turnId);
+        const ended = this.endedAt(chatId);
+        if (turn !== undefined && ended !== null && ended >= turn.createdAt) {
+            session.lapseResume();
+            return;
+        }
+        return session.takeUpAfterLimit(turnId) === 'wait' ? 'wait' : undefined;
     }
 
     /* The host's switch for resuming after a limit changed; every chat loaded here looks again. */

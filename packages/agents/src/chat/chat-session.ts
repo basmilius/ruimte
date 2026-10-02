@@ -494,10 +494,12 @@ export class ChatSession {
         this.awaitingBackgroundReport = false;
         this.launchedSelection = null;
         this.turnReady = Promise.resolve();
+        this.lapseResume();
         const usage = this.thread.info.usage;
         this.emit([
             this.thread.reset({
                 agentSessionId: null,
+                limit: undefined,
                 running: false,
                 status: 'idle',
                 activeTurnId: null,
@@ -717,25 +719,32 @@ export class ChatSession {
 
     /*
      * Opens the turn that takes up the limited turn `turnId` again, carrying the tasks and messages that
-     * one answered; false when anything stepped in since (a person wrote, the switch went off, the chat
-     * stopped), which is how the owed entry lapses.
+     * one answered. `wait` while a settings change waits on the CLI's work, which keeps the owed entry
+     * until that work ends; `lapsed` when anything stepped in since (a person wrote, the switch went off,
+     * the chat stopped or was cleared), which takes the resume time off with the entry.
      */
-    takeUpAfterLimit(turnId: string): boolean {
+    takeUpAfterLimit(turnId: string): 'opened' | 'wait' | 'lapsed' {
         const turn = limitedTurn(this.thread.list());
         if (turn === null || turn.id !== turnId || !this.resumeAllowed()) {
-            return false;
+            this.lapseResume();
+            return 'lapsed';
         }
         const wake = limitResumeWake(turn.limit.kind);
-        const woke =
-            this.wake({
-                ...wake,
-                taskIds: turn.taskIds ?? [],
-                ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
-            }) !== null;
-        if (woke) {
-            this.pauseQueue(false);
+        const opened = this.wake({
+            ...wake,
+            taskIds: turn.taskIds ?? [],
+            ...(turn.messageFrom === undefined ? {} : { messageFrom: turn.messageFrom })
+        });
+        if (opened === null) {
+            return 'wait';
         }
-        return woke;
+        this.pauseQueue(false);
+        return 'opened';
+    }
+
+    /* Whether a change that needs a new CLI waits now: a turn, work beside it or an open request holds the one there is. */
+    get replacementWouldWait(): boolean {
+        return this.backend !== null && (this.info.activeTurnId !== null || this.processInUse());
     }
 
     /* A limited turn a fork went on with is that fork's to take up, never this chat's. */
@@ -812,7 +821,8 @@ export class ChatSession {
         this.options.persist();
     }
 
-    private lapseResume(): void {
+    /* Drops the resume owed after a limit, the time the thread shows for it included. */
+    lapseResume(): void {
         const hooks = this.options.limitResume;
         if (this.thread.info.resumeAt === undefined || !hooks) {
             return;
