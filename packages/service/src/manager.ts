@@ -29,8 +29,13 @@ export interface ServiceManager {
     /* Where the definition lives, for the documentation and the error a person reads. */
     readonly path: string;
     isInstalled(): boolean;
-    /* Puts the definition on disk, so the service starts with the person's session. A running daemon keeps running. */
-    install(definition: string): void;
+    /* The definition on disk, null when there is none. */
+    read(): string | null;
+    /*
+     * Puts the definition on disk, so the service starts with the person's session. A running daemon
+     * keeps running, on the definition it was started from: true says that one is not this one.
+     */
+    install(definition: string): boolean;
     /* Starts the daemon from the definition on disk; nothing when it already runs. */
     start(): void;
     /* Ends the running daemon and starts it from the definition on disk, which is how a new binary takes over. */
@@ -81,12 +86,15 @@ export const launchdManager = (options: LaunchdOptions): ServiceManager => {
         kind: 'launchd',
         path,
         isInstalled: () => options.files.read(path) !== null,
+        read: () => options.files.read(path),
         install(definition) {
             // launchd opens the log but makes no folder for it, and a job whose log cannot open never starts.
             options.files.makeDirectory(dirname(serviceLogFile(options.home)));
-            if (options.files.read(path) !== definition) {
+            const previous = options.files.read(path);
+            if (previous !== definition) {
                 options.files.write(path, definition);
             }
+            return previous !== null && previous !== definition;
         },
         start() {
             if (isLoaded()) {
@@ -139,12 +147,15 @@ export const systemdManager = (options: SystemdOptions): ServiceManager => {
         kind: 'systemd',
         path,
         isInstalled: () => options.files.read(path) !== null,
+        read: () => options.files.read(path),
         install(definition) {
-            if (options.files.read(path) !== definition) {
+            const previous = options.files.read(path);
+            if (previous !== definition) {
                 options.files.write(path, definition);
                 reload();
             }
             expectSuccess(systemctl('enable', unit), 'systemctl enable');
+            return previous !== null && previous !== definition;
         },
         start() {
             expectSuccess(systemctl('start', unit), 'systemctl start');

@@ -35,6 +35,13 @@ describe('backgroundServiceRow', () => {
         }
     });
 
+    test('a service the command line installed is named, without a switch that would take it over', () => {
+        const row = backgroundServiceRow(state({ keepRunning: false, owner: 'external', commandLineService: true }));
+        expect(row.toggle).toBeNull();
+        expect(row.unavailable).toContain('npx ruimte service');
+        expect(row.canStop).toBe(false);
+    });
+
     test('lingering is offered on Linux only while the switch is on and it is not enabled yet', () => {
         expect(backgroundServiceRow(state({ linger: false })).offerLinger).toBe(true);
         expect(backgroundServiceRow(state({ linger: true })).offerLinger).toBe(false);

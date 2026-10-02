@@ -32,10 +32,15 @@ export interface BackgroundServiceState {
     linger: boolean | null;
     /* Null once the new build runs. Absent from a shell older than the field, which is why the page has to read it as optional. */
     pendingRestart?: PendingRestart | null;
+    /*
+     * The service on this machine is one `npx ruimte service install` set up, which the app uses as
+     * it finds it and never rewrites, starts or stops. Absent from a shell older than the field.
+     */
+    commandLineService?: boolean;
 }
 
 /*
  * The same state as the shell builds it. Every field this release knows is there, so a missing
- * `pendingRestart` inside the shell is a mistake rather than an older preload.
+ * optional field inside the shell is a mistake rather than an older preload.
  */
 export type ShellServiceState = Required<BackgroundServiceState>;

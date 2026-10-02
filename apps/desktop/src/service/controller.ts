@@ -1,7 +1,7 @@
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { decideRestart, decideStart, sameBuild } from './decide';
-import type { ServiceManager } from '@ruimte/service';
+import { definitionRunsProgram, type ServiceManager } from '@ruimte/service';
 import type { KeepRunningSetting } from './settings';
 
 export interface ServiceControllerDeps {
@@ -11,6 +11,8 @@ export interface ServiceControllerDeps {
     setting: KeepRunningSetting;
     /* The plist or unit for this app, built when it is needed: the login shell's PATH is asked once. */
     definition(): string;
+    /* What a service of `ruimte service install` runs, which the app leaves as it finds it. */
+    commandLineProgram: string;
     expected: BuildIdentity;
     /* One ask of `/health`; null when nothing answers. */
     probe(): Promise<BuildIdentity | null>;
@@ -37,8 +39,10 @@ export interface ServiceController {
     restartNow(): Promise<ShellServiceState>;
     /* "When idle": the old daemon stays for this session and restarts itself once nothing runs. */
     restartWhenIdle(): ShellServiceState;
-    /* Asks the port again, and drops a pending restart once the new build answers. */
+    /* Asks the port again: drops a pending restart once the new build answers, and restarts onto a changed definition once nothing runs. */
     refresh(): Promise<ShellServiceState>;
+    /* Whether `refresh` still has something to settle. */
+    unsettled(): boolean;
 }
 
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -47,8 +51,14 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
     let owner: DaemonOwner | null = null;
     let failure: string | null = null;
     let pendingRestart: PendingRestart | null = null;
+    // launchd and systemd read a definition only when they start the job, so a new PATH waits for a restart.
+    let staleDefinition = false;
     const manager = deps.support === 'supported' ? deps.manager : null;
-    const keepRunning = (): boolean => manager !== null && deps.setting.read();
+    const commandLineService = (): boolean => {
+        const onDisk = manager?.read() ?? null;
+        return onDisk !== null && definitionRunsProgram(onDisk, deps.commandLineProgram);
+    };
+    const keepRunning = (): boolean => manager !== null && !commandLineService() && deps.setting.read();
 
     const state = (): ShellServiceState => {
         let linger: boolean | null = null;
@@ -59,7 +69,7 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
                 linger = null;
             }
         }
-        return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger, pendingRestart };
+        return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger, pendingRestart, commandLineService: commandLineService() };
     };
 
     const spawn = async (): Promise<void> => {
@@ -93,15 +103,26 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
         }
     };
 
+    /* Restarts the service onto the definition on disk, unless that would end what runs on it. */
+    const applyDefinition = async (service: ServiceManager): Promise<void> => {
+        staleDefinition = decideRestart(await deps.work()) === 'ask';
+        if (!staleDefinition) {
+            await runService(service, () => service.restart());
+        }
+    };
+
     return {
         state,
         async start() {
             failure = null;
+            staleDefinition = false;
             const serviceOn = keepRunning();
-            if (manager) {
+            let definitionChanged = false;
+            // A service of the command line is used as it is, the way that command leaves the app's alone.
+            if (manager && !commandLineService()) {
                 try {
                     if (serviceOn) {
-                        manager.install(deps.definition());
+                        definitionChanged = manager.install(deps.definition());
                     } else if (manager.isInstalled()) {
                         // Off, yet a definition is on disk: a quit that never ran after the switch. Removed and stopped
                         // here, before the port is asked, so the answer is not a service about to go.
@@ -115,6 +136,9 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             const decision = decideStart(await deps.probe(), deps.expected, manager !== null && serviceOn && failure === null);
             if (decision === 'attach') {
                 owner = 'service';
+                if (manager && definitionChanged) {
+                    await applyDefinition(manager);
+                }
             } else if (decision === 'attach-external') {
                 owner = 'external';
             } else if (decision === 'spawn' || !manager) {
@@ -133,7 +157,7 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             }
         },
         setKeepRunning(next) {
-            if (!manager) {
+            if (!manager || commandLineService()) {
                 return state();
             }
             deps.setting.write(next);
@@ -212,6 +236,9 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             return state();
         },
         async refresh() {
+            if (staleDefinition && manager && owner === 'service') {
+                await applyDefinition(manager);
+            }
             if (pendingRestart === null) {
                 return state();
             }
@@ -220,6 +247,9 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
                 pendingRestart = null;
             }
             return state();
+        },
+        unsettled() {
+            return pendingRestart !== null || (staleDefinition && owner === 'service');
         }
     };
 };

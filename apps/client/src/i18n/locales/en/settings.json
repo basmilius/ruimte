@@ -298,7 +298,8 @@
         "unavailable": {
             "dev": "The dev app always runs a machine of its own and stops it when it quits.",
             "windows": "Not available on Windows yet, so this machine stops when Ruimte quits.",
-            "appimage": "Not available for the AppImage, which is gone once Ruimte quits. Install the deb or rpm package to keep this machine running."
+            "appimage": "Not available for the AppImage, which is gone once Ruimte quits. Install the deb or rpm package to keep this machine running.",
+            "commandLine": "This machine runs as the background service that `npx ruimte service install` set up. Ruimte uses it as it is and leaves it alone; `npx ruimte service uninstall` removes it."
         },
         "pending": {
             "takeOver": "Ruimte runs this machine itself right now. It keeps running from the next time Ruimte quits.",

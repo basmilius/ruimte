@@ -32,6 +32,12 @@ export const platformServiceManager = (platform: NodeJS.Platform): ServiceManage
     return null;
 };
 
+/*
+ * The binary a service of `ruimte service install` runs: a copy out of the npx cache, which npm clears
+ * whenever it likes. The app tells that service from its own by it.
+ */
+export const commandLineServiceProgram = (ruimteHome: string): string => join(ruimteHome, 'bin', 'ruimte');
+
 export interface DaemonService {
     /* The daemon binary and its arguments, absolute. */
     program: string;

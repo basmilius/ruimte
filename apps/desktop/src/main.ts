@@ -27,7 +27,7 @@ import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController } from './service/controller';
-import { daemonServiceSpec, platformServiceManager, serviceDefinition as definitionFor, type ServiceManager } from '@ruimte/service';
+import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceDefinition as definitionFor, type ServiceManager } from '@ruimte/service';
 import { keepRunningSetting, serviceSupport } from './service/settings';
 import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
@@ -279,6 +279,7 @@ const serviceController = createServiceController({
     manager: createServiceManager(),
     setting: keepRunningSetting(join(app.getPath('userData'), 'background-service.json'), support),
     definition: serviceDefinition,
+    commandLineProgram: commandLineServiceProgram(ruimteHome),
     expected: { version: app.getVersion(), build: bundledBuild() },
     probe: probeDaemon,
     work: probeWork,
@@ -304,16 +305,16 @@ handleFromApp('service:state', () => serviceController.state());
 handleFromApp('service:set-keep-running', (_event, keepRunning: boolean) => pushServiceState(serviceController.setKeepRunning(keepRunning === true)));
 handleFromApp('service:enable-linger', () => pushServiceState(serviceController.enableLinger()));
 /*
- * While an older build keeps the machine, the port is asked now and then, so the question and the
- * row in the settings go away once the daemon restarted itself onto the new build.
+ * While an older build or an older definition keeps the machine, the port is asked now and then, so
+ * the question and the row in the settings go away once the daemon restarted onto the new one.
  */
 const watchPendingRestart = (): void => {
-    if (serviceController.state().pendingRestart === null) {
+    if (!serviceController.unsettled()) {
         return;
     }
     const timer = setInterval(() => {
         void serviceController.refresh().then((state) => {
-            if (state.pendingRestart === null) {
+            if (!serviceController.unsettled()) {
                 clearInterval(timer);
                 pushServiceState(state);
             }

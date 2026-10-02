@@ -9,5 +9,5 @@ export {
     type ServiceManager,
     type SystemdOptions
 } from './manager';
-export { daemonServiceSpec, platformServiceManager, serviceDefinition, type DaemonService } from './platform';
+export { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceDefinition, type DaemonService } from './platform';
 export { diskFiles, runCommand } from './system';

@@ -17,10 +17,10 @@ export interface BackgroundServiceRow {
 }
 
 export const backgroundServiceRow = (state: BackgroundServiceState): BackgroundServiceRow => {
-    if (state.support !== 'supported') {
+    if (state.support !== 'supported' || state.commandLineService === true) {
         return {
             toggle: null,
-            unavailable: i18next.t(`settings:backgroundService.unavailable.${state.support}`),
+            unavailable: i18next.t(`settings:backgroundService.unavailable.${state.support === 'supported' ? 'commandLine' : state.support}`),
             pending: null,
             failure: state.failure,
             canStop: false,

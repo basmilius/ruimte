@@ -35,9 +35,12 @@ const fakeManager = (files: ServiceFiles, linger?: boolean): ServiceManager & { 
         path,
         steps,
         isInstalled: () => files.read(path) !== null,
+        read: () => files.read(path),
         install(definition) {
             steps.push('install');
+            const previous = files.read(path);
             files.write(path, definition);
+            return previous !== null && previous !== definition;
         },
         start: () => void steps.push('start'),
         restart: async () => void steps.push('restart'),

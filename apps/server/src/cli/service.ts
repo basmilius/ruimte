@@ -3,6 +3,7 @@ import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimt
 import { homedir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
+    commandLineServiceProgram,
     daemonServiceSpec,
     definitionRunsProgram,
     diskFiles,
@@ -76,8 +77,8 @@ export const servicePlan = (facts: ServiceFacts): ServicePlan | string => {
     if (kind === null) {
         return UNSUPPORTED_PLATFORM;
     }
-    const binDir = join(facts.ruimteHome, 'bin');
-    const program = join(binDir, 'ruimte');
+    const program = commandLineServiceProgram(facts.ruimteHome);
+    const binDir = dirname(program);
     const spec = daemonServiceSpec({
         program,
         args: facts.flags,
@@ -137,9 +138,8 @@ const install = async (facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps
     if (sourceDir !== plan.binDir) {
         deps.copyBinaries(sourceDir, plan.binDir);
     }
-    const previous = deps.files.read(deps.manager.path);
-    deps.manager.install(plan.definition);
-    if (owner === 'this' && previous !== plan.definition) {
+    const changed = deps.manager.install(plan.definition);
+    if (owner === 'this' && changed) {
         // The flags or the PATH changed, and launchd and systemd only read a definition when they start the job.
         await deps.manager.restart();
         deps.out('The service now runs with the new definition.');

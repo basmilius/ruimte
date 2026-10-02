@@ -10,16 +10,24 @@ import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './s
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
 
-const fakeManager = (options: { installed?: boolean; running?: BuildIdentity | null; refuseStart?: string } = {}) => {
+/* What the app writes; `installed` puts it on disk, `onDisk` something else in its place. */
+const DEFINITION = '<plist/>';
+
+const COMMAND_LINE_PROGRAM = '/Users/bas/.ruimte/bin/ruimte';
+
+const fakeManager = (options: { installed?: boolean; onDisk?: string; running?: BuildIdentity | null; refuseStart?: string } = {}) => {
     const calls: string[] = [];
-    const service = { installed: options.installed ?? false, running: options.running ?? null };
+    const service = { definition: options.onDisk ?? (options.installed ? DEFINITION : null), running: options.running ?? null };
     const manager: ServiceManager = {
         kind: 'launchd',
         path: '/fake/app.ruimte.daemon.plist',
-        isInstalled: () => service.installed,
-        install: () => {
+        isInstalled: () => service.definition !== null,
+        read: () => service.definition,
+        install: (definition) => {
             calls.push('install');
-            service.installed = true;
+            const changed = service.definition !== definition;
+            service.definition = definition;
+            return changed;
         },
         start: () => {
             calls.push('start');
@@ -38,7 +46,7 @@ const fakeManager = (options: { installed?: boolean; running?: BuildIdentity | n
         },
         uninstall: () => {
             calls.push('uninstall');
-            service.installed = false;
+            service.definition = null;
         }
     };
     return { calls, service, manager };
@@ -65,15 +73,17 @@ const setup = (options: {
     const fake = options.fake ?? fakeManager();
     const events: string[] = [];
     let child: BuildIdentity | null = null;
+    const machine = { work: options.work === undefined ? { terminals: 0, agents: 0 } : options.work };
     const behindPort = (): BuildIdentity | null => fake.service.running ?? child ?? options.answering ?? null;
     const deps: ServiceControllerDeps = {
         support: options.support ?? 'supported',
         manager: fake.manager,
         setting: memorySetting(options.keepRunning ?? true),
-        definition: () => '<plist/>',
+        definition: () => DEFINITION,
+        commandLineProgram: COMMAND_LINE_PROGRAM,
         expected: EXPECTED,
         probe: async () => behindPort(),
-        work: async () => (options.work === undefined ? { terminals: 0, agents: 0 } : options.work),
+        work: async () => machine.work,
         waitForHealth: async (accept) => {
             const health = behindPort();
             if (!health || !accept(health)) {
@@ -89,7 +99,7 @@ const setup = (options: {
             child = null;
         }
     };
-    return { controller: createServiceController(deps), fake, events, deps };
+    return { controller: createServiceController(deps), fake, events, deps, machine };
 };
 
 describe('start', () => {
@@ -177,12 +187,77 @@ describe('start', () => {
         expect(events).toEqual(['spawn']);
     });
 
+    test('a definition that changed under the same build is read by restarting the service, once nothing runs', async () => {
+        const { controller, fake } = setup({ fake: fakeManager({ onDisk: '<plist>old PATH</plist>', running: EXPECTED }) });
+        await controller.start();
+        expect(fake.calls).toEqual(['install', 'restart']);
+        expect(controller.state().owner).toBe('service');
+    });
+
+    test('a changed definition waits for the work on the machine, and the next refresh after it restarts', async () => {
+        const { controller, fake, machine } = setup({
+            fake: fakeManager({ onDisk: '<plist>old PATH</plist>', running: EXPECTED }),
+            work: { terminals: 1, agents: 1 }
+        });
+        await controller.start();
+        expect(fake.calls).toEqual(['install']);
+        expect(controller.unsettled()).toBe(true);
+        await controller.refresh();
+        expect(fake.calls).toEqual(['install']);
+        machine.work = { terminals: 0, agents: 0 };
+        await controller.refresh();
+        expect(fake.calls).toEqual(['install', 'restart']);
+        expect(controller.unsettled()).toBe(false);
+    });
+
     test('with the service off whatever answers is used and never killed', async () => {
         const { controller, events } = setup({ keepRunning: false, answering: { version: '0.0.9', build: 'old' } });
         await controller.start();
         expect(controller.state().owner).toBe('external');
         controller.quit(false);
         expect(events).toEqual([]);
+    });
+});
+
+describe('a service the command line installed', () => {
+    const COMMAND_LINE = `<plist><string>${COMMAND_LINE_PROGRAM}</string><string>--host</string><string>0.0.0.0</string></plist>`;
+
+    test('is used as it is with the switch on, and nothing is written, started or stopped', async () => {
+        const { controller, fake, events } = setup({ fake: fakeManager({ onDisk: COMMAND_LINE, running: EXPECTED }) });
+        await controller.start();
+        expect(controller.state()).toMatchObject({ owner: 'external', keepRunning: false, commandLineService: true });
+        expect(controller.survivesQuit(false)).toBe(true);
+        controller.setKeepRunning(true);
+        controller.quit(false);
+        expect(fake.calls).toEqual([]);
+        expect(fake.service.definition).toBe(COMMAND_LINE);
+        expect(events).toEqual([]);
+    });
+
+    test('is not removed or stopped with the switch off', async () => {
+        const { controller, fake } = setup({ keepRunning: false, fake: fakeManager({ onDisk: COMMAND_LINE, running: EXPECTED }) });
+        await controller.start();
+        controller.setKeepRunning(false);
+        controller.quit(true);
+        expect(fake.calls).toEqual([]);
+        expect(fake.service.definition).toBe(COMMAND_LINE);
+    });
+
+    test('that is not running leaves the app on a daemon of its own, which is not handed to the service at quit', async () => {
+        const { controller, fake, events } = setup({ fake: fakeManager({ onDisk: COMMAND_LINE }) });
+        await controller.start();
+        controller.quit(false);
+        expect(events).toEqual(['spawn', 'kill']);
+        expect(fake.calls).toEqual([]);
+    });
+
+    test("a definition of an app elsewhere is the app's own and is rewritten", async () => {
+        const { controller, fake } = setup({
+            fake: fakeManager({ onDisk: '<plist><string>/Volumes/Ruimte/Ruimte.app/Contents/Resources/bin/ruimte</string></plist>' })
+        });
+        await controller.start();
+        expect(fake.calls).toEqual(['install', 'start']);
+        expect(controller.state().commandLineService).toBe(false);
     });
 });
 
@@ -217,7 +292,7 @@ describe('the setting', () => {
         const { controller, fake } = setup({ fake: fakeManager({ installed: true, running: EXPECTED }) });
         await controller.start();
         expect(controller.setKeepRunning(false)).toMatchObject({ keepRunning: false, owner: 'service' });
-        expect(fake.service.installed).toBe(false);
+        expect(fake.service.definition).toBeNull();
         expect(fake.service.running).toEqual(EXPECTED);
         expect(controller.survivesQuit(false)).toBe(false);
         controller.quit(false);

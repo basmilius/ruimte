@@ -298,7 +298,8 @@
         "unavailable": {
             "dev": "De dev-app draait altijd een eigen machine en stopt die als hij afsluit.",
             "windows": "Nog niet beschikbaar op Windows, dus deze machine stopt als Ruimte afsluit.",
-            "appimage": "Niet beschikbaar voor de AppImage, die weg is zodra Ruimte afsluit. Installeer het deb- of rpm-pakket om deze machine te laten draaien."
+            "appimage": "Niet beschikbaar voor de AppImage, die weg is zodra Ruimte afsluit. Installeer het deb- of rpm-pakket om deze machine te laten draaien.",
+            "commandLine": "Deze machine draait als de achtergronddienst die `npx ruimte service install` heeft ingesteld. Ruimte gebruikt die zoals hij is en laat hem met rust; `npx ruimte service uninstall` verwijdert hem."
         },
         "pending": {
             "takeOver": "Ruimte draait deze machine nu zelf. Vanaf de volgende keer dat Ruimte afsluit blijft die draaien.",
