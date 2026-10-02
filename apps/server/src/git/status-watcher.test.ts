@@ -110,6 +110,39 @@ describe('GitStatusWatcher', () => {
         expect(changed.map((event) => event.cwd)).toEqual([repo, repo]);
     });
 
+    test('a write that lands while a status runs is published once that run is over', async () => {
+        await watcher.watch('c1', repo);
+        const original = watcher.status.bind(watcher);
+        const { promise: gate, resolve: release } = Promise.withResolvers<void>();
+        const { promise: inside, resolve: entered } = Promise.withResolvers<void>();
+        let first = true;
+        watcher.status = async (cwd: string) => {
+            const status = await original(cwd);
+            if (first) {
+                first = false;
+                entered();
+                await gate;
+            }
+            return status;
+        };
+        await writeFile(join(repo, 'a.txt'), 'a\n');
+        fake.on(repo).emit('a.txt');
+        const firstRun = fake.settle();
+        await inside;
+        await writeFile(join(repo, 'b.txt'), 'b\n');
+        fake.on(repo).emit('b.txt');
+        await fake.settle();
+        release();
+        await firstRun;
+
+        expect(
+            events
+                .at(-1)!
+                .status.files.map((file) => file.path)
+                .sort()
+        ).toEqual(['a.txt', 'b.txt']);
+    });
+
     test('a write git ignores, and git moving its own objects and locks, are not worth a status run', async () => {
         await watcher.watch('c1', repo);
         await mkdir(join(repo, 'build'));

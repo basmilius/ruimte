@@ -129,6 +129,9 @@ export class GitStatusWatcher {
             return;
         }
         if (state.running) {
+            for (const path of touched) {
+                state.touched.add(path);
+            }
             state.again = true;
             return;
         }
