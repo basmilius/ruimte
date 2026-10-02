@@ -49,10 +49,18 @@ const labelAt = (point: Point, elements: readonly DrawingElement[], arrowId: str
  * arrow as the two things it connects. A diagram becomes a list without anyone looking at it.
  */
 export const readingOrder = (elements: readonly DrawingElement[]): string[] => {
-    const texts = elements
-        .filter((element) => labelOf(element) !== null)
-        .sort((left, right) => (Math.abs(left.y - right.y) <= ROW_TOLERANCE ? left.x - right.x : left.y - right.y))
-        .map((element) => labelOf(element)!);
+    // A row is measured from its top text, so a staircase of texts cannot chain into one long line.
+    const rows: DrawingElement[][] = [];
+    const labeled = elements.filter((element) => labelOf(element) !== null).sort((left, right) => left.y - right.y || left.x - right.x);
+    for (const element of labeled) {
+        const row = rows.at(-1);
+        if (row && element.y - row[0]!.y <= ROW_TOLERANCE) {
+            row.push(element);
+        } else {
+            rows.push([element]);
+        }
+    }
+    const texts = rows.flatMap((row) => row.sort((left, right) => left.x - right.x || left.y - right.y)).map((element) => labelOf(element)!);
 
     const arrows: string[] = [];
     for (const element of elements) {

@@ -157,6 +157,14 @@ describe('toSvg', () => {
 });
 
 describe('readingOrder', () => {
+    test('a staircase of texts reads the same whatever order they were drawn in', () => {
+        const stairs = [text('A', 'A', 300, 0), text('B', 'B', 200, 20), text('C', 'C', 100, 40), text('D', 'D', 0, 60)];
+        const orders = [stairs, [...stairs].reverse(), [stairs[2]!, stairs[0]!, stairs[3]!, stairs[1]!]];
+        for (const order of orders) {
+            expect(readingOrder(order)).toEqual(['B', 'A', 'D', 'C']);
+        }
+    });
+
     test('texts read top to bottom and left to right', () => {
         const lines = readingOrder([text('c', 'third', 0, 200), text('b', 'second', 300, 10), text('a', 'first', 0, 0)]);
         expect(lines).toEqual(['first', 'second', 'third']);
