@@ -564,6 +564,12 @@ describe('subagents', () => {
         expect(summaryLine('')).toBe('');
     });
 
+    test('summaryLine never cuts a character in half', () => {
+        // Japanese has no spaces to cut at, and the emoji straddles the 80th unit.
+        const summary = `${'調'.repeat(79)}😀${'査'.repeat(20)}`;
+        expect(summaryLine(summary)).toBe(`${'調'.repeat(79)}...`);
+    });
+
     test('the footer strip survives a CLI that says it a little differently', () => {
         expect(stripAgentFooter('done\nagentId: a1 (use SendMessage ...)')).toEqual({ text: 'done', usage: null });
         expect(stripAgentFooter('(Subagent completed but returned no output.)')).toEqual({ text: null, usage: null });

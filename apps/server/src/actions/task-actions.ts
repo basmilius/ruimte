@@ -1,5 +1,5 @@
 import type { ActionHandlers } from '@ruimte/actions';
-import { isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
+import { clipText, isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
 import { ownViewOf, refuseOwnView } from '../canvas/own-view.ts';
 import { readPromptFile, readResultFile } from '../canvas/project-paths.ts';
 import { MAX_RESULT_LENGTH, MAX_TASK_PROMPT_LENGTH, requireChatParent, taskLine } from '../canvas/tasks.ts';
@@ -18,10 +18,7 @@ const NEEDS_PROMPT = '--prompt needs what the task asks, in quotes';
 const isCurrentTask = (task: Task, nodeId: string): boolean => task.status === 'open' || (task.parentId === nodeId && task.wake === 'pending');
 
 /* The title of a task nobody named: its first line, cut to what a name on the canvas fits. */
-const titleFromPrompt = (prompt: string): string =>
-    field(prompt.split('\n').find((line) => line.trim() !== '') ?? prompt)
-        .trim()
-        .slice(0, MAX_TITLE_LENGTH);
+const titleFromPrompt = (prompt: string): string => clipText(field(prompt.split('\n').find((line) => line.trim() !== '') ?? prompt).trim(), MAX_TITLE_LENGTH);
 
 /* A node of this project, on whatever canvas it sits: a task travels by lineage, not over a canvas. */
 const nodeOf = (content: ProjectContent, id: string): ProjectNode | undefined => {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import {
+    clipText,
     isCanvasView,
     NODE_SIZE,
     withView,
@@ -253,7 +254,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
     const native = info.provider === 'codex' ? turn.native?.turnId : turn.native?.lastUuid;
     const cut: Cut = { turn, number: index + 1, total: turns.length, last, exact: native !== undefined };
     const originalTitle = deps.titleFor(payload.chatId) ?? nameOf(info.provider);
-    const title = (payload.title ?? `${originalTitle} (fork)`).slice(0, MAX_TITLE);
+    const title = clipText(payload.title ?? `${originalTitle} (fork)`, MAX_TITLE);
     const forkId = newId('chat', await deps.read(place.projectId));
 
     // Steps taken back in reverse when a later one is refused.

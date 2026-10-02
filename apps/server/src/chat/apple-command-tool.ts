@@ -1,3 +1,4 @@
+import { clipText } from '@ruimte/contracts';
 import type { AppleToolResult } from './apple-tools.ts';
 
 export interface AppleCommandProcess {
@@ -120,7 +121,7 @@ export const executeAppleCommand = async (
             });
         while (Buffer.byteLength(serialized()) > 6000) {
             truncated = true;
-            output = output.slice(0, Math.floor(output.length * 0.9));
+            output = clipText(output, Math.floor(output.length * 0.9));
         }
         return {
             output: serialized(),

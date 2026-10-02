@@ -1,4 +1,4 @@
-import { SUGGESTED_TITLE_LIMIT, type NodeTitleSource } from '@ruimte/contracts';
+import { clipText, SUGGESTED_TITLE_LIMIT, type NodeTitleSource } from '@ruimte/contracts';
 
 /*
  * The name a node takes from what its CLI called the session, or null to leave it as it is. A person's
@@ -9,7 +9,7 @@ export const suggestedTitleFor = (current: { title: string; titleSource?: NodeTi
     if (!suggestion || current.titleSource === 'user') {
         return null;
     }
-    const title = suggestion.replace(/\s+/g, ' ').trim().slice(0, SUGGESTED_TITLE_LIMIT);
+    const title = clipText(suggestion.replace(/\s+/g, ' ').trim(), SUGGESTED_TITLE_LIMIT);
     return title !== '' && title !== current.title ? title : null;
 };
 
@@ -32,7 +32,7 @@ export const deriveNodeTitle = (prompt: string): string | null => {
     if (line.length <= TITLE_LIMIT) {
         return withoutTail(line) || null;
     }
-    const cut = line.slice(0, TITLE_LIMIT);
+    const cut = clipText(line, TITLE_LIMIT);
     const space = cut.lastIndexOf(' ');
     const head = withoutTail(space > TITLE_LIMIT / 2 ? cut.slice(0, space) : cut);
     return head === '' ? null : `${head}…`;

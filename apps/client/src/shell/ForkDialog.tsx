@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitFork } from 'lucide-react';
-import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
+import { CHAT_FORK_TITLE_MAX, clipText, type ChatForkInfoResult } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { AccountDot } from '@ruimte/agents-react/agents/AccountDot';
 import { canContinueOn } from '@ruimte/agents-react/agents/accounts';
@@ -72,7 +72,7 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     // A node's live editor names it before a save has brought the document up to date.
     const originalTitle = canvasOfNode(chatId)?.getState().nodes[chatId]?.title ?? viewName ?? t('planPanel.chat');
     const shapes = forkShapes(origin);
-    const [title, setTitle] = useState(t('fork.copyTitle', { title: originalTitle }).slice(0, CHAT_FORK_TITLE_MAX));
+    const [title, setTitle] = useState(clipText(t('fork.copyTitle', { title: originalTitle }), CHAT_FORK_TITLE_MAX));
     const [shape, setShape] = useState<ForkShape>(shapes[0]!);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);

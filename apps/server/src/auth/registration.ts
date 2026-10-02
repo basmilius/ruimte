@@ -5,6 +5,7 @@ import {
     type DeviceLinkStartPayload,
     type RegisterMachinePayload
 } from '@ruimte/pulsar';
+import { clipText } from '@ruimte/contracts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 
 type SigningIdentity = Pick<EndpointIdentity, 'id' | 'publicKey' | 'label' | 'icon' | 'sign'>;
@@ -15,7 +16,7 @@ type SigningIdentity = Pick<EndpointIdentity, 'id' | 'publicKey' | 'label' | 'ic
  */
 const describe = (identity: SigningIdentity) => {
     const icon = MachineIconSchema.safeParse(identity.icon);
-    return { id: identity.id, name: identity.label.slice(0, 80), icon: icon.success ? icon.data : null, publicKey: identity.publicKey };
+    return { id: identity.id, name: clipText(identity.label, 80), icon: icon.success ? icon.data : null, publicKey: identity.publicKey };
 };
 
 /* The machine agreeing to be listed on one account: `endpoint.signRegistration`, and the last step of `ruimte login`. */

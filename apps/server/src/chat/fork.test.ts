@@ -137,6 +137,26 @@ describe('forking a Claude chat', () => {
         expect([daemon.lineage.madeBy(nodeId), daemon.lineage.projectOf(nodeId)]).toEqual([null, projectId]);
     });
 
+    test('the name of a fork of a chat with a long name is cut between two characters', async () => {
+        const { turns } = await fourTurns();
+        // The emoji takes the 120th and 121st unit, so a cut at 120 would keep its first half.
+        const long = `${'a'.repeat(119)}😀b`;
+        await store.mutate(projectId, (current) => ({
+            content: {
+                ...current,
+                views: current.views.map((view) =>
+                    view.kind === 'canvas' ? { ...view, nodes: view.nodes.map((node) => (node.id === 'chat-lead' ? { ...node, title: long } : node)) } : view
+                )
+            },
+            result: null
+        }));
+
+        const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turns[1]!.id });
+        const { nodeId } = (answer as { result: { nodeId: string } }).result;
+        const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
+        expect(canvas.nodes.find((node) => node.id === nodeId)?.title).toBe('a'.repeat(119));
+    });
+
     test('a chat view forks into a chat view listed right after it, with the items through the turn and its original to read', async () => {
         const { turns } = await fourTurns();
         const leadItems = daemon.chats.get('chat-lead')!.thread.list();

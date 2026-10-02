@@ -1,5 +1,6 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { clipText } from '@ruimte/contracts';
 import { looksLikeSvg, sniffMime } from '../fs/sniff.ts';
 import { PROJECT_DIR } from './project-files.ts';
 
@@ -245,7 +246,7 @@ export const readIdeaName = async (folder: string): Promise<string | null> => {
             .join('')
             .trim();
         if (cleaned !== '') {
-            return cleaned.slice(0, NAME_MAX_CHARS);
+            return clipText(cleaned, NAME_MAX_CHARS);
         }
     }
     return null;

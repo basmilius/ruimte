@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatBookmark } from '@ruimte/agent-contracts';
+import { CHAT_BOOKMARK_LIMITS, type ChatBookmark } from '@ruimte/agent-contracts';
 import { BookmarkStore, bookmarkFileName } from './bookmark-store.ts';
 
 let home: string;
@@ -86,5 +86,13 @@ describe('BookmarkStore', () => {
         await writeFile(join(home, 'chats', bookmarkFileName('chat-1')), JSON.stringify({ version: 1, bookmarks: [{ itemId: '' }] }));
         await expect(store.read('chat-1')).rejects.toThrow('not valid');
         await expect(store.add('chat-1', { itemId: 'b', excerpt: 'y' }, 11)).rejects.toThrow('not valid');
+    });
+
+    test('a long excerpt and name are cut between two characters', async () => {
+        // Each emoji straddles the limit, so a cut there would keep half of it.
+        const excerpt = `${'e'.repeat(CHAT_BOOKMARK_LIMITS.excerpt - 1)}😀`;
+        const name = `${'n'.repeat(CHAT_BOOKMARK_LIMITS.name - 1)}😀`;
+        const [bookmark] = await store.add('chat-1', { itemId: 'a', excerpt, name }, 10);
+        expect(bookmark).toMatchObject({ excerpt: 'e'.repeat(CHAT_BOOKMARK_LIMITS.excerpt - 1), name: 'n'.repeat(CHAT_BOOKMARK_LIMITS.name - 1) });
     });
 });

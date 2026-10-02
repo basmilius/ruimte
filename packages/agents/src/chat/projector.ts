@@ -8,6 +8,7 @@ import type {
     ChatToolProgress,
     ChatTurnLimit
 } from '@ruimte/agent-contracts';
+import { clipText } from '@ruimte/agent-contracts/text';
 import type { BackendEvent } from './backend.ts';
 import { estimateContextBreakdown } from './context-breakdown.ts';
 import type { ChatThread } from './thread.ts';
@@ -79,7 +80,7 @@ export const summaryLine = (summary: string): string => {
     if (text.length <= MAX_SUMMARY_CHARS) {
         return text;
     }
-    const cut = text.slice(0, MAX_SUMMARY_CHARS);
+    const cut = clipText(text, MAX_SUMMARY_CHARS);
     const space = cut.lastIndexOf(' ');
     return `${(space > MAX_SUMMARY_CHARS / 2 ? cut.slice(0, space) : cut).trimEnd()}...`;
 };

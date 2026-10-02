@@ -255,6 +255,7 @@ export * from './render.ts';
 export * from './push.ts';
 export * from './stored-path.ts';
 export * from './task.ts';
+export * from './text.ts';
 export * from './usage.ts';
 export * from './voice-languages.ts';
 

@@ -248,6 +248,35 @@ describe('offline push delivery', () => {
         expect(pushes.length).toBe(1);
     });
 
+    test('a long approval is cut between two characters, so the phone still reads its choices', async () => {
+        // The emoji takes the 500th and 501st unit.
+        const description = `${'x'.repeat(499)}😀 and more`;
+        service.consume({
+            event: 'chat.event',
+            payload: {
+                chatId: 'other',
+                event: {
+                    type: 'item',
+                    item: {
+                        id: 'approval-long',
+                        createdAt: NOW,
+                        turnId: null,
+                        kind: 'approval',
+                        requestId: 'long',
+                        toolUseId: null,
+                        toolName: 'Bash',
+                        input: {},
+                        description,
+                        canAllowAlways: false,
+                        decision: 'pending'
+                    }
+                }
+            }
+        });
+        await service.settled();
+        expect(decrypt(pushes[0]!)).toMatchObject({ kind: 'approval', body: 'x'.repeat(499) });
+    });
+
     test('foreground devices still receive ActivityKit phase updates while alerts stay quiet', async () => {
         await auth.setPush(sessionId, { ...subscription, activities: true });
         const disconnected = service.connected(sessionId);

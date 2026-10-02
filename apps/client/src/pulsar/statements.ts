@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { clipText } from '@ruimte/contracts';
 import { accessRequestMessage, randomToken, type AccessRequestPayload, type AccessStatement, type SignalAccess } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
 import { currentClientLabel } from '@/endpoint/client-label';
@@ -22,7 +23,7 @@ export const requestSignalAccess = async (
     if (statement.machineId !== machineId || statement.clientPublicKey !== key.publicKey || statement.nonce !== nonce) {
         throw new Error(i18next.t('machines:account.statementMismatch'));
     }
-    return { statement, label: label.slice(0, 80) };
+    return { statement, label: clipText(label, 80) };
 };
 
 /* The same, asked of the account this client is signed in to. */

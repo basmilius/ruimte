@@ -21,6 +21,8 @@ describe('suggestedTitleFor', () => {
     test('flattens and caps what the model wrote', () => {
         expect(suggestedTitleFor({ title: 'Chat' }, 'Two\nlines')).toBe('Two lines');
         expect(suggestedTitleFor({ title: 'Chat' }, 'x'.repeat(200))).toHaveLength(SUGGESTED_TITLE_LIMIT);
+        // An emoji across the limit goes whole, never half of it.
+        expect(suggestedTitleFor({ title: 'Chat' }, `${'x'.repeat(SUGGESTED_TITLE_LIMIT - 1)}😀`)).toBe('x'.repeat(SUGGESTED_TITLE_LIMIT - 1));
     });
 });
 
@@ -47,6 +49,10 @@ describe('deriveNodeTitle', () => {
 
     test('cuts a long word where the limit falls', () => {
         expect(deriveNodeTitle(`Fix ${'a'.repeat(80)}`)).toBe(`Fix ${'a'.repeat(44)}…`);
+    });
+
+    test('ends a cut on a whole character', () => {
+        expect(deriveNodeTitle(`a${'😀'.repeat(30)}`)).toBe(`a${'😀'.repeat(23)}…`);
     });
 
     test('answers null when nothing readable is left', () => {

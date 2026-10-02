@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
+import { clipText } from '@ruimte/contracts';
 import {
     APP_REDIRECT_LOOPBACK_PATH,
     AddressBookClient,
@@ -97,7 +98,7 @@ const finishWebSignIn = async (given: PulsarPlatform, web: NonNullable<PulsarPla
             await finishWebLink(given, provider, { code, codeVerifier: verifier, redirectUri });
             return;
         }
-        const view = await given.keeper.exchange({ code, codeVerifier: verifier, redirectUri, label: currentClientLabel().slice(0, 80) });
+        const view = await given.keeper.exchange({ code, codeVerifier: verifier, redirectUri, label: clipText(currentClientLabel(), 80) });
         tokens?.set(view);
         usePulsarAccount.setState({ status: 'signed-in', account: view.account, error: null, notice: null });
         keepStorage();

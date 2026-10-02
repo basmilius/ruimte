@@ -15,6 +15,7 @@ import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
+import { clipText } from '@ruimte/contracts';
 
 interface PushServiceOptions {
     auth: AuthStore;
@@ -89,7 +90,7 @@ export class PushService {
         body: string,
         destination: Pick<EventMap['push.notification'], 'projectId' | 'viewId'>
     ): void {
-        const alert = { ...destination, nodeId, title: title.slice(0, 160), body: body.slice(0, 500) };
+        const alert = { ...destination, nodeId, title: clipText(title, 160), body: clipText(body, 500) };
         this.alert(target, nodeId, alert.title, alert.body);
         for (const listener of this.notificationListeners) {
             listener(alert);
@@ -155,7 +156,7 @@ export class PushService {
             } else if (chat.type === 'item' && chat.item.kind === 'tool' && chat.item.state === 'running') {
                 const node = this.nodes.get(chatId);
                 if (node) {
-                    this.track(this.deliverActivity(chatId, { title: node.title.slice(0, 160), phase: 'tool', startedAt: node.startedAt }));
+                    this.track(this.deliverActivity(chatId, { title: clipText(node.title, 160), phase: 'tool', startedAt: node.startedAt }));
                 }
             } else if (chat.type === 'item' && chat.item.kind === 'approval') {
                 const item = chat.item;
@@ -174,7 +175,7 @@ export class PushService {
                     target: 'chat',
                     nodeId: chatId,
                     title: this.nodes.get(chatId)?.title ?? 'Agent needs permission',
-                    body: (item.description ?? item.toolName).slice(0, 500),
+                    body: clipText(item.description ?? item.toolName, 500),
                     requestId: item.requestId,
                     choices: [
                         { id: 'allow', kind: 'allow', label: 'Allow' },
@@ -214,14 +215,14 @@ export class PushService {
                 kind: 'attention',
                 target,
                 nodeId,
-                title: title.slice(0, 160),
+                title: clipText(title, 160),
                 body: 'The agent needs your attention.',
                 expiresAt: this.now() + PUSH_MAX_AGE_MS
             });
         }
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
             const phase = status === 'running' ? 'running' : status === 'needs-you' ? 'needs-you' : 'done';
-            this.track(this.deliverActivity(nodeId, { title: title.slice(0, 160), phase, startedAt }));
+            this.track(this.deliverActivity(nodeId, { title: clipText(title, 160), phase, startedAt }));
         }
     }
 
@@ -231,8 +232,8 @@ export class PushService {
             kind: 'attention',
             target,
             nodeId,
-            title: title.slice(0, 160),
-            body: body.slice(0, 500),
+            title: clipText(title, 160),
+            body: clipText(body, 500),
             expiresAt: this.now() + PUSH_MAX_AGE_MS
         });
     }
@@ -247,7 +248,7 @@ export class PushService {
             .map((node) => ({
                 nodeId: node.nodeId,
                 target: node.target,
-                title: (this.options.titleFor?.(node.nodeId) || node.title).slice(0, 80),
+                title: clipText(this.options.titleFor?.(node.nodeId) || node.title, 80),
                 phase: node.status === 'needs-you' ? 'needs-you' : 'running',
                 startedAt: this.nodes.get(node.nodeId)?.startedAt
             }));
@@ -258,7 +259,7 @@ export class PushService {
             this.machineStartedAt = this.now();
         }
         const activity: PushActivityContent = {
-            title: (this.options.machineName?.() ?? 'Ruimte').slice(0, 160),
+            title: clipText(this.options.machineName?.() ?? 'Ruimte', 160),
             phase: attentionCount ? 'needs-you' : runningCount ? 'running' : 'done',
             startedAt: this.machineStartedAt || this.now(),
             runningCount,

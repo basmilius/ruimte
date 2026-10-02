@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { ActionRefusal, type ActionCall, type ActionHandlers, type ActionOutput } from '@ruimte/actions';
 import {
     CHAT_FORK_TITLE_MAX,
+    clipText,
     isCanvasView,
     type AgentKind,
     type ChatForkResult,
@@ -490,7 +491,7 @@ export function sessionActions(document: StoreApi<DocumentState>, overrides: Par
                     throw new ActionRefusal('cannot-fork', refusal);
                 }
             }
-            const named = title ?? i18next.t('shell:fork.copyTitle', { title: chat }).slice(0, CHAT_FORK_TITLE_MAX);
+            const named = title ?? clipText(i18next.t('shell:fork.copyTitle', { title: chat }), CHAT_FORK_TITLE_MAX);
             if (branch != null && asksFirst(call)) {
                 return {
                     confirmation: {

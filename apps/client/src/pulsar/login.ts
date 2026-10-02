@@ -1,3 +1,4 @@
+import { clipText } from '@ruimte/contracts';
 import type { IdentityLinkCompletePayload, ProviderId } from '@ruimte/pulsar';
 import { codeFromCallback, createLoginState, createPkce, loginStartUrl, type LoginCallback } from './pkce';
 import type { SessionKeeper, SessionView } from './session';
@@ -59,7 +60,7 @@ const loginInBrowser = async (options: {
 /* Signing in: the code is traded by the keeper, which keeps the refresh token that comes back. */
 export const signIn = async (options: SignInOptions): Promise<SessionView> => {
     const login = await loginInBrowser({ redirect: options.redirect, addressBookUrl: options.addressBookUrl, provider: options.provider ?? 'github' });
-    return options.keeper.exchange({ ...login, label: options.label.slice(0, 80) });
+    return options.keeper.exchange({ ...login, label: clipText(options.label, 80) });
 };
 
 export interface LinkIdentityOptions<T> {

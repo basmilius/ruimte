@@ -1,4 +1,4 @@
-import { FS_GREP_CONTEXT_LINES, FS_GREP_MAX_RESULTS, type FsGrepMatch, type FsGrepResult } from '@ruimte/contracts';
+import { clipText, FS_GREP_CONTEXT_LINES, FS_GREP_MAX_RESULTS, type FsGrepMatch, type FsGrepResult } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
 import { listSearchableFiles } from './search.ts';
 
@@ -49,13 +49,13 @@ const contextOf = (lineOf: (line: number) => string | undefined, line: number): 
     for (let offset = FS_GREP_CONTEXT_LINES; offset >= 1; offset -= 1) {
         const text = lineOf(line - offset);
         if (text !== undefined) {
-            before.push(text.slice(0, MAX_LINE_LENGTH));
+            before.push(clipText(text, MAX_LINE_LENGTH));
         }
     }
     for (let offset = 1; offset <= FS_GREP_CONTEXT_LINES; offset += 1) {
         const text = lineOf(line + offset);
         if (text !== undefined) {
-            after.push(text.slice(0, MAX_LINE_LENGTH));
+            after.push(clipText(text, MAX_LINE_LENGTH));
         }
     }
     return { before, after };
@@ -90,7 +90,7 @@ interface Collected {
 /* One file's hits and the lines around them, turned into the matches the wire carries. */
 const matchesOfFile = (path: string, hits: Collected[], lines: Map<number, string>): FsGrepMatch[] =>
     hits.map((hit) => {
-        const text = hit.text.slice(0, MAX_LINE_LENGTH);
+        const text = clipText(hit.text, MAX_LINE_LENGTH);
         const column = toUnits(hit.text, hit.start);
         return {
             path,
@@ -263,7 +263,7 @@ const searchInJs = async (cwd: string, query: string, options: GrepOptions, limi
                 line: index + 1,
                 column: Math.min(found.index, MAX_LINE_LENGTH),
                 length: Math.min(found[0].length, MAX_LINE_LENGTH - Math.min(found.index, MAX_LINE_LENGTH)),
-                text: text.slice(0, MAX_LINE_LENGTH),
+                text: clipText(text, MAX_LINE_LENGTH),
                 ...contextOf((line) => lines[line - 1]?.replace(/\r$/, ''), index + 1)
             });
         }

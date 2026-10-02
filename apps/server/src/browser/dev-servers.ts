@@ -1,4 +1,4 @@
-import type { DevServer } from '@ruimte/contracts';
+import { clipText, type DevServer } from '@ruimte/contracts';
 
 /* As much of `fetch` as a probe uses, so a test can hand it an answer. */
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -22,7 +22,7 @@ export const titleOfHtml = (html: string): string | undefined => {
         .replace(/&(amp|lt|gt|quot|apos|#39);/g, (whole, name: string) => ENTITIES[name] ?? whole)
         .replace(/\s+/g, ' ')
         .trim();
-    return text === '' ? undefined : text.slice(0, 200);
+    return text === '' ? undefined : clipText(text, 200);
 };
 
 const readStart = async (response: Response): Promise<string> => {

@@ -28,6 +28,11 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
+/* A hit and the line above it, each with an emoji across the 500th and 501st unit, where a line is cut. */
+const longLines = async (): Promise<void> => {
+    await writeFile(join(root, 'src', 'long.ts'), [`${'c'.repeat(499)}😀 above`, `${'a'.repeat(499)}😀 needle`, ''].join('\n'));
+};
+
 describe('grepFiles', () => {
     test('finds a literal across files and reads the lines around it', async () => {
         const result = await grepFiles(root, 'session');
@@ -39,6 +44,12 @@ describe('grepFiles', () => {
         expect(hit.text).toContain('startSession');
         expect(hit.before.at(-1)).toBe('');
         expect(hit.after[0]).toBe('    spawn(["bash"]);');
+    });
+
+    test('cuts a long line between two characters', async () => {
+        await longLines();
+        const [hit] = (await grepFiles(root, 'needle')).matches;
+        expect(hit).toMatchObject({ text: 'a'.repeat(499), before: ['c'.repeat(499)] });
     });
 
     test('points at the hit inside the line, counted the way a viewer draws it', async () => {
@@ -120,6 +131,12 @@ describe('grepFiles without ripgrep', () => {
         let clock = 0;
         const result = await grepFiles(root, 'e', { now: () => (clock += 20_000) });
         expect(result).toEqual({ matches: [], files: 0, truncated: true });
+    });
+
+    test('cuts a long line between two characters', async () => {
+        await longLines();
+        const [hit] = (await grepFiles(root, 'needle')).matches;
+        expect(hit).toMatchObject({ text: 'a'.repeat(499), before: ['c'.repeat(499)] });
     });
 
     test('skips a file that holds bytes nobody reads', async () => {

@@ -12,6 +12,7 @@ import {
     type PushEnvelope,
     type PushRouting
 } from '@ruimte/pulsar';
+import { clipText } from '@ruimte/contracts';
 
 export const encryptPush = (
     routing: PushRouting,
@@ -29,7 +30,7 @@ export const encryptPush = (
     let bytes = Buffer.from(JSON.stringify(fitted));
     // APNs counts UTF-8 bytes, so a short emoji-rich command can exceed the envelope budget.
     while (bytes.length > 2200 && 'body' in fitted && fitted.body.length > 0) {
-        fitted.body = fitted.body.slice(0, Math.floor(fitted.body.length / 2));
+        fitted.body = clipText(fitted.body, Math.floor(fitted.body.length / 2));
         bytes = Buffer.from(JSON.stringify(fitted));
     }
     cipher.setAAD(Buffer.from(pushRoutingMessage(routing)), { plaintextLength: bytes.length });

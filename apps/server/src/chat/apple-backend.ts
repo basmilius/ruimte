@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { AppleFoundationEventSchema, type AppleFoundationEvent, type AppleFoundationRequest } from '@ruimte/contracts';
+import { AppleFoundationEventSchema, clipText, type AppleFoundationEvent, type AppleFoundationRequest } from '@ruimte/contracts';
 import { closeAppleNetworkTools } from './apple-network-tools.ts';
 import { APPLE_TOOL_NAMES, appleToolInput, executeAppleTool, type AppleToolCall, type AppleToolContext, type AppleToolResult } from './apple-tools.ts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from '@ruimte/agents/chat/backend';
@@ -167,7 +167,7 @@ export class AppleBackend implements ChatBackend {
             return false;
         }
         if (decision !== 'allow') {
-            this.finishTool(id, { output: `Denied by the person${message ? `: ${message.slice(0, 500)}` : '.'}`, failed: true }, 'denied');
+            this.finishTool(id, { output: `Denied by the person${message ? `: ${clipText(message, 500)}` : '.'}`, failed: true }, 'denied');
         } else {
             const controller = new AbortController();
             this.executing.set(id, controller);
@@ -263,7 +263,7 @@ export class AppleBackend implements ChatBackend {
     }
     declineRequest(id: string, message: string): boolean {
         if (this.questions.delete(id)) {
-            this.finishTool(id, { output: `Question declined: ${message.slice(0, 500)}`, failed: true }, 'denied');
+            this.finishTool(id, { output: `Question declined: ${clipText(message, 500)}`, failed: true }, 'denied');
             return true;
         }
         return this.respondApproval(id, 'deny', message);

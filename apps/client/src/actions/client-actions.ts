@@ -20,6 +20,7 @@ import {
 } from '@ruimte/actions';
 import {
     canShareView,
+    clipText,
     flagOf,
     isCanvasView,
     isDiagramView,
@@ -637,7 +638,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
                 ...(title
                     ? { title }
                     : kind === 'note' && content
-                      ? { title: content.split('\n')[0]!.slice(0, 48) }
+                      ? { title: clipText(content.split('\n')[0]!, 48) }
                       : kind === 'file' && path
                         ? { title: basenameOf(path) }
                         : {}),
@@ -1426,7 +1427,7 @@ export const renameViewAction = (viewId: string, name: string): void => {
 };
 
 /* A name carried over from something that already has one may predate the limit; it is cut, never refused. */
-const carriedName = (name: string | undefined): string | null => (name === undefined ? null : name.trim().slice(0, MAX_TITLE_LENGTH) || null);
+const carriedName = (name: string | undefined): string | null => (name === undefined ? null : clipText(name.trim(), MAX_TITLE_LENGTH) || null);
 
 export interface CreateViewOptions extends AgentSession {
     name?: string;

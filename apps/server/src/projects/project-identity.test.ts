@@ -127,6 +127,10 @@ describe('readIdeaName', () => {
         await put('.idea/.name', `${'x'.repeat(200)}\n`);
         expect(await readIdeaName(folder)).toHaveLength(64);
 
+        // The emoji takes the 64th and 65th unit, and half of one makes the project list unreadable on an iPhone.
+        await put('.idea/.name', `${'x'.repeat(63)}😀y\n`);
+        expect(await readIdeaName(folder)).toBe('x'.repeat(63));
+
         await put('.idea/.name', Buffer.alloc(8 * 1024, 0x41));
         expect(await readIdeaName(folder)).toBeNull();
     });

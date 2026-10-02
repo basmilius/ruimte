@@ -1,4 +1,4 @@
-import type { ChatApprovalItem, ChatItem, ChatQuestionItem, Task } from '@ruimte/agent-contracts';
+import { clipText, type ChatApprovalItem, type ChatItem, type ChatQuestionItem, type Task } from '@ruimte/agent-contracts';
 import type { ChatCore } from '../chat/chat-core.ts';
 import { errorText } from '../error-text.ts';
 import type { AgentEvent } from '../events.ts';
@@ -110,7 +110,7 @@ const NOTE_QUESTION_LENGTH = 200;
 
 const quotedShort = (text: string): string => {
     const line = text.replace(/\s+/g, ' ').trim();
-    return JSON.stringify(line.length > NOTE_QUESTION_LENGTH ? `${line.slice(0, NOTE_QUESTION_LENGTH - 1)}…` : line);
+    return JSON.stringify(line.length > NOTE_QUESTION_LENGTH ? `${clipText(line, NOTE_QUESTION_LENGTH - 1)}…` : line);
 };
 
 /* One question as the parent's CLI reads it, with the choices it may pick from. */

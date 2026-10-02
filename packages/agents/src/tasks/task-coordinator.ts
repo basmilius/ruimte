@@ -1,5 +1,5 @@
 import type { ChatBackgroundTask, ChatItem, ChatTurnItem, Task, TaskResult } from '@ruimte/agent-contracts';
-import { abortedByMachine } from '@ruimte/agent-contracts';
+import { abortedByMachine, clipText } from '@ruimte/agent-contracts';
 import { BACKGROUND_COMMAND_LIMIT_MS, commandLabel, isBackgroundWork, runningInBackground, runsInBackground } from '../chat/background-work.ts';
 import { errorText } from '../error-text.ts';
 import type { AgentEvent } from '../events.ts';
@@ -372,7 +372,7 @@ export class TaskCoordinator {
         }
         await this.deps.oweWake(settled);
         if (status === 'failed') {
-            this.deps.alert(settled.childId, `Task failed: ${settled.title}`, result.text.slice(0, 500));
+            this.deps.alert(settled.childId, `Task failed: ${settled.title}`, clipText(result.text, 500));
         }
         return settled;
     }

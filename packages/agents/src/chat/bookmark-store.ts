@@ -1,6 +1,6 @@
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { CHAT_BOOKMARK_LIMITS, ChatBookmarksSchema, type ChatBookmark } from '@ruimte/agent-contracts';
+import { CHAT_BOOKMARK_LIMITS, ChatBookmarksSchema, clipText, type ChatBookmark } from '@ruimte/agent-contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { KeyedSerializer } from '../serializer.ts';
@@ -19,7 +19,7 @@ export type BookmarkListener = (chatId: string, bookmarks: ChatBookmark[]) => vo
 
 /* A name as it is kept: trimmed, and none at all when nothing is left. */
 const cleanName = (name: string | undefined): string | undefined => {
-    const trimmed = name?.trim().slice(0, CHAT_BOOKMARK_LIMITS.name);
+    const trimmed = name === undefined ? undefined : clipText(name.trim(), CHAT_BOOKMARK_LIMITS.name);
     return trimmed === undefined || trimmed === '' ? undefined : trimmed;
 };
 
@@ -66,7 +66,7 @@ export class BookmarkStore {
             if (bookmarks.length >= CHAT_BOOKMARK_LIMITS.perChat) {
                 throw new ChatError('too-many-bookmarks', `This chat already keeps ${CHAT_BOOKMARK_LIMITS.perChat} bookmarks; remove one first`);
             }
-            const excerpt = input.excerpt.slice(0, CHAT_BOOKMARK_LIMITS.excerpt);
+            const excerpt = clipText(input.excerpt, CHAT_BOOKMARK_LIMITS.excerpt);
             return [...bookmarks, named({ itemId: input.itemId, excerpt, createdAt: now }, name)];
         });
     }

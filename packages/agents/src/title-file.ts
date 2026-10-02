@@ -1,5 +1,5 @@
 import { open } from 'node:fs/promises';
-import { SUGGESTED_TITLE_LIMIT } from '@ruimte/agent-contracts';
+import { clipText, SUGGESTED_TITLE_LIMIT } from '@ruimte/agent-contracts';
 
 // oxlint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]+/g;
@@ -16,7 +16,7 @@ export const cleanTitle = (raw: unknown): string | null => {
     if (text === '') {
         return null;
     }
-    return text.length <= SUGGESTED_TITLE_LIMIT ? text : `${text.slice(0, SUGGESTED_TITLE_LIMIT - 1).trimEnd()}…`;
+    return text.length <= SUGGESTED_TITLE_LIMIT ? text : `${clipText(text, SUGGESTED_TITLE_LIMIT - 1).trimEnd()}…`;
 };
 
 /*
