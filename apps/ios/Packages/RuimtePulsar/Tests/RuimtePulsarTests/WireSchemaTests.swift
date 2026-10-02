@@ -24,6 +24,15 @@ struct WireSchemaTests {
         }
     }
 
+    @Test func aValidationErrorNamesTheField() {
+        do {
+            try WireSchema.validate("request.server.ping.result", .object(["time": .string("now")]))
+            Issue.record("A string time validated")
+        } catch {
+            #expect(error.localizedDescription.contains("request.server.ping.result.time"))
+        }
+    }
+
     @Test func aLoneSurrogateHalfDecodesAsAReplacementCharacter() throws {
         let value = try JSONValue.decode(
             Data(

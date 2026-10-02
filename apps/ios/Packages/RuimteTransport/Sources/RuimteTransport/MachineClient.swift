@@ -450,7 +450,12 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                 } else {
                     throw MachineClientError.invalid("Invalid machine response")
                 }
-            } catch { finish(id, result: .failure(error)) }
+            } catch {
+                let type = request.type.rawValue
+                let reason = error.localizedDescription
+                Self.log.error("Rejected a reply to \(type, privacy: .public): \(reason, privacy: .public)")
+                finish(id, result: .failure(error))
+            }
             return
         }
         guard frame["type"] == .string("event"), let name = frame["event"]?.stringValue,

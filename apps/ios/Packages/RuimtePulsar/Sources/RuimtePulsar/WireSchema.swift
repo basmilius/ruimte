@@ -6,8 +6,14 @@ public enum Presence<Value: Codable & Sendable & Equatable>: Sendable, Equatable
     case value(Value)
 }
 
-public enum WireValidationError: Error, Sendable, Equatable {
+public enum WireValidationError: Error, LocalizedError, Sendable, Equatable {
     case invalid(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalid(let reason): reason
+        }
+    }
 }
 
 public struct WireCodingKey: CodingKey {
