@@ -153,12 +153,13 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
         );
     }
     return (
-        <div className="file-diff min-h-0 grow overflow-auto">
+        <div className="file-diff flex min-h-0 grow flex-col overflow-auto">
             <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     change={{ path: relative, kind: 'update', diff: state.diff.diff }}
                     overflow={wrap ? 'wrap' : 'scroll'}
                     diffStyle={layout === 'split' ? 'split' : 'unified'}
+                    fill
                 />
             </Suspense>
         </div>

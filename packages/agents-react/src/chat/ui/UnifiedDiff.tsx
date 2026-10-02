@@ -22,6 +22,16 @@ const asPatch = (change: ChatFileChange): string | null => {
     return `--- ${from}\n+++ ${to}\n${change.diff}`;
 };
 
+/* Lets a diff with a view of its own run to the bottom of it, so the scrollbar of a short one sits
+   there instead of under its last line; the lines themselves keep their height. */
+const FILL_CSS = `
+:host { display: flex; flex-direction: column; flex-grow: 1; }
+pre { flex-grow: 1; align-content: start; }
+pre[data-diff-type="single"] { display: flex; flex-direction: column; }
+pre[data-diff-type="split"][data-overflow="scroll"]:not([data-dehydrated]) { align-content: stretch; }
+pre > [data-code] { flex-grow: 1; align-self: stretch; align-content: start; }
+`;
+
 const lineClass = (line: string): string => {
     if (line.startsWith('+')) {
         return 'text-term-green';
@@ -37,9 +47,11 @@ interface UnifiedDiffProps {
     overflow?: 'wrap' | 'scroll';
     /* `split` puts the old and the new side by side; the chat always stacks. */
     diffStyle?: 'unified' | 'split';
+    /* Grow to the height of a flex column around it. */
+    fill?: boolean;
 }
 
-export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'unified' }: UnifiedDiffProps) {
+export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'unified', fill = false }: UnifiedDiffProps) {
     const resolved = chatHost().code.useMode();
     const theme = useDiffTheme();
     const patch = useMemo(() => asPatch(change), [change]);
@@ -50,9 +62,10 @@ export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'un
             disableFileHeader: true,
             diffStyle,
             overflow,
-            hunkSeparators: 'simple' as const
+            hunkSeparators: 'simple' as const,
+            unsafeCSS: fill ? FILL_CSS : undefined
         }),
-        [diffStyle, overflow, theme, resolved]
+        [diffStyle, overflow, theme, resolved, fill]
     );
     if (patch === null) {
         return (
@@ -69,7 +82,7 @@ export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'un
         );
     }
     return (
-        <div className="chat-diff select-text">
+        <div className={clsx('chat-diff select-text', fill && 'flex grow flex-col')}>
             <PatchDiff patch={patch} options={options} />
         </div>
     );
