@@ -218,6 +218,7 @@ describe('ContextStore', () => {
         expect(await (await get('/context/note?tail=1', 'tok')).text()).toBe('two');
         expect((await get('/context/note?tail=0', 'tok')).status).toBe(400);
         expect((await get('/context/note?tail=two', 'tok')).status).toBe(400);
+        expect((await get('/context/%E0', 'tok')).status).toBe(400);
     });
 
     test('a read that finds nothing answers why, from the canvas the CLI cannot see', async () => {

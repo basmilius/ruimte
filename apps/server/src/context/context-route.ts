@@ -62,6 +62,12 @@ export const handleContextRequest = async (request: Request, pathname: string, d
     if (tail !== null && (!Number.isInteger(tail) || tail < 1)) {
         return new Response('tail takes a positive whole number of lines', { status: 400 });
     }
-    const read = await serverActions.execute('context.read', { sourceId: decodeURIComponent(rest), tail, subagent: query.get('subagent') || null }, call);
+    let sourceId: string;
+    try {
+        sourceId = decodeURIComponent(rest);
+    } catch {
+        return new Response('The source id is not valid percent-encoding', { status: 400 });
+    }
+    const read = await serverActions.execute('context.read', { sourceId, tail, subagent: query.get('subagent') || null }, call);
     return read.status === 'completed' ? new Response(read.output.text, { headers: TEXT }) : failed(read);
 };
