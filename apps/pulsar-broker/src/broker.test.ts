@@ -131,6 +131,35 @@ describe('the broker between peers', () => {
         expect(framesOf(client.state, 'relayed')[0]!.envelope).toEqual(answer);
     });
 
+    test('an envelope goes on byte for byte as the sender wrote it, fields this broker does not know included', async () => {
+        const broker = newBroker();
+        const machine = connect(broker, 'machine', newKey());
+        const client = connect(broker, 'client', newKey());
+        await settle();
+        const heard: string[] = [];
+        const onFrame = machine.socket.onFrame;
+        machine.socket.onFrame = (frame) => {
+            heard.push(frame);
+            onFrame?.(frame);
+        };
+        const envelope = { connectionId: 'attempt-0001', later: { nested: [1, 'two', null] }, signal: { kind: 'offer', sdp: 'v=0', alsoLater: true } };
+        const signature = 's'.repeat(86);
+        broker.message(client.handle, JSON.stringify({ type: 'relay', id: 'r1', to: machine.key.publicKey, envelope, signature }));
+        expect(heard).toEqual([JSON.stringify({ type: 'relayed', from: client.key.publicKey, envelope, signature })]);
+    });
+
+    test('an envelope an older receiver could not read is refused, so it never drops that receiver from the broker', async () => {
+        const broker = newBroker();
+        const machine = connect(broker, 'machine', newKey());
+        const client = connect(broker, 'client', newKey());
+        await settle();
+        const envelope = { connectionId: 'attempt-0001', signal: { kind: 'restart' } };
+        broker.message(client.handle, JSON.stringify({ type: 'relay', id: 'r1', to: machine.key.publicKey, envelope, signature: 's'.repeat(86) }));
+        expect(framesOf(machine.state, 'relayed')).toEqual([]);
+        expect(framesOf(client.state, 'error').map((frame) => frame.code)).toEqual(['bad-frame']);
+        expect(client.state.closed).toBeNull();
+    });
+
     test('a wrong signature gets nothing: the socket closes and the key is not reachable', async () => {
         const broker = newBroker();
         const victim = newKey();

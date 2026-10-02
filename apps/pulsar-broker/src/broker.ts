@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { BrokerPeerFrameSchema, brokerHelloMessage, type BrokerRole, type BrokerServerFrame } from '@ruimte/pulsar';
+import { BrokerPeerFrameSchema, brokerHelloMessage, type BrokerRole, type BrokerServerFrame, type SignalEnvelope } from '@ruimte/pulsar';
 import type { BrokerLimits } from './config.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RateLimiter } from './rate-limit.ts';
@@ -52,8 +52,8 @@ export interface Admission {
 
 /*
  * The whole broker: which key sits on which socket, and a signal from one to another. It holds no
- * account, no name and nothing on disk, and it never opens an envelope; the receiver checks the
- * sender's signature, because the receiver is the one a lying broker would be lying to.
+ * account, no name and nothing on disk, and it passes an envelope on as it was written; the receiver
+ * checks the sender's signature, because the receiver is the one a lying broker would be lying to.
  */
 export class Broker {
     private readonly limits: BrokerLimits;
@@ -168,7 +168,10 @@ export class Broker {
                     this.send(peer, { type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: frame.id });
                     return;
                 }
-                this.send(target, { type: 'relayed', from: peer.publicKey, envelope: frame.envelope, signature: frame.signature });
+                /* The envelope as the sender wrote it, since the parse strips what this broker does not know. It still
+                   has to parse: an older daemon leaves the broker over a frame it cannot read. */
+                const envelope = (json as { envelope: SignalEnvelope }).envelope;
+                this.send(target, { type: 'relayed', from: peer.publicKey, envelope, signature: frame.signature });
                 this.send(peer, { type: 'delivered', id: frame.id });
                 return;
             }

@@ -5,7 +5,8 @@ server that brings a client and a machine together without either reaching the o
 announces its ed25519 public key, signs the broker's nonce over `brokerHelloMessage` from
 `@ruimte/pulsar`, and is then held in a `Map` from key to socket. A signal for another key is written to
 that key's socket with the sender filled in, and that is all the broker does: no database, no accounts,
-nothing on disk, and it never checks or reads the envelope it passes on. The receiver verifies the
+nothing on disk, and the envelope goes on as the sender wrote it. It only checks that the envelope
+parses, since an older daemon leaves the broker over one it cannot read. The receiver verifies the
 sender's signature, since the receiver is the one a lying broker would be lying to.
 
 Once the offer and the answer have crossed, client and machine talk over their own DataChannel and the

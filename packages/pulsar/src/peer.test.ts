@@ -60,7 +60,7 @@ describe('BrokerPeer', () => {
         expect(log.failed).toEqual(['The broker at 127.0.0.1:4400 calls itself elsewhere.example.com']);
     });
 
-    test('relays and refusals reach the events; a frame that does not parse ends the peer', async () => {
+    test('relays and refusals reach the events; something that is not JSON ends the peer', async () => {
         const { peer, log } = setup();
         peer.start();
         await peer.receive(JSON.stringify({ type: 'challenge', broker: 'broker.example.com', nonce }));
@@ -71,10 +71,32 @@ describe('BrokerPeer', () => {
         expect(log.relayed).toEqual([relayed]);
         expect(log.refused).toEqual([{ type: 'error', code: 'not-connected', message: 'Nobody', id: 'relay-1' }]);
 
-        await peer.receive('{"type":"surprise"}');
+        await peer.receive('not json');
         expect(log.failed).toHaveLength(1);
         await peer.receive(JSON.stringify(relayed));
         expect(log.relayed).toHaveLength(1);
+    });
+
+    test('a frame from a newer broker and an envelope this version cannot read are passed over, and the peer stays ready', async () => {
+        const { peer, log } = setup();
+        peer.start();
+        await peer.receive(JSON.stringify({ type: 'challenge', broker: 'broker.example.com', nonce }));
+        await peer.receive(JSON.stringify({ type: 'ready' }));
+
+        await peer.receive(JSON.stringify({ type: 'notice', text: 'maintenance' }));
+        await peer.receive(
+            JSON.stringify({ type: 'relayed', from: otherKey, envelope: { connectionId: 'attempt-1', signal: { kind: 'restart' } }, signature })
+        );
+        await peer.receive(
+            JSON.stringify({ type: 'relayed', from: otherKey, envelope: { connectionId: 'attempt-1', signal: { kind: 'close', reason: 'busy' } }, signature })
+        );
+        expect(peer.isReady).toBe(true);
+        expect(log.failed).toEqual([]);
+        expect(log.relayed).toEqual([]);
+
+        const relayed = { type: 'relayed', from: otherKey, envelope: { connectionId: 'attempt-1', signal: { kind: 'answer', sdp: 'v=0' } }, signature };
+        await peer.receive(JSON.stringify(relayed));
+        expect(log.relayed).toEqual([relayed]);
     });
 
     test('asks for ICE servers only once ready, and hands the answer to its event', async () => {

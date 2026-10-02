@@ -78,8 +78,8 @@ export class BrokerPeer {
             return;
         }
         const parsed = BrokerServerFrameSchema.safeParse(json);
+        // A newer broker may say more, and any key can relay an envelope a newer version wrote; neither is worth the socket.
         if (!parsed.success) {
-            this.fail('The broker sent a frame this peer cannot read');
             return;
         }
         const frame = parsed.data;
