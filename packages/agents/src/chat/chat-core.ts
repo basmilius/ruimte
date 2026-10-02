@@ -327,6 +327,9 @@ export class ChatCore {
 
     private async createNow(payload: ChatCreatePayload): Promise<ChatInfo> {
         const stored = await this.store?.read(payload.chatId);
+        if (!stored && (await this.store?.unreadable(payload.chatId))) {
+            throw new ChatError('chat-unreadable', `The record of chat ${payload.chatId} cannot be read by this version, so it is left as it is`);
+        }
         // A thread on disk keeps its provider; the selection it stored only makes sense in that catalog.
         const kind = stored?.info.provider ?? payload.provider ?? 'claude';
         const provider = this.providers.get(kind);

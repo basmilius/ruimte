@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AGENT_EVENT_SCHEMAS, parseServerFrame, type ChatInfo, type ChatItem, type FramePort, type ReplyError, type ReplyOk } from '@ruimte/agent-contracts';
@@ -235,5 +235,31 @@ describe('AgentHost over a port', () => {
         const argv = claude.started.at(-1)!.argv;
         expect(argv.some((arg) => arg.startsWith('--add-dir'))).toBe(false);
         expect(argv).toContain('--resume');
+    });
+
+    test('refuses a chat whose record it cannot read, and leaves the record and its log as they are', async () => {
+        ok(await client.request('chat.create', { chatId: 'chat-6', provider: 'claude', cwd: dataDir }));
+        ok(await client.request('chat.attach', { chatId: 'chat-6' }));
+        ok(await client.request('chat.send', { chatId: 'chat-6', text: 'hello there' }));
+        await client.until(() => client.info?.activeTurnId === null && [...client.items.values()].some((item) => item.kind === 'assistant'));
+        await host.close();
+
+        const recordPath = join(dataDir, 'chats', 'chat-6.json');
+        const record = JSON.parse(await readFile(recordPath, 'utf8')) as { items: unknown[] };
+        // An item of a kind a newer version writes.
+        record.items.push({ id: 'future-1', kind: 'future-kind', createdAt: 2, turnId: null, text: 'from a newer build' });
+        const bytes = JSON.stringify(record);
+        await writeFile(recordPath, bytes);
+        const logPath = join(dataDir, 'chats', 'chat-6.log');
+        const log = await readFile(logPath, 'utf8').catch(() => null);
+
+        host = await AgentHost.open({ dataDir, env: { HOME: dataDir, PATH: process.env.PATH }, background: false, command: ['claude'], spawn: claude.spawn });
+        const [renderer, utility] = memoryPortPair();
+        host.connect(utility);
+        client = new Client(renderer);
+        expect(await client.request('chat.create', { chatId: 'chat-6' })).toMatchObject({ ok: false, error: { code: 'chat-unreadable' } });
+        await host.chats.persisted('chat-6');
+        expect(await readFile(recordPath, 'utf8')).toBe(bytes);
+        expect(await readFile(logPath, 'utf8').catch(() => null)).toBe(log);
     });
 });

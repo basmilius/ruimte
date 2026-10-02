@@ -141,9 +141,13 @@ export class ChatStore {
         writeAtomicSync(join(this.dir, recordFileName(chatId)), recordBody(info, items, at, preambles, extras));
     }
 
+    /* Null for a chat with nothing on disk to make it of, and for one whose record does not parse (see `unreadable`). */
     async read(chatId: string): Promise<ChatRecord | null> {
         const lines = parseLog((await readOrNull(this.logPath(chatId))) ?? '');
         const snapshot = await this.readSnapshot(chatId);
+        if (snapshot === UNREADABLE) {
+            return null;
+        }
         if (snapshot === null) {
             return fromLogAlone(lines);
         }
@@ -163,7 +167,15 @@ export class ChatStore {
         return { ...thread.snapshot(), seq, resetSeq, preambles: snapshot.preambles ?? [], extras: extrasOf(snapshot), lines };
     }
 
-    private async readSnapshot(chatId: string): Promise<z.infer<typeof RecordSchema> | null> {
+    /*
+     * Whether a record is on disk that this host cannot read: one a newer version wrote, one cut short,
+     * one edited by hand. It is left alone rather than written over, together with its log.
+     */
+    async unreadable(chatId: string): Promise<boolean> {
+        return (await this.readSnapshot(chatId)) === UNREADABLE;
+    }
+
+    private async readSnapshot(chatId: string): Promise<z.infer<typeof RecordSchema> | typeof UNREADABLE | null> {
         const raw = await readOrNull(join(this.dir, recordFileName(chatId)));
         if (raw === null) {
             return null;
@@ -172,7 +184,7 @@ export class ChatStore {
         try {
             record = JSON.parse(raw);
         } catch {
-            return null;
+            return UNREADABLE;
         }
         // Before the schema sees it: an image written inline no longer has a shape the schema knows.
         if (this.attachments) {
@@ -183,13 +195,15 @@ export class ChatStore {
             }
         }
         const parsed = RecordSchema.safeParse(record);
-        return parsed.success ? parsed.data : null;
+        return parsed.success ? parsed.data : UNREADABLE;
     }
 
     async delete(chatId: string): Promise<void> {
         await Promise.all([rm(join(this.dir, recordFileName(chatId)), { force: true }), rm(this.logPath(chatId), { force: true })]);
     }
 }
+
+const UNREADABLE = Symbol('unreadable');
 
 const exists = async (path: string): Promise<boolean> => {
     try {
