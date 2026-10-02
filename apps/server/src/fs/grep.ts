@@ -7,11 +7,18 @@ const MAX_FILE_BYTES = 2 * 1024 * 1024;
 // A hit on a line this long is one nothing can show; the line is a minified bundle, not source.
 const MAX_LINE_LENGTH = 500;
 
+// A pattern that backtracks without end holds the event loop one line at a time, not one search.
+const JS_SLICE_MS = 50;
+// Past this the search without ripgrep answers with what it found so far.
+const JS_BUDGET_MS = 10_000;
+
 export interface GrepOptions {
     regex?: boolean;
     caseSensitive?: boolean;
     wholeWord?: boolean;
     limit?: number;
+    /* The clock the search without ripgrep keeps its budget by, in milliseconds. */
+    now?: () => number;
 }
 
 type GrepErrorCode = 'invalid-query';
@@ -105,7 +112,8 @@ const searchWithRipgrep = async (binary: string, cwd: string, query: string, opt
         binary,
         '--json',
         `--context=${FS_GREP_CONTEXT_LINES}`,
-        ...(options.regex ? [] : ['--fixed-strings']),
+        // Lookaround and backreferences need PCRE2, which `auto` picks only for a pattern that does.
+        ...(options.regex ? ['--engine=auto'] : ['--fixed-strings']),
         options.caseSensitive ? '--case-sensitive' : '--ignore-case',
         ...(options.wholeWord ? ['--word-regexp'] : []),
         `--max-filesize=${MAX_FILE_BYTES}`,
@@ -119,6 +127,7 @@ const searchWithRipgrep = async (binary: string, cwd: string, query: string, opt
     const matches: FsGrepMatch[] = [];
     const files = new Set<string>();
     let truncated = false;
+    let finished = false;
     let path: string | null = null;
     let hits: Collected[] = [];
     let lines = new Map<number, string>();
@@ -161,6 +170,10 @@ const searchWithRipgrep = async (binary: string, cwd: string, query: string, opt
             flush();
             return;
         }
+        if (event.type === 'summary') {
+            finished = true;
+            return;
+        }
         // A line without text is binary, and a file that holds one has nothing to read anyway.
         const text = data.lines?.text;
         const number = data.line_number;
@@ -191,19 +204,27 @@ const searchWithRipgrep = async (binary: string, cwd: string, query: string, opt
     handle(rest);
     flush();
     await proc.exited;
+    // Ripgrep that turned the pattern away searched nothing, which is not the same as finding nothing.
+    if (!finished && !truncated) {
+        throw new Error(`ripgrep stopped with code ${proc.exitCode} before it searched`);
+    }
     return { matches: matches.slice(0, limit), files: files.size, truncated };
 };
 
 /* The same search without ripgrep: over the file list `fs.search` already keeps, one file at a
    time. Slower on a large tree, and the only way a machine without the binary searches at all. */
 const searchInJs = async (cwd: string, query: string, options: GrepOptions, limit: number): Promise<FsGrepResult> => {
+    const now = options.now ?? (() => performance.now());
+    const started = now();
+    let sliceStarted = started;
+    let outOfTime = false;
     const pattern = toRegExp(query, options);
     const { files: paths, truncated: walkTruncated } = await listSearchableFiles(cwd);
     const matches: FsGrepMatch[] = [];
     const files = new Set<string>();
     let truncated = walkTruncated;
     for (const path of paths) {
-        if (matches.length >= limit) {
+        if (matches.length >= limit || outOfTime) {
             truncated = true;
             break;
         }
@@ -223,6 +244,14 @@ const searchInJs = async (cwd: string, query: string, options: GrepOptions, limi
         }
         const lines = content.split('\n');
         for (let index = 0; index < lines.length && matches.length < limit; index += 1) {
+            if (now() - sliceStarted > JS_SLICE_MS) {
+                await new Promise((resolve) => setImmediate(resolve));
+                if (now() - started > JS_BUDGET_MS) {
+                    outOfTime = true;
+                    break;
+                }
+                sliceStarted = now();
+            }
             const text = lines[index]!.replace(/\r$/, '');
             const found = pattern.exec(text);
             if (!found) {
@@ -239,7 +268,7 @@ const searchInJs = async (cwd: string, query: string, options: GrepOptions, limi
             });
         }
     }
-    return { matches, files: files.size, truncated };
+    return { matches, files: files.size, truncated: truncated || outOfTime };
 };
 
 /*
@@ -255,7 +284,8 @@ export const grepFiles = async (cwd: string, query: string, options: GrepOptions
     const limit = Math.min(options.limit ?? FS_GREP_MAX_RESULTS, FS_GREP_MAX_RESULTS);
     // The pattern is checked here as well, so a broken regex fails the same way on both paths.
     toRegExp(trimmed, options);
-    const binary = Bun.which('rg');
+    // The PATH as it is now: Bun's own lookup keeps the one the process started with.
+    const binary = Bun.which('rg', { PATH: process.env.PATH ?? '' });
     if (binary === null) {
         return searchInJs(cwd, trimmed, options, limit);
     }

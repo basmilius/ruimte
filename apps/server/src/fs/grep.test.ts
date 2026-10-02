@@ -75,6 +75,17 @@ describe('grepFiles', () => {
     test('a pattern that is no pattern comes back as an error the client can show', async () => {
         await expect(grepFiles(root, '(unclosed', { regex: true })).rejects.toThrow(GrepError);
     });
+
+    test('a lookahead finds what it looks for', async () => {
+        const result = await grepFiles(root, 'start(?=Session)', { regex: true, caseSensitive: true });
+        expect(result.matches.map((match) => [match.path, match.line])).toEqual([['src/session.ts', 3]]);
+    });
+
+    test('a pattern ripgrep turns away is searched without it, never answered with nothing', async () => {
+        // `[^]` is any character to JavaScript and an unclosed class to ripgrep.
+        const result = await grepFiles(root, 'sess[^]on', { regex: true });
+        expect(result.matches.map((match) => match.path).sort()).toEqual(['src/notes.md', 'src/session.ts']);
+    });
 });
 
 /* The same searches without ripgrep on PATH. Git goes with it, so the file list comes from the
@@ -103,6 +114,12 @@ describe('grepFiles without ripgrep', () => {
         expect((await grepFiles(root, 'SESSION', { caseSensitive: true })).matches).toHaveLength(0);
         expect((await grepFiles(root, 'session', { wholeWord: true })).matches.map((match) => match.path)).toEqual(['src/notes.md']);
         expect((await grepFiles(root, 'e', { limit: 2 })).truncated).toBe(true);
+    });
+
+    test('a search that runs out of time says so rather than hold the machine', async () => {
+        let clock = 0;
+        const result = await grepFiles(root, 'e', { now: () => (clock += 20_000) });
+        expect(result).toEqual({ matches: [], files: 0, truncated: true });
     });
 
     test('skips a file that holds bytes nobody reads', async () => {
