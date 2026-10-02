@@ -185,8 +185,8 @@ so every client refused every machine as older.
 
 ## The secrets in CI
 
-`.github/workflows/release.yml` notarizes when `APPLE_API_KEY_P8` is set, and only signs when it is
-not. Five repository secrets:
+`.github/workflows/release.yml` signs and notarizes every release, and stops before building when
+one of these five repository secrets is empty, so the draft stays a draft:
 
 | Secret | What it is |
 | --- | --- |
