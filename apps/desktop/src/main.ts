@@ -27,6 +27,7 @@ import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
+import { quitQuestion } from './quit-question';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController } from './service/controller';
 import { commandLineServiceProgram, daemonServiceSpec, platformServiceManager, serviceDefinition as definitionFor, type ServiceManager } from '@ruimte/service';
@@ -514,8 +515,25 @@ const dropWindowShares = (windowId: number): void => {
     setAgentActivity(windowId, null);
 };
 
-/* Set once a person has said to quit with agents still working, so the question is asked once. */
+/* Set once a person has said to quit with work still running, so the question is asked once. */
 let quitConfirmed = false;
+/* While the question is out, another quit waits for its answer. */
+let quitAsked = false;
+
+/*
+ * Whether to go ahead with a quit. The machine is asked what runs on it only when the quit ends it,
+ * since a window that closed took its own count with it and the last one may be gone already.
+ */
+const askBeforeQuit = async (): Promise<boolean> => {
+    const survives = serviceController.survivesQuit(stopMachineOnQuit);
+    const question = quitQuestion({ survives, windows: agentActivity, machine: survives ? null : await askDaemonWork(daemonPort) });
+    if (question === null) {
+        return true;
+    }
+    const parent = windows.focused();
+    const { response } = parent ? await dialog.showMessageBox(parent, question) : await dialog.showMessageBox(question);
+    return response === 0;
+};
 
 const pageKeys = createPageKeys();
 
@@ -1176,7 +1194,18 @@ handleFromApp('update:check', () => updater.check());
 
 handleFromApp('update:download', () => updater.download());
 
-onFromApp('update:install', () => void updater.install());
+/* Installing closes every window before it quits, so a quit that ends work is asked about while they are still there. */
+const installUpdate = async (): Promise<void> => {
+    if (!serviceController.survivesQuit(false) && !(await askBeforeQuit())) {
+        return;
+    }
+    quitConfirmed = true;
+    if (!updater.install()) {
+        quitConfirmed = false;
+    }
+};
+
+onFromApp('update:install', () => void installUpdate());
 
 /* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
    only the versions between this one and the next, and a tag whose release is still a draft. */
@@ -1366,29 +1395,29 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     app.on('before-quit', (event) => {
-        // Ask once when quitting would stop working agents; the background service lets them survive.
-        // Counted over every window, and a window that closed took its share with it.
-        const parent = windows.focused();
-        if (!quitConfirmed && agentActivity.working > 0 && parent !== null) {
-            const survives = serviceController.survivesQuit(stopMachineOnQuit);
-            const choice = dialog.showMessageBoxSync(parent, {
-                type: 'question',
-                buttons: survives ? ['Quit', 'Cancel'] : ['Quit anyway', 'Keep working'],
-                defaultId: survives ? 0 : 1,
-                cancelId: 1,
-                message: agentActivity.working === 1 ? 'An agent is still working.' : `${agentActivity.working} agents are still working.`,
-                detail: survives
-                    ? 'They keep running on this machine after Ruimte quits, and you can pick them up from any client.'
-                    : 'Quitting ends their sessions on this machine.'
-            });
-            if (choice !== 0) {
-                stopMachineOnQuit = false;
-                // An update that went to install marked the quit already.
-                windows.resume();
-                event.preventDefault();
+        if (!quitConfirmed) {
+            event.preventDefault();
+            if (quitAsked) {
                 return;
             }
-            quitConfirmed = true;
+            quitAsked = true;
+            void askBeforeQuit()
+                .catch(() => true)
+                .then((go) => {
+                    quitAsked = false;
+                    if (go) {
+                        quitConfirmed = true;
+                        app.quit();
+                        return;
+                    }
+                    stopMachineOnQuit = false;
+                    // Off macOS the last window closed on its way to this quit, and it comes back as it was.
+                    if (process.platform !== 'darwin' && windows.all().length === 0) {
+                        windows.restore();
+                    }
+                    windows.resume();
+                });
+            return;
         }
         // From here the quit goes ahead, so the windows it closes stay in the session for the next start.
         windows.quit();

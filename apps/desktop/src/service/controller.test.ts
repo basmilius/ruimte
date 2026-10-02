@@ -249,8 +249,15 @@ describe('start', () => {
         const { controller, events } = setup({ keepRunning: false, answering: { version: '0.0.9', build: 'old' } });
         await controller.start();
         expect(controller.state().owner).toBe('external');
+        expect(controller.survivesQuit(true)).toBe(true);
         controller.quit(false);
         expect(events).toEqual([]);
+    });
+
+    test('before any start, as in the dev app whose daemon `bun dev` runs, a quit ends nothing', () => {
+        const { controller } = setup({ support: 'dev' });
+        expect(controller.survivesQuit(false)).toBe(true);
+        expect(controller.survivesQuit(true)).toBe(true);
     });
 });
 

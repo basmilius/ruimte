@@ -229,13 +229,11 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             return state();
         },
         survivesQuit(stopMachine) {
-            if (stopMachine) {
-                return false;
-            }
-            if (owner === 'external') {
+            // A daemon the app never ran, such as the one `bun dev` runs, is not the app's to end.
+            if (owner === null || owner === 'external') {
                 return true;
             }
-            return owner === 'service' && keepRunning();
+            return !stopMachine && owner === 'service' && keepRunning();
         },
         quit(stopMachine) {
             quitting = true;
