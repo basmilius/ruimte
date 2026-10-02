@@ -4,7 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES, type FsWriteResult } from '@ruimte/contracts';
 import { isInside } from '../canvas/project-paths.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
-import { ReadError, inspect } from './read.ts';
+import { ReadError, UTF8_BOM, inspect } from './read.ts';
 
 type WriteErrorCode = 'stale' | 'too-large' | 'not-text' | 'outside-project' | 'ruimte-state' | 'not-writable';
 
@@ -52,11 +52,7 @@ const openError = (e: unknown, path: string): unknown => {
  * so the inode, its mode and its hard links stay what they were.
  */
 export const writeTextFile = async (path: string, text: string, expectedMtime: number, boundary: WriteBoundary): Promise<FsWriteResult> => {
-    const bytes = new TextEncoder().encode(text);
-    if (bytes.length > FS_READ_MAX_TEXT_BYTES) {
-        throw new WriteError('too-large', 'That text is too large to save from here');
-    }
-    const { file, mime } = await inspect(path);
+    const { file, mime, bom } = await inspect(path);
     const folder = await realOrNull(dirname(file.path));
     if (folder === null) {
         throw new ReadError('not-found', 'That file is not there');
@@ -72,6 +68,12 @@ export const writeTextFile = async (path: string, text: string, expectedMtime: n
     }
     if (mime) {
         throw new WriteError('not-text', 'That file is not text. Ruimte does not write over it.');
+    }
+    const encoded = new TextEncoder().encode(text);
+    // The read handed the text out without the mark, and a file that had one keeps it.
+    const bytes = bom && !text.startsWith('\uFEFF') ? Buffer.concat([UTF8_BOM, encoded]) : encoded;
+    if (bytes.length > FS_READ_MAX_TEXT_BYTES) {
+        throw new WriteError('too-large', 'That text is too large to save from here');
     }
     const handle = await open(real, constants.O_WRONLY | constants.O_NOFOLLOW).catch((e: unknown) => {
         throw openError(e, file.path);

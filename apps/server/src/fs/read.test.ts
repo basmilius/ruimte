@@ -171,6 +171,11 @@ describe('fs.read', () => {
         expect(await readMedia(await write('notes.md', '# hello'))).toBeNull();
     });
 
+    test('a byte past the sniff that is not UTF-8 makes the file binary, never lossy text', async () => {
+        const path = await write('legacy.txt', Buffer.concat([Buffer.from('a'.repeat(9000)), Buffer.from(latin1('caf\u00e9\n'))]));
+        expect(await readFile(path)).toMatchObject({ kind: 'binary', mime: 'application/octet-stream', size: 9005 });
+    });
+
     test('answers a text file past the cap with its size alone', async () => {
         const path = await write('huge.txt', 'x'.repeat(FS_READ_MAX_TEXT_BYTES + 1));
         expect(await readFile(path)).toEqual({ kind: 'too-large', size: FS_READ_MAX_TEXT_BYTES + 1 });

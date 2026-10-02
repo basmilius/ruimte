@@ -158,18 +158,36 @@ const statFile = async (path: string): Promise<FileStat> => {
     return { path: resolved, size: stats.size, mtime: Math.round(stats.mtimeMs), dev: stats.dev, ino: stats.ino };
 };
 
-/* What the head of a file says it is, before anything decides to read the rest of it. A null mime is text. */
-export const inspect = async (path: string): Promise<{ file: FileStat; mime: string | null }> => {
+export const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+
+const startsWithBom = (head: Uint8Array): boolean => UTF8_BOM.every((byte, index) => head[index] === byte);
+
+/*
+ * What the head of a file says it is, before anything decides to read the rest of it. A null mime is
+ * text. `bom` is whether it opens with a UTF-8 byte order mark, which decoding drops and a save puts back.
+ */
+export const inspect = async (path: string): Promise<{ file: FileStat; mime: string | null; bom: boolean }> => {
     const file = await statFile(path);
     const head = new Uint8Array(await Bun.file(file.path).slice(0, SNIFF_BYTES).arrayBuffer());
+    const bom = startsWithBom(head);
     const magic = sniffMime(head);
     if (magic) {
-        return { file, mime: magic };
+        return { file, mime: magic, bom };
     }
     if (looksBinary(head, head.length === SNIFF_BYTES)) {
-        return { file, mime: 'application/octet-stream' };
+        return { file, mime: 'application/octet-stream', bom };
     }
-    return { file, mime: looksLikeSvg(head) ? 'image/svg+xml' : null };
+    return { file, mime: looksLikeSvg(head) ? 'image/svg+xml' : null, bom };
+};
+
+/* The whole file as text, or null when a byte past the head is not UTF-8 after all; text with
+   replacement characters in it would be saved over the original. */
+const decodeWhole = (bytes: Uint8Array): string | null => {
+    try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+        return null;
+    }
 };
 
 /*
@@ -185,9 +203,13 @@ export const readFile = async (path: string): Promise<FsReadResult> => {
     if (file.size > FS_READ_MAX_TEXT_BYTES) {
         return { kind: 'too-large', size: file.size };
     }
+    const text = decodeWhole(await Bun.file(file.path).bytes());
+    if (text === null) {
+        return { kind: 'binary', mime: 'application/octet-stream', size: file.size, mtime: file.mtime };
+    }
     return {
         kind: 'text',
-        text: await Bun.file(file.path).text(),
+        text,
         encoding: 'utf-8',
         size: file.size,
         mtime: file.mtime,

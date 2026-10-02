@@ -59,6 +59,22 @@ describe('fs.write', () => {
         expect(result).toEqual({ size: 17, mtime: Math.round(after.mtimeMs) });
     });
 
+    test('a read and a write of what it read leave the file as it was, byte for byte', async () => {
+        const original = Buffer.concat([
+            Buffer.from([0xef, 0xbb, 0xbf]),
+            Buffer.from('<Project Sdk="Microsoft.NET.Sdk">\r\n  <!-- caf\u00e9 -->\r\n</Project>\r\n')
+        ]);
+        const { path } = await put(join(project, 'app.csproj'), original);
+        const read = await readForViewer(path);
+        if (read.kind !== 'text') {
+            throw new Error('expected text');
+        }
+
+        await writeTextFile(path, read.text, read.mtime, boundary());
+
+        expect(await readFile(path)).toEqual(original);
+    });
+
     test('keeps the inode, the mode and every hard link', async () => {
         const { path, mtime } = await put(join(project, 'script.sh'), 'echo one and a longer tail\n');
         await chmod(path, 0o754);
