@@ -37,6 +37,13 @@ describe('buildResolvePrompt', () => {
         expect(prompt).toContain('Lines after:\nthree\nfour');
     });
 
+    test('ties an answer to the heading of its conflict and shows no index a model could copy', () => {
+        const { prompt, asked } = buildResolvePrompt('file.txt', blocks, 'main', 'feature');
+        expect(asked).toEqual([1]);
+        expect(prompt).toContain('where N is the number of the "Conflict N" heading it answers');
+        expect(prompt).not.toMatch(/"index": \d/);
+    });
+
     test('says nothing about the stretches that merge by themselves', () => {
         expect(buildResolvePrompt('file.txt', blocks, 'main', 'feature').prompt).not.toContain('Conflict 0');
     });
