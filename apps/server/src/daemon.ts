@@ -7,6 +7,7 @@ import {
     AuthTicketPayloadSchema,
     isIdle,
     MACHINE_HEALTH_PATH,
+    MACHINE_PROOF_PATH,
     MACHINE_WORK_PATH,
     PairPayloadSchema,
     PROTOCOL_PARAM,
@@ -48,6 +49,7 @@ import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from '@ruimte/agents/chat/chat-title';
 import { decideAccess, handleLocalTicketRequest, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
+import { handleLocalProofRequest } from './auth/local-proof.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
 import { signLinkRequest, signRegistration } from './auth/registration.ts';
 import { AccountSchema } from '@ruimte/pulsar';
@@ -894,6 +896,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     return new Response('Method not allowed', { status: 405 });
                 }
                 return Response.json({ ok: true, version: VERSION, build: BUILD, service: config.underService } satisfies HealthResult);
+            }
+
+            if (url.pathname === MACHINE_PROOF_PATH) {
+                return handleLocalProofRequest(request, { localSecret: access.localSecret, port: server.port ?? config.port });
             }
 
             if (url.pathname === '/auth/pairing-token') {

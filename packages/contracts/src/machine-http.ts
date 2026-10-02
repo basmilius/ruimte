@@ -1,3 +1,4 @@
+import { toBase64Url } from '@ruimte/pulsar';
 import { z } from 'zod';
 
 /*
@@ -59,3 +60,33 @@ export const machineWorkOf = (body: unknown): MachineWork | null => {
 };
 
 export const isIdle = (work: MachineWork): boolean => work.terminals === 0 && work.agents === 0;
+
+/*
+ * Where a daemon proves it holds the local secret of its home without showing it. The desktop shell
+ * asks before it sends that secret anywhere or loads a page from the port, since whatever got the
+ * port first answers `/health` as readily as the daemon does.
+ */
+export const MACHINE_PROOF_PATH = '/machine/proof';
+
+export const MachineProofRequestSchema = z.object({ nonce: z.string().min(16).max(256) });
+
+export const MachineProofResultSchema = z.object({ proof: z.string().min(1) });
+
+/*
+ * The port is covered too, so a daemon of the same home on another port cannot answer for whatever
+ * holds this one. The first line keeps the HMAC from ever meaning anything else signed with the secret.
+ */
+const proofMessage = (port: number, nonce: string): string => `ruimte machine proof v1\n${port}\n${nonce}`;
+
+/* HMAC-SHA256 under the local secret, in base64url, with WebCrypto so the daemon and the shell compute the same bytes. */
+export const localProofOf = async (secret: string, port: number, nonce: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(proofMessage(port, nonce))));
+};
+
+/* Whether a reply to the proof request was made with this secret, for this port and this nonce. */
+export const isLocalProof = async (body: unknown, secret: string, port: number, nonce: string): Promise<boolean> => {
+    const parsed = MachineProofResultSchema.safeParse(body);
+    return parsed.success && parsed.data.proof === (await localProofOf(secret, port, nonce));
+};

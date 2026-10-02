@@ -69,6 +69,10 @@ const setup = (options: {
     fake?: ReturnType<typeof fakeManager>;
     answering?: BuildIdentity | null;
     work?: MachineWork | null;
+    /* Whether what answers the port proves it holds the local secret; every build of this release does. */
+    proves?: (health: BuildIdentity) => boolean;
+    /* The answer to the question before an earlier build that cannot prove itself is restarted. */
+    restartUnproven?: boolean;
 }) => {
     const fake = options.fake ?? fakeManager();
     const events: string[] = [];
@@ -87,6 +91,14 @@ const setup = (options: {
         expected: EXPECTED,
         probe: async () => behindPort(),
         work: async () => machine.work,
+        verify: async () => {
+            const health = behindPort();
+            return health !== null && (options.proves ?? (() => true))(health);
+        },
+        askRestart: async () => {
+            events.push('ask');
+            return options.restartUnproven ?? false;
+        },
         waitForHealth: async (accept) => {
             const health = behindPort();
             if (!health || !accept(health)) {
@@ -239,6 +251,40 @@ describe('start', () => {
         expect(controller.state().owner).toBe('external');
         controller.quit(false);
         expect(events).toEqual([]);
+    });
+});
+
+describe('proving the local secret', () => {
+    const OLD = { version: '0.0.9', build: 'old' };
+    const onlyThisBuild = (health: BuildIdentity): boolean => health.build === EXPECTED.build;
+
+    test('something that answers health without the proof is not connected to', async () => {
+        const { controller } = setup({ keepRunning: false, answering: EXPECTED, proves: () => false });
+        await expect(controller.start()).rejects.toThrow('could not prove');
+    });
+
+    test('a service that answers as this build without the proof is not connected to either', async () => {
+        const { controller } = setup({ fake: fakeManager({ installed: true, running: EXPECTED }), proves: () => false });
+        await expect(controller.start()).rejects.toThrow('could not prove');
+    });
+
+    test('an earlier build that cannot prove itself is restarted once the person says so', async () => {
+        const { controller, fake, events } = setup({
+            fake: fakeManager({ installed: true, running: OLD }),
+            proves: onlyThisBuild,
+            restartUnproven: true
+        });
+        expect(await controller.start()).toBe(true);
+        expect(events).toEqual(['ask']);
+        expect(fake.calls).toEqual(['install', 'restart']);
+        expect(controller.state().owner).toBe('service');
+    });
+
+    test('an earlier build that cannot prove itself is left running when the person quits instead', async () => {
+        const { controller, fake } = setup({ fake: fakeManager({ installed: true, running: OLD }), proves: onlyThisBuild });
+        expect(await controller.start()).toBe(false);
+        expect(fake.calls).toEqual(['install']);
+        expect(fake.service.running).toEqual(OLD);
     });
 });
 

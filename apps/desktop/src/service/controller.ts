@@ -16,8 +16,12 @@ export interface ServiceControllerDeps {
     expected: BuildIdentity;
     /* One ask of `/health`; null when nothing answers. */
     probe(): Promise<BuildIdentity | null>;
-    /* One ask of `/machine/work` with the local secret; null when the daemon cannot say. */
+    /* One ask of `/machine/work` with the local secret; null when the daemon cannot say or did not prove it holds the secret. */
     work(): Promise<MachineWork | null>;
+    /* Whether what answers the port proves it holds the local secret, which an earlier build cannot. */
+    verify(): Promise<boolean>;
+    /* Asks the person before an earlier build that cannot prove itself is restarted; false means quit instead. */
+    askRestart(): Promise<boolean>;
     /* Resolves once `/health` answers and `accept` takes the answer, rejects when it never does. */
     waitForHealth(accept: (health: BuildIdentity) => boolean): Promise<void>;
     /* Starts the app's own daemon; `onExit` runs once it ended, whoever ended it. */
@@ -31,8 +35,11 @@ export interface ServiceControllerDeps {
 
 export interface ServiceController {
     state(): ShellServiceState;
-    /* Brings a daemon up behind the port: the service, or the app's own. Rejects when none comes up. */
-    start(): Promise<void>;
+    /*
+     * Brings a daemon up behind the port: the service, or the app's own. Rejects when none comes up or
+     * what answers cannot prove it holds the local secret, and is false when the person chose to quit.
+     */
+    start(): Promise<boolean>;
     /* The switch. The daemon that runs keeps running; the other owner takes over when the app quits. */
     setKeepRunning(keepRunning: boolean): ShellServiceState;
     /* Whether the agents outlive this quit, for the question asked before it. */
@@ -51,6 +58,9 @@ export interface ServiceController {
 }
 
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+export const UNPROVEN =
+    'Something else answers where this machine should be, and it could not prove that it belongs to you, so Ruimte does not connect to it. If it is an earlier Ruimte started from a terminal, stop or update it and open Ruimte again.';
 
 /* A daemon that ends this often in a row, each time within a minute of its start, is not started again. */
 const RESPAWNS = 5;
@@ -177,17 +187,29 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             } else if (decision === 'spawn' || !manager) {
                 await spawn();
             } else if (decision === 'restart-service') {
-                const work = await deps.work();
-                if (decideRestart(work) === 'restart') {
+                if (!(await deps.verify())) {
+                    // A build from before the proof cannot show it is ours, and nothing is sent to it or loaded from it until it restarted.
+                    if (!(await deps.askRestart())) {
+                        return false;
+                    }
                     await runService(manager, () => manager.restart());
                 } else {
-                    // The old daemon keeps the port for now: a restart would end what runs on it without a word.
-                    owner = 'service';
-                    pendingRestart = { work: work === null ? null : work.terminals + work.agents, answered: false };
+                    const work = await deps.work();
+                    if (decideRestart(work) === 'restart') {
+                        await runService(manager, () => manager.restart());
+                    } else {
+                        // The old daemon keeps the port for now: a restart would end what runs on it without a word.
+                        owner = 'service';
+                        pendingRestart = { work: work === null ? null : work.terminals + work.agents, answered: false };
+                    }
                 }
             } else {
                 await runService(manager, () => manager.start());
             }
+            if (!(await deps.verify())) {
+                throw new Error(UNPROVEN);
+            }
+            return true;
         },
         setKeepRunning(next) {
             if (!manager || commandLineService()) {

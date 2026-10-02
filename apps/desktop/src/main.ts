@@ -1,9 +1,10 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
+import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import {
     createMenuCommands,
     createPageKeys,
@@ -22,6 +23,7 @@ import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest,
 import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { editFrameOf, runGuestEdit } from './guest-edit';
+import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
@@ -215,18 +217,37 @@ const probeDaemon = async (): Promise<BuildIdentity | null> => {
     }
 };
 
-/* What a restart would end, asked with the local secret; null for a daemon from before the route or one that does not answer. */
-const probeWork = async (): Promise<MachineWork | null> => {
+/*
+ * The daemon's local secret, which is how the app proves it runs on this machine now that a loopback
+ * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
+ * which in `bun dev` may come after this window.
+ */
+const readLocalSecret = async (): Promise<string | null> => {
     try {
-        const secret = (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim();
-        const response = await fetch(`http://127.0.0.1:${port}${MACHINE_WORK_PATH}`, {
-            headers: { authorization: `Bearer ${secret}` },
-            signal: AbortSignal.timeout(2000)
-        });
-        return response.ok ? machineWorkOf(await response.json()) : null;
+        return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
     } catch {
         return null;
     }
+};
+
+const daemonPort: DaemonPort = {
+    port,
+    readSecret: readLocalSecret,
+    fetch: (url, init) => fetch(url, init),
+    nonce: () => randomBytes(32).toString('base64url')
+};
+
+/* Asked before restarting a daemon of an earlier build, which cannot prove it holds the local secret. No window exists yet. */
+const askRestartUnproven = async (): Promise<boolean> => {
+    const { response } = await dialog.showMessageBox({
+        type: 'question',
+        buttons: ['Restart Now', 'Quit'],
+        defaultId: 1,
+        cancelId: 1,
+        message: 'Ruimte was updated, and this machine still runs the previous version.',
+        detail: 'That version cannot prove to Ruimte that it belongs to you, so Ruimte connects only after a restart, which ends the terminals and agents running on it. If you quit instead, the machine restarts itself as soon as nothing runs on it.'
+    });
+    return response === 0;
 };
 
 /* Long enough for a daemon that is snapshotting its sessions on the way out of a restart. */
@@ -283,7 +304,9 @@ const serviceController = createServiceController({
     commandLineProgram: commandLineServiceProgram(ruimteHome),
     expected: { version: app.getVersion(), build: bundledBuild() },
     probe: probeDaemon,
-    work: probeWork,
+    work: () => askDaemonWork(daemonPort),
+    verify: () => proveDaemon(daemonPort),
+    askRestart: askRestartUnproven,
     waitForHealth: waitForDaemon,
     spawnDaemon,
     killDaemon: () => daemon?.kill('SIGTERM'),
@@ -867,18 +890,8 @@ handleFromApp('browser:capture', async (_event, id: number) => {
     return image.toPNG();
 });
 
-/*
- * The daemon's local secret, which is how the app proves it runs on this machine now that a loopback
- * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
- * which in `bun dev` may come after this window. Only the app's own page gets it.
- */
-handleFromApp('daemon:local-secret', async () => {
-    try {
-        return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
-    } catch {
-        return null;
-    }
-});
+/* Only the app's own page gets the local secret, and only once the daemon on the port proved it holds it (`serviceController.start`). */
+handleFromApp('daemon:local-secret', () => readLocalSecret());
 
 /*
  * Signing in to the Pulsar address book. The page runs the login (PKCE, the state, the start URL) and
@@ -1330,8 +1343,9 @@ if (!app.requestSingleInstanceLock()) {
         powerMonitor.on('on-ac', applyKeepAwake);
         try {
             // `bun dev` runs the daemon itself; the shell only opens the dev URL.
-            if (!devUrl) {
-                await serviceController.start();
+            if (!devUrl && !(await serviceController.start())) {
+                app.quit();
+                return;
             }
         } catch (e) {
             dialog.showErrorBox('Ruimte', e instanceof Error ? e.message : 'The background service did not start');
