@@ -108,6 +108,14 @@ describe('DrawingStore', () => {
         await expect(drawings.save(projectId, 'view-a', 0, drawn(), 'c1')).rejects.toMatchObject({ code: 'rev-conflict' });
     });
 
+    test('a save that gives two elements one id is refused and writes nothing', async () => {
+        await drawings.open(projectId, 'view-a');
+        await expect(drawings.save(projectId, 'view-a', 0, drawn(element('el-1'), element('el-1', 40)), 'c1')).rejects.toMatchObject({
+            code: 'drawing-invalid'
+        });
+        expect(await exists(drawingFile('view-a'))).toBe(false);
+    });
+
     test('a view that is not a drawing, and a project that is not open, are refused', async () => {
         await expect(drawings.open(projectId, 'main')).rejects.toMatchObject({ code: 'drawing-not-found' });
         await expect(drawings.open('nope', 'view-a')).rejects.toMatchObject({ code: 'project-not-found' });

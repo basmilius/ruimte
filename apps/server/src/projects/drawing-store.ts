@@ -1,4 +1,4 @@
-import { DRAWING_VERSION, EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
+import { DRAWING_VERSION, EMPTY_DRAWING, duplicateElementIdIn, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
 import type { WatchSeams } from '@ruimte/agents/watch-seam';
 import { drawingsDirOf, privateDrawingsDirOf, readDrawing, tooNewMessage, viewFilePathOf, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
@@ -19,8 +19,11 @@ const DRAWING_FILES: ViewFileKind<DrawingDocument, DrawingContent> = {
     documentOf: (content, rev) => ({ version: DRAWING_VERSION, rev, elements: content.elements }),
     empty: EMPTY_DRAWING,
     isViewOf: (projects, projectId, viewId) => projects.isDrawingView(projectId, viewId),
-    // A drawing has no rule a save could break: an element is whatever the schema let through.
-    problemIn: () => null,
+    // The read refuses a file with two elements under one id, so a save must never write one.
+    problemIn: (content) => {
+        const duplicate = duplicateElementIdIn(content.elements);
+        return duplicate === null ? null : `Two elements in this drawing would share the id "${duplicate}"`;
+    },
     changed: (projectId, viewId, document) => ({ event: 'drawing.changed', payload: { projectId, viewId, document } }),
     projectNotFound: (message) => new DrawingError('project-not-found', message),
     notFound: (message) => new DrawingError('drawing-not-found', message),
