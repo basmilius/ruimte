@@ -13,25 +13,41 @@ export interface PackageToPublish {
 
 export interface PublishStep extends PackageToPublish {
     action: 'publish' | 'skip';
-    /* npm refuses a prerelease without a dist-tag, and `latest` must never point at one. */
-    tag: string | null;
+    /* Always named: npm moves `latest` to whatever is published without one. */
+    tag: string;
 }
 
-/* Answers whether `name@version` is on the registry; throws when it cannot tell. */
-export type PublishedLookup = (name: string, version: string) => Promise<boolean>;
+export interface RegistryLookup {
+    /* Whether `name@version` is on the registry; throws when it cannot tell. */
+    published(name: string, version: string): Promise<boolean>;
+    /* The version `latest` points at, null for a package that is not on the registry yet; throws when it cannot tell. */
+    latest(name: string): Promise<string | null>;
+}
 
-export const distTagOf = (version: string): string | null => (version.includes('-') ? 'next' : null);
+/*
+ * `latest` never points at a prerelease, and never moves back: a run of 0.11.0 that finishes after
+ * the one of 0.11.1, or runs again, publishes under a tag of its own.
+ */
+export const distTagOf = (version: string, latest: string | null): string => {
+    if (version.includes('-')) {
+        return 'next';
+    }
+    return latest === null || Bun.semver.order(version, latest) >= 0 ? 'latest' : 'previous';
+};
 
 export const publishOrder = (packages: PackageToPublish[]): PackageToPublish[] => [
     ...packages.filter((entry) => entry.name !== LAUNCHER_NAME),
     ...packages.filter((entry) => entry.name === LAUNCHER_NAME)
 ];
 
-export const planPublish = async (packages: PackageToPublish[], version: string, published: PublishedLookup): Promise<PublishStep[]> => {
+export const planPublish = async (packages: PackageToPublish[], version: string, registry: RegistryLookup): Promise<PublishStep[]> => {
     const steps: PublishStep[] = [];
     for (const entry of publishOrder(packages)) {
-        const action = (await published(entry.name, version)) ? 'skip' : 'publish';
-        steps.push({ ...entry, action, tag: distTagOf(version) });
+        if (await registry.published(entry.name, version)) {
+            steps.push({ ...entry, action: 'skip', tag: distTagOf(version, null) });
+            continue;
+        }
+        steps.push({ ...entry, action: 'publish', tag: distTagOf(version, await registry.latest(entry.name)) });
     }
     return steps;
 };
@@ -41,6 +57,17 @@ export interface CommandOutcome {
     stdout: string;
     stderr: string;
 }
+
+/* `npm view <name> dist-tags.latest`, which fails with E404 for a package that is not on the registry yet. */
+export const latestFromView = (outcome: CommandOutcome): string | null => {
+    if (outcome.code === 0) {
+        return outcome.stdout.trim().replace(/^"|"$/g, '') || null;
+    }
+    if (outcome.stderr.includes('E404')) {
+        return null;
+    }
+    throw new Error(`npm view failed (${outcome.code}): ${outcome.stderr.trim() || outcome.stdout.trim() || 'no output'}`);
+};
 
 /*
  * `npm view <name>@<version> version` prints the version when it exists, prints nothing when the

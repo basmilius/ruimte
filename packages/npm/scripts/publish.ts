@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { LIBRARIES } from '../src/libraries';
-import { planPublish, publishedFromView, type PackageToPublish } from '../src/publish-plan';
+import { latestFromView, planPublish, publishedFromView, type PackageToPublish } from '../src/publish-plan';
 import { LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
 
 /*
@@ -54,14 +54,17 @@ const npm = (args: string[], cwd?: string) => {
     return { code: result.exitCode ?? 1, stdout: result.stdout.toString(), stderr: result.stderr.toString() };
 };
 
-const steps = await planPublish(packages, version!, async (name, wanted) => publishedFromView(wanted, npm(['view', `${name}@${wanted}`, 'version'])));
+const steps = await planPublish(packages, version!, {
+    published: async (name, wanted) => publishedFromView(wanted, npm(['view', `${name}@${wanted}`, 'version'])),
+    latest: async (name) => latestFromView(npm(['view', name, 'dist-tags.latest']))
+});
 
 for (const step of steps) {
     if (step.action === 'skip') {
         console.log(`${step.name}@${version} is already on npm; skipped.`);
         continue;
     }
-    const args = ['publish', '--access', 'public', ...(step.tag ? ['--tag', step.tag] : []), ...(values['dry-run'] ? ['--dry-run'] : [])];
+    const args = ['publish', '--access', 'public', '--tag', step.tag, ...(values['dry-run'] ? ['--dry-run'] : [])];
     console.log(`npm ${args.join(' ')} (${step.name}@${version})`);
     const result = Bun.spawnSync(['npm', ...args], { cwd: step.dir, stdio: ['ignore', 'inherit', 'inherit'], timeout: 10 * 60_000 });
     if (result.exitCode !== 0) {
