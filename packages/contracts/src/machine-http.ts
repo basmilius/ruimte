@@ -2,7 +2,7 @@ import { toBase64Url } from '@ruimte/pulsar';
 import { z } from 'zod';
 
 /*
- * The two HTTP routes a daemon answers beside the socket, asked by the desktop shell and by
+ * The HTTP routes a daemon answers beside the socket, asked by the desktop shell and by
  * `ruimte service` before they start, restart or update a daemon. They are a wire like any other:
  * the asker is often a different release than the daemon that answers.
  */
