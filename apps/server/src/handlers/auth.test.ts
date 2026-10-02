@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
-import { AuthStore } from '../auth/auth-store.ts';
+import { AuthStore, type StatementAdmission } from '../auth/auth-store.ts';
 import { machineRegistrationMessage } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair } from '../auth/keys.ts';
@@ -36,6 +36,13 @@ const client = (access?: ClientAccess): { connection: ClientConnection; frames: 
 
 // A client that presented the local secret: the app on this machine, or `ruimte login`.
 const LOCAL: ClientAccess = { reachability: 'loopback', sessionId: null };
+
+const sessionOf = (admission: StatementAdmission): string => {
+    if (!('sessionId' in admission)) {
+        throw new Error(`Expected an admission, got ${admission.refused}`);
+    }
+    return admission.sessionId;
+};
 
 const ask = async (access: ClientAccess | undefined, type: string, payload: unknown = {}): Promise<ServerFrame> => {
     const { connection, frames } = client(access);
@@ -327,7 +334,7 @@ describe('auth handlers', () => {
         const laptop = await store.pair(store.issuePairingToken(), { label: 'Laptop', publicKey: generateKeyPair().publicKey });
 
         expect(await ask(LOCAL, 'endpoint.leaveAccount')).toMatchObject({ ok: true, result: { revoked: 1 } });
-        expect('sessionId' in admitted && disconnected).toEqual(['sessionId' in admitted ? admitted.sessionId : '']);
+        expect(disconnected).toEqual([sessionOf(admitted)]);
         expect((await store.list(null)).map((entry) => entry.id)).toEqual([laptop!.id]);
     });
 
@@ -341,7 +348,7 @@ describe('auth handlers', () => {
             accountId: 'colleague'
         });
         expect(await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'owner' })).toMatchObject({ ok: true });
-        expect(disconnected).toEqual(['sessionId' in admitted ? admitted.sessionId : '']);
+        expect(disconnected).toEqual([sessionOf(admitted)]);
         expect(await store.list(null)).toEqual([]);
     });
 });
