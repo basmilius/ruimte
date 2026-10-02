@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { encodeBytesReply } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
 import type { TransportStatus } from './transport';
 
@@ -222,7 +223,7 @@ describe('LinkTransport', () => {
             { addressTimeoutMs: 20, log: { info: () => undefined, warn: () => undefined } }
         );
         await tick(40);
-        expect(transport.connection).toMatchObject({ status: 'closed', attempts: 1 });
+        expect(transport.connection).toMatchObject({ status: 'closed', attempts: 1, failure: i18next.t('machines:connection.noAddress', { seconds: 0 }) });
         await tick(600);
         expect(asked).toBe(2);
         expect(links).toHaveLength(1);

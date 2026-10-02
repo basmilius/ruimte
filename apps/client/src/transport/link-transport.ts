@@ -228,7 +228,7 @@ export class LinkTransport implements PooledTransport {
                 // A daemon that will not say how to reach it is a daemon that is not reachable; the backoff is the same one.
                 this.log.warn('Could not work out how to connect to the machine', e);
                 this.scheduleReconnect();
-                this.setConnection({ status: 'closed' });
+                this.setConnection({ status: 'closed', failure: e instanceof Error ? e.message : String(e) });
             }
         );
     }
