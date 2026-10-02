@@ -39,7 +39,7 @@ import {
 import { overlayWords, presenceWords } from './overlay-words.ts';
 import { ComputerPresence, type LineOutcome, type PresenceShow } from './presence.ts';
 import type { ComputerUseStore } from './store.ts';
-import { readProcessTable, runsShells, type ProcessRow, type ProcessTable } from './terminal-apps.ts';
+import { isKnownTerminal, readProcessTable, runsShells, type ProcessRow, type ProcessTable } from './terminal-apps.ts';
 import { diffTree, rememberTree, type RememberedTree, type TreeView } from './tree-diff.ts';
 
 /* A no to an agent: the code a script branches on, the sentence the model reads, what it may pick instead. */
@@ -656,14 +656,14 @@ export class ComputerUse {
     }
 
     /*
-     * Whether an app is a terminal: seen running shells once, or doing so now. One seen now is remembered.
-     * Ruimte never is: its shells run under the daemon.
+     * Whether an app is a terminal: a known terminal app, seen running shells once, or doing so now. One
+     * seen now is remembered. Ruimte never is: its shells run under the daemon.
      */
     private async isTerminal(bundleId: string, name: string, pid: number | null, rows: readonly ProcessRow[]): Promise<boolean> {
         if (RUIMTE_BUNDLE_IDS.has(bundleId)) {
             return false;
         }
-        if (this.store.knownTerminal(bundleId)) {
+        if (isKnownTerminal(bundleId) || this.store.knownTerminal(bundleId)) {
             return true;
         }
         if (pid === null || !runsShells(pid, rows)) {

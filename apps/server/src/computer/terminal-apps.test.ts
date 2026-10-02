@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseProcessTable, runsShells, type ProcessRow } from './terminal-apps.ts';
+import { isKnownTerminal, parseProcessTable, runsShells, type ProcessRow } from './terminal-apps.ts';
 
 describe('the process table', () => {
     test('reads pid, parent and controlling terminal, with none for ??', () => {
@@ -56,5 +56,19 @@ describe('an app that runs shells', () => {
             { pid: 401, ppid: 400, tty: 'ttys007' }
         ];
         expect(runsShells(400, rows)).toBe(true);
+    });
+});
+
+describe('a known terminal', () => {
+    test('is one of the terminal apps by its bundle id, whatever its case', () => {
+        for (const bundleId of ['com.apple.Terminal', 'com.googlecode.iterm2', 'com.mitchellh.ghostty', 'net.kovidgoyal.kitty', 'dev.warp.Warp-Stable']) {
+            expect(isKnownTerminal(bundleId)).toBe(true);
+        }
+        expect(isKnownTerminal('COM.APPLE.TERMINAL')).toBe(true);
+    });
+
+    test('is not an app that merely has a terminal in its name', () => {
+        expect(isKnownTerminal('com.apple.TextEdit')).toBe(false);
+        expect(isKnownTerminal('com.example.terminal-notes')).toBe(false);
     });
 });

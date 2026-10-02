@@ -26,6 +26,26 @@ export const readProcessTable: ProcessTable = async () => {
     return parseProcessTable(text);
 };
 
+/*
+ * Terminal apps by bundle id, lowercased. A window of one may run no shell yet, as one just opened
+ * does, and it is a terminal all the same; any other app counts once it runs shells.
+ */
+const KNOWN_TERMINALS: ReadonlySet<string> = new Set([
+    'com.apple.terminal',
+    'com.googlecode.iterm2',
+    'com.mitchellh.ghostty',
+    'com.github.wez.wezterm',
+    'org.alacritty',
+    'net.kovidgoyal.kitty',
+    'dev.warp.warp-stable',
+    'dev.warp.warp-preview',
+    'co.zeit.hyper',
+    'org.tabby',
+    'com.termius.mac'
+]);
+
+export const isKnownTerminal = (bundleId: string): boolean => KNOWN_TERMINALS.has(bundleId.toLowerCase());
+
 /* How far below an app a shell may sit: a terminal that starts its shells under a pty host of its own puts them two or three levels down. */
 export const SHELL_DEPTH = 3;
 

@@ -365,6 +365,18 @@ describe('a terminal', () => {
         expect((await computer.apps('chat-1')).apps.map(({ access }) => access)).toEqual(['ask', 'ask']);
     });
 
+    test('is known by its bundle id before any window of it runs a shell, and also before it is launched', async () => {
+        const terminal = { name: 'Terminal', pid: 950, bundleId: 'com.apple.Terminal' };
+        const { computer, helper } = await computerSetup({ overrides: { processes: async () => [] } });
+        helper.apps = [TEXT_EDIT, terminal];
+        expect(await codeOf(computer.operate('chat-1', 'state', 'Terminal', {}))).toBe('terminal');
+        expect((await computer.apps('chat-1')).apps.find(({ app }) => app.name === 'Terminal')?.access).toBe('terminal');
+        helper.apps = [TEXT_EDIT];
+        expect(await codeOf(computer.operate('chat-1', 'open', terminal.bundleId, {}))).toBe('terminal');
+        expect(computer.pendingApprovals()).toEqual([]);
+        expect(helper.acted).toEqual([]);
+    });
+
     test('is refused before it is launched when it was seen before', async () => {
         const { computer } = await computerSetup();
         await computer.apps('chat-1');
