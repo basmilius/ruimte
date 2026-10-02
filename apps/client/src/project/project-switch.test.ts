@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { TransportError } from '@/transport/transport';
 import { ProjectSwitch, REVEAL_DELAY_MS, type SwitchClock, type SwitchContext, type SwitchRun, type SwitchTarget } from './project-switch';
 
 /* A clock that only moves when a test says so. */
@@ -118,6 +119,20 @@ describe('switching to a project', () => {
         expect(projectSwitch.state).toEqual({ kind: 'failed', target, reason: 'No network path to the machine' });
         clock.advance(REVEAL_DELAY_MS);
         expect(projectSwitch.state.kind).toBe('failed');
+    });
+
+    test('another copy of the canvas open on the machine is said in the words of the window', async () => {
+        const projectSwitch = new ProjectSwitch(fakeClock());
+        const run: SwitchRun = {
+            steps: () => Promise.reject(new TransportError('project-ids-taken', 'app (/work/app) is open on this machine with the same canvas')),
+            back: async () => undefined
+        };
+        expect(await projectSwitch.start(target, () => run)).toBe('failed');
+        expect(projectSwitch.state).toEqual({
+            kind: 'failed',
+            target,
+            reason: 'Another copy of this canvas is open on this machine, from another checkout of the same repository. Close that project first, or the two would share their terminals and chats.'
+        });
     });
 
     test('cancelling while connecting is over at once, and undoes nothing that moved', async () => {

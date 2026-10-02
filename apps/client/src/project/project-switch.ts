@@ -1,9 +1,18 @@
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import type { ProjectSummary } from '@ruimte/contracts';
+import { TransportError } from '@/transport/transport';
 
 /* Long enough that a switch on a machine that is already connected never flashes a screen, short enough that a wait is never silent. */
 export const REVEAL_DELAY_MS = 300;
+
+/* Why a switch failed: the window's own words for a refusal it knows, the machine's sentence for the rest. */
+const failureOf = (e: unknown): string => {
+    if (e instanceof TransportError && e.code === 'project-ids-taken') {
+        return i18next.t('project:error.idsTaken');
+    }
+    return e instanceof Error ? e.message : i18next.t('project:error.couldNotOpen');
+};
 
 /* What a switch is on its way to, with whatever the cached list knew about it to name it on screen. */
 export interface SwitchTarget {
@@ -139,7 +148,7 @@ export class ProjectSwitch {
                 }
             });
         } catch (e) {
-            failure = e instanceof Error ? e.message : i18next.t('project:error.couldNotOpen');
+            failure = failureOf(e);
         }
         if (signal.aborted) {
             // A pick made while this one was going back owns the screen now, and going back would undo it.

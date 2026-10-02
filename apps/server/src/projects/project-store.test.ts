@@ -585,6 +585,46 @@ describe('ProjectStore', () => {
         await expect(store.closeProject('nope', 'c1')).rejects.toMatchObject({ code: 'project-not-found' });
     });
 
+    describe('two copies of one canvas', () => {
+        /* A second checkout of the same repository: the committed canvas, and with it the node ids. */
+        const secondCheckout = async (): Promise<string> => {
+            const other = join(root, 'repo-2');
+            await mkdir(join(other, '.ruimte'), { recursive: true });
+            await writeFile(documentPathInFolder(other), await readFile(documentPathInFolder(folder), 'utf8'));
+            return other;
+        };
+
+        test('the second is refused while the first is open, so it never reaches the sessions of the first', async () => {
+            const ended: string[] = [];
+            store.attachSessionEnder(async (_kind, nodeId) => {
+                ended.push(nodeId);
+            });
+            store.attachTracked(async () => true);
+            const first = await store.openProject({ folder });
+            await store.save(first.summary.projectId, 0, content(), ['main']);
+            store.hold('c1', first.summary.projectId);
+            const other = await secondCheckout();
+
+            await expect(store.openProject({ folder: other })).rejects.toMatchObject({ code: 'project-ids-taken' });
+            expect(store.index.locate('n1')?.projectId).toBe(first.summary.projectId);
+            expect(ended).toEqual([]);
+            // Nothing of the refused folder was written down: no registry entry, no private file.
+            expect((await store.list()).map((summary) => summary.folder)).toEqual([folder]);
+        });
+
+        test('it opens once the first is closed, and the first is refused in turn', async () => {
+            store.attachTracked(async () => true);
+            const first = await store.openProject({ folder });
+            await store.save(first.summary.projectId, 0, content(), ['main']);
+            const other = await secondCheckout();
+            await store.closeProject(first.summary.projectId, 'c1');
+
+            const second = await store.openProject({ folder: other });
+            expect(second.document.views.map((view) => view.id)).toEqual(['main']);
+            await expect(store.openProject({ projectId: first.summary.projectId })).rejects.toMatchObject({ code: 'project-ids-taken' });
+        });
+    });
+
     test('a folder that is gone and an unknown id are refused', async () => {
         await expect(store.openProject({ folder: join(root, 'nope') })).rejects.toMatchObject({ code: 'folder-not-found' });
         await expect(store.openProject({ projectId: 'nope' })).rejects.toMatchObject({ code: 'project-not-found' });

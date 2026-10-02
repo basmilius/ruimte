@@ -66,7 +66,7 @@ import {
 } from './project-files.ts';
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
-import { ProjectIndex } from './project-index.ts';
+import { placesOf, ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, servedIcon, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
@@ -83,7 +83,9 @@ type ProjectErrorCode =
     | 'rev-conflict'
     | 'folder-not-found'
     | 'folder-create-failed'
-    | 'bad-icon';
+    | 'bad-icon'
+    // Another copy of the canvas is open here, and a session is keyed on its node id.
+    | 'project-ids-taken';
 
 export class ProjectError extends CodedError<ProjectErrorCode> {}
 
@@ -298,6 +300,23 @@ export class ProjectStore {
         return { content: merged.content, shared: merged.shared, rev: file.rev, privateText: outcome.kind === 'ok' ? outcome.text : null };
     }
 
+    /*
+     * Another project that places an id of these views and is open on this machine, Recent being the
+     * only place a project is closed. Its sessions may run with no client holding it, so being loaded
+     * here is not what counts.
+     */
+    private holderOfIds(projectId: string, views: readonly ProjectView[], entries: readonly RegistryEntry[]): RegistryEntry | null {
+        const open = entries.filter((candidate) => candidate.projectId !== projectId && (candidate.closedAt === null || candidate.closedAt === undefined));
+        for (const id of placesOf(views).keys()) {
+            const placing = this.index.projectsPlacing(id);
+            const holder = open.find((candidate) => placing.includes(candidate.projectId));
+            if (holder) {
+                return holder;
+            }
+        }
+        return null;
+    }
+
     private async readPrivateWithoutRepair(path: string) {
         let text: string;
         try {
@@ -500,6 +519,13 @@ export class ProjectStore {
         }
         const loaded = await this.loadFiles(path, entry, outcome.kind === 'ok' ? outcome.document : null);
         const content = missing ? { name: entry.name, color: entry.color, views: [] } : loaded.content;
+        const holder = this.holderOfIds(entry.projectId, content.views, entries);
+        if (holder) {
+            throw new ProjectError(
+                'project-ids-taken',
+                `${holder.name} (${holder.folder}) is open on this machine with the same canvas, which another copy of one repository carries; close it before opening ${entry.folder}, or the two would share their terminals and chats`
+            );
+        }
         let text = outcome.kind === 'ok' ? outcome.text : '';
         let privateText = loaded.privateText ?? '';
         /* A folder that has no private file yet is one this daemon never wrote: a fresh project, a

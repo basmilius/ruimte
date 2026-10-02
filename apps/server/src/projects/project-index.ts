@@ -45,6 +45,21 @@ const flaggedSources = (sources: Map<string, ContextSource[]>, flags: ProjectFla
     return flagged;
 };
 
+/* Every id these views place, with the canvas it is a node on (null for a view of its own). */
+export const placesOf = (views: readonly ProjectView[]): Map<string, string | null> => {
+    const places = new Map<string, string | null>();
+    for (const view of views) {
+        if (isCanvasView(view)) {
+            for (const node of view.nodes) {
+                places.set(node.id, view.id);
+            }
+        } else if (isSessionView(view)) {
+            places.set(view.id, null);
+        }
+    }
+    return places;
+};
+
 /*
  * The last known document of every project the daemon knows, open or not. A session outlives the
  * client that opened its project (`project.release` lets go of the file the moment a client
@@ -59,16 +74,7 @@ export class ProjectIndex {
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
     set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags'>): void {
-        const places = new Map<string, string | null>();
-        for (const view of content.views) {
-            if (isCanvasView(view)) {
-                for (const node of view.nodes) {
-                    places.set(node.id, view.id);
-                }
-            } else if (isSessionView(view)) {
-                places.set(view.id, null);
-            }
-        }
+        const places = placesOf(content.views);
         this.projects.set(projectId, { folder, content, sources: flaggedSources(deriveProjectContextSources(content.views, folder), content.flags), places });
         this.onPlaces?.(projectId, new Set(places.keys()));
     }
@@ -174,6 +180,11 @@ export class ProjectIndex {
      */
     sessionNodes(projectId: string): ViewSessionNode[] {
         return (this.projects.get(projectId)?.content.views ?? []).flatMap(sessionNodesOfView);
+    }
+
+    /* Every project that places this id; more than one only when two copies of one canvas are known here. */
+    projectsPlacing(id: string): string[] {
+        return [...this.projects].filter(([, project]) => project.places.has(id)).map(([projectId]) => projectId);
     }
 
     locate(id: string): IndexedPlace | null {

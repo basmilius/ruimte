@@ -5,7 +5,8 @@
         "openFailed": "That project could not be opened",
         "couldNotOpen": "That could not be opened",
         "projectNotSaved": "The project could not be saved",
-        "reopenFailed": "The project could not be opened again"
+        "reopenFailed": "The project could not be opened again",
+        "idsTaken": "Another copy of this canvas is open on this machine, from another checkout of the same repository. Close that project first, or the two would share their terminals and chats."
     },
     "close": {
         "idle": "Nothing in this project is running. It moves to Recent just as you left it.",
