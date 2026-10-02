@@ -41,6 +41,7 @@ import {
     appSubframeNavigation,
     appWindowNavigation,
     BROWSER_PARTITION,
+    createGestureGate,
     hardenGuestPreferences,
     isAppSender,
     isExternalLink,
@@ -386,7 +387,7 @@ const isBrowserGuest = (contents: Electron.WebContents): boolean =>
 
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
-/* A previewed file may load adjacent assets, but cannot use its scripts to reach a server. */
+/* A previewed file may load adjacent assets, but cannot use its scripts to reach a server or, without a press of the person, the system browser. */
 const sealPreviewSession = (): void => {
     const preview = session.fromPartition(PREVIEW_PARTITION);
     preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
@@ -403,16 +404,20 @@ const sealBrowserSession = (): void => {
 const isPreviewGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(PREVIEW_PARTITION);
 
-/* Network links leave the sealed preview instead of failing silently inside it. */
+/* Network links a person clicks leave the sealed preview instead of failing silently inside it. */
 const routePreviewLinks = (contents: Electron.WebContents): void => {
+    const gesture = createGestureGate(() => Date.now());
+    contents.on('input-event', (_event, input) => gesture.saw(input.type));
     contents.on('will-navigate', (event) => {
         if (isExternalLink(event.url)) {
             event.preventDefault();
-            void shell.openExternal(event.url);
+            if (gesture.consume()) {
+                void shell.openExternal(event.url);
+            }
         }
     });
     contents.setWindowOpenHandler(({ url }) => {
-        if (isExternalLink(url)) {
+        if (isExternalLink(url) && gesture.consume()) {
             void shell.openExternal(url);
         }
         return { action: 'deny' };

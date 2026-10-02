@@ -40,6 +40,33 @@ const GUEST_PERMISSIONS: ReadonlySet<string> = new Set(['fullscreen', 'pointerLo
 /* What a page in a browser node gets without asking. Electron grants everything to a session without a handler. */
 export const allowGuestPermission = (permission: string): boolean => GUEST_PERMISSIONS.has(permission);
 
+/* What a person does on purpose: a press or a key, never a move, a wheel or a scroll. */
+const DELIBERATE_INPUT: ReadonlySet<string> = new Set(['mouseDown', 'mouseUp', 'rawKeyDown', 'keyDown', 'gestureTap', 'touchEnd']);
+
+/* How long after a press a link may still leave, which is longer than any click takes to navigate. */
+export const GESTURE_MS = 1000;
+
+/*
+ * Whether a link a sealed preview wants to open in the system browser follows a press of the person.
+ * The preview runs the file's scripts, and without this a cloned repository's page could send the
+ * person's browser anywhere, over and over. One press lets one link out.
+ */
+export const createGestureGate = (now: () => number) => {
+    let pressedAt: number | null = null;
+    return {
+        saw(type: string): void {
+            if (DELIBERATE_INPUT.has(type)) {
+                pressedAt = now();
+            }
+        },
+        consume(): boolean {
+            const recent = pressedAt !== null && now() - pressedAt <= GESTURE_MS;
+            pressedAt = null;
+            return recent;
+        }
+    };
+};
+
 /* The part of a `<webview>`'s preferences a guest could use to reach Node or another session. */
 export interface GuestWebPreferences {
     partition?: string;
