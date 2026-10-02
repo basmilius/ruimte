@@ -130,7 +130,9 @@ const stopAction = defineActionVerb('launches', {
     detail: [
         'prints\tstopping\tid\tname\tcount\thow many of its launches ran and are being stopped; ruimte-context launches list says when they are gone',
         `signals\tCtrl+C first, then SIGTERM after ${STOP_GRACE_MS / 1_000} seconds; never SIGKILL, which only a person gives with Force stop`,
-        'note\tAny launch of the project stops, approved or not'
+        APPROVAL_LINE,
+        'refused\tlaunch-held\tnobody approved it here as it stands now, so an agent may not stop it: ask the person, whose launch chip in the toolbar asks for it',
+        'note\tA group stops every launch it holds, and only once each of them is approved'
     ],
     positionals: launchTuple('stop'),
     flags: z.object({}),

@@ -131,8 +131,17 @@ describe('ruimte-context launches', () => {
     });
 
     test('stops a launch, and says when it was not running', async () => {
+        launches.push(reading('lint', { name: 'Lint', kind: 'task' }));
         expect(await run(['stop', 'dev'])).toEqual(['stopping\tdev\tDev\t1']);
-        expect(await run(['stop', 'tests'])).toEqual(['note\tTests was not running']);
+        expect(await run(['stop', 'lint'])).toEqual(['note\tLint was not running']);
+    });
+
+    test('a launch that is not approved as it stands now is not stopped either', async () => {
+        expect((await run(['stop', 'tests']))[0]).toBe(
+            'refused\tlaunch-held\tTests is stopped only once a person approves it on this machine as it stands now; the launch chip in the toolbar asks them'
+        );
+        expect((await run(['stop', 'stack']))[0]).toStartWith('refused\tlaunch-held\tFull stack is stopped only once');
+        expect(calls).toEqual([]);
     });
 
     test('refuses on a machine that runs no launches', async () => {

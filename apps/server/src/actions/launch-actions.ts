@@ -96,6 +96,12 @@ export const launchActions: ActionHandlers<ServerActionContext> = {
         const host = launchHostOf(context);
         const { projectId } = context.place;
         const launch = named(await host.list(projectId), wanted);
+        if (!launch.approved) {
+            throw new VerbRefusal(
+                'launch-held',
+                `${launch.name} is stopped only once a person approves it on this machine as it stands now; the launch chip in the toolbar asks them`
+            );
+        }
         return { output: { launchId: launch.launchId, name: launch.name, stopping: await host.stop(projectId, launch.launchId) } };
     }
 };
