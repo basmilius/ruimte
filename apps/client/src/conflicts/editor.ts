@@ -1,4 +1,4 @@
-import { StateEffect, StateField, type EditorState, type Extension, type Text } from '@codemirror/state';
+import { EditorState, StateEffect, StateField, type Extension, type Text } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import type { MergeBlockKind, MergeSpan } from '@ruimte/merge';
 
@@ -93,7 +93,11 @@ const decorationsOf = (state: EditorState): DecorationSet => {
     return Decoration.set(marks, true);
 };
 
-export const mergeDecorations: Extension = EditorView.decorations.compute([spansField], decorationsOf);
+const mergeDecorations: Extension = EditorView.decorations.compute([spansField], decorationsOf);
+
+/* The merge splits lines on `\n` alone, so a lone `\r` is a character inside a line; an editor that
+   breaks on it shifts every span after it and writes the file back changed. */
+export const conflictEditing: Extension = [EditorState.lineSeparator.of('\n'), spansField, mergeDecorations];
 
 /* The block the cursor is in, so the panes below the editor follow what a person is reading. */
 export const blockAt = (state: EditorState, position: number): number | null => {

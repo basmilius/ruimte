@@ -4,7 +4,7 @@ import { indentUnit } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import type { ConflictFile } from '@/conflicts/conflict-model';
-import { applyBlock, blockAt, mergeDecorations, revealBlock, setSpans, spansField, spansOf, type ConflictDraft } from '@/conflicts/editor';
+import { applyBlock, blockAt, conflictEditing, revealBlock, setSpans, spansField, spansOf, type ConflictDraft } from '@/conflicts/editor';
 
 export interface EditorHandle {
     /* The file this editor holds, which is what an answer that arrives later is checked against. */
@@ -49,8 +49,7 @@ export function ConflictEditor({ file, held, onChange, onReady }: Props) {
                     history(),
                     keymap.of([...defaultKeymap, ...historyKeymap]),
                     indentUnit.of('    '),
-                    spansField,
-                    mergeDecorations,
+                    conflictEditing,
                     EditorView.updateListener.of((update) => {
                         if (update.docChanged || update.selectionSet) {
                             const spans = update.state.field(spansField);
