@@ -45,3 +45,16 @@ struct KeyComboTests {
         #expect(throws: AgentError.self) { try KeyCombo.parse("") }
     }
 }
+
+struct TypingLimitTests {
+    @Test func takesTextUpToTheLimitInCharactersAsTheyType() throws {
+        try TypingLimit.check(text: String(repeating: "a", count: TypingLimit.characters))
+        try TypingLimit.check(text: String(repeating: "👍🏽", count: TypingLimit.characters))
+        #expect(throws: AgentError.self) { try TypingLimit.check(text: String(repeating: "a", count: TypingLimit.characters + 1)) }
+    }
+
+    @Test func takesCombosUpToTheLimit() throws {
+        try TypingLimit.check(combos: Array(repeating: "tab", count: TypingLimit.combos))
+        #expect(throws: AgentError.self) { try TypingLimit.check(combos: Array(repeating: "tab", count: TypingLimit.combos + 1)) }
+    }
+}

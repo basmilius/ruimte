@@ -51,8 +51,15 @@ export const locateHelperApp = (options: { platform: string; compiled: boolean; 
     return existsSync(path) ? path : null;
 };
 
-/* How long a request may go without an answer: a `wait` gets the time it waits for on top. */
-export const answerWithinMs = (request: HelperRequest, baseMs: number = REQUEST_TIMEOUT_MS): number => baseMs + (request.timeout ?? 0) * 1000;
+/* What one typed or pressed key may take: the helper's slowest is a Return behind the person's work, at about 65 ms. */
+const KEY_MS = 100;
+
+const keysOf = (request: HelperRequest): number =>
+    request.command === 'type' ? (request.text?.length ?? 0) : request.command === 'key' ? (request.combos?.length ?? 0) : 0;
+
+/* How long a request may go without an answer: a `wait` gets the time it waits for on top, a `type` or `key` the time its keys take. */
+export const answerWithinMs = (request: HelperRequest, baseMs: number = REQUEST_TIMEOUT_MS): number =>
+    baseMs + (request.timeout ?? 0) * 1000 + keysOf(request) * KEY_MS;
 
 /* One request per connection: write the JSON, half-close, read until the helper closes. */
 export const socketTransport = (socketPath: string, timeoutMs: number = REQUEST_TIMEOUT_MS): HelperTransport => ({

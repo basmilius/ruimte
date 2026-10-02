@@ -57,7 +57,7 @@ import {
     WorktreeSchema
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH } from './limits.ts';
+import { MAX_KEY_COMBOS, MAX_NOTICE_LENGTH, MAX_OPENED_PER_CALLER, MAX_PROMPT_LENGTH, MAX_TITLE_LENGTH, MAX_TYPED_LENGTH } from './limits.ts';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
@@ -1975,7 +1975,15 @@ export const ACTION_DEFINITIONS = {
         effect: 'external',
         domain: 'machine',
         actors: AGENT,
-        input: z.object({ app: computerApp, text: z.string().min(1).describe('The text to type'), ...computerThenState }),
+        input: z.object({
+            app: computerApp,
+            text: z
+                .string()
+                .min(1)
+                .max(MAX_TYPED_LENGTH, `At most ${MAX_TYPED_LENGTH} characters at a time; type the rest in another call`)
+                .describe(`The text to type, at most ${MAX_TYPED_LENGTH} characters`),
+            ...computerThenState
+        }),
         output: computerOutcome
     },
     'computer.key': {
@@ -1986,7 +1994,11 @@ export const ACTION_DEFINITIONS = {
         actors: AGENT,
         input: z.object({
             app: computerApp,
-            combos: z.array(z.string().min(1)).min(1).describe('Key combinations such as cmd+n, return, escape, shift+tab'),
+            combos: z
+                .array(z.string().min(1))
+                .min(1)
+                .max(MAX_KEY_COMBOS, `At most ${MAX_KEY_COMBOS} key combinations at a time; press the rest in another call`)
+                .describe(`Key combinations such as cmd+n, return, escape, shift+tab, at most ${MAX_KEY_COMBOS}`),
             ...computerThenState
         }),
         output: computerOutcome

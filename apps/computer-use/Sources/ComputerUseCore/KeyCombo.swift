@@ -105,3 +105,23 @@ public struct KeyCombo: Sendable {
         return KeyCombo(keyCode: code, flags: flags, name: text)
     }
 }
+
+/// The most one `type` or `key` sends. The keys go one at a time while every other call for an app waits behind
+/// them, and the daemon gives a call only so long to answer; it holds its agents to the same numbers
+/// (`packages/actions/src/limits.ts`).
+public enum TypingLimit {
+    public static let characters = 500
+    public static let combos = 50
+
+    public static func check(text: String) throws {
+        guard text.count <= characters else {
+            throw AgentError("type takes at most \(characters) characters at a time and got \(text.count); type the rest in another call")
+        }
+    }
+
+    public static func check(combos: [String]) throws {
+        guard combos.count <= Self.combos else {
+            throw AgentError("key takes at most \(Self.combos) combos at a time and got \(combos.count); press the rest in another call")
+        }
+    }
+}

@@ -29,3 +29,12 @@ export const MAX_PROMPT_LENGTH = 2000;
  * takes as many roles, so one team can fill that allowance and no more.
  */
 export const MAX_OPENED_PER_CALLER = 16;
+
+/*
+ * The longest text and the most key combinations one computer use call types. The helper sends them
+ * a key at a time, 40 ms apart behind the person's work, while every other call for an app waits
+ * behind it; past this an agent types the rest in another call, or sets the value of a field. The
+ * helper refuses more as well (`TypingLimit` in `apps/computer-use`).
+ */
+export const MAX_TYPED_LENGTH = 500;
+export const MAX_KEY_COMBOS = 50;

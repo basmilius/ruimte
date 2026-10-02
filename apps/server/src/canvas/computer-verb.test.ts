@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '@ruimte/actions';
 import { READ_MAX_CHARS } from '../actions/computer-actions.ts';
 import { computerSetup, SAMPLE_STATE, turnEnded, until, type ComputerSetup } from '../computer/computer-test-helpers.ts';
 import { refusalBody } from '@ruimte/agents/context/refusal';
@@ -156,6 +157,17 @@ describe('ruimte-context computer', () => {
         expect((await run(setup, ['key', 'TextEdit']))[0]).toStartWith('refused\tbad-arguments\t');
         expect((await run(setup, ['type', 'TextEdit']))[0]).toStartWith('refused\tbad-arguments\t');
         expect(setup.computer.pendingApprovals()).toEqual([]);
+    });
+
+    test('refuses more text or keys than one call types, before anyone is asked', async () => {
+        const setup = await computerSetup();
+        const tooLong = await run(setup, ['type', 'TextEdit', '--text', 'a'.repeat(MAX_TYPED_LENGTH + 1)]);
+        expect(tooLong[0]).toStartWith('refused\tinvalid-input\t');
+        expect(tooLong.join('\n')).toContain(`At most ${MAX_TYPED_LENGTH} characters at a time`);
+        const tooMany = await run(setup, ['key', 'TextEdit', ...Array.from({ length: MAX_KEY_COMBOS + 1 }, () => 'tab')]);
+        expect(tooMany[0]).toStartWith('refused\tinvalid-input\t');
+        expect(setup.computer.pendingApprovals()).toEqual([]);
+        expect(setup.helper.acted).toEqual([]);
     });
 
     test('holds as long as --wait asks, within its bounds', async () => {

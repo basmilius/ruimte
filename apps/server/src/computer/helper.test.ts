@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { MAX_KEY_COMBOS, MAX_TYPED_LENGTH } from '@ruimte/actions';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,6 +33,17 @@ describe('the helper', () => {
     test('gets the time a wait waits for on top of the time any request has to answer in', () => {
         expect(answerWithinMs({ command: 'click' })).toBe(20_000);
         expect(answerWithinMs({ command: 'wait', timeout: 110 })).toBe(130_000);
+        expect(answerWithinMs({ command: 'wait', text: 'Saved', timeout: 10 })).toBe(30_000);
+    });
+
+    test('gets the time its keys take for the longest type or key, past the slowest pace the helper types at', () => {
+        // A Return in the background is the slowest key: a press of 25 ms and the 40 ms gap after it.
+        const slowest = 65;
+        expect(answerWithinMs({ command: 'type', text: '\n'.repeat(MAX_TYPED_LENGTH) })).toBeGreaterThan(20_000 + MAX_TYPED_LENGTH * slowest);
+        expect(answerWithinMs({ command: 'key', combos: Array.from({ length: MAX_KEY_COMBOS }, () => 'return') })).toBeGreaterThan(
+            20_000 + MAX_KEY_COMBOS * 85
+        );
+        expect(answerWithinMs({ command: 'type', text: 'hi' })).toBeLessThan(21_000);
     });
 
     test('is started once when its socket is closed, and signs every request with the local secret', async () => {

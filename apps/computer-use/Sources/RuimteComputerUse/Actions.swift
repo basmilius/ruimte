@@ -280,6 +280,7 @@ extension Agent {
         guard let text = request.text, !text.isEmpty else {
             throw AgentError("type needs text")
         }
+        try TypingLimit.check(text: text)
         let window = snapshots[app.processIdentifier]?.window
         let look = ActionLook(state: .type, target: focusedElement(app).map { targetName($0, app) } ?? Targets.name(app), text: text)
         if request.front != true {
@@ -300,6 +301,7 @@ extension Agent {
     }
 
     func key(_ app: NSRunningApplication, _ request: Request) async throws -> [String: Any] {
+        try TypingLimit.check(combos: request.combos ?? [])
         let combos = try (request.combos ?? []).map(KeyCombo.parse)
         guard !combos.isEmpty else {
             throw AgentError("key needs at least one combo")
