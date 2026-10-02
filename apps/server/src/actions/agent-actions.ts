@@ -54,8 +54,9 @@ export const agentActions: ActionHandlers<ServerActionContext> = {
         if (nodeId === caller) {
             throw new VerbRefusal('self-answer', `${nodeId} is you; answer is for a question an agent you opened asks`);
         }
-        // Only an agent the caller opened, as the daemon wrote it down: a line would let two agents answer for each other.
-        if (host.madeBy(nodeId) !== caller) {
+        /* Only an agent the caller opened, as the daemon wrote it down: a line would let two agents answer
+           for each other, and an empty chat made with node new is a person's to use. */
+        if ((host.agents?.startedBy(nodeId) ?? null) !== caller) {
             throw new VerbRefusal('not-yours', `${nodeId} is not a node you opened; you only answer the questions of an agent you opened yourself`);
         }
         const requests = host.requests;

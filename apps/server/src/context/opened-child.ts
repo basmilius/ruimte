@@ -1,8 +1,8 @@
 import type { ContextSource } from '@ruimte/contracts';
 
 export interface OpenedChildReaders {
-    /* Who made a node, as the lineage under `$RUIMTE_HOME` wrote it down; null for one a person made. */
-    madeBy(nodeId: string): string | null;
+    /* The node that opened this one as an agent, as the lineage under `$RUIMTE_HOME` wrote it down; null for any other node. */
+    startedBy(nodeId: string): string | null;
     agentSource(id: string): ContextSource | null;
 }
 
@@ -12,4 +12,4 @@ export interface OpenedChildReaders {
  * other, and a grandchild is its own parent's to read, so nothing wider than that one step opens here.
  */
 export const openedChildSource = (readerId: string, sourceId: string, readers: OpenedChildReaders): ContextSource | null =>
-    readers.madeBy(sourceId) === readerId ? readers.agentSource(sourceId) : null;
+    readers.startedBy(sourceId) === readerId ? readers.agentSource(sourceId) : null;

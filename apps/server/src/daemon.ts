@@ -323,7 +323,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }),
         referenced: (targetId) => referencedChats(chats.get(targetId)?.thread.list() ?? [], (id) => projects.index.chatTitleBeside(targetId, id)),
         opened: (targetId, sourceId) =>
-            openedChildSource(targetId, sourceId, { madeBy: (id) => lineage.madeBy(id), agentSource: (id) => projects.index.agentSource(id) }),
+            openedChildSource(targetId, sourceId, { startedBy: (id) => lineage.startedBy(id), agentSource: (id) => projects.index.agentSource(id) }),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         browserPage: (browserId) => browserDriver.read(browserId),

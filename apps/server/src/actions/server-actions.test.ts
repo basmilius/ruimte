@@ -188,6 +188,18 @@ describe('the daemon actions', () => {
         expect(main?.kind === 'canvas' ? main.edges : null).toEqual([]);
     });
 
+    test('a chat the caller made with node.create is no agent it opened, so it answers none of its questions', async () => {
+        const created = await serverActions.execute('node.create', note({ kind: 'chat', content: null }), agent());
+        expect(created).toMatchObject({ status: 'completed' });
+        const nodeId = created.status === 'completed' ? created.output.nodeId : '';
+        expect(made.get(nodeId)).toBe('term-1');
+
+        expect(await serverActions.execute('agent.answer', { nodeId, requestId: 'req-q', answer: 'Red', answers: null }, agent())).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-yours' }
+        });
+    });
+
     test('an agent starts no CLI and no command through node.create or view.create', async () => {
         expect(await serverActions.execute('node.create', note({ kind: 'terminal', content: null, command: 'rm -rf /' }), agent())).toMatchObject({
             status: 'failed',

@@ -44,13 +44,15 @@ beforeEach(async () => {
     await lineage.put({ projectId: 'p', nodeId: 'grandchild', openedBy: 'child', depth: 2, agent: true });
     await lineage.put({ projectId: 'p', nodeId: 'others-child', openedBy: 'other', depth: 1, agent: true });
     await lineage.put({ projectId: 'p', nodeId: 'memo', openedBy: 'parent', depth: 1, agent: false });
+    // An empty terminal the parent made with node new, which a person may use for anything later.
+    await lineage.put({ projectId: 'p', nodeId: 'shell', openedBy: 'parent', depth: 1, agent: false });
     const index = new ProjectIndex();
     index.set('p', '/work/p', { views: [canvas] });
     // The daemon's own wiring, over a real lineage and index.
     store = new ContextStore({
         sources: () => [],
         opened: (targetId, sourceId) =>
-            openedChildSource(targetId, sourceId, { madeBy: (id) => lineage.madeBy(id), agentSource: (id) => index.agentSource(id) }),
+            openedChildSource(targetId, sourceId, { startedBy: (id) => lineage.startedBy(id), agentSource: (id) => index.agentSource(id) }),
         drawingElements: async () => null,
         diagramDocument: async () => null,
         terminalText: async (id) => (id === 'others-child' || id === 'shell' ? `${id} screen` : null),
