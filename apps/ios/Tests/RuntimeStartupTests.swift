@@ -54,6 +54,42 @@ final class RuntimeStartupTests: XCTestCase {
     }
 }
 
+final class NotificationSyncTests: XCTestCase {
+    /// A pull to refresh cancels the sync before it, which then wrote its CancellationError over what the new one found.
+    @MainActor func testACancelledSyncLeavesNoProblem() async throws {
+        let defaults = UserDefaults.standard
+        let wasEnabled = defaults.object(forKey: "ruimte.push.enabled")
+        let store = try SharedPushStore()
+        let context = try store.context()
+        defer {
+            defaults.set(wasEnabled, forKey: "ruimte.push.enabled")
+            try? store.save(context)
+        }
+        defaults.set(true, forKey: "ruimte.push.enabled")
+        try store.save(PushDeviceContext(handle: "handle", machinePublicKeys: [:]))
+        let pool = MachineConnections(monitorPaths: false)
+        defer { pool.shutdown() }
+        let runtime = AppRuntime(connections: pool)
+        runtime.machines = [
+            Machine(
+                id: "offline-\(UUID().uuidString)", name: "Offline", icon: nil,
+                publicKey: String(repeating: "A", count: 43), brokerUrl: nil, lastSeenAt: nil)
+        ]
+        let coordinator = NotificationCoordinator(runtime: runtime)
+
+        let atOnce = Task { await coordinator.synchronize() }
+        atOnce.cancel()
+        await atOnce.value
+        XCTAssertNil(coordinator.problem)
+
+        let waiting = Task { await coordinator.synchronize() }
+        for _ in 0..<20 { await Task.yield() }
+        waiting.cancel()
+        await waiting.value
+        XCTAssertNil(coordinator.problem)
+    }
+}
+
 @MainActor
 private final class RuntimeStartupFixture {
     let runtime: AppRuntime

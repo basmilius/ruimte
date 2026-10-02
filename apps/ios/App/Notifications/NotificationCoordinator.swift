@@ -273,9 +273,10 @@ struct NotificationDestination: Identifiable, Hashable {
         }
     }
 
+    /// A sync that was cancelled reports nothing: the sync that replaced it says what it found.
     func synchronize() async {
         do { try await removeRetiredDevices() } catch {
-            problem = error.localizedDescription
+            if !Task.isCancelled { problem = error.localizedDescription }
             return
         }
         guard enabled, let runtime else { return }
@@ -296,11 +297,12 @@ struct NotificationDestination: Identifiable, Hashable {
                 try Task.checkCancellation()
                 guard enabled else { return }
                 do { try await subscribe(machine, context: context) } catch {
+                    if Task.isCancelled { return }
                     problem = "\(machine.name): \(error.localizedDescription)"
                 }
             }
             await synchronizeActivityTarget()
-        } catch { problem = error.localizedDescription }
+        } catch { if !Task.isCancelled { problem = error.localizedDescription } }
     }
     private func subscribe(_ machine: Machine, context: PushDeviceContext) async throws {
         guard let runtime else { return }
