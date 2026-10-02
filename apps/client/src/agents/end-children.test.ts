@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, expect, test } from 'bun:test';
+import i18next from 'i18next';
 import {
     agentsEndedWith,
     askBeforeEndingAgents,
     askBeforeStoppingSubagents,
     askBeforeStoppingTask,
+    endingTitle,
     endsAgentsWarning,
     stopsSubagentsWarning,
     stopsTaskWarning,
@@ -73,10 +76,25 @@ test('stopping a turn with its sub-agents runs at once when the chat opened no a
 
     await askBeforeStoppingSubagents(machine({ chat: ['child-a', 'child-b'] }) as never, 'chat', () => runs.push('asked'));
     expect(runs).toEqual(['now']);
-    expect(useEndingAgents.getState().pending).toMatchObject({ what: 'the turn and its sub-agents', agents: 2, action: 'stop-subagents' });
+    expect(useEndingAgents.getState().pending).toMatchObject({ agents: 2, action: 'stop-subagents' });
+    expect(endingTitle(useEndingAgents.getState().pending!)).toBe('Stop the turn and its sub-agents?');
     useEndingAgents.getState().pending?.run();
     expect(runs).toEqual(['now', 'asked']);
     expect(stopsSubagentsWarning(2)).toBe(
         "Stops the turn and marks the chat's own sub-agents as stopped. Also ends the 2 agents it opened. Their nodes stay on the canvas with what they did so far."
     );
+});
+
+test('every question is asked in the language on screen', async () => {
+    const dutch = JSON.parse(readFileSync(new URL('../i18n/locales/nl/agents.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+    i18next.addResourceBundle('nl', 'agents', dutch);
+    const run = () => {};
+    await i18next.changeLanguage('nl');
+    try {
+        expect(endingTitle({ agents: 2, action: 'stop-subagents', run })).toBe('De turn en zijn sub-agents stoppen?');
+        expect(endingTitle({ what: 'Chat', agents: 1, action: 'stop', run })).toBe('Chat stoppen?');
+        expect(endingTitle({ what: 'Chat', agents: 1, run })).toBe('Chat verwijderen?');
+    } finally {
+        await i18next.changeLanguage('en');
+    }
 });

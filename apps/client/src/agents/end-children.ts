@@ -4,7 +4,8 @@ import type { Worktree } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
 
 export interface PendingEnd {
-    what: string;
+    /* What a delete or a stop names in its title; stopping a turn with its sub-agents has a title of its own. */
+    what?: string;
     agents: number;
     /* A stop keeps the node where it is; without one the question is about a delete. */
     action?: 'delete' | 'stop' | 'stop-subagents';
@@ -13,6 +14,14 @@ export interface PendingEnd {
 }
 
 export const useEndingAgents = create<{ pending: PendingEnd | null }>(() => ({ pending: null }));
+
+/* The question the dialog asks, in the language on screen. */
+export const endingTitle = (pending: PendingEnd): string => {
+    if (pending.action === 'stop-subagents') {
+        return i18next.t('agents:dialog.stopSubagentsTitle');
+    }
+    return i18next.t(pending.action === 'stop' ? 'agents:dialog.stopTitle' : 'agents:dialog.deleteTitle', { what: pending.what });
+};
 
 export const endsAgentsWarning = (agents: number): string => i18next.t('agents:ending.alsoEnds', { count: agents });
 
@@ -76,5 +85,5 @@ export const askBeforeStoppingSubagents = async (transport: Pick<Transport, 'req
         run();
         return;
     }
-    useEndingAgents.setState({ pending: { what: 'the turn and its sub-agents', agents, action: 'stop-subagents', run } });
+    useEndingAgents.setState({ pending: { agents, action: 'stop-subagents', run } });
 };

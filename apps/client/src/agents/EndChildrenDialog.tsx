@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { Square, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { performAsPerson } from '@/actions/client-actions';
-import { endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
+import { endingTitle, endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
 import { Switch, Button, Icon, Dialog } from '@basmilius/desktop-ui';
 import { useEndpointId } from '@/state/keys';
@@ -45,7 +45,7 @@ export function EndChildrenDialog() {
     return (
         <Dialog.Root open={pending !== null} onOpenChange={(next) => !next && close()}>
             <Dialog.Popup size="sm">
-                <Dialog.Title>{stop ? t('dialog.stopTitle', { what: pending?.what }) : t('dialog.deleteTitle', { what: pending?.what })}</Dialog.Title>
+                <Dialog.Title>{pending === null ? null : endingTitle(pending)}</Dialog.Title>
                 {warning !== null && <Dialog.Text className="mt-1">{warning}</Dialog.Text>}
                 {offered?.worktrees.map((worktree) => (
                     <Dialog.Text key={worktree.path} className="mt-1">

@@ -7,6 +7,7 @@
     },
     "dialog": {
         "stopTitle": "Stop {{what}}?",
+        "stopSubagentsTitle": "Stop the turn and its sub-agents?",
         "deleteTitle": "Delete {{what}}?",
         "removeWorktree_one": "Also remove the worktree and its branch",
         "removeWorktree_other": "Also remove the {{count}} worktrees without work and their branches",
