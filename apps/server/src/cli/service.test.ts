@@ -1,7 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { definitionRunsProgram, type ServiceFiles, type ServiceManager } from '@ruimte/service';
 import type { BuildIdentity } from '@ruimte/contracts';
-import { runServiceAction, servicePath, servicePlan, type ServiceDeps, type ServiceFacts } from './service.ts';
+import { copyServiceBinaries, removeServiceBinaries, runServiceAction, servicePath, servicePlan, type ServiceDeps, type ServiceFacts } from './service.ts';
 
 const MAC: ServiceFacts = {
     platform: 'darwin',
@@ -225,5 +228,45 @@ describe('runServiceAction', () => {
         };
         expect(await runServiceAction('install', MAC, deps)).toBe(1);
         expect(err[0]).toBe('launchctl bootstrap failed (5): Input/output error');
+    });
+});
+
+describe('the copy the service runs', () => {
+    let dir: string | null = null;
+
+    afterEach(() => {
+        if (dir) {
+            rmSync(dir, { recursive: true, force: true });
+        }
+        dir = null;
+    });
+
+    const packageBin = (root: string, build: string, helpers: string[]): string => {
+        const bin = join(root, 'package', 'bin');
+        mkdirSync(join(bin, 'native'), { recursive: true });
+        for (const name of ['ruimte', 'ruimte-context']) {
+            writeFileSync(join(bin, name), `#!${name}`, { mode: 0o755 });
+        }
+        writeFileSync(join(bin, 'ruimte.build'), build);
+        for (const helper of helpers) {
+            writeFileSync(join(bin, 'native', helper), helper, { mode: 0o755 });
+        }
+        return bin;
+    };
+
+    test('takes the native helpers along, and an update drops the ones its package no longer has', () => {
+        dir = mkdtempSync(join(tmpdir(), 'ruimte-service-bin-'));
+        const binDir = join(dir, 'home', 'bin');
+        copyServiceBinaries(packageBin(join(dir, 'first'), 'one', ['scrcpy-server', 'ruimte-foundation-models']), binDir);
+        expect(readFileSync(join(binDir, 'native', 'scrcpy-server'), 'utf8')).toBe('scrcpy-server');
+        expect(statSync(join(binDir, 'native', 'ruimte-foundation-models')).mode & 0o111).not.toBe(0);
+
+        copyServiceBinaries(packageBin(join(dir, 'second'), 'two', ['scrcpy-server']), binDir);
+        expect(readFileSync(join(binDir, 'ruimte.build'), 'utf8')).toBe('two');
+        expect(existsSync(join(binDir, 'native', 'ruimte-foundation-models'))).toBe(false);
+
+        removeServiceBinaries(binDir);
+        expect(existsSync(join(binDir, 'native'))).toBe(false);
+        expect(existsSync(join(binDir, 'ruimte'))).toBe(false);
     });
 });

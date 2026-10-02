@@ -1,4 +1,4 @@
-import { chmodSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -24,6 +24,9 @@ import { replaceSync, tempNameFor } from '@ruimte/agents/fs';
 
 /* What travels with the daemon: `ruimte-context` goes on every session's PATH, `ruimte.build` is how an update is seen. */
 export const BINARY_FILES = ['ruimte', 'ruimte-context', 'ruimte.build'] as const;
+
+/* The helpers the daemon finds beside its binary, such as the Android screen server it pushes onto a device. */
+const NATIVE_DIR = 'native';
 
 export interface ServiceFacts {
     platform: NodeJS.Platform;
@@ -217,9 +220,19 @@ export const runServiceAction = async (action: string, facts: ServiceFacts, deps
     }
 };
 
-/* Each file lands under a temporary name first, so a daemon reading `ruimte.build` never sees half a file. */
-const copyBinaries = (from: string, to: string): void => {
+/*
+ * Each file lands under a temporary name first, so a daemon reading `ruimte.build` never sees half a
+ * file. The helpers go first and whole, since a new `ruimte.build` is what restarts the daemon onto them.
+ */
+export const copyServiceBinaries = (from: string, to: string): void => {
     mkdirSync(to, { recursive: true });
+    const native = join(to, NATIVE_DIR);
+    rmSync(native, { recursive: true, force: true });
+    if (existsSync(join(from, NATIVE_DIR))) {
+        const temporary = tempNameFor(native);
+        cpSync(join(from, NATIVE_DIR), temporary, { recursive: true });
+        replaceSync(temporary, native);
+    }
     for (const name of BINARY_FILES) {
         const target = join(to, name);
         const temporary = tempNameFor(target);
@@ -229,10 +242,11 @@ const copyBinaries = (from: string, to: string): void => {
     }
 };
 
-const removeBinaries = (dir: string): void => {
+export const removeServiceBinaries = (dir: string): void => {
     for (const name of BINARY_FILES) {
         rmSync(join(dir, name), { force: true });
     }
+    rmSync(join(dir, NATIVE_DIR), { recursive: true, force: true });
 };
 
 const health = async (port: number): Promise<BuildIdentity | null> => {
@@ -265,8 +279,8 @@ export const runService = (args: string[], options: { port: number; ruimteHome: 
         {
             manager,
             files: diskFiles,
-            copyBinaries,
-            removeBinaries,
+            copyBinaries: copyServiceBinaries,
+            removeBinaries: removeServiceBinaries,
             health,
             readBuild: (dir) => readBuildFile(buildFileOf(join(dir, 'ruimte'))),
             user: userInfo().username,
