@@ -14,6 +14,13 @@ import Testing
     func fire() { for action in Array(actions.values) { action() } }
 }
 
+@MainActor private struct ImmediateClock: TransportScheduling {
+    func after(milliseconds: Double, _ action: @escaping @MainActor () -> Void) -> () -> Void {
+        action()
+        return {}
+    }
+}
+
 @MainActor struct MachineClientTests {
     @Test func queuedFramesKeepOrderAndDiscardPreviousConnections() async throws {
         let client = MachineClient(send: { _ in }, connected: true)
@@ -191,6 +198,14 @@ import Testing
         clock.fire()
         clock.fire()
         await #expect(throws: MachineClientError.timeout("server.ping")) { try await ping.value }
+    }
+
+    @Test func aTimerThatFiresAtOnceTimesOutAfterSomethingWasHeard() async {
+        var sends = 0
+        let client = MachineClient(send: { _ in sends += 1 }, scheduler: ImmediateClock(), connected: true)
+        client.heard()
+        await #expect(throws: MachineClientError.timeout("server.ping")) { try await client.request("server.ping") }
+        #expect(sends == 0)
     }
 
     @Test func aMutationWaitsForTheLinkInsteadOfATimer() async throws {

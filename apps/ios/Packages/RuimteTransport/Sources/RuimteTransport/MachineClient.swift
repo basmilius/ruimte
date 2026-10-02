@@ -293,6 +293,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
 
     private func armTimeout(_ id: String, type: String) {
         pending[id]?.cancelTimeout()
+        pending[id]?.heardAt = heardCount
         let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
             guard let self, let request = pending[id] else { return }
             if request.heardAt == heardCount {
@@ -302,7 +303,6 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
             }
         }
         if pending[id] != nil {
-            pending[id]?.heardAt = heardCount
             pending[id]?.cancelTimeout = cancel
         } else {
             cancel()
@@ -427,7 +427,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     private func unreadable(_ text: String) {
         guard isConnected else { return }
         let replied = pending.keys.filter { text.contains(#""id":"\#($0)""#) }
-        Self.log.error("Dropped a frame that does not decode, a reply to \(replied.count, privacy: .public) requests")
+        let count = replied.count
+        Self.log.error("Dropped a frame that does not decode, which answered \(count, privacy: .public) requests")
         for id in replied {
             finish(id, result: .failure(MachineClientError.invalid("The machine sent a reply this app cannot read.")))
         }
