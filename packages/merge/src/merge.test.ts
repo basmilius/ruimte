@@ -137,6 +137,38 @@ describe('wandLines', () => {
         const blocks = splitBlocks(['a'], ['ours'], ['theirs']);
         expect(wandLines(blocks[0]!)).toBeNull();
     });
+
+    /* One conflict each, with the base around it kept out of the block by a stable line on either end. */
+    const cases: { name: string; base: string[]; ours: string[]; theirs: string[]; wand: string[] | null }[] = [
+        {
+            name: 'the side holding lines the other side deleted is no superset',
+            base: ['old1', 'old2'],
+            ours: ['import NEW', 'old1', 'old2'],
+            theirs: ['import NEW'],
+            wand: null
+        },
+        {
+            name: 'the same, the other way around',
+            base: ['old1', 'old2'],
+            ours: ['import NEW'],
+            theirs: ['import NEW', 'old1', 'old2'],
+            wand: null
+        },
+        { name: 'an addition on top of the same change still wins', base: ['old'], ours: ['new', 'more'], theirs: ['new'], wand: ['new', 'more'] },
+        { name: 'indentation is not whitespace', base: ['    x = 1'], ours: ['    x = 2'], theirs: ['x = 2'], wand: null },
+        { name: 'a tab is not four spaces', base: ['\tx = 1'], ours: ['\tx = 2'], theirs: ['    x = 2'], wand: null },
+        { name: 'whitespace inside and after a line still is', base: ['    x = 1'], ours: ['    x = 2;'], theirs: ['    x  =  2;  '], wand: ['    x = 2;'] },
+        { name: 'a blank line is blank however indented', base: ['x = 1'], ours: ['x = 2', ''], theirs: ['x = 2', '    '], wand: ['x = 2', ''] }
+    ];
+
+    for (const entry of cases) {
+        test(entry.name, () => {
+            const blocks = splitBlocks(['start', ...entry.base, 'end'], ['start', ...entry.ours, 'end'], ['start', ...entry.theirs, 'end']);
+            const conflict = blocks.find((block) => block.kind === 'conflict')!;
+            expect(conflict.base).toEqual(entry.base);
+            expect(wandLines(conflict)).toEqual(entry.wand);
+        });
+    }
 });
 
 describe('text', () => {

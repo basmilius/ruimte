@@ -22,26 +22,44 @@ export const autoLines = (block: MergeBlock): string[] | null => {
     }
 };
 
-const squashed = (lines: readonly string[]): string => lines.map((line) => line.trim().replace(/\s+/g, ' ')).join('\n');
+const squashed = (lines: readonly string[]): string =>
+    lines
+        .map((line) => {
+            const body = line.trim();
+            // Indentation is meaning in Python, YAML or a Makefile, so only a blank line loses its own.
+            const indent = body === '' ? '' : line.slice(0, line.length - line.trimStart().length);
+            return `${indent}${body.replace(/\s+/g, ' ')}`;
+        })
+        .join('\n');
 
-/* Whether every line of `inner` appears in `outer`, in the same order and without a gap in `inner`. */
-const contains = (outer: readonly string[], inner: readonly string[]): boolean => {
-    if (inner.length === 0) {
-        return true;
-    }
+/* Where `inner` starts in `outer` as one run of lines, or -1. */
+const runIn = (outer: readonly string[], inner: readonly string[]): number => {
     for (let start = 0; start + inner.length <= outer.length; start += 1) {
         if (inner.every((line, index) => outer[start + index] === line)) {
-            return true;
+            return start;
         }
     }
-    return false;
+    return -1;
+};
+
+/*
+ * Whether `outer` holds every line of `inner` and adds nothing `inner` took out: a base line among
+ * what `outer` adds is one `inner` deleted, and taking `outer` would put it back.
+ */
+const covers = (base: readonly string[], outer: readonly string[], inner: readonly string[]): boolean => {
+    const start = runIn(outer, inner);
+    if (inner.length === 0 || start < 0) {
+        return false;
+    }
+    const added = [...outer.slice(0, start), ...outer.slice(start + inner.length)];
+    return added.every((line) => !base.includes(line) || inner.includes(line));
 };
 
 /*
  * What the wand makes of a conflict, or null for one that needs a person after all. It closes the
- * two nobody would think twice about: the sides that say the same thing in different whitespace, and
- * the side that already holds every line of the other. Anything else is a choice, and a wand that
- * guesses at those is a wand nobody trusts twice.
+ * two nobody would think twice about: the sides that differ only in whitespace inside or after a
+ * line, and the side that already holds every line of the other without putting back what the other
+ * deleted. Anything else is a choice, and a wand that guesses at those is a wand nobody trusts twice.
  */
 export const wandLines = (block: MergeBlock): string[] | null => {
     if (block.kind !== 'conflict') {
@@ -50,10 +68,10 @@ export const wandLines = (block: MergeBlock): string[] | null => {
     if (squashed(block.ours) === squashed(block.theirs)) {
         return [...block.ours];
     }
-    if (block.theirs.length > 0 && contains(block.ours, block.theirs)) {
+    if (covers(block.base, block.ours, block.theirs)) {
         return [...block.ours];
     }
-    if (block.ours.length > 0 && contains(block.theirs, block.ours)) {
+    if (covers(block.base, block.theirs, block.ours)) {
         return [...block.theirs];
     }
     return null;
