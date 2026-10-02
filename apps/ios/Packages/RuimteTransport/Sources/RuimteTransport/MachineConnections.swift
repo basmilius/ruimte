@@ -14,15 +14,19 @@ import RuimtePulsar
     public var binary: (Data) -> Void
     public var closed: (Error?) -> Void
     public var route: (Bool?) -> Void
+    /// A piece of a frame arrived, the last one included.
+    public var progress: () -> Void
     public init(
         opened: @escaping () -> Void, message: @escaping (String) -> Void, binary: @escaping (Data) -> Void = { _ in },
-        closed: @escaping (Error?) -> Void, route: @escaping (Bool?) -> Void = { _ in }
+        closed: @escaping (Error?) -> Void, route: @escaping (Bool?) -> Void = { _ in },
+        progress: @escaping () -> Void = {}
     ) {
         self.opened = opened
         self.message = message
         self.binary = binary
         self.closed = closed
         self.route = route
+        self.progress = progress
     }
 }
 
@@ -260,6 +264,10 @@ import RuimtePulsar
                 guard valid(), let entry else { return }
                 entry.relayed = route
                 for member in Array(entry.members.values) { member.route(route) }
+            },
+            progress: { [weak entry] in
+                guard valid(), let entry else { return }
+                for member in Array(entry.members.values) { member.progress() }
             })
         do {
             let opened = try entry.open(events)

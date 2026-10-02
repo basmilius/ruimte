@@ -247,6 +247,7 @@ import RuimtePulsar
     private func receivePiece(_ text: String) {
         guard !ended else { return }
         liveness?.heard(now: now)
+        if authenticated { events.progress() }
         let limit = authenticated ? DirectFraming.authenticatedFrameChars : DirectFraming.handshakeFrameChars
         switch assembler.push(text, maxChars: limit) {
         case .invalid:
@@ -274,6 +275,7 @@ import RuimtePulsar
             end(TransportFailure.invalid("The machine sent a binary message before the handshake."))
             return
         }
+        events.progress()
         switch binaryAssembler.push(piece, maxBytes: WireConstants.bytesReplyMaxBytes) {
         case .invalid:
             trace("invalid binary piece")

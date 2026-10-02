@@ -288,6 +288,27 @@ final class BrokerAndLifecycleTests: XCTestCase {
         pool.shutdown()
     }
 
+    @MainActor func testProgressReachesTheHoldersOfTheCurrentLinkOnly() {
+        let pool = MachineConnections(scheduler: FakeScheduler(), monitorPaths: false)
+        pool.setScene("scene", foreground: true)
+        var link: FakeLink!
+        var heard = 0
+        let lease = pool.hold(
+            machineID: "machine",
+            open: {
+                link = FakeLink(events: $0)
+                return link
+            }, events: LinkEvents(opened: {}, message: { _ in }, closed: { _ in }, progress: { heard += 1 }))
+        link.events.opened()
+        link.events.progress()
+        XCTAssertEqual(heard, 1)
+        pool.forget(machineID: "machine")
+        link.events.progress()
+        XCTAssertEqual(heard, 1)
+        lease.release()
+        pool.shutdown()
+    }
+
     @MainActor func testForgetInvalidatesOldLinkAndLeaseWithoutTouchingReplacement() throws {
         let scheduler = FakeScheduler()
         let pool = MachineConnections(scheduler: scheduler, monitorPaths: false)

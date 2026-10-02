@@ -138,6 +138,36 @@ import Testing
         #expect(client.pendingRequestCount == 0)
     }
 
+    @Test func aReplyThatKeepsArrivingOutlastsTheTimeout() async throws {
+        let clock = RequestClock()
+        var sent: [JSONValue] = []
+        let client = MachineClient(
+            send: { sent.append(try JSONValue.decode(Data($0.utf8))) }, scheduler: clock, connected: true)
+        let history = Task {
+            try await client.request(
+                "chat.history", payload: .object(["chatId": .string("c"), "cursor": .string("epoch:1")]))
+        }
+        while sent.isEmpty { await Task.yield() }
+        // Each firing is a timeout's worth of a reply coming in piece by piece.
+        for _ in 0..<4 {
+            client.heard()
+            clock.fire()
+        }
+        #expect(client.pendingRequestCount == 1)
+        try answer(
+            client, sent[0],
+            .object(["items": .array([]), "history": .object(["start": .number(0), "cursor": .null])]))
+        _ = try await history.value
+        #expect(clock.actions.isEmpty)
+
+        let ping = Task { try await client.request("server.ping") }
+        while sent.count < 2 { await Task.yield() }
+        client.heard()
+        clock.fire()
+        clock.fire()
+        await #expect(throws: MachineClientError.timeout("server.ping")) { try await ping.value }
+    }
+
     @Test func aMutationWaitsForTheLinkInsteadOfATimer() async throws {
         let clock = RequestClock()
         var client: MachineClient!

@@ -150,6 +150,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         // Asked by `readBytes`, which alone takes a binary reply.
         var binary = false
         var cancelTimeout: () -> Void = {}
+        // What `heard` had counted when the timer was set.
+        var heardAt = 0
     }
     private struct Subscription {
         var owners: Set<UUID>
@@ -171,6 +173,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     private var observers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
     private var incoming: Task<Void, Never>?
     private var connectionGeneration = 0
+    private var heardCount = 0
     public private(set) var isConnected: Bool
     public var pendingRequestCount: Int { pending.count }
 
@@ -250,20 +253,37 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
                 }
                 pending[id] = Pending(type: requestType, continuation: continuation, onResult: onResult, binary: binary)
                 if Self.timedRequests.contains(requestType) {
-                    let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
-                        self?.finish(id, result: .failure(MachineClientError.timeout(type)))
-                    }
-                    if pending[id] != nil {
-                        pending[id]?.cancelTimeout = cancel
-                    } else {
-                        cancel()
-                        return
-                    }
+                    armTimeout(id, type: type)
+                    guard pending[id] != nil else { return }
                 }
                 do { try send(text) } catch { finish(id, result: .failure(error)) }
             }
         } onCancel: { [weak self] in
             Task { @MainActor in self?.finish(id, result: .failure(CancellationError())) }
+        }
+    }
+
+    /// A piece of any frame arrived. A timed request times out on silence rather than on its whole reply, which over
+    /// a slow link can take longer than the timeout to come in.
+    public func heard() {
+        heardCount += 1
+    }
+
+    private func armTimeout(_ id: String, type: String) {
+        pending[id]?.cancelTimeout()
+        let cancel = scheduler.after(milliseconds: timeoutMilliseconds) { [weak self] in
+            guard let self, let request = pending[id] else { return }
+            if request.heardAt == heardCount {
+                finish(id, result: .failure(MachineClientError.timeout(type)))
+            } else {
+                armTimeout(id, type: type)
+            }
+        }
+        if pending[id] != nil {
+            pending[id]?.heardAt = heardCount
+            pending[id]?.cancelTimeout = cancel
+        } else {
+            cancel()
         }
     }
 
