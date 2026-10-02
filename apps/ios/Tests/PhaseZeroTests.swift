@@ -91,14 +91,17 @@ final class PhaseZeroTests: XCTestCase {
         XCTAssertNil(account.login)
     }
 
-    // Needs local signing on the Simulator: unsigned, every Keychain call fails with -34018 (missing
-    // entitlement), which is not a malformed query.
     func testKeychainUsesDeviceOnlyAfterFirstUnlockWithoutSync() throws {
         let service = "app.ruimte.mobile.tests.\(UUID().uuidString)"
         let store = KeychainStore(service: service)
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service]
         defer { SecItemDelete(query as CFDictionary) }
-        let first = try DeviceKey.loadOrCreate(in: store)
+        let first: DeviceKey
+        do {
+            first = try DeviceKey.loadOrCreate(in: store)
+        } catch let error as KeychainError where error.status == errSecMissingEntitlement {
+            throw XCTSkip("The Simulator refuses Keychain access to an unsigned test host (-34018).")
+        }
         let second = try DeviceKey.loadOrCreate(in: store)
         XCTAssertEqual(first.publicKey, second.publicKey)
         var attributesQuery = query

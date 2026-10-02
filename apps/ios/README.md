@@ -321,7 +321,8 @@ origin. This app contains no local daemon.
   `node:crypto`.
 - The app validates `chat.attach` and `chat.history` whole, so one chat item kind or enum value it
   does not know rejects the conversation. The daemon wire only gains optional fields.
-- Simulator Keychain tests need local signing: unsigned, they fail with -34018 (missing entitlement).
+- Simulator Keychain tests need local signing. Unsigned, the Keychain answers -34018 (missing entitlement) and
+  they skip.
 - CryptoKit's ed25519 signatures differ per call, so fixtures compare message bytes and verify
   signatures rather than comparing them.
 
