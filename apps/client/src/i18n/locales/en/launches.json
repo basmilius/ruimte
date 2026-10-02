@@ -116,6 +116,7 @@
     "import": {
         "title": "Import launches",
         "description": "Nothing is saved until you import. What you import counts as your approval on this machine.",
+        "descriptionInEditor": "What you import joins the list. Nothing is saved until you save, which counts as your approval on this machine.",
         "searching": "Looking for run configurations and scripts…",
         "nothing": "Found nothing to import in this project.",
         "failed": "Could not look through the project.",

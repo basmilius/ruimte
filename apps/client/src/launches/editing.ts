@@ -147,14 +147,18 @@ const sameRun = (launch: LaunchConfigEntry, suggestion: LaunchSuggestion): boole
     (launch.command ?? '').trim() === (suggestion.launch.command ?? '').trim();
 
 /* What the project offers that is not a launch yet. */
-export const newSuggestions = (suggestions: readonly LaunchSuggestion[], document: LaunchesDocument): LaunchSuggestion[] =>
+export const newSuggestions = (suggestions: readonly LaunchSuggestion[], document: Pick<LaunchesDocument, 'launches'>): LaunchSuggestion[] =>
     suggestions.filter((suggestion) => !document.launches.some((launch) => sameRun(launch, suggestion)));
 
 /*
  * The launches an import adds. Sharing is the person's choice for the lot, except for one that names a
  * path outside the project, which would not work on another machine.
  */
-export const importedLaunches = (suggestions: readonly LaunchSuggestion[], share: boolean, document: LaunchesDocument): LaunchConfigEntry[] => {
+export const importedLaunches = (
+    suggestions: readonly LaunchSuggestion[],
+    share: boolean,
+    document: Pick<LaunchesDocument, 'launches'>
+): LaunchConfigEntry[] => {
     const taken = new Set(document.launches.map((launch) => launch.id));
     return suggestions.map((suggestion) => {
         const id = uniqueId(suggestion.launch.id, taken);
@@ -162,6 +166,12 @@ export const importedLaunches = (suggestions: readonly LaunchSuggestion[], share
         return { ...suggestion.launch, id, shared: share && !suggestion.private };
     });
 };
+
+/* An import from inside the editor: what was found joins the list beside the drafts, saved with them. */
+export const withImported = (drafts: readonly LaunchDraft[], suggestions: readonly LaunchSuggestion[], share: boolean): LaunchDraft[] => [
+    ...drafts,
+    ...importedLaunches(suggestions, share, { launches: drafts.filter((draft) => !draft.fresh).map((draft) => draft.entry) }).map(draftOf)
+];
 
 const dirnameOf = (path: string): string => {
     const at = path.lastIndexOf('/');

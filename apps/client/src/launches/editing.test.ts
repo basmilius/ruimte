@@ -13,6 +13,7 @@ import {
     splitFolder,
     suggestionSource,
     uniqueId,
+    withImported,
     withoutDraft
 } from './editing.ts';
 
@@ -137,6 +138,22 @@ describe('the import', () => {
             ['debug', false]
         ]);
         expect(importedLaunches(found, false, doc([])).map((entry) => entry.shared)).toEqual([false, false]);
+    });
+
+    test('from the editor it adds to the drafts, which keep what was typed', () => {
+        const edited = draftOf(launch('dev', { name: 'Dev, renamed' }));
+        const typed = {
+            ...newDraft('new:1', 'service'),
+            entry: { id: 'new:1', name: 'Worker', kind: 'service' as const, shared: false, command: 'bun worker' }
+        };
+        const found = [suggestion('dev', {}, { command: 'bun run dev' }), suggestion('worker', {}, { command: 'bun worker' })];
+
+        const offered = newSuggestions(found, { launches: savedLaunches([edited, typed]) });
+        expect(offered.map((entry) => entry.launch.id)).toEqual(['dev']);
+
+        const next = withImported([edited, typed], offered, false);
+        expect(next.slice(0, 2)).toEqual([edited, typed]);
+        expect(next.slice(2).map((draft) => [draft.entry.id, draft.entry.command, draft.fresh])).toEqual([['dev-2', 'bun run dev', false]]);
     });
 
     test('says what it found, and where', () => {

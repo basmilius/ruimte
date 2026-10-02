@@ -34,6 +34,7 @@ import {
     savedLaunches,
     splitFolder,
     suggestionSource,
+    withImported,
     withoutDraft,
     type EnvRow,
     type LaunchDraft
@@ -120,6 +121,7 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
     const [tried, setTried] = useState(false);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<Failure | null>(null);
+    const [finding, setFinding] = useState(false);
 
     const selected = drafts.find((draft) => draft.entry.id === selectedId) ?? null;
     const problem = draftProblem(drafts);
@@ -173,6 +175,17 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
         }
     }
 
+    function addFound(picked: readonly LaunchSuggestion[], share: boolean) {
+        const next = withImported(drafts, picked, share);
+        setDrafts(next);
+        setSelectedId(next[drafts.length]?.entry.id ?? selectedId);
+        setFinding(false);
+    }
+
+    if (finding) {
+        return <ImportForm projectId={projectId} document={document} into={{ drafts, add: addFound, back: () => setFinding(false) }} />;
+    }
+
     return (
         <>
             <div className="flex min-h-0 grow">
@@ -185,7 +198,7 @@ function EditForm({ projectId, document, launchId }: { projectId: string; docume
                         <Button variant="ghost" size="sm" className="justify-start" onClick={add}>
                             <Icon icon={Plus} size={14} /> {t('edit.new')}
                         </Button>
-                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => useLaunches.getState().setDialog({ kind: 'import' })}>
+                        <Button variant="ghost" size="sm" className="justify-start" onClick={() => setFinding(true)}>
                             <Icon icon={Search} size={14} /> {t('edit.find')}
                         </Button>
                     </div>
@@ -496,12 +509,22 @@ function CheckboxRow({ label, hint, checked, onCheckedChange }: { label: string;
     );
 }
 
+/* The editor an import runs inside: what it found joins the drafts there instead of being saved, and Cancel goes back to them. */
+interface ImportInto {
+    drafts: readonly LaunchDraft[];
+    add(picked: readonly LaunchSuggestion[], share: boolean): void;
+    back(): void;
+}
+
 /* What the machine found in the project, each with the command it becomes; nothing is saved until the import. */
-function ImportForm({ projectId, document }: { projectId: string; document: LaunchesDocument }) {
+function ImportForm({ projectId, document, into }: { projectId: string; document: LaunchesDocument; into?: ImportInto }) {
     const { t } = useTranslation('launches');
     const transport = useTransport();
     const { suggestions, failed } = useLaunchSuggestions(projectId);
-    const offered = useMemo(() => (suggestions === null ? null : newSuggestions(suggestions, document)), [suggestions, document]);
+    const offered = useMemo(
+        () => (suggestions === null ? null : newSuggestions(suggestions, into === undefined ? document : { launches: savedLaunches(into.drafts) })),
+        [suggestions, document, into]
+    );
     const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
     const [share, setShare] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -509,6 +532,10 @@ function ImportForm({ projectId, document }: { projectId: string; document: Laun
     const picked = (offered ?? []).filter((suggestion) => suggestion.unsupported === undefined && !skipped.has(suggestion.launch.id));
 
     async function importPicked() {
+        if (into !== undefined) {
+            into.add(picked, share);
+            return;
+        }
         setBusy(true);
         setFailure(null);
         try {
@@ -556,7 +583,9 @@ function ImportForm({ projectId, document }: { projectId: string; document: Laun
 
     return (
         <>
-            <p className="border-b border-border px-5 py-3 text-xs text-text-muted">{t('import.description')}</p>
+            <p className="border-b border-border px-5 py-3 text-xs text-text-muted">
+                {into === undefined ? t('import.description') : t('import.descriptionInEditor')}
+            </p>
             {body}
             <div className="flex items-center gap-3 border-t border-border px-5 py-3">
                 <label className="flex min-w-0 items-center gap-2.5">
@@ -566,7 +595,13 @@ function ImportForm({ projectId, document }: { projectId: string; document: Laun
                 <span className="min-w-0 grow">
                     {failure !== null && <FormError className="truncate">{failure.conflict ? t('edit.conflict') : failure.message}</FormError>}
                 </span>
-                <Dialog.Close render={<Button variant="secondary" />}>{t('import.cancel')}</Dialog.Close>
+                {into === undefined ? (
+                    <Dialog.Close render={<Button variant="secondary" />}>{t('import.cancel')}</Dialog.Close>
+                ) : (
+                    <Button variant="secondary" onClick={into.back}>
+                        {t('import.cancel')}
+                    </Button>
+                )}
                 <Button variant="primary" disabled={busy || picked.length === 0} onClick={() => void importPicked()}>
                     {t('import.confirm', { count: picked.length })}
                 </Button>
