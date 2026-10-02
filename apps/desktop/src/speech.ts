@@ -7,8 +7,10 @@ export const speechHelperPath = (packaged: boolean, daemonExecutable: string, so
         ? join(dirname(daemonExecutable), 'native', process.platform === 'win32' ? 'speech-bridge.exe' : 'speech-bridge')
         : join(sourceRoot, 'apps', 'speech-bridge', 'target', 'release', process.platform === 'win32' ? 'speech-bridge.exe' : 'speech-bridge');
 
-interface Run {
+interface Run<Owner> {
     id: string;
+    /* The page the run's events go back to, taken only once its start was accepted. */
+    owner: Owner | undefined;
     ready: boolean;
     stopping: boolean;
     resolve(): void;
@@ -16,23 +18,23 @@ interface Run {
     deadline: ReturnType<typeof setTimeout>;
 }
 
-export class SpeechService {
+export class SpeechService<Owner = never> {
     readonly #helper: string;
     readonly #model: string;
     readonly #cache: string;
-    readonly #emit: (event: SpeechEvent) => void;
+    readonly #emit: (event: SpeechEvent, owner: Owner | undefined) => void;
     readonly #createProcess: typeof spawn;
     readonly #setTimeout: typeof setTimeout;
     readonly #clearTimeout: typeof clearTimeout;
     #child: ChildProcessWithoutNullStreams | null = null;
-    #run: Run | null = null;
+    #run: Run<Owner> | null = null;
     #idle: ReturnType<typeof setTimeout> | null = null;
 
     constructor(
         helper: string,
         model: string,
         cache: string,
-        emit: (event: SpeechEvent) => void,
+        emit: (event: SpeechEvent, owner: Owner | undefined) => void,
         createProcess: typeof spawn = spawn,
         timers = { setTimeout, clearTimeout }
     ) {
@@ -106,12 +108,12 @@ export class SpeechService {
             // Ten minutes also bounds silence and a renderer that disappears without cleaning up.
             run.deadline = this.#setTimeout(() => this.#fail('Dictation exceeded ten minutes'), 600_000);
             run.resolve();
-            this.#emit({ type: 'ready', sessionId: run.id });
+            this.#emit({ type: 'ready', sessionId: run.id }, run.owner);
         } else if (event.type === 'transcript' && typeof event.text === 'string' && typeof event.final === 'boolean') {
-            this.#emit({ type: 'transcript', sessionId: run.id, text: event.text, final: event.final });
+            this.#emit({ type: 'transcript', sessionId: run.id, text: event.text, final: event.final }, run.owner);
         } else if (event.type === 'ended') {
             this.#complete();
-            this.#emit({ type: 'ended', sessionId: run.id });
+            this.#emit({ type: 'ended', sessionId: run.id }, run.owner);
         } else if (event.type === 'failed' && typeof event.message === 'string') {
             this.#fail(event.message);
         } else {
@@ -134,7 +136,7 @@ export class SpeechService {
         const run = this.#run;
         if (run) {
             run.reject(new Error(message));
-            this.#emit({ type: 'failed', sessionId: run.id, message });
+            this.#emit({ type: 'failed', sessionId: run.id, message }, run.owner);
         }
         this.dispose();
     }
@@ -151,7 +153,12 @@ export class SpeechService {
         return new Promise((resolve, reject) => child.stdin.write(`${JSON.stringify(value)}\n`, (error) => (error ? reject(error) : resolve())));
     }
 
-    async start(id: string, language: string): Promise<void> {
+    /* The page the running dictation belongs to; undefined while none runs. */
+    get owner(): Owner | undefined {
+        return this.#run?.owner;
+    }
+
+    async start(id: string, language: string, owner?: Owner): Promise<void> {
         if (!/^[\w-]{1,100}$/.test(id) || !/^[\w-]{1,30}$/.test(language)) {
             throw new Error('Invalid dictation request');
         }
@@ -165,6 +172,7 @@ export class SpeechService {
         const ready = new Promise<void>((resolve, reject) => {
             this.#run = {
                 id,
+                owner,
                 ready: false,
                 stopping: false,
                 resolve,
@@ -232,7 +240,7 @@ export class SpeechService {
         this.#child = null;
         child?.kill();
         if (run) {
-            this.#emit({ type: 'ended', sessionId: run.id });
+            this.#emit({ type: 'ended', sessionId: run.id }, run.owner);
         }
     }
 }

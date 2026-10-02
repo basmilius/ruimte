@@ -992,11 +992,10 @@ const speechModel = new SpeechModel(
     (state) => windows.send('speech:state', state),
     (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init)
 );
-/* The page that started the dictation that runs, which is the one its words go back to. There is one helper, so one at a time. */
-let speechOwner: Electron.WebContents | null = null;
-const speechService = new SpeechService(speechHelper, speechModel.directory, speechModel.cacheDirectory, (event) => {
-    if (speechOwner && !speechOwner.isDestroyed()) {
-        speechOwner.send('speech:event', event);
+/* A run's words go back to the page that started it. There is one helper, so one run at a time. */
+const speechService = new SpeechService<Electron.WebContents>(speechHelper, speechModel.directory, speechModel.cacheDirectory, (event, owner) => {
+    if (owner && !owner.isDestroyed()) {
+        owner.send('speech:event', event);
     }
 });
 app.on('before-quit', () => {
@@ -1005,19 +1004,18 @@ app.on('before-quit', () => {
 });
 app.on('web-contents-created', (_event, contents) => {
     contents.on('render-process-gone', () => {
-        if (contents === speechOwner) {
+        if (contents === speechService.owner) {
             speechService.dispose();
         }
     });
     contents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
-        if (isMainFrame && contents === speechOwner) {
+        if (isMainFrame && contents === speechService.owner) {
             speechService.dispose();
         }
     });
     contents.on('destroyed', () => {
-        if (contents === speechOwner) {
+        if (contents === speechService.owner) {
             speechService.dispose();
-            speechOwner = null;
         }
     });
 });
@@ -1048,8 +1046,7 @@ handleFromApp('speech:start', async (event, id: unknown, language: unknown) => {
     if (typeof id !== 'string' || typeof language !== 'string') {
         throw new Error('Invalid dictation request');
     }
-    speechOwner = event.sender;
-    return speechService.start(id, language);
+    return speechService.start(id, language, event.sender);
 });
 handleFromApp('speech:samples', async (_event, id: unknown, samples: unknown) => {
     if (typeof id !== 'string') {

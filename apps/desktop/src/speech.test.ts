@@ -7,6 +7,7 @@ import { SpeechService } from './speech';
 
 const fixture = () => {
     const events: SpeechEvent[] = [];
+    const delivered: Array<[string | undefined, SpeechEvent['type']]> = [];
     let now = 0;
     let nextTimer = 0;
     const scheduled = new Map<number, { at: number; action(): void }>();
@@ -47,11 +48,14 @@ const fixture = () => {
             getKilled: () => killed
         });
     }
-    const service = new SpeechService(
+    const service = new SpeechService<string>(
         'helper',
         'model',
         'cache',
-        (event) => events.push(event),
+        (event, owner) => {
+            events.push(event);
+            delivered.push([owner, event.type]);
+        },
         (() => {
             const next = child();
             children.push(next);
@@ -60,7 +64,7 @@ const fixture = () => {
         timers
     );
     const emit = (index: number, value: object) => children[index]!.stdout.write(`${JSON.stringify(value)}\n`);
-    return { service, children, events, emit, advance };
+    return { service, children, events, delivered, emit, advance };
 };
 
 test('waits for ready and keeps a finished helper warm for sixty seconds', async () => {
@@ -124,4 +128,24 @@ test('reports a native crash signal when the helper has no stderr', async () => 
     run.children[0]!.emit('close', null, 'SIGBUS');
     expect(await result).toContain('SIGBUS');
     expect(run.events).toContainEqual({ type: 'failed', sessionId: 'crash', message: 'Speech helper stopped unexpectedly (signal SIGBUS)' });
+});
+
+test('a start refused while another runs leaves that run and its words with the page that started it', async () => {
+    const run = fixture();
+    const first = run.service.start('a', 'nl-NL', 'window-a');
+    run.emit(0, { type: 'ready', sessionId: 'a' });
+    await first;
+    await expect(run.service.start('b', 'nl-NL', 'window-b')).rejects.toThrow('Another dictation is running');
+    expect(run.service.owner).toBe('window-a');
+
+    await run.service.stop('a');
+    run.emit(0, { type: 'transcript', sessionId: 'a', text: 'Hallo.', final: true });
+    run.emit(0, { type: 'ended', sessionId: 'a' });
+    expect(run.delivered).toEqual([
+        ['window-a', 'ready'],
+        ['window-a', 'transcript'],
+        ['window-a', 'ended']
+    ]);
+    expect(run.service.owner).toBeUndefined();
+    run.service.dispose();
 });
