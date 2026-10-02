@@ -30,6 +30,10 @@ public struct MachineMediaInfo: Sendable, Equatable {
     private var inFlight: [Int: Task<BytesPiece, any Error>] = [:]
     // The furthest piece a read asked for, which reading ahead runs from.
     private var frontier = -1
+    // Off after a piece that did not reach the spool, which reading ahead would otherwise ask again at once, without
+    // end. A piece a read brings in turns it back on.
+    private var readingAhead = true
+    private var cancelled = false
     public private(set) var info: MachineMediaInfo?
     var spoolURL: URL? { spool?.url }
 
@@ -90,31 +94,47 @@ public struct MachineMediaInfo: Sendable, Equatable {
         }
     }
 
+    /// Stops every piece on its way and asks nothing more; a read after it fails.
+    public func cancel() {
+        cancelled = true
+        inFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
+    }
+
     /// Asks for the piece at `index` unless it is in the spool or on its way.
     @discardableResult private func fetch(_ index: Int) -> Task<BytesPiece, any Error>? {
         if let task = inFlight[index] { return task }
-        guard !stored.contains(index) else { return nil }
+        guard !cancelled, !stored.contains(index) else { return nil }
         let offset = index * chunkBytes
         let length = info.map { max(min(chunkBytes, $0.size - offset), 1) } ?? chunkBytes
-        let task = Task {
-            defer { self.readAhead() }
-            let piece: BytesPiece
+        // Weak, so reading ahead ends with the last player that holds the source.
+        let task = Task { [weak self] () async throws -> BytesPiece in
             do {
-                piece = try await self.request(at: offset, length: length)
+                guard let piece = try await self?.request(at: offset, length: length) else { throw CancellationError() }
+                self?.settle(index, piece: piece)
+                return piece
             } catch {
-                self.inFlight.removeValue(forKey: index)
+                self?.settle(index, piece: nil)
                 throw error
             }
-            self.inFlight.removeValue(forKey: index)
-            if let spool = self.spool, let info = self.info, info.version == piece.version, info.size == piece.size,
-                (try? spool.write(piece.data, at: offset)) != nil
-            {
-                self.stored.insert(index)
-            }
-            return piece
         }
         inFlight[index] = task
         return task
+    }
+
+    private func settle(_ index: Int, piece: BytesPiece?) {
+        inFlight.removeValue(forKey: index)
+        // The first piece arrives before it pins the file, and reading ahead waits for that.
+        guard let info else { return }
+        if let piece, let spool, info.version == piece.version, info.size == piece.size,
+            (try? spool.write(piece.data, at: index * chunkBytes)) != nil
+        {
+            stored.insert(index)
+            readingAhead = true
+            readAhead()
+        } else {
+            readingAhead = false
+        }
     }
 
     private func reach(_ index: Int) {
@@ -125,7 +145,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
 
     /// Keeps up to `ahead` pieces on their way until the window past the frontier is in the spool.
     private func readAhead() {
-        guard readAheadPieces > 0, spool != nil, let info, info.size > 0 else { return }
+        guard readingAhead, !cancelled, readAheadPieces > 0, spool != nil, let info, info.size > 0 else { return }
         let lastPiece = (info.size - 1) / chunkBytes
         let end = lastPiece - frontier <= readAheadPieces ? lastPiece : frontier + readAheadPieces
         var next = max(frontier, 0)
@@ -141,6 +161,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
             let data = try spool.read(at: offset, count: min(chunkBytes, info.size - offset))
             return BytesPiece(mime: info.mime, size: info.size, version: info.version, offset: offset, data: data)
         }
+        guard !cancelled else { throw CancellationError() }
         guard let task = fetch(index) else { throw MachineClientError.invalid("The spool lost a piece of the file.") }
         return try await task.value
     }
@@ -148,6 +169,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
     private func request(at offset: Int, length: Int) async throws -> BytesPiece {
         var waited = 0
         while true {
+            try Task.checkCancellation()
             do {
                 let piece = try await client.readBytes(
                     .object([
@@ -252,6 +274,7 @@ final class MediaSpool {
     public func cancel() {
         loads.values.forEach { $0.cancel() }
         loads.removeAll()
+        source.cancel()
     }
 
     nonisolated public func resourceLoader(

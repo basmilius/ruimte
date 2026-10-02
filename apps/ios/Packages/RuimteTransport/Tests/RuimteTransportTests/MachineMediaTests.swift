@@ -118,6 +118,76 @@ import Testing
         #expect(Set(machine.asked.map(\.offset)).count == machine.asked.count)
     }
 
+    @Test func aFileThatChangedStopsReadingAhead() async throws {
+        let machine = MediaMachine(size: 100)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8, ahead: 3, readAheadPieces: .max)
+        _ = try await read(source, offset: 0, length: 16)
+        machine.version = "2-2"
+        for _ in 0..<2_000 { await Task.yield() }
+        #expect(machine.asked.count <= 13 + 3)
+    }
+
+    @Test func aRefusedPieceStopsReadingAhead() async throws {
+        let machine = MediaMachine(size: 100)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8, ahead: 3, readAheadPieces: .max)
+        _ = try await read(source, offset: 0, length: 16)
+        machine.refuse = .max
+        for _ in 0..<2_000 { await Task.yield() }
+        #expect(machine.asked.count <= 13 + 3)
+    }
+
+    @Test func aPieceAReadBringsInStartsReadingAheadAgain() async throws {
+        let machine = MediaMachine(size: 100)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8, ahead: 1, readAheadPieces: .max)
+        _ = try await read(source, offset: 0, length: 8)
+        machine.refuse = 1
+        await #expect(throws: MachineClientError.server(code: "busy", message: "Try again")) {
+            _ = try await read(source, offset: 8, length: 8)
+        }
+        for _ in 0..<200 { await Task.yield() }
+        #expect(machine.asked.map(\.offset) == [0, 8])
+        let result = try await read(source, offset: 8, length: 8)
+        #expect(result.data == machine.bytes.subdata(in: 8..<16))
+        for _ in 0..<200 { await Task.yield() }
+        #expect(Set(machine.asked.map(\.offset)) == Set(stride(from: 0, to: 100, by: 8)))
+    }
+
+    @Test func aCancelledSourceAsksNothingMoreAndGoes() async throws {
+        let machine = MediaMachine(size: 1_000)
+        var source: MachineMediaSource? = MachineMediaSource(
+            client: machine, path: "/v.mp4", chunkBytes: 8, ahead: 3, readAheadPieces: .max)
+        _ = try await read(try #require(source), offset: 0, length: 16)
+        weak let gone = source
+        source?.cancel()
+        let asked = machine.asked.count
+        source = nil
+        for _ in 0..<200 { await Task.yield() }
+        #expect(machine.asked.count == asked)
+        #expect(gone == nil)
+    }
+
+    @Test func aSourceNobodyHoldsStopsReadingAhead() async throws {
+        let machine = MediaMachine(size: 1_000)
+        var source: MachineMediaSource? = MachineMediaSource(
+            client: machine, path: "/v.mp4", chunkBytes: 8, ahead: 3, readAheadPieces: .max)
+        _ = try await read(try #require(source), offset: 0, length: 16)
+        weak let gone = source
+        source = nil
+        for _ in 0..<2_000 { await Task.yield() }
+        #expect(gone == nil)
+        #expect(machine.asked.count < 20)
+    }
+
+    @Test func aReadOnACancelledSourceFails() async throws {
+        let machine = MediaMachine(size: 100)
+        let source = MachineMediaSource(client: machine, path: "/v.mp4", chunkBytes: 8)
+        source.cancel()
+        await #expect(throws: CancellationError.self) {
+            _ = try await read(source, offset: 0, length: 8)
+        }
+        #expect(machine.asked.isEmpty)
+    }
+
     @Test func aPieceThatFailedIsAskedAgain() async throws {
         let machine = MediaMachine(size: 100)
         machine.refuse = 1
