@@ -54,6 +54,7 @@ import { snoozeOf, useSnoozes } from '@/state/snooze';
 import { SnoozeButton, SnoozedMark, SnoozeMenuItems } from '@/shell/Snooze';
 import {
     buildSidebar,
+    gapIndex,
     heaviestWork,
     isSessionKind,
     rowAfterArrow,
@@ -139,16 +140,12 @@ const ROW_SELECTED = 'bg-surface-active text-text';
 const ROW_BESIDE = 'text-text hover:bg-surface-hover';
 const ROW_PLAIN = 'text-text-muted hover:bg-surface-hover hover:text-text';
 
-/* The gap in the list the pointer is asking for: above the row whose top half it is in. */
-const insertionIndex = (list: HTMLElement, clientY: number): number => {
-    const rows = [...list.querySelectorAll<HTMLElement>('[data-view-index]')];
-    for (const row of rows) {
+const insertionIndex = (list: HTMLElement, clientY: number, viewCount: number): number => {
+    const rows = [...list.querySelectorAll<HTMLElement>('[data-view-index]')].map((row) => {
         const rect = row.getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) {
-            return Number(row.dataset.viewIndex);
-        }
-    }
-    return rows.length;
+        return { index: Number(row.dataset.viewIndex), middle: rect.top + rect.height / 2 };
+    });
+    return gapIndex(rows, clientY, viewCount);
 };
 
 interface RowProps {
@@ -1047,7 +1044,7 @@ export function Sidebar() {
                                                   if (!reorderable) {
                                                       e.dataTransfer.dropEffect = dropEffectFor(e.dataTransfer.effectAllowed);
                                                   }
-                                                  setInsertAt(insertionIndex(e.currentTarget, e.clientY));
+                                                  setInsertAt(insertionIndex(e.currentTarget, e.clientY, section.viewCount));
                                               }
                                             : (e) => {
                                                   e.preventDefault();
@@ -1067,7 +1064,7 @@ export function Sidebar() {
                                     onDrop={
                                         takesDrop
                                             ? (e) => {
-                                                  const index = insertionIndex(e.currentTarget, e.clientY);
+                                                  const index = insertionIndex(e.currentTarget, e.clientY, section.viewCount);
                                                   e.preventDefault();
                                                   if (reorderable) {
                                                       dropAt(index);

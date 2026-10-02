@@ -196,6 +196,11 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
     return sections;
 };
 
+/* The gap a dragged row would land in: above the row whose top half the pointer is in, and under the
+   last one the end of the list. A row's index counts the views the list hides, so the end is too. */
+export const gapIndex = (rows: readonly { index: number; middle: number }[], y: number, viewCount: number): number =>
+    rows.find((row) => y < row.middle)?.index ?? viewCount;
+
 /* The ids in the order the eye reads them, which is the order Up and Down have to walk. */
 export const rowOrder = (sections: readonly SidebarSection[]): string[] =>
     sections.flatMap((section) => [...(section.group ? [`project:${section.id}`] : []), ...section.rows.map((row) => row.rowId)]);

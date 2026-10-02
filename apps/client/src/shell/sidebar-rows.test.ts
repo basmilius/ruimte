@@ -5,6 +5,7 @@ import {
     type SidebarGroup,
     buildSidebar,
     buildSidebarEverywhere,
+    gapIndex,
     heaviestStatus,
     heaviestWork,
     isSessionKind,
@@ -325,5 +326,23 @@ describe('a chat nobody wrote in yet', () => {
             ['last', 2]
         ]);
         expect(sections[0]!.viewCount).toBe(3);
+    });
+});
+
+describe('where a dragged row lands', () => {
+    // A and B, a hidden chat at 2 that has no row, then C: the rows by their index in the file and the middle of each.
+    const rows = [
+        { index: 0, middle: 10 },
+        { index: 1, middle: 30 },
+        { index: 3, middle: 50 }
+    ];
+
+    test('above the row whose top half the pointer is in', () => {
+        expect(gapIndex(rows, 5, 4)).toBe(0);
+        expect(gapIndex(rows, 45, 4)).toBe(3);
+    });
+
+    test('under the last row is the end of the list, past a view it hides', () => {
+        expect(gapIndex(rows, 70, 4)).toBe(4);
     });
 });
