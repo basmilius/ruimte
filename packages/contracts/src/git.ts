@@ -191,6 +191,9 @@ export const GitCommitSchema = z.object({
     author: z.string(),
     // Seconds since the epoch, the way git writes an author date.
     at: z.number().int(),
+    // The commit date, in the same unit: what `git log` sorts by, which a rebase or an amend moves
+    // and the author date keeps. A daemon from before it leaves it out.
+    committedAt: z.number().int().optional(),
     // Branch and tag names on this commit, without their `refs/` prefix.
     refs: z.array(z.string())
 });

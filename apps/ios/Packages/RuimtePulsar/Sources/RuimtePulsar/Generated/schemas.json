@@ -34208,6 +34208,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "committedAt": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "refs": {
             "type": "array",
             "items": {
@@ -34487,6 +34492,11 @@
               "type": "string"
             },
             "at": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "committedAt": {
               "type": "integer",
               "minimum": -9007199254740991,
               "maximum": 9007199254740991

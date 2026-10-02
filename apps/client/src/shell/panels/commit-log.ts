@@ -40,19 +40,31 @@ export interface LogSection {
     commits: LogRow[];
 }
 
+/* The date git orders a log by. A daemon that does not send it leaves the author date, which a rebase keeps. */
+const committedAt = (commit: GitCommit): number => commit.committedAt ?? commit.at;
+
 /*
- * The logs of several checkouts as one history, newest first. Every page covers a different stretch
- * of time, so the merge reaches no further down than the newest of the pages that have more to give:
- * under that line a repository could still hold a commit older than the rows around it, and putting
- * those rows in now would mean moving them later. They come with the next page instead.
+ * The logs of several checkouts as one history, newest first, each in the order git gave it. Every
+ * page covers a different stretch of time, so the merge stops where a page that has more to give
+ * runs out: below that a repository could still hold a commit newer than the rows still waiting, and
+ * putting those rows in now would mean moving them later. They come with the next page instead.
  */
 export const mergeLogs = (logs: readonly LoadedLog[]): { rows: LogRow[]; more: boolean } => {
-    const floors = logs.filter((log) => log.cursor !== null && log.commits.length > 0).map((log) => log.commits[log.commits.length - 1]!.at);
-    const floor = floors.length === 0 ? null : Math.max(...floors);
-    const rows = logs
-        .flatMap((log) => log.commits.map((commit) => ({ ...commit, cwd: log.cwd, repo: log.repo })))
-        .filter((row) => floor === null || row.at >= floor)
-        .sort((left, right) => right.at - left.at);
+    const queues = logs.map((log) => ({ log, next: 0 }));
+    const headOf = (queue: (typeof queues)[number]): GitCommit => queue.log.commits[queue.next]!;
+    const rows: LogRow[] = [];
+    for (;;) {
+        const waiting = queues.filter((queue) => queue.next < queue.log.commits.length);
+        if (waiting.length === 0) {
+            break;
+        }
+        const newest = waiting.reduce((best, queue) => (committedAt(headOf(queue)) > committedAt(headOf(best)) ? queue : best));
+        rows.push({ ...headOf(newest), cwd: newest.log.cwd, repo: newest.log.repo });
+        newest.next += 1;
+        if (newest.log.cursor !== null && newest.next === newest.log.commits.length) {
+            break;
+        }
+    }
     return { rows, more: logs.some((log) => log.cursor !== null) };
 };
 

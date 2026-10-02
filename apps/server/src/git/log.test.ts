@@ -56,10 +56,22 @@ describe('the log', () => {
     });
 
     test('a subject with the field separator in it stays one subject', () => {
-        const record = ['abc', 'abc123', 'Ada', '1700000000', 'HEAD -> main, tag: v1', `fix: a${FIELD}b`].join(FIELD);
+        const record = ['abc', 'abc123', 'Ada', '1700000000', '1700000500', 'HEAD -> main, tag: v1', `fix: a${FIELD}b`].join(FIELD);
         const [commit] = parseLog(`${record}\0`);
         expect(commit?.subject).toBe(`fix: a${FIELD}b`);
         expect(commit?.refs).toEqual(['main', 'v1']);
+        expect(commit?.at).toBe(1700000000);
+        expect(commit?.committedAt).toBe(1700000500);
+    });
+
+    test('a commit carries the date it was committed beside the one it was written', async () => {
+        const dated = join(root, 'dated');
+        await mkdir(dated);
+        await run(['init', '--quiet', '--initial-branch=main'], dated);
+        await run(['commit', '--quiet', '--allow-empty', '--message', 'old work', '--date=@1700000000'], dated);
+        const [commit] = (await readLog(dated, 1)).commits;
+        expect(commit?.at).toBe(1700000000);
+        expect(commit?.committedAt).toBeGreaterThan(1700000000);
     });
 });
 

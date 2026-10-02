@@ -6,7 +6,7 @@ export const DEFAULT_LIMIT = 30;
 // A branch name may hold anything but a control character, so this one cannot appear inside a field.
 const FIELD = '\u001f';
 
-const LOG_FORMAT = ['%H', '%h', '%an', '%at', '%D', '%s'].join(FIELD);
+const LOG_FORMAT = ['%H', '%h', '%an', '%at', '%ct', '%D', '%s'].join(FIELD);
 
 /*
  * `log -z --format=...` writes one NUL terminated record per commit, the fields separated by the
@@ -19,7 +19,7 @@ export const parseLog = (output: string): GitCommit[] => {
         if (record === '') {
             continue;
         }
-        const [hash = '', shortHash = '', author = '', at = '', decoration = '', ...rest] = record.split(FIELD);
+        const [hash = '', shortHash = '', author = '', at = '', committedAt = '', decoration = '', ...rest] = record.split(FIELD);
         if (hash === '') {
             continue;
         }
@@ -27,7 +27,15 @@ export const parseLog = (output: string): GitCommit[] => {
             .split(', ')
             .map((name) => name.replace('HEAD -> ', '').replace('tag: ', '').trim())
             .filter((name) => name !== '');
-        commits.push({ hash, shortHash, author, at: Number.parseInt(at, 10) || 0, refs, subject: rest.join(FIELD) });
+        commits.push({
+            hash,
+            shortHash,
+            author,
+            at: Number.parseInt(at, 10) || 0,
+            committedAt: Number.parseInt(committedAt, 10) || 0,
+            refs,
+            subject: rest.join(FIELD)
+        });
     }
     return commits;
 };

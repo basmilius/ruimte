@@ -195,6 +195,23 @@ describe('the log', () => {
         expect(more).toBe(true);
     });
 
+    test('a commit rebased onto the top of its log stays on top, whatever its author date', () => {
+        // A pull with rebase writes the commit again today, but keeps the date it was first written.
+        const rebased = { ...commit(now - 21 * 86400, 'rebased'), committedAt: now };
+        const older = [1, 2, 7].map((days) => ({ ...commit(now - days * 86400, `old-${days}`), committedAt: now - days * 86400 }));
+        const { rows } = mergeLogs([{ cwd: '/work/one', repo: '', commits: [rebased, ...older], cursor: '4' }]);
+        expect(rows.map((entry) => entry.hash)).toEqual(['rebased', 'old-1', 'old-2', 'old-7']);
+    });
+
+    test('several logs merge on the commit date and keep the order of git within each', () => {
+        const stamped = (hash: string, at: number, committedAt: number): GitCommit => ({ ...commit(at, hash), committedAt });
+        const { rows } = mergeLogs([
+            { cwd: '/work/one', repo: 'one', commits: [stamped('one-a', 100, 500), stamped('one-b', 400, 400)], cursor: null },
+            { cwd: '/work/two', repo: 'two', commits: [stamped('two-a', 450, 450), stamped('two-b', 480, 300)], cursor: null }
+        ]);
+        expect(rows.map((entry) => entry.hash)).toEqual(['one-a', 'two-a', 'one-b', 'two-b']);
+    });
+
     test('a repository whose page ran out holds nothing back', () => {
         const { rows } = mergeLogs([log('one', [500], null), log('two', [200], null)]);
         expect(rows.map((entry) => entry.at)).toEqual([500, 200]);
