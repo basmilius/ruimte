@@ -27,7 +27,7 @@ runs:
     # Swift binaries are reused only when their sources and toolchain match exactly.
     - name: Cache Swift release products
       id: swift
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           apps/computer-use/.build
