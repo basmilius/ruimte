@@ -22,6 +22,11 @@ struct GitCheckout: Identifiable, Equatable {
     var isRepository: Bool { status?["repo"] == .bool(true) }
     var ahead: Int { Int(status?.number("ahead") ?? 0) }
     var behind: Int { Int(status?.number("behind") ?? 0) }
+    /// The merge, rebase, cherry-pick or revert that stopped halfway in this checkout.
+    var operation: String? { status?["operation"]?.stringValue }
+    var conflictCount: Int { files(state: "conflicted").count }
+    /// Whether something waits on a person here; a machine from before `operation` only says so with conflicts.
+    var halted: Bool { operation != nil || conflictCount > 0 }
 
     func files(state: String) -> [JSONValue] { files.filter { $0.text("state") == state } }
     var hasStaged: Bool { files.contains { $0.text("state") == "staged" } }

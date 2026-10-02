@@ -22,6 +22,7 @@ struct GitPage: View {
     @State private var commitSheet = false
     @State private var confirmation: GitConfirmation?
     @State private var diff: GitDiffTarget?
+    @State private var conflictFile: GitConflictTarget?
     @State private var note: String?
 
     private var checkouts: [GitCheckout] { repositories.checkouts }
@@ -49,6 +50,7 @@ struct GitPage: View {
             } else if checkouts.isEmpty {
                 ContentUnavailableView("No Git repository", lucideIcon: "git-branch", description: Text(folder))
             } else {
+                waiting
                 changes
                 repositoriesSection
             }
@@ -56,6 +58,9 @@ struct GitPage: View {
         .navigationTitle("Git")
         .navigationDestination(item: $diff) { target in
             GitDiffPage(client: client, target: target)
+        }
+        .navigationDestination(item: $conflictFile) { target in
+            GitConflictFilePage(client: client, session: repositories.conflicts.session(target.cwd), path: target.path)
         }
         .toolbar {
             ToolbarItem {
@@ -131,9 +136,26 @@ struct GitPage: View {
         }
     }
 
+    /// Every checkout that stopped halfway says so until it is finished or taken back.
+    @ViewBuilder private var waiting: some View {
+        let halted = checkouts.filter(\.halted)
+        if !halted.isEmpty {
+            Section("Waiting on you") {
+                ForEach(halted) { checkout in
+                    GitHaltedRows(
+                        client: client, repositories: repositories, checkout: checkout, named: repositories.named)
+                }
+            }
+        }
+    }
+
     private func fileRow(checkout: GitCheckout, file: JSONValue, group: String) -> some View {
         Button {
-            diff = GitDiffTarget(cwd: checkout.path, path: file.text("path"), staged: group == "staged", commit: nil)
+            if group == "conflicted" {
+                conflictFile = GitConflictTarget(cwd: checkout.path, path: file.text("path"))
+            } else {
+                diff = GitDiffTarget(cwd: checkout.path, path: file.text("path"), staged: group == "staged", commit: nil)
+            }
         } label: {
             HStack(spacing: 10) {
                 Text(file.text("status")).font(.caption.monospaced())
@@ -151,7 +173,7 @@ struct GitPage: View {
         }
         .modifier(MobileSidebarRow())
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(group == "staged" ? "Unstage" : "Stage") {
+            Button(group == "staged" ? "Unstage" : group == "conflicted" ? "Stage as resolved" : "Stage") {
                 Task {
                     await repositories.stage(
                         client: client, cwd: checkout.path, paths: [file.text("path")], staged: group != "staged")
@@ -164,7 +186,10 @@ struct GitPage: View {
             }
         }
         .contextMenu {
-            Button(group == "staged" ? "Unstage file" : "Stage file", lucideIcon: group == "staged" ? "minus" : "plus") {
+            Button(
+                group == "staged" ? "Unstage file" : group == "conflicted" ? "Stage as resolved" : "Stage file",
+                lucideIcon: group == "staged" ? "minus" : "plus"
+            ) {
                 Task {
                     await repositories.stage(
                         client: client, cwd: checkout.path, paths: [file.text("path")], staged: group != "staged")
@@ -316,5 +341,72 @@ struct GitRepoHeaderRow: View {
             }
         }
         .listRowInsets(EdgeInsets(top: 6, leading: 28, bottom: 2, trailing: 28))
+    }
+}
+
+/// A checkout that stopped halfway: what waits in it, the way to its conflicts, and finishing or taking
+/// the operation back without opening them.
+struct GitHaltedRows: View {
+    let client: any MachineRequesting
+    let repositories: GitRepositories
+    let checkout: GitCheckout
+    let named: Bool
+    @State private var confirmAbort = false
+
+    private var session: GitConflictSession { repositories.conflicts.session(checkout.path) }
+
+    private var title: String {
+        let what =
+            switch checkout.operation {
+            case "merge": "A merge waits on you"
+            case "rebase": "A rebase waits on you"
+            case "cherry-pick": "A cherry-pick waits on you"
+            case "revert": "A revert waits on you"
+            default: "Files conflict"
+            }
+        return named ? "\(what) (\(checkout.label))" : what
+    }
+
+    var body: some View {
+        NavigationLink {
+            GitConflictsPage(client: client, session: session)
+        } label: {
+            HStack(spacing: 10) {
+                Image(lucide: "git-merge", size: 16).foregroundStyle(MobileStyle.statusNeedsYou)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).lineLimit(1)
+                    Text(
+                        checkout.conflictCount == 0
+                            ? "Every file is resolved."
+                            : checkout.conflictCount == 1 ? "1 file conflicts" : "\(checkout.conflictCount) files conflict"
+                    ).font(.caption).foregroundStyle(MobileStyle.muted)
+                }
+            }
+        }
+        if let operation = checkout.operation {
+            HStack(spacing: 8) {
+                Button(GitConflictModel.continueLabel(operation)) { Task { await finish("continue") } }
+                    .disabled(session.busy || checkout.conflictCount > 0)
+                Button(GitConflictModel.abortLabel(operation), role: .destructive) { confirmAbort = true }
+                    .disabled(session.busy)
+                Spacer(minLength: 0)
+            }
+            .font(.caption).buttonStyle(.bordered)
+            .modifier(GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) { Task { await finish("abort") } })
+        }
+        if session.busy {
+            HStack(spacing: 10) {
+                MobileLoadingRow("Working")
+                Text(session.progress ?? "Working").font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
+            }
+        }
+        if let problem = session.problem {
+            Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(.red)
+        }
+    }
+
+    private func finish(_ action: String) async {
+        await session.finish(client: client, action: action)
+        await repositories.refresh(client: client, cwd: checkout.path)
     }
 }
