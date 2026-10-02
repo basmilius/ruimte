@@ -19,6 +19,7 @@ import { isRealMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { PlanSync } from '@/state/plans';
 import { watchPushAttention } from '@/state/push-attention';
+import { watchSnoozes } from '@/state/snooze';
 import { knownAccounts, providerAccountsOf, useProviderAccountsStore, watchProviderAccounts } from '@ruimte/agents-react/state/provider-accounts';
 import { providerSinkFor } from '@ruimte/agents-react/state/providers';
 import { sessionSinkFor, useSessions } from '@/state/sessions';
@@ -101,6 +102,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     const transport = machineTransport(endpoint.id);
     const stopNotifications = transport.on('push.notification', (alert) => notifyRequested(endpoint.id, alert));
     const stopPushAttention = watchPushAttention(endpoint.id, transport);
+    const stopSnoozes = watchSnoozes(endpoint.id, transport);
     const stopAccounts = watchProviderAccounts(endpoint.id, transport);
     const plans = new PlanSync(endpoint.id, transport);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
@@ -118,6 +120,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
         dispose(): void {
             stopNotifications();
             stopPushAttention();
+            stopSnoozes();
             stopAccounts();
             plans.dispose();
             sessions.dispose();
