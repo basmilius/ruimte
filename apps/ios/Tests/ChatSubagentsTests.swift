@@ -1,5 +1,7 @@
 import RuimtePulsar
 import RuimteTransport
+import SwiftUI
+import UIKit
 import XCTest
 
 @testable import Ruimte
@@ -223,6 +225,70 @@ final class ChatSubagentsTests: XCTestCase {
         XCTAssertEqual(ChatBackground.label([task("monitor"), task("monitor")]), "2 monitors")
         XCTAssertEqual(ChatBackground.label([task("shell")]), "1 shell")
     }
+
+    /// A pushed page makes its chat screen disappear, and a chat nobody holds stops: without the page holding it, the
+    /// questions and approvals of the parent chat never reached the composer under a sub-agent.
+    @MainActor func testASubagentPageHoldsItsChatOnceItsScreenLetsGo() async throws {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        defer { runtime.connections.shutdown() }
+        let session = SharedMachineSession(
+            machine: Machine(
+                id: "machine", name: "Machine", icon: nil, publicKey: String(repeating: "A", count: 43),
+                brokerUrl: "wss://broker.test", lastSeenAt: nil),
+            runtime: runtime)
+        let machine = HeldChatMachine()
+        let model = session.retainChat(ChatModel(client: machine, chatID: "chat", machineID: "machine"))
+        let crumb = SubagentCrumb(agent("one"))
+        let host = UIHostingController(
+            rootView: NavigationStack { SubagentConversationPage(model: model, crumb: crumb, session: session) })
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        for _ in 0..<10 { await HeldChatFrame.next() }
+
+        session.releaseChat(model)
+        for _ in 0..<10 { await HeldChatFrame.next() }
+        XCTAssertFalse(machine.requests.contains("chat.detach"))
+
+        window.isHidden = true
+        window.rootViewController = nil
+        for _ in 0..<10 { await HeldChatFrame.next() }
+        XCTAssertTrue(machine.requests.contains("chat.detach"))
+    }
+}
+
+@MainActor private final class HeldChatFrame: NSObject {
+    private var link: CADisplayLink?
+    private var completion: (() -> Void)?
+
+    static func next() async {
+        await withCheckedContinuation { continuation in
+            let frame = HeldChatFrame()
+            frame.completion = { continuation.resume() }
+            let link = CADisplayLink(target: frame, selector: #selector(fire))
+            frame.link = link
+            link.add(to: .main, forMode: .common)
+        }
+    }
+
+    @objc private func fire() {
+        link?.invalidate()
+        link = nil
+        completion?()
+        completion = nil
+    }
+}
+
+@MainActor private final class HeldChatMachine: MachineRequesting {
+    var requests: [String] = []
+
+    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+        requests.append(type)
+        throw MachineClientError.disconnected
+    }
+
+    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }
 
 @MainActor private final class SubagentMachine: MachineRequesting {

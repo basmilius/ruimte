@@ -187,14 +187,14 @@ struct ChatScreen: View {
             }
         }
         .navigationDestination(item: $subagentList) { _ in
-            SubagentListPage(model: model, tasks: machineSession?.tasks)
+            SubagentListPage(model: model, tasks: machineSession?.tasks, session: machineSession)
         }
         .navigationDestination(
             item: Binding(
                 get: { model.presentation.conversationRequest },
                 set: { model.presentation.conversationRequest = $0 })
         ) { crumb in
-            SubagentConversationPage(model: model, crumb: crumb)
+            SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
         }
         .onAppear {
             visible = true

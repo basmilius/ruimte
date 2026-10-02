@@ -31,6 +31,7 @@ extension View {
 struct SubagentListPage: View {
     let model: ChatModel
     let tasks: TaskStore?
+    let session: SharedMachineSession?
     @State private var opened: SubagentCrumb?
     @State private var ending: EndingAgents?
     @State private var failure: String?
@@ -56,7 +57,7 @@ struct SubagentListPage: View {
         .navigationTitle("Sub-agents")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $opened) { crumb in
-            SubagentConversationPage(model: model, crumb: crumb)
+            SubagentConversationPage(model: model, crumb: crumb, session: session)
         }
         .endingAgentsConfirmation($ending)
         .alert(
@@ -67,6 +68,7 @@ struct SubagentListPage: View {
         } message: {
             Text(failure ?? "")
         }
+        .modifier(HoldsChat(model: model, session: session))
     }
 
     @ViewBuilder private func section(_ label: String, items: [JSONValue], work: [String: [JSONValue]]) -> some View {
@@ -327,6 +329,7 @@ struct SubagentInfoBar: View {
 struct SubagentConversationPage: View {
     let model: ChatModel
     let crumb: SubagentCrumb
+    let session: SharedMachineSession?
     @State private var conversation: SubagentConversation
     @State private var presentation = ChatPresentation()
     @State private var prompts = ChatPromptState()
@@ -336,9 +339,10 @@ struct SubagentConversationPage: View {
     private var chatID: String { model.chatID }
     private var parent: ChatPresentation { model.presentation }
 
-    init(model: ChatModel, crumb: SubagentCrumb) {
+    init(model: ChatModel, crumb: SubagentCrumb, session: SharedMachineSession?) {
         self.model = model
         self.crumb = crumb
+        self.session = session
         _conversation = State(
             initialValue: SubagentConversation(client: model.client, chatID: model.chatID, toolUseID: crumb.toolUseID))
     }
@@ -397,7 +401,7 @@ struct SubagentConversationPage: View {
         .navigationTitle(crumb.description)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $presentation.conversationRequest) { nested in
-            SubagentConversationPage(model: model, crumb: nested)
+            SubagentConversationPage(model: model, crumb: nested, session: session)
         }
         .onChange(of: conversation.unsupported) { _, unsupported in
             if unsupported { parent.subagentsRefused = true }
@@ -416,6 +420,28 @@ struct SubagentConversationPage: View {
             conversation.start()
         }
         .onDisappear { conversation.stop() }
+        .modifier(HoldsChat(model: model, session: session))
+    }
+}
+
+/// A page pushed over a chat screen makes that screen let go of its chat, which the session then stops 30 seconds
+/// later or at a reconnect, and with it the questions and approvals the page shows. The page holds the chat itself.
+private struct HoldsChat: ViewModifier {
+    let model: ChatModel
+    let session: SharedMachineSession?
+    @State private var held: ChatModel?
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                guard let session, held == nil else { return }
+                held = session.retainChat(model)
+            }
+            .onDisappear {
+                guard let session, let held else { return }
+                self.held = nil
+                session.releaseChat(held)
+            }
     }
 }
 
