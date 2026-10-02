@@ -65,6 +65,30 @@ describe('diffLines', () => {
         }
     });
 
+    /* How many lines a shortest edit script deletes and inserts, by the longest common subsequence. */
+    const shortest = (base: readonly string[], other: readonly string[]): number => {
+        let previous = new Int32Array(other.length + 1);
+        for (const line of base) {
+            const row = new Int32Array(other.length + 1);
+            for (let index = 0; index < other.length; index += 1) {
+                row[index + 1] = line === other[index] ? previous[index]! + 1 : Math.max(previous[index + 1]!, row[index]!);
+            }
+            previous = row;
+        }
+        return base.length + other.length - 2 * previous[other.length]!;
+    };
+    const edits = (base: readonly string[], other: readonly string[]): number =>
+        diffLines(base, other).reduce((sum, change) => sum + change.baseEnd - change.baseStart + change.otherEnd - change.otherStart, 0);
+
+    test('a long way apart the changes still rebuild the other side, by a shortest script', () => {
+        const base = Array.from({ length: 1200 }, (_, index) => `line ${index % 97}`);
+        for (let seed = 1; seed <= 4; seed += 1) {
+            const other = mutate(base, seed);
+            expect(rebuild(base, other)).toEqual(other);
+            expect(edits(base, other)).toBe(shortest(base, other));
+        }
+    });
+
     test('two files with nothing in common are one change', () => {
         expect(diffLines(['a', 'b'], ['x', 'y'])).toEqual([{ baseStart: 0, baseEnd: 2, otherStart: 0, otherEnd: 2 }]);
     });

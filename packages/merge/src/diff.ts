@@ -16,6 +16,10 @@ export interface Change {
  */
 const MAX_DISTANCE = 4000;
 
+/* The walk keeps every STRIDE-th state and walks the rounds between two again on the way back: a
+   state per round came to over a hundred megabytes at MAX_DISTANCE. */
+const STRIDE = 64;
+
 /* One edit and the run of equal lines behind it, as the walk found them. */
 interface Move {
     prevX: number;
@@ -24,49 +28,70 @@ interface Move {
     y: number;
 }
 
+/* One round of the walk: every diagonal of this distance taken as far as its lines match. True once the far corner is reached. */
+const extend = (left: readonly string[], right: readonly string[], reach: Int32Array, offset: number, distance: number): boolean => {
+    for (let diagonal = -distance; diagonal <= distance; diagonal += 2) {
+        const down = diagonal === -distance || (diagonal !== distance && reach[offset + diagonal - 1]! < reach[offset + diagonal + 1]!);
+        let x = down ? reach[offset + diagonal + 1]! : reach[offset + diagonal - 1]! + 1;
+        let y = x - diagonal;
+        while (x < left.length && y < right.length && left[x] === right[y]) {
+            x += 1;
+            y += 1;
+        }
+        reach[offset + diagonal] = x;
+        if (x >= left.length && y >= right.length) {
+            return true;
+        }
+    }
+    return false;
+};
+
 /* The path back from the far corner, one edit per step, in the order the file reads. */
-const backtrack = (trace: readonly Int32Array[], distance: number, offset: number, width: number, height: number): Move[] => {
+const backtrack = (left: readonly string[], right: readonly string[], saved: readonly Int32Array[], distance: number, offset: number): Move[] => {
     const moves: Move[] = [];
-    let x = width;
-    let y = height;
-    for (let step = distance; step > 0; step -= 1) {
-        const reach = trace[step]!;
-        const diagonal = x - y;
-        const down = diagonal === -step || (diagonal !== step && reach[offset + diagonal - 1]! < reach[offset + diagonal + 1]!);
-        const previous = down ? diagonal + 1 : diagonal - 1;
-        const prevX = reach[offset + previous]!;
-        const prevY = prevX - previous;
-        moves.push({ prevX, prevY, x, y });
-        x = prevX;
-        y = prevY;
+    let x = left.length;
+    let y = right.length;
+    const states = Array.from({ length: Math.min(distance, STRIDE) + 1 }, () => new Int32Array(2 * offset + 1));
+    for (let step = distance; step > 0;) {
+        // The states the rounds from the saved one below this step started in, walked again.
+        const first = Math.floor((step - 1) / STRIDE) * STRIDE;
+        states[0]!.set(saved[first / STRIDE]!);
+        for (let round = first; round < step; round += 1) {
+            const next = states[round - first + 1]!;
+            next.set(states[round - first]!);
+            extend(left, right, next, offset, round);
+        }
+        for (; step > first; step -= 1) {
+            const state = states[step - first]!;
+            const diagonal = x - y;
+            const down = diagonal === -step || (diagonal !== step && state[offset + diagonal - 1]! < state[offset + diagonal + 1]!);
+            const previous = down ? diagonal + 1 : diagonal - 1;
+            const prevX = state[offset + previous]!;
+            const prevY = prevX - previous;
+            moves.push({ prevX, prevY, x, y });
+            x = prevX;
+            y = prevY;
+        }
     }
     return moves.reverse();
 };
 
 /*
- * Myers' greedy walk: for every edit distance it keeps the furthest reach on each diagonal, and the
- * state each round started in, which is the trace the path is read back from once the far corner is
- * reached. Null once the distance passes what is worth walking.
+ * Myers' greedy walk: for every edit distance it keeps the furthest reach on each diagonal, and every
+ * STRIDE-th state a round started in, which is what the path is read back from once the far corner
+ * is reached. Null once the distance passes what is worth walking.
  */
 const walk = (left: readonly string[], right: readonly string[]): Move[] | null => {
     const limit = Math.min(left.length + right.length, MAX_DISTANCE);
     const offset = limit;
     const reach = new Int32Array(2 * limit + 1);
-    const trace: Int32Array[] = [];
+    const saved: Int32Array[] = [];
     for (let distance = 0; distance <= limit; distance += 1) {
-        trace.push(reach.slice());
-        for (let diagonal = -distance; diagonal <= distance; diagonal += 2) {
-            const down = diagonal === -distance || (diagonal !== distance && reach[offset + diagonal - 1]! < reach[offset + diagonal + 1]!);
-            let x = down ? reach[offset + diagonal + 1]! : reach[offset + diagonal - 1]! + 1;
-            let y = x - diagonal;
-            while (x < left.length && y < right.length && left[x] === right[y]) {
-                x += 1;
-                y += 1;
-            }
-            reach[offset + diagonal] = x;
-            if (x >= left.length && y >= right.length) {
-                return backtrack(trace, distance, offset, left.length, right.length);
-            }
+        if (distance % STRIDE === 0) {
+            saved.push(reach.slice());
+        }
+        if (extend(left, right, reach, offset, distance)) {
+            return backtrack(left, right, saved, distance, offset);
         }
     }
     return null;
