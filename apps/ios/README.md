@@ -40,6 +40,19 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   the staged files decide where a commit lands, and fetch, pull and push run over the whole folder.
   A repository of its own has its branches, its stash, its pull request and its history behind it.
   Diffs read a working-tree file or a whole commit.
+  A checkout that stopped halfway in a merge, rebase, cherry-pick or revert says so on the git page, with
+  Continue and Abort (`git.operation`). Its conflicts are worked out in the app, never through markers in
+  the file: a page per file folds what merged by itself and shows each conflict with both sides, to take
+  one, both or a stretch written by hand. The wand closes what needs no choice, and an agent on the
+  machine can propose answers (`git.resolveAi`); a proposal is an answer to check, not a write. Mark
+  resolved writes the file over the digest it was read at, so a file that moved on the machine refuses
+  and is read again, keeping the answers that still fit. The stretch logic is a Swift port of
+  `packages/merge` that splits and fingerprints exactly as the daemon does.
+  Worktrees of a repository list what they hold and open their changes against the branch they came
+  from. A new one is made for a branch; a merge commits loose work first if asked, squashes, merges or
+  rebases, and runs in the checkout that has the target branch out. A target checked out nowhere is
+  refused on purpose and offers the branch the folder is on instead; a conflict leads to the conflict
+  pages or is taken back. Removing asks with the work counted again and only forces when it says so.
   Usage follows the OS region: EUR regions use the supplied exchange rate; other regions use USD.
   Missing or invalid rates keep dollar amounts and show an explanation.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification

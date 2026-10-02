@@ -88,6 +88,11 @@ struct GitRepositoryPage: View {
                     } label: {
                         Label("History", lucideIcon: "git-commit-horizontal")
                     }
+                    NavigationLink {
+                        GitWorktreesPage(client: client, repositories: repositories, repo: path)
+                    } label: {
+                        Label("Worktrees", lucideIcon: "folder-git-2")
+                    }
                 }
             }
         }
@@ -162,6 +167,8 @@ struct GitRepositoryPage: View {
         case .renameBranch(let cwd, _):
             await repositories.act(client: client, cwd: cwd, kind: "rename-branch", extra: ["name": .string(first)])
             await refs.load(client: client, cwd: cwd)
+        case .createWorktree:
+            break
         }
     }
 }

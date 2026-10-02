@@ -2,19 +2,23 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What a diff page is asked for: one file of a checkout, or a whole commit of it.
+/// What a diff page is asked for: one file of a checkout, a whole commit of it, or everything a checkout
+/// holds over the branch it was made from.
 struct GitDiffTarget: Hashable, Identifiable {
     let cwd: String
-    /// Nil for a whole commit, which is every file it touched.
+    /// Nil for a whole commit or a whole checkout, which is every file it touched.
     let path: String?
     let staged: Bool
     let commit: String?
+    /// What a whole checkout is measured from; nil measures from the repository's base branch.
+    var base: String? = nil
 
-    var id: String { "\(cwd)\u{0}\(path ?? "")\u{0}\(commit ?? "")\u{0}\(staged)" }
-    var scope: String { commit == nil ? "worktree" : "commit" }
+    var id: String { "\(cwd)\u{0}\(path ?? "")\u{0}\(commit ?? "")\u{0}\(staged)\u{0}\(base ?? "")" }
+    var scope: String { commit != nil ? "commit" : path == nil ? "base" : "worktree" }
     var title: String {
         if let path { return (path as NSString).lastPathComponent }
-        return String((commit ?? "").prefix(7))
+        if let commit { return String(commit.prefix(7)) }
+        return (cwd as NSString).lastPathComponent
     }
 }
 
@@ -96,6 +100,7 @@ struct GitDiffPage: View {
             ]
             if let path = target.path { fields["path"] = .string(path) }
             if let commit = target.commit { fields["commit"] = .string(commit) }
+            if let base = target.base { fields["base"] = .string(base) }
             return try await client.request("git.diff", payload: .object(fields))
         }
     }

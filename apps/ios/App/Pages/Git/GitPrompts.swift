@@ -8,6 +8,7 @@ enum GitPrompt: Identifiable {
     case pullRequest(cwd: String, subject: String)
     case createBranch(cwd: String)
     case renameBranch(cwd: String, branch: String)
+    case createWorktree(repo: String)
 
     var id: String {
         switch self {
@@ -15,6 +16,7 @@ enum GitPrompt: Identifiable {
         case .pullRequest(let cwd, _): "pr\u{0}\(cwd)"
         case .createBranch(let cwd): "create\u{0}\(cwd)"
         case .renameBranch(let cwd, let branch): "rename\u{0}\(cwd)\u{0}\(branch)"
+        case .createWorktree(let repo): "worktree\u{0}\(repo)"
         }
     }
 
@@ -24,6 +26,7 @@ enum GitPrompt: Identifiable {
         case .pullRequest: "Create pull request"
         case .createBranch: "New branch"
         case .renameBranch: "Rename branch"
+        case .createWorktree: "New worktree"
         }
     }
 
@@ -33,6 +36,8 @@ enum GitPrompt: Identifiable {
         case .pullRequest: "Opens a pull request for this branch on the remote it tracks."
         case .createBranch: "Branches off what is checked out now and switches to it."
         case .renameBranch: "Renames the branch that is checked out here."
+        case .createWorktree:
+            "Makes a second checkout of this branch beside the project. A branch that does not exist yet starts from what is checked out here."
         }
     }
 
@@ -54,7 +59,7 @@ enum GitPrompt: Identifiable {
 
     var placeholder: String {
         switch self {
-        case .createBranch: "feature/what-it-does"
+        case .createBranch, .createWorktree: "feature/what-it-does"
         default: ""
         }
     }
@@ -71,6 +76,7 @@ enum GitPrompt: Identifiable {
         case .pullRequest: "Create"
         case .createBranch: "Create"
         case .renameBranch: "Rename"
+        case .createWorktree: "Create"
         }
     }
 }
