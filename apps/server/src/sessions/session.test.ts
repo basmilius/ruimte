@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { Terminal } from '@xterm/headless';
 import type { ServerFrame } from '@ruimte/contracts';
 import { HIGH_WATER_MARK, OutputGate, type BackpressuredSocket } from '../backpressure.ts';
+import { SCREEN_MAX_BYTES } from './fit-screen.ts';
 import type { SessionEvent } from './manager.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
@@ -153,5 +154,26 @@ describe('Session.snapshotFor', () => {
 
         expect(screens).toHaveLength(1);
         await expect(serialized).resolves.toBeString();
+    });
+});
+
+describe('Session.attach', () => {
+    test('a screen past what one frame carries comes back with its newest lines and under the limit', async () => {
+        await harness.manager.create({ sessionId: 'art', cols: 160, rows: 50, shell: '/bin/sh', args: [], cwd: harness.home });
+        const pty = harness.adapter.forSession('art');
+        // What an image-to-ANSI tool prints: half blocks with a truecolor foreground and background per cell.
+        for (let line = 0; line < 3000; line++) {
+            let text = '';
+            for (let col = 0; col < 160; col++) {
+                text += `\x1b[38;2;${(line * 7 + col) % 256};${(col * 3) % 256};${line % 256}m\x1b[48;2;${(col * 5) % 256};${line % 256};${(line + col) % 256}m▀`;
+            }
+            pty.emit(`${text}\x1b[0m\r\n`);
+        }
+        pty.emit('the newest line\r\n');
+
+        const { screen } = await harness.manager.attach('art', 'c1');
+
+        expect(Buffer.byteLength(JSON.stringify(screen))).toBeLessThanOrEqual(SCREEN_MAX_BYTES);
+        expect(screen).toContain('the newest line');
     });
 });

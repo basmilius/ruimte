@@ -2,6 +2,7 @@ import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/headless';
 import type { AgentInfo, AgentLaunch, RuntimeMode } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
+import { fitScreen } from './fit-screen.ts';
 
 const SCROLLBACK_LINES = 10_000;
 
@@ -377,7 +378,7 @@ export class Session {
     }
 
     private serialize(): string {
-        return this.serializer.serialize({ scrollback: SCROLLBACK_LINES });
+        return fitScreen((scrollback) => this.serializer.serialize({ scrollback }), SCROLLBACK_LINES);
     }
 
     // xterm calls back in the middle of its write loop: every earlier write is parsed there, no later one is.
