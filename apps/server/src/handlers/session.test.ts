@@ -86,3 +86,21 @@ describe('following a shared terminal', () => {
         expect(harness.adapter.forSession('terminal').resizes).toEqual([]);
     });
 });
+
+describe('a login for a client that goes', () => {
+    test('leaves no login shell behind when the client closed while it started', async () => {
+        const logins = new Dispatcher();
+        registerSessionHandlers(logins, harness.manager, undefined, { commandOf: () => 'claude /login', nameOf: () => 'Claude Code' });
+        const frames: ServerFrame[] = [];
+        const client = { id: 'phone', closed: false, send: (frame: ServerFrame) => frames.push(frame) };
+
+        const payload = { sessionId: 'login-1', kind: 'claude', cols: 80, rows: 24 };
+        const handled = logins.handle(client, JSON.stringify({ id: 'login', type: 'session.login', payload }));
+        // The socket goes while the shell is still being set up, and its own cleanup runs at once.
+        client.closed = true;
+        harness.manager.detachAll('phone');
+        await handled;
+
+        expect(harness.manager.get('login-1')).toBeUndefined();
+    });
+});

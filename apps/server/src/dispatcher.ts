@@ -22,6 +22,8 @@ export interface ClientConnection {
     // Unique per socket for the life of the daemon, so a handler can attach a session to exactly this client.
     readonly id: string;
     readonly access?: ClientAccess;
+    /* True once the channel went. Its cleanup already ran, so state a handler leaves for it after an await would outlive it. */
+    readonly closed?: boolean;
     send(frame: ServerFrame): void;
     // A channel that carries binary frames; a reply that asked for one goes out this way.
     sendBinary?(frame: Uint8Array): void;

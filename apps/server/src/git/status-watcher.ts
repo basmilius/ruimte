@@ -69,6 +69,14 @@ export class GitStatusWatcher {
         if (!root) {
             return;
         }
+        const tooBig = (await trackedFiles(root)) > MAX_TRACKED_FILES;
+        // A linked worktree keeps its refs in the repository it came from, where a commit on another
+        // branch is what makes this one's ahead and behind move.
+        const common = tooBig ? null : (await git(['rev-parse', '--path-format=absolute', '--git-common-dir'], root))?.trim();
+        // Registered only once git answered, so a second watch asked meanwhile finds this one and opens nothing of its own.
+        if (this.watches.get(clientId, key) !== undefined) {
+            return;
+        }
         const state: Watch = {
             cwd: key,
             root,
@@ -80,13 +88,10 @@ export class GitStatusWatcher {
             again: false
         };
         this.watches.put(clientId, key, state);
-        if ((await trackedFiles(root)) > MAX_TRACKED_FILES) {
+        if (tooBig) {
             this.degraded.add(root);
             return;
         }
-        // A linked worktree keeps its refs in the repository it came from, where a commit on another
-        // branch is what makes this one's ahead and behind move.
-        const common = (await git(['rev-parse', '--path-format=absolute', '--git-common-dir'], root))?.trim();
         for (const dir of common && !common.startsWith(root + sep) ? [root, common] : [root]) {
             this.attach(state, dir);
         }

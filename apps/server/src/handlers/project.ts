@@ -9,8 +9,10 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
     dispatcher.register('project.open', (payload, client) =>
         translate(async () => {
             const opened = await store.openProject(payload);
-            // Told after the open, so a client is only counted as watching a project it really got.
-            store.hold(client.id, opened.summary.projectId);
+            // Told after the open, so a client is only counted as watching a project it really got and is still there for.
+            if (!client.closed) {
+                store.hold(client.id, opened.summary.projectId);
+            }
             return opened;
         })
     );

@@ -95,9 +95,13 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             },
             requestKeyFrame: ({ backendId, deviceId }) => services.devices?.requestKeyFrame(backendId, deviceId)
         });
+        let closed = false;
         const client: ClientConnection = {
             id: clientId,
             access,
+            get closed() {
+                return closed;
+            },
             send(frame: ServerFrame) {
                 gate.send(frame);
             },
@@ -133,7 +137,6 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.plans?.subscribe(clientId, sink) ?? (() => undefined),
             services.computer?.subscribe(clientId, sink) ?? (() => undefined)
         ];
-        let closed = false;
 
         channel.onDrain(() => {
             if (!closed) {

@@ -17,12 +17,12 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
     /* No `cwd`, so the shell starts in the home folder. The default account is named outright, since a
        launch without one would take the person's pick for new agents instead. */
     dispatcher.register('session.login', (payload, client) =>
-        translate(() => {
+        translate(async () => {
             const command = logins?.commandOf(payload.kind);
             if (logins === undefined || command === undefined) {
                 throw new SessionError('login-unavailable', `${logins?.nameOf(payload.kind) ?? payload.kind} has no login of its own`);
             }
-            return manager.create({
+            const created = await manager.create({
                 sessionId: payload.sessionId,
                 cols: payload.cols,
                 rows: payload.rows,
@@ -31,6 +31,11 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
                 fresh: true,
                 forClient: { clientId: client.id, label: `${logins.nameOf(payload.kind)} login` }
             });
+            // The login lives for its client, whose leaving ended the others before this one was there.
+            if (client.closed) {
+                await manager.kill(created.sessionId);
+            }
+            return created;
         })
     );
 

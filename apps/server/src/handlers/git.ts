@@ -64,6 +64,9 @@ export const registerGitHandlers = (
     dispatcher.register('git.watch', (payload, client) =>
         translate(async () => {
             await statuses.watch(client.id, payload.cwd);
+            if (client.closed) {
+                statuses.detachAll(client.id);
+            }
             return {};
         })
     );

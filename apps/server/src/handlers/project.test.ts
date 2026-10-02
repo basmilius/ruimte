@@ -11,6 +11,7 @@ import { registerProjectHandlers } from './project.ts';
 
 class FakeChannel implements ClientChannel {
     readonly frames: ServerFrame[] = [];
+    private readonly closeListeners: Array<() => void> = [];
 
     send(data: string): number {
         this.frames.push(JSON.parse(data) as ServerFrame);
@@ -23,7 +24,16 @@ class FakeChannel implements ClientChannel {
 
     close(): void {}
 
-    onClose(): void {}
+    onClose(listener: () => void): void {
+        this.closeListeners.push(listener);
+    }
+
+    /* The socket going, the way the server's `close` handler reports it. */
+    drop(): void {
+        for (const listener of this.closeListeners) {
+            listener();
+        }
+    }
 
     onDrain(): void {}
 }
@@ -153,6 +163,30 @@ describe('a save in one client', () => {
 
         const kinds = clients.b.channel.frames.map((frame) => ('event' in frame ? frame.event : 'reply'));
         expect(kinds).toEqual(['project.changed', 'reply']);
+    });
+});
+
+describe('a client that goes while a project opens', () => {
+    test('is not left holding the project once the open lands', async () => {
+        const clients = twoClients();
+        const opened = await request<{ summary: { projectId: string } }>(clients.b, 'project.open', { folder });
+        const projectId = opened.summary.projectId;
+        let land = (): void => undefined;
+        const landed = new Promise<void>((resolve) => {
+            land = resolve;
+        });
+        const openProject = store.openProject.bind(store);
+        store.openProject = async (payload) => {
+            await landed;
+            return openProject(payload);
+        };
+
+        const reply = request(clients.a, 'project.open', { projectId });
+        clients.a.channel.drop();
+        land();
+        await reply;
+
+        expect(store.closing(clients.b.connection.client.id, projectId).otherClients).toBe(0);
     });
 });
 

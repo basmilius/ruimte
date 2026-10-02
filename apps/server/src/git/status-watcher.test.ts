@@ -62,6 +62,14 @@ afterEach(async () => {
 });
 
 describe('GitStatusWatcher', () => {
+    test('two watches of one checkout asked at once keep one watcher', async () => {
+        await Promise.all([watcher.watch('c1', repo), watcher.watch('c1', repo)]);
+        expect(fake.openOn(repo)).toHaveLength(1);
+
+        watcher.detachAll('c1');
+        expect(fake.openOn(repo)).toHaveLength(0);
+    });
+
     test('a burst of writes is one status, and it names the files that changed', async () => {
         await watcher.watch('c1', repo);
         await Promise.all([writeFile(join(repo, 'tracked.txt'), 'one\ntwo\n'), writeFile(join(repo, 'a.txt'), 'a\n'), writeFile(join(repo, 'b.txt'), 'b\n')]);
