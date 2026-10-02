@@ -119,6 +119,52 @@ describe('BrowserClient', () => {
         client.dispose();
     });
 
+    test('a page taken off the canvas while it opens is detached once the open lands', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        transport.hold = true;
+        const opened = client.open('node-1', 'https://example.com', 800, 600);
+        await client.detach('node-1');
+        expect(transport.calls.map((call) => call.type)).toEqual(['browser.open']);
+
+        transport.release();
+        await opened;
+        expect(transport.calls.map((call) => call.type)).toEqual(['browser.open', 'browser.detach']);
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await Promise.resolve();
+        expect(transport.calls.map((call) => call.type)).toEqual(['browser.open', 'browser.detach']);
+        client.dispose();
+    });
+
+    test('a page taken off the canvas while the socket comes back is detached once the reopen lands', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        await client.open('node-1', 'https://example.com', 800, 600);
+        transport.hold = true;
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await client.detach('node-1');
+        transport.release();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(transport.calls.map((call) => call.type)).toEqual(['browser.open', 'browser.open', 'browser.detach']);
+        client.dispose();
+    });
+
+    test('a page that leaves and comes back while it opens stays attached', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        transport.hold = true;
+        const first = client.open('node-1', 'https://example.com', 800, 600);
+        await client.detach('node-1');
+        const again = client.open('node-1', 'https://example.com', 800, 600);
+        transport.release();
+        await Promise.all([first, again]);
+        expect(transport.calls.map((call) => call.type)).toEqual(['browser.open', 'browser.open']);
+        client.dispose();
+    });
+
     test('folds status events into the browser row', async () => {
         const transport = new FakeTransport();
         const client = new BrowserClient('machine-1', transport);

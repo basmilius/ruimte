@@ -96,11 +96,17 @@ export class SessionClient {
     /**
      * On mount a node registers, creates if needed, and attaches. Answers null when the transport is
      * not connected; the session stays registered and `onScreen` fires once the reconnect has attached it.
+     * Null as well for a node that left before it was attached.
      */
     async open(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<SessionAttachResult | null> {
-        this.mounted.set(nodeId, { ...options, cols, rows, attached: false });
+        const registered: Mounted = { ...options, cols, rows, attached: false };
+        this.mounted.set(nodeId, registered);
         try {
             await this.ensure(nodeId, options, cols, rows);
+            // The node may have left the canvas while the create was on the wire.
+            if (this.mounted.get(nodeId) !== registered) {
+                return null;
+            }
             return await this.attach(nodeId, cols, rows);
         } catch (e) {
             if (isConnectionError(e)) {
@@ -114,7 +120,7 @@ export class SessionClient {
      * Answers with the screen as soon as the daemon does: it streams from that moment, and output
      * written before the screen would be wiped by it. What the list says about the session follows.
      */
-    attach(nodeId: string, cols: number, rows: number): Promise<SessionAttachResult> {
+    attach(nodeId: string, cols: number, rows: number): Promise<SessionAttachResult | null> {
         return this.attachWith(nodeId, cols, rows, () => this.listSessions());
     }
 
@@ -231,29 +237,38 @@ export class SessionClient {
 
     private async reattach(nodeId: string, entry: Mounted, sessions: () => Promise<SessionInfo[] | null>): Promise<void> {
         await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent, follow: entry.follow }, entry.cols, entry.rows);
-        // The node may have left the canvas while the create was on the wire.
-        if (!this.mounted.has(nodeId)) {
+        // The node may have left the canvas while the create was on the wire, or mounted again with an open of its own.
+        if (this.mounted.get(nodeId) !== entry) {
             return;
         }
         const result = await this.attachWith(nodeId, entry.cols, entry.rows, sessions);
+        if (result === null) {
+            return;
+        }
         this.sizeHandlers.fanOut(nodeId, { cols: result.cols, rows: result.rows });
         this.screenHandlers.fanOut(nodeId, result);
     }
 
-    private async attachWith(nodeId: string, cols: number, rows: number, sessions: () => Promise<SessionInfo[] | null>): Promise<SessionAttachResult> {
+    /* Null when the node left while the attach was on the wire. */
+    private async attachWith(nodeId: string, cols: number, rows: number, sessions: () => Promise<SessionInfo[] | null>): Promise<SessionAttachResult | null> {
         // Registered before the request, so a socket that drops mid-flight still brings this node back.
-        this.mounted.set(nodeId, { ...this.opens.get(nodeId), cols, rows, attached: false });
+        const entry: Mounted = { ...this.opens.get(nodeId), cols, rows, attached: false };
+        this.mounted.set(nodeId, entry);
         try {
             const result = await this.transport.request('session.attach', { sessionId: nodeId, cols, rows });
-            const entry = this.mounted.get(nodeId);
-            if (entry) {
-                entry.attached = true;
-                this.sink.setAttached(nodeId, true);
+            if (this.mounted.get(nodeId) !== entry) {
+                // The daemon attached a node that is gone, and its detach found nothing to say. A node mounted again since keeps the attach.
+                if (!this.mounted.has(nodeId)) {
+                    void this.transport.request('session.detach', { sessionId: nodeId }).catch(() => undefined);
+                }
+                return null;
             }
+            entry.attached = true;
+            this.sink.setAttached(nodeId, true);
             void this.settle(nodeId, result, sessions);
             return result;
         } catch (e) {
-            if (!isConnectionError(e)) {
+            if (!isConnectionError(e) && this.mounted.get(nodeId) === entry) {
                 this.mounted.delete(nodeId);
             }
             throw e;

@@ -62,6 +62,10 @@ export class BrowserClient {
         this.mounted.set(browserId, mounted);
         try {
             const info = await this.transport.request('browser.open', this.openPayload(browserId, mounted));
+            if (this.mounted.get(browserId) !== mounted) {
+                this.detachIfGone(browserId);
+                return;
+            }
             mounted.attached = true;
             this.apply(info);
         } catch (error) {
@@ -198,6 +202,7 @@ export class BrowserClient {
             const info = await this.transport.request('browser.open', this.openPayload(browserId, mounted));
             // The node may have left the canvas while the reopen was on the wire.
             if (this.mounted.get(browserId) !== mounted) {
+                this.detachIfGone(browserId);
                 return;
             }
             mounted.attached = true;
@@ -206,6 +211,13 @@ export class BrowserClient {
             if (!isConnectionError(error)) {
                 this.fail(browserId, error);
             }
+        }
+    }
+
+    /* The daemon opened a page whose node left while that was on the wire, and the detach then had nothing to say. A node mounted again since keeps it. */
+    private detachIfGone(browserId: string): void {
+        if (!this.mounted.has(browserId)) {
+            void this.transport.request('browser.detach', { browserId }).catch(() => undefined);
         }
     }
 

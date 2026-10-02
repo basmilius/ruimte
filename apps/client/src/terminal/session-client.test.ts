@@ -17,10 +17,26 @@ class FakeTransport implements Transport {
     screen = 'screen';
     // While set, a list request waits for it, the way a second round trip does on a slow link.
     listHeld: Promise<void> | null = null;
+    // Requests of these kinds wait on the wire until `answer` lets the oldest of them through, the way a slow machine keeps them.
+    readonly gated = new Set<RequestType>();
+    private readonly waiting: Array<{ type: RequestType; go: () => void }> = [];
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
+        const reply = this.reply(type, payload);
+        if (!this.gated.has(type)) {
+            return reply;
+        }
+        return new Promise<void>((go) => this.waiting.push({ type, go })).then(() => reply);
+    }
+
+    answer(type: RequestType): void {
+        const at = this.waiting.findIndex((entry) => entry.type === type);
+        this.waiting.splice(at, 1)[0]?.go();
+    }
+
+    private reply<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         this.calls.push({ type, payload });
         if (this.status !== 'open') {
             return Promise.reject(new TransportError('not-connected', 'offline'));
@@ -352,6 +368,58 @@ describe('SessionClient', () => {
         await flush();
         // Not a word about a session. What a fresh socket does hear is what this client wants asked of it.
         expect(transport.calls.filter((call) => call.type !== 'agent.setApprovals')).toEqual([]);
+    });
+
+    test('a node that leaves while its create is on the wire stays gone, also after a reconnect', async () => {
+        const { transport, client } = setup();
+        transport.gated.add('session.create');
+        const opened = client.open('a', { agent: { kind: 'claude' } }, 80, 24);
+        await client.detach('a');
+        transport.answer('session.create');
+        expect(await opened).toBeNull();
+        await flush();
+        expect(client.isMounted('a')).toBe(false);
+        expect(transport.of('session.attach')).toHaveLength(0);
+
+        transport.setStatus('closed');
+        transport.calls.length = 0;
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('session.create')).toHaveLength(0);
+    });
+
+    test('a node that leaves while its attach is on the wire is detached once that lands', async () => {
+        const { transport, sink, client } = setup();
+        transport.gated.add('session.attach');
+        const opened = client.open('a', {}, 80, 24);
+        await flush();
+        await client.detach('a');
+        expect(transport.of('session.detach')).toHaveLength(0);
+
+        transport.answer('session.attach');
+        await opened;
+        await flush();
+        expect(transport.of('session.detach')).toHaveLength(1);
+        expect(client.isMounted('a')).toBe(false);
+        expect(sink.attached.get('a')).toBe(false);
+    });
+
+    test('a node that leaves and comes back while its attach is on the wire stays attached', async () => {
+        const { transport, sink, client } = setup();
+        transport.gated.add('session.attach');
+        void client.open('a', {}, 80, 24);
+        await flush();
+        await client.detach('a');
+        const again = client.open('a', {}, 80, 24);
+        await flush();
+
+        transport.answer('session.attach');
+        transport.answer('session.attach');
+        await again;
+        await flush();
+        expect(transport.of('session.detach')).toHaveLength(0);
+        expect(client.isMounted('a')).toBe(true);
+        expect(sink.attached.get('a')).toBe(true);
     });
 
     test('attaching an exited session records its exit code from the list', async () => {
