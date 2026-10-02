@@ -198,7 +198,8 @@ export const resizeRect = (rect: Rect, handle: ResizeHandle, point: Point, aspec
     }
     if (aspect && rect.w > 0 && rect.h > 0) {
         const ratio = rect.h / rect.w;
-        const width = Math.abs(w) < Math.abs(h / ratio) ? w : h / ratio;
+        // A side handle moves one dimension, which sets the other; a corner follows the smaller pull.
+        const width = handle === 'e' || handle === 'w' ? w : handle === 'n' || handle === 's' ? h / ratio : Math.abs(w) < Math.abs(h / ratio) ? w : h / ratio;
         const height = width * ratio;
         if (handle.includes('w')) {
             x = rect.x + rect.w - width;

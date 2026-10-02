@@ -81,6 +81,15 @@ describe('boxes', () => {
         expect(resized.w / resized.h).toBeCloseTo(2, 5);
     });
 
+    test('keeping the proportions on a side handle grows as well as shrinks', () => {
+        const from = { x: 0, y: 0, w: 100, h: 50 };
+        expect(resizeRect(from, 'e', { x: 200, y: 25 }, true)).toEqual({ x: 0, y: 0, w: 200, h: 100 });
+        expect(resizeRect(from, 'e', { x: 50, y: 25 }, true)).toEqual({ x: 0, y: 0, w: 50, h: 25 });
+        expect(resizeRect(from, 'w', { x: -100, y: 25 }, true)).toEqual({ x: -100, y: 0, w: 200, h: 100 });
+        expect(resizeRect(from, 's', { x: 50, y: 100 }, true)).toEqual({ x: 0, y: 0, w: 200, h: 100 });
+        expect(resizeRect(from, 'n', { x: 50, y: -50 }, true)).toEqual({ x: 0, y: -50, w: 200, h: 100 });
+    });
+
     test('scaling a line takes its points along', () => {
         const scaled = scaleElement(line('a'), { x: 0, y: 0, w: 100, h: 100 }, { x: 0, y: 0, w: 200, h: 100 });
         expect(scaled.kind === 'line' && scaled.points).toEqual([
