@@ -43,8 +43,11 @@ export class ComputerPresence {
     private line: Waiter[] = [];
     private readonly statuses = new Map<string, AgentStatus>();
     private readonly inFlight = new Map<string, number>();
+    private readonly atHelper = new Map<string, number>();
     private cards: ComputerApproval[] = [];
     private ending: PresenceShow | null = null;
+    // The session bar and its stop key go with an end, so one that comes while the helper still acts waits for its answer.
+    private endAfterCall: PresenceShow | null = null;
     private sent: PresenceShow | null = null;
     private sending = false;
 
@@ -90,6 +93,7 @@ export class ComputerPresence {
     /* The call goes to the helper for an app; one that nobody held is this agent's from now on. */
     acting(nodeId: string): void {
         this.take(nodeId);
+        this.atHelper.set(nodeId, (this.atHelper.get(nodeId) ?? 0) + 1);
         // The helper shows the action itself, so whatever went before has to be said again after it.
         this.sent = null;
     }
@@ -101,9 +105,23 @@ export class ComputerPresence {
             this.inFlight.set(nodeId, left);
         } else {
             this.inFlight.delete(nodeId);
+            this.atHelper.delete(nodeId);
         }
         if (nodeId === this.holderId) {
-            this.flush();
+            this.endOrFlush();
+        }
+    }
+
+    /* The helper answered a call that `acting` sent it. */
+    answered(nodeId: string): void {
+        const left = (this.atHelper.get(nodeId) ?? 1) - 1;
+        if (left > 0) {
+            this.atHelper.set(nodeId, left);
+        } else {
+            this.atHelper.delete(nodeId);
+        }
+        if (nodeId === this.holderId) {
+            this.endOrFlush();
         }
     }
 
@@ -186,7 +204,20 @@ export class ComputerPresence {
         return { state: 'error', label: this.options.words().agentError, ends: true };
     }
 
+    /* An end that waited for the helper goes once it answered; anything else is shown as it stands. */
+    private endOrFlush(): void {
+        if (this.endAfterCall !== null && this.holderId !== null && !this.atHelper.has(this.holderId)) {
+            this.end(this.endAfterCall);
+        } else {
+            this.flush();
+        }
+    }
+
     private end(show: PresenceShow): void {
+        if (this.holderId !== null && this.atHelper.has(this.holderId)) {
+            this.endAfterCall = show;
+            return;
+        }
         this.ending = show;
         this.handOver();
         this.flush();
@@ -220,6 +251,7 @@ export class ComputerPresence {
     private setHolder(nodeId: string | null): void {
         if (this.holderId !== nodeId) {
             this.holderId = nodeId;
+            this.endAfterCall = null;
             this.options.onHolder?.(nodeId);
         }
     }
@@ -236,7 +268,7 @@ export class ComputerPresence {
         if (card !== undefined) {
             return { state: 'permission', label: this.options.words().permission(card.app.name) };
         }
-        if (this.inFlight.has(holder)) {
+        if (this.inFlight.has(holder) || this.atHelper.has(holder)) {
             return null;
         }
         return { state: this.statuses.get(holder) === 'needs-you' ? 'waiting' : 'think' };

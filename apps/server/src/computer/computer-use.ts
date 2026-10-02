@@ -683,7 +683,7 @@ export class ComputerUse {
         this.presence.acting(callerId);
         let result: Result;
         try {
-            result = await this.call(work);
+            result = await this.call(work).finally(() => this.presence.answered(callerId));
         } catch (error) {
             // A refused action, such as a stale element, is routine: the agent reads the refusal and recovers, so the person sees no error.
             const code = error instanceof ComputerRefusal ? error.code : null;

@@ -569,6 +569,38 @@ describe('the presence at the cursor', () => {
         expect(computer.status().session).toBeNull();
     });
 
+    test('keeps the session while the helper still acts for a turn that was interrupted, and ends it once it answered', async () => {
+        const setup = await computerSetup();
+        const { computer, helper } = setup;
+        await letIn(setup);
+        const answer = helper.send.bind(helper);
+        let reached = false;
+        let release = (): void => undefined;
+        const released = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        helper.send = async (request) => {
+            if (request.command === 'type') {
+                reached = true;
+                await released;
+            }
+            return answer(request);
+        };
+        const call = computer.operate('chat-1', 'type', 'TextEdit', { text: 'hello' });
+        await until(() => reached);
+        computer.observe(turnEnded('chat-1', 'aborted'));
+        for (let i = 0; i < 5; i++) {
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+        expect(helper.presences).toEqual([]);
+        expect(computer.holder).toBe('chat-1');
+        release();
+        await call;
+        await until(() => helper.presences.length === 1);
+        expect(helper.presences).toEqual(['end']);
+        expect(computer.holder).toBeNull();
+    });
+
     test('ends a session the person paused as well, once the turn is interrupted', async () => {
         const setup = await computerSetup();
         const { computer, helper } = setup;

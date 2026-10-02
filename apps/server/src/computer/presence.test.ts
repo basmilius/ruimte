@@ -229,6 +229,38 @@ describe('the presence of the agent that holds the session', () => {
         expect(presence.holder).toBeNull();
     });
 
+    test('ends the session only once the helper answered the call it still runs', async () => {
+        const { presence, shown, alive } = setup();
+        const outcomes: string[] = [];
+        presence.calling('chat-1');
+        presence.acting('chat-1');
+        presence.calling('chat-2');
+        presence.wait('chat-2', (outcome) => outcomes.push(`chat-2 ${outcome}`));
+        presence.turnEnded('chat-1', 'aborted');
+        await settled();
+        expect(shown).toEqual([]);
+        expect(presence.holder).toBe('chat-1');
+        expect(outcomes).toEqual([]);
+        presence.answered('chat-1');
+        await until(() => shown.length === 1);
+        presence.acted('chat-1');
+        await settled();
+        expect(shown).toEqual(['end']);
+        expect(presence.holder).toBe('chat-2');
+        expect(outcomes).toEqual(['chat-2 yours']);
+
+        // A node that goes waits for the helper as well, and shows nothing meanwhile.
+        presence.acting('chat-2');
+        alive.delete('chat-2');
+        presence.closed('chat-2');
+        await settled();
+        expect(shown).toEqual(['end']);
+        expect(presence.holder).toBe('chat-2');
+        presence.answered('chat-2');
+        await until(() => shown.length === 2);
+        expect(presence.holder).toBeNull();
+    });
+
     test('sends only the newest state while one is out, in order', async () => {
         const { presence, shown, gate } = setup();
         presence.calling('chat-1');
