@@ -102,7 +102,19 @@ export const canApply = (op: PlanOp, actor: PlanActor, plan: Plan): PlanVerdict 
                 return refuse('plan-missing-item', `The plan has no item "${op.id}"`);
             }
             const item = location.item;
-            if (op.checks === undefined || item.type !== 'step') {
+            if (item.type !== 'step') {
+                return ALLOWED;
+            }
+            // A new title would make a person's check or stamp stand for something they never saw.
+            if (op.title !== undefined && op.title !== item.title) {
+                if (holdsPersonState(item)) {
+                    return refuse('set-by-person', `A person checked "${op.id}" or a step under it, so its title stays`);
+                }
+                if (effectiveChecks(plan, item) === 'person') {
+                    return refuse('person-only', `Only a person checks "${op.id}", so its title stays`);
+                }
+            }
+            if (op.checks === undefined) {
                 return ALLOWED;
             }
             if (item.unlocked && op.checks !== 'anyone') {
@@ -127,6 +139,9 @@ export const canApply = (op: PlanOp, actor: PlanActor, plan: Plan): PlanVerdict 
             if (holdsPersonState(location.item)) {
                 return refuse('set-by-person', `A person checked "${op.id}" or a step under it, so it stays`);
             }
+            if (allSteps([location.item]).some((step) => effectiveChecks(plan, step) === 'person')) {
+                return refuse('person-only', `Only a person checks "${op.id}" or a step under it, so it stays`);
+            }
             return ALLOWED;
         }
         case 'meta': {
@@ -138,3 +153,9 @@ export const canApply = (op: PlanOp, actor: PlanActor, plan: Plan): PlanVerdict 
         }
     }
 };
+
+/* Deleting a plan takes every check a person made in it along, so an agent leaves one that holds any. */
+export const canDeletePlan = (plan: Plan, actor: PlanActor): PlanVerdict =>
+    actor === 'agent' && plan.items.some(holdsPersonState)
+        ? refuse('set-by-person', `A person checked steps of "${plan.meta.title}", so the plan stays`)
+        : ALLOWED;

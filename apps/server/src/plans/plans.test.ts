@@ -215,6 +215,22 @@ describe('plan verbs', () => {
         expect(lines[at + 1]).toBe('  Cover the lexer and the parser');
     });
 
+    test('a step a person checks or checked keeps its place and title, and its plan stays', async () => {
+        const daemon = await boot();
+        const planId = await newPlan(daemon);
+        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['remove', 'check']))).toBe('person-only');
+        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'check', '--title', 'Checked by nobody']))).toBe('person-only');
+
+        expect(await daemon.plans.apply('chat-lead', planId, [{ op: 'set', ids: ['build'], state: 'failed' }], 'person')).toMatchObject({ ok: true });
+        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['remove', 'build']))).toBe('set-by-person');
+        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['edit', 'build', '--title', 'Built after all']))).toBe('set-by-person');
+        expect(refusalCode(await runVerb(daemon, 'chat-lead', 'plan', ['delete', '--plan', planId]))).toBe('set-by-person');
+        expect(await planOf(daemon, planId)).toBeDefined();
+
+        expect(await daemon.plans.apply('chat-lead', planId, [{ op: 'set', ids: ['build'], state: 'open' }], 'person')).toMatchObject({ ok: true });
+        expect(await runVerb(daemon, 'chat-lead', 'plan', ['delete', '--plan', planId])).toEqual([`deleted\t${planId}\tShip the feature`]);
+    });
+
     test('a chat keeps at most twenty plans, and the refusal points at plan delete', async () => {
         const daemon = await boot();
         for (let i = 0; i < 20; i++) {

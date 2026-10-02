@@ -158,7 +158,7 @@ export const planActions: ActionHandlers<ServerActionContext> = {
     'plan.setStatus': async ({ planId, text }, { actor, context }) => changed(await applyOps(actor, context, planId, [{ op: 'meta', status: text }])),
     'plan.delete': async ({ planId }, { actor, context }) => {
         const chatId = await callerChat(context, actor.id);
-        const deleted = await context.host.plans.delete(chatId, planId);
+        const deleted = await context.host.plans.delete(chatId, planId, planActorOf(actor));
         if (!deleted.ok) {
             throw await refused(context.host, chatId, deleted);
         }

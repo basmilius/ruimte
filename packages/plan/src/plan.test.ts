@@ -3,6 +3,7 @@ import type { Plan, PlanActor, PlanChecks, PlanItem, PlanOp, PlanStep, PlanStepS
 import {
     applyPlanOps,
     canApply,
+    canDeletePlan,
     createPlan,
     deriveState,
     findItem,
@@ -105,7 +106,20 @@ describe('who may set a step', () => {
         const plan = planOf([step('a', { checks: 'person' }), step('b')], { checks: 'person' });
         expect(codeOf(apply(plan, [{ op: 'edit', id: 'a', checks: 'anyone' }], 'agent'))).toBe('person-only');
         expect(codeOf(apply(plan, [{ op: 'meta', checks: 'anyone' }], 'agent'))).toBe('person-only');
-        expect(codeOf(apply(plan, [{ op: 'edit', id: 'a', title: 'Renamed' }], 'agent'))).toBeUndefined();
+        expect(codeOf(apply(plan, [{ op: 'edit', id: 'a', description: 'What to look at' }], 'agent'))).toBeUndefined();
+    });
+
+    test('an agent does not retitle a step only a person checks or a person set', () => {
+        const plan = planOf([step('a', { checks: 'person' }), step('b', { state: 'failed', by: 'person', at: NOW }), step('c'), step('d')], {
+            checks: 'anyone'
+        });
+        expect(codeOf(apply(plan, [{ op: 'edit', id: 'a', title: 'Renamed' }], 'agent'))).toBe('person-only');
+        expect(codeOf(apply(plan, [{ op: 'edit', id: 'b', title: 'Renamed' }], 'agent'))).toBe('set-by-person');
+        expect(codeOf(apply(plan, [{ op: 'edit', id: 'a', title: 'Step a' }], 'agent'))).toBeUndefined();
+        expect(codeOf(apply(plan, [{ op: 'edit', id: 'b', description: 'Why it failed' }], 'agent'))).toBeUndefined();
+        expect(codeOf(apply(plan, [{ op: 'edit', id: 'c', title: 'Renamed' }], 'agent'))).toBeUndefined();
+        const inherited = planOf([step('a')], { checks: 'person' });
+        expect(codeOf(apply(inherited, [{ op: 'edit', id: 'a', title: 'Renamed' }], 'agent'))).toBe('person-only');
     });
 
     test('an agent never changes a state a person set, but may repeat it or add a note', () => {
@@ -224,10 +238,28 @@ describe('removing', () => {
         expect(findItem(removed, 'zone')).toBeNull();
     });
 
+    test('refuses a step only a person checks, and a parent above one', () => {
+        const plan = planOf([step('a', { checks: 'person' }), step('b', { steps: [step('c'), step('d', { checks: 'person' })] }), step('e')]);
+        expect(codeOf(apply(plan, [{ op: 'remove', id: 'a' }], 'agent'))).toBe('person-only');
+        expect(codeOf(apply(plan, [{ op: 'remove', id: 'b' }], 'agent'))).toBe('person-only');
+        expect(codeOf(apply(plan, [{ op: 'remove', id: 'c' }], 'agent'))).toBeUndefined();
+        expect(codeOf(apply(planOf([step('a')], { checks: 'person' }), [{ op: 'remove', id: 'a' }], 'agent'))).toBe('person-only');
+    });
+
     test('allows what the agent set itself', () => {
         const plan = planOf([step('a', { steps: [step('b', { state: 'done', by: 'agent', at: NOW })] })]);
         const result = applied(apply(plan, [{ op: 'remove', id: 'a' }], 'agent')).plan;
         expect(result.items).toEqual([]);
+    });
+});
+
+describe('deleting a plan', () => {
+    test('an agent may not while a person checked a step of it', () => {
+        const stamped = planOf([
+            { type: 'section', id: 's', title: 'S', items: [step('a', { steps: [step('b', { state: 'done', by: 'person', at: NOW })] })] }
+        ]);
+        expect(codeOf(canDeletePlan(stamped, 'agent'))).toBe('set-by-person');
+        expect(codeOf(canDeletePlan(planOf([step('a', { state: 'done', by: 'agent', at: NOW }), step('b', { checks: 'person' })]), 'agent'))).toBeUndefined();
     });
 });
 

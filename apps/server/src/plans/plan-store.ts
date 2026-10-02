@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PLAN_LIMITS, PlanSchema, type Plan, type PlanActor, type PlanMeta, type PlanOfChat, type PlanOp } from '@ruimte/contracts';
-import { applyPlanOps, createPlan, planProgress, randomItemId, refuse, type PlanApplied, type PlanDraft, type PlanRefusal } from '@ruimte/plan';
+import { applyPlanOps, canDeletePlan, createPlan, planProgress, randomItemId, refuse, type PlanApplied, type PlanDraft, type PlanRefusal } from '@ruimte/plan';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
@@ -119,12 +119,16 @@ export class PlanStore {
         });
     }
 
-    delete(chatId: string, planId: string): Promise<{ ok: true; plan: Plan } | PlanRefusal> {
+    delete(chatId: string, planId: string, actor: PlanActor): Promise<{ ok: true; plan: Plan } | PlanRefusal> {
         return this.inChain(chatId, async () => {
             const plans = await this.readFile(chatId);
             const plan = plans.find((candidate) => candidate.id === planId);
             if (!plan) {
                 return missing(planId);
+            }
+            const verdict = canDeletePlan(plan, actor);
+            if (!verdict.ok) {
+                return verdict;
             }
             await this.writeFile(
                 chatId,

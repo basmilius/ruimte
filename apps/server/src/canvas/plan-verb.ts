@@ -353,7 +353,7 @@ const editSub = defineActionVerb('plan', {
     usage: '<itemId> [--title T] [--description D] [--checks anyone|agent|person] [--plan P]',
     params: [
         ITEM_ID,
-        { syntax: '--title T', need: 'optional', field: 'title' },
+        { syntax: '--title T', need: 'optional', field: 'title', more: 'a step only a person checks, or one a person checked, keeps its title' },
         { syntax: '--description D', need: 'optional', field: 'description' },
         {
             syntax: '--checks C',
@@ -408,7 +408,10 @@ const removeSub = defineActionVerb('plan', {
     action: 'plan.removeItem',
     usage: '<itemId> [--plan P]',
     params: [ITEM_ID, PLAN_FLAG],
-    detail: ['prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
+    detail: [
+        'person\tA step only a person checks, or one a person checked, stays, and so does everything above it',
+        'prints\tplan\tid\trev N\tkind\ttitle\tprogress'
+    ],
     positionals: itemId('plan remove'),
     flags: z.object({ plan: planFlag }),
     async run({ positionals: [id], flags }, call) {
@@ -445,7 +448,7 @@ const deleteSub = defineActionVerb('plan', {
     action: 'plan.delete',
     usage: '--plan P',
     params: [{ syntax: '--plan P', need: 'required', field: 'planId' }],
-    detail: ['prints\tdeleted\tid\ttitle'],
+    detail: ['person\tA plan with a step a person checked stays', 'prints\tdeleted\tid\ttitle'],
     positionals: z.tuple([], { error: 'plan delete takes no arguments; --plan names the plan' }),
     flags: z.object({
         plan: z.string({ error: 'plan delete needs --plan with the id of the plan' }).min(1, 'plan delete needs --plan with the id of the plan')
