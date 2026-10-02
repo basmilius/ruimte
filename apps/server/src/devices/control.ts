@@ -27,6 +27,11 @@ const heldWords = (mode: Exclude<Mode, 'running'>, name: string): string =>
 
 const HELD_CODES: Record<Exclude<Mode, 'running'>, string> = { paused: 'paused', takenOver: 'taken-over' };
 
+const held = (mode: Exclude<Mode, 'running'>, device: DeviceInfo): { code: string; message: string } => ({
+    code: HELD_CODES[mode],
+    message: heldWords(mode, device.name)
+});
+
 const keyOf = (device: Target): string => `${device.backendId}\u0000${device.deviceId}`;
 
 /* A step in the words a client that does not know its kind still shows. */
@@ -94,12 +99,17 @@ export class DeviceControl implements DeviceGate {
             if (step.kind === 'shot') {
                 return null;
             }
-            return { code: HELD_CODES[entry.mode], message: heldWords(entry.mode, device.name) };
+            return held(entry.mode, device);
         }
         entry.nodeId = caller;
         entry.step = wireStep(step, this.seq++);
         this.emit(payloadOf(entry));
         return null;
+    }
+
+    recheck(device: DeviceInfo): { code: string; message: string } | null {
+        const entry = this.entries.get(keyOf(device));
+        return entry === undefined || entry.mode === 'running' ? null : held(entry.mode, device);
     }
 
     /* A press on the strip; answers how the device stands after it, `ended` when no agent operates it. */

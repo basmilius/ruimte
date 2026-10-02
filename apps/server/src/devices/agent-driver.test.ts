@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ManualTimers } from '../computer/computer-test-helpers.ts';
 import { AGENT_HOLD_IDLE_MS, DeviceDriver, type AgentStep, type DeviceGate } from './agent-driver.ts';
+import { DeviceControl } from './control.ts';
 import { ReadingBackend, RecordingBackend, SAMPLE_TREE, SIMULATOR, pngOf } from './device-test-helpers.ts';
 import { DeviceManager } from './manager.ts';
 
@@ -12,7 +13,7 @@ let backend: RecordingBackend;
 let manager: DeviceManager;
 let timers: ManualTimers;
 let slept: number[];
-let gate: DeviceGate;
+let gate: Pick<DeviceGate, 'admit'>;
 let admitted: { caller: string; step: AgentStep }[];
 let driver: DeviceDriver;
 
@@ -35,7 +36,8 @@ beforeEach(async () => {
             admit: (device, caller, step) => {
                 admitted.push({ caller, step });
                 return gate.admit(device, caller, step);
-            }
+            },
+            recheck: () => null
         }
     });
 });
@@ -80,6 +82,33 @@ describe('DeviceDriver', () => {
         expect(inputs.filter((input) => input.kind === 'pointer' && input.phase === 'move')).toHaveLength(4);
         expect(inputs.at(-2)).toMatchObject({ phase: 'move', y: 0.2 });
         expect(slept).toEqual([16, 16, 16, 16]);
+    });
+
+    test('a swipe the person pauses halfway sends no move after that, and lifts the finger where it got to', async () => {
+        backend.shot = pngOf(100, 100);
+        const control = new DeviceControl({ timers });
+        let frames = 0;
+        const paused = new DeviceDriver({
+            home,
+            manager,
+            timers,
+            sleep: async () => {
+                frames += 1;
+                if (frames === 2) {
+                    control.control(SIMULATOR, 'pause');
+                }
+            },
+            gate: control
+        });
+        await paused.shot('chat-1', SIMULATOR, 'phone-node');
+        await expect(paused.swipe('chat-1', SIMULATOR, { x: 50, y: 80 }, { x: 50, y: 20 }, 64)).rejects.toMatchObject({ code: 'paused' });
+        const reached = { x: 0.5, y: expect.closeTo(0.65) };
+        expect(backend.source.inputs).toEqual([
+            { kind: 'pointer', phase: 'down', x: 0.5, y: 0.8 },
+            { kind: 'pointer', phase: 'move', ...reached },
+            { kind: 'pointer', phase: 'up', ...reached }
+        ]);
+        expect(frames).toBe(2);
     });
 
     test('holds a session without any client, which a client opening the device shares', async () => {
@@ -190,7 +219,8 @@ describe('DeviceDriver on a device with a tree', () => {
                 admit: (device, caller, step) => {
                     admitted.push({ caller, step });
                     return gate.admit(device, caller, step);
-                }
+                },
+                recheck: () => null
             }
         });
     });

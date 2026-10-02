@@ -61,9 +61,11 @@ export type AgentStep =
  */
 export interface DeviceGate {
     admit(device: DeviceInfo, caller: string, step: AgentStep): { code: string; message: string } | null;
+    /* Asked between the moves of a step under way: refuses as `admit` does while the person holds the device, without counting as a step. */
+    recheck(device: DeviceInfo): { code: string; message: string } | null;
 }
 
-export const OPEN_GATE: DeviceGate = { admit: () => null };
+export const OPEN_GATE: DeviceGate = { admit: () => null, recheck: () => null };
 
 type Manager = Pick<
     DeviceManager,
@@ -222,10 +224,18 @@ export class DeviceDriver {
         const steps = Math.max(2, Math.round(ms / SWIPE_STEP_MS));
         await this.operate(caller, device, { kind: 'swipe' }, async (send) => {
             await send({ kind: 'pointer', phase: 'down', ...start });
+            let at = start;
             for (let step = 1; step <= steps; step += 1) {
                 await this.sleep(ms / steps);
+                const refusal = this.gate.recheck(device);
+                if (refusal !== null) {
+                    // The finger comes up where it got to, or it would stay on the glass under the person's hand.
+                    await send({ kind: 'pointer', phase: 'up', ...at });
+                    throw new CodedError(refusal.code, refusal.message);
+                }
                 const share = step / steps;
-                await send({ kind: 'pointer', phase: 'move', x: start.x * (1 - share) + end.x * share, y: start.y * (1 - share) + end.y * share });
+                at = { x: start.x * (1 - share) + end.x * share, y: start.y * (1 - share) + end.y * share };
+                await send({ kind: 'pointer', phase: 'move', ...at });
             }
             await send({ kind: 'pointer', phase: 'up', ...end });
         });
