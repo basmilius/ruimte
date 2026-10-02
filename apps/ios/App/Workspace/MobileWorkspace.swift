@@ -149,10 +149,11 @@ final class MobileWorkspace {
     }
 
     func save() async {
-        guard !saving, conflict == nil, session.connected else { return }
+        guard !saving, conflict == nil, session.rpc.isConnected else { return }
         saving = true
         defer { saving = false }
-        while pendingSave && conflict == nil && session.connected {
+        var retries = 0
+        while pendingSave && conflict == nil && session.rpc.isConnected {
             pendingSave = false
             let sent = document
             let content = sent.setting("rev", nil).setting("version", nil)
@@ -172,13 +173,16 @@ final class MobileWorkspace {
             } catch {
                 pendingSave = true
                 problem = error.localizedDescription
+                let failedRevision = revision
                 // Reopen retrieves the conflicting revision without discarding this client's edits.
-                if session.connected {
+                if session.rpc.isConnected {
                     if let result = try? await session.openProject(projectID), let incoming = result["document"] {
                         receive(incoming)
                     }
                 }
-                break
+                // Merged onto a newer revision, the edit goes out again.
+                guard revision > failedRevision, conflict == nil, retries < 2 else { break }
+                retries += 1
             }
         }
     }

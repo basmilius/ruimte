@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import XCTest
 
 @testable import Ruimte
@@ -73,6 +74,86 @@ final class SessionWorkspaceTests: XCTestCase {
         _ = try await opening.value
         await subscriptions.release("project", connected: true).value
         XCTAssertEqual(gate.requests, ["project.open", "project.release"])
+    }
+
+    @MainActor func testASaveThatConflictedGoesOutAgainOnceMerged() async throws {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        let machine = Machine(
+            id: "conflict-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
+            brokerUrl: nil, lastSeenAt: nil)
+        let session = runtime.session(for: machine)
+        let wire = ConflictWire()
+        session.rpc = wire.client
+        let workspace = MobileWorkspace(session: session, projectID: "project")
+        defer {
+            workspace.stop()
+            wire.client.shutdown()
+            runtime.connections.shutdown()
+            UserDefaults.standard.removeObject(forKey: workspace.storageKey)
+        }
+        workspace.start()
+        await workspace.open()
+        XCTAssertTrue(workspace.ready, workspace.problem ?? "The project did not open")
+        wire.remote = wire.remote.setting("rev", .number(2)).setting("color", .string("#e7000b"))
+        wire.conflicts = 1
+
+        await workspace.edit { $0.setting("name", .string("Renamed on the phone")) }
+
+        XCTAssertEqual(wire.saves.count, 2)
+        XCTAssertEqual(wire.saves.last?["baseRev"], .number(2))
+        XCTAssertEqual(wire.saves.last?["content"]?["name"], .string("Renamed on the phone"))
+        XCTAssertEqual(wire.saves.last?["content"]?["color"], .string("#e7000b"))
+        XCTAssertNil(workspace.problem)
+    }
+}
+
+/// A machine whose project changed elsewhere: the next `conflicts` saves are refused until the phone reopens it.
+@MainActor private final class ConflictWire {
+    var remote: JSONValue = .object([
+        "version": .number(3), "rev": .number(1), "name": .string("Ruimte"), "color": .string("#155dfc"),
+        "views": .array([]),
+    ])
+    var conflicts = 0
+    private(set) var saves: [JSONValue] = []
+    lazy var client = MachineClient(send: { [weak self] text in try self?.receive(text) }, connected: true)
+
+    private func receive(_ text: String) throws {
+        let frame = try JSONValue.decode(Data(text.utf8))
+        let id = frame["id"] ?? .null
+        let reply: JSONValue
+        switch frame.text("type") {
+        case "project.open":
+            reply = .object([
+                "id": id, "ok": .bool(true),
+                "result": .object([
+                    "summary": summary, "document": remote,
+                    "local": .object(["activeViewId": .null, "views": .object([:])]),
+                ]),
+            ])
+        case "project.save" where conflicts > 0:
+            conflicts -= 1
+            saves.append(frame["payload"] ?? .null)
+            reply = .object([
+                "id": id, "ok": .bool(false),
+                "error": .object(["code": .string("rev-conflict"), "message": .string("The project changed.")]),
+            ])
+        case "project.save":
+            saves.append(frame["payload"] ?? .null)
+            let rev = remote.number("rev") + 1
+            remote = (frame["payload"]?["content"] ?? remote).setting("rev", .number(rev))
+            reply = .object(["id": id, "ok": .bool(true), "result": .object(["rev": .number(rev)])])
+        default:
+            reply = .object(["id": id, "ok": .bool(true), "result": .object([:])])
+        }
+        client.receive(String(decoding: try reply.encoded(), as: UTF8.self))
+    }
+
+    private var summary: JSONValue {
+        .object([
+            "projectId": .string("project"), "name": .string("Ruimte"), "color": .string("#155dfc"),
+            "folder": .string("/work/project"), "lastOpenedAt": .number(1), "closedAt": .null, "available": .bool(true),
+            "icon": .object(["kind": .string("initial"), "value": .string("R")]), "nameSource": .string("chosen"),
+        ])
     }
 }
 
