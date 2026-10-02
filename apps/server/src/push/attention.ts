@@ -2,8 +2,18 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { writeAtomicSync } from '@ruimte/agents/fs';
 import { PushAttentionResultSchema, type PushAttentionEntry } from '@ruimte/contracts';
+import { errorText } from '../error-text.ts';
 
 const RETENTION_MS = 30 * 24 * 60 * 60_000;
+
+const readSaved = (path: string): ReturnType<typeof PushAttentionResultSchema.parse> | null => {
+    try {
+        return PushAttentionResultSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
+    } catch (e) {
+        console.warn(`${path} would not read; push attention starts empty:`, errorText(e));
+        return null;
+    }
+};
 
 export class PushAttention {
     private readonly entries = new Map<string, PushAttentionEntry>();
@@ -20,14 +30,12 @@ export class PushAttention {
     constructor(path?: string, now: () => number = Date.now) {
         this.path = path;
         this.now = now;
-        let marksFrom: number | undefined;
-        if (path && existsSync(path)) {
-            const saved = PushAttentionResultSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
-            for (const entry of saved.entries) {
-                this.entries.set(entry.nodeId, entry);
-            }
-            marksFrom = saved.marksFrom;
+        // A ledger that will not read only costs which notifications were read, never the start.
+        const saved = path && existsSync(path) ? readSaved(path) : null;
+        for (const entry of saved?.entries ?? []) {
+            this.entries.set(entry.nodeId, entry);
         }
+        const marksFrom = saved?.marksFrom;
         this.marksFrom = marksFrom ?? this.now();
         this.prune();
         if (marksFrom === undefined) {

@@ -43,3 +43,16 @@ test('marks start the first time a ledger runs on this version, and entries from
         rmSync(folder, { recursive: true });
     }
 });
+
+test('a ledger that will not read starts empty instead of keeping the daemon from starting', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'ruimte-push-broken-'));
+    try {
+        const path = join(folder, 'attention.json');
+        writeFileSync(path, '{"entries":[{"nodeId":');
+        const ledger = new PushAttention(path, () => 1000);
+        expect(ledger.snapshot()).toEqual([]);
+        expect(ledger.notify('agent').issuedAt).toBe(1000);
+    } finally {
+        rmSync(folder, { recursive: true });
+    }
+});

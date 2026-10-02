@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
@@ -82,6 +82,21 @@ describe('readOrCreateEndpointIdentity', () => {
         expect(restarted.id).toBe(identity.id);
         expect(restarted.label).toBe('Studio');
         expect(restarted.icon).toEqual({ kind: 'lucide', value: 'server' });
+    });
+
+    test.each([
+        ['empty, as a power cut leaves it', ''],
+        ['cut off halfway', '{"version":1,"id":"minted-earlier","publicKey":"-----BEGIN'],
+        ['from a version this one does not read', '{"version":2,"id":"minted-later"}']
+    ])('a file that will not read, %s, is set aside rather than minted over', async (_case, text) => {
+        await writeFile(join(home, 'endpoint.json'), text);
+
+        const minted = await readOrCreateEndpointIdentity(home);
+
+        const aside = (await readdir(home)).filter((name) => name.startsWith('endpoint.json.corrupt-'));
+        expect(aside).toHaveLength(1);
+        expect(await readFile(join(home, aside[0]!), 'utf8')).toBe(text);
+        expect((await readOrCreateEndpointIdentity(home)).id).toBe(minted.id);
     });
 
     test('a name that was typed in a client wins over the one the daemon was started with', async () => {

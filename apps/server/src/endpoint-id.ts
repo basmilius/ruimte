@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
 import { ProjectIconChoiceSchema, type EndpointNameSource, type ProjectIconChoice } from '@ruimte/contracts';
@@ -8,14 +8,14 @@ import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
 import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 import type { SessionEvent, SessionSink } from './sessions/manager.ts';
-import { errorText } from './error-text.ts';
 import { ClientSinks } from './client-sinks.ts';
 
 /*
  * The key pair arrived after the id did, and the name and icon after the keys; the version stays at
  * 1 on purpose: zod strips what it does not know, so a daemon from before any of them reads this
  * file, keeps its id and leaves the extra fields alone. Bumping the version would make that daemon
- * mint a new id, and every paired client would see the machine it knows answer as a stranger.
+ * set the file aside and mint a new id, and every paired client would see the machine it knows
+ * answer as a stranger.
  */
 const FileSchema = z.object({
     version: z.literal(1),
@@ -232,24 +232,47 @@ export class EndpointIdentity {
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
-        await writeAtomic(this.path, `${JSON.stringify(file, null, 2)}\n`, 0o600);
+        // Durable: a power cut right after a change must not leave an empty file where the key pair was.
+        await writeAtomic(this.path, `${JSON.stringify(file, null, 2)}\n`, 0o600, { durable: true });
     }
 }
+
+const parseEndpointFile = (text: string): z.infer<typeof FileSchema> | null => {
+    try {
+        const parsed = FileSchema.safeParse(JSON.parse(text));
+        return parsed.success ? parsed.data : null;
+    } catch {
+        return null;
+    }
+};
+
+/*
+ * The file as it stands, or null when there is none yet. One that will not read is set aside before
+ * anything is minted, so the key pair every paired client pinned can still be put back by hand.
+ */
+const readEndpointFile = async (path: string): Promise<z.infer<typeof FileSchema> | null> => {
+    let text: string;
+    try {
+        text = await readFile(path, 'utf8');
+    } catch (e) {
+        if (isNotFound(e)) {
+            return null;
+        }
+        throw e;
+    }
+    const file = parseEndpointFile(text);
+    if (file === null) {
+        const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+        await rename(path, setAside);
+        console.warn(`${path} would not read; it is kept as ${setAside} and this machine starts with a new id`);
+    }
+    return file;
+};
 
 /* Reads `$RUIMTE_HOME/endpoint.json` and mints whatever is not in it yet. */
 export const readOrCreateEndpointIdentity = async (home: string, defaultName: string = hostname()): Promise<EndpointIdentity> => {
     const path = join(home, 'endpoint.json');
-    let file: z.infer<typeof FileSchema> | null = null;
-    try {
-        const parsed = FileSchema.safeParse(JSON.parse(await readFile(path, 'utf8')));
-        if (parsed.success) {
-            file = parsed.data;
-        }
-    } catch (e) {
-        if (!isNotFound(e)) {
-            console.warn('The endpoint id file would not parse; minting a new id:', errorText(e));
-        }
-    }
+    const file = await readEndpointFile(path);
     const keys = file?.publicKey && file.privateKey ? { publicKey: file.publicKey, privateKey: file.privateKey } : null;
     const identity = new EndpointIdentity({
         path,
