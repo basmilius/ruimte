@@ -36,13 +36,24 @@ export interface ChatDelivery {
  * Whether the turn a chat is running was itself opened by a message. This is the whole of the stop:
  * two agents that read each other would otherwise wake each other for as long as they kept writing,
  * and nothing about that started with a person. It rides on the turn, so it survives a restart.
+ * Between turns the last one counts, since work it left running (a background subagent) may still
+ * write, and a turn the CLI opened by itself goes on with the step of the turn before it.
  */
 export const turnFromMessage = (items: readonly ChatItem[], activeTurnId: string | null): boolean => {
-    if (activeTurnId === null) {
-        return false;
+    const from = activeTurnId === null ? items.findLastIndex((item) => item.kind === 'turn') : items.findIndex((item) => item.id === activeTurnId);
+    for (let i = from; i >= 0; i--) {
+        const turn = items[i]!;
+        if (turn.kind !== 'turn') {
+            continue;
+        }
+        if ((turn.messageFrom ?? []).length > 0) {
+            return true;
+        }
+        if (turn.origin !== 'agent' || turn.taskIds !== undefined || turn.summaryFor !== undefined) {
+            return false;
+        }
     }
-    const turn = items.find((item) => item.id === activeTurnId);
-    return turn?.kind === 'turn' && (turn.messageFrom ?? []).length > 0;
+    return false;
 };
 
 /* The chats of a core as a message sees them. */

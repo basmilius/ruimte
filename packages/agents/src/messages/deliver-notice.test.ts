@@ -71,7 +71,19 @@ describe('turnFromMessage', () => {
         expect(turnFromMessage([turn('t1', ['chat-1'])], 't1')).toBe(true);
         expect(turnFromMessage([turn('t1', [])], 't1')).toBe(false);
         expect(turnFromMessage([turn('t1')], 't1')).toBe(false);
-        expect(turnFromMessage([turn('t1', ['chat-1'])], null)).toBe(false);
+    });
+
+    test('work a turn a message opened left running goes on in that step, between turns and in the turn the CLI opens about it', () => {
+        const ended = { ...turn('t1', ['chat-1']), state: 'done' as const };
+        expect(turnFromMessage([ended], null)).toBe(true);
+        expect(turnFromMessage([ended, turn('t2')], 't2')).toBe(true);
+    });
+
+    test('a turn a person or a settled task opened starts a step of its own', () => {
+        const ended = { ...turn('t1', ['chat-1']), state: 'done' as const };
+        expect(turnFromMessage([ended, { ...turn('t2'), origin: 'user' }], 't2')).toBe(false);
+        expect(turnFromMessage([ended, { ...turn('t2'), taskIds: ['task-1'] }], 't2')).toBe(false);
+        expect(turnFromMessage([ended, { ...turn('t2'), origin: 'user', state: 'done' }, turn('t3')], 't3')).toBe(false);
     });
 });
 
