@@ -398,6 +398,42 @@ describe('ICE servers from the broker', () => {
         expect(turn.asked).toHaveLength(4);
     });
 
+    test('the addresses of one IPv6 /64 share a budget, since a host gets the whole prefix', async () => {
+        const turn = fakeTurn();
+        const broker = newBroker({ iceRequestsPerMinutePerIp: 2 }, turn.provider);
+        const hopping = ['2001:db8:7:1::1', '2001:db8:7:1::2', '2001:db8:7:1:ffff:ffff:ffff:fffe'].map((ip) => connect(broker, 'client', newKey(), { ip }));
+        const neighbor = connect(broker, 'client', newKey(), { ip: '2001:db8:7:2::1' });
+        await settle();
+        const ids = hopping.map((client) => client.peer.ice()!);
+        const neighborId = neighbor.peer.ice();
+        await settle();
+        expect(framesOf(hopping[2]!.state, 'rate-limited')).toEqual([expect.objectContaining({ scope: 'ip', id: ids[2] })]);
+        expect(framesOf(neighbor.state, 'ice').map((frame) => frame.id)).toEqual([neighborId!]);
+
+        const crowded = newBroker({ maxSocketsPerIp: 2 });
+        crowded.open(new FakeSocket(), '2001:db8:9:1::a', BROKER_NAME);
+        crowded.open(new FakeSocket(), '2001:db8:9:1:0:0:0:b', BROKER_NAME);
+        expect(crowded.admit('2001:db8:9:1::c')).not.toBeNull();
+        expect(crowded.admit('2001:db8:9:2::c')).toBeNull();
+    });
+
+    test('every key and address together have one budget, so a crowd of prefixes cannot mint credentials without end', async () => {
+        const turn = fakeTurn();
+        const warnings: string[] = [];
+        const broker = new Broker({ ...DEFAULT_LIMITS, iceRequestsPerMinute: 2 }, () => 0, turn.provider, {
+            warn: (message: string) => warnings.push(message)
+        });
+        const crowd = Array.from({ length: 4 }, (_, index) => connect(broker, 'client', newKey(), { ip: `2001:db8:${index}::1` }));
+        await settle();
+        const ids = crowd.map((client) => client.peer.ice()!);
+        await settle();
+        expect(crowd.flatMap((client) => framesOf(client.state, 'ice').map((frame) => frame.id))).toEqual(ids.slice(0, 2));
+        // An older peer only knows these two scopes, and an address is the nearest.
+        expect(framesOf(crowd[2]!.state, 'rate-limited')).toEqual([expect.objectContaining({ scope: 'ip', id: ids[2] })]);
+        expect(turn.asked).toHaveLength(2);
+        expect(warnings).toHaveLength(1);
+    });
+
     test('a key that asks too often is told to wait with the id, and a provider that fails is an internal error with the id', async () => {
         const turn = fakeTurn();
         const broker = newBroker({ iceRequestsPerMinutePerKey: 2 }, turn.provider);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { isCloudflareAddress } from './cloudflare.ts';
-import { clientIpOf, DEFAULT_LIMITS, DEFAULT_PORT, nameFor, parseBrokerArgs } from './config.ts';
+import { addressKeyOf, clientIpOf, DEFAULT_LIMITS, DEFAULT_PORT, nameFor, parseBrokerArgs } from './config.ts';
 import { RateLimiter } from './rate-limit.ts';
 
 describe('parseBrokerArgs', () => {
@@ -24,8 +24,9 @@ describe('parseBrokerArgs', () => {
             PULSAR_BROKER_NAMES: 'Broker.Example.com, other.example.com',
             PULSAR_BROKER_TRUST_PROXY: '1'
         };
-        const config = parseBrokerArgs(['--port', '6000', '--heartbeat-seconds', '10'], env);
+        const config = parseBrokerArgs(['--port', '6000', '--heartbeat-seconds', '10', '--ice-per-minute', '40'], env);
         expect(config.port).toBe(6000);
+        expect(config.limits.iceRequestsPerMinute).toBe(40);
         expect(config.limits.relaysPerMinutePerKey).toBe(12);
         expect(config.limits.heartbeatMs).toBe(10_000);
         expect(config.names).toEqual(['broker.example.com', 'other.example.com']);
@@ -85,6 +86,21 @@ describe('nameFor', () => {
         expect(nameFor(null, [])).toBeNull();
         expect(nameFor('Broker.Example.com', ['broker.example.com'])).toBe('broker.example.com');
         expect(nameFor('evil.example.com', ['broker.example.com'])).toBeNull();
+    });
+});
+
+describe('addressKeyOf', () => {
+    test('counts an IPv6 address by its /64 and an IPv4 address as it is', () => {
+        expect(addressKeyOf('2001:db8:7:1::1')).toBe(addressKeyOf('2001:0db8:0007:0001:ffff:0:0:9'));
+        expect(addressKeyOf('2001:db8:7:1::1')).not.toBe(addressKeyOf('2001:db8:7:2::1'));
+        expect(addressKeyOf('2001:DB8::1')).toBe(addressKeyOf('2001:db8:0:0:1::'));
+        expect(addressKeyOf('::1')).toBe(addressKeyOf('::2'));
+        expect(addressKeyOf('64:ff9b::203.0.113.9')).toBe(addressKeyOf('64:ff9b::1'));
+        expect(addressKeyOf('fe80::1%en0')).toBe(addressKeyOf('fe80::2'));
+        expect(addressKeyOf('203.0.113.9')).toBe('203.0.113.9');
+        expect(addressKeyOf('::ffff:203.0.113.9')).toBe('203.0.113.9');
+        expect(addressKeyOf('203.0.113.9')).not.toBe(addressKeyOf('203.0.113.10'));
+        expect(addressKeyOf('')).toBe('');
     });
 });
 

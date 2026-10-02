@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { BrokerPeerFrameSchema, brokerHelloMessage, type BrokerRole, type BrokerServerFrame, type SignalEnvelope } from '@ruimte/pulsar';
-import type { BrokerLimits } from './config.ts';
+import { addressKeyOf, type BrokerLimits } from './config.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RateLimiter } from './rate-limit.ts';
 import { noTurn, type TurnProvider } from './turn.ts';
@@ -24,6 +24,7 @@ export const CLOSE = {
 
 export class Peer {
     readonly socket: PeerSocket;
+    /* What the address counts against, `addressKeyOf`. */
     readonly ip: string;
     /* The host this peer dialed, which is what it signs. */
     readonly name: string;
@@ -67,6 +68,8 @@ export class Broker {
     private readonly announcements: RateLimiter;
     private readonly iceRequests: RateLimiter;
     private readonly iceRequestsPerIp: RateLimiter;
+    private readonly iceRequestsAll: RateLimiter;
+    private iceRefusedLoggedAt: number | null = null;
     private readonly turn: TurnProvider;
     private readonly log: Pick<Console, 'warn'>;
 
@@ -77,6 +80,7 @@ export class Broker {
         this.log = log;
         this.iceRequests = new RateLimiter(limits.iceRequestsPerMinutePerKey, 60_000, now);
         this.iceRequestsPerIp = new RateLimiter(limits.iceRequestsPerMinutePerIp, 60_000, now);
+        this.iceRequestsAll = new RateLimiter(limits.iceRequestsPerMinute, 60_000, now);
         this.connections = new RateLimiter(limits.connectionsPerMinutePerIp, 60_000, now);
         this.frames = new RateLimiter(limits.framesPerSecondPerIp, 1_000, now);
         this.relays = new RateLimiter(limits.relaysPerMinutePerKey, 60_000, now);
@@ -93,7 +97,8 @@ export class Broker {
     }
 
     /* Asked before a socket is upgraded; null lets it in. */
-    admit(ip: string): Admission | null {
+    admit(address: string): Admission | null {
+        const ip = addressKeyOf(address);
         if ((this.socketsPerIp.get(ip) ?? 0) >= this.limits.maxSocketsPerIp) {
             return { message: 'Too many sockets from this address', retryAfterMs: 60_000 };
         }
@@ -101,10 +106,10 @@ export class Broker {
         return wait === 0 ? null : { message: 'Too many connections from this address', retryAfterMs: wait };
     }
 
-    open(socket: PeerSocket, ip: string, name: string): Peer {
-        const peer = new Peer(socket, ip, name, this.now());
+    open(socket: PeerSocket, address: string, name: string): Peer {
+        const peer = new Peer(socket, addressKeyOf(address), name, this.now());
         this.peers.add(peer);
-        this.socketsPerIp.set(ip, (this.socketsPerIp.get(ip) ?? 0) + 1);
+        this.socketsPerIp.set(peer.ip, (this.socketsPerIp.get(peer.ip) ?? 0) + 1);
         return peer;
     }
 
@@ -223,7 +228,7 @@ export class Broker {
                 peer.socket.ping();
             }
         }
-        for (const limiter of [this.connections, this.frames, this.relays, this.announcements, this.iceRequests, this.iceRequestsPerIp]) {
+        for (const limiter of [this.connections, this.frames, this.relays, this.announcements, this.iceRequests, this.iceRequestsPerIp, this.iceRequestsAll]) {
             limiter.prune();
         }
     }
@@ -286,6 +291,13 @@ export class Broker {
             this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: wait, id });
             return;
         }
+        const waitAll = this.iceRequestsAll.take('all');
+        if (waitAll > 0) {
+            this.warnIceRefused();
+            // An older peer only knows `ip` and `key`, and leaves the broker over a scope it cannot read.
+            this.send(peer, { type: 'rate-limited', scope: 'ip', retryAfterMs: waitAll, id });
+            return;
+        }
         try {
             const grant = await this.turn.iceServersFor({ role: peer.role, publicKey: peer.publicKey });
             if (peer.state === 'ready') {
@@ -297,6 +309,16 @@ export class Broker {
                 this.send(peer, { type: 'error', code: 'internal', message: 'The broker could not hand out ICE servers', id });
             }
         }
+    }
+
+    /* Once a minute at most, so a run of refusals says it in the log without filling it. */
+    private warnIceRefused(): void {
+        const now = this.now();
+        if (this.iceRefusedLoggedAt !== null && now - this.iceRefusedLoggedAt < 60_000) {
+            return;
+        }
+        this.iceRefusedLoggedAt = now;
+        this.log.warn(`ICE questions are over --ice-per-minute (${this.limits.iceRequestsPerMinute}); TURN credentials are refused until it refills`);
     }
 
     /* A frame that is wrong: said, and before `ready` the end of the socket, since a peer that cannot announce has nothing else to do here. */

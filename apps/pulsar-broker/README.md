@@ -42,6 +42,7 @@ Every flag also reads an environment variable, `PULSAR_BROKER_` plus the flag in
 | `--hello-timeout-seconds`     | `10`        | Time from open to a verified signature.                                                                                                                                                                                                     |
 | `--key-ice-per-minute`        | `10`        | `ice` questions per key per minute; one over it gets `rate-limited` with its id.                                                                                                                                                           |
 | `--ip-ice-per-minute`         | `30`        | `ice` questions per address per minute, summed over every key behind it, since a key costs nothing to make; one over it gets `rate-limited` with its id.                                                                                    |
+| `--ice-per-minute`            | `120`       | `ice` questions per minute over every key and address together, so a crowd of addresses cannot mint credentials faster than coturn's quota frees them; one over it gets `rate-limited` (scope `ip`) with its id, and the log says so once a minute. |
 | `--turn`                      | `none`      | Where TURN credentials come from: `none`, `shared-secret` or `cloudflare`. See "TURN" below.                                                                                                                                                |
 | `--turn-secret-file`          | none        | With `shared-secret`: the file with coturn's `static-auth-secret`, read on every question.                                                                                                                                                  |
 | `--turn-url`                  | none        | With `shared-secret`: a `turn:` or `turns:` URL to hand out. Repeatable (`PULSAR_BROKER_TURN_URLS` takes a comma-separated list).                                                                                                          |
@@ -49,7 +50,9 @@ Every flag also reads an environment variable, `PULSAR_BROKER_` plus the flag in
 | `--cloudflare-turn-key-id`    | none        | With `cloudflare`: the TURN key id of Cloudflare's service.                                                                                                                                                                                |
 | `--cloudflare-turn-token-file` | none       | With `cloudflare`: a file with that key's API token.                                                                                                                                                                                       |
 
-A bucket fills to its limit and refills evenly over its window, so the limits are also the bursts.
+A bucket fills to its limit and refills evenly over its window, so the limits are also the bursts. An
+IPv6 address counts by its /64, since a host gets the whole prefix and would otherwise have a fresh
+budget per address.
 
 ### Why a name
 

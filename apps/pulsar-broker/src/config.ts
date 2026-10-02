@@ -14,6 +14,8 @@ export interface BrokerLimits {
     iceRequestsPerMinutePerKey: number;
     /* Every key behind one address together, since a script can make as many keys as it likes. */
     iceRequestsPerMinutePerIp: number;
+    /* Every key and address together, since a crowd of addresses can mint credentials faster than coturn's quota frees them. */
+    iceRequestsPerMinute: number;
     /* How often a socket is pinged; one that answers nothing for twice this long is dropped. */
     heartbeatMs: number;
     /* How long a socket may take from opening to a verified signature. */
@@ -58,6 +60,7 @@ export const DEFAULT_LIMITS: BrokerLimits = {
     announcesPerMinutePerKey: 10,
     iceRequestsPerMinutePerKey: 10,
     iceRequestsPerMinutePerIp: 30,
+    iceRequestsPerMinute: 120,
     heartbeatMs: 25_000,
     helloTimeoutMs: 10_000
 };
@@ -93,6 +96,7 @@ const LIMIT_FLAGS = [
     'key-announces-per-minute',
     'key-ice-per-minute',
     'ip-ice-per-minute',
+    'ice-per-minute',
     'heartbeat-seconds',
     'hello-timeout-seconds'
 ] as const;
@@ -136,6 +140,7 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
             announcesPerMinutePerKey: number('key-announces-per-minute', 1, 100_000, DEFAULT_LIMITS.announcesPerMinutePerKey),
             iceRequestsPerMinutePerKey: number('key-ice-per-minute', 1, 100_000, DEFAULT_LIMITS.iceRequestsPerMinutePerKey),
             iceRequestsPerMinutePerIp: number('ip-ice-per-minute', 1, 100_000, DEFAULT_LIMITS.iceRequestsPerMinutePerIp),
+            iceRequestsPerMinute: number('ice-per-minute', 1, 100_000, DEFAULT_LIMITS.iceRequestsPerMinute),
             // A peer gives up on a broker it has not heard from in 90 seconds, so a ping has to come well inside that.
             heartbeatMs: number('heartbeat-seconds', 1, 40, DEFAULT_LIMITS.heartbeatMs / 1000) * 1000,
             helloTimeoutMs: number('hello-timeout-seconds', 1, 120, DEFAULT_LIMITS.helloTimeoutMs / 1000) * 1000
@@ -192,7 +197,43 @@ export const nameFor = (hostHeader: string | null, names: string[]): string | nu
     return names.includes(host) ? host : null;
 };
 
+/* The eight groups of an IPv6 address, `::` and a trailing IPv4 part spelled out. */
+const ipv6GroupsOf = (address: string): number[] => {
+    const groupsIn = (part: string): number[] =>
+        part === ''
+            ? []
+            : part.split(':').flatMap((group) => {
+                  if (!group.includes('.')) {
+                      return [Number.parseInt(group, 16)];
+                  }
+                  const [a = 0, b = 0, c = 0, d = 0] = group.split('.').map(Number);
+                  return [a * 256 + b, c * 256 + d];
+              });
+    const [head = '', tail] = address.split('::');
+    const front = groupsIn(head);
+    if (tail === undefined) {
+        return front;
+    }
+    const back = groupsIn(tail);
+    return [...front, ...Array<number>(8 - front.length - back.length).fill(0), ...back];
+};
+
 const stripMappedPrefix = (address: string): string => (address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address);
+
+/*
+ * What an address counts against in every limit: an IPv6 address by its /64, since one host is handed
+ * the whole prefix and would otherwise have a fresh budget per address, and an IPv4 address as it is.
+ */
+export const addressKeyOf = (address: string): string => {
+    const bare = stripMappedPrefix(address.split('%')[0] ?? '');
+    if (isIP(bare) !== 6) {
+        return bare;
+    }
+    return `${ipv6GroupsOf(bare.toLowerCase())
+        .slice(0, 4)
+        .map((group) => group.toString(16))
+        .join(':')}::/64`;
+};
 
 const isLoopback = (address: string): boolean => address === '::1' || address.startsWith('127.');
 
