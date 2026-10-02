@@ -47,7 +47,9 @@ jobs:
             version="${INPUT:-${TAG#v}}"
             ref="v$version"
           fi
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+          # Over the whole value: grep would pass a second line, which lands in GITHUB_OUTPUT.
+          pattern='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
+          if [[ ! "$version" =~ $pattern ]]; then
             echo "Not a version: $version" >&2
             exit 1
           fi
@@ -112,8 +114,9 @@ jobs:
 
   publish:
     needs: [version, verify, binaries]
-    # One of verify and binaries is always skipped, and a skipped need skips this job unless it says otherwise.
-    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') && needs.version.result == 'success' }}
+    # One of verify and binaries is always skipped, and a skipped need skips this job unless it says
+    # otherwise. The other one has to succeed: a cancelled verify is no pass.
+    if: ${{ !cancelled() && needs.version.result == 'success' && ((needs.version.outputs.libraries == 'true' && needs.verify.result == 'success') || (needs.version.outputs.libraries != 'true' && needs.binaries.result == 'success')) }}
     runs-on: ubuntu-latest
     environment: npm
     permissions:
@@ -140,8 +143,12 @@ jobs:
           path: binaries
       - name: Lay out the packages
         if: needs.version.outputs.libraries != 'true'
-        run: bun packages/npm/scripts/build.ts --version ${{ needs.version.outputs.version }} --binaries binaries --out npm-packages
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bun packages/npm/scripts/build.ts --version "$VERSION" --binaries binaries --out npm-packages
       - name: Lay out the libraries
-        run: bun packages/npm/scripts/build-libraries.ts --version ${{ needs.version.outputs.version }} --out npm-packages
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bun packages/npm/scripts/build-libraries.ts --version "$VERSION" --out npm-packages
       - name: Publish, libraries and platform packages first
         run: bun packages/npm/scripts/publish.ts --out npm-packages ${{ needs.version.outputs.libraries == 'true' && '--libraries' || '' }}
