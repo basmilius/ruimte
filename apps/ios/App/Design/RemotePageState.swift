@@ -77,10 +77,17 @@ import SwiftUI
         stop: @escaping () async -> Void = {}, load: @escaping () async -> Void
     ) async {
         var lease: MachineSubscription?
-        let (stream, continuation) = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let cancelConnection = client.observeConnection { connected in if connected { continuation.yield(true) } }
+        // Reads coalesce, but a reconnect is kept apart from them: an event right behind it would otherwise take its
+        // place, and the page would read again without setting its watch again.
+        let reconnect = ReconnectFlag()
+        let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let cancelConnection = client.observeConnection { connected in
+            guard connected else { return }
+            reconnect.pending = true
+            continuation.yield()
+        }
         let cancelEvents = events.map { event in
-            client.subscribe(event) { if matches($0) { continuation.yield(false) } }
+            client.subscribe(event) { if matches($0) { continuation.yield() } }
         }
         defer {
             cancelConnection()
@@ -91,9 +98,10 @@ import SwiftUI
                 await stop()
             }
         }
-        for await connected in stream {
+        for await _ in stream {
             if Task.isCancelled { break }
-            if connected {
+            if reconnect.pending {
+                reconnect.pending = false
                 try? await start()
                 if lease == nil { lease = subscription?() }
                 _ = try? await lease?.refresh()
@@ -101,6 +109,10 @@ import SwiftUI
             await load()
         }
     }
+}
+
+@MainActor private final class ReconnectFlag {
+    var pending = false
 }
 
 /// The spinner of a surface that is reading, with the one thing VoiceOver needs beside it: what is being read. Where

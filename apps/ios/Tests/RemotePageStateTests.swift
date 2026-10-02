@@ -107,6 +107,55 @@ import XCTest
     }
 }
 
+@MainActor final class RemotePageLifecycleTests: XCTestCase {
+    /// An event right behind a reconnect used to take the reconnect's place, and the page's watch was never set again.
+    func testAReconnectFollowedByAnEventStillStartsThePageAgain() async {
+        let machine = LifecycleMachine()
+        let gate = Gate()
+        let counts = LifecycleCounts()
+        let page = Task {
+            await RemotePageLifecycle.run(
+                client: machine, events: ["fs.changed"], start: { counts.starts += 1 },
+                load: {
+                    counts.loads += 1
+                    if counts.loads == 1 { await gate.wait() }
+                })
+        }
+        while counts.loads == 0 { await Task.yield() }
+        machine.connection(true)
+        machine.emit("fs.changed")
+        await gate.open()
+        while counts.loads < 2 { await Task.yield() }
+        XCTAssertEqual(counts.starts, 2)
+        page.cancel()
+        await page.value
+    }
+}
+
+@MainActor private final class LifecycleCounts {
+    var starts = 0
+    var loads = 0
+}
+
+@MainActor private final class LifecycleMachine: MachineRequesting {
+    private var observers: [@MainActor @Sendable (Bool) -> Void] = []
+    private var handlers: [String: [@MainActor @Sendable (JSONValue) -> Void]] = [:]
+
+    func connection(_ connected: Bool) { for observer in observers { observer(connected) } }
+    func emit(_ event: String) { for handler in handlers[event] ?? [] { handler(.object([:])) } }
+
+    func request(_ type: String, payload: JSONValue) async throws -> JSONValue { .object([:]) }
+    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {
+        handlers[event, default: []].append(handler)
+        return {}
+    }
+    func observeConnection(_ handler: @escaping @MainActor @Sendable (Bool) -> Void) -> () -> Void {
+        observers.append(handler)
+        handler(true)
+        return {}
+    }
+}
+
 /// Holds one operation until the test lets it through, so two of them overlap without a clock.
 private actor Gate {
     private var waiter: CheckedContinuation<Void, Never>?
