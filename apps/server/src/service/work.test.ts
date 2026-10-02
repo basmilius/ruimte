@@ -30,6 +30,11 @@ describe('workOf', () => {
         expect(workOf({ sessions: [shell(10), shell(20)], chats: [], children })).toEqual({ terminals: 1, agents: 0 });
     });
 
+    test('a launch is a running terminal, even when its shell became the server it runs', () => {
+        const work = workOf({ sessions: [{ ...shell(10), launch: true }], chats: [], children: () => 0 });
+        expect(work).toEqual({ terminals: 1, agents: 0 });
+    });
+
     test('a terminal agent in a turn, or waiting on a person in one, is an agent', () => {
         const sessions = [shell(10, { agent: agent('running') }), shell(20, { agent: agent('needs-you') })];
         expect(workOf({ sessions, chats: [], children: () => 1 })).toEqual({ terminals: 0, agents: 2 });

@@ -1,7 +1,8 @@
 import type { AgentInfo, AgentStatus, MachineWork } from '@ruimte/contracts';
 
 export interface WorkFacts {
-    sessions: readonly { pid: number; exited: boolean; agent?: AgentInfo | null }[];
+    /* `launch` is a session a launch runs in, whose shell execs the command and so has no child to count. */
+    sessions: readonly { pid: number; exited: boolean; agent?: AgentInfo | null; launch?: boolean }[];
     chats: readonly { activeTurnId: string | null }[];
     /* How many processes have this pid as their parent; null where the process table cannot be read. */
     children: ((pid: number) => number) | null;
@@ -21,7 +22,7 @@ export const workOf = (facts: WorkFacts): MachineWork => {
             continue;
         }
         // Without a process table a live shell may be running anything, so it counts as work.
-        if (facts.children === null || facts.children(session.pid) > 0) {
+        if (session.launch === true || facts.children === null || facts.children(session.pid) > 0) {
             terminals += 1;
         }
     }

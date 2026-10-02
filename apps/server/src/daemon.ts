@@ -523,7 +523,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         } catch {
             children = null;
         }
-        return workOf({ sessions: manager.list(), chats: chats.list(), children });
+        const sessions = manager.list().map((session) => ({ ...session, launch: launches.labelOf(session.sessionId) !== null }));
+        return workOf({ sessions, chats: chats.list(), children });
     };
     const selfUpdate = new SelfUpdater({
         underService: config.underService,
