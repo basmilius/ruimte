@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { isRecentProject } from '@ruimte/contracts';
-import { AppWindow, FolderOpen, LogIn, MessageSquarePlus, MonitorSmartphone, RotateCw } from 'lucide-react';
+import { AppWindow, FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { STRIP_PADDING_PX, useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -89,19 +89,20 @@ function RecentRow({ row }: { row: ProjectMenuRow }) {
     );
 }
 
-/* The machine's Chats project, above Recent and apart from the projects. It names no folder, so its second line is the machine, and only where there is more than one. */
-function ChatsRow({ row, showMachine }: { row: ProjectMenuRow; showMachine: boolean }) {
+/* The machine's Chats project, a way to start beside a new chat. It names no folder, so where there is more than one its second line is the machine. */
+function ChatsTile({ row, showMachine, disabled }: { row: ProjectMenuRow; showMachine: boolean; disabled: boolean }) {
     const { t } = useTranslation('shell');
-    const { summary } = row;
-    const where = [showMachine ? row.machineLabel : null, row.connected ? null : t('start.notConnected')].filter((part) => part !== null).join(' · ');
+    const description = [showMachine ? row.machineLabel : t('chats.openHint'), row.connected ? null : t('start.notConnected')]
+        .filter((part) => part !== null)
+        .join(' · ');
     return (
-        <button className={ROW} onClick={(event) => openProjectClickAction(event, row.endpointId, summary.projectId)}>
-            <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} size={16} scratch />
-            <span className="flex min-w-0 grow flex-col">
-                <span className={clsx('truncate text-sm', row.connected ? 'text-text' : 'text-text-muted')}>{t('chats.name')}</span>
-                {where !== '' && <span className="truncate text-xs text-text-faint">{where}</span>}
-            </span>
-        </button>
+        <Tile
+            icon={<Icon icon={MessagesSquare} size={16} />}
+            title={t('chats.name')}
+            description={description}
+            disabled={disabled}
+            onClick={(event) => openProjectClickAction(event, row.endpointId, row.summary.projectId)}
+        />
     );
 }
 
@@ -238,7 +239,6 @@ function StartContent() {
 
     // Nothing to go back to leaves the second column empty, and a lone column belongs in the middle.
     const hasRecent = failure !== null || listed.length > 0;
-    const secondColumn = hasRecent || chats.length > 0;
 
     const openFolder = (): void => useUi.getState().openFolderBrowser();
 
@@ -295,9 +295,8 @@ function StartContent() {
                     {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                 </div>
             ) : (
-                <div className={clsx('grid grow grid-cols-1 items-start gap-10', secondColumn ? 'md:grid-cols-2' : 'mx-auto w-full max-w-md')}>
+                <div className={clsx('grid grow grid-cols-1 items-start gap-10', hasRecent ? 'md:grid-cols-2' : 'mx-auto w-full max-w-md')}>
                     <div className="flex min-w-0 flex-col gap-8">
-                        {boot === 'machines' && machineList}
                         <Section label={t('start.start')}>
                             <div className="flex flex-col gap-2">
                                 {boot === 'sign-in' && <SignInCard description={t('start.signInForMachines')} />}
@@ -318,6 +317,9 @@ function StartContent() {
                                     onClick={openFolder}
                                 />
                                 {chatTile(waiting)}
+                                {chats.map((row) => (
+                                    <ChatsTile key={row.endpointId} row={row} showMachine={chats.length > 1} disabled={waiting} />
+                                ))}
                                 <Tile
                                     icon={<Icon icon={MonitorSmartphone} size={16} />}
                                     title={t('start.connectMachine')}
@@ -328,28 +330,17 @@ function StartContent() {
                                 {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                             </div>
                         </Section>
-                        {boot === null && machineList}
+                        {(boot === null || boot === 'machines') && machineList}
                     </div>
-                    {secondColumn && (
-                        <div className="flex min-w-0 flex-col gap-8">
-                            {chats.length > 0 && (
-                                <div className="flex flex-col gap-px">
-                                    {chats.map((row) => (
-                                        <ChatsRow key={row.endpointId} row={row} showMachine={chats.length > 1} />
-                                    ))}
-                                </div>
-                            )}
-                            {hasRecent && (
-                                <Section label={t('start.recent')}>
-                                    <div className="flex flex-col gap-px">
-                                        {failure !== null && <FailedRow failure={failure} row={failedRow} />}
-                                        {listed.map((row) => (
-                                            <RecentRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} />
-                                        ))}
-                                    </div>
-                                </Section>
-                            )}
-                        </div>
+                    {hasRecent && (
+                        <Section label={t('start.recent')}>
+                            <div className="flex flex-col gap-px">
+                                {failure !== null && <FailedRow failure={failure} row={failedRow} />}
+                                {listed.map((row) => (
+                                    <RecentRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} />
+                                ))}
+                            </div>
+                        </Section>
                     )}
                 </div>
             )}

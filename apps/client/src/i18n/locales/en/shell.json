@@ -440,7 +440,8 @@
     "chats": {
         "name": "Chats",
         "newChat": "New chat",
-        "newChatHint": "For a question or a quick task"
+        "newChatHint": "For a question or a quick task",
+        "openHint": "Your earlier chats"
     },
     "start": {
         "failed": "The start screen failed to render",

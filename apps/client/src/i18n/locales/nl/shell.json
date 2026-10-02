@@ -440,7 +440,8 @@
     "chats": {
         "name": "Chats",
         "newChat": "Nieuwe chat",
-        "newChatHint": "Voor een vraag of een klusje"
+        "newChatHint": "Voor een vraag of een klusje",
+        "openHint": "Je eerdere chats"
     },
     "start": {
         "failed": "Het startscherm kon niet worden getekend",
