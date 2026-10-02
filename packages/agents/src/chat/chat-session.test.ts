@@ -1019,6 +1019,85 @@ for (const unknown of [false, true]) {
     });
 }
 
+describe('a message sent while a settings change waits', () => {
+    const replacingRig = (provider: typeof codexProvider) => {
+        let host: BackendHost | null = null;
+        const sent: TurnInput[] = [];
+        let made = 0;
+        const session = new ChatSession({
+            info: { ...info(), provider: provider.kind, selection: provider.catalog.normalize(undefined) },
+            provider: {
+                ...provider,
+                createBackend: (_launch, madeHost) => {
+                    made += 1;
+                    host = madeHost;
+                    return {
+                        running: true,
+                        pid: null,
+                        start: () => Promise.resolve(),
+                        sendTurn: (input) => {
+                            sent.push(input);
+                        },
+                        compact: () => undefined,
+                        interrupt: () => madeHost.onEvent({ type: 'turn.done', state: 'aborted', costUsd: 0 }),
+                        respondApproval: () => false,
+                        respondQuestion: () => false,
+                        stop: () => undefined,
+                        dispose: () => Promise.resolve()
+                    };
+                }
+            },
+            command: ['unused'],
+            env: () => ({}),
+            emit: () => undefined,
+            persist: () => undefined,
+            persistSoon: () => undefined
+        });
+        return { session, sent, made: () => made, event: (event: BackendEvent) => host!.onEvent(event) };
+    };
+
+    test('goes out on a new CLI once the background work ends, after the person stopped the turn', async () => {
+        const run = replacingRig(codexProvider);
+        run.session.send('first');
+        await flush();
+        run.event({ type: 'background.started', taskId: 'b1', ref: null, monitor: false, description: 'bun dev' });
+        run.session.cancel();
+        await flush();
+        expect(run.session.info.queuePaused).toBe(true);
+        run.session.configure({ runtimeMode: 'auto' });
+        run.session.send('second');
+        await flush();
+        expect(run.session.info.queue?.map((message) => message.text)).toEqual(['second']);
+
+        run.event({ type: 'background.ended', taskId: 'b1' });
+        await flush();
+        expect(run.made()).toBe(2);
+        expect(run.sent.map((input) => input.text)).toEqual(['first', 'second']);
+        expect(run.session.info.queue ?? []).toEqual([]);
+        await run.session.dispose();
+    });
+
+    test('goes out once the turn Claude opens about its background work ends, after the person stopped the turn', async () => {
+        const run = replacingRig(claudeProvider);
+        run.session.send('first');
+        await flush();
+        run.event({ type: 'background.started', taskId: 'b1', ref: null, monitor: false, description: 'bun dev' });
+        run.session.cancel();
+        await flush();
+        run.session.configure({ runtimeMode: 'auto' });
+        run.session.send('second');
+        await flush();
+
+        run.event({ type: 'background.ended', taskId: 'b1' });
+        run.event({ type: 'text.delta', ref: 'report', text: 'The dev server stopped.' });
+        run.event({ type: 'turn.done', state: 'done', costUsd: 0 });
+        await flush();
+        expect(run.made()).toBe(2);
+        expect(run.sent.map((input) => input.text)).toEqual(['first', 'second']);
+        await run.session.dispose();
+    });
+});
+
 describe('ids across a restart of the host', () => {
     const codexRig = (chatInfo: ChatInfo, items: ChatItem[]) => {
         let host: BackendHost | null = null;

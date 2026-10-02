@@ -142,6 +142,8 @@ export class ChatSession {
     private starting: Promise<ChatBackend> | null = null;
     private pendingStart: { turnId: string; warning: unknown } | null = null;
     private sendAfterStop = false;
+    // A message the person sent while a settings change waited goes out once it applies, paused queue or not.
+    private sendAfterReplacement = false;
     private readonly workflowWarnings = new Map<string, unknown>();
     // New per backend, so thread items of a resumed CLI never overwrite older ones.
     private generation = nextGeneration();
@@ -310,9 +312,10 @@ export class ChatSession {
     }
 
     /* The next queued message, once nothing is in its way. */
-    private drainQueue(explicit = false): void {
+    private drainQueue(asked = false): void {
         const [next, ...rest] = this.queue;
         const limited = limitedTurn(this.thread.list());
+        const explicit = asked || this.sendAfterReplacement;
         if (
             !next ||
             this.busy ||
@@ -321,6 +324,7 @@ export class ChatSession {
             return;
         }
         if (this.replacementWaits()) {
+            this.sendAfterReplacement = explicit;
             const id = `settings-wait-${this.generation}`;
             if (!this.thread.get(id)) {
                 this.emit([
@@ -337,6 +341,7 @@ export class ChatSession {
             }
             return;
         }
+        this.sendAfterReplacement = false;
         this.pauseQueue(false);
         this.setQueue(rest);
         this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, chats: next.chats, attachments: next.attachments }, next.turnId);
@@ -384,6 +389,7 @@ export class ChatSession {
 
     cancel(advanceQueue = false): void {
         this.sendAfterStop = advanceQueue;
+        this.sendAfterReplacement = false;
         this.pauseQueue(true);
         this.lapseResume();
         const turnId = this.thread.info.activeTurnId;
@@ -484,6 +490,7 @@ export class ChatSession {
         this.submission = null;
         this.staleResults = 0;
         this.sendAfterStop = false;
+        this.sendAfterReplacement = false;
         this.awaitingBackgroundReport = false;
         this.launchedSelection = null;
         this.turnReady = Promise.resolve();
@@ -865,6 +872,7 @@ export class ChatSession {
         this.clearStartWarning();
         this.clearWorkflowWarnings();
         this.sendAfterStop = false;
+        this.sendAfterReplacement = false;
         this.lapseResume();
         const backend = this.backend;
         this.backend = null;
