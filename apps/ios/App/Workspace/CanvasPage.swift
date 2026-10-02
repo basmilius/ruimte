@@ -153,17 +153,17 @@ struct CanvasPage: View {
             isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }),
             titleVisibility: .visible, presenting: removal
         ) { pending in
-            Button(pending.chats.isEmpty ? "Remove node" : "Remove and end chat", role: .destructive) {
+            Button(pending.confirmLabel, role: .destructive) {
                 removal = nil
                 Task {
                     await workspace.updateView(viewID) { canvasWithoutNode($0, id: pending.id) }
-                    if workspace.problem == nil { await ChatEnding.end(pending.chats, session: workspace.session) }
+                    if workspace.problem == nil { await SessionEnding.end(pending.question, session: workspace.session) }
                 }
             }
         } message: { pending in
             Text(
-                pending.warning.map { "\($0) Its connections are removed too." }
-                    ?? "Its connections are removed too. A running session remains available on the machine.")
+                pending.question.warning.map { "\($0) Its connections are removed too." }
+                    ?? "Its connections are removed too.")
         }
     }
     @ViewBuilder private func nodeActions(_ node: JSONValue) -> some View {
@@ -180,8 +180,8 @@ struct CanvasPage: View {
         }
         Button("Remove", lucideIcon: "trash", role: .destructive) {
             Task {
-                let question = await ChatEnding.question(for: node, client: workspace.client)
-                removal = NodeRemoval(id: node.stableID, chats: question.chats, warning: question.warning)
+                let question = await SessionEnding.question(for: node, client: workspace.client)
+                removal = NodeRemoval(id: node.stableID, question: question)
             }
         }
     }
@@ -231,8 +231,12 @@ struct CanvasPage: View {
 
 private struct NodeRemoval {
     let id: String
-    let chats: [String]
-    let warning: String?
+    let question: SessionEnding.Question
+
+    var confirmLabel: String {
+        if !question.chats.isEmpty { return "Remove and end chat" }
+        return question.terminals.isEmpty ? "Remove node" : "Remove and end terminal"
+    }
 }
 
 func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {

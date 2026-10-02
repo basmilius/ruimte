@@ -29,10 +29,10 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   neither files nor git, its plus starts a new chat, and a chat nobody wrote in yet stays out of its list
   unless it is open. A machine that cannot hold such chats, being older or keeping its Ruimte folder in a
   git checkout, says so in the sheet.
-- Deleting a chat view or a chat node, or a canvas with chat nodes on it, ends those chats on the machine with
-  `chat.kill`, as the desktop does: the CLI stops and the thread, its attachments and bookmarks go, and
-  so do the agents it opened. The confirmation says so and counts those agents. Stopping a turn keeps
-  the chat. Terminals still keep running when their node goes.
+- Deleting a chat or terminal view or node, or a canvas with such nodes on it, ends those sessions on the
+  machine, as the desktop does: a chat with `chat.kill`, so the CLI stops and the thread, its attachments and
+  bookmarks go, and a terminal with `session.kill`, so its shell and everything running in it end. The agents
+  they opened end too. The confirmation says so and counts those agents. Stopping a turn keeps the chat.
 - Drawing with a finger or Apple Pencil, pressure, pen colors and widths, whole-element
   erasing, undo, pan and zoom. Selection, shapes and text creation are included.
   Unsaved drawing drafts persist locally for recovery.

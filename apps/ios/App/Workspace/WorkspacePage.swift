@@ -125,11 +125,11 @@ struct WorkspacePage: View {
                         if views.isEmpty && !workspace.isScratch { views = [newCanvas()] }
                         return document.setting("views", .array(views))
                     }
-                    if workspace.problem == nil { await ChatEnding.end(pending.chats, session: workspace.session) }
+                    if workspace.problem == nil { await SessionEnding.end(pending.question, session: workspace.session) }
                 }
             }
         } message: { pending in
-            if let warning = pending.warning { Text(warning) }
+            if let warning = pending.question.warning { Text(warning) }
         }
         .confirmationDialog(
             "This project changed elsewhere", isPresented: Binding(get: { workspace.conflict != nil }, set: { _ in }),
@@ -278,9 +278,8 @@ struct WorkspacePage: View {
                                 .disabled(item.text("kind") == "unknown")
                             Button("Delete", lucideIcon: "trash", role: .destructive) {
                                 Task {
-                                    let question = await ChatEnding.question(for: item, client: workspace.client)
-                                    deleteView = ViewDeletion(
-                                        item: item, chats: question.chats, warning: question.warning)
+                                    let question = await SessionEnding.question(for: item, client: workspace.client)
+                                    deleteView = ViewDeletion(item: item, question: question)
                                 }
                             }
                         }
@@ -361,8 +360,7 @@ struct WorkspacePage: View {
 
 private struct ViewDeletion {
     let item: JSONValue
-    let chats: [String]
-    let warning: String?
+    let question: SessionEnding.Question
 }
 
 func newCanvas() -> JSONValue {

@@ -59,35 +59,6 @@ import XCTest
             model.problem,
             "This machine keeps its Ruimte folder inside a git checkout, so it cannot hold chats outside a project.")
     }
-
-    func testAChatOrACanvasTakesItsChatsAlongWhenItGoes() {
-        let chat = JSONValue.object(["id": .string("c1"), "kind": .string("chat")])
-        let canvas = JSONValue.object([
-            "id": .string("v1"), "kind": .string("canvas"),
-            "nodes": .array([
-                .object(["id": .string("n1"), "kind": .string("chat")]),
-                .object(["id": .string("n2"), "kind": .string("terminal")]),
-            ]),
-        ])
-        XCTAssertEqual(ChatEnding.chats(in: chat), ["c1"])
-        XCTAssertEqual(ChatEnding.chats(in: canvas), ["n1"])
-        XCTAssertEqual(ChatEnding.chats(in: .object(["id": .string("t"), "kind": .string("terminal")])), [])
-    }
-
-    func testADeleteSaysTheChatEndsAndCountsTheAgentsItOpened() async {
-        XCTAssertNil(ChatEnding.warning(chats: 0, agents: 0))
-        XCTAssertEqual(
-            ChatEnding.warning(chats: 1, agents: 0), "The chat ends on this machine, and its conversation is gone.")
-        XCTAssertEqual(
-            ChatEnding.warning(chats: 2, agents: 1),
-            "Its 2 chats end on this machine, and their conversations are gone. "
-                + "Also ends the agent it opened. Its node stays on the canvas with what it did so far.")
-        let machine = NewChatMachine()
-        let question = await ChatEnding.question(
-            for: .object(["id": .string("c1"), "kind": .string("chat")]), client: machine)
-        XCTAssertEqual(question.chats, ["c1"])
-        XCTAssertTrue(question.warning?.contains("Also ends the agent it opened.") == true)
-    }
 }
 
 @MainActor private final class NewChatMachine: MachineRequesting {
