@@ -109,7 +109,8 @@ export class GitActions {
             try {
                 const result = await streamCommand(options.command ?? 'git', args, top, {
                     onLine: (line) => sink(phase, line),
-                    onSpawn: (kill) => job.hold(kill)
+                    onSpawn: (kill) => job.hold(kill),
+                    group: true
                 });
                 const text = textOf(result.stdout, result.stderr);
                 output.push(text);
