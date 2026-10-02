@@ -119,8 +119,12 @@ final class SessionVisualTests: XCTestCase {
         })
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "ruimte.visual.home"))
         defer { defaults.removePersistentDomain(forName: "ruimte.visual.home") }
-        let runtime = AppRuntime(client: client, defaults: defaults)
+        // The Keychain refuses an unsigned Simulator build, and its Sign-in failed alert would cover the logo.
+        let key = DeviceKey()
+        let vault = SessionVault(client: client, store: EmptySessionStore(), signer: { key })
+        let runtime = AppRuntime(client: client, vault: vault, defaults: defaults, deviceKey: key)
         await runtime.start()
+        XCTAssertNil(runtime.problem)
         for (name, dark, signedIn, size, typeSize) in [
             ("welcome-iphone", false, false, CGSize(width: 402, height: 874), DynamicTypeSize.large),
             ("welcome-dark", true, false, CGSize(width: 402, height: 874), .large),
@@ -342,6 +346,11 @@ final class SessionVisualTests: XCTestCase {
     @MainActor private func displayFrame() async {
         await withCheckedContinuation { continuation in _ = VisualFrameWaiter { continuation.resume() } }
     }
+}
+
+private struct EmptySessionStore: SessionStore {
+    func read() -> StoredSession? { nil }
+    func write(_ session: StoredSession?) {}
 }
 
 @MainActor private final class VisualFrameWaiter: NSObject {
