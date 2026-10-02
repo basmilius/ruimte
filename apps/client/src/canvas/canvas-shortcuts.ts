@@ -24,6 +24,7 @@ import { showView, stepView, viewAtIndex } from '@/project/views';
 import { undoLatestDeletion } from '@/project/view-trash';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { isInNodeBody } from '@/canvas/node-body';
+import { followSpaceRelease, holdSpace, releaseSpace, spaceWorksTarget } from '@/canvas/space-pan';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
 import { useSubagentView } from '@ruimte/agents-react/chat/subagent-view';
 import { stepTimelineMessage } from '@ruimte/agents-react/chat/timeline-scroll';
@@ -123,15 +124,6 @@ export const isTypingTarget = (el: EventTarget | null): boolean => {
     return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
 };
 
-/*
- * Space turns the pointer into a pan. There is one keyboard, so this is one flag for the window
- * rather than a ref per cell: the canvas the pointer goes down in is the one that pans, and which
- * one that is, is a question the pointer answers and not the key.
- */
-let spaceDown = false;
-
-export const isSpaceDown = (): boolean => spaceDown;
-
 /* Bind once per workspace so a split grid does not run the same project shortcut in every canvas. */
 export const useCanvasShortcuts = (): void => {
     useEffect(() => {
@@ -151,8 +143,8 @@ export const useCanvasShortcuts = (): void => {
         };
         const onKeyDown = (e: KeyboardEvent): void => {
             const s = focusedCanvas().getState();
-            if (e.code === 'Space' && !isTypingTarget(e.target)) {
-                spaceDown = true;
+            if (e.code === 'Space' && !isTypingTarget(e.target) && !spaceWorksTarget(e.target)) {
+                holdSpace();
                 e.preventDefault();
                 return;
             }
@@ -470,9 +462,10 @@ export const useCanvasShortcuts = (): void => {
                 dictationPress = null;
             }
             if (e.code === 'Space') {
-                spaceDown = false;
+                releaseSpace();
             }
         };
+        const stopSpaceRelease = followSpaceRelease();
         window.addEventListener('keydown', onEscapeCapture, true);
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp, true);
@@ -482,6 +475,7 @@ export const useCanvasShortcuts = (): void => {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp, true);
             window.removeEventListener('blur', onBlur);
+            stopSpaceRelease();
             voiceShortcut.blur();
             cancelDictation();
         };

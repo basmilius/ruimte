@@ -4,7 +4,7 @@ import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } f
 import { gridTakesPath } from '@/shell/view-drag';
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
-import { isSpaceDown } from '@/canvas/canvas-shortcuts';
+import { isSpaceDown } from '@/canvas/space-pan';
 import type { NodeSide } from '@ruimte/contracts';
 import { rectFromPoints } from '@ruimte/drawing';
 import { alignmentGuides, gapGuides, type AlignmentGuide, type GapGuide } from '@/canvas/alignment-guides';
