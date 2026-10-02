@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import type { ByteResource } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
-import { activeEndpoint, endpointById, useEndpoints } from '@/state/endpoints';
+import { endpointById, useEndpoints } from '@/state/endpoints';
 import { transportFor } from '@/transport';
 import { BlobCache, type BlobLease, type BlobState } from './blob-cache';
 import { readResource } from './byte-transfer';
@@ -37,9 +37,13 @@ const NOTHING: MachineUrl = { url: null, failure: null };
  * since an `<img>` cannot send a header. The version is in the URL too, which is what lets the browser
  * keep the answer for good. The machine is the one the thing on screen belongs to, never simply the
  * active one. A second workspace or a list that spans machines would otherwise ask the wrong daemon.
+ * Null for a machine this client no longer knows.
  */
-export const httpUrlFor = (endpointId: string, resource: MachineResource): string => {
-    const endpoint = endpointById(endpointId) ?? activeEndpoint();
+export const httpUrlFor = (endpointId: string, resource: MachineResource): string | null => {
+    const endpoint = endpointById(endpointId);
+    if (!endpoint) {
+        return null;
+    }
     const credential = credentialFor(endpoint);
     if (resource.kind === 'attachment') {
         const query = credential ? `?token=${encodeURIComponent(credential)}` : '';
@@ -133,7 +137,8 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
         return NOTHING;
     }
     if (!direct) {
-        return { url: httpUrlFor(machineId, resource), failure: null };
+        const url = httpUrlFor(machineId, resource);
+        return url === null ? { url: null, failure: i18next.t('machines:connection.unknownMachine') } : { url, failure: null };
     }
     if (streamed && resource.kind === 'media') {
         return { url: bytesStreamUrl({ machine: machineId, path: resource.path, mtime: resource.mtime, size: resource.size }), failure: null };
