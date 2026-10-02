@@ -75,7 +75,66 @@ public enum JSONValue: Codable, Sendable, Equatable {
         if case .bool(let value) = self { return value }
         return nil
     }
-    public static func decode(_ data: Data) throws -> JSONValue { try JSONDecoder().decode(JSONValue.self, from: data) }
+    public static func decode(_ data: Data) throws -> JSONValue {
+        try JSONDecoder().decode(JSONValue.self, from: replacingLoneSurrogates(in: data))
+    }
+
+    /// `JSON.stringify` writes half of a surrogate pair as an escape of its own, which `JSONDecoder` refuses along with
+    /// the whole document. Each such half becomes U+FFFD, so one cut emoji costs a character instead of the frame.
+    public static func replacingLoneSurrogates(in data: Data) -> Data {
+        let backslash = UInt8(ascii: "\\")
+        return data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Data in
+            // The UTF-16 unit of the `\uXXXX` escape at `index`, if there is one.
+            func unit(at index: Int) -> UInt16? {
+                guard index + 6 <= bytes.count, bytes[index] == backslash, bytes[index + 1] == UInt8(ascii: "u") else {
+                    return nil
+                }
+                var value: UInt16 = 0
+                for byte in bytes[(index + 2)..<(index + 6)] {
+                    guard let digit = hexDigit(byte) else { return nil }
+                    value = value << 4 | UInt16(digit)
+                }
+                return value
+            }
+            var output: Data?
+            var copied = 0
+            var index = 0
+            while index < bytes.count {
+                guard bytes[index] == backslash else {
+                    index += 1
+                    continue
+                }
+                guard let value = unit(at: index) else {
+                    // Any other escape, `\\` included, is two bytes.
+                    index += 2
+                    continue
+                }
+                if (0xD800...0xDBFF).contains(value), let next = unit(at: index + 6), (0xDC00...0xDFFF).contains(next) {
+                    index += 12
+                    continue
+                }
+                if (0xD800...0xDFFF).contains(value) {
+                    output = output ?? Data(capacity: bytes.count)
+                    output?.append(contentsOf: bytes[copied..<index])
+                    output?.append(contentsOf: Array(#"�"#.utf8))
+                    copied = index + 6
+                }
+                index += 6
+            }
+            guard var output else { return data }
+            output.append(contentsOf: bytes[copied...])
+            return output
+        }
+    }
+
+    private static func hexDigit(_ byte: UInt8) -> UInt8? {
+        switch byte {
+        case UInt8(ascii: "0")...UInt8(ascii: "9"): byte - UInt8(ascii: "0")
+        case UInt8(ascii: "a")...UInt8(ascii: "f"): byte - UInt8(ascii: "a") + 10
+        case UInt8(ascii: "A")...UInt8(ascii: "F"): byte - UInt8(ascii: "A") + 10
+        default: nil
+        }
+    }
     public func encoded() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

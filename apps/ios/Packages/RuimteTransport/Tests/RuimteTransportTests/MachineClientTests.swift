@@ -267,6 +267,59 @@ import Testing
         stop()
     }
 
+    @Test func aLoneSurrogateHalfInAReplyReadsAsAReplacementCharacter() async throws {
+        let clock = RequestClock()
+        var client: MachineClient!
+        client = MachineClient(
+            send: { text in
+                let id = try JSONValue.decode(Data(text.utf8))["id"]?.stringValue ?? ""
+                let delivery = client.receiveInOrder(
+                    #"{"id":"\#(id)","ok":true,"result":{"version":"1","platform":"darwin","home":"/Users/\ud83d"}}"#)
+                Task { @MainActor in
+                    await delivery.value
+                    clock.fire()
+                }
+            }, scheduler: clock, connected: true)
+        let result = try await client.request("server.hello")
+        #expect(result["home"] == .string("/Users/\u{FFFD}"))
+    }
+
+    @Test func aLoneSurrogateHalfInAnEventReadsAsAReplacementCharacter() {
+        let client = MachineClient(send: { _ in }, connected: true)
+        var received: [String] = []
+        let stop = client.subscribe("session.output") { received.append($0["data"]?.stringValue ?? "") }
+        defer { stop() }
+        client.receive(#"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"\udc00 \ud83d"}}"#)
+        #expect(received == ["\u{FFFD} \u{FFFD}"])
+    }
+
+    @Test func aReplyThatDoesNotDecodeFailsItsRequest() async throws {
+        let clock = RequestClock()
+        var client: MachineClient!
+        client = MachineClient(
+            send: { text in
+                let id = try JSONValue.decode(Data(text.utf8))["id"]?.stringValue ?? ""
+                let delivery = client.receiveInOrder(#"{"id":"\#(id)","ok":true,"result":{"time":1}"#)
+                Task { @MainActor in
+                    await delivery.value
+                    clock.fire()
+                }
+            }, scheduler: clock, connected: true)
+        await #expect(throws: MachineClientError.invalid("The machine sent a reply this app cannot read.")) {
+            try await client.request("server.ping")
+        }
+        client = MachineClient(
+            send: { text in
+                let id = try JSONValue.decode(Data(text.utf8))["id"]?.stringValue ?? ""
+                client.receive(#"{"id":"\#(id)","ok":true,"result":{"time":1"#)
+                clock.fire()
+            }, scheduler: clock, connected: true)
+        await #expect(throws: MachineClientError.invalid("The machine sent a reply this app cannot read.")) {
+            try await client.request("server.ping")
+        }
+        #expect(client.pendingRequestCount == 0)
+    }
+
     @Test func serverErrorsAndSendFailuresReachCallers() async throws {
         var client: MachineClient!
         client = MachineClient(

@@ -30,7 +30,8 @@ public struct PushDecryptionKey: Sendable {
         let bytes = try decryptBytes(
             input, type: "alert", handle: handle, machinePublicKeys: machinePublicKeys,
             now: now, allowExpiredRouting: allowExpiredRouting)
-        let content = try JSONDecoder().decode(PushAlertContent.self, from: bytes)
+        let content = try JSONDecoder().decode(
+            PushAlertContent.self, from: JSONValue.replacingLoneSurrogates(in: bytes))
         guard allowExpiredRouting || Double(content.expiresAt) > now,
             Double(content.expiresAt) <= (input["expiresAt"]?.numberValue ?? 0)
         else { throw PushCryptoError.expired }
@@ -44,7 +45,7 @@ public struct PushDecryptionKey: Sendable {
         let bytes = try decryptBytes(
             input, type: "background", handle: handle, machinePublicKeys: machinePublicKeys,
             now: now, allowExpiredRouting: false)
-        let content = try JSONDecoder().decode(PushReadContent.self, from: bytes)
+        let content = try JSONDecoder().decode(PushReadContent.self, from: JSONValue.replacingLoneSurrogates(in: bytes))
         guard Double(content.expiresAt) > now,
             Double(content.expiresAt) <= (input["expiresAt"]?.numberValue ?? 0),
             Double(content.through) <= (input["issuedAt"]?.numberValue ?? 0)

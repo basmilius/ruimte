@@ -346,7 +346,11 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     }
 
     public func receive(_ text: String) {
-        guard isConnected, let frame = try? JSONValue.decode(Data(text.utf8)) else { return }
+        guard isConnected else { return }
+        guard let frame = try? JSONValue.decode(Data(text.utf8)) else {
+            unreadable(text)
+            return
+        }
         receive(frame)
     }
 
@@ -357,11 +361,31 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         // Await delivery as well as decoding: a snapshot must precede its following deltas.
         let task = Task.detached(priority: .userInitiated) { [weak self] in
             await previous?.value
-            guard !Task.isCancelled, let frame = try? JSONValue.decode(Data(text.utf8)) else { return }
+            guard !Task.isCancelled else { return }
+            guard let frame = try? JSONValue.decode(Data(text.utf8)) else {
+                await self?.unreadable(text, generation: generation)
+                return
+            }
             await self?.receive(frame, generation: generation)
         }
         incoming = task
         return task
+    }
+
+    private func unreadable(_ text: String, generation: Int) {
+        guard generation == connectionGeneration else { return }
+        unreadable(text)
+    }
+
+    /// A frame that does not decode has no `id` to read, but a reply still names its request, which would otherwise
+    /// wait for a timer or, for a mutation, for the link to close.
+    private func unreadable(_ text: String) {
+        guard isConnected else { return }
+        let replied = pending.keys.filter { text.contains(#""id":"\#($0)""#) }
+        Self.log.error("Dropped a frame that does not decode, a reply to \(replied.count, privacy: .public) requests")
+        for id in replied {
+            finish(id, result: .failure(MachineClientError.invalid("The machine sent a reply this app cannot read.")))
+        }
     }
 
     @discardableResult public func receiveBinaryInOrder(_ frame: Data) -> Task<Void, Never> {

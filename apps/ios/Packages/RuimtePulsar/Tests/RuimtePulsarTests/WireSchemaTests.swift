@@ -24,6 +24,21 @@ struct WireSchemaTests {
         }
     }
 
+    @Test func aLoneSurrogateHalfDecodesAsAReplacementCharacter() throws {
+        let value = try JSONValue.decode(
+            Data(
+                #"{"high":"x\ud83d","low":"\udc00y","pair":"\ud83d\ude00","twice":"\uD83D\uD83D\uDE00","escaped":"\\ud83d","end":"\ud83d"}"#
+                    .utf8))
+        #expect(value["high"] == .string("x\u{FFFD}"))
+        #expect(value["low"] == .string("\u{FFFD}y"))
+        #expect(value["pair"] == .string("😀"))
+        #expect(value["twice"] == .string("\u{FFFD}😀"))
+        #expect(value["escaped"] == .string(#"\ud83d"#))
+        #expect(value["end"] == .string("\u{FFFD}"))
+        let plain = Data(#"{"text":"café \"🚀\" \\u"}"#.utf8)
+        #expect(JSONValue.replacingLoneSurrogates(in: plain) == plain)
+    }
+
     @Test func nullableIsRequiredAndOptionalNullIsRejected() throws {
         let decoder = JSONDecoder()
         #expect(throws: (any Error).self) {
