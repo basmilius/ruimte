@@ -115,6 +115,21 @@ export const storeMachine = async (
     clearsRemoval: boolean,
     now: number
 ): Promise<{ machine: Machine } | { response: Response }> => {
+    /*
+     * A machine is on one account at a time and only the machine moves itself, so its key on a second
+     * account is refused. A row this account already holds for the key keeps updating: two accounts
+     * that listed one machine before this rule keep it.
+     */
+    const elsewhere = await db
+        .prepare(
+            `SELECT 1 AS taken FROM machine WHERE public_key = ?1 AND account_id != ?2
+             AND NOT EXISTS (SELECT 1 FROM machine AS own WHERE own.account_id = ?2 AND own.id = ?3 AND own.public_key = ?1)`
+        )
+        .bind(machine.publicKey, accountId, machine.id)
+        .first<{ taken: number }>();
+    if (elsewhere) {
+        return { response: failure('machine-on-other-account', 'This machine is on another account. Disconnect it on the machine itself first.') };
+    }
     if (clearsRemoval) {
         await db.prepare('DELETE FROM removed_machine WHERE account_id = ?1 AND machine_id = ?2').bind(accountId, machine.id).run();
     }

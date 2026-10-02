@@ -11,6 +11,7 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     'bad-signature': 403,
     'not-found': 404,
     removed: 409,
+    'machine-on-other-account': 409,
     'identity-taken': 409,
     'provider-linked': 409,
     'last-identity': 409,

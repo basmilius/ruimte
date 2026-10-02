@@ -12,6 +12,7 @@ export const SIGNING_PURPOSES = {
     machineRegistration: 'pulsar-machine-registration-v1',
     accessRequest: 'pulsar-access-request-v1',
     accessStatement: 'pulsar-access-statement-v1',
+    accessStatementV2: 'pulsar-access-statement-v2',
     sessionKey: 'pulsar-session-key-v1',
     sessionRefresh: 'pulsar-session-refresh-v1',
     deviceLinkStart: 'pulsar-device-link-start-v1',
@@ -39,7 +40,8 @@ export const signalMessage = (from: string, to: string, envelope: SignalEnvelope
     const body = (() => {
         switch (signal.kind) {
             case 'offer': {
-                // Signed with the offer, so a broker cannot take a statement off one attempt and put it on another.
+                /* Signed with the offer, so a broker cannot take a statement off one attempt and put it on another.
+                   The v2 fields stay out: a daemon from before them drops them before it checks this signature. */
                 const access = signal.access;
                 if (!access) {
                     return [signal.sdp];
@@ -78,6 +80,20 @@ export const accessRequestMessage = (machineId: string, clientPublicKey: string,
 // The address book vouching that this client key and this machine belong to the same account, until `expiresAt`.
 export const accessStatementMessage = (machineId: string, clientPublicKey: string, nonce: string, issuedAt: number, expiresAt: number): string =>
     signedBytes(SIGNING_PURPOSES.accessStatement, [machineId, clientPublicKey, nonce, issuedAt, expiresAt]);
+
+/*
+ * The same, naming the key the account lists the machine with and the account itself. A machine id is
+ * no secret, so only the key tells the machine that the account lists it and not a namesake.
+ */
+export const accessStatementV2Message = (
+    machineId: string,
+    machinePublicKey: string,
+    accountId: string,
+    clientPublicKey: string,
+    nonce: string,
+    issuedAt: number,
+    expiresAt: number
+): string => signedBytes(SIGNING_PURPOSES.accessStatementV2, [machineId, machinePublicKey, accountId, clientPublicKey, nonce, issuedAt, expiresAt]);
 
 // The key a session is bound to, proven over the one-time login code so a key nobody holds is never bound.
 export const sessionKeyMessage = (code: string, sessionKey: string): string => signedBytes(SIGNING_PURPOSES.sessionKey, [code, sessionKey]);

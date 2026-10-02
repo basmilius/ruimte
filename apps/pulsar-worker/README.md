@@ -51,6 +51,21 @@ Sign in with Apple for Ruimte in the Apple ID settings and sign in once more. A 
 characters and runs of whitespace folded and is cut at 100 characters. Migration `0013_display_name.sql`
 adds the nullable columns, so the Worker still running while it applies keeps working.
 
+## Statements and the one account of a machine
+
+A statement (`POST /v1/statements`) carries two signatures with the statement key. `signature` is over
+`accessStatementMessage`: the machine id, the client key, the nonce and the times, which is all a daemon
+from before v2 reads. `accountSignature` is over `accessStatementV2Message`, which adds the key this
+account's row lists the machine with (`machinePublicKey`) and the account (`accountId`). A machine id is
+no secret, so a second account can list the same id under a key of its own; the v2 statement it gets
+names that key, and the machine refuses a statement that does not name its own key. A machine bound to
+an account refuses one without the v2 fields, and one for another account (`apps/server/README.md`).
+
+A machine is on one account at a time and only moves itself, so `POST /v1/machines` and a device link
+refuse a machine key that another account lists with `machine-on-other-account` (409). A row an account
+already holds for that key keeps updating, so two accounts that listed one machine before this rule keep
+it; nothing is thrown away. A person removes the machine from the other account first.
+
 ## Local dev
 
 ```sh

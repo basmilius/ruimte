@@ -13,6 +13,10 @@ export const migratedDatabase = (): Database => {
     return database;
 };
 
+interface ShimStatement {
+    batched(): { results: unknown[]; meta: { changes: number }; success: true };
+}
+
 // The Worker's real SQL runs on SQLite; only the D1 transport is adapted.
 export const d1 = (database: Database): D1Database =>
     ({
@@ -30,8 +34,17 @@ export const d1 = (database: Database): D1Database =>
                 },
                 async all() {
                     return { results: database.query(sql).all(...(values as never[])), success: true };
+                },
+                batched() {
+                    const results = database.query(sql).all(...(values as never[]));
+                    const { changes } = database.query('SELECT changes() AS changes').get() as { changes: number };
+                    return { results, meta: { changes }, success: true as const };
                 }
             });
             return query();
+        },
+        // One transaction, as D1 runs a batch.
+        async batch(statements: ShimStatement[]) {
+            return database.transaction(() => statements.map((statement) => statement.batched()))();
         }
     }) as unknown as D1Database;

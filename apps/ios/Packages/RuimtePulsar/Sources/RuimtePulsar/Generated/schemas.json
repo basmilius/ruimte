@@ -58,6 +58,19 @@
       "signature": {
         "type": "string",
         "pattern": "^[A-Za-z0-9_-]{86}$"
+      },
+      "machinePublicKey": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      },
+      "accountId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "accountSignature": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{86}$"
       }
     },
     "required": [
@@ -195,6 +208,7 @@
       "bad-signature",
       "not-found",
       "removed",
+      "machine-on-other-account",
       "identity-taken",
       "provider-linked",
       "last-identity",
@@ -220,6 +234,7 @@
               "bad-signature",
               "not-found",
               "removed",
+              "machine-on-other-account",
               "identity-taken",
               "provider-linked",
               "last-identity",
@@ -1605,6 +1620,19 @@
                               "signature": {
                                 "type": "string",
                                 "pattern": "^[A-Za-z0-9_-]{86}$"
+                              },
+                              "machinePublicKey": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_-]{43}$"
+                              },
+                              "accountId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "accountSignature": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_-]{86}$"
                               }
                             },
                             "required": [
@@ -1892,6 +1920,19 @@
                           "signature": {
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{86}$"
+                          },
+                          "machinePublicKey": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{43}$"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "accountSignature": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{86}$"
                           }
                         },
                         "required": [
@@ -2089,6 +2130,19 @@
                             "maximum": 9007199254740991
                           },
                           "signature": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{86}$"
+                          },
+                          "machinePublicKey": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{43}$"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "accountSignature": {
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{86}$"
                           }
@@ -2350,6 +2404,19 @@
                                 "maximum": 9007199254740991
                               },
                               "signature": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_-]{86}$"
+                              },
+                              "machinePublicKey": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z0-9_-]{43}$"
+                              },
+                              "accountId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "accountSignature": {
                                 "type": "string",
                                 "pattern": "^[A-Za-z0-9_-]{86}$"
                               }
@@ -2691,6 +2758,19 @@
           "signature": {
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{86}$"
+          },
+          "machinePublicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "accountId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "accountSignature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{86}$"
           }
         },
         "required": [
@@ -2867,6 +2947,19 @@
                       "signature": {
                         "type": "string",
                         "pattern": "^[A-Za-z0-9_-]{86}$"
+                      },
+                      "machinePublicKey": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{43}$"
+                      },
+                      "accountId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "accountSignature": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{86}$"
                       }
                     },
                     "required": [
@@ -3033,6 +3126,19 @@
               "signature": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_-]{86}$"
+              },
+              "machinePublicKey": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$"
+              },
+              "accountId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "accountSignature": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{86}$"
               }
             },
             "required": [
@@ -3107,6 +3213,19 @@
                     "maximum": 9007199254740991
                   },
                   "signature": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{86}$"
+                  },
+                  "machinePublicKey": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$"
+                  },
+                  "accountId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "accountSignature": {
                     "type": "string",
                     "pattern": "^[A-Za-z0-9_-]{86}$"
                   }
@@ -3519,6 +3638,19 @@
                             "maximum": 9007199254740991
                           },
                           "signature": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{86}$"
+                          },
+                          "machinePublicKey": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{43}$"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "accountSignature": {
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{86}$"
                           }
@@ -38494,6 +38626,19 @@
                           "signature": {
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{86}$"
+                          },
+                          "machinePublicKey": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{43}$"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "accountSignature": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{86}$"
                           }
                         },
                         "required": [
@@ -44277,6 +44422,19 @@
                             "maximum": 9007199254740991
                           },
                           "signature": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{86}$"
+                          },
+                          "machinePublicKey": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{43}$"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "accountSignature": {
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{86}$"
                           }

@@ -3,6 +3,7 @@ import {
     AccessRequestPayloadSchema,
     accessRequestMessage,
     accessStatementMessage,
+    accessStatementV2Message,
     toBase64Url,
     type AccessStatement
 } from '@ruimte/pulsar';
@@ -39,22 +40,30 @@ export const issueStatement = async (request: Request, env: Env): Promise<Respon
         return failure('bad-signature', 'The request is not signed by the key it names');
     }
     // A machine on another account answers the same as one that does not exist, so ids cannot be probed.
-    const machine = await env.DB.prepare('SELECT id FROM machine WHERE account_id = ?1 AND id = ?2')
+    const machine = await env.DB.prepare('SELECT public_key FROM machine WHERE account_id = ?1 AND id = ?2')
         .bind(session.account.id, machineId)
-        .first<{ id: string }>();
+        .first<{ public_key: string }>();
     if (!machine) {
         return failure('not-found', 'No machine with that id on this account');
     }
     const key = await statementKeyOf(env.STATEMENT_PRIVATE_KEY);
     const issuedAt = Date.now();
     const expiresAt = issuedAt + ACCESS_STATEMENT_LIFETIME_MS;
+    const accountId = session.account.id;
+    // The key from this account's own row: another account may list the same id under a key of its own.
+    const machinePublicKey = machine.public_key;
     const statement: AccessStatement = {
         machineId,
         clientPublicKey,
         nonce,
         issuedAt,
         expiresAt,
-        signature: toBase64Url(await signEd25519(key.privateKey, accessStatementMessage(machineId, clientPublicKey, nonce, issuedAt, expiresAt)))
+        signature: toBase64Url(await signEd25519(key.privateKey, accessStatementMessage(machineId, clientPublicKey, nonce, issuedAt, expiresAt))),
+        machinePublicKey,
+        accountId,
+        accountSignature: toBase64Url(
+            await signEd25519(key.privateKey, accessStatementV2Message(machineId, machinePublicKey, accountId, clientPublicKey, nonce, issuedAt, expiresAt))
+        )
     };
     await env.DB.batch([
         env.DB.prepare(

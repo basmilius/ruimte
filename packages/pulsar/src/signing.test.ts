@@ -4,6 +4,7 @@ import {
     SIGNING_PURPOSES,
     accessRequestMessage,
     accessStatementMessage,
+    accessStatementV2Message,
     brokerHelloMessage,
     deviceLinkStartMessage,
     machineRegistrationMessage,
@@ -29,6 +30,7 @@ const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
     machineRegistration: machineRegistrationMessage('machine-1', 'machine-1', key, 'machine', 0),
     accessRequest: accessRequestMessage('machine-1', key, nonce),
     accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000),
+    accessStatementV2: accessStatementV2Message('machine-1', key, 'account-1', otherKey, nonce, 0, 120_000),
     sessionKey: sessionKeyMessage(nonce, key),
     sessionRefresh: sessionRefreshMessage(nonce, 0),
     deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0),
@@ -117,6 +119,20 @@ describe('signed bytes', () => {
         expect(accessStatementMessage('machine-1', key, nonce, 0, 120_000)).not.toBe(accessStatementMessage('machine-1', key, nonce, 0, 119_999));
     });
 
+    test('a v2 statement binds the machine key and the account, and its signature does not pass for a v1 one', () => {
+        const base = accessStatementV2Message('machine-1', key, 'account-1', otherKey, nonce, 0, 120_000);
+        expect(accessStatementV2Message('machine-1', otherKey, 'account-1', otherKey, nonce, 0, 120_000)).not.toBe(base);
+        expect(accessStatementV2Message('machine-1', key, 'account-2', otherKey, nonce, 0, 120_000)).not.toBe(base);
+        expect(accessStatementV2Message('machine-1', key, 'account-1', otherKey, nonce, 0, 119_999)).not.toBe(base);
+
+        const pair = generateKeyPairSync('ed25519');
+        const v1 = accessStatementMessage('machine-1', otherKey, nonce, 0, 120_000);
+        const signature = sign(null, Buffer.from(v1), pair.privateKey);
+        expect(verify(null, Buffer.from(base), pair.publicKey, signature)).toBe(false);
+        const v2Signature = sign(null, Buffer.from(base), pair.privateKey);
+        expect(verify(null, Buffer.from(v1), pair.publicKey, v2Signature)).toBe(false);
+    });
+
     test('an offer signs the statement it carries, and one without a statement signs as before', () => {
         const statement = { machineId: 'machine-1', clientPublicKey: key, nonce, issuedAt: 0, expiresAt: 120_000, signature: 's'.repeat(86) };
         const bare: SignalEnvelope = { connectionId: 'attempt-1', signal: { kind: 'offer', sdp: 'v=0' } };
@@ -134,5 +150,15 @@ describe('signed bytes', () => {
         expect(swapped({ machineId: 'machine-2' })).not.toBe(base);
         expect(swapped({ signature: 't'.repeat(86) })).not.toBe(base);
         expect(swapped({}, 'Phone')).not.toBe(base);
+    });
+
+    test('an offer signs a v2 statement as it signs a v1 one, so a daemon from before v2 still verifies it', () => {
+        const statement = { machineId: 'machine-1', clientPublicKey: key, nonce, issuedAt: 0, expiresAt: 120_000, signature: 's'.repeat(86) };
+        const v2 = { ...statement, machinePublicKey: otherKey, accountId: 'account-1', accountSignature: 't'.repeat(86) };
+        const offer = (carried: typeof statement): SignalEnvelope => ({
+            connectionId: 'attempt-1',
+            signal: { kind: 'offer', sdp: 'v=0', access: { statement: carried, label: 'Laptop' } }
+        });
+        expect(signalMessage(key, otherKey, offer(v2))).toBe(signalMessage(key, otherKey, offer(statement)));
     });
 });

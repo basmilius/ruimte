@@ -327,7 +327,11 @@ export const AccessRequestPayloadSchema = z.object({
 });
 export type AccessRequestPayload = z.infer<typeof AccessRequestPayloadSchema>;
 
-// The answer to `POST /v1/statements`. The address book's signature is over `accessStatementMessage`.
+/*
+ * The answer to `POST /v1/statements`. `signature` is over `accessStatementMessage`, for a daemon from
+ * before v2; `accountSignature` is over `accessStatementV2Message`, with the key the account lists the
+ * machine with and the account. The three v2 fields come together, and an older address book sends none.
+ */
 export const AccessStatementSchema = z
     .object({
         machineId: MachineIdSchema,
@@ -335,7 +339,10 @@ export const AccessStatementSchema = z
         nonce: NonceSchema,
         issuedAt: z.number().int().min(0),
         expiresAt: z.number().int().min(0),
-        signature: SignatureSchema
+        signature: SignatureSchema,
+        machinePublicKey: PublicKeySchema.optional(),
+        accountId: AccountSchema.shape.id.optional(),
+        accountSignature: SignatureSchema.optional()
     })
     .refine((statement) => statement.expiresAt > statement.issuedAt && statement.expiresAt - statement.issuedAt <= ACCESS_STATEMENT_LIFETIME_MS, {
         message: `A statement is valid for at most ${ACCESS_STATEMENT_LIFETIME_MS} ms`,
@@ -349,6 +356,8 @@ export const AddressBookErrorCodeSchema = z.enum([
     'bad-signature',
     'not-found',
     'removed',
+    // The machine's key is on another account; a machine is on one account at a time.
+    'machine-on-other-account',
     // The identity signs in to another account; accounts are never merged.
     'identity-taken',
     // The account already has an identity of this provider.

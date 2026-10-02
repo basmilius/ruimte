@@ -66,14 +66,20 @@ public struct AccessStatement: Codable, Sendable, Equatable {
     public let `issuedAt`: Int64
     public let `expiresAt`: Int64
     public let `signature`: String
+    public let `machinePublicKey`: String?
+    public let `accountId`: String?
+    public let `accountSignature`: String?
 
-    public init(`machineId`: String, `clientPublicKey`: String, `nonce`: String, `issuedAt`: Int64, `expiresAt`: Int64, `signature`: String) {
+    public init(`machineId`: String, `clientPublicKey`: String, `nonce`: String, `issuedAt`: Int64, `expiresAt`: Int64, `signature`: String, `machinePublicKey`: String? = nil, `accountId`: String? = nil, `accountSignature`: String? = nil) {
         self.`machineId` = `machineId`
         self.`clientPublicKey` = `clientPublicKey`
         self.`nonce` = `nonce`
         self.`issuedAt` = `issuedAt`
         self.`expiresAt` = `expiresAt`
         self.`signature` = `signature`
+        self.`machinePublicKey` = `machinePublicKey`
+        self.`accountId` = `accountId`
+        self.`accountSignature` = `accountSignature`
     }
 
     public init(from decoder: Decoder) throws {
@@ -85,6 +91,9 @@ public struct AccessStatement: Codable, Sendable, Equatable {
         `issuedAt` = try container.decode(Int64.self, forKey: .`issuedAt`)
         `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
         `signature` = try container.decode(String.self, forKey: .`signature`)
+        `machinePublicKey` = try container.decodeIfPresent(String.self, forKey: .`machinePublicKey`)
+        `accountId` = try container.decodeIfPresent(String.self, forKey: .`accountId`)
+        `accountSignature` = try container.decodeIfPresent(String.self, forKey: .`accountSignature`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -95,6 +104,9 @@ public struct AccessStatement: Codable, Sendable, Equatable {
         try container.encode(`issuedAt`, forKey: .`issuedAt`)
         try container.encode(`expiresAt`, forKey: .`expiresAt`)
         try container.encode(`signature`, forKey: .`signature`)
+        try container.encodeIfPresent(`machinePublicKey`, forKey: .`machinePublicKey`)
+        try container.encodeIfPresent(`accountId`, forKey: .`accountId`)
+        try container.encodeIfPresent(`accountSignature`, forKey: .`accountSignature`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -104,6 +116,9 @@ public struct AccessStatement: Codable, Sendable, Equatable {
         case `issuedAt` = "issuedAt"
         case `expiresAt` = "expiresAt"
         case `signature` = "signature"
+        case `machinePublicKey` = "machinePublicKey"
+        case `accountId` = "accountId"
+        case `accountSignature` = "accountSignature"
     }
 }
 
@@ -230,6 +245,7 @@ public enum AddressBookErrorCode: String, CaseIterable, Codable, Sendable, Equat
     case `badSignature` = "bad-signature"
     case `notFound` = "not-found"
     case `removed` = "removed"
+    case `machineOnOtherAccount` = "machine-on-other-account"
     case `identityTaken` = "identity-taken"
     case `providerLinked` = "provider-linked"
     case `lastIdentity` = "last-identity"

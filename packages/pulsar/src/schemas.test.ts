@@ -173,6 +173,14 @@ describe('address book', () => {
         expect(roundTrip(AddressBookErrorSchema, error)).toEqual(error);
     });
 
+    test('a statement keeps the machine key, the account and the v2 signature through a signal, and one without them still parses', () => {
+        const v2 = { ...statement, machinePublicKey: otherKey, accountId: 'account-1', accountSignature: signature };
+        expect(roundTrip(AccessStatementSchema, v2)).toEqual(v2);
+        const offer = { connectionId: 'attempt-1', signal: { kind: 'offer', sdp: 'v=0', access: { statement: v2, label: 'Laptop' } } };
+        expect(roundTrip(SignalEnvelopeSchema, offer as never)).toEqual(offer as never);
+        expect(AccessStatementSchema.safeParse({ ...v2, machinePublicKey: 'not-a-key' }).success).toBe(false);
+    });
+
     test('refuses a statement that is valid for longer than two minutes, or expires before it is issued', () => {
         expect(AccessStatementSchema.safeParse({ ...statement, expiresAt: statement.issuedAt + ACCESS_STATEMENT_LIFETIME_MS + 1 }).success).toBe(false);
         expect(AccessStatementSchema.safeParse({ ...statement, expiresAt: statement.issuedAt }).success).toBe(false);

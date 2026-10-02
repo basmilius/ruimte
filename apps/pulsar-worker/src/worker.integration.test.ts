@@ -9,6 +9,7 @@ import {
     type NativeAppleStartResult,
     accessRequestMessage,
     accessStatementMessage,
+    accessStatementV2Message,
     deviceLinkStartMessage,
     machineRegistrationMessage,
     sessionKeyMessage,
@@ -783,12 +784,16 @@ describe('machines', () => {
         expect(await errorCode(refused)).toBe('removed');
         expect(((await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult).machines).toHaveLength(0);
 
-        // Removed on one account says nothing about another account the same machine is on.
+        // A machine is on one account at a time: once it is on another, adding it again here is refused.
         const other = await signIn(3006);
         expect(
             (await dispatch('/v1/machines', { method: 'POST', headers: bearer(other), body: { ...registration(other, machine, 'desk'), automatic: true } }))
                 .status
         ).toBe(200);
+        const taken = await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, machine, 'desk') });
+        expect(taken.status).toBe(409);
+        expect(await errorCode(taken)).toBe('machine-on-other-account');
+        expect((await dispatch('/v1/machines/desk', { method: 'DELETE', headers: bearer(other) })).status).toBe(204);
 
         expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, machine, 'desk') })).status).toBe(200);
         const back = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
@@ -905,6 +910,17 @@ describe('statements', () => {
         const message = accessStatementMessage(statement.machineId, statement.clientPublicKey, statement.nonce, statement.issuedAt, statement.expiresAt);
         expect(verifies(statementPublicKey, message, statement.signature)).toBe(true);
         expect(verifies(machine.publicKey, message, statement.signature)).toBe(false);
+        expect(statement).toMatchObject({ machinePublicKey: machine.publicKey, accountId: session.account.id });
+        const v2 = accessStatementV2Message(
+            statement.machineId,
+            machine.publicKey,
+            session.account.id,
+            statement.clientPublicKey,
+            statement.nonce,
+            statement.issuedAt,
+            statement.expiresAt
+        );
+        expect(verifies(statementPublicKey, v2, statement.accountSignature!)).toBe(true);
 
         const db = database(mf);
         const log = await db.all('SELECT machine_id, device_public_key FROM statement_log WHERE account_id = ?1', session.account.id);
