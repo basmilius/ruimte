@@ -27,11 +27,7 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
 
     if (scratch) {
         return (
-            <span
-                aria-hidden
-                className={clsx('flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border-strong text-text-muted', className)}
-                style={box}
-            >
+            <span aria-hidden className={clsx('flex shrink-0 items-center justify-center text-text-muted', className)} style={box}>
                 <Icon icon={picked ?? MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
             </span>
         );

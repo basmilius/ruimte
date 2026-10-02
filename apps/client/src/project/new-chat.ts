@@ -50,19 +50,12 @@ export const useOffersNewChat = (): boolean => {
 };
 
 /*
- * The chat on screen. A window with another project leaves it to the shell, which raises the window
- * that has the Chats project or opens one on it, with the chat in front either way. The start screen
- * takes the project itself, and hands the chat on when the claim found it in another window.
+ * The chat on screen. The window switches to the Chats project itself, and hands the chat on to the
+ * shell when the claim found that project in another window, which then comes to the front.
  */
 const showNewChat = async (endpointId: string, projectId: string, viewId: string): Promise<void> => {
     if (isOpenHere(endpointId, projectId)) {
         showViewOnceThere(viewId);
-        return;
-    }
-    const key = endpointKey(endpointId, projectId);
-    const shell = desktop();
-    if (windowWorkspace() !== null && shell?.openWindow) {
-        shell.openWindow(key, viewId);
         return;
     }
     const outcome = await openProject(endpointId, projectId);
@@ -73,7 +66,7 @@ const showNewChat = async (endpointId: string, projectId: string, viewId: string
         showViewOnceThere(viewId);
         return;
     }
-    shell?.openWindow?.(key, viewId);
+    desktop()?.openWindow?.(endpointKey(endpointId, projectId), viewId);
 };
 
 /*
