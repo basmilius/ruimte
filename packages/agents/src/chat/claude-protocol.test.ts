@@ -589,6 +589,68 @@ describe('ClaudeProtocol', () => {
         expect(refused(protocol, 'rate_limit', 'Request rejected (429)')).toMatchObject([{ state: 'error', limit: { kind: 'overload' } }]);
     });
 
+    for (const reverse of [false, true]) {
+        test(`all refused windows use the latest reset with reverse order ${reverse}`, () => {
+            const protocol = new ClaudeProtocol();
+            const windows = [
+                { status: 'rejected', rateLimitType: 'seven_day', resetsAt: 900 },
+                { status: 'rejected', rateLimitType: 'five_hour', resetsAt: 500 }
+            ];
+            for (const window of reverse ? windows.toReversed() : windows) {
+                protocol.handle({ type: 'rate_limit_event', rate_limit_info: window });
+            }
+            expect(refused(protocol, 'rate_limit', 'Usage limit')).toMatchObject([{ limit: { kind: 'usage', resetsAt: 900000 } }]);
+        });
+    }
+
+    for (const resetsAt of [undefined, NaN, Infinity, -1, 0, 8.64e12]) {
+        test(`an unknown or invalid window reset ${resetsAt} prevents a scheduled usage reset`, () => {
+            const protocol = new ClaudeProtocol();
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'seven_day', resetsAt } });
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'five_hour', resetsAt: 500 } });
+            const done = refused(protocol, 'rate_limit', 'Usage limit')[0];
+            expect(done).toMatchObject({ limit: { kind: 'usage' } });
+            expect(done).not.toHaveProperty('limit.resetsAt');
+        });
+    }
+
+    for (const status of ['allowed', 'allowed_warning', 'future_status']) {
+        test(`a different ${status} window does not remove a refusal`, () => {
+            const protocol = new ClaudeProtocol();
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'seven_day', resetsAt: 900 } });
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status, rateLimitType: 'five_hour', resetsAt: 500 } });
+            expect(refused(protocol, 'rate_limit', 'Usage limit')).toMatchObject([{ limit: { kind: 'usage', resetsAt: 900000 } }]);
+        });
+    }
+
+    test('allowing a blocked window retains another window with an unknown reset', () => {
+        const protocol = new ClaudeProtocol();
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'seven_day' } });
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'five_hour', resetsAt: 500 } });
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'five_hour' } });
+        const done = refused(protocol, 'rate_limit', 'Usage limit')[0];
+        expect(done).toMatchObject({ limit: { kind: 'usage' } });
+        expect(done).not.toHaveProperty('limit.resetsAt');
+    });
+
+    test("a new prompt does not inherit another prompt's refused windows", () => {
+        const protocol = new ClaudeProtocol();
+        protocol.beginPrompt('first');
+        protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'seven_day', resetsAt: 900 } });
+        protocol.beginPrompt('second');
+        expect(refused(protocol, 'rate_limit', 'Unexplained 429')).toMatchObject([{ limit: { kind: 'overload' } }]);
+    });
+
+    for (const overage of [{ overageStatus: 'allowed' }, { overageStatus: 'allowed_warning' }, { isUsingOverage: true }, { overageInUse: true }]) {
+        test(`overage ${JSON.stringify(overage)} permits only its own window`, () => {
+            const protocol = new ClaudeProtocol();
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'seven_day', resetsAt: 900 } });
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'five_hour', resetsAt: 500 } });
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'seven_day', ...overage } });
+            expect(refused(protocol, 'rate_limit', 'Usage limit')).toMatchObject([{ limit: { kind: 'usage', resetsAt: 500000 } }]);
+        });
+    }
+
     test('a refused window on a turn that still answered is no limit', () => {
         const protocol = new ClaudeProtocol();
         protocol.handle({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1_789_000_000, rateLimitType: 'five_hour' } });

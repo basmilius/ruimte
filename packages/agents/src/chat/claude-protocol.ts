@@ -133,14 +133,14 @@ export class ClaudeProtocol {
     private lastUuid: string | null = null;
     // The model each subagent last answered with, so a frame only reports one it had not named yet.
     private readonly subagentModels = new Map<string, string>();
-    // What this turn heard about a limit: the API error of a main-chain frame, and a window the plan refused, with its reset in seconds.
+    // Only main-chain errors classify the turn; each plan window can refuse it independently.
     private apiError: string | null = null;
-    private refused: { resetsAt: number | null } | null = null;
+    private readonly refusedWindows = new Map<string, number | null>();
 
     beginPrompt(promptId: string): void {
         this.promptId = promptId;
         this.apiError = null;
-        this.refused = null;
+        this.refusedWindows.clear();
         this.lastUuid = null;
     }
 
@@ -582,7 +582,7 @@ export class ClaudeProtocol {
         this.lastUuid = null;
         const limit = failed ? this.limit() : null;
         this.apiError = null;
-        this.refused = null;
+        this.refusedWindows.clear();
         events.push({
             type: 'turn.done',
             ...(promptId === null ? {} : { promptId }),
@@ -594,12 +594,19 @@ export class ClaudeProtocol {
         });
     }
 
-    /* The last word of the plan on its windows this turn: `rejected` is a window that refused the request. */
     private noteRefusal(info: unknown): void {
         if (!isRecord(info) || typeof info.status !== 'string') {
             return;
         }
-        this.refused = info.status === 'rejected' ? { resetsAt: typeof info.resetsAt === 'number' ? info.resetsAt : null } : null;
+        const window = str(info.rateLimitType) ?? 'unknown';
+        const overageAllowed =
+            info.overageStatus === 'allowed' || info.overageStatus === 'allowed_warning' || info.isUsingOverage === true || info.overageInUse === true;
+        if (info.status === 'rejected' && !overageAllowed) {
+            const resetsAt = typeof info.resetsAt === 'number' ? info.resetsAt * 1000 : NaN;
+            this.refusedWindows.set(window, Number.isFinite(resetsAt) && resetsAt > 0 && resetsAt < 8.64e15 ? resetsAt : null);
+        } else if (info.status === 'allowed' || info.status === 'allowed_warning' || overageAllowed) {
+            this.refusedWindows.delete(window);
+        }
     }
 
     /*
@@ -608,8 +615,15 @@ export class ClaudeProtocol {
      * not explain) or of `overloaded` is a model too busy to answer.
      */
     private limit(): ChatTurnLimit | null {
-        if (this.refused !== null) {
-            return { kind: 'usage', ...(this.refused.resetsAt === null ? {} : { resetsAt: this.refused.resetsAt * 1000 }) };
+        if (this.refusedWindows.size > 0) {
+            let resetsAt = 0;
+            for (const reset of this.refusedWindows.values()) {
+                if (reset === null) {
+                    return { kind: 'usage' };
+                }
+                resetsAt = Math.max(resetsAt, reset);
+            }
+            return { kind: 'usage', resetsAt };
         }
         if (this.apiError === 'rate_limit' || this.apiError === 'overloaded') {
             return { kind: 'overload' };

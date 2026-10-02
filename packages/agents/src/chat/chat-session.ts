@@ -16,7 +16,7 @@ import { notResumedNote } from '@ruimte/agent-contracts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
-import { commandLabel, isBackgroundWork, runningInBackground, type BackgroundWork } from './background-work.ts';
+import { commandLabel, isBackgroundWork, reportsOnBackgroundWork, runningInBackground, type BackgroundWork } from './background-work.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
@@ -134,12 +134,13 @@ export class ChatSession {
     private readonly workflowWarnings = new Map<string, unknown>();
     // Bumped per backend, so thread items of a resumed CLI never overwrite older ones.
     private generation = 0;
-    // Set by configure: the running process has the old settings, the next send starts a new one.
-    private restartPending = false;
+    // Claude's task notification precedes the turn that reports its result.
+    private awaitingBackgroundReport = false;
     // The selection the running CLI was started on; a window it reports is that one's, not a newer pick's.
     private launchedSelection: ModelSelection | null = null;
     // The account the running CLI was started under, which what it reports about a plan belongs to.
     private launchedAccount: string | undefined = undefined;
+    private launchedRuntimeMode: RuntimeMode | null = null;
     private launchedFolders: readonly string[] = [];
     // The checkpoint of the turn in flight; everything queued for that turn waits for it.
     private turnReady: Promise<void> = Promise.resolve();
@@ -192,7 +193,7 @@ export class ChatSession {
         return turnId !== null && (turn?.kind !== 'turn' || turn.origin !== 'agent');
     }
 
-    /* Model and permission changes; a turn in flight keeps its process until it ends. */
+    /* The next process uses these settings; live work keeps the process it started in. */
     configure(patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode; resumeAtReset?: boolean }): ChatInfo {
         if (patch.resumeAtReset !== undefined && patch.resumeAtReset !== this.thread.info.resumeAtReset) {
             this.emit([this.thread.patchInfo({ resumeAtReset: patch.resumeAtReset })]);
@@ -212,20 +213,20 @@ export class ChatSession {
         if (patch.selection) {
             next.usage = { ...this.thread.info.usage, contextWindow: catalog.contextWindowFor(selection) };
         }
-        this.restartPending = this.backend !== null;
         this.emit([this.thread.patchInfo(next)]);
         this.options.persist();
+        this.drainQueue();
         return this.thread.info;
     }
 
-    /* The account the next CLI of this chat starts under; a turn in flight keeps its process until it ends. */
+    /* The next process uses this account; current usage still belongs to the launched account. */
     setAccount(account: string | undefined): ChatInfo {
         if (account === this.thread.info.account) {
             return this.thread.info;
         }
-        this.restartPending = this.backend !== null;
         this.emit([this.thread.patchInfo({ account })]);
         this.options.persist();
+        this.drainQueue();
         return this.thread.info;
     }
 
@@ -237,7 +238,7 @@ export class ChatSession {
     send(text: string, extras: ChatSendExtras = {}): { queued: boolean; turnId: string } {
         const turnId = newId('turn');
         // Behind whatever still waits (a CLI that crashed leaves its queue), so everything goes out in the order it was sent.
-        if (this.busy || this.queue.length > 0) {
+        if (this.busy || this.queue.length > 0 || this.replacementWaits()) {
             if (this.busy && this.info.queuePaused) {
                 this.sendAfterStop = true;
             }
@@ -308,6 +309,23 @@ export class ChatSession {
         ) {
             return;
         }
+        if (this.replacementWaits()) {
+            const id = `settings-wait-${this.generation}`;
+            if (!this.thread.get(id)) {
+                this.emit([
+                    this.thread.upsert({
+                        id,
+                        kind: 'note',
+                        createdAt: Date.now(),
+                        turnId: null,
+                        level: 'info',
+                        text: 'Your message is queued until the current work and open requests finish. The changes to this chat will apply then.'
+                    })
+                ]);
+                this.options.persist();
+            }
+            return;
+        }
         this.pauseQueue(false);
         this.setQueue(rest);
         this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, chats: next.chats, attachments: next.attachments }, next.turnId);
@@ -343,11 +361,14 @@ export class ChatSession {
             this.send('/compact');
             return;
         }
+        if (this.replacementWaits()) {
+            throw new ChatError('chat-busy', 'The current work and open requests must finish before the changes to this chat can apply');
+        }
         // A native compaction has no message of the person in front of it, only a turn to fold behind.
         this.openTurn(null, null, {});
         // Folding the context changes no file, so this turn needs no checkpoint.
         this.turnReady = Promise.resolve();
-        this.startTurnWith((backend) => backend.compact());
+        this.run((backend) => backend.compact());
     }
 
     cancel(advanceQueue = false): void {
@@ -452,7 +473,7 @@ export class ChatSession {
         this.submission = null;
         this.staleResults = 0;
         this.sendAfterStop = false;
-        this.restartPending = false;
+        this.awaitingBackgroundReport = false;
         this.launchedSelection = null;
         this.turnReady = Promise.resolve();
         const usage = this.thread.info.usage;
@@ -632,7 +653,7 @@ export class ChatSession {
      * with `origin: 'agent'` and close the wake it just made.
      */
     wake(wake: { text: string; label: string; note?: string; taskIds: string[]; summaryFor?: string; messageFrom?: string[] }): string | null {
-        if (this.frozen || this.thread.info.activeTurnId !== null) {
+        if (this.frozen || this.thread.info.activeTurnId !== null || this.replacementWaits()) {
             return null;
         }
         this.turnOpened();
@@ -837,14 +858,18 @@ export class ChatSession {
         const backend = this.backend;
         this.backend = null;
         this.starting = null;
-        this.restartPending = false;
+        this.awaitingBackgroundReport = false;
         void backend?.dispose();
         const now = Date.now();
         const turnId = this.thread.info.activeTurnId;
         const events: ChatEvent[] = [];
         for (const item of this.thread.list()) {
             const settled =
-                item.kind === 'turn' && item.state === 'running' ? { ...item, state: 'aborted' as const, endedAt: now } : settleStoredItem(item, null);
+                item.kind === 'turn' && item.state === 'running'
+                    ? { ...item, state: 'aborted' as const, endedAt: now }
+                    : item.kind === 'subagent' && item.origin !== 'ruimte' && item.status === 'running'
+                      ? { ...item, status: 'failed' as const, finishedAt: now }
+                      : settleStoredItem(item, null);
             if (settled !== item) {
                 events.push(this.thread.upsert(settled));
             }
@@ -1121,7 +1146,7 @@ export class ChatSession {
         this.submission = { turnId, input: { ...input, promptId: randomUUID() } };
         const submission = this.submission;
         this.options.persist();
-        this.startTurnWith((backend) => {
+        this.run((backend) => {
             backend.sendTurn(submission.input);
             if (!backend.acknowledgesTurns) {
                 this.acceptPrompt(submission.input.promptId!);
@@ -1162,6 +1187,15 @@ export class ChatSession {
             .catch((error: unknown) => {
                 if (this.pendingStart === pending || (this.backend !== null && this.generation === generation && this.info.activeTurnId === turnId)) {
                     this.clearStartWarning();
+                    if (error instanceof ChatError && error.code === 'chat-busy') {
+                        this.pendingPreambles = this.preambles;
+                        this.submission = null;
+                        this.pauseQueue(true);
+                        this.emit(this.projector.project(generation, { type: 'turn.done', state: 'error', costUsd: 0, error: error.message }));
+                        this.settleCheckpoint(turnId);
+                        this.options.persist();
+                        return;
+                    }
                     this.receive(generation, { type: 'failed', message: errorText(error), processAlive: this.running });
                 }
             });
@@ -1200,22 +1234,38 @@ export class ChatSession {
         this.pendingStart = null;
     }
 
-    /* Only where a turn starts, so a stop or a resume never ends the process of the turn it is about. */
-    private startTurnWith(work: (backend: ChatBackend) => void): void {
-        if (this.backend && !sameFolders(this.options.folders?.() ?? [], this.launchedFolders)) {
-            this.restartPending = true;
-        }
-        this.run(work);
+    private requiresReplacement(): boolean {
+        return (
+            this.backend !== null &&
+            (JSON.stringify(this.info.selection) !== JSON.stringify(this.launchedSelection) ||
+                this.info.runtimeMode !== this.launchedRuntimeMode ||
+                this.info.account !== this.launchedAccount ||
+                !sameFolders(this.options.folders?.() ?? [], this.launchedFolders))
+        );
+    }
+
+    private hasNativeWork(): boolean {
+        return runningInBackground(this.thread.list()).length > 0 || (this.info.background?.length ?? 0) > 0;
+    }
+
+    private processInUse(): boolean {
+        return this.hasNativeWork() || this.thread.pending().length > 0 || this.awaitingBackgroundReport;
+    }
+
+    private replacementWaits(): boolean {
+        return this.requiresReplacement() && (this.info.activeTurnId !== null || this.processInUse());
     }
 
     private ensureBackend(): Promise<ChatBackend> {
-        if (this.backend && this.restartPending) {
+        if (this.backend && this.requiresReplacement()) {
+            if (this.processInUse()) {
+                return Promise.reject(new ChatError('chat-busy', 'The current work and open requests must finish before the changes to this chat can apply'));
+            }
             // Let the old one go quietly; its events are dropped and its exit must not end the chat.
             this.backend.stop();
             this.backend = null;
             this.starting = null;
         }
-        this.restartPending = false;
         if (this.backend && this.starting) {
             return this.starting;
         }
@@ -1230,6 +1280,7 @@ export class ChatSession {
         const generation = this.generation;
         const info = this.thread.info;
         this.launchedSelection = info.selection;
+        this.launchedRuntimeMode = info.runtimeMode;
         const folders = this.options.folders?.() ?? [];
         this.launchedFolders = folders;
         const launch: BackendLaunch = {
@@ -1322,6 +1373,7 @@ export class ChatSession {
         if (event.type === 'exit') {
             this.backend = null;
             this.starting = null;
+            this.awaitingBackgroundReport = false;
         }
         // A turn we settled ourselves still has its own `result` coming; it may not close the turn after it.
         if (event.type === 'turn.done' && event.promptId === undefined && this.staleResults > 0) {
@@ -1355,7 +1407,14 @@ export class ChatSession {
                 this.backend?.declineRequest?.(item.requestId, 'The user stopped the turn');
             }
         }
-        this.emit(this.projector.project(generation, event));
+        const hadNativeWork = (event.type === 'task.done' || event.type === 'tool.done' || event.type === 'background.ended') && this.hasNativeWork();
+        const projected = this.projector.project(generation, event);
+        if (event.type === 'turn.done' || (event.type === 'failed' && event.processAlive !== true)) {
+            this.awaitingBackgroundReport = false;
+        } else if (event.type !== 'exit' && event.type !== 'failed' && hadNativeWork && !this.hasNativeWork() && reportsOnBackgroundWork(this.info.provider)) {
+            this.awaitingBackgroundReport = true;
+        }
+        this.emit(projected);
         this.watchWorkflows(event);
         if (isMainAgentOutput(event)) {
             this.spokenTurnId = this.thread.info.activeTurnId;
@@ -1403,6 +1462,11 @@ export class ChatSession {
             }
             this.drainQueue(event.state === 'aborted' && this.sendAfterStop);
             this.sendAfterStop = false;
+        } else if (
+            !reportsOnBackgroundWork(this.info.provider) &&
+            (event.type === 'task.done' || event.type === 'tool.done' || event.type === 'background.ended' || event.type === 'request.withdrawn')
+        ) {
+            this.drainQueue();
         }
     }
 

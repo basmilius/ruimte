@@ -43,6 +43,13 @@ mixed-provider child context are recorded in the
 [app acceptance results](reports/private/2026-09-30-orchestration-upstream.html#appacceptatie-1-oktober).
 No remaining implementation step from B1 through B6 or R1 is open.
 
+The first current baseline is recorded in the
+[October 2 scan](reports/private/2026-10-02-orchestration-scan-061736.html).
+The additional B01/B02 fixes and current verification are recorded in the
+[October 2 recovery results](reports/private/2026-10-02-orchestration-scan-061736.html#herstel).
+No implementation step from those findings remains open. The natural captures and measurements
+below remain separate evidence tasks.
+
 1. Capture a natural provider-limit/reset sequence when one occurs, using the bounded probe in
    the report. A quota read alone is not a refusal/reset replay. Do not consume budget to force
    a limit. Unknown reset times keep the queue paused; this capture does not block other fixes.
@@ -87,6 +94,11 @@ a usable launch route.
    records the completed 1,000-child deterministic probe, genuine nine-child Claude replay,
    full Electron view-switch baseline and Bun/JSC/mimalloc attribution. Do not infer collected
    Electron heap from RSS or change cache/GC policy before measuring this workload.
+   The [October 2 protocol probe](reports/private/2026-10-02-orchestration-scan-061736.html#R01)
+   also retains 10,000 text and 10,000 thinking counters after completed turns and `forgetPending()`.
+   Determine a safe lifetime for these message-id maps with replay, deduplication and late background
+   frames before choosing cleanup or a cap. This process-lifetime retention does not prove an
+   Electron leak; measure the full client separately.
 5. Measure binary `bytes.read` throughput while terminals and chats are busy, on socket and direct
    connections. If one session can dominate the socket, add fair per-session limits that preserve
    replies/chat events and repair dropped terminal output through `session.resync`.
