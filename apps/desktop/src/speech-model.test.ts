@@ -1,9 +1,9 @@
 import { afterEach, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, open, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SpeechModel, validModelFile } from './speech-model';
+import { SPEECH_FILES, SpeechModel, validModelFile } from './speech-model';
 
 const temporary: string[] = [];
 afterEach(async () => {
@@ -50,4 +50,39 @@ test('a missing helper is unavailable and never starts a download', async () => 
     await model.setEnabled(true);
     expect(model.state.phase).toBe('unavailable');
     expect(calls).toBe(0);
+});
+
+test('a start reads only the model files that changed since their last full check', async () => {
+    const { directory, helper } = await fixture();
+    const models = join(directory, 'models', 'streaming');
+    await mkdir(models, { recursive: true });
+    // Sparse files of the sizes the model has, so nothing is written; the check itself is faked.
+    for (const file of SPEECH_FILES) {
+        const handle = await open(join(models, file.name), 'w');
+        await handle.truncate(file.size);
+        await handle.close();
+    }
+    await writeFile(join(directory, 'speech.json'), JSON.stringify({ enabled: true }));
+    const checked: string[] = [];
+    const verify = async (path: string): Promise<boolean> => {
+        checked.push(path.slice(models.length + 1));
+        return true;
+    };
+    const start = async (): Promise<SpeechModel> => {
+        const model = new SpeechModel(directory, helper, () => undefined, fetch, verify);
+        await model.initialized;
+        return model;
+    };
+
+    expect((await start()).state).toMatchObject({ enabled: true, phase: 'ready' });
+    expect(checked).toEqual(SPEECH_FILES.map((file) => file.name));
+
+    checked.length = 0;
+    expect((await start()).state).toMatchObject({ enabled: true, phase: 'ready' });
+    expect(checked).toEqual([]);
+
+    const later = new Date(Date.now() + 60_000);
+    await utimes(join(models, 'tokenizer.model'), later, later);
+    expect((await start()).state).toMatchObject({ enabled: true, phase: 'ready' });
+    expect(checked).toEqual(['tokenizer.model']);
 });

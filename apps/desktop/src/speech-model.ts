@@ -33,24 +33,41 @@ export const validModelFile = async (path: string, file: { size: number; sha256:
     }
 };
 
+// What the last full check of the model found, inside the model's folder so removing the model removes it too.
+const CHECKED = 'checked.json';
+
+interface CheckedFile {
+    name: string;
+    size: number;
+    modified: number;
+}
+
 export class SpeechModel {
     readonly directory: string;
     readonly cacheDirectory: string;
     readonly #settings: string;
     readonly #helper: string;
     readonly #fetch: typeof fetch;
+    readonly #verify: typeof validModelFile;
     readonly #changed: (state: SpeechState) => void;
     readonly initialized: Promise<void>;
     #abort: AbortController | null = null;
     #operation: Promise<SpeechState> | null = null;
     #state: SpeechState = { enabled: false, phase: 'missing', downloadedBytes: 0, totalBytes: SPEECH_BYTES, error: null };
 
-    constructor(home: string, helper: string, changed: (state: SpeechState) => void, fetcher: typeof fetch = fetch) {
+    constructor(
+        home: string,
+        helper: string,
+        changed: (state: SpeechState) => void,
+        fetcher: typeof fetch = fetch,
+        verify: typeof validModelFile = validModelFile
+    ) {
         this.directory = join(home, 'models', 'streaming');
         this.cacheDirectory = join(home, 'models', 'streaming-coreml-cache');
         this.#settings = join(home, 'speech.json');
         this.#helper = helper;
         this.#fetch = fetcher;
+        this.#verify = verify;
         this.#changed = changed;
         this.initialized = this.#initialize();
     }
@@ -71,6 +88,42 @@ export class SpeechModel {
         await rename(`${this.#settings}.tmp`, this.#settings);
     }
 
+    /* The size and time of every model file, for the next start to trust them by. */
+    async #rememberChecked(): Promise<void> {
+        const files = await Promise.all(
+            SPEECH_FILES.map(async (file): Promise<CheckedFile> => {
+                const info = await stat(join(this.directory, file.name));
+                return { name: file.name, size: info.size, modified: info.mtimeMs };
+            })
+        );
+        const path = join(this.directory, CHECKED);
+        await writeFile(`${path}.tmp`, JSON.stringify({ revision: SPEECH_REVISION, files }));
+        await rename(`${path}.tmp`, path);
+    }
+
+    async #checked(): Promise<CheckedFile[]> {
+        try {
+            const recorded = JSON.parse(await readFile(join(this.directory, CHECKED), 'utf8')) as { revision?: unknown; files?: unknown };
+            return recorded.revision === SPEECH_REVISION && Array.isArray(recorded.files) ? (recorded.files as CheckedFile[]) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    /* Hashing 2.6 GB at every start is what this spares: a file that kept its size and time since its full check is trusted. */
+    async #unchanged(file: (typeof SPEECH_FILES)[number], checked: readonly CheckedFile[]): Promise<boolean> {
+        const known = checked.find((entry) => entry.name === file.name);
+        if (!known) {
+            return false;
+        }
+        try {
+            const info = await stat(join(this.directory, file.name));
+            return info.size === file.size && info.size === known.size && info.mtimeMs === known.modified;
+        } catch {
+            return false;
+        }
+    }
+
     async #initialize(): Promise<void> {
         try {
             if (!existsSync(this.#helper)) {
@@ -78,12 +131,21 @@ export class SpeechModel {
                 return;
             }
             const enabled = JSON.parse(await readFile(this.#settings, 'utf8')).enabled === true;
+            const checked = await this.#checked();
             let complete = true;
+            let read = false;
             for (const file of SPEECH_FILES) {
-                if (!(await validModelFile(join(this.directory, file.name), file))) {
+                if (await this.#unchanged(file, checked)) {
+                    continue;
+                }
+                read = true;
+                if (!(await this.#verify(join(this.directory, file.name), file))) {
                     complete = false;
                     break;
                 }
+            }
+            if (complete && read) {
+                await this.#rememberChecked();
             }
             this.#update({ enabled: enabled && complete, phase: complete ? 'ready' : 'missing', downloadedBytes: complete ? SPEECH_BYTES : 0 });
         } catch (error) {
@@ -125,7 +187,7 @@ export class SpeechModel {
             for (const file of SPEECH_FILES) {
                 signal.throwIfAborted();
                 const destination = join(this.directory, file.name);
-                if (await validModelFile(destination, file, signal)) {
+                if (await this.#verify(destination, file, signal)) {
                     completed += file.size;
                     this.#update({ downloadedBytes: completed });
                     continue;
@@ -180,6 +242,7 @@ export class SpeechModel {
                 }
             }
             signal.throwIfAborted();
+            await this.#rememberChecked();
             await this.#save(true);
             return this.#update({ enabled: true, phase: 'ready', downloadedBytes: SPEECH_BYTES });
         } catch (error) {
