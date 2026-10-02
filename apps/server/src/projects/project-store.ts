@@ -889,11 +889,23 @@ export class ProjectStore {
         /* The sessions go before the write, the rule `view delete` follows: a shell that outlived
            the project it stood in would answer to a canvas nobody can open any more. */
         const sessions = this.index.sessionNodes(projectId);
+        /* A client may open the project while its sessions end, and keeps what is left of it. An open
+           replaces the loaded project before its client holds it, so that is checked as well. */
+        const loaded = this.open.get(projectId);
+        const reopened = (): boolean => this.holds.holders(projectId) > 0 || this.open.get(projectId) !== loaded;
+        let ended = 0;
         for (const node of sessions) {
+            if (reopened()) {
+                break;
+            }
             await this.endSession(node.kind, node.id);
+            ended += 1;
         }
-        const launches = (await this.launches?.end(projectId)) ?? 0;
-        await this.locked(async () => {
+        const launches = reopened() ? 0 : ((await this.launches?.end(projectId)) ?? 0);
+        const kept = await this.locked(async () => {
+            if (reopened()) {
+                return true;
+            }
             this.release(projectId);
             const entries = await this.loadRegistry();
             const entry = entries.find((candidate) => candidate.projectId === projectId);
@@ -905,8 +917,9 @@ export class ProjectStore {
             // What a machine holds is the same for everyone on it, agents included; which projects a
             // person keeps in their own menu is that client's business.
             this.publish(closed);
+            return false;
         });
-        return { ended: sessions.length + launches, otherClients: 0 };
+        return { ended: ended + launches, otherClients: kept ? this.holds.holders(projectId) : 0 };
     }
 
     delete(projectId: string, removeFiles: boolean): Promise<void> {

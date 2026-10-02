@@ -490,6 +490,43 @@ describe('ProjectStore', () => {
         expect((await store.list())[0]?.closedAt).toBeNumber();
     });
 
+    test('a client that opens the project while its sessions end keeps it open, out of Recent', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        const two = content();
+        canvas(two).nodes.push({ id: 'n2', kind: 'terminal', title: 'Shell', x: 0, y: 0, w: 10, h: 10 });
+        await store.save(projectId, opened.document.rev, two);
+        store.hold('c1', projectId);
+        const ended: string[] = [];
+        store.attachSessionEnder(async (_kind, nodeId) => {
+            ended.push(nodeId);
+            if (ended.length === 1) {
+                await store.openProject({ projectId });
+                store.hold('c2', projectId);
+            }
+        });
+
+        expect(await store.closeProject(projectId, 'c1')).toEqual({ ended: 1, otherClients: 1 });
+        expect(ended).toEqual(['n1']);
+        expect(store.openProjectIds()).toEqual([projectId]);
+        expect((await store.list())[0]?.closedAt).toBeNull();
+        expect(await store.save(projectId, 1, two)).toBe(2);
+    });
+
+    test('an open that lands before its client holds the project still keeps it open', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+        store.attachSessionEnder(async () => {
+            await store.openProject({ projectId });
+        });
+
+        await store.closeProject(projectId, 'c1');
+        expect(store.openProjectIds()).toEqual([projectId]);
+        expect((await store.list())[0]?.closedAt).toBeNull();
+    });
+
     test('launches start with the first hold, are counted before closing, and end with the last client out', async () => {
         const calls: string[] = [];
         let running = 2;
