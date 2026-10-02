@@ -218,14 +218,15 @@ export function FilesPanel() {
         if (!folder) {
             return;
         }
-        // The watch goes up before the first listing, so a write in between is reported, not missed.
-        const watch = folderWatches.watch(endpointId, folder);
-        void watch.ready.then(() => {
-            void load(folder);
-            for (const dir of expandedRef.current) {
-                void load(absoluteOf(folder, dir));
+        const loadAll = (): void => {
+            const dirs = new Set([folder, ...[...expandedRef.current].map((dir) => absoluteOf(folder, dir)), ...cacheRef.current.keys()]);
+            for (const dir of dirs) {
+                void load(dir);
             }
-        });
+        };
+        // The watch goes up before the first listing, so a write in between is reported, not missed.
+        const watch = folderWatches.watch(endpointId, folder, loadAll);
+        void watch.ready.then(loadAll);
         return watch.release;
     }, [endpointId, folder, load]);
 

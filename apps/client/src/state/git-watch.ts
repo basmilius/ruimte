@@ -1,53 +1,25 @@
 import { useEffect, useState } from 'react';
 import type { GitStatus } from '@ruimte/contracts';
+import { HeldWatches, type HeldWatch } from '@/state/held-watches';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
-import { transportFor } from '@/transport';
+import { machineTransport, transportFor } from '@/transport';
+import type { Transport } from '@/transport/transport';
 
-interface Watch {
-    /* How many panels asked for this checkout; the daemon hears about the first and the last. */
-    count: number;
-    ready: Promise<void>;
+/* The checkouts this client is watching, counted, so the files panel letting go of what the git panel still looks at leaves neither blind. */
+export class GitWatches extends HeldWatches {
+    protected ask(link: Transport, cwd: string): Promise<unknown> {
+        return link.request('git.watch', { cwd });
+    }
+
+    protected unask(link: Transport, cwd: string): Promise<unknown> {
+        return link.request('git.unwatch', { cwd });
+    }
 }
 
-/* Keyed on the endpoint as well, since the same absolute path on two machines is two checkouts. */
-const watches = new Map<string, Watch>();
+const gitWatches = new GitWatches(machineTransport);
 
-/*
- * A git watch that more than one panel can hold. The daemon keeps a watch per client and per
- * checkout with no count of its own, so the files panel unwatching what the git panel is still
- * looking at would leave that panel blind. `ready` resolves once the daemon is watching, which is
- * what the first status read waits for so a write in between is reported instead of missed.
- */
-export const watchGit = (cwd: string): { ready: Promise<void>; release: () => void } => {
-    const endpointId = currentEndpointId();
-    const key = endpointKey(endpointId, cwd);
-    const link = transportFor(endpointId);
-    const watch = watches.get(key) ?? {
-        count: 0,
-        ready: (link?.request('git.watch', { cwd }) ?? Promise.reject(new Error('no socket'))).then(
-            () => undefined,
-            () => undefined
-        )
-    };
-    watch.count += 1;
-    watches.set(key, watch);
-    let released = false;
-    return {
-        ready: watch.ready,
-        release: () => {
-            if (released) {
-                return;
-            }
-            released = true;
-            watch.count -= 1;
-            if (watch.count === 0) {
-                watches.delete(key);
-                // On the machine the watch was taken out on, never on the one that happens to be active now.
-                void link?.request('git.unwatch', { cwd }).catch(() => undefined);
-            }
-        }
-    };
-};
+/* A watch on a checkout of the machine on screen. `renewed` reads again once a link that came back watches it again. */
+export const watchGit = (cwd: string, renewed?: () => void): HeldWatch => gitWatches.watch(currentEndpointId(), cwd, renewed);
 
 /*
  * The status of a checkout, kept fresh while the caller is on screen. For a panel that only reads
@@ -64,15 +36,17 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
             return;
         }
         let cancelled = false;
-        const watch = watchGit(cwd);
-        void watch.ready
-            .then(() => transportFor(endpointId)?.request('git.status', { cwd }) ?? Promise.reject(new Error('no socket')))
-            .then((status) => {
-                if (!cancelled) {
-                    setHeld({ key, status });
-                }
-            })
-            .catch(() => undefined);
+        const read = (): void => {
+            void (transportFor(endpointId)?.request('git.status', { cwd }) ?? Promise.reject(new Error('no socket')))
+                .then((status) => {
+                    if (!cancelled) {
+                        setHeld({ key, status });
+                    }
+                })
+                .catch(() => undefined);
+        };
+        const watch = watchGit(cwd, read);
+        void watch.ready.then(read);
         return () => {
             cancelled = true;
             watch.release();
@@ -91,6 +65,10 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
     return held?.key === key ? held.status : null;
 };
 
+const bumped =
+    (key: string) =>
+    (previous: { key: string; count: number } | null): { key: string; count: number } => ({ key, count: (previous?.key === key ? previous.count : 0) + 1 });
+
 /*
  * A count that goes up whenever the working tree of a checkout moved, for a surface that reads git
  * itself and only needs to know that something did. It holds the watch of its own, so a diff tab
@@ -105,7 +83,7 @@ export const useGitSignal = (cwd: string | null): number => {
         if (cwd === null) {
             return;
         }
-        const watch = watchGit(cwd);
+        const watch = watchGit(cwd, () => setHeld(bumped(key)));
         return () => {
             watch.release();
         };
@@ -114,7 +92,7 @@ export const useGitSignal = (cwd: string | null): number => {
     useEffect(() => {
         return transportFor(endpointId)?.on('git.changed', (payload) => {
             if (payload.cwd === cwd) {
-                setHeld((previous) => ({ key, count: (previous?.key === key ? previous.count : 0) + 1 }));
+                setHeld(bumped(key));
             }
         });
     }, [cwd, endpointId, key]);

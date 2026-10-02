@@ -24,7 +24,7 @@ export const useFileRead = (path: string): { state: FileRead; retry(): void } =>
     /* Every reader holds the watch itself rather than leaving it to the files panel: a file node on
        a canvas with that panel closed would otherwise never hear that the file changed. */
     useEffect(() => {
-        const watch = folderWatches.watch(endpointId, folder);
+        const watch = folderWatches.watch(endpointId, folder, () => setAttempt((count) => count + 1));
         return watch.release;
     }, [endpointId, folder]);
 

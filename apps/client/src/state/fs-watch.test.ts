@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { FolderWatches, isUnderFolder } from '@/state/fs-watch';
-import type { Transport } from '@/transport/transport';
+import type { Transport, TransportStatus } from '@/transport/transport';
 
 interface Call {
     endpointId: string;
@@ -8,18 +8,41 @@ interface Call {
     path: string;
 }
 
-/* A transport that only records what was asked of it, per machine. */
-const fakePool = (calls: Call[]): ((endpointId: string) => Transport | null) => {
-    return (endpointId) =>
-        ({
-            request: (type: string, payload: { path: string }) => {
-                calls.push({ endpointId, type, path: payload.path });
-                return Promise.resolve({});
-            },
-            on: () => () => undefined,
-            status: 'open',
-            subscribeStatus: () => () => undefined
-        }) as unknown as Transport;
+/* A transport that only records what was asked of it, per machine, and whose link drops and comes back when a test says so. */
+const fakePool = (
+    calls: Call[]
+): ((endpointId: string) => Transport) & { setStatus(endpointId: string, status: TransportStatus): void; listening(endpointId: string): number } => {
+    const links = new Map<string, Transport>();
+    const listeners = new Map<string, Set<(status: TransportStatus) => void>>();
+    const linkFor = (endpointId: string): Transport => {
+        let link = links.get(endpointId);
+        if (link === undefined) {
+            const heard = new Set<(status: TransportStatus) => void>();
+            listeners.set(endpointId, heard);
+            link = {
+                request: (type: string, payload: { path: string }) => {
+                    calls.push({ endpointId, type, path: payload.path });
+                    return Promise.resolve({});
+                },
+                on: () => () => undefined,
+                status: 'open',
+                subscribeStatus: (handler: (status: TransportStatus) => void) => {
+                    heard.add(handler);
+                    return () => heard.delete(handler);
+                }
+            } as unknown as Transport;
+            links.set(endpointId, link);
+        }
+        return link;
+    };
+    return Object.assign(linkFor, {
+        setStatus: (endpointId: string, status: TransportStatus): void => {
+            for (const handler of [...(listeners.get(endpointId) ?? [])]) {
+                handler(status);
+            }
+        },
+        listening: (endpointId: string): number => listeners.get(endpointId)?.size ?? 0
+    });
 };
 
 describe('isUnderFolder', () => {
@@ -76,5 +99,49 @@ describe('FolderWatches', () => {
             { endpointId: 'local', type: 'fs.unwatch', path: '/project' },
             { endpointId: 'local', type: 'fs.watch', path: '/project/docs' }
         ]);
+    });
+    test('a link that comes back is asked for every folder still held, and their readers read again', async () => {
+        const calls: Call[] = [];
+        const pool = fakePool(calls);
+        const watches = new FolderWatches(pool);
+        let rereads = 0;
+        const tree = watches.watch('local', '/project', () => {
+            rereads += 1;
+        });
+        const file = watches.watch('local', '/project', () => {
+            rereads += 1;
+        });
+        watches.watch('remote', '/project');
+        await tree.ready;
+        calls.length = 0;
+
+        pool.setStatus('local', 'closed');
+        pool.setStatus('local', 'open');
+        expect(calls).toEqual([{ endpointId: 'local', type: 'fs.watch', path: '/project' }]);
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(rereads).toBe(2);
+
+        file.release();
+        pool.setStatus('local', 'open');
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(rereads).toBe(3);
+    });
+
+    test('a machine with nothing held on it is no longer followed', () => {
+        const calls: Call[] = [];
+        const pool = fakePool(calls);
+        const watches = new FolderWatches(pool);
+        const first = watches.watch('local', '/project');
+        const second = watches.watch('local', '/elsewhere');
+        expect(pool.listening('local')).toBe(1);
+        first.release();
+        expect(pool.listening('local')).toBe(1);
+        second.release();
+        expect(pool.listening('local')).toBe(0);
+        calls.length = 0;
+        pool.setStatus('local', 'open');
+        expect(calls).toEqual([]);
     });
 });
