@@ -79,19 +79,26 @@ struct ChatRunSettings: View {
                     }
                 }
                 if let accounts = model.accounts, accounts.hasChoice(model.info.text("provider")) {
-                    Section("Account") {
+                    Section {
                         let kind = model.info.text("provider")
                         let current = model.info["account"]?.stringValue ?? kind
                         let started = ProviderAccountList.chatStarted(model.info)
                         ForEach(accounts.offered(kind, current: current)) { account in
                             let locked = started && !accounts.canContinue(kind, from: current, to: account.id)
                             Button {
-                                Task { _ = await model.configure(["account": .string(account.id)]) }
+                                model.chooseAccount(account.id)
                             } label: {
                                 HStack(spacing: 10) {
                                     AccountDot(color: account.color, size: 8)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(account.name(provider: usageProviderName(kind)))
+                                        if let window = ProviderAccountList.sessionWindow(
+                                            model.limits, account: account.id)
+                                        {
+                                            Text(ChatLimits.sessionLine(window))
+                                                .font(.caption).monospacedDigit()
+                                                .foregroundStyle(ChatRunSettings.tone(window.used))
+                                        }
                                         if locked {
                                             Text("Fork the conversation to use this account.").font(.caption)
                                                 .foregroundStyle(MobileStyle.muted)
@@ -102,7 +109,14 @@ struct ChatRunSettings: View {
                                 }
                             }.disabled(locked || account.id == current)
                         }
+                    } header: {
+                        Text("Account")
+                    } footer: {
+                        Text(
+                            "A new chat of \(usageProviderName(model.info.text("provider"))) on this machine starts under the account you pick."
+                        )
                     }
+                    .task(id: model.connected) { await model.readLimits() }
                 }
                 Section {
                     Picker(
@@ -178,6 +192,11 @@ struct ChatRunSettings: View {
     }
 
     private func updateOption(_ id: String, value: JSONValue) { model.chooseOption(id, value: value) }
+
+    /// A session window warns as it fills, as the desktop's account rows do.
+    static func tone(_ used: Double) -> Color {
+        used >= 0.9 ? MobileStyle.statusError : used >= 0.7 ? MobileStyle.statusNeedsYou : MobileStyle.muted
+    }
 
     private func updateSelection(_ selection: JSONValue) { model.chooseSelection(selection) }
 }

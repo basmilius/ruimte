@@ -15,6 +15,7 @@ struct AppHome: View {
     @State private var pairing = false
     @State private var machines = false
     @State private var recentProjects = false
+    @State private var newChat: NewChatTarget?
     @State private var signIn = false
     @State private var pairAfterDismiss = false
     @State private var search = ""
@@ -309,14 +310,16 @@ struct AppHome: View {
         LastProject.forget()
     }
 
-    private func openWorkspace(_ workspace: MobileWorkspace) {
+    private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {
         machines = false
         restoreProblem = nil
         restoring = nil
         LastProject.remember(machineID: workspace.session.machine.id, projectID: workspace.projectID)
+        let navigation = WorkspaceNavigation(workspace: workspace)
+        navigation.pendingViewID = view
         withAnimation(reduceMotion ? nil : .default) {
             runtime.notifications.destination = nil
-            activeProject = WorkspaceNavigation(workspace: workspace)
+            activeProject = navigation
         }
     }
 
@@ -385,6 +388,24 @@ struct AppHome: View {
                 MobileStyle.border.frame(height: 1).padding(.vertical, 10)
                     .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
                     .accessibilityHidden(true)
+                NewChatRow(machines: runtime.machines) { newChat = NewChatTarget(machineID: $0.id) }
+                ForEach(projects.chats) { row in
+                    Button {
+                        openWorkspace(
+                            MobileWorkspace(session: runtime.session(for: row.machine), projectID: row.id.projectID),
+                            view: nil)
+                    } label: {
+                        ChatsRowLabel(
+                            title: "Chats",
+                            detail: [
+                                projects.chats.count > 1 ? row.machine.name : "Your earlier chats",
+                                row.connected ? nil : "Offline",
+                            ].compactMap { $0 }.joined(separator: " · "),
+                            icon: "messages-square")
+                    }
+                    .modifier(MobileSidebarRow())
+                    .accessibilityIdentifier("projects.chats.\(row.machine.id)")
+                }
                 Button {
                     recentProjects = true
                 } label: {
@@ -415,6 +436,14 @@ struct AppHome: View {
         .modifier(ProjectListWidth())
         .navigationDestination(isPresented: $recentProjects) {
             RecentProjectsPage(runtime: runtime, projects: projects)
+        }
+        .mobileSheet(item: $newChat) { target in
+            if let machine = runtime.machines.first(where: { $0.id == target.machineID }) {
+                let session = runtime.session(for: machine)
+                NewChatSheet(session: session) { place in
+                    openWorkspace(MobileWorkspace(session: session, projectID: place.projectID), view: place.viewID)
+                }
+            }
         }
         .searchable(text: $search, prompt: "Search projects or machines")
         .toolbar {

@@ -15,6 +15,7 @@ struct MachineProjectsPage: View {
     @State private var createFolder = false
     @State private var unsubscribe: (() -> Void)?
     @State private var destination: MachineDestination?
+    @State private var newChat = false
     private enum MachineDestination: Hashable { case files, usage, settings }
     var body: some View {
         MobileList {
@@ -24,7 +25,7 @@ struct MachineProjectsPage: View {
                         title: session.connected ? "Connected" : "Connecting",
                         color: session.connected ? .green : .secondary)
                     Spacer()
-                    Text("\(projects.count) projects").font(.caption).monospacedDigit().foregroundStyle(
+                    Text("\(listed.count) projects").font(.caption).monospacedDigit().foregroundStyle(
                         MobileStyle.muted)
                 }.padding(.vertical, 3)
                     .listRowBackground(Color.clear)
@@ -34,9 +35,24 @@ struct MachineProjectsPage: View {
                     Button("Reconnect") { session.reconnect() }
                 }
             }
+            if session.connected || chats != nil {
+                Section("Chats") {
+                    if session.connected {
+                        NewChatRow(machines: [session.machine]) { _ in newChat = true }
+                    }
+                    if let chats {
+                        Button {
+                            openWorkspace(MobileWorkspace(session: session, projectID: chats.text("projectId")))
+                        } label: {
+                            ChatsRowLabel(title: "Chats", detail: "Your earlier chats", icon: "messages-square")
+                        }
+                        .modifier(MobileSidebarRow())
+                    }
+                }
+            }
             Section("Projects") {
                 ForEach(
-                    projects.filter { search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search) },
+                    listed.filter { search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search) },
                     id: \.stableID
                 ) { project in
                     Button {
@@ -52,7 +68,7 @@ struct MachineProjectsPage: View {
                 }
                 if work.loading {
                     MobileLoadingRow("Loading projects")
-                } else if session.connected && projects.isEmpty {
+                } else if session.connected && listed.isEmpty {
                     ContentUnavailableView(
                         "No projects yet", lucideIcon: "folder",
                         description: Text("Open a folder on this machine."))
@@ -119,6 +135,11 @@ struct MachineProjectsPage: View {
             unsubscribe?()
             unsubscribe = nil
         }
+        .mobileSheet(isPresented: $newChat) {
+            NewChatSheet(session: session) { place in
+                openWorkspace(MobileWorkspace(session: session, projectID: place.projectID), view: place.viewID)
+            }
+        }
         .mobileSheet(isPresented: $openingFolder) {
             NavigationStack {
                 MobileForm {
@@ -137,6 +158,10 @@ struct MachineProjectsPage: View {
             }.presentationDetents([.medium, .large])
         }
     }
+    /// The projects without the machine's Chats project, which has a section of its own.
+    private var listed: [JSONValue] { projects.filter { !NewChat.isChats($0) } }
+    private var chats: JSONValue? { projects.first(where: NewChat.isChats) }
+
     private var cacheKey: String { "ruimte.ios.projects.\(session.machine.id)" }
     private func readCache() {
         if let data = UserDefaults.standard.data(forKey: cacheKey), let cached = try? JSONValue.decode(data) {

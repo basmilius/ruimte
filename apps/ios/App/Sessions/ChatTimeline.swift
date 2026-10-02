@@ -1061,12 +1061,21 @@ struct ChatObservedRow: View {
     /// The thread the row stands in, when that thread can fork or lead to another chat.
     var presentation: ChatPresentation?
     var body: some View {
-        ChatTimelineRow(item: record.value, client: client, chatID: chatID, presentation: presentation)
-            .modifier(
-                ChatMessageMenu(
-                    text: ChatSubagents.handbackReport(record.value) ?? record.value.text("text"),
-                    presentation: forkable ? presentation : nil, turnID: record.value.text("turnId")))
+        VStack(alignment: .leading, spacing: 8) {
+            if let bookmark = bookmarkable ? presentation?.bookmarks[record.id] : nil {
+                ChatBookmarkMarker(bookmark: bookmark).frame(maxWidth: 720).frame(maxWidth: .infinity)
+            }
+            ChatTimelineRow(item: record.value, client: client, chatID: chatID, presentation: presentation)
+                .modifier(
+                    ChatMessageMenu(
+                        text: ChatSubagents.handbackReport(record.value) ?? record.value.text("text"),
+                        presentation: forkable ? presentation : nil, turnID: record.value.text("turnId"),
+                        bookmarks: bookmarkable ? presentation : nil, itemID: record.id))
+        }
     }
+
+    /// Whether this row can carry a bookmark: a message of the chat's own thread.
+    private var bookmarkable: Bool { presentation?.forkable == true && ChatBookmarks.markable(record.value) }
 
     /// Whether "Fork from here" belongs on this row: what the person asked or the answer of a turn.
     private var forkable: Bool {

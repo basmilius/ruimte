@@ -52,6 +52,10 @@ final class ChatPresentation {
     /// The forks this device knows of per turn, for the line under the turn.
     private(set) var forks: [String: [String]] = [:]
     var places: ChatPlaces?
+    /// The messages a person marked, by item id, as the machine last said.
+    private(set) var bookmarks: [String: ChatBookmark] = [:]
+    /// A row asked to place, name or take away a bookmark; the screen carries it out.
+    var bookmarkRequest: ChatBookmarkRequest?
     /// The timeline entries on screen, answered by the timeline while it is there.
     @ObservationIgnored var visibleEntryIDs: () -> [String] = { [] }
     private(set) var scrollRequest = 0
@@ -168,6 +172,27 @@ final class ChatPresentation {
     func reveal(entryID: String) {
         requestedItemID = entryID
         scrollRequest += 1
+    }
+
+    /// Scrolls to a message, unfolding the turn that hides it. False while the message is not loaded.
+    func revealItem(_ id: String) -> Bool {
+        guard let record = records[id] else { return false }
+        if !entries.contains(where: { $0.id == id }), let turnID = record.value["turnId"]?.stringValue {
+            expandedTurns.insert(turnID)
+            rebuild()
+        }
+        reveal(entryID: id)
+        return true
+    }
+
+    func setBookmarks(_ bookmarks: [ChatBookmark]) {
+        let next = Dictionary(bookmarks.map { ($0.itemID, $0) }, uniquingKeysWith: { first, _ in first })
+        if next != self.bookmarks { self.bookmarks = next }
+    }
+
+    /// The bookmarks in the order of the thread; one on a message this device has not loaded goes last.
+    var orderedBookmarks: [ChatBookmark] {
+        ChatBookmarks.inThreadOrder(Array(bookmarks.values), order: order)
     }
 
     func toggleTurn(_ id: String) {

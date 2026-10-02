@@ -120,11 +120,11 @@ final class SharedMachineSession {
         preferenceSubscriptions = [
             rpc.observeConnection { [weak self] connected in
                 guard let self, connected else { return }
-                preferences.send(to: rpc)
+                preferences.send(to: rpc, machineID: machine.id)
             },
             preferences.observe { [weak self] in
                 guard let self, rpc.isConnected else { return }
-                preferences.send(to: rpc)
+                preferences.send(to: rpc, machineID: machine.id)
             },
         ]
     }
@@ -187,6 +187,9 @@ final class SharedMachineSession {
         guard connected, let model = chats[id]?.model else { return false }
         return model.connected && !model.loading && model.info != .null && model.error == nil
     }
+
+    /// Lets go of a chat that ended on the machine, so nothing here attaches to it again.
+    func forgetChat(_ id: String) { removeChat(id) }
 
     private func discardIdleChats(except retainedID: String? = nil) {
         for (id, entry) in chats where entry.viewers == 0 && id != retainedID { removeChat(id) }

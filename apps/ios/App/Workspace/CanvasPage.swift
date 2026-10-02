@@ -14,7 +14,7 @@ struct CanvasPage: View {
     @State private var renameID: String?
     @State private var name = ""
     @State private var linkID: String?
-    @State private var deleteID: String?
+    @State private var removal: NodeRemoval?
     private var canvas: JSONValue { workspace.views.first { $0.stableID == viewID } ?? .object([:]) }
     var body: some View {
         Group {
@@ -150,16 +150,20 @@ struct CanvasPage: View {
         }
         .confirmationDialog(
             "Remove this node from the canvas?",
-            isPresented: Binding(get: { deleteID != nil }, set: { if !$0 { deleteID = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("Remove node", role: .destructive) {
-                guard let id = deleteID else { return }
-                deleteID = nil
-                Task { await workspace.updateView(viewID) { canvasWithoutNode($0, id: id) } }
+            isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }),
+            titleVisibility: .visible, presenting: removal
+        ) { pending in
+            Button(pending.chats.isEmpty ? "Remove node" : "Remove and end chat", role: .destructive) {
+                removal = nil
+                Task {
+                    await workspace.updateView(viewID) { canvasWithoutNode($0, id: pending.id) }
+                    if workspace.problem == nil { await ChatEnding.end(pending.chats, session: workspace.session) }
+                }
             }
-        } message: {
-            Text("Its connections are removed too. A running session remains available on the machine.")
+        } message: { pending in
+            Text(
+                pending.warning.map { "\($0) Its connections are removed too." }
+                    ?? "Its connections are removed too. A running session remains available on the machine.")
         }
     }
     @ViewBuilder private func nodeActions(_ node: JSONValue) -> some View {
@@ -174,7 +178,12 @@ struct CanvasPage: View {
         if ["chat", "terminal", "browser"].contains(node.text("kind")) {
             Button("Open as view", lucideIcon: "panel-left") { Task { await promote(node) } }
         }
-        Button("Remove", lucideIcon: "trash", role: .destructive) { deleteID = node.stableID }
+        Button("Remove", lucideIcon: "trash", role: .destructive) {
+            Task {
+                let question = await ChatEnding.question(for: node, client: workspace.client)
+                removal = NodeRemoval(id: node.stableID, chats: question.chats, warning: question.warning)
+            }
+        }
     }
     private func edgeName(_ edge: JSONValue) -> String {
         let names = [edge.text("from"), edge.text("to")].map { id in
@@ -218,6 +227,12 @@ struct CanvasPage: View {
         }
         workspace.select(node.stableID)
     }
+}
+
+private struct NodeRemoval {
+    let id: String
+    let chats: [String]
+    let warning: String?
 }
 
 func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {

@@ -7,6 +7,8 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     let workspace: MobileWorkspace
     var section = ProjectSection.views
     var selectedViewID: String?
+    /// A view to open once the project is there, such as a chat a machine just made.
+    var pendingViewID: String?
 
     init(workspace: MobileWorkspace) { self.workspace = workspace }
 

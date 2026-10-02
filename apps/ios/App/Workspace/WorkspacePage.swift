@@ -9,11 +9,12 @@ struct WorkspacePage: View {
     @State private var iconView: JSONValue?
     @State private var renamed: JSONValue?
     @State private var renameText = ""
-    @State private var deleteView: JSONValue?
+    @State private var deleteView: ViewDeletion?
     @State private var search = ""
     @State private var searching = false
     @State private var showUsage = false
     @State private var openedViewID: String?
+    @State private var newChat = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
@@ -66,12 +67,26 @@ struct WorkspacePage: View {
                     .disabled(!workspace.ready)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Add view", lucideIcon: "plus") { adding = true }
-                    .disabled(!workspace.ready)
+                // The views of the Chats project are its chats, so its plus makes one.
+                if workspace.isScratch {
+                    Button("New chat", lucideIcon: "message-square-plus") { newChat = true }
+                        .disabled(!workspace.ready)
+                } else {
+                    Button("Add view", lucideIcon: "plus") { adding = true }
+                        .disabled(!workspace.ready)
+                }
             }
         }
         .navigationDestination(item: $openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
+        .task(id: workspace.ready) { await openPendingView() }
+        .mobileSheet(isPresented: $newChat) {
+            NewChatSheet(session: workspace.session) { place in
+                guard place.projectID == workspace.projectID else { return }
+                navigation.pendingViewID = place.viewID
+                Task { await openPendingView() }
+            }
+        }
         .mobileSheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
             if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
         }
@@ -98,20 +113,23 @@ struct WorkspacePage: View {
             Button("Cancel", role: .cancel) { renamed = nil }
         }
         .confirmationDialog(
-            "Delete this view?", isPresented: Binding(get: { deleteView != nil }, set: { if !$0 { deleteView = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("Delete view", role: .destructive) {
-                guard let item = deleteView else { return }
+            deleteView?.item.text("kind") == "chat" ? "Delete this chat?" : "Delete this view?",
+            isPresented: Binding(get: { deleteView != nil }, set: { if !$0 { deleteView = nil } }),
+            titleVisibility: .visible, presenting: deleteView
+        ) { pending in
+            Button(pending.item.text("kind") == "chat" ? "Delete chat" : "Delete view", role: .destructive) {
                 deleteView = nil
                 Task {
                     await workspace.edit { document in
-                        var views = document.list("views").filter { $0.stableID != item.stableID }
-                        if views.isEmpty { views = [newCanvas()] }
+                        var views = document.list("views").filter { $0.stableID != pending.item.stableID }
+                        if views.isEmpty && !workspace.isScratch { views = [newCanvas()] }
                         return document.setting("views", .array(views))
                     }
+                    if workspace.problem == nil { await ChatEnding.end(pending.chats, session: workspace.session) }
                 }
             }
+        } message: { pending in
+            if let warning = pending.warning { Text(warning) }
         }
         .confirmationDialog(
             "This project changed elsewhere", isPresented: Binding(get: { workspace.conflict != nil }, set: { _ in }),
@@ -156,19 +174,26 @@ struct WorkspacePage: View {
             } label: {
                 Label("Views", lucideIcon: "layout-grid")
             }
-            Tab(value: ProjectSection.files) {
-                if isSidebar {
-                    viewList(query: "")
-                } else {
-                    MachineFilesPage(client: workspace.client, path: workspace.folder)
+            // The Chats project's folder is the machine's own, so it shows neither files nor git.
+            if !workspace.isScratch {
+                Tab(value: ProjectSection.files) {
+                    if isSidebar {
+                        viewList(query: "")
+                    } else {
+                        MachineFilesPage(client: workspace.client, path: workspace.folder)
+                    }
+                } label: {
+                    Label("Files", lucideIcon: "folder")
                 }
-            } label: {
-                Label("Files", lucideIcon: "folder")
-            }
-            Tab(value: ProjectSection.git) {
-                if isSidebar { viewList(query: "") } else { GitPage(client: workspace.client, folder: workspace.folder) }
-            } label: {
-                Label("Git", lucideIcon: "git-branch")
+                Tab(value: ProjectSection.git) {
+                    if isSidebar {
+                        viewList(query: "")
+                    } else {
+                        GitPage(client: workspace.client, folder: workspace.folder)
+                    }
+                } label: {
+                    Label("Git", lucideIcon: "git-branch")
+                }
             }
             Tab(value: ProjectSection.search, role: .search) {
                 searchResults.searchable(text: $search, isPresented: $searching, prompt: "Find a view")
@@ -187,7 +212,7 @@ struct WorkspacePage: View {
     private var searchResults: some View {
         viewList(query: search)
             .overlay {
-                if !search.isEmpty && WorkspaceViewSections.split(workspace.views, search: search).isEmpty {
+                if !search.isEmpty && WorkspaceViewSections.split(listedViews, search: search).isEmpty {
                     ContentUnavailableView("No matching views", lucideIcon: "search")
                 }
             }
@@ -201,8 +226,16 @@ struct WorkspacePage: View {
         }
     }
 
+    /// A chat of the Chats project nobody wrote in yet stays out of the list, as the desktop's sidebar leaves it out,
+    /// unless it is the one open.
+    private var listedViews: [JSONValue] {
+        workspace.views.filter {
+            $0["empty"]?.boolValue != true || $0.text("kind") != "chat" || $0.stableID == navigation.selectedViewID
+        }
+    }
+
     private func viewList(query: String) -> some View {
-        let sections = WorkspaceViewSections.split(workspace.views, search: query)
+        let sections = WorkspaceViewSections.split(listedViews, search: query)
         return List {
             ForEach(sections) { section in
                 Section {
@@ -248,7 +281,11 @@ struct WorkspacePage: View {
                             Button("Change icon", lucideIcon: "palette") { iconView = item }
                                 .disabled(item.text("kind") == "unknown")
                             Button("Delete", lucideIcon: "trash", role: .destructive) {
-                                deleteView = item
+                                Task {
+                                    let question = await ChatEnding.question(for: item, client: workspace.client)
+                                    deleteView = ViewDeletion(
+                                        item: item, chats: question.chats, warning: question.warning)
+                                }
                             }
                         }
                         .moveDisabled(!query.isEmpty)
@@ -274,9 +311,25 @@ struct WorkspacePage: View {
             }
         }
         .modifier(MobileSidebarList(minimumRowHeight: 0))
+        .overlay {
+            if workspace.isScratch && query.isEmpty && sections.isEmpty {
+                ContentUnavailableView {
+                    Label("No chats yet", lucideIcon: "messages-square", iconSize: 48)
+                } actions: {
+                    Button("New chat") { newChat = true }.disabled(!workspace.session.connected)
+                }
+            }
+        }
         .contentMargins(.top, isSidebar ? nil : 0, for: .scrollContent)
         .contentMargins(.bottom, isSidebar ? nil : 24, for: .scrollContent)
         .accessibilityIdentifier("workspace.views")
+    }
+
+    /// Opens the view a project was opened for, once the machine's copy of the project holds it.
+    private func openPendingView() async {
+        guard workspace.ready, let id = navigation.pendingViewID else { return }
+        navigation.pendingViewID = nil
+        if await workspace.arrival(of: id) { openView(id) }
     }
 
     private func openView(_ id: String) {
@@ -306,6 +359,12 @@ struct WorkspacePage: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
+}
+
+private struct ViewDeletion {
+    let item: JSONValue
+    let chats: [String]
+    let warning: String?
 }
 
 func newCanvas() -> JSONValue {
@@ -606,15 +665,16 @@ extension EnvironmentValues {
 
 struct OpenMobileWorkspaceAction: Equatable {
     private let id: String?
-    private let action: (MobileWorkspace) -> Void
+    private let action: (MobileWorkspace, String?) -> Void
 
-    init(id: String? = nil, action: @escaping (MobileWorkspace) -> Void = { _ in }) {
+    init(id: String? = nil, action: @escaping (MobileWorkspace, String?) -> Void = { _, _ in }) {
         self.id = id
         self.action = action
     }
 
-    func callAsFunction(_ workspace: MobileWorkspace) {
-        action(workspace)
+    /// Opens a project, and with `view` that view of it once the project is there.
+    func callAsFunction(_ workspace: MobileWorkspace, view: String? = nil) {
+        action(workspace, view)
     }
 
     static func == (lhs: Self, rhs: Self) -> Bool {

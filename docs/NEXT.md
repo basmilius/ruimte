@@ -221,10 +221,7 @@ Source: `packages/agents/src/providers/accounts`. Nobody has used a second real 
 3. Decide which skills, `CLAUDE.md` and settings an additional Claude account should share with
    `~/.claude`. Implement that policy without sharing authentication or overwriting an explicit
    account configuration.
-4. Complete the iOS account follow-up: Continue on account after a limit (`chat.continueOn` is
-   generated but no screen calls it), limit information in its account menu, and a remembered
-   default keyed by machine and CLI. Recheck each against current iOS behavior before writing it.
-5. Drop the background behind the machine tiles in the Account pane, as the other settings icons did.
+4. Drop the background behind the machine tiles in the Account pane, as the other settings icons did.
 
 Known limits, accepted for now: a Claude chat cannot move to an account with another folder after
 its first turn (fork instead); Gemini and Copilot only have their default account until it is known

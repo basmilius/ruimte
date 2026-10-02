@@ -7,6 +7,8 @@ import RuimteTransport
 final class ChatModel {
     let client: any MachineRequesting
     let chatID: String
+    /// The machine the chat runs on, which is what a remembered account is kept for.
+    let machineID: String
     let presentation = ChatPresentation()
     var info: JSONValue = .null
     var items: [JSONValue] = []
@@ -38,6 +40,9 @@ final class ChatModel {
     var providers: [JSONValue] = []
     /// Nil from a machine before accounts.
     var accounts: ProviderAccountList?
+    /// The machine's plan windows per account, `usage.limits`; nil until something on screen asked for them.
+    var limits: JSONValue?
+    var continuing = false
     var suggestions: [ChatSuggestion] = []
     var suggestionKind = ""
     var searching = false
@@ -75,6 +80,7 @@ final class ChatModel {
     init(client: any MachineRequesting, chatID: String, machineID: String = "local", draftRoot: URL? = nil) {
         self.client = client
         self.chatID = chatID
+        self.machineID = machineID
         composition = ChatComposition(machineID: machineID, chatID: chatID, root: draftRoot)
         if composition.deliveryUncertain { sendProblem = Self.uncertainSendMessage }
         presentation.forkable = true
@@ -111,6 +117,16 @@ final class ChatModel {
         unsubscribe.append(
             client.subscribe(WireEvent.accountsChanged.rawValue) { [weak self] payload in
                 self?.accounts = ProviderAccountList(payload)
+            })
+        unsubscribe.append(
+            client.subscribe(WireEvent.chatBookmarks.rawValue) { [weak self] payload in
+                guard let self, payload["chatId"]?.stringValue == self.chatID else { return }
+                self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
+            })
+        unsubscribe.append(
+            client.subscribe(WireEvent.usageLimitsChanged.rawValue) { [weak self] payload in
+                guard let self, self.limits != nil else { return }
+                self.limits = payload
             })
         unsubscribe.append(
             client.subscribeRejected("chat.event") { [weak self] payload in
@@ -203,6 +219,8 @@ final class ChatModel {
             }, uniquingKeysWith: { _, newest in newest })
         refreshPending()
         presentation.replace(items, info: info)
+        // A machine without bookmarks sends none, and then this chat has none.
+        presentation.setBookmarks(ChatBookmarks.parse(snapshot["bookmarks"]?.arrayValue ?? []))
         subagentRevision += 1
         revision += 1
     }
@@ -261,6 +279,14 @@ final class ChatModel {
             return
         }
         Task { await loadOlder() }
+    }
+
+    /// The page before, waited for; what a jump to a message that is not loaded yet reads through. False when no
+    /// page came, because there is none, one is on its way already or it failed.
+    func loadOlderNow() async -> Bool {
+        let before = history.cursor
+        await loadOlder()
+        return history.cursor != before
     }
 
     private func loadOlder() async {

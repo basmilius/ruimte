@@ -36,9 +36,17 @@ final class UnifiedProjects {
 
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
 
-    var open: [UnifiedProjectRow] { ordered(rows.filter { !$0.recent }, by: "lastOpenedAt") }
-    var recent: [UnifiedProjectRow] { ordered(rows.filter(\.recent), by: "closedAt") }
-    var unavailable: [UnifiedProjectRow] { rows.filter { $0.summary["available"] == .bool(false) } }
+    var open: [UnifiedProjectRow] { ordered(projectRows.filter { !$0.recent }, by: "lastOpenedAt") }
+    var recent: [UnifiedProjectRow] { ordered(projectRows.filter(\.recent), by: "closedAt") }
+    var unavailable: [UnifiedProjectRow] { projectRows.filter { $0.summary["available"] == .bool(false) } }
+    /// The Chats project of every machine that has one, by machine name; it has a place of its own and never stands
+    /// among the projects.
+    var chats: [UnifiedProjectRow] {
+        rows.filter { NewChat.isChats($0.summary) }.sorted {
+            $0.machine.name == $1.machine.name ? $0.machine.id < $1.machine.id : $0.machine.name < $1.machine.name
+        }
+    }
+    private var projectRows: [UnifiedProjectRow] { rows.filter { !NewChat.isChats($0.summary) } }
     var loading: Bool { entries.values.contains { $0.loading } }
     var hasConnectedMachine: Bool { entries.values.contains { $0.connected } }
     var problems: [String: String] {

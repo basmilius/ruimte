@@ -28,6 +28,8 @@ final class MobileWorkspace {
     var views: [JSONValue] { document.list("views") }
     var folder: String { summary.text("folder", fallback: "~") }
     var title: String { document.text("name", fallback: summary.text("name", fallback: "Project")) }
+    /// The machine's Chats project, which holds the chats outside any project; its folder is the machine's own.
+    var isScratch: Bool { summary["scratch"]?.boolValue == true }
     var client: any MachineRequesting { session.rpc }
     var storageKey: String { "ruimte.ios.workspace.\(session.machine.id).\(projectID)" }
 
@@ -255,7 +257,7 @@ final class MobileWorkspace {
                 payload["command"] = metadata["command"]
             }
         } else {
-            for key in ["provider", "resume", "runtimeMode"] { payload[key] = metadata[key] }
+            for key in ["provider", "account", "resume", "runtimeMode"] { payload[key] = metadata[key] }
         }
         do {
             let info = try await client.request(kind == "chat" ? "chat.create" : "session.create", payload: .object(payload))

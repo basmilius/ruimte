@@ -32,6 +32,24 @@ final class UnifiedProjectsTests: XCTestCase {
         XCTAssertTrue((fixture.model.open + fixture.model.recent).allSatisfy { !$0.connected })
     }
 
+    @MainActor func testTheChatsProjectOfAMachineStandsApartFromItsProjects() throws {
+        let fixture = try ProjectListFixture()
+        defer { fixture.clean() }
+        let mini = fixture.machine("mini")
+        let mac = fixture.machine("mac")
+        try fixture.cache(mini, [fixture.summary("mini-chats", opened: 90, scratch: true)])
+        try fixture.cache(
+            mac,
+            [
+                fixture.summary("mac-chats", opened: 80, closed: 85, scratch: true),
+                fixture.summary("app", opened: 10), fixture.summary("old", opened: 5, closed: 6),
+            ])
+        fixture.model.reconcile(machines: [mini, mac], connect: nil)
+        XCTAssertEqual(fixture.model.open.map(\.id.projectID), ["app"])
+        XCTAssertEqual(fixture.model.recent.map(\.id.projectID), ["old"])
+        XCTAssertEqual(fixture.model.chats.map(\.id.projectID), ["mac-chats", "mini-chats"])
+    }
+
     @MainActor func testOfflineCacheSurvivesDisconnectAndStopReleasesOnlyListDemand() async throws {
         let fixture = try ProjectListFixture()
         defer { fixture.clean() }
@@ -204,16 +222,18 @@ final class UnifiedProjectsTests: XCTestCase {
     }
     func summary(
         _ id: String = UUID().uuidString, opened: Double, closed: Double? = nil,
-        available: Bool = true
+        available: Bool = true, scratch: Bool = false
     ) -> JSONValue {
-        .object([
+        var values: [String: JSONValue] = [
             "projectId": .string(id), "name": .string("Project"), "color": .string("blue"),
             "folder": .string("/work/project"),
             "lastOpenedAt": .number(opened), "closedAt": closed.map(JSONValue.number) ?? .null,
             "available": .bool(available),
             "icon": .object(["kind": .string("initial"), "value": .string("P")]),
             "nameSource": .string("chosen"),
-        ])
+        ]
+        if scratch { values["scratch"] = .bool(true) }
+        return .object(values)
     }
     func cache(_ machine: Machine, _ summaries: [JSONValue]) throws {
         defaults.set(

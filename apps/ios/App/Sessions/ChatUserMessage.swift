@@ -60,6 +60,9 @@ struct ChatMessageMenu: ViewModifier {
     /// The thread that can fork after this row's turn; nil where a row has nothing to fork.
     var presentation: ChatPresentation?
     var turnID = ""
+    /// The thread whose bookmarks this row can hold; nil where a row takes none.
+    var bookmarks: ChatPresentation?
+    var itemID = ""
     func body(content: Content) -> some View {
         content.contextMenu {
             if !text.isEmpty {
@@ -71,6 +74,9 @@ struct ChatMessageMenu: ViewModifier {
             }
             if let presentation, presentation.forkable, !turnID.isEmpty {
                 ChatForkButton(presentation: presentation, turnID: turnID)
+            }
+            if let bookmarks, !itemID.isEmpty {
+                ChatBookmarkButtons(presentation: bookmarks, itemID: itemID)
             }
         }
     }

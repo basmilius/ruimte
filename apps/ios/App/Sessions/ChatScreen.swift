@@ -25,6 +25,12 @@ struct ChatScreen: View {
     @State private var indexOnScreen: Set<String> = []
     /// A fork asked for from the message index, shown once the index has gone.
     @State private var forkAfterIndex: String?
+    @State private var showingBookmarks = false
+    /// A rename asked for from the bookmark list, asked once the list has gone.
+    @State private var renameAfterList: String?
+    /// The message whose bookmark is being named, with the name as typed.
+    @State private var namingBookmark: String?
+    @State private var bookmarkName = ""
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
@@ -108,7 +114,7 @@ struct ChatScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    if messageMarks.count >= 3 || hasSubagents {
+                    if messageMarks.count >= 3 || hasSubagents || hasBookmarks {
                         Section {
                             if messageMarks.count >= 3 {
                                 Button("Messages", lucideIcon: "list") {
@@ -116,6 +122,10 @@ struct ChatScreen: View {
                                     showingIndex = true
                                 }
                                 .accessibilityIdentifier("chat.messages")
+                            }
+                            if hasBookmarks {
+                                Button("Bookmarks", lucideIcon: "bookmark") { showingBookmarks = true }
+                                    .accessibilityIdentifier("chat.bookmarks")
                             }
                             if hasSubagents {
                                 Button("Sub-agents", lucideIcon: "bot") {
@@ -138,7 +148,7 @@ struct ChatScreen: View {
                     Image(lucide: "ellipsis")
                 }
                 .accessibilityLabel("Conversation actions")
-                .disabled(!isPrepared && messageMarks.count < 3 && !hasSubagents)
+                .disabled(!isPrepared && messageMarks.count < 3 && !hasSubagents && !hasBookmarks)
                 // Anchored on the menu now that Messages lives inside it; a popover on iPad, a sheet on iPhone.
                 .popover(isPresented: $showingIndex) {
                     ChatMessageIndex(
@@ -153,12 +163,48 @@ struct ChatScreen: View {
                     )
                     .modifier(MobileSheetSurface())
                 }
+                .popover(isPresented: $showingBookmarks) {
+                    ChatBookmarkList(
+                        presentation: model.presentation,
+                        jump: { id in Task { await model.revealBookmark(id) } },
+                        rename: { id in
+                            renameAfterList = id
+                            showingBookmarks = false
+                        },
+                        remove: { id in Task { await model.removeBookmark(id) } }
+                    )
+                    .modifier(MobileSheetSurface())
+                }
             }
         }
         .onChange(of: showingIndex) { _, showing in
             guard !showing, let turnID = forkAfterIndex else { return }
             forkAfterIndex = nil
             model.presentation.forkRequest = ChatForkRequest(turnID: turnID)
+        }
+        .onChange(of: showingBookmarks) { _, showing in
+            guard !showing, let id = renameAfterList else { return }
+            renameAfterList = nil
+            askBookmarkName(id)
+        }
+        .onChange(of: model.presentation.bookmarkRequest) { _, request in
+            guard let request else { return }
+            model.presentation.bookmarkRequest = nil
+            handle(request)
+        }
+        .alert(
+            namingBookmark.flatMap { model.presentation.bookmarks[$0]?.name } == nil
+                ? "Name this bookmark" : "Rename bookmark",
+            isPresented: Binding(get: { namingBookmark != nil }, set: { if !$0 { namingBookmark = nil } })
+        ) {
+            TextField("Name it, or leave it empty", text: $bookmarkName)
+            Button("Cancel", role: .cancel) { namingBookmark = nil }
+            Button("Save") {
+                guard let id = namingBookmark else { return }
+                namingBookmark = nil
+                let name = bookmarkName
+                Task { await model.nameBookmark(id, name: name) }
+            }
         }
         .mobileSheet(
             item: Binding(
@@ -323,6 +369,24 @@ struct ChatScreen: View {
         }
     }
 
+    private var hasBookmarks: Bool { !model.presentation.bookmarks.isEmpty }
+
+    private func handle(_ request: ChatBookmarkRequest) {
+        switch request.action {
+        case .add:
+            Task {
+                if await model.addBookmark(request.itemID) { askBookmarkName(request.itemID) }
+            }
+        case .rename: askBookmarkName(request.itemID)
+        case .remove: Task { await model.removeBookmark(request.itemID) }
+        }
+    }
+
+    private func askBookmarkName(_ id: String) {
+        bookmarkName = model.presentation.bookmarks[id]?.name ?? ""
+        namingBookmark = id
+    }
+
     /// The toolbar offers the list only once the chat has a sub-agent to open.
     private var hasSubagents: Bool {
         model.presentation.subagentsRefused ? model.subagentRows.native : model.subagentRows.any
@@ -357,6 +421,7 @@ struct ChatScreen: View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(spacing: 0) {
                 if prompts.active == nil {
+                    ChatLimitBanner(model: model, openFork: openFork)
                     ChatActivityChips(model: model, tasks: machineSession?.tasks)
                     ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 }

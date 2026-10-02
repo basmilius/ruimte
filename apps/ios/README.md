@@ -21,6 +21,18 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions. The composer styles Markdown
   while editing and shows selected files and skills as inline badges.
+- Chats outside any project. New chat on the projects page (a menu of the machines when there are
+  several) and on a machine's page picks one of the machine's installed chat agents from `provider.list`,
+  asks the machine for it with `project.newChat` and opens it; the machine hands back the chat of that
+  agent nobody wrote in yet instead of making another. Each machine's Chats project (`scratch` on its
+  summary) has a row of its own, "Chats", and stays out of the projects and Recently closed. It shows
+  neither files nor git, its plus starts a new chat, and a chat nobody wrote in yet stays out of its list
+  unless it is open. A machine that cannot hold such chats, being older or keeping its Ruimte folder in a
+  git checkout, says so in the sheet.
+- Deleting a chat view or a chat node, or a canvas with chat nodes on it, ends those chats on the machine with
+  `chat.kill`, as the desktop does: the CLI stops and the thread, its attachments and bookmarks go, and
+  so do the agents it opened. The confirmation says so and counts those agents. Stopping a turn keeps
+  the chat. Terminals still keep running when their node goes.
 - Drawing with a finger or Apple Pencil, pressure, pen colors and widths, whole-element
   erasing, undo, pan and zoom. Selection, shapes and text creation are included.
   Unsaved drawing drafts persist locally for recovery.
@@ -91,9 +103,19 @@ Stop with sub-agents. Task marks appear on the nodes a task opened, wake turns s
 tasks woke them, and a failed task or a wake the machine gave up on leaves an unseen mark.
 Once a chat's CLI has two accounts that are on, the composer names the chat's account with its dot beside the
 model, and Run settings has an Account section. Before the first turn any account can be picked; after it only
-an account that writes its conversations to the same folder, and the others say to fork.
+an account that writes its conversations to the same folder, and the others say to fork. Each account shows how
+much of its session window is spent and when it resets, from `usage.limits`, amber from 70% and red from 90%.
+The account picked there is remembered per machine and CLI: a new chat started here asks for it, and every
+connected machine is told it (`accounts` in `chat.setPreferences`) for the chats it starts on its own, unless that
+machine turned the account off or removed it.
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
+A chat whose last turn stopped on a usage limit or an overload says so over the composer, with when the limit
+resets or when the machine takes the chat up again, and names the account that ran into it. After a usage limit,
+another account of the same CLI that is on, signed in and has room (the least of its session spent) is offered as
+Continue on; `chat.continueOn` goes on in the chat itself or in a fork, which then opens. Accounts the machine has
+not read yet are asked for with `usage.refreshLimits`, at most every five minutes per machine. The chat's own
+Resume at reset switch is not on the phone yet.
 
 A chat whose agent keeps a plan shows its progress beside Sub-agents as the desktop pill: "6/11" with a double check
 on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last opened; the
@@ -127,6 +149,13 @@ A machine without these requests says it needs an update and nothing else change
 With three or more messages, Messages in the conversation menu lists what you sent and the turns tasks woke: a
 popover on iPad, a sheet on iPhone. It opens scrolled to what is on screen, marks those messages,
 searches, jumps on a tap and offers Copy and Fork from here on a long press or a swipe.
+
+Long-press a message you sent or an answer for Bookmark message, which asks for an optional name; a bookmarked
+message offers Rename bookmark and Remove bookmark instead. A bookmark stands as a line over its message with its
+name or the start of the message. Bookmarks in the conversation menu lists them in thread order, the same way as
+Messages; a tap jumps there, unfolding the turn or reading earlier pages when needed, and a long press or a swipe
+renames or removes. Every client of the chat sees the same bookmarks (`chat.bookmarks`). A machine without
+bookmarks says it needs an update.
 
 Messages support nested lists, tasks, quotes, tables, matching code fences and reference
 links. Long prompts can fold; mentions and skills retain their styling. Message context
