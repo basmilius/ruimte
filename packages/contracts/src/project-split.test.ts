@@ -114,6 +114,13 @@ describe('splitContent', () => {
         expect(split.private.views.map((view) => view.id)).toEqual(['f1']);
     });
 
+    test('a file view that climbs out of the project folder is kept back like an absolute one', () => {
+        const climbing: ProjectView = { kind: 'file', id: 'f1', name: 'notes', path: '../x' };
+        expect(viewShareRefusal(climbing)).toBe('path-outside-project');
+        expect(canShareView({ ...climbing, path: 'docs/../README.md' })).toBe(true);
+        expect(splitContent(content([climbing]), ['f1'], 1).shared.views).toEqual([]);
+    });
+
     test('a separator travels with the group under it and stays home when that whole stretch is private', () => {
         const views = [separator('s1'), canvas('a'), canvas('b'), separator('s2'), canvas('mine')];
         const split = splitContent(content(views), ['b'], 1);
@@ -239,6 +246,23 @@ describe('mergeFiles', () => {
         // What travels legitimately stays, and this person's own overlay is still laid over it.
         expect(main.nodes[1]).toEqual(node('n2', { cwd: './apps', path: 'README.md', resume: 'mine' }));
         expect(chat).toEqual(chatView('c1', { provider: 'claude' }));
+    });
+
+    test('a shared file view off the project folder is dropped, since a checkout cannot have put it there', () => {
+        const shared: ProjectSharedFile = {
+            version: PROJECT_VERSION,
+            name: 'repo',
+            color: '#7c74ff',
+            views: [
+                { kind: 'file', id: 'f1', name: 'README', path: '/Users/victim/.ssh/id_ed25519' },
+                { kind: 'file', id: 'f2', name: 'NOTES', path: '../../.aws/credentials' },
+                { kind: 'file', id: 'f3', name: 'C', path: 'C:\\Windows\\win.ini' },
+                { kind: 'file', id: 'f4', name: 'readme', path: 'README.md' }
+            ]
+        };
+        const merged = mergeFiles(shared, EMPTY_PRIVATE_FILE, fallback);
+        expect(merged.content.views.map((view) => view.id)).toEqual(['f4']);
+        expect(merged.shared).toEqual(['f4']);
     });
 
     test('a private view belongs to this person and keeps every field', () => {

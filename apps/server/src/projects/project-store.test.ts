@@ -972,6 +972,19 @@ describe('what the shared file may decide', () => {
         expect(await readFile(sharedPath(), 'utf8')).not.toContain('sess-1');
     });
 
+    test("a version-2 file the repository tracks keeps a file view off the folder as this person's own", async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const views = [...content().views, { kind: 'file', id: 'f1', name: 'notes', path: '/home/bas/notes.md' }];
+        await writeFile(documentPathInFolder(folder), JSON.stringify({ version: 2, rev: 5, name: 'repo', color: '#123456', views }));
+        store.attachTracked(async () => true);
+
+        const opened = await store.openProject({ folder });
+        expect(opened.document.views.map((view) => view.id)).toEqual(['main', 'f1']);
+        expect(opened.document.shared).toEqual(['main']);
+        expect((await privateFileOnDisk(folder)).views.map((view) => view.id)).toEqual(['f1']);
+        expect(await readFile(sharedPath(), 'utf8')).not.toContain('notes.md');
+    });
+
     test('a version-2 file that turns up after the split came from a colleague, and keeps nothing of theirs', async () => {
         store.attachTracked(async () => true);
         const opened = await store.openProject({ folder });

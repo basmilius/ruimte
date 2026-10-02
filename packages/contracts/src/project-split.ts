@@ -179,7 +179,7 @@ export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | 'f
     if (isDividerView(view)) {
         return 'follows-its-group';
     }
-    return view.kind === 'file' && isAbsolutePath(view.path) ? 'path-outside-project' : null;
+    return view.kind === 'file' && !isPortablePath(view.path) ? 'path-outside-project' : null;
 };
 
 export const canShareView = (view: ProjectView): boolean => viewShareRefusal(view) === null;
@@ -314,16 +314,19 @@ export const mergeFiles = (
     fallback: { name: string; color: string }
 ): { content: ProjectContent; shared: string[] } => {
     const overlay = file.overlay;
-    const sharedViews = (shared?.views ?? []).map((view) =>
-        withSessionTitles(
-            withCarriers(view, (id, carrier) => {
-                const trusted = trustedOfShared(carrier);
-                const held = carrierPartOf(overlay[id]);
-                return held ? { ...trusted, ...held } : trusted;
-            }),
-            overlay
-        )
-    );
+    // Ruimte never writes a file view off the folder there, so one that is came from whoever pushed it.
+    const sharedViews = (shared?.views ?? [])
+        .filter((view) => viewShareRefusal(view) !== 'path-outside-project')
+        .map((view) =>
+            withSessionTitles(
+                withCarriers(view, (id, carrier) => {
+                    const trusted = trustedOfShared(carrier);
+                    const held = carrierPartOf(overlay[id]);
+                    return held ? { ...trusted, ...held } : trusted;
+                }),
+                overlay
+            )
+        );
     return {
         content: {
             name: shared?.name ?? fallback.name,
