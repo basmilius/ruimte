@@ -9,6 +9,7 @@ import {
     phaseLabel,
     popStashStep,
     pushable,
+    pushAllButton,
     pushButton,
     pushEntries,
     splitMessage
@@ -64,6 +65,15 @@ describe('pushing a folder of repositories', () => {
     test('"push all" runs only the ones that would move', () => {
         const entries = pushEntries([checkout('one', { ahead: 1 }), checkout('two', {}), checkout('three', { ahead: 4 })]);
         expect(pushable(entries).map((entry) => entry.label)).toEqual(['one', 'three']);
+    });
+
+    test('"push all" leaves a branch without an upstream to its own row', () => {
+        const entries = pushEntries([checkout('one', { ahead: 1 }), checkout('local', { upstream: null })]);
+        expect(pushable(entries).map((entry) => entry.label)).toEqual(['one']);
+        expect(pushAllButton(entries).reason).toBe('Push 1 repository');
+
+        const unpublished = pushEntries([checkout('local', { upstream: null }), checkout('two', {})]);
+        expect(pushAllButton(unpublished)).toMatchObject({ disabled: true, reason: 'Nothing to push' });
     });
 
     test('the summary counts what went well, and names what did not', () => {

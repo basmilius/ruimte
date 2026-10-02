@@ -60,13 +60,13 @@ export const pushEntries = (checkouts: readonly { path: string; label: string; s
         ahead: checkout.status?.ahead ?? 0
     }));
 
-/* The repositories a push would actually move, which is what "push all" runs and counts. */
-export const pushable = (entries: readonly PushEntry[]): PushEntry[] => entries.filter((entry) => !entry.button.disabled);
+/* The repositories a push would actually move, which is what "push all" runs and counts. Publishing a
+   branch puts a new one on the remote (or fails where there is none), so that is asked per repository. */
+export const pushable = (entries: readonly PushEntry[]): PushEntry[] => entries.filter((entry) => !entry.button.disabled && entry.button.kind !== 'publish');
 
 /*
  * The primary button while the folder holds more than one repository. It pushes all of them: pushing
- * one of nine is the exception, and the flyout beside it is where that one is. Nothing to push
- * anywhere disables the button and the flyout with it, since every row in there would be dead too.
+ * one of nine is the exception, and the flyout beside it is where that one is.
  */
 export const pushAllButton = (entries: readonly PushEntry[]): PushButton => {
     const ready = pushable(entries);

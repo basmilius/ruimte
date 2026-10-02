@@ -19,7 +19,8 @@ interface PushMenuProps {
 /*
  * The primary button of the header. A folder with one repository has exactly the button it always
  * had. With more than one it grows a second half: the left one pushes every repository that has
- * something to push, and the chevron opens the flyout that pushes one of them on its own.
+ * something to push, and the chevron opens the flyout that pushes or publishes one of them on its
+ * own. The flyout stays open to a branch that only publishing would move.
  */
 export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: PushMenuProps) {
     const { t } = useTranslation('panels');
@@ -40,6 +41,7 @@ export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: P
     }
 
     const all = pushAllButton(entries);
+    const anyRow = entries.some((entry) => !entry.button.disabled);
 
     return (
         <ButtonGroup render={<span />}>
@@ -50,7 +52,7 @@ export function PushMenu({ button, active, entries, busy, onPush, onPushAll }: P
             </Tooltip>
             <Menu.Root>
                 <Tooltip label={t('git.push.one')} name>
-                    <Menu.Trigger render={<Button size="sm" variant="primary" className="rounded-l-none px-1.5" disabled={all.disabled || busy} />}>
+                    <Menu.Trigger render={<Button size="sm" variant="primary" className="rounded-l-none px-1.5" disabled={!anyRow || busy} />}>
                         <Icon icon={ChevronDown} size={14} />
                     </Menu.Trigger>
                 </Tooltip>
