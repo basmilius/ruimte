@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthStore } from '../auth/auth-store.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './file-route.ts';
+import { MachineHome } from './machine-home.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
@@ -18,10 +19,11 @@ const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { tick
 
 let root: string;
 let auth: AuthStore;
+let machineHome: MachineHome;
 
 const ask = (path: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
     const url = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}?v=1-1&path=${encodeURIComponent(join(root, path))}`);
-    return handleFsFileRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS);
+    return handleFsFileRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS, machineHome);
 };
 // Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
 const asLocal = (init?: RequestInit): RequestInit => ({
@@ -33,6 +35,7 @@ beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-fs-file-route-'));
     await writeFile(join(root, 'icon.png'), PNG);
     auth = new AuthStore(join(root, 'home'));
+    machineHome = new MachineHome(join(root, 'home'));
 });
 
 afterEach(async () => {
@@ -109,22 +112,30 @@ describe('the file route', () => {
 
     test('a client from elsewhere needs the token the socket needs', async () => {
         const url = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}?path=${encodeURIComponent(join(root, 'icon.png'))}`);
-        const refused = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS);
+        const refused = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS, machineHome);
         expect(refused.status).toBe(401);
         // A tunnel on this machine looks exactly like this.
-        expect((await handleFsFileRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS)).status).toBe(401);
+        expect((await handleFsFileRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS, machineHome)).status).toBe(401);
 
         const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
         url.searchParams.set('token', paired!.sessionToken!);
-        const allowed = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS);
+        const allowed = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS, machineHome);
         expect(allowed.status).toBe(200);
+    });
+
+    test('serves no picture of the machine home outside the shots agents take', async () => {
+        await mkdir(join(root, 'home', 'screenshots'), { recursive: true });
+        await writeFile(join(root, 'home', 'portrait.png'), PNG);
+        await writeFile(join(root, 'home', 'screenshots', 'shot.png'), PNG);
+        expect((await ask('home/portrait.png')).status).toBe(403);
+        expect((await ask('home/screenshots/shot.png')).status).toBe(200);
     });
 
     test('answers 400 without a path and 404 for another route', async () => {
         const bare = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}`);
-        expect((await handleFsFileRequest(new Request(bare, asLocal()), bare, '127.0.0.1', auth, OPTIONS)).status).toBe(400);
+        expect((await handleFsFileRequest(new Request(bare, asLocal()), bare, '127.0.0.1', auth, OPTIONS, machineHome)).status).toBe(400);
 
         const elsewhere = new URL('http://127.0.0.1:4210/fs/other');
-        expect((await handleFsFileRequest(new Request(elsewhere, asLocal()), elsewhere, '127.0.0.1', auth, OPTIONS)).status).toBe(404);
+        expect((await handleFsFileRequest(new Request(elsewhere, asLocal()), elsewhere, '127.0.0.1', auth, OPTIONS, machineHome)).status).toBe(404);
     });
 });

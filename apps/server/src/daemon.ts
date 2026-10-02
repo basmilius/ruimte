@@ -88,6 +88,7 @@ import { withForkOrigin } from './context/fork-origin.ts';
 import { openedChildSource } from './context/opened-child.ts';
 import { referencedChats } from './context/chat-references.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
+import { MachineHome } from './fs/machine-home.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerBytesHandlers } from './handlers/bytes.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
@@ -737,16 +738,26 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
         }
     });
-    registerFsHandlers(dispatcher, folders, async (clientId) => ({
-        folders: await projects.heldFolders(clientId),
-        worktreesOf: canvasHost.worktreePaths,
-        worktreesRoot: worktrees.root
-    }));
-    registerBytesHandlers(dispatcher, {
-        attachment: (chatId, id) => chats.attachment(chatId, id),
-        projectIcon: (projectId, theme) => projects.iconFile(projectId, theme),
-        media: readMedia
-    });
+    const machineHome = new MachineHome(config.home);
+    registerFsHandlers(
+        dispatcher,
+        folders,
+        async (clientId) => ({
+            folders: await projects.heldFolders(clientId),
+            worktreesOf: canvasHost.worktreePaths,
+            worktreesRoot: worktrees.root
+        }),
+        machineHome
+    );
+    registerBytesHandlers(
+        dispatcher,
+        {
+            attachment: (chatId, id) => chats.attachment(chatId, id),
+            projectIcon: (projectId, theme) => projects.iconFile(projectId, theme),
+            media: readMedia
+        },
+        machineHome
+    );
     registerUsageHandlers(dispatcher, usage, limits);
     registerProviderAccountHandlers(dispatcher, providerAccounts);
     registerProcessHandlers(dispatcher, processes);
@@ -1027,7 +1038,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname === FS_FILE_PATH) {
-                return handleFsFileRequest(request, url, remote, auth, access);
+                return handleFsFileRequest(request, url, remote, auth, access, machineHome);
             }
 
             if (url.pathname.startsWith(`${LIVE_STREAM_PATH}/`)) {

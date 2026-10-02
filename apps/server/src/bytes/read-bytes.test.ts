@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BYTES_CHUNK_MAX, decodeBytesReply, type ByteResource } from '@ruimte/contracts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
+import { MachineHome } from '../fs/machine-home.ts';
 import { readMedia } from '../fs/read.ts';
 import { registerBytesHandlers } from '../handlers/bytes.ts';
 import { BytesError, readBytes, type ByteSources } from './read-bytes.ts';
@@ -102,7 +103,7 @@ describe('readBytes', () => {
 
     test('the handler answers a refusal with its code on the wire', async () => {
         const dispatcher = new Dispatcher();
-        registerBytesHandlers(dispatcher, sources);
+        registerBytesHandlers(dispatcher, sources, new MachineHome(join(folder, 'home')));
         const frames: unknown[] = [];
         const client: ClientConnection = { id: 'c1', send: (frame) => frames.push(frame) };
         await dispatcher.handle(
@@ -121,7 +122,7 @@ describe('readBytes', () => {
 
     test('a client that asks for a binary reply gets the bytes as they are, with the header in front', async () => {
         const dispatcher = new Dispatcher();
-        registerBytesHandlers(dispatcher, sources);
+        registerBytesHandlers(dispatcher, sources, new MachineHome(join(folder, 'home')));
         const frames: unknown[] = [];
         const binary: Uint8Array[] = [];
         const client: ClientConnection = { id: 'c1', send: (frame) => frames.push(frame), sendBinary: (frame) => binary.push(frame) };
@@ -134,7 +135,7 @@ describe('readBytes', () => {
 
     test('a client that did not ask, or a channel without binary frames, gets base64 in JSON', async () => {
         const dispatcher = new Dispatcher();
-        registerBytesHandlers(dispatcher, sources);
+        registerBytesHandlers(dispatcher, sources, new MachineHome(join(folder, 'home')));
         for (const [binary, sendBinary] of [
             [undefined, true],
             [true, false]
