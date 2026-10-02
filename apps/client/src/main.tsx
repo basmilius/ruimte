@@ -35,7 +35,8 @@ import { refuseStrayDrops } from '@/canvas/drop';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import { reloadOnStaleChunk } from '@/stale-chunks';
-import { prefetcher } from '@basmilius/desktop-ui';
+import { onLazyOpenError, prefetcher } from '@basmilius/desktop-ui';
+import { onLazyOpenError as onChatLazyOpenError } from '@ruimte/agents-react/lazy';
 import '@/state/theme';
 import '@/state/settings';
 import '@fontsource-variable/geist';
@@ -55,7 +56,9 @@ if (!desktop()) {
         reload: () => window.location.reload(),
         // The entry chunk's address carries the hash of the build.
         build: import.meta.url,
-        prefetching: () => prefetcher.busy
+        prefetching: () => prefetcher.busy,
+        // The chat's surfaces load through `agents-react`'s own `lazyNamed`, so it reports apart.
+        failedOpens: [onLazyOpenError, onChatLazyOpenError]
     });
 }
 /* First, so a window that opens beside another follows what that one changes from the start. */

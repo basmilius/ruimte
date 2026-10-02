@@ -4,6 +4,7 @@ type Loader = () => Promise<unknown>;
 
 const loaders: Loader[] = [];
 let register: ((load: Loader) => void) | null = null;
+const openErrorListeners = new Set<(error: unknown) => void>();
 
 /*
  * Hands every module the chat loads lazily to the app's prefetcher: the ones made so far, and each
@@ -14,6 +15,17 @@ export const setLazyPrefetch = (next: (load: Loader) => void): void => {
     for (const load of loaders) {
         next(load);
     }
+};
+
+/*
+ * Tells `listener` when a module the chat loads for a render fails to load, the way `onLazyOpenError`
+ * of `@basmilius/desktop-ui` does for the app's own. A failed prefetch never reaches it.
+ */
+export const onLazyOpenError = (listener: (error: unknown) => void): (() => void) => {
+    openErrorListeners.add(listener);
+    return () => {
+        openErrorListeners.delete(listener);
+    };
 };
 
 /*
@@ -33,7 +45,17 @@ export function lazyNamed<Module extends Record<Name, ComponentType<any>>, Name 
     };
     loaders.push(open);
     register?.(open);
-    const Lazy = lazy(async () => ({ default: await open() }));
+    // Only a render loads through here; a prefetch calls `open` itself, so its failures report nothing.
+    const Lazy = lazy(async () => {
+        try {
+            return { default: await open() };
+        } catch (error) {
+            for (const listener of openErrorListeners) {
+                listener(error);
+            }
+            throw error;
+        }
+    });
     const LazyNamed = (props: ComponentProps<Module[Name]>) => {
         const Component: ComponentType<any> = loaded ?? Lazy;
         return <Component {...props} />;

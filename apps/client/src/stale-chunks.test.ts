@@ -72,3 +72,73 @@ describe('reloading on a stale chunk', () => {
         expect(reloads).toBe(0);
     });
 });
+
+const failedOpens = () => {
+    const listeners = new Set<() => void>();
+    return {
+        subscribe: (listener: () => void): (() => void) => {
+            listeners.add(listener);
+            return () => {
+                listeners.delete(listener);
+            };
+        },
+        fail: (): void => {
+            for (const listener of listeners) {
+                listener();
+            }
+        },
+        listening: (): number => listeners.size
+    };
+};
+
+describe('a failed open beside a prefetch', () => {
+    test('a chunk only a prefetch asked for does not reload', () => {
+        const target = new EventTarget();
+        let reloads = 0;
+        reloadOnStaleChunk({ target, storage: memoryStorage(), reload: () => reloads++, build: '/assets/index-a.js', prefetching: () => true });
+        target.dispatchEvent(preloadError());
+        expect(reloads).toBe(0);
+    });
+
+    test('a surface a person opened reloads, even while a prefetch runs', () => {
+        const target = new EventTarget();
+        const opens = failedOpens();
+        let reloads = 0;
+        reloadOnStaleChunk({
+            target,
+            storage: memoryStorage(),
+            reload: () => reloads++,
+            build: '/assets/index-a.js',
+            prefetching: () => true,
+            failedOpens: [opens.subscribe]
+        });
+        target.dispatchEvent(preloadError());
+        opens.fail();
+        expect(reloads).toBe(1);
+    });
+
+    test('a failed open and its own preload error reload once', () => {
+        const target = new EventTarget();
+        const opens = failedOpens();
+        let reloads = 0;
+        reloadOnStaleChunk({ target, storage: memoryStorage(), reload: () => reloads++, build: '/assets/index-a.js', failedOpens: [opens.subscribe] });
+        target.dispatchEvent(preloadError());
+        opens.fail();
+        expect(reloads).toBe(1);
+    });
+
+    test('disposing stops listening to every source of failed opens', () => {
+        const app = failedOpens();
+        const chat = failedOpens();
+        const stop = reloadOnStaleChunk({
+            target: new EventTarget(),
+            storage: memoryStorage(),
+            reload: () => undefined,
+            build: '/assets/index-a.js',
+            failedOpens: [app.subscribe, chat.subscribe]
+        });
+        expect(app.listening() + chat.listening()).toBe(2);
+        stop();
+        expect(app.listening() + chat.listening()).toBe(0);
+    });
+});

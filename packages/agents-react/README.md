@@ -10,6 +10,7 @@ Import per file: `@ruimte/agents-react/chat/ui/Timeline`, `@ruimte/agents-react/
 - **`ChatScope`** (`scope`) is one host of chats as everything under `ChatScopeContext` sees it: an `id` for the stores that keep a row per host (providers, accounts, usage), `keyOf` and `owns` for the rows of the chats store, whose keys the app decides, the `transport`, and the `ChatClient` on it. An app with several hosts renders a scope per host; the usage page renders the host it shows as a scope of its own.
 - **`setChatHost`** (`host`) hands over, once and before the first render, what only the app decides: its palette for account colors, toasts, its own actions (else every action is a request on the transport), file search for `@`, attached files, code themes, how replies stream, file links, find in a thread, dictation, prompts of its own beside a chat's, other chats to point at, whether an empty thread names the folder a chat works in, whether a chat before its first message opens on a greeting with the composer under it, the places of forks, tasks, confirmations, logins, project marks, which settings section to open, and its own parts in the chat (below). Whatever an app leaves out is the chat without that part.
 - **`setLazyPrefetch`** (`lazy`) hands the modules the chat loads lazily (the diff renderers) to the app's prefetcher.
+- **`onLazyOpenError`** (`lazy`) tells the app when one of those modules fails to load for a render, never for a prefetch, so it can reload after a deploy.
 
 ## Wiring it up
 
