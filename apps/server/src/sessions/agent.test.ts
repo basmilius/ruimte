@@ -327,3 +327,34 @@ describe('agent status via hooks', () => {
         expect(await harness.agents.read('s5')).toBeNull();
     });
 });
+
+describe('the mode of a node no agent opened', () => {
+    test('is never wider than a person gave it, whatever the project file says now', async () => {
+        await harness.cleanup();
+        await freshHarness({ personMode: () => 'auto' });
+        await createAgent('s20', { kind: 'claude', runtimeMode: 'full-access' });
+        expect(harness.adapter.forSession('s20').input).toEqual([`claude ${ALLOW} --permission-mode auto\n`]);
+
+        // A node without a mode starts in the default, which is just as wide.
+        await createAgent('s21', { kind: 'claude' });
+        expect(harness.adapter.forSession('s21').input).toEqual([`claude ${ALLOW} --permission-mode auto\n`]);
+    });
+
+    test('a narrower mode stays, and a resume that names none starts fresh as the strictest', async () => {
+        await harness.cleanup();
+        await freshHarness({ personMode: () => 'auto' });
+        await createAgent('s22', { kind: 'claude', runtimeMode: 'auto-accept-edits' });
+        expect(harness.adapter.forSession('s22').input).toEqual([`claude ${ALLOW} --permission-mode acceptEdits\n`]);
+
+        // Supervised puts no flag on Claude's line, so the resume reads its mode from the transcript as before.
+        await createAgent('s23', { kind: 'claude', resume: 'claude-1' });
+        expect(harness.adapter.forSession('s23').input).toEqual([`claude ${ALLOW} --resume 'claude-1' || claude ${ALLOW}\n`]);
+    });
+
+    test('an agent node keeps the ceiling its opener gave it', async () => {
+        await harness.cleanup();
+        await freshHarness({ modeCeiling: () => 'auto-accept-edits', personMode: () => 'full-access' });
+        await createAgent('s24', { kind: 'claude', runtimeMode: 'full-access' });
+        expect(harness.adapter.forSession('s24').input).toEqual([`claude ${ALLOW} --permission-mode acceptEdits\n`]);
+    });
+});

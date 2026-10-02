@@ -136,6 +136,7 @@ import { ProviderAccountsService } from '@ruimte/agents/providers/accounts/servi
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionError, SessionManager } from './sessions/manager.ts';
 import { CommandApprovals, commandsSet } from './sessions/command-approvals.ts';
+import { ModeApprovals, modesSet, personModeOf } from './sessions/mode-approvals.ts';
 import { checkCwd, startCwdGuard } from './canvas/project-paths.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { limitAccountsOf, usageAccountsOf, usageRootsOf } from '@ruimte/agents/usage/accounts';
@@ -210,6 +211,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // And for the commands a person let a terminal type, which a node's first start asks about.
     const commandApprovals = new CommandApprovals(config.home);
     await commandApprovals.load();
+    // And for the mode a person gave each terminal agent, which an edit of the project file cannot widen.
+    const modeApprovals = new ModeApprovals(config.home);
+    await modeApprovals.load();
     // And for whether agents may operate this machine's apps, and which ones a person let them into for good.
     const computerStore = new ComputerUseStore(config.home);
     await computerStore.load();
@@ -303,6 +307,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
         },
         modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
+        personMode: (sessionId) => {
+            const folder = folderOf(sessionId);
+            return personModeOf(folder === null ? null : modeApprovals.modeOf(folder, sessionId), chats.composerPreferences.terminalMode());
+        },
         checkCwd: startCwd,
         claudeTitles,
         codexTitles: new CodexTitleReader(),
@@ -424,6 +432,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 continue;
             }
             manager.runApproved(nodeId, command);
+        }
+        for (const { nodeId, mode } of modesSet(before, after)) {
+            // Not written down narrows the node to the mode its person picks for new terminals, which is safe to retry.
+            await modeApprovals.approve(folder, nodeId, mode).catch((e: unknown) => console.error(`Approving the mode of ${nodeId} failed:`, errorText(e)));
         }
     });
     const drawings = new DrawingStore(projects);

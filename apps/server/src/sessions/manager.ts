@@ -109,6 +109,9 @@ export interface SessionManagerOptions {
     commands?: CommandGate;
     // The widest mode the agent of this node may start in, whatever the node says; null for no limit.
     modeCeiling?: (sessionId: string) => RuntimeMode | null;
+    /* The widest mode a person gave a node no agent opened, which an edit of the project file cannot
+       widen; null for no limit. Asked only where `modeCeiling` has none. */
+    personMode?: (sessionId: string) => RuntimeMode | null;
     // Refuses a directory this node may not start in, asked right before every spawn.
     checkCwd?: (sessionId: string, cwd: string) => Promise<void>;
     // The accounts a launch may name; without them only a CLI's default account starts.
@@ -171,6 +174,7 @@ export class SessionManager {
     private readonly computerUse: () => boolean;
     private readonly commands: CommandGate | null;
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
+    private readonly personMode: (sessionId: string) => RuntimeMode | null;
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
     private readonly accounts: AccountLaunches | null;
     private readonly preferredAccount: (kind: AgentKind) => string | undefined;
@@ -200,6 +204,7 @@ export class SessionManager {
         this.titleRetryMs = options.titleRetryMs ?? TITLE_RETRY_MS;
         this.commands = options.commands ?? null;
         this.modeCeiling = options.modeCeiling ?? (() => null);
+        this.personMode = options.personMode ?? (() => null);
         this.checkCwd = options.checkCwd ?? (() => Promise.resolve());
         this.accounts = options.accounts ?? null;
         this.preferredAccount = options.preferredAccount ?? (() => undefined);
@@ -320,11 +325,16 @@ export class SessionManager {
 
     /* The launch with its mode narrowed to what the node may have, which a project file cannot widen. */
     private withinCeiling(sessionId: string, launch: AgentLaunch | undefined): AgentLaunch | undefined {
-        const ceiling = this.modeCeiling(sessionId);
-        if (!launch || ceiling === null) {
+        if (!launch) {
             return launch;
         }
-        return { ...launch, runtimeMode: narrowerMode(launch.runtimeMode ?? DEFAULT_RUNTIME_MODE, ceiling) };
+        const ceiling = this.modeCeiling(sessionId);
+        if (ceiling !== null) {
+            return { ...launch, runtimeMode: narrowerMode(launch.runtimeMode ?? DEFAULT_RUNTIME_MODE, ceiling) };
+        }
+        const person = this.personMode(sessionId);
+        // A resume that names no mode counts as the strictest, as `launchedMode` reads it, so a person's node is never handed more.
+        return person === null ? launch : { ...launch, runtimeMode: narrowerMode(launchedMode(launch), person) };
     }
 
     /*
