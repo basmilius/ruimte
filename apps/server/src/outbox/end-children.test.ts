@@ -247,6 +247,24 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'full-access']);
         expect(line).not.toStartWith('refused');
     });
+
+    test('a terminal agent an agent opened never reports itself above its ceiling or the mode it was launched in', async () => {
+        const daemon = await boot();
+        await daemon.lineage.put({ projectId, nodeId: 'term-lead', openedBy: 'chat-lead', depth: 1, agent: true, ceiling: 'auto' });
+        await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
+        // Any process in its shell can post a hook with the token in its environment.
+        const token = daemon.sessions.get('term-lead')!.hookToken;
+        await daemon.sessions.applyHook('claude', token, { session_id: 'c1', hook_event_name: 'UserPromptSubmit', permission_mode: 'bypassPermissions' });
+        expect(daemon.host.modeOf('term-lead')).toBe('auto');
+        const [refusal] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'full-access']);
+        expect(refusal).toStartWith('refused\tmode-above-parent\t');
+
+        await daemon.lineage.put({ projectId, nodeId: 'term-narrow', openedBy: 'chat-lead', depth: 1, agent: true, ceiling: 'auto' });
+        await daemon.sessions.create({ sessionId: 'term-narrow', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'supervised' } });
+        const narrow = daemon.sessions.get('term-narrow')!.hookToken;
+        await daemon.sessions.applyHook('claude', narrow, { session_id: 'c2', hook_event_name: 'UserPromptSubmit', permission_mode: 'acceptEdits' });
+        expect(daemon.host.modeOf('term-narrow')).toBe('supervised');
+    });
 });
 
 /* A background subagent of the CLI's own that still runs in the lead's thread. */

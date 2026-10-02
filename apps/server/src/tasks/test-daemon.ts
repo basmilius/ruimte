@@ -129,6 +129,7 @@ export const bootTestDaemon = async ({
         adapter,
         env,
         firstPrompt: (id) => prompts.take(id),
+        modeCeiling: (sessionId) => lineage.ceilingOf(sessionId),
         ...(accounts ? { accounts } : {}),
         preferredAccount: (kind) => chats.composerPreferences.for(kind).account
     });
@@ -228,7 +229,8 @@ export const bootTestDaemon = async ({
     const modes = {
         chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
         launch: (id: string) => sessions.get(id)?.launch,
-        reportedMode: (id: string) => sessions.get(id)?.reportedMode
+        reportedMode: (id: string) => sessions.get(id)?.reportedMode,
+        ceiling: (id: string) => lineage.ceilingOf(id)
     };
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),

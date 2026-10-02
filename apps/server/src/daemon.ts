@@ -553,7 +553,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const modes = {
         chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
         launch: (id: string) => manager.get(id)?.launch,
-        reportedMode: (id: string) => manager.get(id)?.reportedMode
+        reportedMode: (id: string) => manager.get(id)?.reportedMode,
+        ceiling: (id: string) => lineage.ceilingOf(id)
     };
     /* Where a message a person has not seen goes: the thread of the chat left under that node id. */
     const noticeChat = {

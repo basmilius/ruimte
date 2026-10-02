@@ -328,6 +328,16 @@ export class SessionManager {
     }
 
     /*
+     * The mode a hook reports, null when it names none. Any process in the shell can post a hook with
+     * the token in its environment, so for a node an agent opened it never reports wider than the launch.
+     */
+    private hookMode(session: Session, kind: AgentKind, permissionMode: string | null): RuntimeMode | null {
+        const launched = launchedMode(session.launch);
+        const reported = modeOfHook(kind, permissionMode, launched);
+        return reported === null || this.modeCeiling(session.id) === null ? reported : narrowerMode(reported, launched);
+    }
+
+    /*
      * A person saying yes to the command a session holds: written down first, so the next start of
      * this node types it too, then typed. A second client that says yes as well finds nothing held.
      */
@@ -397,7 +407,7 @@ export class SessionManager {
             // The CLI is up and speaking for itself, so the resume it answers to is done.
             this.resuming.delete(session.id);
         }
-        session.reportedMode = agent === null ? null : (modeOfHook(kind, outcome.permissionMode, launchedMode(session.launch)) ?? session.reportedMode);
+        session.reportedMode = agent === null ? null : (this.hookMode(session, kind, outcome.permissionMode) ?? session.reportedMode);
         await this.setAgent(session, agent);
         if (agent !== null) {
             this.refreshTitle(session, agent);

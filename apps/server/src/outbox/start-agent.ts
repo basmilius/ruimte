@@ -12,13 +12,21 @@ export interface NodeModeDeps {
     launch(nodeId: string): AgentLaunch | null | undefined;
     /* The mode a terminal agent's hooks last reported; null or undefined while none did. */
     reportedMode(nodeId: string): RuntimeMode | null | undefined;
+    /* The widest mode an agent that opened this node let it have; null for a node a person made. */
+    ceiling(nodeId: string): RuntimeMode | null;
 }
 
-/* The mode a node runs in as far as the daemon knows it, which is what an agent it opens may get at most. */
+/*
+ * The mode a node runs in as far as the daemon knows it, which is what an agent it opens may get at
+ * most. Never above the ceiling its opener gave it, whatever a hook or the node's own file says.
+ */
 export const nodeMode =
     (deps: NodeModeDeps) =>
-    (nodeId: string): RuntimeMode =>
-        deps.chatMode(nodeId) ?? deps.reportedMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
+    (nodeId: string): RuntimeMode => {
+        const mode = deps.chatMode(nodeId) ?? deps.reportedMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
+        const ceiling = deps.ceiling(nodeId);
+        return ceiling === null ? mode : narrowerMode(mode, ceiling);
+    };
 
 export interface NodeAccountDeps {
     chat(nodeId: string): Pick<ChatInfo, 'provider' | 'account'> | undefined;

@@ -190,7 +190,8 @@ const boot = async (): Promise<Daemon> => {
     const modes = {
         chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
         launch: (id: string) => sessions.get(id)?.launch,
-        reportedMode: (id: string) => sessions.get(id)?.reportedMode
+        reportedMode: (id: string) => sessions.get(id)?.reportedMode,
+        ceiling: (id: string) => lineage.ceilingOf(id)
     };
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
@@ -506,7 +507,8 @@ describe('the start of one agent node', () => {
                     : id === 'plain'
                       ? null
                       : undefined,
-            reportedMode: (id: string) => (id === 'switched' ? ('supervised' as const) : null)
+            reportedMode: (id: string) => (id === 'switched' ? ('supervised' as const) : null),
+            ceiling: () => null
         };
         const start = { projectId: 'p', nodeId: 'n', node: 'chat' as const, provider: 'claude' as const, cwd: null };
         expect(startAgentWork({ ...start, openedBy: 'lead' }, modes).payload).toEqual({
@@ -525,12 +527,15 @@ describe('the start of one agent node', () => {
         // A CLI typed into a plain shell, or a node the daemon runs nothing for, counts as the strictest.
         expect(nodeMode(modes)('plain')).toBe('supervised');
         expect(nodeMode(modes)('nobody')).toBe('supervised');
-        const unreported = { chatMode: () => undefined, reportedMode: () => undefined };
+        const unreported = { chatMode: () => undefined, reportedMode: () => undefined, ceiling: () => null };
         expect(nodeMode({ ...unreported, launch: () => ({ kind: 'codex' }) })('x')).toBe('full-access');
         expect(nodeMode({ ...unreported, launch: () => ({ kind: 'codex', resume: 'abc' }) })('x')).toBe('supervised');
         // What the hooks reported outranks the launch, since a person can switch modes inside the CLI.
         expect(nodeMode(modes)('switched')).toBe('supervised');
-        expect(nodeMode({ chatMode: () => undefined, launch: () => null, reportedMode: () => 'full-access' })('x')).toBe('full-access');
+        expect(nodeMode({ chatMode: () => undefined, launch: () => null, reportedMode: () => 'full-access', ceiling: () => null })('x')).toBe('full-access');
+        // Nothing a node reports or keeps in its own file takes it above what its opener gave it.
+        expect(nodeMode({ chatMode: () => 'full-access', launch: () => undefined, reportedMode: () => undefined, ceiling: () => 'auto' })('x')).toBe('auto');
+        expect(nodeMode({ chatMode: () => undefined, launch: () => null, reportedMode: () => 'full-access', ceiling: () => 'auto' })('x')).toBe('auto');
     });
 
     test('an explicit model survives the durable outbox and overrides the composer preference', async () => {
@@ -545,7 +550,7 @@ describe('the start of one agent node', () => {
                 cwd: '/work',
                 selection
             },
-            { chatMode: () => 'supervised', launch: () => null, reportedMode: () => null }
+            { chatMode: () => 'supervised', launch: () => null, reportedMode: () => null, ceiling: () => null }
         );
         const outbox = new OutboxStore(home);
         await outbox.load();
