@@ -14,7 +14,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
 import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@basmilius/desktop-ui';
 import { GitFileList } from '@/shell/panels/GitFileList';
-import { isUnmergedRefusal, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
+import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
 import { PushMenu } from '@/shell/panels/PushMenu';
 import { activeDiff, allCollapseKeys } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
@@ -417,7 +417,7 @@ export function GitPanel() {
             canPullRequest={capabilities?.gh === true}
             stashes={refsByCwd[path]?.stashes ?? []}
             branch={checkouts.find((checkout) => checkout.path === path)?.status?.branch ?? ''}
-            onAction={(kind) => void act(path, kind)}
+            onAction={(kind, extra) => void act(path, kind, extra)}
             onDialog={setDialog}
             onPullRequest={() => openPullRequest(path)}
         />
@@ -871,7 +871,7 @@ interface RepoActionItemsProps {
     stashes: readonly GitStash[];
     /* What HEAD is on, which the rename dialog opens with. */
     branch: string;
-    onAction(kind: GitActionKind): void;
+    onAction(kind: GitActionKind, extra?: { ref: string }): void;
     onDialog(dialog: Dialog): void;
     onPullRequest(): void;
 }
@@ -879,6 +879,14 @@ interface RepoActionItemsProps {
 /* Everything that acts on one repository. The order is how often a person reaches for it. */
 function RepoActionItems({ cwd, busy, canPullRequest, stashes, branch, onAction, onDialog, onPullRequest }: RepoActionItemsProps) {
     const { t } = useTranslation('panels');
+    const popStash = (): void => {
+        const step = popStashStep(stashes);
+        if (step?.kind === 'pick') {
+            onDialog({ kind: 'pick-stash', cwd });
+        } else if (step?.kind === 'pop') {
+            onAction('stash-pop', { ref: step.ref });
+        }
+    };
     return (
         <>
             <Menu.Item disabled={busy} onClick={() => onAction('pull')}>
@@ -915,10 +923,7 @@ function RepoActionItems({ cwd, busy, canPullRequest, stashes, branch, onAction,
             <Menu.Item disabled={busy} onClick={() => onDialog({ kind: 'stash', cwd })}>
                 {t('git.actions.stash')}
             </Menu.Item>
-            <Menu.Item
-                disabled={busy || stashes.length === 0}
-                onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash', cwd }) : onAction('stash-pop'))}
-            >
+            <Menu.Item disabled={busy || stashes.length === 0} onClick={popStash}>
                 {t('git.actions.popStash')}
                 {stashes.length > 1 && <Menu.Hint>{stashes.length}</Menu.Hint>}
             </Menu.Item>

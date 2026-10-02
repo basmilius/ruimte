@@ -1,7 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitCommit, GitFile, GitStatus } from '@ruimte/contracts';
 import { groupCommits, mergeLogs, relativeTime, type LoadedLog } from './commit-log';
-import { actionTitle, commitTargets, isUnmergedRefusal, manySummary, phaseLabel, pushable, pushButton, pushEntries, splitMessage } from './git-actions';
+import {
+    actionTitle,
+    commitTargets,
+    isUnmergedRefusal,
+    manySummary,
+    phaseLabel,
+    popStashStep,
+    pushable,
+    pushButton,
+    pushEntries,
+    splitMessage
+} from './git-actions';
 
 const status = (patch: Partial<GitStatus> = {}): GitStatus => ({
     repo: true,
@@ -129,6 +140,19 @@ describe('what a toast says', () => {
     test('only an unmerged branch earns a second ask', () => {
         expect(isUnmergedRefusal("error: the branch 'work' is not fully merged")).toBe(true);
         expect(isUnmergedRefusal('error: branch not found')).toBe(false);
+    });
+});
+
+describe('popping a stash', () => {
+    test('a single stash pops by its ref, more than one asks which', () => {
+        expect(popStashStep([])).toBeNull();
+        expect(popStashStep([{ ref: 'stash@{0}', message: 'WIP on main' }])).toEqual({ kind: 'pop', ref: 'stash@{0}' });
+        expect(
+            popStashStep([
+                { ref: 'stash@{0}', message: 'WIP on main' },
+                { ref: 'stash@{1}', message: 'WIP on work' }
+            ])
+        ).toEqual({ kind: 'pick' });
     });
 });
 

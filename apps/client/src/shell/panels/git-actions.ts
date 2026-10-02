@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { GitActionKind, GitActionPhase, GitStatus } from '@ruimte/contracts';
+import type { GitActionKind, GitActionPhase, GitStash, GitStatus } from '@ruimte/contracts';
 
 let counter = 0;
 
@@ -124,6 +124,14 @@ export const actionTitle = (kind: GitActionKind): string => i18next.t(`panels:gi
 export const splitMessage = (message: string): { subject: string; body: string } => {
     const [subject = '', ...rest] = message.split('\n');
     return { subject: subject.trim(), body: rest.join('\n').trim() };
+};
+
+/* What "Pop stash" does with the stashes of a repository: the one there is, or a question which. */
+export const popStashStep = (stashes: readonly GitStash[]): { kind: 'pop'; ref: string } | { kind: 'pick' } | null => {
+    if (stashes.length === 0) {
+        return null;
+    }
+    return stashes.length === 1 ? { kind: 'pop', ref: stashes[0]!.ref } : { kind: 'pick' };
 };
 
 /* Git refuses to delete a branch it has not merged anywhere; only that refusal earns a second ask. */
