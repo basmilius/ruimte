@@ -108,4 +108,24 @@ describe('the dictation controller', () => {
         expect(field.inserted).toEqual([]);
         expect(useDictation.getState().phase).toBe('idle');
     });
+
+    test('a target that turns disabled while it listens keeps its run, and a disabled one does not start', () => {
+        // A composer is disabled while its socket is down; recognition runs here and does not need it.
+        let disabled = false;
+        const field = target();
+        const unregister = registerDictationTarget({ ...field.target, disabled: () => disabled });
+        toggleDictation({ ...field.target, disabled: () => disabled });
+        fake.handlers().onReady?.();
+        disabled = true;
+        fake.handlers().onChunk({ text: 'Nog steeds hier.', final: true });
+        stopDictation();
+        fake.handlers().onEnd();
+        expect(fake.calls).toEqual(['start', 'stop']);
+        expect(field.inserted).toEqual(['Nog steeds hier.']);
+
+        toggleDictation({ ...field.target, disabled: () => disabled });
+        expect(fake.calls).toEqual(['start', 'stop']);
+        expect(useDictation.getState().phase).toBe('idle');
+        unregister();
+    });
 });

@@ -46,6 +46,8 @@ export interface DictationTarget {
     id: string;
     element: HTMLElement;
     capture(): DictationInsertion | null;
+    /* Refuses a start only. A run that is going keeps going, and its insertion refuses a field that went read-only. */
+    disabled?(): boolean;
 }
 interface State {
     model: SpeechState | null;
@@ -163,7 +165,7 @@ export const toggleDictation = (target: DictationTarget): void => {
         stopDictation();
         return;
     }
-    if (!state.model?.enabled || state.model.phase !== 'ready') {
+    if (!state.model?.enabled || state.model.phase !== 'ready' || target.disabled?.()) {
         return;
     }
     cancelDictation();

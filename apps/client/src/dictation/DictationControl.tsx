@@ -27,6 +27,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
     const { t } = useTranslation('voice');
     const id = useId();
     const latest = useRef(capture);
+    const latestDisabled = useRef(disabled);
     const enabled = useDictation((state) => state.model?.enabled === true);
     const targetId = useDictation((state) => state.targetId);
     const phase = useDictation((state) => (state.targetId === id ? state.phase : 'idle'));
@@ -36,16 +37,18 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
     const active = id === targetId;
     useLayoutEffect(() => {
         latest.current = capture;
+        latestDisabled.current = disabled;
     });
     useEffect(observeSpeech, []);
+    // Registered whatever `disabled` says, since unregistering cancels: a socket blip would throw the words away.
     useEffect(() => {
         const element = targetRef.current;
-        if (!element || disabled) {
+        if (!element) {
             return;
         }
-        return registerDictationTarget({ id, element, capture: () => latest.current() });
-    }, [id, targetRef, disabled]);
-    if (!enabled || disabled) {
+        return registerDictationTarget({ id, element, capture: () => latest.current(), disabled: () => latestDisabled.current });
+    }, [id, targetRef]);
+    if (!enabled || (disabled && !active)) {
         return null;
     }
     const label = active && phase !== 'error' ? t('dictation.stop') : t('dictation.start');
@@ -74,7 +77,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                             onClick={() => {
                                 const element = targetRef.current;
                                 if (element) {
-                                    toggleDictation({ id, element, capture: () => latest.current() });
+                                    toggleDictation({ id, element, capture: () => latest.current(), disabled: () => latestDisabled.current });
                                 }
                             }}
                         />,
@@ -110,7 +113,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
                         onClick={() => {
                             const element = targetRef.current;
                             if (element) {
-                                toggleDictation({ id, element, capture: () => latest.current() });
+                                toggleDictation({ id, element, capture: () => latest.current(), disabled: () => latestDisabled.current });
                             }
                         }}
                     />
