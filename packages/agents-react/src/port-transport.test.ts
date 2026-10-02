@@ -79,6 +79,18 @@ describe('portTransport', () => {
         warn.mockRestore();
     });
 
+    test('a frame the port refuses to send fails its request instead of throwing', async () => {
+        const { port } = fakePort();
+        port.send = () => {
+            throw new DOMException('could not be cloned', 'DataCloneError');
+        };
+        const transport = portTransport(port);
+        const asked = transport.request('chat.list', {});
+        const failure = await asked.catch((e: unknown) => e);
+        expect(errorCode(failure)).toBe('not-sent');
+        expect((failure as Error).message).toBe('The request chat.list could not be sent to the agents');
+    });
+
     test('closing fails what still waits as a lost connection and refuses what comes after', async () => {
         const { port, listening } = fakePort();
         const transport = portTransport(port);

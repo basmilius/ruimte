@@ -98,7 +98,13 @@ export const portTransport = (port: FramePort): PortTransport => {
             const promise = new Promise<ChatRequestMap[T]['result']>((resolve, reject) => {
                 pending.set(id, { type, resolve: resolve as (result: unknown) => void, reject });
             });
-            port.send({ id, type, payload });
+            try {
+                port.send({ id, type, payload });
+            } catch {
+                // A payload the port cannot clone throws here, and the caller only listens to the promise.
+                pending.delete(id);
+                return Promise.reject(new ChatTransportError('not-sent', i18next.t('agent-chat:transport.notSent', { type })));
+            }
             return promise;
         },
         on<E extends AgentEventType>(event: E, handler: (payload: ChatEventMap[E]) => void): () => void {
