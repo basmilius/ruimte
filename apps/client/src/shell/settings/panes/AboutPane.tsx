@@ -161,7 +161,7 @@ export function AboutPane() {
     return (
         <>
             {updates.supported && (
-                <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
+                <SettingsSection title={t('about.updates.title')}>
                     <UpdateStatusRow releases={releases} notesVersion={notesLink?.version ?? null} />
                     <SettingsRow
                         searchId="about.updates.auto"

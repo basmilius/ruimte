@@ -440,7 +440,6 @@
         },
         "updates": {
             "title": "Updates",
-            "description": "Installing always waits for you.",
             "auto": {
                 "label": "Download updates automatically",
                 "description": "On, new versions download in the background. Off, you start each download yourself."
