@@ -112,6 +112,7 @@
 		802A9A9A193CDB146D037CE7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
 		82193D6DB2962B4D0F595DE0 /* GitRepositoryPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF867FDF1331EDCFFF2BDAF9 /* GitRepositoryPage.swift */; };
 		8270B0185E659FCCEDE90765 /* MobileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5196DB934834DA206C75471E /* MobileSheet.swift */; };
+		82DBD408B052301E4172F075 /* ProcessesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAE336B51506F84D7272583D /* ProcessesModel.swift */; };
 		832DDD2D985B451DDE2F7F8D /* ChatQueueSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDEBDA8A3C104C2C7998E957 /* ChatQueueSheet.swift */; };
 		85A5AD591051CFA625E43D32 /* SessionVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */; };
 		88496043F5CA8296C720D8EC /* ChatForking.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DA820F5A230279EC2E2564 /* ChatForking.swift */; };
@@ -147,6 +148,7 @@
 		B7C91BEC26677BD8FBAFC69D /* rotated.jpg in Resources */ = {isa = PBXBuildFile; fileRef = EA1E6B2B79C7846350EFB6FB /* rotated.jpg */; };
 		B813CD6EB25AA3268C59EAAE /* PlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F137CE09D47800F7B2E9F3 /* PlanStore.swift */; };
 		B828D0ACB3BF5C59BE471515 /* GitLogPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08DFEA6F2EAF61D3A5B6C07E /* GitLogPage.swift */; };
+		B834A0A08E4903FFB42E0C4A /* ProcessesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7EB90664392C5D8194C594 /* ProcessesTests.swift */; };
 		B8D72A9CB141E5034E0596D4 /* WorkspaceViewSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE3E762A08E656C5BF5C92C /* WorkspaceViewSectionsTests.swift */; };
 		B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
 		B98F3680E193F865D98DA277 /* LastProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5A9E15DAA4E2C5B3A17AC1 /* LastProject.swift */; };
@@ -178,6 +180,7 @@
 		D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D5C5B6D3EA9D21DAA758BF79 /* ChatContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2414AA03D39CF3F8A6A5CC /* ChatContentTests.swift */; };
 		D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CC2CFC02B68B045C92968 /* NotificationService.swift */; };
+		D7FA9A3E252629C6B70568CA /* ProcessesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96A6B0E983DF98BFAA61C16 /* ProcessesPage.swift */; };
 		D89BCF8FB21499BBC87CF46E /* ChatRunSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 445B9BB2968F1A7C458F650A /* ChatRunSettings.swift */; };
 		D94B9A219172036093CE9911 /* FileFallbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 087DA6353C210DE8AA1937BC /* FileFallbackView.swift */; };
 		DBAB23D19384984149C8E454 /* UsageWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A2764A51BCE359F3B4CCA36 /* UsageWidget.swift */; };
@@ -336,6 +339,7 @@
 		59965D01855765D4A850A9AD /* ChatPromptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPromptCard.swift; sourceTree = "<group>"; };
 		5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedProjects.swift; sourceTree = "<group>"; };
 		5C7AB3BBCD4DCB62DA65528F /* image.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image.png; sourceTree = "<group>"; };
+		5C7EB90664392C5D8194C594 /* ProcessesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesTests.swift; sourceTree = "<group>"; };
 		5EEF2A1565431D8E3D196AC0 /* image.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = image.gif; sourceTree = "<group>"; };
 		6121F187F1A5B808F82EE616 /* NotificationService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationService.entitlements; sourceTree = "<group>"; };
 		6165EEB92F8B4DB68B70B3F7 /* image.bmp */ = {isa = PBXFileReference; lastKnownFileType = image.bmp; path = image.bmp; sourceTree = "<group>"; };
@@ -428,6 +432,7 @@
 		D779BA807ED5F459698AC2C0 /* BrowserPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPage.swift; sourceTree = "<group>"; };
 		D7F137CE09D47800F7B2E9F3 /* PlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanStore.swift; sourceTree = "<group>"; };
 		D938536D0453E8C833E785E7 /* ChatPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPreferences.swift; sourceTree = "<group>"; };
+		D96A6B0E983DF98BFAA61C16 /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
 		D9AC34FA6BB3E2D39E24D463 /* ChatDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDraftTests.swift; sourceTree = "<group>"; };
 		DD1AADEED69848ED7D305964 /* TerminalSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSnapshot.swift; sourceTree = "<group>"; };
 		DD5A9E15DAA4E2C5B3A17AC1 /* LastProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastProject.swift; sourceTree = "<group>"; };
@@ -439,6 +444,7 @@
 		E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSessionPage.swift; sourceTree = "<group>"; };
 		EA1E6B2B79C7846350EFB6FB /* rotated.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = rotated.jpg; sourceTree = "<group>"; };
 		EA4765B876EC0A5E3E010F07 /* FileImagePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileImagePreview.swift; sourceTree = "<group>"; };
+		EAE336B51506F84D7272583D /* ProcessesModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesModel.swift; sourceTree = "<group>"; };
 		EB380C5765BB27F525DE31C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasRenderTests.swift; sourceTree = "<group>"; };
@@ -634,6 +640,7 @@
 				055B44926C3693450CF4C1FC /* MachineUsagePage.swift */,
 				74DFA4E24F0ADD3C4E4058D1 /* Files */,
 				D305A4E65B308A027F535027 /* Git */,
+				E9D69B67A3F2E8B8202675E0 /* Processes */,
 			);
 			path = Pages;
 			sourceTree = "<group>";
@@ -732,6 +739,7 @@
 				4BBB52BE588812020D2C144C /* NewChatTests.swift */,
 				28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */,
 				710B2DB25A631005B674A223 /* PlanOutlineTests.swift */,
+				5C7EB90664392C5D8194C594 /* ProcessesTests.swift */,
 				8ABABCDEEE659AD8B4D227A8 /* ProjectArtworkTests.swift */,
 				0C17D413F96B8051800FD0DC /* RemotePageStateTests.swift */,
 				CF0183BD88185DD4301FC7B9 /* RuntimeStartupTests.swift */,
@@ -829,6 +837,15 @@
 				5748DC9D2A5D211B6913A122 /* RuimteTransport */,
 			);
 			path = Packages;
+			sourceTree = "<group>";
+		};
+		E9D69B67A3F2E8B8202675E0 /* Processes */ = {
+			isa = PBXGroup;
+			children = (
+				EAE336B51506F84D7272583D /* ProcessesModel.swift */,
+				D96A6B0E983DF98BFAA61C16 /* ProcessesPage.swift */,
+			);
+			path = Processes;
 			sourceTree = "<group>";
 		};
 		F89F7730201891FA1B8685A6 /* Sessions */ = {
@@ -1153,6 +1170,7 @@
 				ACC53B6D9E0252A9ADD4DF97 /* NewChatTests.swift in Sources */,
 				CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */,
 				C0EAB79CF03B546D88E005CC /* PlanOutlineTests.swift in Sources */,
+				B834A0A08E4903FFB42E0C4A /* ProcessesTests.swift in Sources */,
 				E95A1AC133CF67657CEA99A3 /* ProjectArtworkTests.swift in Sources */,
 				EAE4EAD82D0861BB96C3F95F /* RemotePageStateTests.swift in Sources */,
 				902C7797057362CD5310734B /* RuntimeStartupTests.swift in Sources */,
@@ -1278,6 +1296,8 @@
 				67C3C7D5685AB8294FBE2666 /* PlanOutline.swift in Sources */,
 				DF70EC4BAFF7F692F3C49854 /* PlanSheet.swift in Sources */,
 				B813CD6EB25AA3268C59EAAE /* PlanStore.swift in Sources */,
+				82DBD408B052301E4172F075 /* ProcessesModel.swift in Sources */,
+				D7FA9A3E252629C6B70568CA /* ProcessesPage.swift in Sources */,
 				F4C315E3ABE645471F0C04C1 /* ProjectArtwork.swift in Sources */,
 				8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */,
 				FBCC63860740FE29DB14145A /* RemotePageState.swift in Sources */,

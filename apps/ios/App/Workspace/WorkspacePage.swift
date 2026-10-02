@@ -13,6 +13,7 @@ struct WorkspacePage: View {
     @State private var search = ""
     @State private var searching = false
     @State private var showUsage = false
+    @State private var showProcesses = false
     @State private var openedViewID: String?
     @State private var newChat = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -63,8 +64,14 @@ struct WorkspacePage: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
-                    .disabled(!workspace.ready)
+                Menu {
+                    Button("Processes", lucideIcon: "activity") { showProcesses = true }
+                    Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
+                } label: {
+                    Image(lucide: "ellipsis")
+                }
+                .accessibilityLabel("More")
+                .disabled(!workspace.ready)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 // The views of the Chats project are its chats, so its plus makes one.
@@ -96,6 +103,14 @@ struct WorkspacePage: View {
                 MachineUsagePage(client: workspace.client)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) { Button("Done") { showUsage = false } }
+                    }
+            }
+        }
+        .mobileSheet(isPresented: $showProcesses) {
+            NavigationStack {
+                ProcessesPage(client: workspace.client, titles: workspace.nodeTitles)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showProcesses = false } }
                     }
             }
         }

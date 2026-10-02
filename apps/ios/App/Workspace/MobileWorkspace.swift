@@ -31,6 +31,15 @@ final class MobileWorkspace {
     /// The machine's Chats project, which holds the chats outside any project; its folder is the machine's own.
     var isScratch: Bool { summary["scratch"]?.boolValue == true }
     var client: any MachineRequesting { session.rpc }
+    /// What a person calls each view and node, by id, for a list that names sessions by their node.
+    var nodeTitles: [String: String] {
+        var titles: [String: String] = [:]
+        for view in views {
+            titles[view.stableID] = view.text("name")
+            for node in view.list("nodes") { titles[node.stableID] = node.text("title") }
+        }
+        return titles
+    }
     var storageKey: String { "ruimte.ios.workspace.\(session.machine.id).\(projectID)" }
 
     init(session: SharedMachineSession, projectID: String) {

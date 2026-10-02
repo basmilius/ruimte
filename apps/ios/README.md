@@ -47,6 +47,12 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   file with the icon of its type. A file without a view of its own opens in Quick Look and can be
   shared to another app, once the machine serves it (images, video, sound and PDFs) and it fits in 32 MB.
 - Filesystem updates, usage and machine access management. Destructive actions require confirmation.
+- Processes, on a machine's page and behind More in a project (`processes.subscribe` while the page is open): CPU,
+  memory and disk of the machine against the share of Ruimte, over the last ten minutes or the last day, then a
+  group per terminal, chat or launch with its processes, for what Ruimte started or everything. A warning sits under
+  the group it is about with the button the desktop offers (interrupt, terminate, show, resume) and can be dismissed.
+  Long-press a node's group or a process for Interrupt, Terminate or Force quit; Force quit asks first, as on the
+  desktop, and the machine refuses a pid that now names another process.
 - Git over every repository a project folder holds: the one the folder is in, its initialized
   submodules and the repositories beside it. Changes are grouped per state and named per repository,
   the staged files decide where a commit lands, and fetch, pull and push run over the whole folder.
