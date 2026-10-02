@@ -159,6 +159,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `endpointInfo` = "endpoint.info"
     case `endpointSetIdentity` = "endpoint.setIdentity"
     case `endpointSignRegistration` = "endpoint.signRegistration"
+    case `endpointLeaveAccount` = "endpoint.leaveAccount"
     case `authSessions` = "auth.sessions"
     case `authRevoke` = "auth.revoke"
     case `authPairingToken` = "auth.pairingToken"

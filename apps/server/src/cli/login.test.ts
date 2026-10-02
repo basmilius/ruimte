@@ -10,7 +10,7 @@ const NOW = 1_000_000;
 
 interface Fakes {
     polls: Array<DeviceLinkPollResult | 'network' | 'refused'>;
-    daemon?: 'down' | 'forbidden';
+    daemon?: 'down' | 'forbidden' | 'other-account';
     startRefusal?: boolean;
 }
 
@@ -46,6 +46,9 @@ const harness = (fakes: Fakes, extra: Partial<LoginOptions> = {}) => {
             }
             if (url.pathname === '/machine/registration') {
                 recorded.registrationFor.push(String(body?.accountId));
+                if (fakes.daemon === 'other-account') {
+                    return answer({ code: 'machine-has-account', message: 'This machine is on another account.' }, 409);
+                }
                 return answer({ ...machine, issuedAt: NOW + 1, signature: SIGNATURE });
             }
             return new Response('Not found', { status: 404 });
@@ -179,6 +182,16 @@ describe('ruimte login', () => {
         const forbidden = harness({ polls: [], daemon: 'forbidden' });
         expect(await forbidden.run()).toBe(1);
         expect(forbidden.recorded.err[0]).toContain('set RUIMTE_HOME');
+    });
+
+    test('a machine on another account says so, signs nothing and withdraws the approved code', async () => {
+        const { recorded, run } = harness({ polls: [{ status: 'approved', interval: 5, account: ACCOUNT }], daemon: 'other-account' });
+        expect(await run()).toBe(1);
+        expect(recorded.err).toHaveLength(1);
+        expect(recorded.err[0]).toContain('This machine is on another account');
+        expect(recorded.err[0]).toContain('ruimte logout');
+        expect(recorded.completes).toEqual([]);
+        expect(recorded.cancels).toBe(1);
     });
 
     test('a refused start says why', async () => {

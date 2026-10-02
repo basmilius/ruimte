@@ -30,7 +30,7 @@ The `dev` script runs on port `4211` with `RUIMTE_HOME` set from `RUIMTE_DEV_HOM
 | `--no-broker` | off | Announce this machine to no broker, whatever `--broker`, the environment or the machine's setting says. |
 | `--broker-advertise <url>` | the broker | The broker URL clients are told in the pairing answer and `endpoint.info` while a broker is on, when they reach it under another name than this machine does (`RUIMTE_BROKER_ADVERTISE_URL`). |
 
-`ruimte pair` (in a checkout: `bun src/main.ts pair`) asks the daemon running on this machine for a fresh pairing URL and prints it; tokens never travel as arguments. `ruimte login` puts the machine on a Pulsar account without the app: run it as the user and with the `RUIMTE_HOME` of the daemon (and `--port` when it is not `4210`), and it prints `https://station.ruimte.app/link?code=BCDF-GHJK`, the code and the machine's key fingerprint. A person opens that page anywhere, signs in, checks the name and the fingerprint and presses "Add to my account"; the command then has the daemon sign a registration for that account, prints `Added to <login>'s account` and exits 0. A denial, an expired or a withdrawn code exits 1, Ctrl+C withdraws the code and exits 130. Nothing is stored on the machine. `RUIMTE_PULSAR_URL` points it at another address book. `ruimte context` is the agent-side CLI behind the `ruimte-context` script.
+`ruimte pair` (in a checkout: `bun src/main.ts pair`) asks the daemon running on this machine for a fresh pairing URL and prints it; tokens never travel as arguments. `ruimte login` puts the machine on a Pulsar account without the app: run it as the user and with the `RUIMTE_HOME` of the daemon (and `--port` when it is not `4210`), and it prints `https://station.ruimte.app/link?code=BCDF-GHJK`, the code and the machine's key fingerprint. A person opens that page anywhere, signs in, checks the name and the fingerprint and presses "Add to my account"; the command then has the daemon sign a registration for that account, prints `Added to <login>'s account` and exits 0. A denial, an expired or a withdrawn code exits 1, Ctrl+C withdraws the code and exits 130. The daemon writes down the account it signed for; a machine on another account refuses, the command withdraws the code and exits 1, and `ruimte logout` takes the machine off its account first (see "One account per machine"). `RUIMTE_PULSAR_URL` points it at another address book. `ruimte context` is the agent-side CLI behind the `ruimte-context` script.
 
 ## Compile
 
@@ -44,6 +44,7 @@ A machine without the desktop app runs the same binary from npm (`packages/npm`)
 npx ruimte                                # the daemon, with every flag above
 npx ruimte pair                           # a pairing link
 npx ruimte login                          # onto an account with a code
+npx ruimte logout                         # off its account again
 npx ruimte service install [flags]        # the background service for this user
 npx ruimte service status
 npx ruimte service uninstall
@@ -77,7 +78,7 @@ Where the daemon keeps its state. Defaults to `~/.ruimte` (`~/.ruimte-dev` under
 ```
 $RUIMTE_HOME/
   endpoint.json                    the daemon's own id and key pair, minted on first start, plus the name, icon and agent policy it was given
-  auth.json                        the clients paired with this daemon, by public key
+  auth.json                        the clients paired with this daemon, by public key, and the one account the machine is on
   projects.json                    every canvas the daemon knows: id, name, color, folder, and when it was last closed
   providers.json                   the accounts of each agent CLI on this machine (`accounts.save`): per id a kind, a label, a color and the CLI's config folder, never a credential
   projects/
@@ -311,9 +312,21 @@ From there nothing long lived travels. Every connection asks `POST /auth/challen
 
 A client that paired before there were key pairs holds a session token, stored as a hash in the same file, and keeps working: `auth.registerKey` hangs a public key on its own session over the connection the token already authenticated, and the token is dropped the first time a signature lands. Nothing has to be paired again, and a client that cannot sign at all (a browser without ed25519 in WebCrypto) stays on its token. Everything phase 7 added to the wire is optional, so a daemon and a client of either generation still talk to each other.
 
-A browser sends its page's origin with the upgrade; the daemon accepts its own origin, any loopback origin (the desktop app, the dev server) and what `--allow-origin` adds, and refuses the rest. Serving over the network in the clear still means anyone on the path can read what travels, tickets included, and can read and change everything on the socket: put a reverse proxy with TLS in front (nginx, Caddy) that forwards `/ws` as a WebSocket and hands the daemon the `Host` and `Origin` headers, and pair with the proxy's `https://` address. The `Relay` seam (`src/auth/relay.ts`) is where a rendezvous service for daemons behind NAT would go; the default does nothing.
+A browser sends its page's origin with the upgrade; the daemon accepts its own origin, any loopback origin (the desktop app, the dev server) and what `--allow-origin` adds, and refuses the rest. `/auth/challenge`, `/auth/pair` and `/auth/ticket` name the same origins in `access-control-allow-origin`, mirrored and never `*`, so a page on another origin cannot read the machine's id and key off them. Serving over the network in the clear still means anyone on the path can read what travels, tickets included, and can read and change everything on the socket: put a reverse proxy with TLS in front (nginx, Caddy) that forwards `/ws` as a WebSocket and hands the daemon the `Host` and `Origin` headers, and pair with the proxy's `https://` address. The `Relay` seam (`src/auth/relay.ts`) is where a rendezvous service for daemons behind NAT would go; the default does nothing.
 
 `bun run serve` at the root builds the client and starts the daemon on every interface serving it, which is the Server Edition: open `http://<machine>:4210/` from any browser on the network and pair.
+
+### One account per machine
+
+A machine is on at most one address book account, and it is shared only with its owner. It goes on an account when it signs a registration: `endpoint.signRegistration` (only for a client that presented the local secret, `mayInvite` in `src/auth/access.ts`; a paired client gets `forbidden`), `POST /machine/registration` for `ruimte login`, and nothing else. The account is written to `auth.json` before the signature leaves the daemon, since anyone holding the signature can post it. The same account again signs as before; another one is refused with `machine-has-account` until a person on the machine takes it off, with `endpoint.leaveAccount` (Settings, Machines, the row of this machine) or `ruimte logout` (`POST /machine/leave-account`), both local secret only. `endpoint.info` names the account (`accountId`, null for none) to a client on the local secret and to no other.
+
+A client that is not paired gets in on a statement from the address book (`src/pulsar/statement.ts`). Besides the v1 signature over the machine id, the client key, the nonce and the times, a current address book signs v2 over the key its row lists the machine with and the account. A statement with v2 fields has to name this machine's own key and carry a v2 signature that holds, so an account that listed a known machine id under a key of its own gets nobody in. Which account it may name is decided in `AuthStore.admitStatement`, at the moment the key is let in:
+
+- On an account, only a v2 statement of that account lets a client in; one without the v2 fields is refused, so a broker or an address book from before v2 cannot open a bound machine.
+- Taken off its account by a person, no statement lets anyone in until the machine signs for an account again.
+- On no account yet, a v1 statement still lets a client in, with a warning in the log, so the iPhone app from before v2 reaches a machine nobody bound yet. A statement never puts the machine on an account.
+
+Each client a statement let in keeps the account it came through. Going on an account cuts off a client another account let in; leaving the account cuts off every client a statement let in, and closes their sockets at once. A client paired by link keeps its access through both.
 
 ## Git status, diffs and staging
 

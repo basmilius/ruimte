@@ -34,7 +34,7 @@ export interface ServerConfig {
     underService: boolean;
     // `pair` asks the running daemon for a pairing URL; `login` puts it on an account with a code; `context` is the agent-side CLI (`ruimte-context`);
     // `service` installs, removes or reports the background service; `version` prints the version.
-    command: 'serve' | 'pair' | 'login' | 'context' | 'service' | 'version';
+    command: 'serve' | 'pair' | 'login' | 'logout' | 'context' | 'service' | 'version';
     // What follows the command: the words of `context`, and the action of `service` followed by the daemon flags its service runs with.
     args: string[];
 }
@@ -114,7 +114,15 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         allowPositionals: true
     });
     const command = values.version ? 'version' : (positionals[0] ?? 'serve');
-    if (command !== 'serve' && command !== 'pair' && command !== 'login' && command !== 'context' && command !== 'service' && command !== 'version') {
+    if (
+        command !== 'serve' &&
+        command !== 'pair' &&
+        command !== 'login' &&
+        command !== 'logout' &&
+        command !== 'context' &&
+        command !== 'service' &&
+        command !== 'version'
+    ) {
         throw new Error(`Unknown command: ${command}`);
     }
     // The flags after `service install` are the ones the service runs the daemon with, so they are kept as written.

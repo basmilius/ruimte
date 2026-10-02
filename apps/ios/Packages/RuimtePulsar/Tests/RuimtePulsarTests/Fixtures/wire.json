@@ -251,6 +251,7 @@
     "endpoint.info",
     "endpoint.setIdentity",
     "endpoint.signRegistration",
+    "endpoint.leaveAccount",
     "auth.sessions",
     "auth.revoke",
     "auth.pairingToken",

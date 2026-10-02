@@ -18,8 +18,8 @@ process.on('unhandledRejection', fail);
 
 /*
  * One binary, several jobs: `ruimte` serves, `ruimte pair` prints a pairing URL, `ruimte login` puts
- * the machine on an account with a code, `ruimte service` sets up the background service, `ruimte
- * context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI commands
+ * the machine on an account with a code and `ruimte logout` takes it off, `ruimte service` sets up the
+ * background service, `ruimte context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI commands
  * do not pay for loading the terminal emulator.
  */
 const arguments_ = process.argv.slice(2);
@@ -57,6 +57,11 @@ if (config.command === 'login') {
     const stop = new AbortController();
     process.once('SIGINT', () => stop.abort());
     process.exit(await runLogin({ port: config.port, home: config.home, addressBookUrl: process.env.RUIMTE_PULSAR_URL, signal: stop.signal }));
+}
+
+if (config.command === 'logout') {
+    const { runLogout } = await import('./cli/logout.ts');
+    process.exit(await runLogout({ port: config.port, home: config.home }));
 }
 
 if (config.command === 'context') {

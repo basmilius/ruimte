@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { decideAccess, handleLocalTicketRequest, mayInvite, originAllowed, reachabilityOf } from './access.ts';
+import { authCorsHeaders, decideAccess, handleLocalTicketRequest, mayInvite, originAllowed, reachabilityOf } from './access.ts';
 import { AuthStore, PAIRING_TTL_MS } from './auth-store.ts';
 import { generateKeyPair } from './keys.ts';
 
@@ -166,6 +166,22 @@ describe('access', () => {
         expect(originAllowed('https://evil.example', 'box:4210', [])).toBe(false);
         expect(originAllowed('https://app.example', 'box:4210', ['https://app.example'])).toBe(true);
         expect(originAllowed('not a url', 'box:4210', [])).toBe(false);
+    });
+
+    test('the auth routes name only an origin the socket would take, and never any origin at all', () => {
+        const request = (origin?: string) => new Request('http://box:4210/auth/challenge', { headers: { host: 'box:4210', ...(origin ? { origin } : {}) } });
+        const allowOrigin = (origin?: string, extra: string[] = []) => authCorsHeaders(request(origin), extra)['access-control-allow-origin'];
+
+        expect(allowOrigin('https://evil.example')).toBeUndefined();
+        expect(allowOrigin('http://127.0.0.1:4210')).toBe('http://127.0.0.1:4210');
+        expect(allowOrigin('http://localhost:5173')).toBe('http://localhost:5173');
+        expect(allowOrigin('http://box:4210')).toBe('http://box:4210');
+        expect(allowOrigin('https://app.example', ['https://app.example'])).toBe('https://app.example');
+        expect(allowOrigin()).toBeUndefined();
+        for (const origin of [undefined, 'https://evil.example', 'http://127.0.0.1:4210']) {
+            expect(Object.values(authCorsHeaders(request(origin), []))).not.toContain('*');
+            expect(authCorsHeaders(request(origin), []).vary).toBe('origin');
+        }
     });
 
     test('the local secret or a paired token gets in, a loopback address alone does not', async () => {

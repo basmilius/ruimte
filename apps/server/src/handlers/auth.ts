@@ -1,7 +1,7 @@
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
+import { RequestError, translate, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import { mayInvite } from '../auth/access.ts';
-import { signRegistration } from '../auth/registration.ts';
+import { signForAccount } from '../auth/registration.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
@@ -26,7 +26,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     const { identity } = host;
 
     // Built per client, so what the machine is called travels alongside what this connection is allowed.
-    const info = (access: ClientAccess | undefined) => ({
+    const info = async (access: ClientAccess | undefined) => ({
         id: identity.id,
         label: identity.label,
         nameSource: identity.nameSource,
@@ -43,7 +43,9 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
         publicKey: identity.publicKey,
         broker: identity.broker,
-        ...host.broker()
+        ...host.broker(),
+        // Only the app on this machine is told which account it is on; it is the one that can take it off.
+        ...(mayInvite(access) ? { accountId: (await store.accountBinding())?.id ?? null } : {})
     });
 
     dispatcher.register('endpoint.info', (_payload, client) => info(client.access));
@@ -74,13 +76,31 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     });
 
     /*
-     * The machine agreeing to be listed on one address book account. Any client that got in may ask,
-     * since it already reaches everything the account would lead to; the client posts the answer with
-     * its own session, so no account token ever reaches the daemon.
+     * The machine agreeing to be listed on one address book account, which puts it on that account. Only
+     * the app on this machine may ask: a machine is shared only with its owner, so a paired client must
+     * not move it onto an account of its choosing. The client posts the answer with its own session, so
+     * no account token ever reaches the daemon.
      */
-    dispatcher.register('endpoint.signRegistration', (payload) => ({
-        registration: signRegistration(identity, host.broker().brokerUrl, payload.accountId)
-    }));
+    dispatcher.register('endpoint.signRegistration', async (payload, client) => {
+        if (!mayInvite(client.access)) {
+            throw new RequestError('forbidden', 'Only the app on this machine can put it on an account');
+        }
+        return {
+            registration: await translate(() =>
+                signForAccount(store, identity, host.broker().brokerUrl, payload.accountId, (sessionId) => host.disconnect(sessionId))
+            )
+        };
+    });
+
+    /* A person on this machine taking it off its account: every client a statement let in loses its access at once. */
+    dispatcher.register('endpoint.leaveAccount', async (_payload, client) => {
+        if (!mayInvite(client.access)) {
+            throw new RequestError('forbidden', 'Only the app on this machine can take it off its account');
+        }
+        const revoked = await store.leaveAccount();
+        revoked.forEach((sessionId) => host.disconnect(sessionId));
+        return { revoked: revoked.length };
+    });
 
     /*
      * The way over to a key pair for a client that paired when a session token was all there was.

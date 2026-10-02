@@ -6,7 +6,9 @@ import {
     type RegisterMachinePayload
 } from '@ruimte/pulsar';
 import { clipText } from '@ruimte/contracts';
+import { CodedError } from '@ruimte/agents/coded-error';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import type { AccountChange } from './auth-store.ts';
 
 type SigningIdentity = Pick<EndpointIdentity, 'id' | 'publicKey' | 'label' | 'icon' | 'sign'>;
 
@@ -39,4 +41,28 @@ export const signLinkRequest = (identity: SigningIdentity, brokerUrl: string | n
         issuedAt,
         signature: identity.sign(deviceLinkStartMessage(machine.id, machine.publicKey, machine.name, issuedAt))
     };
+};
+
+export class MachineAccountError extends CodedError<'machine-has-account'> {}
+
+/*
+ * The machine agreeing to join one account, which puts it on that account before it signs: a signature
+ * handed out is a registration anyone holding it can post. The account it is on already signs again;
+ * another one is refused until a person on the machine takes it off. Callers let only the local secret
+ * this far, since a paired client could otherwise move the machine to an account of its choosing.
+ */
+export const signForAccount = async (
+    store: { bindAccount(accountId: string): Promise<AccountChange> },
+    identity: SigningIdentity,
+    brokerUrl: string | null,
+    accountId: string,
+    // Closes what a client another account let in still has open.
+    disconnect: (sessionId: string) => void
+): Promise<RegisterMachinePayload> => {
+    const change = await store.bindAccount(accountId);
+    if (!change.bound) {
+        throw new MachineAccountError('machine-has-account', 'This machine is on another account. Take it off that account on this machine first.');
+    }
+    change.revoked.forEach(disconnect);
+    return signRegistration(identity, brokerUrl, accountId);
 };

@@ -3428,8 +3428,9 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `brokerUrl`: Presence<String>
     public let `broker`: PairResultEndpointBroker?
     public let `brokerFixed`: Bool?
+    public let `accountId`: Presence<String>
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3448,6 +3449,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`brokerUrl` = `brokerUrl`
         self.`broker` = `broker`
         self.`brokerFixed` = `brokerFixed`
+        self.`accountId` = `accountId`
     }
 
     public init(from decoder: Decoder) throws {
@@ -3470,6 +3472,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
         `broker` = try container.decodeIfPresent(PairResultEndpointBroker.self, forKey: .`broker`)
         `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
+        `accountId` = try container.contains(.`accountId`) ? (container.decodeNil(forKey: .`accountId`) ? .null : .value(container.decode(String.self, forKey: .`accountId`))) : .missing
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -3500,6 +3503,11 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         }
         try container.encodeIfPresent(`broker`, forKey: .`broker`)
         try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
+        switch `accountId` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`accountId`)
+        case .value(let value): try container.encode(value, forKey: .`accountId`)
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -3521,6 +3529,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `brokerUrl` = "brokerUrl"
         case `broker` = "broker"
         case `brokerFixed` = "brokerFixed"
+        case `accountId` = "accountId"
     }
 }
 

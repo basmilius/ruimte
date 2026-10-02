@@ -57,7 +57,10 @@ export const EndpointInfoSchema = z.object({
        before the setting. */
     broker: BrokerSettingSchema.optional(),
     // True when a flag or the environment decides the broker, so `broker` is kept but changes nothing.
-    brokerFixed: z.boolean().optional()
+    brokerFixed: z.boolean().optional(),
+    /* The address book account this machine is on, null when it is on none. Only a client that presented
+       the local secret is told; absent for any other, and from a daemon from before a machine had one account. */
+    accountId: z.string().nullable().optional()
 });
 export type EndpointInfo = z.infer<typeof EndpointInfoSchema>;
 
@@ -206,8 +209,9 @@ export const clientAuthMessage = (daemonId: string, challenge: string, publicKey
 
 /*
  * `endpoint.signRegistration`: the daemon's agreement to join one address book account, which the
- * client posts to the address book with its own session. The daemon signs and holds no account token,
- * so a machine is only ever on an account a client it already trusts asked for.
+ * client posts to the address book with its own session. The daemon signs and holds no account token.
+ * Only a client that presented the local secret may ask, signing puts the machine on that account,
+ * and another account is refused with `machine-has-account` until `endpoint.leaveAccount`.
  */
 export const EndpointSignRegistrationPayloadSchema = z.object({
     accountId: z.string().min(1).max(64)
@@ -218,3 +222,14 @@ export const EndpointSignRegistrationResultSchema = z.object({
     registration: RegisterMachinePayloadSchema
 });
 export type EndpointSignRegistrationResult = z.infer<typeof EndpointSignRegistrationResultSchema>;
+
+/*
+ * `endpoint.leaveAccount`: a person on this machine takes it off its account, from a client that presented
+ * the local secret. Every client a statement let in loses its access, and no statement lets one in until
+ * the machine signs for an account again.
+ */
+export const EndpointLeaveAccountResultSchema = z.object({
+    // How many clients lost their access.
+    revoked: z.number().int().min(0)
+});
+export type EndpointLeaveAccountResult = z.infer<typeof EndpointLeaveAccountResultSchema>;

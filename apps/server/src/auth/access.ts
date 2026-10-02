@@ -38,6 +38,22 @@ export const originAllowed = (origin: string | null, host: string | null, extra:
     return extra.some((allowed) => allowed === origin || allowed === parsed.host);
 };
 
+/*
+ * What the auth routes answer a page on another origin. The origin is named only when the socket would
+ * take it too, never `*`: these routes hand out the machine's id and key and turn a signature into a
+ * ticket, and no page that is not ours has a reason to read either.
+ */
+export const authCorsHeaders = (request: Request, extra: string[]): Record<string, string> => {
+    const origin = request.headers.get('origin');
+    const headers: Record<string, string> = { vary: 'origin' };
+    if (origin && originAllowed(origin, request.headers.get('host'), extra)) {
+        headers['access-control-allow-origin'] = origin;
+        headers['access-control-allow-methods'] = 'POST';
+        headers['access-control-allow-headers'] = 'content-type';
+    }
+    return headers;
+};
+
 export interface Access {
     reachability: Reachability;
     // The paired session behind a ticket or a token, or null for a client that presented the local secret.

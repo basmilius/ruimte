@@ -47,10 +47,10 @@ import { greetingLines } from './cli/greeting.ts';
 import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from '@ruimte/agents/chat/chat-title';
-import { decideAccess, handleLocalTicketRequest, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
+import { authCorsHeaders, decideAccess, handleLocalTicketRequest, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
 import { handleLocalProofRequest } from './auth/local-proof.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
-import { signLinkRequest, signRegistration } from './auth/registration.ts';
+import { MachineAccountError, signForAccount, signLinkRequest } from './auth/registration.ts';
 import { AccountSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { pairingUrl } from './cli/pairing.ts';
@@ -168,13 +168,12 @@ import { LiveStreamHub } from './streams/live-stream.ts';
 // What `ruimte login` has the machine sign; local secret only, like the work.
 const MACHINE_LINK_PATH = '/machine/link-request';
 const MACHINE_REGISTRATION_PATH = '/machine/registration';
+// What `ruimte logout` asks: the machine leaves its account, as `endpoint.leaveAccount` does for the app.
+const MACHINE_LEAVE_ACCOUNT_PATH = '/machine/leave-account';
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 
 // Past anything a hook or a verb sends, and the ceiling on what an unauthenticated request can make the daemon buffer.
 const MAX_REQUEST_BODY_BYTES = 8 * 1024 * 1024;
-
-// A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
-const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 
@@ -710,6 +709,15 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
     registerLaunchHandlers(dispatcher, launchStore, launches);
+    // Revoking must take effect now, not at the next connection, so a session's sockets and channels close here.
+    const disconnectSession = (sessionId: string): void => {
+        handshake.revoke(sessionId);
+        for (const { channel, connection } of [...connections.values(), ...directConnections]) {
+            if (connection.client.access?.sessionId === sessionId) {
+                channel.close(4001, 'Access revoked');
+            }
+        }
+    };
     registerAuthHandlers(dispatcher, auth, {
         identity,
         version: VERSION,
@@ -740,14 +748,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 void outboxLink.lapseLimitResume().catch((e: unknown) => console.error('Dropping the resumes after a limit failed:', errorText(e)));
             }
         },
-        disconnect: (sessionId) => {
-            handshake.revoke(sessionId);
-            for (const { channel, connection } of [...connections.values(), ...directConnections]) {
-                if (connection.client.access?.sessionId === sessionId) {
-                    channel.close(4001, 'Access revoked');
-                }
-            }
-        }
+        disconnect: disconnectSession
     });
     const machineHome = new MachineHome(config.home);
     registerFsHandlers(
@@ -807,6 +808,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // What lets a key nobody paired in on a statement from the address book, when the machine takes them.
     const statements = new StatementGate({
         machineId: identity.id,
+        machinePublicKey: identity.publicKey,
         trustedKeys: statementKeys,
         refusesStatements: () => identity.refuseStatements,
         store: auth
@@ -937,55 +939,58 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname === '/auth/pair') {
+                const cors = authCorsHeaders(request, config.allowedOrigins);
                 if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: AUTH_CORS });
+                    return new Response(null, { status: 204, headers: cors });
                 }
                 if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: AUTH_CORS });
+                    return new Response('Method not allowed', { status: 405, headers: cors });
                 }
                 const parsed = PairPayloadSchema.safeParse(await request.json().catch(() => null));
                 if (!parsed.success) {
-                    return new Response('Bad pairing request', { status: 400, headers: AUTH_CORS });
+                    return new Response('Bad pairing request', { status: 400, headers: cors });
                 }
                 const paired = await auth.pair(parsed.data.token, {
                     label: parsed.data.label,
                     ...(parsed.data.publicKey ? { publicKey: parsed.data.publicKey } : {})
                 });
                 if (!paired) {
-                    return new Response('That pairing link is used or expired. Ask for a new one.', { status: 401, headers: AUTH_CORS });
+                    return new Response('That pairing link is used or expired. Ask for a new one.', { status: 401, headers: cors });
                 }
                 return Response.json(
                     { ...(paired.sessionToken ? { sessionToken: paired.sessionToken } : {}), endpoint: endpointInfo(reachabilityOf(remote), true) },
-                    { headers: AUTH_CORS }
+                    { headers: cors }
                 );
             }
 
             if (url.pathname === '/auth/challenge') {
+                const cors = authCorsHeaders(request, config.allowedOrigins);
                 if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: AUTH_CORS });
+                    return new Response(null, { status: 204, headers: cors });
                 }
                 if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: AUTH_CORS });
+                    return new Response('Method not allowed', { status: 405, headers: cors });
                 }
-                return Response.json(handshake.challenge(), { headers: AUTH_CORS });
+                return Response.json(handshake.challenge(), { headers: cors });
             }
 
             if (url.pathname === '/auth/ticket') {
+                const cors = authCorsHeaders(request, config.allowedOrigins);
                 if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: AUTH_CORS });
+                    return new Response(null, { status: 204, headers: cors });
                 }
                 if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: AUTH_CORS });
+                    return new Response('Method not allowed', { status: 405, headers: cors });
                 }
                 const parsed = AuthTicketPayloadSchema.safeParse(await request.json().catch(() => null));
                 if (!parsed.success) {
-                    return new Response('Bad ticket request', { status: 400, headers: AUTH_CORS });
+                    return new Response('Bad ticket request', { status: 400, headers: cors });
                 }
                 const ticket = await handshake.redeem(parsed.data);
                 if (!ticket) {
-                    return new Response('This machine does not recognize that signature. Pair again.', { status: 401, headers: AUTH_CORS });
+                    return new Response('This machine does not recognize that signature. Pair again.', { status: 401, headers: cors });
                 }
-                return Response.json(ticket, { headers: AUTH_CORS });
+                return Response.json(ticket, { headers: cors });
             }
 
             if (url.pathname === '/auth/local-ticket') {
@@ -1002,6 +1007,19 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     return new Response('Forbidden', { status: 403 });
                 }
                 return Response.json(machineWork());
+            }
+
+            if (url.pathname === MACHINE_LEAVE_ACCOUNT_PATH) {
+                if (request.method !== 'POST') {
+                    return new Response('Method not allowed', { status: 405 });
+                }
+                const decision = await decideAccess(request, remote, auth, access, 'local');
+                if (!decision.ok || !mayInvite(decision.access)) {
+                    return new Response('Forbidden', { status: 403 });
+                }
+                const revoked = await auth.leaveAccount();
+                revoked.forEach(disconnectSession);
+                return Response.json({ revoked: revoked.length });
             }
 
             if (url.pathname === MACHINE_LINK_PATH || url.pathname === MACHINE_REGISTRATION_PATH) {
@@ -1021,7 +1039,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 if (!parsed.success) {
                     return new Response('Expected an account id', { status: 400 });
                 }
-                return Response.json(signRegistration(identity, brokerUrl, parsed.data.accountId));
+                try {
+                    return Response.json(await signForAccount(auth, identity, brokerUrl, parsed.data.accountId, disconnectSession));
+                } catch (e) {
+                    if (e instanceof MachineAccountError) {
+                        return Response.json({ code: e.code, message: e.message }, { status: 409 });
+                    }
+                    throw e;
+                }
             }
 
             if (url.pathname === '/ws') {

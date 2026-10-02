@@ -34,6 +34,9 @@ const client = (access?: ClientAccess): { connection: ClientConnection; frames: 
     };
 };
 
+// A client that presented the local secret: the app on this machine, or `ruimte login`.
+const LOCAL: ClientAccess = { reachability: 'loopback', sessionId: null };
+
 const ask = async (access: ClientAccess | undefined, type: string, payload: unknown = {}): Promise<ServerFrame> => {
     const { connection, frames } = client(access);
     await dispatcher.handle(connection, JSON.stringify({ id: '1', type, payload }));
@@ -242,7 +245,7 @@ describe('auth handlers', () => {
 
     test('a registration carries the name and icon a person chose, and the name the machine started with until then', async () => {
         const sign = async () => {
-            const frame = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.signRegistration', { accountId: 'account-1' });
+            const frame = await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-1' });
             if (!('ok' in frame) || !frame.ok) {
                 throw new Error(`Expected an answer, got ${JSON.stringify(frame)}`);
             }
@@ -257,7 +260,7 @@ describe('auth handlers', () => {
 
     test('a registration is signed by the machine for the account a client names, with what a client needs to reach it', async () => {
         await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
-        const frame = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.signRegistration', { accountId: 'account-1' });
+        const frame = await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-1' });
         if (!('ok' in frame) || !frame.ok) {
             throw new Error(`Expected an answer, got ${JSON.stringify(frame)}`);
         }
@@ -280,5 +283,65 @@ describe('auth handlers', () => {
                 registration.signature
             )
         ).toBe(false);
+    });
+    test('only the app on this machine has it sign a registration; a paired client is refused whatever account it names', async () => {
+        for (const access of [{ reachability: 'lan', sessionId: 's1' } as const, { reachability: 'loopback', sessionId: 's1' } as const, undefined]) {
+            expect(await ask(access, 'endpoint.signRegistration', { accountId: 'account-1' })).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        }
+        expect(await store.accountBinding()).toBeUndefined();
+    });
+
+    test('signing a registration puts the machine on that account, and a second account is refused until a person takes it off', async () => {
+        expect(await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-1' })).toMatchObject({ ok: true });
+        expect(await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-1' })).toMatchObject({ ok: true });
+        expect(await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-2' })).toMatchObject({
+            ok: false,
+            error: { code: 'machine-has-account' }
+        });
+        expect(await ask(LOCAL, 'endpoint.info')).toMatchObject({ ok: true, result: { accountId: 'account-1' } });
+
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.leaveAccount')).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await ask(LOCAL, 'endpoint.leaveAccount')).toMatchObject({ ok: true, result: { revoked: 0 } });
+        expect(await ask(LOCAL, 'endpoint.info')).toMatchObject({ ok: true, result: { accountId: null } });
+        expect(await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-2' })).toMatchObject({ ok: true });
+        expect(await store.accountBinding()).toMatchObject({ id: 'account-2' });
+    });
+
+    test('only the app on this machine is told which account the machine is on', async () => {
+        await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-1' });
+        const paired = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
+        expect(paired).toMatchObject({ ok: true });
+        expect('ok' in paired && paired.ok && 'accountId' in (paired.result as object)).toBe(false);
+    });
+
+    test('leaving the account cuts off the clients a statement of it let in, and leaves a client paired by link', async () => {
+        await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'account-1' });
+        const phone = generateKeyPair();
+        const admitted = await store.admitStatement({
+            publicKey: phone.publicKey,
+            label: 'Phone',
+            nonce: 'n'.repeat(22),
+            keepNonceUntil: Date.now() + 1_000,
+            accountId: 'account-1'
+        });
+        const laptop = await store.pair(store.issuePairingToken(), { label: 'Laptop', publicKey: generateKeyPair().publicKey });
+
+        expect(await ask(LOCAL, 'endpoint.leaveAccount')).toMatchObject({ ok: true, result: { revoked: 1 } });
+        expect('sessionId' in admitted && disconnected).toEqual(['sessionId' in admitted ? admitted.sessionId : '']);
+        expect((await store.list(null)).map((entry) => entry.id)).toEqual([laptop!.id]);
+    });
+
+    test('joining an account cuts off a client another account let in on a statement', async () => {
+        const colleague = generateKeyPair();
+        const admitted = await store.admitStatement({
+            publicKey: colleague.publicKey,
+            label: 'Colleague',
+            nonce: 'c'.repeat(22),
+            keepNonceUntil: Date.now() + 1_000,
+            accountId: 'colleague'
+        });
+        expect(await ask(LOCAL, 'endpoint.signRegistration', { accountId: 'owner' })).toMatchObject({ ok: true });
+        expect(disconnected).toEqual(['sessionId' in admitted ? admitted.sessionId : '']);
+        expect(await store.list(null)).toEqual([]);
     });
 });

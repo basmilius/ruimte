@@ -22,6 +22,8 @@ const SessionRecordSchema = z
         tokenHash: z.string().min(1).optional(),
         publicKey: z.string().min(1).optional(),
         origin: z.enum(['link', 'statement']).optional().catch(undefined),
+        // The account whose statement let this client in; absent for a link, and for a statement that named none.
+        account: z.string().min(1).optional().catch(undefined),
         createdAt: z.number(),
         lastSeenAt: z.number(),
         push: PushSubscribePayloadSchema.optional()
@@ -35,19 +37,32 @@ type SessionRecord = z.infer<typeof SessionRecordSchema>;
  * must not make its nonce new again, and a revoked device must not walk back in on the next statement
  * the address book hands it. Dropped rather than refused when they will not read, like the sessions.
  */
+const AccountBindingSchema = z.object({ id: z.string().min(1), since: z.number() });
+export type AccountBinding = z.infer<typeof AccountBindingSchema>;
+
 const FileSchema = z.object({
     sessions: z.array(SessionRecordSchema),
     spentNonces: z
         .array(z.object({ nonce: z.string().min(1), until: z.number() }))
         .optional()
         .catch(undefined),
-    revokedKeys: z.array(z.string().min(1)).optional().catch(undefined)
+    revokedKeys: z.array(z.string().min(1)).optional().catch(undefined),
+    // A binding that will not read takes no statement, as one a person took off, until the machine signs again.
+    account: AccountBindingSchema.nullable().optional().catch(null)
 });
+
+/*
+ * The one address book account this machine is on. It is set when the machine signs a registration,
+ * only a person on the machine takes it off, and a statement never sets it. Absent on a machine that
+ * signed none since this was kept; null once a person took it off.
+ */
+type Binding = AccountBinding | null | undefined;
 
 interface State {
     sessions: SessionRecord[];
     spentNonces: { nonce: string; until: number }[];
     revokedKeys: string[];
+    account: Binding;
 }
 
 const hash = (token: string): string => createHash('sha256').update(token).digest('hex');
@@ -75,9 +90,35 @@ export interface StatementEntry {
     nonce: string;
     // When the nonce may be forgotten: past the statement's expiry and the clock skew allowed on it.
     keepNonceUntil: number;
+    // The account a statement v2 named and the address book signed; null for a statement that names none.
+    accountId: string | null;
 }
 
-export type StatementAdmission = { sessionId: string; created: boolean } | { refused: 'replayed' | 'revoked' | 'bad-key' };
+export type StatementAccountRefusal = 'wrong-account' | 'account-required' | 'no-account';
+
+export type StatementAdmission = { sessionId: string; created: boolean } | { refused: 'replayed' | 'revoked' | 'bad-key' | StatementAccountRefusal };
+
+/* Whether a statement of `accountId` may let a client in on this binding; null when it may. */
+export const statementAccountRefusal = (binding: Binding, accountId: string | null): StatementAccountRefusal | null => {
+    if (binding === null) {
+        return 'no-account';
+    }
+    if (binding !== undefined) {
+        if (accountId === null) {
+            return 'account-required';
+        }
+        return accountId === binding.id ? null : 'wrong-account';
+    }
+    // TODO(Bas): refuse a statement that names no account here too, once the iPhone app that passes statement v2 on is live.
+    return null;
+};
+
+export interface AccountChange {
+    // False when the machine is on another account, which a person on the machine has to take it off first.
+    bound: boolean;
+    // The clients another account let in on a statement, which lose their access now.
+    revoked: string[];
+}
 
 /*
  * One record per key. A daemon from before `pair` looked for a known key wrote a second record for a
@@ -193,6 +234,12 @@ export class AuthStore {
             await this.save({ ...state, spentNonces });
             return { refused: 'revoked' };
         }
+        // Decided here rather than by the caller, so a person taking the machine off its account in between is never missed.
+        const accountRefusal = statementAccountRefusal(state.account, entry.accountId);
+        if (accountRefusal !== null) {
+            await this.save({ ...state, spentNonces });
+            return { refused: accountRefusal };
+        }
         const known = state.sessions.find((record) => record.publicKey === entry.publicKey);
         if (known) {
             known.lastSeenAt = now;
@@ -204,11 +251,51 @@ export class AuthStore {
             label: entry.label,
             publicKey: entry.publicKey,
             origin: 'statement',
+            ...(entry.accountId === null ? {} : { account: entry.accountId }),
             createdAt: now,
             lastSeenAt: now
         };
         await this.save({ ...state, sessions: [...state.sessions, record], spentNonces });
         return { sessionId: record.id, created: true };
+    }
+
+    /* The account this machine is on: absent when it never signed for one since this was kept, null once a person took it off. */
+    async accountBinding(): Promise<Binding> {
+        const { account } = await this.load();
+        return account === undefined || account === null ? account : { ...account };
+    }
+
+    /*
+     * Puts the machine on an account, which signing a registration for it does. The same account again
+     * changes nothing; another one is refused. A client another account let in on a statement loses its
+     * access, since a machine is on one account. One whose statement named no account stays: it most
+     * likely came from this account before accounts were written down, and nothing says otherwise.
+     */
+    async bindAccount(accountId: string): Promise<AccountChange> {
+        const state = await this.load();
+        if (state.account !== undefined && state.account !== null) {
+            return { bound: state.account.id === accountId, revoked: [] };
+        }
+        const revoked = state.sessions.filter((record) => record.origin === 'statement' && record.account !== undefined && record.account !== accountId);
+        await this.save({
+            ...state,
+            sessions: state.sessions.filter((record) => !revoked.includes(record)),
+            account: { id: accountId, since: this.now() }
+        });
+        return { bound: true, revoked: revoked.map((record) => record.id) };
+    }
+
+    /*
+     * Takes the machine off its account, which only a person on the machine does. Every client a statement
+     * let in loses its access, and no statement lets anyone in until the machine signs for an account again.
+     * A key that loses its access this way is not revoked: the same device may come back through the next account.
+     */
+    async leaveAccount(): Promise<string[]> {
+        const state = await this.load();
+        const left = state.account?.id;
+        const revoked = state.sessions.filter((record) => record.origin === 'statement' && (record.account === undefined || record.account === left));
+        await this.save({ ...state, sessions: state.sessions.filter((record) => !revoked.includes(record)), account: null });
+        return revoked.map((record) => record.id);
     }
 
     /* The session a token belongs to, with its last-seen time moved to now. */
@@ -342,13 +429,18 @@ export class AuthStore {
         try {
             const parsed = FileSchema.safeParse(JSON.parse(await readFile(this.path, 'utf8')));
             this.state = parsed.success
-                ? { sessions: mergeSharedKeys(parsed.data.sessions), spentNonces: parsed.data.spentNonces ?? [], revokedKeys: parsed.data.revokedKeys ?? [] }
-                : { sessions: [], spentNonces: [], revokedKeys: [] };
+                ? {
+                      sessions: mergeSharedKeys(parsed.data.sessions),
+                      spentNonces: parsed.data.spentNonces ?? [],
+                      revokedKeys: parsed.data.revokedKeys ?? [],
+                      account: parsed.data.account
+                  }
+                : { sessions: [], spentNonces: [], revokedKeys: [], account: null };
         } catch (e) {
             if (!isNotFound(e)) {
                 console.warn('The auth file would not parse; starting with no sessions:', errorText(e));
             }
-            this.state = { sessions: [], spentNonces: [], revokedKeys: [] };
+            this.state = { sessions: [], spentNonces: [], revokedKeys: [], account: isNotFound(e) ? undefined : null };
         }
         return this.state;
     }

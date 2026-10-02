@@ -6,6 +6,7 @@ Ruimte for a machine without the app. It runs the machine that terminals, agents
 npx ruimte                      # start the machine on 127.0.0.1:4210
 npx ruimte pair                 # print a pairing link for the app on another computer
 npx ruimte login                # add this machine to your Ruimte account with a code
+npx ruimte logout               # take this machine off its account
 npx ruimte service install      # keep it running in the background for this user
 npx ruimte service status
 npx ruimte service uninstall

@@ -49,6 +49,9 @@ const whose = (account: Account): string => (account.login === null ? 'your' : `
 
 class LoginFailure extends Error {}
 
+const ON_ANOTHER_ACCOUNT =
+    'This machine is on another account. Take it off that account first, with `ruimte logout` or under Settings, Machines in the app on this machine, then run `ruimte login` again.';
+
 /*
  * `ruimte login`: puts this machine on an address book account without the app. The daemon signs, the
  * terminal carries the signatures to the address book, and a person approves the code on the web client.
@@ -81,6 +84,9 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
         }
         if (response.status === 404) {
             throw new LoginFailure(`The daemon on port ${options.port} is older than \`ruimte login\`; update it first.`);
+        }
+        if (response.status === 409) {
+            throw new LoginFailure(ON_ANOTHER_ACCOUNT);
         }
         if (!response.ok) {
             throw new LoginFailure(`The daemon on port ${options.port} does not use ${options.home}; set RUIMTE_HOME to the home it was started with.`);
@@ -155,7 +161,14 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
                     if (poll.account === null) {
                         continue;
                     }
-                    const registration = await askDaemon('/machine/registration', RegisterMachinePayloadSchema, { accountId: poll.account.id });
+                    const approved = link;
+                    // A machine that refuses the account leaves the approval unused, so the code stops working on the page too.
+                    const registration = await askDaemon('/machine/registration', RegisterMachinePayloadSchema, { accountId: poll.account.id }).catch(
+                        async (e: unknown) => {
+                            await book.cancelDeviceLink({ deviceCode: approved.deviceCode }).catch(() => undefined);
+                            throw e;
+                        }
+                    );
                     const result = await book.completeDeviceLink({
                         deviceCode: link.deviceCode,
                         issuedAt: registration.issuedAt,
