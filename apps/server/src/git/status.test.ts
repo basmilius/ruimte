@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { rm, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { diffFile } from './diff.ts';
+import { diffCommit, diffFile } from './diff.ts';
 import { forgetBase, mergeBaseOf, parsePorcelain, readStatus } from './status.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
@@ -79,6 +79,16 @@ describe('readStatus', () => {
         ]);
     });
 
+    test('an untracked file named like an option is counted and never read as one', async () => {
+        await write('victim.txt', 'keep me\n');
+        await git(['add', 'victim.txt']);
+        await write('--output=victim.txt', 'a\n');
+
+        const status = await readStatus(repo);
+        expect(await readFile(join(repo, 'victim.txt'), 'utf8')).toBe('keep me\n');
+        expect(status.files).toContainEqual({ path: '--output=victim.txt', state: 'untracked', status: '?', added: 1, deleted: 0, binary: false });
+    });
+
     test('the base is the branch the work is measured against, and the merge base is where it left', async () => {
         await git(['checkout', '-q', '-b', 'feature']);
         await write('tracked.txt', 'one\ntwo\nthree\nfour\n');
@@ -100,6 +110,22 @@ describe('diffFile', () => {
         expect(diff).toMatchObject({ path: 'fresh.txt', added: 2, deleted: 0, binary: false });
         expect(diff.diff).toContain('+a');
         expect(diff.diff).toContain('+b');
+    });
+
+    test('an untracked file named like an option diffs as a file', async () => {
+        await write('victim.txt', 'keep me\n');
+        await write('--output=victim.txt', 'a\n');
+        const diff = await diffFile(repo, '--output=victim.txt', { scope: 'worktree', staged: false, ignoreWhitespace: false }, null);
+        expect(diff).toMatchObject({ added: 1, deleted: 0 });
+        expect(await readFile(join(repo, 'victim.txt'), 'utf8')).toBe('keep me\n');
+    });
+
+    test('a commit named like an option is never read as one', async () => {
+        await write('victim.txt', 'keep me\n');
+        const options = { scope: 'commit' as const, commit: '--output=victim.txt', staged: false, ignoreWhitespace: false };
+        await diffFile(repo, 'tracked.txt', options, null).catch(() => undefined);
+        await diffCommit(repo, '--output=victim.txt').catch(() => undefined);
+        expect(await readFile(join(repo, 'victim.txt'), 'utf8')).toBe('keep me\n');
     });
 
     test('the staged and the unstaged half of a file are two diffs', async () => {

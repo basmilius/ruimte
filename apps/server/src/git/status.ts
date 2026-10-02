@@ -120,7 +120,7 @@ const untrackedCounts = async (root: string, paths: string[]): Promise<Map<strin
         const results = await Promise.all(
             batch.map(async (path) => {
                 // `--no-index` answers 1 when the two sides differ, which is what every file here does.
-                const { code, stdout } = await runGit(['diff', '--numstat', '-z', '--no-index', '/dev/null', path], root);
+                const { code, stdout } = await runGit(['diff', '--numstat', '-z', '--no-index', '--', '/dev/null', path], root);
                 return code > 1 ? null : (parseNumstat(stdout)[0] ?? null);
             })
         );

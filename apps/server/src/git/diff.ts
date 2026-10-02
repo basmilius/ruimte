@@ -131,11 +131,12 @@ const diffArgs = async (top: string, path: string, options: DiffOptions, mergeBa
     const args = [...PATCH_ARGS, ...(options.ignoreWhitespace ? ['--ignore-all-space'] : [])];
     // Only the working tree can hold a file git has never seen; in history every path is tracked.
     if (options.scope === 'worktree' && !(await isTracked(top, path))) {
-        return ['diff', ...args, '--no-index', '/dev/null', path];
+        return ['diff', ...args, '--no-index', '--', '/dev/null', path];
     }
+    // A revision comes from a client, so a name like `--output=<file>` must never parse as an option.
     if (options.scope === 'commit') {
         const commit = options.commit ?? 'HEAD';
-        return ['diff', ...args, `${commit}^`, commit, '--', `:(literal)${path}`];
+        return ['diff', ...args, '--end-of-options', `${commit}^`, commit, '--', `:(literal)${path}`];
     }
     if (options.scope === 'base') {
         return ['diff', ...args, mergeBase ?? 'HEAD', '--', `:(literal)${path}`];
