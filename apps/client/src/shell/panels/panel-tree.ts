@@ -31,6 +31,14 @@ export const directoryHandle = (model: FileTree, path: string): FileTreeDirector
     return item?.isDirectory() ? (item as FileTreeDirectoryHandle) : null;
 };
 
+export const resetExpandedPaths = (model: FileTree, paths: readonly string[], expanded: ReadonlySet<string>): void => {
+    model.resetPaths(paths, { initialExpandedPaths: [...expanded] });
+    // @pierre/trees beta.6 restores expansion with its default sort, so custom sorting needs a second pass.
+    for (const path of expanded) {
+        directoryHandle(model, path)?.expand();
+    }
+};
+
 /* The row a composed event came out of. The rows live in a shadow root, so the path is somewhere on
    the way up and never on the target React hands over. */
 export const rowPathOf = (event: { nativeEvent: Event }): string | null => {

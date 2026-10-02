@@ -30,6 +30,7 @@ import {
     collapseKey,
     dirPathOf,
     expansionChanges,
+    gitTreeScope,
     mergeCollapsedPaths,
     pathsUnder,
     statusColor,
@@ -275,8 +276,7 @@ function GitRepoTree({
     const staged = state === 'staged';
     const conflicted = state === 'conflicted';
     const root = checkout.path;
-    /* While the folder holds one repository the folds are keyed as they always were. */
-    const scope = named ? checkout.label : '';
+    const scope = gitTreeScope(root, state);
     /* The rows the open context menu acts on: one, or the whole selection when the row is part of one. */
     const [menuPaths, setMenuPaths] = useState<string[]>([]);
     const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
@@ -455,7 +455,7 @@ function GitRepoTree({
     };
     const menuFile = menuPath === null ? undefined : byPath.get(menuPath);
     const menuDir = menuFile === undefined && menuPath !== null ? dirPathOf(menuPath) : null;
-    const menuDirKey = menuDir === null ? null : scope === '' ? menuDir : `${scope}/${menuDir}`;
+    const menuDirKey = menuDir === null ? null : collapseKey(scope, menuDir);
     const height = rowCount * model.getItemHeight();
 
     return (

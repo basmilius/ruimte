@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { FileTree } from '@pierre/trees';
 import type { FsEntry, GitFile } from '@ruimte/contracts';
+import { directoryHandle, resetExpandedPaths } from './panel-tree.ts';
 import {
     LOADING_NAME,
     ancestorDirsOf,
@@ -80,6 +82,47 @@ describe('newlyExpanded', () => {
     test('names only the directories that opened since the last look', () => {
         expect(newlyExpanded(new Set(['src/']), new Set(['src/', 'docs/']))).toEqual(['docs/']);
         expect(newlyExpanded(new Set(['src/']), new Set())).toEqual([]);
+    });
+});
+
+describe('loading expanded directories', () => {
+    const cacheOf = (): Map<string, FsEntry[]> => new Map([[ROOT, [directory('/repo/foo'), directory('/repo/foo_bar'), directory('/repo/foo-bar')]]]);
+
+    const modelOf = (cache: Map<string, FsEntry[]>): FileTree =>
+        new FileTree({ paths: buildTreeInput(ROOT, cache, false).paths, initialExpansion: 'closed', flattenEmptyDirectories: false, sort: compareRows });
+
+    test('the first listing keeps a newly opened folder open with custom sorting', () => {
+        const cache = cacheOf();
+        const model = modelOf(cache);
+        directoryHandle(model, 'foo-bar/')!.expand();
+        cache.set('/repo/foo-bar', [entry('/repo/foo-bar/index.ts')]);
+
+        resetExpandedPaths(model, buildTreeInput(ROOT, cache, false).paths, new Set(['foo-bar/']));
+
+        expect(directoryHandle(model, 'foo-bar/')!.isExpanded()).toBe(true);
+        expect(directoryHandle(model, 'foo/')!.isExpanded()).toBe(false);
+        expect(directoryHandle(model, 'foo_bar/')!.isExpanded()).toBe(false);
+        expect(model.getVisibleRows(0, model.getVisibleCount()).map((row) => row.path)).toContain('foo-bar/index.ts');
+        model.cleanUp();
+    });
+
+    test('loading a nested folder preserves both parents and removes the loading row', () => {
+        const cache = cacheOf();
+        cache.set('/repo/foo-bar', [directory('/repo/foo-bar/nested')]);
+        cache.set('/repo/foo-bar/nested', [directory('/repo/foo-bar/nested/deep')]);
+        const model = modelOf(cache);
+        directoryHandle(model, 'foo-bar/nested/deep/')!.expand();
+        cache.set('/repo/foo-bar/nested/deep', [entry('/repo/foo-bar/nested/deep/index.ts')]);
+
+        resetExpandedPaths(model, buildTreeInput(ROOT, cache, false).paths, new Set(['foo-bar/', 'foo-bar/nested/', 'foo-bar/nested/deep/']));
+
+        for (const path of ['foo-bar/', 'foo-bar/nested/', 'foo-bar/nested/deep/']) {
+            expect(directoryHandle(model, path)!.isExpanded()).toBe(true);
+        }
+        const visible = model.getVisibleRows(0, model.getVisibleCount()).map((row) => row.path);
+        expect(visible).toContain('foo-bar/nested/deep/index.ts');
+        expect(visible).not.toContain(`foo-bar/nested/deep/${LOADING_NAME}`);
+        model.cleanUp();
     });
 });
 

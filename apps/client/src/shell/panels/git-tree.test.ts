@@ -2,10 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import type { GitFile } from '@ruimte/contracts';
 import {
     activeDiff,
+    allCollapseKeys,
     allDirs,
     branchesUnder,
     collapsedPathsOf,
     expansionChanges,
+    gitTreeScope,
     mergeCollapsedPaths,
     pathsUnder,
     statusColor,
@@ -44,6 +46,44 @@ describe('what the tree is told about a group', () => {
 });
 
 describe('which folders stand folded up', () => {
+    test('staged and unstaged folders of the same checkout fold independently', () => {
+        const staged = gitTreeScope('/repo', 'staged');
+        const unstaged = gitTreeScope('/repo', 'unstaged');
+        const collapsed = collapsedPathsOf([dir('src/', false)], staged);
+
+        expect(mergeCollapsedPaths(collapsed, [dir('src/', true)], unstaged)).toBe(collapsed);
+        expect(expansionChanges([dir('src/', true)], new Set(collapsed), staged)).toEqual({ collapse: ['src/'], expand: [] });
+        expect(expansionChanges([dir('src/', false)], new Set(collapsed), unstaged)).toEqual({ collapse: [], expand: ['src/'] });
+        expect(branchesUnder([], collapsed, ['src', 'src/deep'], unstaged)).toEqual([]);
+        expect(branchesUnder([], collapsed, ['src', 'src/deep'], staged)).toEqual(['src/deep']);
+    });
+
+    test('a checkout scope cannot be mistaken for a descendant folder', () => {
+        const parent = gitTreeScope('/repo', 'unstaged');
+        const child = gitTreeScope('/repo/src', 'unstaged');
+        const collapsed = collapsedPathsOf([dir('src/', false)], parent);
+
+        expect(branchesUnder([], collapsed, ['deep'], child)).toEqual([]);
+        expect(expansionChanges([dir('src/', true)], new Set(collapsed), child)).toEqual({ collapse: [], expand: [] });
+    });
+
+    test('collapse all includes every file group and deduplicates folders within a group', () => {
+        const files = [
+            file('src/a.ts'),
+            { ...file('src/deep/b.ts'), state: 'staged' as const },
+            file('src/c.ts'),
+            { ...file('src/d.ts'), state: 'untracked' as const }
+        ];
+        const collapsed = new Set(allCollapseKeys(files, '/repo'));
+
+        expect(collapsed.size).toBe(4);
+        for (const state of ['staged', 'unstaged', 'untracked'] as const) {
+            expect(expansionChanges([dir('src/', true)], collapsed, gitTreeScope('/repo', state))).toEqual({ collapse: ['src/'], expand: [] });
+        }
+        expect(expansionChanges([dir('src/deep/', true)], collapsed, gitTreeScope('/repo', 'staged'))).toEqual({ collapse: ['src/deep/'], expand: [] });
+        expect(expansionChanges([dir('src/', true)], collapsed, gitTreeScope('/other', 'staged'))).toEqual({ collapse: [], expand: [] });
+    });
+
     test('selection notifications from different groups leave shared folds unchanged', () => {
         const current = ['src', 'docs'];
         const staged = mergeCollapsedPaths(current, [dir('src/', false)]);

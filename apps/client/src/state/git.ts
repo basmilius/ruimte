@@ -9,8 +9,7 @@ export const DEFAULT_LOG_HEIGHT = 200;
 interface GitStore {
     /* What a diff opens in, remembered per project so a branch review stays a branch review. */
     scope: GitDiffScope;
-    /* The folders the list has folded up, by their path from the repository root, behind the label of
-       their repository while the folder holds more than one. */
+    /* Persisted folder keys include the checkout path and file group. */
     collapsedDirs: string[];
     /* The repositories of the folder a person folded away, by label. */
     hiddenRepos: string[];

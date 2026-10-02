@@ -1,4 +1,4 @@
-import type { GitFile } from '@ruimte/contracts';
+import type { GitFile, GitFileState } from '@ruimte/contracts';
 import { treeGitStatus } from '@/shell/panels/files-tree';
 import type { FileTab } from '@/state/files';
 
@@ -24,11 +24,9 @@ export const statusColor = (status: string): string => STATUS_COLORS[treeGitStat
 export const pathsUnder = (files: readonly GitFile[], dir: string): string[] =>
     files.filter((file) => file.path.startsWith(`${dir}/`)).map((file) => file.path);
 
-/*
- * The key a folder is folded up under. The set is shared by every group and every repository, so while
- * the folder holds more than one the label of the repository goes in front: a `src` of one module is
- * not the `src` of the module beside it.
- */
+// JSON keeps checkout paths out of the directory prefix used to fold descendants.
+export const gitTreeScope = (checkout: string, group: GitFileState): string => JSON.stringify([checkout, group]);
+
 export const collapseKey = (scope: string, dir: string): string => (scope === '' ? dir : `${scope}/${dir}`);
 
 /*
@@ -49,6 +47,10 @@ export const allDirs = (files: readonly GitFile[], scope = ''): string[] => {
     }
     return [...dirs];
 };
+
+export const allCollapseKeys = (files: readonly GitFile[], checkout: string): string[] => [
+    ...new Set(files.flatMap((file) => allDirs([file], gitTreeScope(checkout, file.state))))
+];
 
 /* The tree names a directory with a trailing slash and the collapse set does not. */
 export const dirPathOf = (rowPath: string): string => (rowPath.endsWith('/') ? rowPath.slice(0, -1) : rowPath);

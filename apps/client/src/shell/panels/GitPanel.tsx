@@ -16,7 +16,7 @@ import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, Ic
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
 import { PushMenu } from '@/shell/panels/PushMenu';
-import { activeDiff, allDirs } from '@/shell/panels/git-tree';
+import { activeDiff, allCollapseKeys } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { useGitActions, type ActionOutcome } from '@/shell/panels/use-git-actions';
 import { WorktreeSection } from '@/shell/panels/WorktreeSection';
@@ -482,7 +482,7 @@ export function GitPanel() {
                                 onClick={() =>
                                     useGit
                                         .getState()
-                                        .setCollapsedDirs(checkouts.flatMap((checkout) => allDirs(checkout.status?.files ?? [], named ? checkout.label : '')))
+                                        .setCollapsedDirs(checkouts.flatMap((checkout) => allCollapseKeys(checkout.status?.files ?? [], checkout.path)))
                                 }
                             />
                         </ButtonGroup>

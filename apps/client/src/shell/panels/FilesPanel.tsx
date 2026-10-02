@@ -51,7 +51,15 @@ import {
     withoutClosedBranches,
     type EntryCache
 } from '@/shell/panels/files-tree';
-import { directoryHandle, extendsSelection, menuTargetsOf, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
+import {
+    directoryHandle,
+    extendsSelection,
+    menuTargetsOf,
+    resetExpandedPaths,
+    rowPathOf,
+    PANEL_TREE_CSS,
+    PANEL_TREE_ROW_HEIGHT
+} from '@/shell/panels/panel-tree';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
@@ -121,6 +129,7 @@ export function FilesPanel() {
     const cacheRef = useRef<EntryCache>(EMPTY_CACHE);
     const expandedRef = useRef<ReadonlySet<string>>(new Set());
     const directoriesRef = useRef<ReadonlySet<string>>(new Set());
+    const resettingRef = useRef(false);
     const selectionRef = useRef<readonly string[]>([]);
     /* The file the tree last followed the preview to, so a click of the person's own is never undone. */
     const revealedRef = useRef<string | null>(null);
@@ -237,10 +246,15 @@ export function FilesPanel() {
         if (!folder) {
             return;
         }
-        model.resetPaths(treeInput.paths, { initialExpandedPaths: [...expandedRef.current] });
         directoriesRef.current = new Set(
             [...cache.values()].flatMap((entries) => entries.filter((entry) => entry.kind === 'directory').map((entry) => treePathOf(folder, entry)))
         );
+        resettingRef.current = true;
+        try {
+            resetExpandedPaths(model, treeInput.paths, expandedRef.current);
+        } finally {
+            resettingRef.current = false;
+        }
     }, [cache, folder, model, treeInput]);
 
     /* The marks the tree draws, on both models: what git ignores and what it says changed. They are
@@ -261,6 +275,9 @@ export function FilesPanel() {
             return;
         }
         return model.subscribe(() => {
+            if (resettingRef.current) {
+                return;
+            }
             const reported = new Set<string>();
             for (const dir of directoriesRef.current) {
                 if (directoryHandle(model, dir)?.isExpanded()) {
