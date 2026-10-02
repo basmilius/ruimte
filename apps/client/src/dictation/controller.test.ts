@@ -41,11 +41,13 @@ describe('the dictation controller', () => {
         fake = fakeEngine();
         restore = setDictationEngine(fake.engine);
         useDictation.setState({ model: READY });
+        (globalThis as { document?: unknown }).document = { hasFocus: () => true };
     });
 
     afterEach(() => {
         cancelDictation();
         restore();
+        delete (globalThis as { document?: unknown }).document;
     });
 
     test('inserts the final transcript once, and only after stopping', () => {
@@ -107,6 +109,70 @@ describe('the dictation controller', () => {
         fake.handlers().onEnd();
         expect(field.inserted).toEqual([]);
         expect(useDictation.getState().phase).toBe('idle');
+    });
+
+    describe('when the window loses the focus', () => {
+        let focused = false;
+        beforeEach(() => {
+            focused = false;
+            (globalThis as { document?: unknown }).document = { hasFocus: () => focused };
+        });
+        afterEach(() => {
+            focused = true;
+        });
+
+        test("it lets the system's question for the microphone take the focus, and ends a run that starts after it", () => {
+            const field = target();
+            toggleDictation(field.target);
+            cancelDictation();
+            expect(fake.calls).toEqual(['start']);
+            expect(useDictation.getState().phase).toBe('starting');
+
+            fake.handlers().onAccess?.();
+            cancelDictation();
+            expect(fake.calls).toEqual(['start', 'cancel']);
+            expect(useDictation.getState().phase).toBe('idle');
+        });
+
+        test('it ends a recording', () => {
+            const field = target();
+            toggleDictation(field.target);
+            fake.handlers().onReady?.();
+            cancelDictation();
+            expect(fake.calls).toEqual(['start', 'cancel']);
+        });
+
+        test('a run that is finishing still lands its words, where a person who cancels discards them', () => {
+            const field = target();
+            toggleDictation(field.target);
+            fake.handlers().onReady?.();
+            fake.handlers().onChunk({ text: 'Toch nog.', final: true });
+            stopDictation();
+            cancelDictation();
+            fake.handlers().onEnd();
+            expect(fake.calls).toEqual(['start', 'stop']);
+            expect(field.inserted).toEqual(['Toch nog.']);
+
+            focused = true;
+            const next = target('other');
+            toggleDictation(next.target);
+            fake.handlers().onReady?.();
+            fake.handlers().onChunk({ text: 'Weg.', final: true });
+            stopDictation();
+            cancelDictation();
+            fake.handlers().onEnd();
+            expect(next.inserted).toEqual([]);
+        });
+
+        test('an error stays on screen', () => {
+            const warn = spyOn(console, 'warn').mockImplementation(() => undefined);
+            const field = target();
+            toggleDictation(field.target);
+            fake.handlers().onError(new DictationError('recognition'));
+            cancelDictation();
+            expect(useDictation.getState().phase).toBe('error');
+            warn.mockRestore();
+        });
     });
 
     test('a target that turns disabled while it listens keeps its run, and a disabled one does not start', () => {

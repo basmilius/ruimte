@@ -86,6 +86,7 @@ export class HelperSession implements DictationSession {
         if (this.#ended) {
             return;
         }
+        this.#handlers.onAccess?.();
         await this.#bridge.start(this.#id, options.language);
         if (this.#ended) {
             return;

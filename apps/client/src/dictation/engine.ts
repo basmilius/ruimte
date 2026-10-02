@@ -22,6 +22,8 @@ export interface DictationOptions {
 }
 
 export interface DictationHandlers {
+    /* The microphone may be used, which the system may first have asked the person about. */
+    onAccess?(): void;
     onReady?(): void;
     onChunk(chunk: DictationChunk): void;
     onError(error: Error): void;

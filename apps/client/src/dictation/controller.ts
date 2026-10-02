@@ -66,6 +66,8 @@ let insertion: DictationInsertion | null = null;
 let observers = 0;
 let releaseModel: (() => void) | null = null;
 let engine: DictationEngine = helperEngine;
+// Until the run may use the microphone: the system's question about it takes the window's focus.
+let awaitingAccess = false;
 
 /* Puts another recognizer behind every dictation that starts from now on; the returned call puts the previous one back. */
 export const setDictationEngine = (next: DictationEngine): (() => void) => {
@@ -79,6 +81,19 @@ export const setDictationEngine = (next: DictationEngine): (() => void) => {
 const failWith = (targetId: string, error: unknown): void => {
     console.warn('Dictation failed:', error);
     useDictation.setState({ targetId, phase: 'error', error: dictationFailureText(error) });
+};
+
+const discardDictation = (): void => {
+    generation++;
+    awaitingAccess = false;
+    const current = session;
+    session = null;
+    insertion?.dispose?.();
+    insertion = null;
+    releaseAudio?.();
+    releaseAudio = null;
+    current?.cancel();
+    useDictation.setState({ targetId: null, phase: 'idle', text: '', error: null, bands: [] });
 };
 
 export const observeSpeech = (): (() => void) => {
@@ -95,7 +110,7 @@ export const observeSpeech = (): (() => void) => {
             }
             useDictation.setState({ model });
             if (!model.enabled) {
-                cancelDictation();
+                discardDictation();
             }
         };
         const off = bridge.onState((model) => {
@@ -119,7 +134,7 @@ export const observeSpeech = (): (() => void) => {
         if (--observers === 0) {
             releaseModel?.();
             releaseModel = null;
-            cancelDictation();
+            discardDictation();
         }
     };
 };
@@ -129,26 +144,27 @@ export const registerDictationTarget = (target: DictationTarget): (() => void) =
     return () => {
         targets.delete(target.element);
         if (useDictation.getState().targetId === target.id) {
-            cancelDictation();
+            discardDictation();
         }
     };
 };
 
+/*
+ * A person cancels from a focused window, so a cancel without the focus is the window losing it. That
+ * ends a recording, but not the system's question about the microphone or a run that already stopped.
+ */
+const endsOnBlur = (phase: State['phase']): boolean => phase === 'listening' || (phase === 'starting' && !awaitingAccess);
+
 export const cancelDictation = (): void => {
-    generation++;
-    const current = session;
-    session = null;
-    insertion?.dispose?.();
-    insertion = null;
-    releaseAudio?.();
-    releaseAudio = null;
-    current?.cancel();
-    useDictation.setState({ targetId: null, phase: 'idle', text: '', error: null, bands: [] });
+    if (!document.hasFocus() && !endsOnBlur(useDictation.getState().phase)) {
+        return;
+    }
+    discardDictation();
 };
 
 export const stopDictation = (): void => {
     if (useDictation.getState().phase === 'starting') {
-        cancelDictation();
+        discardDictation();
         return;
     }
     if (useDictation.getState().phase !== 'listening') {
@@ -168,7 +184,7 @@ export const toggleDictation = (target: DictationTarget): void => {
     if (!state.model?.enabled || state.model.phase !== 'ready' || target.disabled?.()) {
         return;
     }
-    cancelDictation();
+    discardDictation();
     const captured = target.capture();
     if (!captured) {
         return;
@@ -182,7 +198,8 @@ export const toggleDictation = (target: DictationTarget): void => {
         useDictation.setState({ targetId: target.id, phase: 'error', error: i18next.t('voice:dictation.unsupportedLanguage') });
         return;
     }
-    releaseAudio = claimMicrophone(cancelDictation);
+    releaseAudio = claimMicrophone(discardDictation);
+    awaitingAccess = true;
     useDictation.setState({ targetId: target.id, phase: 'starting', text: '', error: null, bands: [] });
     let finalText: string | null = null;
     let failed = false;
@@ -190,8 +207,14 @@ export const toggleDictation = (target: DictationTarget): void => {
         session = engine.start(
             { language, deviceId: useSettings.getState().voiceInputDeviceId },
             {
+                onAccess: () => {
+                    if (generation === token) {
+                        awaitingAccess = false;
+                    }
+                },
                 onReady: () => {
                     if (generation === token) {
+                        awaitingAccess = false;
                         useDictation.setState({ phase: 'listening' });
                         captured.levels?.([]);
                     }
@@ -247,7 +270,7 @@ export const toggleDictation = (target: DictationTarget): void => {
             }
         );
     } catch (error) {
-        cancelDictation();
+        discardDictation();
         failWith(target.id, error);
     }
 };

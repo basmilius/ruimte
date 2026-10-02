@@ -61,6 +61,7 @@ const fixture = (allowed = true) => {
     const session = new HelperSession(
         { language: 'nl-NL' },
         {
+            onAccess: () => calls.push('granted'),
             onReady: () => calls.push('ready'),
             onChunk: (chunk) => calls.push(`text:${chunk.text}`),
             onError: () => calls.push('error'),
@@ -94,16 +95,17 @@ describe('dictation lifecycle', () => {
     test('asks for the microphone, then waits for the loaded model before opening it', async () => {
         const run = fixture();
         await flush();
-        expect(run.calls).toEqual(['access', 'start']);
+        expect(run.calls).toEqual(['access', 'granted', 'start']);
         run.ready.resolve();
         await flush();
-        expect(run.calls).toEqual(['access', 'start', 'microphone', 'capture', 'ready']);
+        expect(run.calls).toEqual(['access', 'granted', 'start', 'microphone', 'capture', 'ready']);
         run.session.cancel();
     });
     test('a refused microphone never starts the helper', async () => {
         const run = fixture(false);
         await flush();
         expect(run.calls).not.toContain('start');
+        expect(run.calls).not.toContain('granted');
         expect(run.calls).toContain('error');
         expect(run.calls.filter((call) => call === 'end')).toHaveLength(1);
     });
