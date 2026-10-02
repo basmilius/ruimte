@@ -279,6 +279,9 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   machine ID and both public keys. Later attempts omit the statement and need no account
   request. A revoked pairing remains a refusal; the app does not silently regain access
   through another statement. Every attempt still verifies the machine key and channel proof.
+  The statement goes into the offer as the address book answered it, v2 fields included
+  (`machinePublicKey`, `accountId`, `accountSignature`): a machine on an account refuses one
+  without them. They stay out of the bytes the signal is signed over, as in the other clients.
 - `stasel/WebRTC` is pinned to release `153.0.0`, commit
   `4266157cd08f92115de885ab12d87196a8db87e1`. The native adapter exchanges no audio/video
   tracks and declares no microphone, camera or background-audio capability.

@@ -345,6 +345,30 @@ struct AuthenticationTests {
         }
     }
 
+    @Test func statementV2FieldsReachTheOffer() async throws {
+        let key = DeviceKey()
+        let client = AddressBookClient(fetch: { request in
+            let payload = try JSONDecoder().decode(AccessRequestPayload.self, from: request.httpBody!)
+            let statement = AccessStatement(
+                machineId: "machine", clientPublicKey: payload.clientPublicKey,
+                nonce: payload.nonce, issuedAt: authNow, expiresAt: authNow + 120_000,
+                signature: String(repeating: "a", count: 86),
+                machinePublicKey: String(repeating: "M", count: 43), accountId: "account-1",
+                accountSignature: String(repeating: "b", count: 86))
+            return (
+                try JSONEncoder().encode(statement),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            )
+        })
+        let access = try await client.signalAccess(accessToken: "access", machineID: "machine", key: key, label: "iPhone")
+        // What an offer carries: the access as the app encodes it into the signal.
+        let encoded = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(access)) as? [String: Any])
+        let statement = try #require(encoded["statement"] as? [String: Any])
+        #expect(statement["machinePublicKey"] as? String == String(repeating: "M", count: 43))
+        #expect(statement["accountId"] as? String == "account-1")
+        #expect(statement["accountSignature"] as? String == String(repeating: "b", count: 86))
+    }
+
     @Test func typeScriptSessionSigningFixtures() throws {
         let url = try #require(Bundle.module.url(forResource: "wire", withExtension: "json"))
         let root = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
