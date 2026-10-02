@@ -59,6 +59,13 @@ export const STILL_WAITING = 'Still waiting on git. A hook or a prompt may be ho
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
 
 /*
+ * The message git writes for a merge of a branch by its bare name, which leaves out the target for
+ * main and master. The merge itself names the full ref, so a tag of the same name never wins.
+ */
+const mergeMessageOf = (branch: string, into: string): string =>
+    into === 'main' || into === 'master' ? `Merge branch '${branch}'` : `Merge branch '${branch}' into ${into}`;
+
+/*
  * Merge through the target checkout under the repository lock, never by moving its ref. Dirty work
  * must be committed explicitly, conflicts remain for the person, and nothing is stashed implicitly.
  */
@@ -234,7 +241,13 @@ export class WorktreeMerge {
         } else {
             const squash = payload.strategy === 'squash';
             const head = (await git(['rev-parse', 'HEAD'], target.path))?.trim();
-            const merged = await step('merge', squash ? ['merge', '--squash', `refs/heads/${branch}`] : ['merge', '--no-edit', '--no-ff', branch], target.path);
+            const merged = await step(
+                'merge',
+                squash
+                    ? ['merge', '--squash', `refs/heads/${branch}`]
+                    : ['merge', '--no-ff', '--message', mergeMessageOf(branch, into), `refs/heads/${branch}`],
+                target.path
+            );
             if (merged.code !== 0) {
                 // The exit code does not say whether git refused or ran into a conflict; what it left behind does.
                 const conflicts = await conflictedFiles(target.path);

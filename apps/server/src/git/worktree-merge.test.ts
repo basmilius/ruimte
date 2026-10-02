@@ -106,6 +106,18 @@ describe('WorktreeMerge', () => {
         expect(await worktrees.list(repo)).toEqual([]);
     });
 
+    test('a tag named like the branch does not take its place in a merge', async () => {
+        const path = await lexer();
+        await gitIn(repo, ['tag', 'lexer', 'main']);
+        const before = (await gitIn(repo, ['rev-parse', 'main'])).trim();
+
+        await run(path);
+
+        expect(await readFile(join(repo, 'lexer.txt'), 'utf8')).toBe('lexer\n');
+        expect(await count(`${before}..main`, '--merges')).toBe(1);
+        expect((await gitIn(repo, ['log', '-1', '--format=%s', 'main'])).trim()).toBe("Merge branch 'lexer'");
+    });
+
     test('squash lands exactly one commit on main and deletes the branch whose commits main does not have', async () => {
         const path = await lexer();
         await writeFile(join(path, 'more.txt'), 'more\n');
