@@ -66,8 +66,12 @@ export const DEFAULT_EDGE: Record<DrawingColor, string> = {
     pink: '#f3c0d1'
 };
 
+// XML has no way to write a control character other than tab and the line breaks, not even escaped.
+// oxlint-disable-next-line no-control-regex
+const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+
 const escapeXml = (value: string): string =>
-    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    value.replace(NOT_XML, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
 const round = (value: number): number => Math.round(value * 100) / 100;
 

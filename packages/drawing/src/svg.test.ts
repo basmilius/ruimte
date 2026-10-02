@@ -148,6 +148,12 @@ describe('toSvg', () => {
     test('without a background the paper stays transparent', () => {
         expect(toSvg([rect('a')], { palette })).not.toContain('<rect');
     });
+
+    test('a control character in a text leaves only characters XML allows', () => {
+        const written = toSvg([text('t', 'bell\u0007 and\u0000 form\u000c feed\u001f', 0, 0), note('n', 'tab\tstays\u0008')], { palette });
+        expect(written).not.toMatch(/[^\t\n\r\u0020-\uFFFD]/);
+        expect(written).toContain('bell and form feed');
+    });
 });
 
 describe('readingOrder', () => {

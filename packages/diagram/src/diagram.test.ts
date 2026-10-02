@@ -391,6 +391,18 @@ describe('toSvg', () => {
         expect(svg).not.toContain('undefined');
     });
 
+    test('a control character in a label leaves only characters XML allows', () => {
+        const svg = toSvg({
+            ...example,
+            groups: [{ ...example.groups[0]!, label: 'Dae\u0001mon' }],
+            nodes: [...example.nodes, { id: 'bell', label: 'Bell\u0007', sub: 'sub\u001f' }],
+            edges: [...example.edges, { from: 'bell', to: 'client', label: 'ring\u000b' }]
+        });
+        expect(svg).not.toMatch(/[^\t\n\r\u0020-\uFFFD]/);
+        expect(svg).toContain('Daemon');
+        expect(svg).toContain('Bell');
+    });
+
     test('every shape has an outline and only a cylinder has a lid', () => {
         const box = { x: 0, y: 0, w: 120, h: 60 };
         for (const shape of ['rect', 'round', 'pill', 'diamond', 'cylinder'] as const) {
