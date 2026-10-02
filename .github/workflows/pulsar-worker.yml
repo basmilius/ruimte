@@ -7,6 +7,8 @@ on:
       - 'apps/pulsar-worker/**'
       - 'packages/pulsar/**'
       - 'packages/agent-contracts/src/model.ts'
+      # The catalog schema in model.ts takes its agent kinds from here.
+      - 'packages/agent-contracts/src/agent.ts'
       # The worker hands these out as the model catalogs.
       - 'packages/agents/src/providers/*-models.json'
 
