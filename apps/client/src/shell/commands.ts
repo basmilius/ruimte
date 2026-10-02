@@ -518,19 +518,23 @@ export const appCommands = (): Command[] => {
             label: i18next.t('shell:menu.compareModels'),
             run: () => useUi.getState().setModelsOpen(true)
         },
-        {
-            id: 'sidebar',
-            label: i18next.t('shell:palette.commands.toggleSidebar'),
-            shortcut: APP_SHORTCUTS.sidebar,
-            run: () => useUi.getState().toggleSidebar()
-        },
-        ...(scratch
-            ? []
-            : [
-                  { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
-                  { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') }
-              ]),
-        { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') },
+        ...(inWorkspace
+            ? [
+                  {
+                      id: 'sidebar',
+                      label: i18next.t('shell:palette.commands.toggleSidebar'),
+                      shortcut: APP_SHORTCUTS.sidebar,
+                      run: () => useUi.getState().toggleSidebar()
+                  },
+                  ...(scratch
+                      ? []
+                      : [
+                            { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
+                            { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') }
+                        ]),
+                  { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') }
+              ]
+            : []),
         ...(inWorkspace && !scratch ? launchCommands() : []),
         { id: 'theme', label: i18next.t('shell:palette.commands.toggleTheme'), run: () => useTheme.getState().toggle() },
         ...(canKeepAwake()
