@@ -32538,6 +32538,15 @@
             },
             "cwd": {
               "type": "string"
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "required": [
@@ -32623,6 +32632,15 @@
             },
             "cwd": {
               "type": "string"
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
             }
           },
           "required": [

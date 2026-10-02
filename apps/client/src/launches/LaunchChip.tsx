@@ -5,7 +5,7 @@ import type { GitRepo, LaunchesDocument } from '@ruimte/contracts';
 import { Button, Icon, IconButton, Menu, Popover, PromptDialog, useNow } from '@basmilius/desktop-ui';
 import { formatAgo } from '@basmilius/desktop-ui/format';
 import { chooseLaunch, showLaunchOutput, startLaunch, stopLaunch } from '@/launches/actions';
-import { LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
+import { HeldCommand, LaunchDot, LaunchStatusIcon } from '@/launches/LaunchControls';
 import { foundText, newSuggestions } from '@/launches/editing';
 import { headlineOf, launchSections, type LaunchView } from '@/launches/model';
 import { useLaunches, useLaunchSuggestions, useProjectLaunches } from '@/launches/state';
@@ -62,13 +62,7 @@ export function LaunchChip() {
                 <Popover.Popup anchor={anchor} align="end" className="flex w-96 flex-col gap-2 p-3">
                     <Popover.Title className="font-medium text-text">{t('approve.title')}</Popover.Title>
                     <Popover.Description className="text-text-muted">{t('approve.description')}</Popover.Description>
-                    {ask?.kind === 'held' &&
-                        ask.held.map((held) => (
-                            <code key={held.launchId} className="block rounded-md bg-surface-sunken px-2 py-1.5 font-mono break-all text-text">
-                                <span className="text-text-faint">{held.cwd} $ </span>
-                                {held.command}
-                            </code>
-                        ))}
+                    {ask?.kind === 'held' && ask.held.map((held) => <HeldCommand key={held.launchId} held={held} />)}
                     <div className="flex justify-end gap-2 pt-1">
                         <Popover.Close render={<Button variant="secondary" size="sm" />}>{t('approve.cancel')}</Popover.Close>
                         <Button

@@ -132,7 +132,9 @@ export const LaunchHeldSchema = z.object({
     launchId: z.string(),
     command: z.string(),
     // Absolute, where it would run.
-    cwd: z.string()
+    cwd: z.string(),
+    // The variables it would run with, which the approval covers as well; absent when it sets none.
+    env: LaunchConfigEnvSchema.optional()
 });
 export type LaunchHeld = z.infer<typeof LaunchHeldSchema>;
 

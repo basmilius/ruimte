@@ -431,4 +431,9 @@ const statusOf = (run: Run): LaunchStatus => ({
     stopped: run.stopped
 });
 
-const heldOf = (resolved: ResolvedLaunch): LaunchHeld => ({ launchId: resolved.launch.id, command: resolved.command, cwd: resolved.cwd });
+const heldOf = (resolved: ResolvedLaunch): LaunchHeld => ({
+    launchId: resolved.launch.id,
+    command: resolved.command,
+    cwd: resolved.cwd,
+    ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {})
+});

@@ -134,7 +134,7 @@ describe('LaunchRunner', () => {
 
         const held: LaunchStartResult = {
             outcome: 'held',
-            held: [{ launchId: 'run-server', command: 'php -S 0.0.0.0:8000 -t web', cwd: join(folder, 'backend') }]
+            held: [{ launchId: 'run-server', command: 'php -S 0.0.0.0:8000 -t web', cwd: join(folder, 'backend'), env: { APP_ENV: 'development' } }]
         };
         expect(await runner.start('p1', 'run-server', { actor: 'agent', approve: true })).toEqual(held);
         expect(await runner.start('p1', 'run-server', { actor: 'person' })).toEqual(held);
@@ -142,6 +142,28 @@ describe('LaunchRunner', () => {
 
         expect(await runner.start('p1', 'run-server', { actor: 'person', approve: true })).toEqual({ outcome: 'started' });
         expect((await store.read('p1')).approved).toEqual(['run-server']);
+    });
+
+    test('a launch held for a change to its variables alone names those variables', async () => {
+        await store.save('p1', 0, [server]);
+        const path = join(folder, '.ruimte', 'launches.json');
+        const file = JSON.parse(await readFile(path, 'utf8'));
+        file.launches[0].env = { PATH: './shim:/usr/bin', NODE_OPTIONS: '--require ./hook.js' };
+        await writeFile(path, JSON.stringify(file));
+        fake.on(join(folder, '.ruimte')).emit('launches.json');
+        await fake.settle();
+
+        expect(await runner.start('p1', 'run-server', { actor: 'person' })).toEqual({
+            outcome: 'held',
+            held: [
+                {
+                    launchId: 'run-server',
+                    command: server.command!,
+                    cwd: join(folder, 'backend'),
+                    env: { PATH: './shim:/usr/bin', NODE_OPTIONS: '--require ./hook.js' }
+                }
+            ]
+        });
     });
 
     test('a folder outside the project is refused before anything runs', async () => {

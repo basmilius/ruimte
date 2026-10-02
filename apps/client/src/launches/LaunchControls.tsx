@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Circle, CircleAlert, CircleCheck, CircleDot, CircleX, OctagonX, Play, RotateCw, Square, type LucideIcon } from 'lucide-react';
 import { Icon, IconButton, Spinner, type IconButtonSize } from '@basmilius/desktop-ui';
 import { startLaunch, stopLaunch } from '@/launches/actions';
+import type { LaunchHeld } from '@ruimte/contracts';
 import type { LaunchPhase, LaunchView } from '@/launches/model';
 
 const STATUS_ICON: Record<Exclude<LaunchPhase, 'starting' | 'stopping'>, { icon: LucideIcon; className: string }> = {
@@ -33,6 +34,22 @@ const dotClass = (view: LaunchView): string => {
 };
 
 /* The phase as a dot, small enough to sit on a button's icon. */
+/* One launch waiting on approval, with every variable the approval covers, since a change to those alone asks again. */
+export function HeldCommand({ held }: { held: LaunchHeld }) {
+    return (
+        <code className="block rounded-md bg-surface-sunken px-2 py-1.5 font-mono break-all text-text">
+            {Object.entries(held.env ?? {}).map(([key, value]) => (
+                <span key={key} className="block">
+                    <span className="text-text-faint">{key}=</span>
+                    {value}
+                </span>
+            ))}
+            <span className="text-text-faint">{held.cwd} $ </span>
+            {held.command}
+        </code>
+    );
+}
+
 export function LaunchDot({ view, className }: { view: LaunchView; className?: string }) {
     const { t } = useTranslation('launches');
     return <span role="img" aria-label={t(`phase.${view.phase}`)} className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', dotClass(view), className)} />;
