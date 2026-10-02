@@ -598,7 +598,7 @@ extension Agent {
             return ["method": "AXValue of the scroll bar", "direction": direction, "pages": pages, "moved": target != now]
         }
         if let scrollDirection = ScrollDirection(rawValue: direction), chain.contains(where: { AX.actions($0).contains(scrollToVisible) }) {
-            return await revealBehind(element, chain: chain, direction: scrollDirection, steps: times)
+            return try await revealBehind(element, chain: chain, direction: scrollDirection, steps: times)
         }
         throw AgentError.needsFront("Nothing around this element scrolls through accessibility, so scrolling it needs the wheel, and so the app in front")
     }
@@ -608,10 +608,11 @@ extension Agent {
     /// Chromium gives a scrolling element neither page actions nor a scroll bar, only a way to bring any element into
     /// view. A step brings in the next element hidden past the edge, from inside the element or else from what it sits
     /// in, and Chromium centers it, so a step is about half a page; an element that is itself out of view comes in first.
-    private static func revealBehind(_ element: AXUIElement, chain: [AXUIElement], direction: ScrollDirection, steps: Int) async -> [String: Any] {
+    private static func revealBehind(_ element: AXUIElement, chain: [AXUIElement], direction: ScrollDirection, steps: Int) async throws -> [String: Any] {
         let web = chain.filter { AX.actions($0).contains(scrollToVisible) }
         var revealed = 0
         for step in 0..<steps {
+            try Task.checkCancellation()
             guard let target = revealTarget(element, within: web, direction: direction, first: step == 0) else {
                 break
             }

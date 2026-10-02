@@ -76,6 +76,34 @@ struct WaitConditionTests {
     }
 }
 
+@MainActor
+private final class Posted {
+    var steps: [Int] = []
+}
+
+@MainActor
+struct PacedTests {
+    @Test func postsEveryStepInOrder() async {
+        let posted = Posted()
+        let sent = await Paced.run([1, 2, 3], gap: .zero) { posted.steps.append($0) }
+        #expect(posted.steps == [1, 2, 3])
+        #expect(sent == 3)
+    }
+
+    @Test func sendsNothingPastTheStepUnderWayOnceCancelled() async {
+        let posted = Posted()
+        // A scroll of 50 pages is about 450 wheel events, 12 ms apart.
+        let task = Task { @MainActor in
+            await Paced.run(Array(1...450), gap: .milliseconds(12)) { step in
+                posted.steps.append(step)
+                withUnsafeCurrentTask { $0?.cancel() }
+            }
+        }
+        #expect(await task.value == 1)
+        #expect(posted.steps == [1])
+    }
+}
+
 struct DragPathTests {
     @Test func movesInEvenStepsAndEndsOnTheTarget() {
         let points = DragPath.points(from: CGPoint(x: 0, y: 0), to: CGPoint(x: 100, y: 40), steps: 4)

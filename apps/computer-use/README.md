@@ -16,7 +16,7 @@ This builds the package with Swift Package Manager and assembles `dist/Ruimte Co
 
 The script signs with the first Apple Development identity in the keychain (`security find-identity -v -p codesigning`), with the hardened runtime and the empty entitlements in `Resources/entitlements.plist`. A stable identity keeps the grants across rebuilds. Without one it signs ad hoc and says so; macOS then asks for the grants again after every build. `--identity <name|hash|->` or `RUIMTE_COMPUTER_USE_IDENTITY` picks another identity, and `-` signs ad hoc.
 
-`swift test` covers the parts that do not need a screen: key combos, menu paths, mapping screenshot pixels to screen points, the overlay config, the session control, when the person's mouse takes over, which window a click lands on and when one is covered, reading a value back, the edit commands a background app cannot run, the home and the local secret, and in `PhantomTests` the forms of the cursor against the design's path strings, the state table, the easings and where the label flips.
+`swift test` covers the parts that do not need a screen: key combos, menu paths, mapping screenshot pixels to screen points, the overlay config, the session control, when the person's mouse takes over, which window a click lands on and when one is covered, reading a value back, the edit commands a background app cannot run, that a scroll stops sending once it is cancelled, the home and the local secret, and in `PhantomTests` the forms of the cursor against the design's path strings, the state table, the easings and where the label flips.
 
 ### In Ruimte.app
 

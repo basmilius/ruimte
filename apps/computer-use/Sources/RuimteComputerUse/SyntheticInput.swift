@@ -41,7 +41,7 @@ enum SyntheticInput {
         move?.flags = []
         post(move)
         try? await Task.sleep(for: .milliseconds(40))
-        for click in 1...count {
+        for click in 1...count where !Task.isCancelled {
             let down = CGEvent(mouseEventSource: source, mouseType: downType, mouseCursorPosition: point, mouseButton: button)
             let up = CGEvent(mouseEventSource: source, mouseType: upType, mouseCursorPosition: point, mouseButton: button)
             for event in [down, up] {
@@ -57,6 +57,7 @@ enum SyntheticInput {
         }
         try? await Task.sleep(for: .milliseconds(80))
         restorePointer(previous)
+        try Task.checkCancellation()
     }
 
     /// Presses at `start`, drags through a few points over `duration` seconds and lets go at `end`. The button
@@ -101,7 +102,7 @@ enum SyntheticInput {
         let steps = max(1, Int((max(abs(deltaX), abs(deltaY)) / 40).rounded(.up)))
         var sentX = 0
         var sentY = 0
-        for step in 1...steps {
+        await Paced.run(Array(1...steps), gap: .milliseconds(12)) { step in
             let targetX = Int((deltaX * Double(step) / Double(steps)).rounded())
             let targetY = Int((deltaY * Double(step) / Double(steps)).rounded())
             let event = CGEvent(
@@ -117,10 +118,10 @@ enum SyntheticInput {
             post(event)
             sentX = targetX
             sentY = targetY
-            try? await Task.sleep(for: .milliseconds(12))
         }
         try? await Task.sleep(for: .milliseconds(80))
         restorePointer(previous)
+        try Task.checkCancellation()
     }
 
     private static func restorePointer(_ point: CGPoint) {

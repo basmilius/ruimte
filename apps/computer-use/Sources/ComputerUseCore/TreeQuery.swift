@@ -113,3 +113,19 @@ public enum DragPath {
         }
     }
 }
+
+/// Synthesized input that goes out a step at a time, such as the wheel events of a scroll.
+public enum Paced {
+    /// Posts each step with `gap` after it and stops before the next once the task is cancelled, so a pause, a
+    /// take-over or a stop lets at most the step under way go out. Answers how many went out.
+    @MainActor @discardableResult
+    public static func run<Step>(_ steps: [Step], gap: Duration, post: (Step) -> Void) async -> Int {
+        var sent = 0
+        for step in steps where !Task.isCancelled {
+            post(step)
+            sent += 1
+            try? await Task.sleep(for: gap)
+        }
+        return sent
+    }
+}
