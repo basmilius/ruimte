@@ -262,6 +262,15 @@ describe('the conventions of the client', () => {
         expect(listening.filter((path) => !(path in KEY_LISTENERS))).toEqual([]);
     });
 
+    // A component outlives the moment the window moves to another machine, so its cleanup would detach on the wrong one.
+    test('a component reaches sessions and chats through its own machine, never the active one', () => {
+        const reaching = sources()
+            .filter(({ path }) => path.endsWith('.tsx'))
+            .filter(({ text }) => /import\s*\{[^}]*\b(sessionClient|chatClient)\b[^}]*\}\s*from\s*'@\/(terminal|transport\/connections)'/.test(text))
+            .map(({ path }) => path);
+        expect(reaching).toEqual([]);
+    });
+
     test('type comes in the four sizes of the theme, never a size in brackets', () => {
         const bracketed = sources()
             .filter(({ path }) => !(path in BRACKETED_SIZES))

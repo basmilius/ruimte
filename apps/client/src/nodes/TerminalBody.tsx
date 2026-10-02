@@ -13,12 +13,12 @@ import { useSessionRestarts, useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
-import { sessionClient } from '@/terminal';
 import { osc52Text } from '@/terminal/osc52';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { bindTerminalKeys, createTerminal, fitToHost, followAncestorScale } from '@/terminal/xterm';
 import { webglBudget } from '@/terminal/webgl-budget';
+import { sessionClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { closeHost, readNodeHost, useSuggestedTitle } from '@/nodes/node-host';
@@ -72,7 +72,9 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
 
     useEffect(() => {
         const host = hostRef.current;
-        if (!host) {
+        // Taken once, so a node that leaves after the window moved to another machine still detaches from its own.
+        const sessions = sessionClientFor(endpointId);
+        if (!host || !sessions) {
             return;
         }
         const term = createTerminal();
@@ -111,28 +113,28 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             if (term.cols !== claimed.cols || term.rows !== claimed.rows) {
                 claimed = { cols: term.cols, rows: term.rows };
                 shared = claimed;
-                sessionClient.resize(id, claimed.cols, claimed.rows);
+                sessions.resize(id, claimed.cols, claimed.rows);
             }
             drawShared();
         };
         refitRef.current = refit;
         const releaseWebgl = webglBudget.register(id, term, refit);
 
-        bindTerminalKeys(term, { write: (data) => sessionClient.write(id, data), clear: () => clearTerminalAction(id), leaves: true });
-        term.onData((data) => sessionClient.write(id, data));
+        bindTerminalKeys(term, { write: (data) => sessions.write(id, data), clear: () => clearTerminalAction(id), leaves: true });
+        term.onData((data) => sessions.write(id, data));
 
         let cancelled = false;
         const unregister = registerTerminal(endpointId, id, term);
-        const offOutput = sessionClient.onOutput(id, (data) => {
+        const offOutput = sessions.onOutput(id, (data) => {
             term.write(data);
             // A terminal that is being written to outranks an idle one when contexts are scarce.
             webglBudget.touch(id);
         });
-        const offSize = sessionClient.onSize(id, (size) => {
+        const offSize = sessions.onSize(id, (size) => {
             shared = size;
             drawShared();
         });
-        const offScreen = sessionClient.onScreen(id, ({ screen }) => {
+        const offScreen = sessions.onScreen(id, ({ screen }) => {
             // A reset through the parser (RIS), since `term.reset()` runs at once and output still queued would land on the fresh screen.
             term.write(`\x1bc${screen}`);
         });
@@ -142,7 +144,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         const cwd = spec?.cwd ?? useProject.getState().current?.folder ?? undefined;
         // An agent says which CLI and how; the daemon turns that into the line the shell gets.
         const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume, account: spec.account } : undefined;
-        sessionClient
+        sessions
             .open(id, { cwd, command: spec?.command, agent }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
@@ -192,7 +194,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             offScreen();
             unregister();
             releaseWebgl();
-            void sessionClient.detach(id);
+            void sessions.detach(id);
             term.dispose();
             termRef.current = null;
             refitRef.current = null;
@@ -257,7 +259,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                         {heldCommand !== undefined && exited === undefined && (
                             <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-text">
                                 <span className="grow truncate">{t('terminal.held', { command: heldCommand })}</span>
-                                <Button size="sm" onClick={() => void sessionClient.runHeld(id).catch(() => undefined)}>
+                                <Button
+                                    size="sm"
+                                    onClick={() =>
+                                        void sessionClientFor(endpointId)
+                                            ?.runHeld(id)
+                                            .catch(() => undefined)
+                                    }
+                                >
                                     <Icon icon={Play} size={12} /> {t('terminal.run')}
                                 </Button>
                             </div>

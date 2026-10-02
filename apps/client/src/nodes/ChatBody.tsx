@@ -12,7 +12,8 @@ import { SubagentTimeline } from '@ruimte/agents-react/chat/ui/SubagentTimeline'
 import { Timeline } from '@ruimte/agents-react/chat/ui/Timeline';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
 import { useProject } from '@/state/project';
-import { chatClient } from '@/transport/connections';
+import { useEndpointId } from '@/state/keys';
+import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
@@ -30,6 +31,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     const providerFixed = useNodeHost(id)?.providerFixed === true;
     useSuggestedTitle(id, info?.suggestedTitle);
     const status = useTransportStatus();
+    const endpointId = useEndpointId();
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
     const switched = useRef<Promise<void>>(Promise.resolve());
@@ -37,12 +39,17 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     const shown = trail.at(-1);
 
     useEffect(() => {
+        // Taken once, so a node that leaves after the window moved to another machine still detaches from its own.
+        const chats = chatClientFor(endpointId);
+        if (!chats) {
+            return;
+        }
         let cancelled = false;
         const host = readNodeHost(id);
         const preferences = readChatPreferences();
         // A node without a provider of its own opens on the CLI whose model was picked last.
         const provider = host?.provider ?? defaultProvider(preferences) ?? undefined;
-        chatClient
+        chats
             .open(id, {
                 provider,
                 account: host?.account,
@@ -59,9 +66,9 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
             });
         return () => {
             cancelled = true;
-            void chatClient.detach(id);
+            void chats.detach(id);
         };
-    }, [id, generation]);
+    }, [endpointId, id, generation]);
 
     // The chat is gone on the machine until it opened again on the other CLI, so a send or another switch meanwhile waits for that.
     const retarget = (provider: AgentKind, selection: ModelSelection): void => {

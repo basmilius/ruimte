@@ -17,13 +17,14 @@ import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useProjectRepos } from '@/state/git-repos';
+import { useEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
-import { sessionClient } from '@/terminal';
 import { isAppShortcut, isTerminalPaste, macMotionSequence } from '@/terminal/keymap';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { createTerminal, fitToHost } from '@/terminal/xterm';
+import { sessionClientFor } from '@/transport/connections';
 
 const RESIZE_DEBOUNCE_MS = 50;
 
@@ -190,10 +191,13 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
     const [failure, setFailure] = useState<string | null>(null);
     const resolvedTheme = useTheme((s) => s.resolved);
     const settingsVersion = useSettings((s) => s.version);
+    const endpointId = useEndpointId();
 
     useEffect(() => {
         const host = hostRef.current;
-        if (!host) {
+        // Taken once, so a panel that closes after the window moved to another machine still detaches from its own.
+        const sessions = sessionClientFor(endpointId);
+        if (!host || !sessions) {
             return;
         }
         const term = createTerminal();
@@ -217,7 +221,7 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
             if (term.cols !== claimed.cols || term.rows !== claimed.rows) {
                 claimed = { cols: term.cols, rows: term.rows };
                 shared = claimed;
-                sessionClient.resize(sessionId, claimed.cols, claimed.rows);
+                sessions.resize(sessionId, claimed.cols, claimed.rows);
             }
             drawShared();
         };
@@ -240,21 +244,21 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
             const motion = apple ? macMotionSequence(e, term.modes.applicationCursorKeysMode) : null;
             if (motion) {
                 e.preventDefault();
-                sessionClient.write(sessionId, motion);
+                sessions.write(sessionId, motion);
                 return false;
             }
             return true;
         });
-        term.onData((data) => sessionClient.write(sessionId, data));
+        term.onData((data) => sessions.write(sessionId, data));
 
         let cancelled = false;
-        const offOutput = sessionClient.onOutput(sessionId, (data) => term.write(data));
-        const offSize = sessionClient.onSize(sessionId, (size) => {
+        const offOutput = sessions.onOutput(sessionId, (data) => term.write(data));
+        const offSize = sessions.onSize(sessionId, (size) => {
             shared = size;
             drawShared();
         });
-        const offScreen = sessionClient.onScreen(sessionId, ({ screen }) => term.write(`\x1bc${screen}`));
-        sessionClient
+        const offScreen = sessions.onScreen(sessionId, ({ screen }) => term.write(`\x1bc${screen}`));
+        sessions
             .open(sessionId, { follow: true }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
@@ -290,12 +294,12 @@ function LaunchTerminal({ sessionId }: { sessionId: string }) {
             offOutput();
             offSize();
             offScreen();
-            void sessionClient.detach(sessionId);
+            void sessions.detach(sessionId);
             term.dispose();
             termRef.current = null;
             refitRef.current = null;
         };
-    }, [sessionId]);
+    }, [endpointId, sessionId]);
 
     useEffect(() => {
         const term = termRef.current;
