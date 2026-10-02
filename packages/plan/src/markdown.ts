@@ -19,22 +19,37 @@ const MARKER_STATES: Record<string, PlanStepState | undefined> = {
     I: 'info'
 };
 
+/* What the reader takes for a heading, a rule, a list item or a quote at the start of a line, and the escape itself. */
+const MARKUP = /^(#{1,6}\s|(-{3,}|\*{3,}|_{3,})$|[-*+]\s|>|\\)/;
+
+const escapeLine = (line: string): string => (MARKUP.test(line.trimStart()) ? `\\${line}` : line);
+
+const escapeText = (text: string): string => text.split('\n').map(escapeLine).join('\n');
+
+const escapeBold = (title: string): string => title.replace(/[\\*]/g, '\\$&');
+
+/* A later line of a text block that starts in bold would start a text block of its own. */
+const escapeQuoted = (line: string): string => (/^(\*\*|\\)/.test(line.trimStart()) ? `\\${line}` : line);
+
+const dropEscape = (line: string): string => (line.trimStart().startsWith('\\') ? line.replace('\\', '') : line);
+
 /*
  * A plan as a GFM task list: `#` the title, `##` a section, `> **Title**` a text block, `- [ ]` a
  * step with its sub-steps indented under it. Beyond `[ ]` and `[x]` a step carries the markers of
  * `plan read`, and a `>` line under a step is its note. Ids, who set a state and the locks stay out.
+ * A line of text the reader would take for markup starts with a backslash, which the reader drops.
  */
 export const planToMarkdown = (plan: Plan): string => {
     const blocks: string[] = [`# ${plan.meta.title}`];
     if (plan.meta.summary) {
-        blocks.push(plan.meta.summary);
+        blocks.push(escapeText(plan.meta.summary));
     }
     const stepLines = (step: PlanStep, depth: number): string[] => {
         const indent = INDENT.repeat(depth);
         const inner = INDENT.repeat(depth + 1);
         const lines = [`${indent}- ${PLAN_STATE_MARKERS[stepState(step)]} ${step.title}`];
         for (const line of step.description?.split('\n') ?? []) {
-            lines.push(`${inner}${line}`);
+            lines.push(line === '' ? '' : `${inner}${escapeLine(line)}`);
         }
         for (const line of step.note?.split('\n') ?? []) {
             lines.push(`${inner}> ${line}`);
@@ -46,7 +61,7 @@ export const planToMarkdown = (plan: Plan): string => {
     };
     const textBlock = (item: Extract<PlanItem, { type: 'text' }>): string => {
         const [first = '', ...rest] = item.description?.split('\n') ?? [];
-        return [`> **${item.title}**${first ? ` ${first}` : ''}`, ...rest.map((line) => `> ${line}`)].join('\n');
+        return [`> **${escapeBold(item.title)}**${first ? ` ${first}` : ''}`, ...rest.map((line) => `> ${escapeQuoted(line)}`)].join('\n');
     };
     const itemBlocks = (items: readonly PlanItem[]): string[] => {
         const result: string[] = [];
@@ -89,7 +104,7 @@ export const planToMarkdown = (plan: Plan): string => {
         flushLoose();
         blocks.push(`## ${item.title}`);
         if (item.description) {
-            blocks.push(item.description);
+            blocks.push(escapeText(item.description));
         }
         blocks.push(...itemBlocks(item.items));
         inSection = true;
@@ -112,7 +127,7 @@ const indentOf = (line: string): number => {
     return width;
 };
 
-const appendLine = (value: string | undefined, line: string): string => (value === undefined ? line : `${value}\n${line}`);
+const appendLine = (value: string | undefined, line: string, blanks = 0): string => (value === undefined ? line : `${value}\n${'\n'.repeat(blanks)}${line}`);
 
 /*
  * Reads a GFM task list into a draft for `plan new`. Lenient where Markdown is (a list item without a
@@ -123,6 +138,9 @@ export const parsePlanMarkdown = (markdown: string): { ok: true; draft: PlanDraf
     let section: PlanDraftSection | null = null;
     let stack: { indent: number; step: PlanDraftStep }[] = [];
     let text: PlanDraftText | null = null;
+    // The text the last line of prose went on and the blank lines since, so a paragraph break inside it stays.
+    let continuing: object | null = null;
+    let blanks = 0;
     const container = (): PlanDraftItem[] => (section ? section.items : draft.items) as PlanDraftItem[];
     const popTo = (indent: number): void => {
         while (stack.length > 0 && stack[stack.length - 1]!.indent >= indent) {
@@ -137,8 +155,18 @@ export const parsePlanMarkdown = (markdown: string): { ok: true; draft: PlanDraf
         const invalid = (message: string): PlanRefusal => refuse('plan-invalid', `Line ${index + 1}: ${message}`);
         if (content === '') {
             text = null;
+            blanks++;
             continue;
         }
+        const previous = continuing;
+        const gap = blanks;
+        continuing = null;
+        blanks = 0;
+        const blanksBefore = (target: object): number => {
+            continuing = target;
+            return previous === target ? gap : 0;
+        };
+        const plain = dropEscape(content);
         const heading = /^(#{1,6})\s+(.*)$/.exec(content);
         if (heading && indent < 4) {
             text = null;
@@ -191,29 +219,30 @@ export const parsePlanMarkdown = (markdown: string): { ok: true; draft: PlanDraf
             if (quote) {
                 owner.note = appendLine(owner.note, quote[1]!);
             } else {
-                owner.description = appendLine(owner.description, content);
+                owner.description = appendLine(owner.description, plain, blanksBefore(owner));
             }
             continue;
         }
         stack = [];
         if (quote) {
-            const titled = /^\*\*(.+?)\*\*\s*(.*)$/.exec(quote[1]!.trim());
+            const titled = /^\*\*((?:\\.|[^\\])+?)\*\*\s*(.*)$/.exec(quote[1]!.trim());
             if (titled) {
-                text = { type: 'text', title: titled[1]!.trim(), ...(titled[2] ? { description: titled[2] } : {}) };
+                const title = titled[1]!.trim().replace(/\\([\\*])/g, '$1');
+                text = { type: 'text', title, ...(titled[2] ? { description: titled[2] } : {}) };
                 container().push(text);
             } else if (text) {
-                text.description = appendLine(text.description, quote[1]!);
+                text.description = appendLine(text.description, dropEscape(quote[1]!));
             } else {
                 return invalid('a text block starts with a bold title: > **Title** description');
             }
             continue;
         }
         if (!section && draft.items.length === 0) {
-            draft.meta = { ...draft.meta, summary: appendLine(draft.meta?.summary, content) };
+            draft.meta = { ...draft.meta, summary: appendLine(draft.meta?.summary, plain, blanksBefore(draft)) };
             continue;
         }
         if (section && section.items.length === 0) {
-            section.description = appendLine(section.description, content);
+            section.description = appendLine(section.description, plain, blanksBefore(section));
             continue;
         }
         return invalid('this line is not a step, a section, a text block or a description');

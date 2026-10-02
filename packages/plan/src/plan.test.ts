@@ -17,6 +17,9 @@ import {
     validatePlan,
     type PlanApplied,
     type PlanDraft,
+    type PlanDraftItem,
+    type PlanDraftStep,
+    type PlanDraftText,
     type PlanRefusal
 } from './index.ts';
 
@@ -703,6 +706,131 @@ describe('markdown', () => {
         const again = applied(createPlan(parsed.draft, { id: source.id, now: NOW, meta: { kind: 'test' } })).plan;
         expect(withoutIds(again)).toEqual(withoutIds(source));
         expect(planToMarkdown(again)).toBe(markdown);
+    });
+
+    /* Lines a description may hold that read as Markdown of their own when they start a line. */
+    const RISKY = [
+        '- not a step',
+        '+ plus',
+        '* star',
+        '> quoted',
+        '# not a title',
+        '## not a section',
+        '---',
+        '***',
+        '___',
+        '```',
+        '```ts',
+        '\\ first',
+        '\\- escaped',
+        '- [ ] box',
+        '1. first',
+        'plain words',
+        '**bold** words'
+    ];
+    const TITLES = ['Heads up', 'a**b', 'a\\b', '*', '**', 'x * y', 'C:\\path\\**', 'ends in \\'];
+
+    const roundTrip = (draft: PlanDraft): { source: unknown; again: unknown; markdown: string } => {
+        const source = applied(createPlan(draft, { id: 'plan-1', now: NOW, mintId: counterMint() })).plan;
+        const markdown = planToMarkdown(source);
+        const parsed = parsePlanMarkdown(markdown);
+        if (!parsed.ok) {
+            throw new Error(`${parsed.message}\n${markdown}`);
+        }
+        const again = applied(createPlan(parsed.draft, { id: 'plan-1', now: NOW, mintId: counterMint() })).plan;
+        return { source: withoutIds(source), again: withoutIds(again), markdown };
+    };
+
+    const cases: { name: string; draft: PlanDraft }[] = [
+        {
+            name: 'a description that starts with a dash',
+            draft: { meta: { title: 'T' }, items: [{ type: 'step', title: 'a', description: '- not a step\nsecond' }] }
+        },
+        { name: 'a description that starts with a plus', draft: { meta: { title: 'T' }, items: [{ type: 'step', title: 'a', description: '+ plus' }] } },
+        { name: 'a quoted description', draft: { meta: { title: 'T' }, items: [{ type: 'step', title: 'a', description: '> quoted' }] } },
+        { name: 'a blank line in a description', draft: { meta: { title: 'T' }, items: [{ type: 'step', title: 'a', description: 'one\n\n\ntwo' }] } },
+        { name: 'a code fence with a dash in it', draft: { meta: { title: 'T' }, items: [{ type: 'step', title: 'a', description: '```\n- x\n```' }] } },
+        { name: 'a summary that is a list', draft: { meta: { title: 'T', summary: '- point' }, items: [{ type: 'step', title: 'a' }] } },
+        { name: 'a summary that is a heading', draft: { meta: { title: 'T', summary: '# not title' }, items: [{ type: 'step', title: 'a' }] } },
+        { name: 'a summary over two paragraphs', draft: { meta: { title: 'T', summary: 'p1\n\np2' }, items: [] } },
+        {
+            name: 'a section description that is a list',
+            draft: { meta: { title: 'T' }, items: [{ type: 'section', title: 'S', description: '* item', items: [{ type: 'step', title: 'a' }] }] }
+        },
+        {
+            name: 'a section description that is a rule',
+            draft: {
+                meta: { title: 'T' },
+                items: [
+                    { type: 'step', title: 'a' },
+                    { type: 'section', title: 'S', description: '---', items: [{ type: 'step', title: 'b' }] }
+                ]
+            }
+        },
+        { name: 'a text title with stars in it', draft: { meta: { title: 'T' }, items: [{ type: 'text', title: 'a**b', description: 'x' }] } },
+        {
+            name: 'a description that starts with a backslash',
+            draft: { meta: { title: 'T' }, items: [{ type: 'step', title: 'a', description: '\\- already escaped' }] }
+        }
+    ];
+
+    for (const entry of cases) {
+        test(`goes out and back in with ${entry.name}`, () => {
+            const { source, again } = roundTrip(entry.draft);
+            expect(again).toEqual(source);
+        });
+    }
+
+    test('goes out and back in whatever Markdown the text of a plan holds', () => {
+        let state = 7;
+        const random = (): number => {
+            state = (state + 0x6d2b79f5) | 0;
+            let value = Math.imul(state ^ (state >>> 15), 1 | state);
+            value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+            return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+        };
+        const pick = <T>(from: readonly T[]): T => from[Math.floor(random() * from.length)]!;
+        const prose = (): string => {
+            const lines = Array.from({ length: 1 + Math.floor(random() * 4) }, () => pick(RISKY));
+            // A blank line only between two lines of text, where it stands for a paragraph break.
+            return lines.flatMap((line, index) => (index > 0 && random() < 0.3 ? ['', line] : [line])).join('\n');
+        };
+        const maybe = <T>(value: () => T): T | undefined => (random() < 0.5 ? value() : undefined);
+        const leaf = (): PlanDraftStep => {
+            const description = maybe(prose);
+            const note = maybe(prose);
+            const state = maybe(() => pick(['done', 'failed', 'active', 'skipped', 'blocked', 'warning', 'info'] as const));
+            return { type: 'step', title: pick(TITLES), ...(description ? { description } : {}), ...(note ? { note } : {}), ...(state ? { state } : {}) };
+        };
+        const stepTree = (depth: number): PlanDraftStep => {
+            const step = leaf();
+            if (depth < 3 && random() < 0.3) {
+                delete step.state;
+                step.steps = Array.from({ length: 1 + Math.floor(random() * 2) }, () => stepTree(depth + 1));
+            }
+            return step;
+        };
+        const text = (): PlanDraftText => {
+            const description = maybe(prose);
+            return { type: 'text', title: pick(TITLES), ...(description ? { description } : {}) };
+        };
+        const items = (): (PlanDraftStep | PlanDraftText)[] =>
+            Array.from({ length: 1 + Math.floor(random() * 3) }, () => (random() < 0.25 ? text() : stepTree(1)));
+        for (let round = 0; round < 200; round += 1) {
+            const summary = maybe(prose);
+            const draftItems: PlanDraftItem[] = [...items()];
+            for (let count = Math.floor(random() * 3); count > 0; count -= 1) {
+                const description = maybe(prose);
+                draftItems.push({ type: 'section', title: pick(TITLES), ...(description ? { description } : {}), items: items() });
+            }
+            if (random() < 0.5) {
+                draftItems.push(...items());
+            }
+            const { source, again, markdown } = roundTrip({ meta: { title: pick(TITLES), ...(summary ? { summary } : {}) }, items: draftItems });
+            if (!Bun.deepEquals(again, source)) {
+                throw new Error(`Round ${round} came back different:\n${markdown}`);
+            }
+        }
     });
 
     test('writes the checked states, notes and the rule back to the top', () => {
