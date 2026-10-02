@@ -20,6 +20,8 @@ interface PlansStore {
     unseen: Readonly<Record<string, string>>;
     setMachinePlans(endpointId: string, plans: readonly PlanOfChat[]): void;
     putPlan(endpointId: string, chatId: string, plan: Plan): void;
+    /* Puts a plan in whatever its rev, for a change of this client's own the machine never took. */
+    restorePlan(endpointId: string, chatId: string, plan: Plan): void;
     removePlan(endpointId: string, chatId: string, planId: string): void;
     markUnseen(endpointId: string, chatId: string, planId: string): void;
     markSeen(endpointId: string, chatId: string): void;
@@ -52,6 +54,11 @@ export const usePlans = create<PlansStore>((set, get) => ({
         if (existing && existing.rev > plan.rev) {
             return;
         }
+        get().restorePlan(endpointId, chatId, plan);
+    },
+    restorePlan(endpointId, chatId, plan) {
+        const key = endpointKey(endpointId, chatId);
+        const current = get().byChat[key] ?? NO_PLANS;
         set({ byChat: { ...get().byChat, [key]: newestFirst([...current.filter((entry) => entry.id !== plan.id), plan]) } });
     },
     removePlan(endpointId, chatId, planId) {

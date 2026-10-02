@@ -9,11 +9,14 @@ import { TransportError, type Transport } from '@/transport/transport';
 export interface PlanWriteSink {
     current(endpointId: string, chatId: string, planId: string): Plan | undefined;
     put(endpointId: string, chatId: string, plan: Plan): void;
+    /* Puts the plan back over the tick it showed, at the rev it had, older than that tick. */
+    restore(endpointId: string, chatId: string, plan: Plan): void;
 }
 
 const storeSink: PlanWriteSink = {
     current: (endpointId, chatId, planId) => usePlans.getState().byChat[endpointKey(endpointId, chatId)]?.find((plan) => plan.id === planId),
-    put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan)
+    put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan),
+    restore: (endpointId, chatId, plan) => usePlans.getState().restorePlan(endpointId, chatId, plan)
 };
 
 /*
@@ -56,7 +59,7 @@ export class PlanClient {
             return plan;
         } catch (error) {
             if (this.sink.current(endpointId, chatId, planId) === local.plan) {
-                this.sink.put(endpointId, chatId, { ...before, rev: local.plan.rev });
+                this.sink.restore(endpointId, chatId, before);
             }
             throw error instanceof TransportError ? new ActionRefusal(error.code, error.message) : error;
         }

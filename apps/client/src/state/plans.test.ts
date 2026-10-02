@@ -121,7 +121,8 @@ describe('the plans of a machine', () => {
 describe('a person changing a plan', () => {
     const sink: PlanWriteSink = {
         current: (endpointId, chatId, planId) => plansOf(endpointId, chatId).find((plan) => plan.id === planId),
-        put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan)
+        put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan),
+        restore: (endpointId, chatId, plan) => usePlans.getState().restorePlan(endpointId, chatId, plan)
     };
 
     beforeEach(() => {
@@ -154,5 +155,24 @@ describe('a person changing a plan', () => {
         const client = new PlanClient(() => transport, sink);
         await expect(client.apply('local', 'chat-a', 'p', [{ op: 'set', ids: ['one'], state: 'done' }])).rejects.toThrow('Only the agent checks "one"');
         expect(plansOf('local', 'chat-a')[0]!.items[0]).not.toHaveProperty('state');
+    });
+
+    test('a plan put back keeps the rev the machine has, so the next change of the agent still lands', async () => {
+        transport.refuseApply = true;
+        const client = new PlanClient(() => transport, sink);
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            await expect(client.apply('local', 'chat-a', 'p', [{ op: 'set', ids: ['one'], state: 'done' }])).rejects.toThrow();
+        }
+        expect(plansOf('local', 'chat-a')[0]!.rev).toBe(1);
+        const byAgent = {
+            ...planOf('p', '2026-09-16T10:00:00Z', 2),
+            meta: { title: 'Renamed by the agent', kind: 'steps' as const, checks: 'anyone' as const }
+        };
+        // A socket that never dropped, so no list comes to set things right.
+        transport.status = 'closed';
+        const sync = new PlanSync('local', transport);
+        transport.emit('plan.changed', { chatId: 'chat-a', plan: byAgent });
+        expect(plansOf('local', 'chat-a')[0]).toEqual(byAgent);
+        sync.dispose();
     });
 });
