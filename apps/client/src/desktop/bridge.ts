@@ -15,6 +15,7 @@ import { isApplePlatform as isApplePlatformFromNavigator } from '@basmilius/desk
 export type {
     AgentActivity,
     BackgroundServiceState,
+    DaemonCrash,
     DaemonOwner,
     KeepAwakeRequest,
     OpenAiLivePreferences,

@@ -19,6 +19,14 @@ export interface PendingRestart {
     answered: boolean;
 }
 
+/* The app's own daemon ended without anybody asking, and the app starts it again. */
+export interface DaemonCrash {
+    /* Every end this session, so a page tells a new one from the one it already showed. */
+    total: number;
+    /* False once it ended too often in a row and the app stopped starting it again. */
+    restarting: boolean;
+}
+
 /* The background service of this machine, as the client draws it in the machine dialog. */
 export interface BackgroundServiceState {
     support: ServiceSupport;
@@ -37,6 +45,8 @@ export interface BackgroundServiceState {
      * it finds it and never rewrites, starts or stops. Absent from a shell older than the field.
      */
     commandLineService?: boolean;
+    /* Null until the app's own daemon ends by itself. Absent from a shell older than the field. */
+    crash?: DaemonCrash | null;
 }
 
 /*

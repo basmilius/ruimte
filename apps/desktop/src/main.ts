@@ -169,7 +169,7 @@ const daemonCommand = (): { command: string; args: string[] } | null => {
 const MISSING_DAEMON = 'The background service is missing. Run the desktop app from the repository or install a release.';
 
 /* The app's own daemon, a child that ends with the app: the dev app always, a packaged one with the service off. */
-const spawnDaemon = (): void => {
+const spawnDaemon = (onExit: () => void): void => {
     const target = daemonCommand();
     if (!target) {
         throw new Error(MISSING_DAEMON);
@@ -201,6 +201,7 @@ const spawnDaemon = (): void => {
         if (!app.isPackaged && code !== 0 && code !== null) {
             console.error(`The daemon exited with code ${code}`);
         }
+        onExit();
     });
 };
 
@@ -285,7 +286,10 @@ const serviceController = createServiceController({
     work: probeWork,
     waitForHealth: waitForDaemon,
     spawnDaemon,
-    killDaemon: () => daemon?.kill('SIGTERM')
+    killDaemon: () => daemon?.kill('SIGTERM'),
+    now: () => Date.now(),
+    after: (ms, run) => void setTimeout(run, ms),
+    publish: (state) => void pushServiceState(state)
 });
 
 const pushServiceState = (state: BackgroundServiceState): BackgroundServiceState => {

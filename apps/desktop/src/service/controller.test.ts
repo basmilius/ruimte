@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createServiceController, type ServiceControllerDeps } from './controller';
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { ServiceManager } from '@ruimte/service';
-import type { ServiceSupport } from '@ruimte/desktop-bridge';
+import type { ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
@@ -73,7 +73,10 @@ const setup = (options: {
     const fake = options.fake ?? fakeManager();
     const events: string[] = [];
     let child: BuildIdentity | null = null;
+    let onChildExit: (() => void) | null = null;
     const machine = { work: options.work === undefined ? { terminals: 0, agents: 0 } : options.work };
+    const clock = { now: 0, timers: [] as { at: number; run: () => void }[] };
+    const published: ShellServiceState[] = [];
     const behindPort = (): BuildIdentity | null => fake.service.running ?? child ?? options.answering ?? null;
     const deps: ServiceControllerDeps = {
         support: options.support ?? 'supported',
@@ -90,16 +93,36 @@ const setup = (options: {
                 throw new Error('The background service did not come up');
             }
         },
-        spawnDaemon: () => {
+        spawnDaemon: (onExit) => {
             events.push('spawn');
             child = EXPECTED;
+            onChildExit = onExit;
         },
         killDaemon: () => {
             events.push('kill');
             child = null;
-        }
+            onChildExit?.();
+        },
+        now: () => clock.now,
+        after: (ms, run) => void clock.timers.push({ at: clock.now + ms, run }),
+        publish: (state) => void published.push(state)
     };
-    return { controller: createServiceController(deps), fake, events, deps, machine };
+    /* The app's own daemon ends by itself, as a crash does. */
+    const crash = (): void => {
+        child = null;
+        onChildExit?.();
+    };
+    /* Moves the clock on and runs what came due, awaiting what a run started. */
+    const advance = async (ms: number): Promise<void> => {
+        clock.now += ms;
+        const due = clock.timers.filter((timer) => timer.at <= clock.now);
+        clock.timers = clock.timers.filter((timer) => timer.at > clock.now);
+        for (const timer of due) {
+            timer.run();
+        }
+        await Promise.resolve();
+    };
+    return { controller: createServiceController(deps), fake, events, deps, machine, clock, published, crash, advance };
 };
 
 describe('start', () => {
@@ -258,6 +281,57 @@ describe('a service the command line installed', () => {
         await controller.start();
         expect(fake.calls).toEqual(['install', 'start']);
         expect(controller.state().commandLineService).toBe(false);
+    });
+});
+
+describe("the app's own daemon", () => {
+    test('that ends by itself is started again after a pause, and every window hears of it', async () => {
+        const { controller, events, clock, published, crash, advance } = setup({ keepRunning: false });
+        await controller.start();
+        crash();
+        expect(events).toEqual(['spawn']);
+        expect(clock.timers.map((timer) => timer.at)).toEqual([1000]);
+        expect(published.at(-1)?.crash).toEqual({ total: 1, restarting: true });
+        await advance(1000);
+        expect(events).toEqual(['spawn', 'spawn']);
+        expect(controller.state()).toMatchObject({ owner: 'app', crash: { total: 1, restarting: true } });
+    });
+
+    test('waits longer each time it ends again soon, and starts over once it stayed up', async () => {
+        const { controller, clock, crash, advance } = setup({ keepRunning: false });
+        await controller.start();
+        const pauses: number[] = [];
+        for (let i = 0; i < 3; i++) {
+            crash();
+            pauses.push(clock.timers[0]!.at - clock.now);
+            await advance(pauses.at(-1)!);
+        }
+        expect(pauses).toEqual([1000, 2000, 4000]);
+        await advance(120_000);
+        crash();
+        expect(clock.timers[0]!.at - clock.now).toBe(1000);
+    });
+
+    test('is given up on after five ends in a row, which the windows hear too', async () => {
+        const { controller, events, clock, crash, advance } = setup({ keepRunning: false });
+        await controller.start();
+        for (let i = 0; i < 5; i++) {
+            crash();
+            await advance(clock.timers[0]!.at - clock.now);
+        }
+        crash();
+        expect(clock.timers).toEqual([]);
+        expect(events.filter((event) => event === 'spawn')).toHaveLength(6);
+        expect(controller.state().crash).toEqual({ total: 6, restarting: false });
+    });
+
+    test('that a quit ends is not started again', async () => {
+        const { controller, events, clock } = setup({ keepRunning: false });
+        await controller.start();
+        controller.quit(false);
+        expect(events).toEqual(['spawn', 'kill']);
+        expect(clock.timers).toEqual([]);
+        expect(controller.state().crash).toBeNull();
     });
 });
 

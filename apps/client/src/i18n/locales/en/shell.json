@@ -90,6 +90,11 @@
             "public": "On the public internet"
         }
     },
+    "machineCrash": {
+        "title": "This machine stopped unexpectedly",
+        "restarting": "Ruimte starts it again. What was running on it has ended.",
+        "gaveUp": "It stopped several times in a row, so Ruimte no longer starts it. Quit Ruimte and open it again."
+    },
     "machineUpdate": {
         "title": "Ruimte was updated",
         "description": "Restart this machine now? {{ends}}",

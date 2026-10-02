@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
+import { desktop, type BackgroundServiceState, type DaemonCrash } from '@/desktop/bridge';
+import { machineCrashToast } from '@/shell/machine-crash';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
+import { useToasts } from '@/state/toasts';
 import { Button, Dialog } from '@basmilius/desktop-ui';
 
 /*
@@ -20,12 +22,23 @@ export function MachineUpdateDialog() {
             return;
         }
         let live = true;
+        let crash: DaemonCrash | null = null;
+        // The same state tells this window when the machine it runs ended by itself.
+        const receive = (next: BackgroundServiceState): void => {
+            const toast = machineCrashToast(crash, next.crash ?? null);
+            crash = next.crash ?? null;
+            if (toast) {
+                useToasts.getState().show(toast);
+            }
+            setState(next);
+        };
         void bridge.state().then((next) => {
             if (live) {
                 setState(next);
+                crash = next.crash ?? null;
             }
         });
-        const off = bridge.onState(setState);
+        const off = bridge.onState(receive);
         return () => {
             live = false;
             off();

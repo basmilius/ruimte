@@ -1,5 +1,5 @@
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
-import type { DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
+import type { DaemonCrash, DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { decideRestart, decideStart, sameBuild } from './decide';
 import { definitionRunsProgram, type ServiceManager } from '@ruimte/service';
 import type { KeepRunningSetting } from './settings';
@@ -20,8 +20,13 @@ export interface ServiceControllerDeps {
     work(): Promise<MachineWork | null>;
     /* Resolves once `/health` answers and `accept` takes the answer, rejects when it never does. */
     waitForHealth(accept: (health: BuildIdentity) => boolean): Promise<void>;
-    spawnDaemon(): void;
+    /* Starts the app's own daemon; `onExit` runs once it ended, whoever ended it. */
+    spawnDaemon(onExit: () => void): void;
     killDaemon(): void;
+    now(): number;
+    after(ms: number, run: () => void): void;
+    /* Every window hears what changed without being asked, such as the app's own daemon ending. */
+    publish(state: ShellServiceState): void;
 }
 
 export interface ServiceController {
@@ -47,12 +52,21 @@ export interface ServiceController {
 
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
+/* A daemon that ends this often in a row, each time within a minute of its start, is not started again. */
+const RESPAWNS = 5;
+const STAYED_UP_MS = 60_000;
+const FIRST_PAUSE_MS = 1000;
+
 export const createServiceController = (deps: ServiceControllerDeps): ServiceController => {
     let owner: DaemonOwner | null = null;
     let failure: string | null = null;
     let pendingRestart: PendingRestart | null = null;
     // launchd and systemd read a definition only when they start the job, so a new PATH waits for a restart.
     let staleDefinition = false;
+    let quitting = false;
+    let crash: DaemonCrash | null = null;
+    let endsInARow = 0;
+    let spawnedAt = 0;
     const manager = deps.support === 'supported' ? deps.manager : null;
     const commandLineService = (): boolean => {
         const onDisk = manager?.read() ?? null;
@@ -69,13 +83,32 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
                 linger = null;
             }
         }
-        return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger, pendingRestart, commandLineService: commandLineService() };
+        return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger, pendingRestart, commandLineService: commandLineService(), crash };
     };
 
     const spawn = async (): Promise<void> => {
-        deps.spawnDaemon();
+        spawnedAt = deps.now();
+        deps.spawnDaemon(ended);
         owner = 'app';
         await deps.waitForHealth(() => true);
+    };
+
+    /* The app's own daemon ended. Unless a quit ended it, it is started again, with a longer pause each time it ends again soon. */
+    const ended = (): void => {
+        if (quitting || owner !== 'app') {
+            return;
+        }
+        endsInARow = deps.now() - spawnedAt >= STAYED_UP_MS ? 1 : endsInARow + 1;
+        const restarting = endsInARow <= RESPAWNS;
+        crash = { total: (crash?.total ?? 0) + 1, restarting };
+        deps.publish(state());
+        if (restarting) {
+            deps.after(FIRST_PAUSE_MS * 2 ** (endsInARow - 1), () => {
+                if (!quitting) {
+                    spawn().catch(() => undefined);
+                }
+            });
+        }
     };
 
     /* The service did not come up: it is stopped so it cannot fight the app for the port, and the app runs its own daemon as before. */
@@ -183,6 +216,7 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             return owner === 'service' && keepRunning();
         },
         quit(stopMachine) {
+            quitting = true;
             if (owner === 'app') {
                 deps.killDaemon();
                 // The switch went on while the app ran its own daemon: the service takes over now. It may find the

@@ -90,6 +90,11 @@
             "public": "Op het openbare internet"
         }
     },
+    "machineCrash": {
+        "title": "Deze machine stopte onverwacht",
+        "restarting": "Ruimte start de machine opnieuw. Wat erop draaide, is gestopt.",
+        "gaveUp": "De machine stopte een paar keer achter elkaar, dus Ruimte start die niet meer. Sluit Ruimte af en open het opnieuw."
+    },
     "machineUpdate": {
         "title": "Ruimte is bijgewerkt",
         "description": "Deze machine nu herstarten? {{ends}}",
