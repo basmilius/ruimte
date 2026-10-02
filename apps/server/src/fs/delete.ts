@@ -19,11 +19,11 @@ export const deletePath = async (path: string, boundary: WriteBoundary, trash: (
     if (entry === null) {
         throw new DeleteError('not-found', 'That path is not there');
     }
-    const folder = await realpath(dirname(path)).catch(() => null);
-    if (folder === null) {
+    // A link keeps its own name; anything else is named the way the disk spells it, so `.GIT` on a volume that ignores case is `.git`.
+    const real = await (entry.isSymbolicLink() ? realpath(dirname(path)).then((folder) => join(folder, basename(path))) : realpath(path)).catch(() => null);
+    if (real === null) {
         throw new DeleteError('not-found', 'That path is not there');
     }
-    const real = join(folder, basename(path));
     const roots = await realRoots(boundary);
     const root = roots.find((candidate) => isInside(candidate, real));
     if (root === undefined) {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deletePath } from './delete.ts';
@@ -19,6 +19,16 @@ const boundary: () => WriteBoundary = () => ({
 const trash = async (path: string): Promise<void> => {
     trashed.push(path);
 };
+
+const caseInsensitive = await (async (): Promise<boolean> => {
+    const probe = await mkdtemp(join(tmpdir(), 'ruimte-fs-case-'));
+    try {
+        await writeFile(join(probe, 'probe'), '');
+        return (await stat(join(probe, 'PROBE')).catch(() => null)) !== null;
+    } finally {
+        await rm(probe, { recursive: true, force: true });
+    }
+})();
 
 const codeOf = async (work: Promise<unknown>): Promise<string | undefined> => {
     try {
@@ -69,6 +79,13 @@ describe('fs.delete', () => {
         expect(await codeOf(deletePath(join(project, '.git'), boundary(), trash))).toBe('git-state');
         expect(await codeOf(deletePath(join(project, 'vendor', 'lib', '.git'), boundary(), trash))).toBe('git-state');
         expect(await codeOf(deletePath(join(project, '.ruimte'), boundary(), trash))).toBe('ruimte-state');
+        expect(trashed).toEqual([]);
+    });
+
+    // Only a volume that ignores case can spell `.git` another way and still mean it.
+    test.skipIf(!caseInsensitive)('refuses .git and .ruimte spelled in other capitals', async () => {
+        expect(await codeOf(deletePath(join(project, '.GIT'), boundary(), trash))).toBe('git-state');
+        expect(await codeOf(deletePath(join(project, '.Ruimte'), boundary(), trash))).toBe('ruimte-state');
         expect(trashed).toEqual([]);
     });
 
