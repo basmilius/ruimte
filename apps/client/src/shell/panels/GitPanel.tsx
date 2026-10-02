@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Eye, Folder, GitMer
 import { type GitActionKind, type GitCapabilitiesResult, type GitFile, type GitRef, type GitStash, type Worktree } from '@ruimte/contracts';
 import { performAsPerson, runAsPerson } from '@/actions/client-actions';
 import { desktop } from '@/desktop/bridge';
+import { startDiffDrag, type DraggedDiff } from '@/shell/diff-drag';
 import { BranchMenu, type CheckoutRefs } from '@/shell/panels/BranchMenu';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { CommitBox } from '@/shell/panels/CommitBox';
@@ -288,22 +289,24 @@ export function GitPanel() {
             });
     };
 
+    const diffOf = (path: string, file: GitFile): DraggedDiff => {
+        // A worktree's own changes are measured against the branch it was made from, not the repository's base.
+        const entry = worktrees.find((candidate) => candidate.path === path);
+        const base = entry === undefined ? undefined : worktreeBase(entry);
+        return {
+            path: `${path}/${file.path}`,
+            view: { kind: 'diff', cwd: path, scope, staged: file.state === 'staged', ...(base === undefined ? {} : { base }) }
+        };
+    };
+
     const openDiff = (path: string, file: GitFile): void => {
         // A conflict has three versions, so a diff with two sides is the wrong thing to open on it.
         if (file.state === 'conflicted') {
             useUi.getState().setConflicts({ cwd: path, path: file.path });
             return;
         }
-        // A worktree's own changes are measured against the branch it was made from, not the repository's base.
-        const entry = worktrees.find((candidate) => candidate.path === path);
-        const base = entry === undefined ? undefined : worktreeBase(entry);
-        useFiles.getState().open(`${path}/${file.path}`, tabLimit, {
-            kind: 'diff',
-            cwd: path,
-            scope,
-            staged: file.state === 'staged',
-            ...(base === undefined ? {} : { base })
-        });
+        const diff = diffOf(path, file);
+        useFiles.getState().open(diff.path, tabLimit, diff.view);
     };
 
     /* The file next to its diff, for a change a person wants to read whole rather than as a patch. */
@@ -548,6 +551,7 @@ export function GitPanel() {
                     busy={busy}
                     onOpen={openDiff}
                     onOpenFile={openFile}
+                    onDrag={(path, file, transfer) => startDiffDrag(transfer, diffOf(path, file))}
                     onStage={stage}
                     onDiscard={(path, files) => setDialog({ kind: 'discard', cwd: path, files })}
                     onDelete={(path, files) => setDialog({ kind: 'delete-file', cwd: path, files })}

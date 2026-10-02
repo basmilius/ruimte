@@ -136,6 +136,8 @@ interface FilesStore extends TabState {
     revealLine: RevealLineRequest | null;
     load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
     open(path: string, limit: number, view?: FileTabView, line?: number): void;
+    /* The tab without the cell, for a caller that puts the files on the grid itself, such as a drop. */
+    openHidden(path: string, limit: number, view?: FileTabView, line?: number): void;
     close(key: string): void;
     closeOthers(key: string): void;
     closeAll(): void;
@@ -164,15 +166,18 @@ export const useFiles = create<FilesStore>((set, get) => ({
     load(projectId, state) {
         set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null, revealLine: null, recent: [] });
     },
-    /* A tab and the cell that draws it are one thing to the person opening a file: the first open
-       puts the files on the grid, beside whatever they were working in, and the last close takes
-       the cell away again. */
+    /* A tab and the cell that draws it are one thing to the person opening a file: an open puts the
+       files in the cell they were working in, like any view, and the last close takes the cell away
+       again. Beside it is a drag. */
     open(path, limit, view, line) {
+        get().openHidden(path, limit, view, line);
+        useDocument.getState().showFiles();
+    },
+    openHidden(path, limit, view, line) {
         const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
         const endpointId = currentEndpointId();
         const unsaved = (tab: FileTab): boolean => tab.view === undefined && textDrafts.isUnsaved(endpointId, tab.path);
         set({ ...openTab(get(), path, limit, view, unsaved), focusRequest: get().focusRequest + 1, revealLine: reveal });
-        useDocument.getState().showFiles();
     },
     /* A file with unsaved changes is saved first, and closes once it is (`unsaved-close.ts`). */
     close(key) {

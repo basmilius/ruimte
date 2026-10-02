@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
@@ -36,6 +36,7 @@ import {
     type GitTreeRow
 } from '@/shell/panels/git-tree';
 import { directoryHandle, extendsSelection, menuTargetsOf, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
+import { setDragging } from '@/shell/view-drag';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import type { GitCheckout } from '@/state/git-repos';
@@ -124,6 +125,8 @@ interface ListProps {
     onOpen(cwd: string, file: GitFile): void;
     /* The file itself rather than its diff, in a tab of its own. */
     onOpenFile(cwd: string, file: GitFile): void;
+    /* A row dragged onto the grid, which opens its diff where it lands. */
+    onDrag(cwd: string, file: GitFile, transfer: DataTransfer): void;
     onStage(cwd: string, paths: string[], staged: boolean): void;
     onDiscard(cwd: string, files: GitFile[]): void;
     onDelete(cwd: string, files: GitFile[]): void;
@@ -137,7 +140,7 @@ interface ListProps {
  * A row opens its diff in the preview panel; a right click stages it, discards it behind a confirm,
  * and offers the things a row has no room for: the file itself, the two reveals, the paths.
  */
-export function GitFileList({ checkouts, collapsed, reading, reposTruncated, busy, onOpen, onOpenFile, onStage, onDiscard, onDelete }: ListProps) {
+export function GitFileList({ checkouts, collapsed, reading, reposTruncated, busy, onOpen, onOpenFile, onDrag, onStage, onDiscard, onDelete }: ListProps) {
     const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -208,6 +211,7 @@ export function GitFileList({ checkouts, collapsed, reading, reposTruncated, bus
                                 busy={busy}
                                 onOpen={(file) => onOpen(checkout.path, file)}
                                 onOpenFile={(file) => onOpenFile(checkout.path, file)}
+                                onDrag={(file, transfer) => onDrag(checkout.path, file, transfer)}
                                 onStage={(paths, next) => onStage(checkout.path, paths, next)}
                                 onDiscard={(files) => onDiscard(checkout.path, files)}
                                 onDelete={(files) => onDelete(checkout.path, files)}
@@ -238,6 +242,7 @@ interface TreeProps {
     busy: boolean;
     onOpen(file: GitFile): void;
     onOpenFile(file: GitFile): void;
+    onDrag(file: GitFile, transfer: DataTransfer): void;
     onStage(paths: string[], staged: boolean): void;
     onDiscard(files: GitFile[]): void;
     onDelete(files: GitFile[]): void;
@@ -261,6 +266,7 @@ function GitRepoTree({
     busy,
     onOpen,
     onOpenFile,
+    onDrag,
     onStage,
     onDiscard,
     onDelete
@@ -309,7 +315,14 @@ function GitRepoTree({
         composition: { contextMenu: { enabled: false } },
         density: 'compact',
         itemHeight: PANEL_TREE_ROW_HEIGHT,
-        dragAndDrop: false,
+        // One file at a time, and never a conflict: its three versions are no diff to open.
+        dragAndDrop: {
+            canDrag: (paths) => {
+                const file = paths.length === 1 ? filesRef.current.get(paths[0]!) : undefined;
+                return file !== undefined && file.state !== 'conflicted';
+            },
+            canDrop: () => false
+        },
         flattenEmptyDirectories: true,
         icons: FILE_TREE_ICONS,
         initialExpansion: 'open',
@@ -408,6 +421,14 @@ function GitRepoTree({
         }
     };
 
+    const onDragStart = (event: ReactDragEvent<HTMLElement>): void => {
+        const path = rowPathOf(event);
+        const file = path === null ? undefined : byPath.get(path);
+        if (file !== undefined && file.state !== 'conflicted') {
+            onDrag(file, event.dataTransfer);
+        }
+    };
+
     const manyTargets = menuPaths.length > 1;
     const menuPath = manyTargets ? null : (menuPaths[0] ?? null);
     /* Every file the selection stands for: a folder in it is the files under it. */
@@ -485,7 +506,13 @@ function GitRepoTree({
                         setMenuPaths(row === null ? [] : menuTargetsOf(row, model.getSelectedPaths()));
                     }}
                 >
-                    <FileTree model={model} className={clsx('panel-tree', named && 'panel-tree-indented')} onClick={onClick} />
+                    <FileTree
+                        model={model}
+                        className={clsx('panel-tree', named && 'panel-tree-indented')}
+                        onClick={onClick}
+                        onDragStart={onDragStart}
+                        onDragEnd={() => setDragging(null)}
+                    />
                 </ContextMenu.Trigger>
                 <ContextMenu.Popup>
                     {manyTargets && menuFiles.length > 0 && (

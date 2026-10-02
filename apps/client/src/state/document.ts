@@ -133,7 +133,7 @@ export interface DocumentState {
     dismissNotice(): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
-    /* The files into a cell of their own, beside the one the person is in; the focus when they already stand somewhere. */
+    /* The files in place of the focused cell, the way any view opens; the focus when they already stand somewhere. */
     showFiles(): void;
     /* Takes that cell off the grid again, which is what closing the last tab does. */
     hideFiles(): void;
@@ -602,30 +602,19 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                     commit(singleLayout(FILES_VIEW_ID));
                     return;
                 }
-                const standing = locateView(state.layout, FILES_VIEW_ID);
-                if (standing !== null) {
-                    if (!isSameCell(state.layout.focus, standing)) {
-                        commit(focusCell(state.layout, standing));
-                    }
-                    return;
+                const shown = showViewIn(state.layout, FILES_VIEW_ID);
+                if (shown !== null) {
+                    commit(shown.layout);
                 }
-                /* Beside what the person was working in, never over it: a chat in the one cell there
-                   is would otherwise be gone behind a file they only meant to read. A grid at its
-                   limit has no room beside, and there the cell does give way. */
-                const at = state.layout.focus;
-                const zone: SplitZone = canSplit(state.layout, at, 'right', FILES_VIEW_ID)
-                    ? 'right'
-                    : canSplit(state.layout, at, 'down', FILES_VIEW_ID)
-                      ? 'down'
-                      : 'center';
-                commit(dropView(state.layout, FILES_VIEW_ID, at, zone));
             },
 
+            /* Unlike a cell a person closes, the files go even as the last one: the grid without a
+               cell has a view of its own to show. */
             hideFiles() {
                 const state = get();
                 const at = state.layout === null ? null : locateView(state.layout, FILES_VIEW_ID);
-                if (at !== null) {
-                    get().closeCellAt(at);
+                if (state.layout !== null && at !== null) {
+                    commit(closeCell(state.layout, at));
                 }
             },
 

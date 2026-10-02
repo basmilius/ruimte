@@ -2908,7 +2908,8 @@ export const ACTION_DEFINITIONS = {
     },
     'file.preview': {
         title: 'Preview a file',
-        description: 'Opens a file in the preview beside the canvas, at a line when one is given.',
+        description:
+            'Opens a file as a tab of the files view, which takes the place of the focused cell unless it is on screen already, at a line when one is given.',
         effect: 'local',
         domain: 'files',
         actors: PERSON_AND_VOICE,

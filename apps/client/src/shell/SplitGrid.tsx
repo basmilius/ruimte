@@ -4,10 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
 import { PromptStack } from '@/canvas/PromptStack';
 import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
-import { isFilesView } from '@/shell/files-view';
+import { carriesDiff, droppedDiff } from '@/shell/diff-drag';
+import { FILES_VIEW_ID, isFilesView } from '@/shell/files-view';
 import { useCellView } from '@/shell/use-cell-view';
 import { placeFilesAction, placeViewAction } from '@/actions/client-actions';
 import { useDocument } from '@/state/document';
+import { useFiles } from '@/state/files';
+import { useSettings } from '@/state/settings';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, draggedSizes, maximizedCell, type CellAt, type SplitZone } from '@/shell/split';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -173,6 +176,10 @@ function Cell({
         // The payload is kept from the page during a drag, so the limit is asked about the view the
         // grid knows is moving, which for a drag out of the sidebar is no view in the grid at all.
         const moving = dragging();
+        // A change dropped on the files cell itself has nowhere to move it, and still opens there.
+        if (here === 'center' && viewId === FILES_VIEW_ID && carriesDiff(event.dataTransfer)) {
+            return here;
+        }
         return layout !== null && canSplit(layout, at, here, moving) && !isNowhereDrop(moving === null ? null : locateView(layout, moving), at, here)
             ? here
             : null;
@@ -277,7 +284,13 @@ function Cell({
                     event.stopPropagation();
                     if (paths.length === 0) {
                         const dragged = draggedViewId(event.dataTransfer);
-                        if (dragged !== null) {
+                        const diff = droppedDiff(event.dataTransfer);
+                        if (diff !== null) {
+                            useFiles.getState().openHidden(diff.path, useSettings.getState().filesTabLimit, diff.view);
+                        }
+                        if (dragged === viewId) {
+                            useDocument.getState().focusCellAt(at);
+                        } else if (dragged !== null) {
                             placeViewAction(dragged, viewId, here);
                         }
                         return;

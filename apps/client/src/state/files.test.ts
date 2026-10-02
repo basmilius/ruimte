@@ -101,7 +101,10 @@ describe('the store and the files cell', () => {
                 rev: 1,
                 name: 'p',
                 color: '#000',
-                views: [{ kind: 'canvas', id: 'a', name: 'a', nodes: [], texts: [], edges: [], layouts: [] }]
+                views: [
+                    { kind: 'canvas', id: 'a', name: 'a', nodes: [], texts: [], edges: [], layouts: [] },
+                    { kind: 'canvas', id: 'b', name: 'b', nodes: [], texts: [], edges: [], layouts: [] }
+                ]
             },
             { activeViewId: 'a', views: {} }
         );
@@ -112,6 +115,27 @@ describe('the store and the files cell', () => {
         expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
     });
 
+    test('the files take the place of the focused cell, like any view', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useFiles.getState().open('a', 5);
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a', FILES_VIEW_ID]);
+    });
+
+    test('a file opened while the files are on screen focuses them and leaves the other cells alone', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useFiles.getState().open('a', 5);
+        useDocument.getState().focusCellAt({ column: 0, cell: 0 });
+        useFiles.getState().open('b', 5);
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a', FILES_VIEW_ID]);
+        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
+    });
+
+    test('a tab opened hidden leaves the grid to the caller', () => {
+        useFiles.getState().openHidden('a', 5);
+        expect(useFiles.getState().active).toBe('a');
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a']);
+    });
+
     test('a file opened by hand asks the cell for the keyboard, a restored project does not', () => {
         useFiles.getState().open('a', 5);
         useFiles.getState().open('b', 5);
@@ -120,9 +144,9 @@ describe('the store and the files cell', () => {
         expect(useFiles.getState().focusRequest).toBe(2);
     });
 
-    /* The empty cell is a blank column, so it goes with the last tab and a file opened later brings
-       it back. Only where it stands alone on the grid does it stay, since a grid has to hold a cell. */
+    /* The empty cell is a blank column, so it goes with the last tab and a file opened later brings it back. */
     test('the last tab that closes takes the cell with it', () => {
+        useDocument.getState().splitFocused('right', 'b');
         useFiles.getState().open('a', 5);
         useFiles.getState().open('b', 5);
         useFiles.getState().close('a');
@@ -130,6 +154,12 @@ describe('the store and the files cell', () => {
         useFiles.getState().close('b');
         expect(useFiles.getState().tabs).toEqual([]);
         expect(viewIdsIn(useDocument.getState().layout!)).not.toContain(FILES_VIEW_ID);
+    });
+
+    test('files that stand alone leave an empty grid when the last tab closes', () => {
+        useFiles.getState().open('a', 5);
+        useFiles.getState().close('a');
+        expect(useDocument.getState().layout).toBeNull();
     });
 });
 
