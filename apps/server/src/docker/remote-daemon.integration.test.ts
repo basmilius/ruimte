@@ -7,6 +7,7 @@ import {
     ACCESS_STATEMENT_LIFETIME_MS,
     BrokerPeer,
     accessStatementMessage,
+    accessStatementV2Message,
     brokerHostOf,
     signalMessage,
     type AccessStatement,
@@ -1551,14 +1552,27 @@ describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on
         return { id: answer.daemon.id, publicKey: answer.daemon.publicKey };
     };
 
-    const statementFor = (machineId: string, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement => {
+    const statementFor = (machineAt: { id: string; publicKey: string }, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement => {
         const issuedAt = Date.now();
-        const base = { machineId, clientPublicKey, nonce: randomNonce(), issuedAt, expiresAt: issuedAt + ACCESS_STATEMENT_LIFETIME_MS, ...overrides };
+        const base = {
+            machineId: machineAt.id,
+            machinePublicKey: machineAt.publicKey,
+            accountId: 'bench-account',
+            clientPublicKey,
+            nonce: randomNonce(),
+            issuedAt,
+            expiresAt: issuedAt + ACCESS_STATEMENT_LIFETIME_MS,
+            ...overrides
+        };
         return {
             ...base,
             signature: signMessage(
                 STATEMENT_PRIVATE_KEY!,
                 accessStatementMessage(base.machineId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
+            ),
+            accountSignature: signMessage(
+                STATEMENT_PRIVATE_KEY!,
+                accessStatementV2Message(base.machineId, base.machinePublicKey, base.accountId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
             )
         };
     };
@@ -1617,7 +1631,7 @@ describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on
     test('a statement for this machine and this key opens a terminal, and the machine lists the client as signed in through a statement', async () => {
         const machineAt = await machine();
         const key = generateKeyPair();
-        const { client, socket } = await offerFrom(key, machineAt, statementFor(machineAt.id, key.publicKey));
+        const { client, socket } = await offerFrom(key, machineAt, statementFor(machineAt, key.publicKey));
         await client.open();
         socket.close();
         expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
@@ -1642,20 +1656,27 @@ describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on
         }
     }, 90_000);
 
-    test('no statement, a statement for another key, one that ran out and one for another machine all get not-paired and no channel', async () => {
+    test('no statement, a statement for another key, one that ran out, one for another machine and one that names no account all get not-paired and no channel', async () => {
         const machineAt = await machine();
         const attempts: Array<[string, (key: { publicKey: string }) => AccessStatement | undefined]> = [
             ['no statement', () => undefined],
-            ['another key', () => statementFor(machineAt.id, generateKeyPair().publicKey)],
+            ['another key', () => statementFor(machineAt, generateKeyPair().publicKey)],
             [
                 'ran out',
                 (key) =>
-                    statementFor(machineAt.id, key.publicKey, {
+                    statementFor(machineAt, key.publicKey, {
                         issuedAt: Date.now() - 10 * 60_000,
                         expiresAt: Date.now() - 10 * 60_000 + ACCESS_STATEMENT_LIFETIME_MS
                     })
             ],
-            ['another machine', (key) => statementFor('the-machine-next-door', key.publicKey)]
+            ['another machine', (key) => statementFor({ ...machineAt, id: 'the-machine-next-door' }, key.publicKey)],
+            [
+                'no account, as a client older than 0.12 sends it',
+                (key) => {
+                    const { machineId, clientPublicKey, nonce, issuedAt, expiresAt, signature } = statementFor(machineAt, key.publicKey);
+                    return { machineId, clientPublicKey, nonce, issuedAt, expiresAt, signature };
+                }
+            ]
         ];
         for (const [what, statement] of attempts) {
             const key = generateKeyPair();
@@ -1680,7 +1701,7 @@ describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on
         await admin.request('endpoint.setIdentity', { ...identity, refuseStatements: true });
         try {
             const key = generateKeyPair();
-            const { client, closes } = await offerFrom(key, machineAt, statementFor(machineAt.id, key.publicKey));
+            const { client, closes } = await offerFrom(key, machineAt, statementFor(machineAt, key.publicKey));
             void client.open().catch(() => undefined);
             await waitUntil('the refusal', () => closes.length > 0);
             expect(closes).toEqual(['statements-refused']);
