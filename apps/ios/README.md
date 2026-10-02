@@ -287,9 +287,10 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   of the daemon's own schemas as Swift enums (agent, task, plan and chat), with the plan markers,
   so a switch over one stops compiling when a case is added; their object schemas stay out, since a
   plan step holds its own sub-steps and the resulting `$ref` is not resolved here.
-  `AgentKind`, `RuntimeMode` and `AgentStatus` are open on the wire. Their API schemas carry
-  `x-open-enum` instead of `enum`, so a value from a newer machine passes validation and the app
-  shows a generic name and mark for it. The Swift enums stay closed for switches.
+  `AgentKind`, `RuntimeMode`, `AgentStatus` and the Lucide name of a project, view or machine
+  icon are open on the wire. Their API schemas carry `x-open-enum` instead of `enum`, so a value
+  from a newer machine passes validation and the app shows a generic name and mark for it. The
+  Swift enums stay closed for switches.
   `bun run check` refuses stale output.
   `MachineClient` correlates responses and rejects pending requests on disconnect. It times out
   reads only, since a mutation ends when the link closes. An event it cannot validate goes to
