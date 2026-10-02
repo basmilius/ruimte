@@ -114,22 +114,3 @@ export const pushCollapseIdMessage = (machineId: string, nodeId: string): string
 export const pushEncryptionInfo = (machineId: string, handle: string): string => JSON.stringify([machineId, handle]);
 export const pushRoutingMessage = (push: PushRouting): string =>
     `pulsar-push-routing-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId])}`;
-export const pushMessage = (push: PushEnvelope): string => {
-    const body: (string | number | null)[] =
-        push.pushType !== 'liveactivity'
-            ? [push.ephemeralKey, push.nonce, push.ciphertext]
-            : [push.activity.title, push.activity.phase, push.activity.startedAt];
-    if (push.pushType === 'liveactivity' && (push.activity.runningCount !== undefined || push.activity.attentionCount !== undefined)) {
-        body.push(push.activity.runningCount ?? null, push.activity.attentionCount ?? null);
-    }
-    if (push.pushType === 'liveactivity' && push.activity.agents !== undefined) {
-        body.push(push.activity.agents.length);
-        for (const agent of push.activity.agents) {
-            body.push(agent.nodeId, agent.target, agent.title, agent.phase);
-            if (agent.startedAt !== undefined) {
-                body.push(agent.startedAt);
-            }
-        }
-    }
-    return `pulsar-push-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body])}`;
-};

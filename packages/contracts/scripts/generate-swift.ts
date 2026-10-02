@@ -551,7 +551,7 @@ const unsignedPush = {
     ciphertext: pushCiphertext.toString('base64url'),
     signature: ''
 };
-const signedPush = { ...unsignedPush, signature: sign(null, Buffer.from(push.pushMessage(unsignedPush)), privateKey).toString('base64url') };
+const signedPush = { ...unsignedPush, signature: sign(null, Buffer.from(signing.pushMessage(unsignedPush)), privateKey).toString('base64url') };
 const pushEncryption = { privateKey: pushPrivateBytes.toString('base64url'), machinePublicKey: publicKey, push: signedPush, content: pushContent, now: 2000 };
 const readContent = { nodeId: 'node-1', through: 999, expiresAt: 121000 };
 const readNonce = Buffer.alloc(12, 4);
@@ -560,7 +560,7 @@ readCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
 const readCiphertext = Buffer.concat([readCipher.update(Buffer.from(JSON.stringify(readContent))), readCipher.final(), readCipher.getAuthTag()]);
 const unsignedRead = { ...unsignedPush, pushType: 'background' as const, nonce: readNonce.toString('base64url'), ciphertext: readCiphertext.toString('base64url') };
 const pushReadEncryption = { ...pushEncryption, content: readContent,
-    push: { ...unsignedRead, signature: sign(null, Buffer.from(push.pushMessage(unsignedRead)), privateKey).toString('base64url') } };
+    push: { ...unsignedRead, signature: sign(null, Buffer.from(signing.pushMessage(unsignedRead)), privateKey).toString('base64url') } };
 const activityPush: push.PushEnvelope = { ...pushRouting, pushType: 'liveactivity', signature: '',
     activity: { title: 'Mac', phase: 'needs-you', startedAt: 1000, runningCount: 1, attentionCount: 1,
         agents: [
@@ -569,7 +569,7 @@ const activityPush: push.PushEnvelope = { ...pushRouting, pushType: 'liveactivit
         ]
     }
 };
-const pushActivitySigning = { push: activityPush, message: push.pushMessage(activityPush) };
+const pushActivitySigning = { push: activityPush, message: signing.pushMessage(activityPush) };
 outputs.set(
     'Tests/RuimtePulsarTests/Fixtures/wire.json',
     JSON.stringify(

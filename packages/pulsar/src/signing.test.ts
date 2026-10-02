@@ -7,15 +7,20 @@ import {
     brokerHelloMessage,
     deviceLinkStartMessage,
     machineRegistrationMessage,
+    pushMessage,
     sessionKeyMessage,
     sessionRefreshMessage,
     signalMessage,
+    type PushEnvelope,
     type SignalEnvelope
 } from './index.ts';
 
 const key = 'A'.repeat(43);
 const otherKey = 'B'.repeat(43);
 const nonce = 'n'.repeat(22);
+
+const routing = { machineId: 'machine-1', handle: key, id: otherKey, issuedAt: 0, expiresAt: 120_000, collapseId: key };
+const alert: PushEnvelope = { ...routing, pushType: 'alert', ephemeralKey: key, nonce: 'n'.repeat(16), ciphertext: 'c'.repeat(22), signature: 's'.repeat(86) };
 
 // One call per purpose over the same values, so only the purpose can make two of them differ.
 const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
@@ -26,7 +31,8 @@ const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
     accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000),
     sessionKey: sessionKeyMessage(nonce, key),
     sessionRefresh: sessionRefreshMessage(nonce, 0),
-    deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0)
+    deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0),
+    push: pushMessage(alert)
 });
 
 describe('signed bytes', () => {
@@ -84,6 +90,27 @@ describe('signed bytes', () => {
     test('a field with a newline in it cannot pass for two fields', () => {
         expect(accessRequestMessage('machine-1', `${key}\n${nonce}`, '')).not.toBe(accessRequestMessage(`machine-1\n${key}`, nonce, ''));
         expect(brokerHelloMessage('a\nb', 'machine', key, nonce).split('\n')).toHaveLength(2);
+    });
+
+    test('a push signs the very bytes it signed before it had a purpose here', () => {
+        expect(pushMessage(alert)).toBe(
+            `pulsar-push-v1\n${JSON.stringify(['machine-1', key, otherKey, 0, 120_000, key, 'alert', key, 'n'.repeat(16), 'c'.repeat(22)])}`
+        );
+        const activity: PushEnvelope = {
+            ...routing,
+            pushType: 'liveactivity',
+            signature: 's'.repeat(86),
+            activity: {
+                title: 'Mac',
+                phase: 'needs-you',
+                startedAt: 1,
+                runningCount: 2,
+                agents: [{ nodeId: 'n1', target: 'chat', title: 'Review', phase: 'running', startedAt: 3 }]
+            }
+        };
+        expect(pushMessage(activity)).toBe(
+            `pulsar-push-v1\n${JSON.stringify(['machine-1', key, otherKey, 0, 120_000, key, 'liveactivity', 'Mac', 'needs-you', 1, 2, null, 1, 'n1', 'chat', 'Review', 'running', 3])}`
+        );
     });
 
     test('a statement binds its expiry', () => {

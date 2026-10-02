@@ -1,4 +1,5 @@
 import type { BrokerRole } from './broker.ts';
+import type { PushEnvelope } from './push.ts';
 import type { SignalEnvelope } from './signaling.ts';
 
 /*
@@ -13,7 +14,8 @@ export const SIGNING_PURPOSES = {
     accessStatement: 'pulsar-access-statement-v1',
     sessionKey: 'pulsar-session-key-v1',
     sessionRefresh: 'pulsar-session-refresh-v1',
-    deviceLinkStart: 'pulsar-device-link-start-v1'
+    deviceLinkStart: 'pulsar-device-link-start-v1',
+    push: 'pulsar-push-v1'
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
@@ -92,3 +94,28 @@ export const sessionRefreshMessage = (refreshToken: string, issuedAt: number): s
  */
 export const deviceLinkStartMessage = (machineId: string, publicKey: string, name: string, issuedAt: number): string =>
     signedBytes(SIGNING_PURPOSES.deviceLinkStart, [machineId, publicKey, name, issuedAt]);
+
+/*
+ * A push a machine hands the address book for one of its devices, signed with the machine key so the
+ * address book and the device both know it came from that machine. A field that was added later is
+ * signed only when present, so a push without it signs as it always did.
+ */
+export const pushMessage = (push: PushEnvelope): string => {
+    const body: (string | number | null)[] =
+        push.pushType !== 'liveactivity'
+            ? [push.ephemeralKey, push.nonce, push.ciphertext]
+            : [push.activity.title, push.activity.phase, push.activity.startedAt];
+    if (push.pushType === 'liveactivity' && (push.activity.runningCount !== undefined || push.activity.attentionCount !== undefined)) {
+        body.push(push.activity.runningCount ?? null, push.activity.attentionCount ?? null);
+    }
+    if (push.pushType === 'liveactivity' && push.activity.agents !== undefined) {
+        body.push(push.activity.agents.length);
+        for (const agent of push.activity.agents) {
+            body.push(agent.nodeId, agent.target, agent.title, agent.phase);
+            if (agent.startedAt !== undefined) {
+                body.push(agent.startedAt);
+            }
+        }
+    }
+    return signedBytes(SIGNING_PURPOSES.push, [push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body]);
+};
