@@ -6,7 +6,17 @@ import type { GitConflictFile, GitConflictsResult, GitOperation } from '@ruimte/
 import { bothLines, sideLines, wandLines, type MergeSide } from '@ruimte/merge';
 import { ConflictEditor, type EditorHandle } from '@/conflicts/ConflictEditor';
 import { ConflictSides } from '@/conflicts/ConflictSides';
-import { answerInto, conflictIndexes, contentOf, fileOf, nextConflict, openInDraft, usableBlocks, type ConflictFile } from '@/conflicts/conflict-model';
+import {
+    answerInto,
+    conflictIndexes,
+    fileOf,
+    nextConflict,
+    openInDraft,
+    rereadConflict,
+    usableBlocks,
+    writeConflict,
+    type ConflictFile
+} from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { cancelGitRunAction, performAsPerson } from '@/actions/client-actions';
@@ -251,16 +261,25 @@ export function ConflictOverlay() {
         }
     };
 
+    const readerOf = (repository: string) => (path: string) => performAsPerson('git.conflict', { repository, path });
+
+    /* A file read again after a refusal: the editor takes it up only when what it draws changed. */
+    const showReread = (): void => {
+        setHeld((previous) => {
+            const fresh = previous === null ? undefined : files.current.get(previous.path);
+            return previous === null || fresh === undefined || fresh.blocks === previous.file.blocks ? previous : { path: previous.path, file: fresh };
+        });
+    };
+
     /* One file written as it stands and staged, which is what takes it out of the list. */
     const write = async (path: string): Promise<void> => {
-        const target = files.current.get(path);
-        const written = drafts.current.get(path);
-        if (cwd === null || target === undefined || written === undefined) {
+        if (cwd === null) {
             return;
         }
-        await performAsPerson('git.resolveConflict', { repository: cwd, path, content: contentOf(target, written.text), take: null, hash: target.hash });
-        files.current.delete(path);
-        drafts.current.delete(path);
+        await writeConflict({ files: files.current, drafts: drafts.current }, path, {
+            resolve: (target, content, hash) => performAsPerson('git.resolveConflict', { repository: cwd, path: target, content, take: null, hash }),
+            read: readerOf(cwd)
+        });
         setOpen((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => key !== path)));
     };
 
@@ -274,6 +293,7 @@ export function ConflictOverlay() {
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : t('failed');
             useToasts.getState().show({ title: t('save.failed'), description: message.split('\n')[0], kind: 'error', output: message });
+            showReread();
         } finally {
             // Whatever went through is out of the list, so the next file that needs a person takes over.
             setActivePath(null);
@@ -297,6 +317,10 @@ export function ConflictOverlay() {
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : t('failed');
             useToasts.getState().show({ title: t('save.failed'), description: message.split('\n')[0], kind: 'error', output: message });
+            if (files.current.has(path)) {
+                await rereadConflict({ files: files.current, drafts: drafts.current }, path, readerOf(cwd)).catch(() => undefined);
+                showReread();
+            }
         } finally {
             setBusy(false);
         }

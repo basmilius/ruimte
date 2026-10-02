@@ -3,6 +3,7 @@ import type { GitConflictResult } from '@ruimte/contracts';
 import { fingerprint, splitBlocks, splitLines } from '@ruimte/merge';
 import {
     answerInto,
+    carryDraft,
     conflictIndexes,
     contentOf,
     draftWith,
@@ -10,6 +11,7 @@ import {
     nextConflict,
     openInDraft,
     usableBlocks,
+    writeConflict,
     type ConflictFile
 } from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
@@ -148,5 +150,58 @@ describe('nextConflict', () => {
     test('walks back the same way', () => {
         expect(nextConflict(indexes, indexes[0]!, -1)).toBe(indexes[1]!);
         expect(nextConflict([], null, 1)).toBeNull();
+    });
+});
+
+describe('a file that moved on disk while it was resolved', () => {
+    test('the first write refuses, and the next one writes over what stands there now with the work kept', async () => {
+        const file = fileOf(answer());
+        const cache = { files: new Map([[file.path, file]]), drafts: new Map([[file.path, answerInto(undefined, file, new Map([[1, ['merged two']]]))]]) };
+        // Read at `abc`; a save in an editor moved it to `def` before the person pressed Resolve.
+        const onDisk = 'def';
+        const written: { content: string; hash: string }[] = [];
+        const writer = {
+            resolve: async (path: string, content: string, hash: string): Promise<void> => {
+                if (hash !== onDisk) {
+                    throw new Error(`${path} changed on disk while it was being resolved.`);
+                }
+                written.push({ content, hash });
+            },
+            read: async (): Promise<GitConflictResult> => answer({ hash: onDisk })
+        };
+
+        await expect(writeConflict(cache, file.path, writer)).rejects.toThrow('changed on disk');
+        expect(cache.files.get(file.path)?.hash).toBe('def');
+        expect(cache.drafts.get(file.path)?.text).toBe('one\nmerged two\nthree');
+
+        await writeConflict(cache, file.path, writer);
+        expect(written).toEqual([{ content: 'one\nmerged two\nthree\n', hash: 'def' }]);
+        expect(cache.files.has(file.path)).toBe(false);
+        expect(cache.drafts.has(file.path)).toBe(false);
+    });
+
+    test('an answer comes along to new versions only while its stretch is the same one', () => {
+        const before = fileOf(answer({ base: 'a\nb\nc\nd\ne\n', ours: 'ours a\nb\nc\nd\nours e\n', theirs: 'theirs a\nb\nc\nd\ntheirs e\n' }));
+        const [first, last] = conflictIndexes(before) as [number, number];
+        const draft = answerInto(
+            undefined,
+            before,
+            new Map([
+                [first, ['merged a']],
+                [last, ['merged e']]
+            ])
+        );
+        const after = fileOf(answer({ base: 'a\nb\nc\nd\ne\n', ours: 'ours a\nb\nc\nd\nother e\n', theirs: 'theirs a\nb\nc\nd\ntheirs e\n', hash: 'def' }));
+
+        const carried = carryDraft(before, after, draft);
+        expect(carried.text).toBe('merged a\nb\nc\nd\nother e');
+        expect(openInDraft(carried)).toEqual([last]);
+        expect(
+            carryDraft(
+                before,
+                fileOf(answer({ base: 'a\nb\nc\nd\ne\n', ours: 'ours a\nb\nc\nd\nours e\n', theirs: 'theirs a\nb\nc\nd\ntheirs e\n', hash: 'def' })),
+                draft
+            )
+        ).toBe(draft);
     });
 });

@@ -1,6 +1,6 @@
 import type { GitConflictKind, GitConflictResult, GitResolveBlock } from '@ruimte/contracts';
 import { draftOf, fingerprint, joinLines, shapeOf, splitBlocks, splitLines, type MergeBlock, type MergeSpan, type TextShape } from '@ruimte/merge';
-import type { ConflictDraft } from '@/conflicts/editor';
+import type { ConflictDraft, LiveSpan } from '@/conflicts/editor';
 
 /* One unmerged file as the overlay works on it: the three versions split into stretches, the merged
    file to start from, and the shape the result is written back in. */
@@ -132,3 +132,94 @@ export const usableBlocks = (file: ConflictFile, answers: readonly GitResolveBlo
             return block !== undefined && block.kind === 'conflict' && fingerprint(block) === answer.fingerprint;
         })
         .map((answer) => ({ index: answer.index, lines: answer.lines }));
+
+/* What a person made of one stretch of a draft, as lines. */
+const spanLines = (text: string, span: LiveSpan): string[] => {
+    let slice = text.slice(span.from, span.to);
+    // An answer put into an empty stretch at the end of the file carries the break before it.
+    if (span.from > 0 && text[span.from - 1] !== '\n' && slice.startsWith('\n')) {
+        slice = slice.slice(1);
+    }
+    if (span.to < text.length && slice.endsWith('\n')) {
+        slice = slice.slice(0, -1);
+    }
+    return slice === '' ? [] : slice.split('\n');
+};
+
+const sameBlocks = (before: ConflictFile, after: ConflictFile): boolean =>
+    before.blocks.length === after.blocks.length &&
+    before.blocks.every((block, index) => block.kind === after.blocks[index]!.kind && fingerprint(block) === fingerprint(after.blocks[index]!));
+
+/*
+ * The work on a file carried over to the same file read again. While git holds the same versions,
+ * which a save in an editor or an agent's write leaves alone, the draft stays whole; otherwise only
+ * an answered conflict whose stretch is still the same one comes along.
+ */
+export const carryDraft = (before: ConflictFile, after: ConflictFile, draft: ConflictDraft): ConflictDraft => {
+    if (sameBlocks(before, after)) {
+        return draft;
+    }
+    const free = new Map(conflictIndexes(after).map((index) => [index, fingerprint(after.blocks[index]!)] as const));
+    const answered = new Map<number, string[]>();
+    for (const span of draft.spans) {
+        const block = before.blocks[span.block];
+        if (span.kind !== 'conflict' || !span.settled || block === undefined) {
+            continue;
+        }
+        const print = fingerprint(block);
+        const match = [...free].find(([, candidate]) => candidate === print)?.[0];
+        if (match !== undefined) {
+            answered.set(match, spanLines(draft.text, span));
+            free.delete(match);
+        }
+    }
+    return answerInto(undefined, after, answered);
+};
+
+/* The overlay's work per file: what was read of it and what a person made of it. */
+export interface ConflictCache {
+    files: Map<string, ConflictFile>;
+    drafts: Map<string, ConflictDraft>;
+}
+
+/* What writing a file asks of the machine. */
+export interface ConflictWriter {
+    resolve(path: string, content: string, hash: string): Promise<unknown>;
+    read(path: string): Promise<GitConflictResult>;
+}
+
+/* A file read again, so the next write goes over what stands on disk now. The same versions keep the file as it was, editor and all. */
+export const rereadConflict = async (cache: ConflictCache, path: string, read: ConflictWriter['read']): Promise<void> => {
+    const after = fileOf(await read(path));
+    const before = cache.files.get(path);
+    if (before === undefined) {
+        cache.files.set(path, after);
+        return;
+    }
+    cache.files.set(path, sameBlocks(before, after) ? { ...before, hash: after.hash } : after);
+    const draft = cache.drafts.get(path);
+    if (draft !== undefined) {
+        cache.drafts.set(path, carryDraft(before, after, draft));
+    }
+};
+
+/*
+ * One file written as it stands, over the version it was read at. A file that moved on disk since
+ * refuses, and is read again before the refusal goes on, so the next try is not refused for the
+ * same reason; what a person made of it stays.
+ */
+export const writeConflict = async (cache: ConflictCache, path: string, writer: ConflictWriter): Promise<void> => {
+    const target = cache.files.get(path);
+    const draft = cache.drafts.get(path);
+    if (target === undefined || draft === undefined) {
+        return;
+    }
+    try {
+        await writer.resolve(path, contentOf(target, draft.text), target.hash);
+    } catch (error: unknown) {
+        await rereadConflict(cache, path, writer.read).catch(() => undefined);
+        throw error;
+    }
+    cache.files.delete(path);
+    cache.drafts.delete(path);
+};
