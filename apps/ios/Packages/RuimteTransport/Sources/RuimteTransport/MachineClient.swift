@@ -174,6 +174,12 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     private var incoming: Task<Void, Never>?
     private var connectionGeneration = 0
     private var heardCount = 0
+    private enum HeldFrame {
+        case text(String)
+        case binary(Data)
+    }
+    // From `linkOpened` until `connected`; nil while no link is opening.
+    private var held: [HeldFrame]?
     public private(set) var isConnected: Bool
     public var pendingRequestCount: Int { pending.count }
 
@@ -187,13 +193,29 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         isConnected = connected
     }
 
+    /// The link opened, but what sends on it is not ready yet and `connected()` follows. A frame that arrives in
+    /// between waits for it instead of being dropped, since an event the machine sends once would be lost.
+    public func linkOpened() {
+        guard !isConnected, held == nil else { return }
+        held = []
+    }
+
     public func connected() {
         guard !isConnected else { return }
         isConnected = true
+        let frames = held ?? []
+        held = nil
+        for frame in frames {
+            switch frame {
+            case .text(let text): receiveInOrder(text)
+            case .binary(let data): receiveBinaryInOrder(data)
+            }
+        }
         for observer in Array(observers.values) { observer(true) }
     }
 
     public func disconnected(error: Error? = nil) {
+        held = nil
         connectionGeneration += 1
         incoming?.cancel()
         incoming = nil
@@ -375,7 +397,10 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     }
 
     @discardableResult public func receiveInOrder(_ text: String) -> Task<Void, Never> {
-        guard isConnected else { return Task {} }
+        guard isConnected else {
+            held?.append(.text(text))
+            return Task {}
+        }
         let previous = incoming
         let generation = connectionGeneration
         // Await delivery as well as decoding: a snapshot must precede its following deltas.
@@ -409,7 +434,10 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     }
 
     @discardableResult public func receiveBinaryInOrder(_ frame: Data) -> Task<Void, Never> {
-        guard isConnected else { return Task {} }
+        guard isConnected else {
+            held?.append(.binary(frame))
+            return Task {}
+        }
         let previous = incoming
         let generation = connectionGeneration
         let task = Task.detached(priority: .userInitiated) { [weak self] in

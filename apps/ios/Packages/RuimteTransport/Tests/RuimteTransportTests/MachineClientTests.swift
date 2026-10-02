@@ -40,6 +40,31 @@ import Testing
         #expect(received == [large, "delta", "new connection"])
     }
 
+    @Test func framesBetweenTheLinkOpeningAndTheClientConnectingWaitForIt() async throws {
+        let client = MachineClient(send: { _ in })
+        var received: [String] = []
+        let stop = client.subscribe("session.output") { received.append($0["data"]?.stringValue ?? "") }
+        defer { stop() }
+        func frame(_ data: String) -> String {
+            #"{"type":"event","event":"session.output","payload":{"sessionId":"s","data":"\#(data)"}}"#
+        }
+        await client.receiveInOrder(frame("before the link")).value
+        client.linkOpened()
+        client.receiveInOrder(frame("first"))
+        client.receiveInOrder(frame("second"))
+        client.connected()
+        await client.receiveInOrder(frame("third")).value
+        #expect(received == ["first", "second", "third"])
+
+        client.disconnected()
+        client.linkOpened()
+        client.receiveInOrder(frame("from a link that closed"))
+        client.disconnected()
+        client.connected()
+        await client.receiveInOrder(frame("fourth")).value
+        #expect(received == ["first", "second", "third", "fourth"])
+    }
+
     @Test func historyPageIsAppliedBeforeTheFollowingDelta() async throws {
         var client: MachineClient!
         var text = ""

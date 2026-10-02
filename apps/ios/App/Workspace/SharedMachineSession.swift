@@ -56,6 +56,7 @@ final class SharedMachineSession {
         let events = LinkEvents(
             opened: { [weak self] in
                 guard let epoch = self?.linkEpoch else { return }
+                self?.rpc.linkOpened()
                 Task { @MainActor [weak self] in
                     guard let self, lease != nil, linkEpoch == epoch else { return }
                     connected = true
