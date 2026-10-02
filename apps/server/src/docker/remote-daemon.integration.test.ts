@@ -354,7 +354,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const opened = await client.request<ProjectOpenResult>('project.open', { folder: REPO, name: 'Atlas' });
         openedProjects.push(opened.summary.projectId);
         expect(opened.summary.folder).toBe(REPO);
-        expect(opened.document.views.length).toBeGreaterThan(0);
+        expect(opened.document.views).toEqual([]);
 
         const listed = await client.request<ProjectListResult>('project.list', {});
         expect(listed.projects.some((project) => project.projectId === opened.summary.projectId)).toBe(true);
@@ -746,7 +746,7 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
 
             const refused = (resource: unknown) => client.request('bytes.read', { resource, offset: 0, length: 1024 });
             await expect(refused({ kind: 'file', path: '/etc/passwd' })).rejects.toThrow(/^not-found:/);
-            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^not-found:/);
+            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^machine-state:/);
             await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toThrow(/^not-found:/);
             const deep = await client.request<BytesReadResult>('bytes.read', {
                 resource: { kind: 'file', path: huge },
@@ -934,10 +934,15 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
      * one that is up keeps listing and opening its own projects while the other one is away.
      */
     test('a project on the machine that is up opens while the other one is gone', async () => {
-        const opened = await here.request<ProjectOpenResult>('project.open', { name: 'While the container is down' });
-        const listed = await here.request<ProjectListResult>('project.list', {});
-        expect(listed.projects.some((project) => project.projectId === opened.summary.projectId)).toBe(true);
-        expect(there.closed).toBe(true);
+        const folder = await mkdtemp(join(tmpdir(), 'ruimte-up-'));
+        try {
+            const opened = await here.request<ProjectOpenResult>('project.open', { folder, name: 'While the container is down' });
+            const listed = await here.request<ProjectListResult>('project.list', {});
+            expect(listed.projects.some((project) => project.projectId === opened.summary.projectId)).toBe(true);
+            expect(there.closed).toBe(true);
+        } finally {
+            await rm(folder, { recursive: true, force: true });
+        }
     });
 
     test('the container comes back and pairs again, next to the connection that never dropped', async () => {
@@ -1256,10 +1261,10 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         mineRev = mineSaved.rev;
         theirsRev = theirsSaved.rev;
 
-        const onDisk = await Bun.file(join(folder, '.ruimte/project.json')).text();
+        const onDisk = await Bun.file(join(folder, '.ruimte/private/project.json')).text();
         expect(onDisk).toContain('written here');
         expect(onDisk).not.toContain('written there');
-        const overThere = await inContainer(['cat', `${REPO}/.ruimte/project.json`]);
+        const overThere = await inContainer(['cat', `${REPO}/.ruimte/private/project.json`]);
         expect(overThere).toContain('written there');
         expect(overThere).not.toContain('written here');
     }, 30_000);
@@ -1275,11 +1280,12 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
     });
 
     test('each files panel browses its own file system, at the same time', async () => {
+        await Bun.write(join(folder, 'here.txt'), 'here');
         const [mineList, theirsList] = await Promise.all([
-            here.request<FsListResult>('fs.list', { path: folder, hidden: true }),
+            here.request<FsListResult>('fs.list', { path: folder }),
             there.request<FsListResult>('fs.list', { path: REPO })
         ]);
-        expect(mineList.entries.map((entry) => entry.name)).toContain('.ruimte');
+        expect(mineList.entries.map((entry) => entry.name)).toContain('here.txt');
         expect(theirsList.entries.map((entry) => entry.name)).toContain('README.md');
         expect(theirsList.entries.map((entry) => entry.name)).not.toContain(basename(folder));
     });
@@ -1333,7 +1339,7 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         });
         expect(saved.rev).toBe(mineRev + 1);
         mineRev = saved.rev;
-        expect(await Bun.file(join(folder, '.ruimte/project.json')).text()).toContain('saved while the other machine is gone');
+        expect(await Bun.file(join(folder, '.ruimte/private/project.json')).text()).toContain('saved while the other machine is gone');
     }, 120_000);
 });
 
