@@ -34,6 +34,8 @@ class FakeTransport implements ChatTransport {
     history: ChatHistoryResult | ChatTransportError = { items: [], history: { start: 0, cursor: null } };
     // A request the host turns down, with the error it answers.
     refusals: Partial<Record<AgentRequestType, ChatTransportError>> = {};
+    // While set, `chat.attach` stays on the wire until it settles.
+    attachHold: Promise<void> | null = null;
     private readonly statusHandlers = new Set<(status: ChatTransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -50,12 +52,14 @@ class FakeTransport implements ChatTransport {
         switch (type) {
             case 'chat.create':
                 return Promise.resolve(info(chatId) as ChatRequestMap[T]['result']);
-            case 'chat.attach':
-                return Promise.resolve({
+            case 'chat.attach': {
+                const answer = {
                     info: info(chatId),
                     items: this.items,
                     ...this.attachResult?.(payload as ChatRequestMap['chat.attach']['payload'])
-                } as ChatRequestMap[T]['result']);
+                } as ChatRequestMap[T]['result'];
+                return this.attachHold ? this.attachHold.then(() => answer) : Promise.resolve(answer);
+            }
             case 'chat.history':
                 return this.history instanceof ChatTransportError ? Promise.reject(this.history) : Promise.resolve(this.history as ChatRequestMap[T]['result']);
             case 'chat.send':
@@ -310,6 +314,60 @@ describe('ChatClient', () => {
 
         await expect(client.retarget('fresh', 'codex', { model: 'gpt-5.5', options: {} })).rejects.toThrow('No account');
         expect(sink.forgotten).toEqual(['fresh']);
+    });
+
+    test('a chat closed while its attach is on the wire is detached once the host answers', async () => {
+        const { transport, sink, client } = setup();
+        let release = () => {};
+        transport.attachHold = new Promise((resolve) => {
+            release = resolve;
+        });
+        const opened = client.open('quick', {});
+        await flush();
+        expect(transport.of('chat.attach')).toHaveLength(1);
+
+        await client.detach('quick');
+        release();
+        await opened;
+        await flush();
+        expect(transport.of('chat.detach').map((call) => call.payload)).toEqual([{ chatId: 'quick' }]);
+        expect(sink.resets).toHaveLength(0);
+    });
+
+    test('a chat closed before its create came back is never attached', async () => {
+        const { transport, client } = setup();
+        const opened = client.open('quick', {});
+        void client.detach('quick');
+        await opened;
+        await flush();
+        expect(transport.of('chat.attach')).toHaveLength(0);
+        expect(transport.of('chat.detach')).toHaveLength(0);
+    });
+
+    test('a reattach that answers after the chat was opened again leaves the new opening alone', async () => {
+        const { transport, sink, client } = setup();
+        transport.items = [{ id: 'u1', kind: 'user', createdAt: 0, turnId: 't1', text: 'hi' } as ChatItem];
+        transport.attachResult = (payload) => (payload.since === undefined ? { seq: 9 } : { items: [], events: [], seq: 6 });
+        await client.open('c', {});
+        transport.emit('chat.event', { chatId: 'c', event: { type: 'delta', itemId: 'a1', text: 'x' }, seq: 5 });
+
+        let release = () => {};
+        transport.attachHold = new Promise((resolve) => {
+            release = resolve;
+        });
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'c', historyLimit: 60, since: 5 });
+
+        // The view mounts again while the reattach is on the wire.
+        void client.detach('c');
+        const reopened = client.open('c', {});
+        release();
+        await reopened;
+        await flush();
+        expect(sink.resets.map((reset) => reset.items.length)).toEqual([1, 1]);
+        expect(transport.of('chat.detach')).toHaveLength(0);
     });
 
     test('letting go of the machine detaches every chat and kills none', async () => {

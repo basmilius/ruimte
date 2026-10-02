@@ -283,26 +283,37 @@ export class ChatClient {
      */
     private async attach(chatId: string): Promise<void> {
         const entry = this.mounted.get(chatId);
-        await this.transport.request('chat.create', {
-            chatId,
-            provider: entry?.provider,
-            account: entry?.account,
-            cwd: entry?.cwd,
-            resume: entry?.resume,
-            selection: entry?.selection,
-            runtimeMode: entry?.runtimeMode
-        });
-        const since = entry?.seq;
-        const result = await this.transport.request('chat.attach', { chatId, historyLimit: HISTORY_PAGE, ...(since === undefined ? {} : { since }) });
-        const current = this.mounted.get(chatId);
-        if (!current) {
+        if (!entry) {
             return;
         }
-        current.attached = true;
-        if (result.seq !== undefined) {
-            current.seq = result.seq;
+        await this.transport.request('chat.create', {
+            chatId,
+            provider: entry.provider,
+            account: entry.account,
+            cwd: entry.cwd,
+            resume: entry.resume,
+            selection: entry.selection,
+            runtimeMode: entry.runtimeMode
+        });
+        // Closed or opened again in the meantime: an opening that is still there attaches itself.
+        if (this.mounted.get(chatId) !== entry) {
+            return;
         }
-        if (result.events && since !== undefined && current === entry) {
+        const since = entry.seq;
+        const result = await this.transport.request('chat.attach', { chatId, historyLimit: HISTORY_PAGE, ...(since === undefined ? {} : { since }) });
+        const current = this.mounted.get(chatId);
+        if (current !== entry) {
+            // Its detach found nothing attached yet, and the host would stream this chat here until the socket closes.
+            if (!current) {
+                await this.transport.request('chat.detach', { chatId }).catch(() => undefined);
+            }
+            return;
+        }
+        entry.attached = true;
+        if (result.seq !== undefined) {
+            entry.seq = result.seq;
+        }
+        if (result.events && since !== undefined) {
             for (const event of result.events) {
                 this.sink.apply(chatId, event);
             }
