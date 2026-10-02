@@ -1817,6 +1817,13 @@ describe('the depth limit', () => {
         expect((await post('team', args('Crew'))).status).toBe(200);
         expect((await onDisk()).rev).toBe(2);
     });
+
+    test('calls at the same moment are counted one after the other', async () => {
+        const answers = await Promise.all(Array.from({ length: MAX_OPENED_PER_CALLER + 4 }, () => post('agent', ['claude'])));
+        expect(answers.filter((answer) => answer.status === 200)).toHaveLength(MAX_OPENED_PER_CALLER);
+        expect(answers.filter((answer) => answer.lines[0]?.startsWith('refused\ttoo-many-agents\t'))).toHaveLength(4);
+        expect(lineage.openedCount('term-1')).toBe(MAX_OPENED_PER_CALLER);
+    });
 });
 
 describe('link new', () => {

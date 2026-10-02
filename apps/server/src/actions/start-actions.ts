@@ -74,6 +74,8 @@ export const startActions: ActionHandlers<ServerActionContext> = {
 
         return host
             .mutate<{ output: ActionOutput<'agent.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
+                // Counted again under the lock the last start wrote its node down in: a call at the same moment read the same count.
+                depthForOpening(caller, 'agent', 1);
                 if (input.task !== null) {
                     requireChatParent(content, caller.caller);
                 }
@@ -254,6 +256,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
 
         return host
             .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
+                depthForOpening(caller, 'team', roles.length);
                 if (input.task) {
                     requireChatParent(content, caller.caller);
                 }
