@@ -1,7 +1,6 @@
 import { PushService } from './push/service.ts';
 import { registerPushHandlers } from './handlers/push.ts';
-import { dirname, join, normalize, resolve } from 'node:path';
-import { cspString } from '@ruimte/csp';
+import { dirname, join, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import {
     AuthTicketPayloadSchema,
@@ -93,6 +92,7 @@ import { FolderWatcher } from './fs/watch.ts';
 import { registerBytesHandlers } from './handlers/bytes.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
 import { readMedia } from './fs/read.ts';
+import { serveClient } from './serve-client.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
@@ -176,9 +176,6 @@ const MAX_REQUEST_BODY_BYTES = 8 * 1024 * 1024;
 const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
-
-/* The policy the served client runs under, the same one the client's own `<meta http-equiv>` carries. */
-const CLIENT_CSP = cspString();
 
 /* Runs the daemon until a signal ends the process. */
 export const startDaemon = async (config: ServerConfig): Promise<void> => {
@@ -1128,17 +1125,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     endChildren.start();
     // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.
     void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));
-
-    /* The built client from one directory; anything that is not a file falls back to the app shell. */
-    const serveClient = async (dir: string, pathname: string): Promise<Response> => {
-        const relative = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '');
-        const file = Bun.file(join(dir, relative === '/' ? 'index.html' : relative));
-        const headers = { 'content-security-policy': CLIENT_CSP };
-        if (await file.exists()) {
-            return new Response(file, { headers });
-        }
-        return new Response(Bun.file(join(dir, 'index.html')), { headers });
-    };
 
     void relay.publish({ host: config.host, port: server.port ?? config.port });
 
