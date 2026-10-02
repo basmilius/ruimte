@@ -1,5 +1,6 @@
 import { notifyRequested } from '@/shell/notifications';
 import i18next from 'i18next';
+import type { ProjectSummary } from '@ruimte/contracts';
 import { ChatClient } from '@ruimte/agents-react/chat/chat-client';
 import { BrowserClient } from '@/browser/browser-client';
 import { claimWindow } from '@/desktop/window-claim';
@@ -163,7 +164,7 @@ const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
  * can hand it the moment before the project is left and the drawing on screen reaches its own file.
  * `onLoad` runs in the tick the project reaches the stores.
  */
-const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): Connection => {
+const connect = (endpoint: Endpoint, onLoad: (connection: Connection, summary: ProjectSummary) => void): Connection => {
     const transport = machineOn(endpoint).transport;
     /* Asked again on every save. A row that learns its daemon's id renames the connection under the same clients. */
     const endpointId = (): string => connection.endpointId;
@@ -183,11 +184,11 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
         afterResume: async (): Promise<void> => {
             await Promise.all([drawings.resume(), diagrams.resume()]);
         },
-        onLoad: () => {
+        onLoad: (summary) => {
             // The last project on this machine took its rows with it, and the socket stayed open, so nothing asks again by itself.
             void connection.sessions.loadStatuses();
             void connection.chats.loadStatuses();
-            onLoad(connection);
+            onLoad(connection, summary);
         },
         endpointId
     });
@@ -219,13 +220,12 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
 };
 
 /*
- * Lets go of everything a connection built: its clients and its hold on the machine's link, which
- * over a broker is a WebRTC channel on both ends. The rows of that machine's sessions and chats go
- * too; they are about the nodes of the project that left, and the next one attaches its own.
+ * Lets go of a connection's clients and its hold on the machine's link, which over a broker is a
+ * WebRTC channel on both ends. False when that already happened.
  */
-const disposeConnection = (connection: Connection): void => {
+const dropClients = (connection: Connection): boolean => {
     if (disposed.has(connection)) {
-        return;
+        return false;
     }
     disposed.add(connection);
     connectionHolds.get(connection)?.set(null);
@@ -233,21 +233,76 @@ const disposeConnection = (connection: Connection): void => {
     connection.projects.dispose();
     connection.drawings.dispose();
     connection.diagrams.dispose();
+    return true;
+};
+
+/*
+ * Lets go of everything a connection built. The rows of that machine's sessions and chats go too;
+ * they are about the nodes of the project that left, and the next one attaches its own.
+ */
+const disposeConnection = (connection: Connection): void => {
+    if (!dropClients(connection)) {
+        return;
+    }
     useSessions.getState().clear(connection.endpointId);
     useChats.getState().forgetWhere((key) => isOfEndpoint(key, connection.endpointId));
 };
 
+interface ProjectOn {
+    endpointId: string;
+    projectId: string;
+}
+
+/* The project the stores hold, by the machine it is on. */
+const projectInStores = (): ProjectOn | null => {
+    const { current, currentEndpointId } = stores.project.getState();
+    return current && currentEndpointId ? { endpointId: currentEndpointId, projectId: current.projectId } : null;
+};
+
+/* The daemon lets go of a project this window will not show, unless it is the very project `kept` names. */
+const releaseUnless = (connection: Connection, projectId: string, kept: ProjectOn | null): void => {
+    if (kept?.endpointId === connection.endpointId && kept.projectId === projectId) {
+        return;
+    }
+    void connection.transport.request('project.release', { projectId }).catch(() => undefined);
+};
+
+/* Thrown out of an open that a later one overtook, before the stores take its project. */
+class Overtaken extends Error {}
+
+/* How many opens this window started, and which of them is on screen. */
+let opens = 0;
+let shownOpen = 0;
+
 /*
  * Opens a project in a new workspace and puts it on screen. The window moves in the same tick the
  * project reaches the stores, so nothing is drawn with the old connection over the new project. A
- * project that does not open leaves the window as it was and takes its clients with it.
+ * project that does not open leaves the window as it was and takes its clients with it. Of two opens
+ * on their way at once, the later one ends up on screen whichever machine answers first.
  */
 export const enterWorkspace = async (endpointId: string, request: OpenRequest): Promise<void> => {
     const endpoint = endpointById(endpointId);
     if (!endpoint || !isRealMachine(endpointId)) {
         throw new Error(i18next.t('machines:link.notInList'));
     }
-    const connection = connect(endpoint, (opened) => {
+    opens += 1;
+    const ticket = opens;
+    const connection = connect(endpoint, (opened, summary) => {
+        if (ticket < shownOpen) {
+            releaseUnless(opened, summary.projectId, projectInStores());
+            throw new Overtaken();
+        }
+        // An earlier open that this one overtook answered first and took the window. Nothing of it is
+        // written, since the stores are about to take this project.
+        const shown = windowWorkspace()?.connection;
+        if (shown && shown !== opened && !disposed.has(shown)) {
+            const left = projectInStores();
+            if (left) {
+                releaseUnless(shown, left.projectId, { endpointId: opened.endpointId, projectId: summary.projectId });
+            }
+            disposeConnection(shown);
+        }
+        shownOpen = ticket;
         useEndpoints.getState().setActive(opened.endpointId);
         useWindow.getState().show({ kind: 'workspace', workspace: { connection: opened } });
     });
@@ -258,6 +313,11 @@ export const enterWorkspace = async (endpointId: string, request: OpenRequest): 
             await connection.projects.openFolder(request.folder, request.createFolder);
         }
     } catch (e) {
+        // The window shows the open that overtook this one, and the rows of a shared machine are its rows too.
+        if (e instanceof Overtaken) {
+            dropClients(connection);
+            return;
+        }
         if (windowWorkspace()?.connection !== connection) {
             disposeConnection(connection);
         }

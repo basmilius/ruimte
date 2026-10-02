@@ -1,6 +1,9 @@
-import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, spyOn, test, type Mock } from 'bun:test';
 import type { AgentInfo, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
 import { useChats } from '@ruimte/agents-react/state/chats';
+import { switchRun, type SwitchDeps } from '@/project/open';
+import { ProjectClient } from '@/project/project-client';
+import { ProjectSwitch } from '@/project/project-switch';
 import { chatWorking, sessionWorking } from '@/state/agent-work';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
@@ -169,6 +172,125 @@ describe('a workspace and the link of its machine', () => {
         await enterWorkspace(other.id, { projectId: project.projectId });
         await Promise.resolve();
         expect(working()).toEqual([true, true]);
+    });
+
+    describe('a second pick while the first is still opening', () => {
+        /* Two picks through the switch, on a machine that opens a project only once the test says so. */
+        const race = () => {
+            const opens = new Map<string, Array<() => void>>();
+            const released: string[] = [];
+            const fallback = answer(refuse);
+            (machineTransport(other.id).request as unknown as Mock<(type: RequestType, payload: unknown) => Promise<unknown>>).mockImplementation(
+                (type, payload) => {
+                    const projectId = (payload as { projectId?: string }).projectId ?? '';
+                    if (type === 'project.release') {
+                        released.push(projectId);
+                    }
+                    if (type !== 'project.open' || projectId === project.projectId) {
+                        return fallback(type);
+                    }
+                    const result = {
+                        summary: { ...project, projectId },
+                        document: { version: 3, rev: 1, name: projectId, color: '#000', views: [] },
+                        local: { activeViewId: null, views: {} }
+                    };
+                    return new Promise((resolve) => opens.set(projectId, [...(opens.get(projectId) ?? []), () => resolve(result)]));
+                }
+            );
+            const deps: SwitchDeps = {
+                ensure: async (endpointId) => endpointId,
+                current: () => {
+                    const { current, currentEndpointId } = useProject.getState();
+                    return windowWorkspace() && current && currentEndpointId ? { endpointId: currentEndpointId, projectId: current.projectId } : null;
+                },
+                leave: leaveWorkspace,
+                enter: enterWorkspace,
+                toStart: showStart,
+                claim: async () => true
+            };
+            const projectSwitch = new ProjectSwitch({ schedule: () => () => undefined });
+            const pick = (projectId: string) =>
+                projectSwitch.start({ endpointId: other.id, summary: null, folder: null, name: null }, () =>
+                    switchRun({ kind: 'project', endpointId: other.id, projectId }, deps)
+                );
+            const settle = async (): Promise<void> => {
+                for (let i = 0; i < 50; i += 1) {
+                    await Promise.resolve();
+                }
+            };
+            // The open asked for first answers first.
+            return { pick, settle, released, open: (projectId: string) => opens.get(projectId)?.shift()?.() };
+        };
+
+        test('the first coming in first leaves one workspace behind, the later one', async () => {
+            const { pick, settle, released, open } = race();
+            const clientsDisposed = spyOn(ProjectClient.prototype, 'dispose');
+            const documents = countLive(defaultWorkspaceStores.document, 'subscribe');
+            try {
+                await enterWorkspace(other.id, { projectId: project.projectId });
+                const oneOpen = documents.live();
+                void pick('project-a');
+                await settle();
+                const toB = pick('project-b');
+                await settle();
+                open('project-a');
+                await settle();
+                expect(useProject.getState().current?.projectId).toBe('project-a');
+                const overtaken = windowWorkspace()?.connection.projects;
+                open('project-b');
+                expect(await toB).toBe('done');
+
+                expect(useProject.getState().current?.projectId).toBe('project-b');
+                expect(clientsDisposed.mock.contexts.filter((client) => client === overtaken)).toHaveLength(1);
+                expect(documents.live()).toBe(oneOpen);
+                expect(released).toContain('project-a');
+            } finally {
+                documents.restore();
+                clientsDisposed.mockRestore();
+            }
+        });
+
+        test('the first coming in last never shows, and leaves the rows of the machine alone', async () => {
+            const { pick, settle, released, open } = race();
+            const documents = countLive(defaultWorkspaceStores.document, 'subscribe');
+            try {
+                await enterWorkspace(other.id, { projectId: project.projectId });
+                const oneOpen = documents.live();
+                const toA = pick('project-a');
+                await settle();
+                const toB = pick('project-b');
+                await settle();
+                open('project-b');
+                expect(await toB).toBe('done');
+                const shown = windowWorkspace();
+                // A terminal of the project on screen, which the list the machine answers with does not name.
+                useSessions.getState().setAttached(endpointKey(other.id, 'terminal-9'), true);
+
+                open('project-a');
+                expect(await toA).toBe('replaced');
+                expect(windowWorkspace()).toBe(shown);
+                expect(useProject.getState().current?.projectId).toBe('project-b');
+                expect(documents.live()).toBe(oneOpen);
+                expect(released).toContain('project-a');
+                expect(useSessions.getState().byKey[endpointKey(other.id, 'terminal-9')]?.attached).toBe(true);
+            } finally {
+                documents.restore();
+            }
+        });
+
+        test('the same project picked twice stays held on the machine', async () => {
+            const { pick, settle, released, open } = race();
+            await enterWorkspace(other.id, { projectId: project.projectId });
+            void pick('project-a');
+            await settle();
+            const again = pick('project-a');
+            await settle();
+            open('project-a');
+            await settle();
+            open('project-a');
+            expect(await again).toBe('done');
+            expect(released).not.toContain('project-a');
+        });
     });
 
     test('opening and closing twenty times leaves no listener and no hold behind', async () => {

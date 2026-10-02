@@ -109,8 +109,8 @@ interface ProjectClientOptions {
     diagrams?: DrawingsAccess;
     /* Runs before the project is left for another one, so the drawing on screen reaches its own file first. */
     beforeLeave?: () => Promise<void>;
-    /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. */
-    onLoad?: () => void;
+    /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. A throw stops the open before the stores take it. */
+    onLoad?: (summary: ProjectSummary) => void;
     /* Drops what this client cached for the views of a project it is putting away. */
     forgetSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
     /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
@@ -139,7 +139,7 @@ export class ProjectClient {
     private readonly saveDelayMs: number;
     private readonly localDelayMs: number;
     private readonly beforeLeave: () => Promise<void>;
-    private readonly onLoad: () => void;
+    private readonly onLoad: (summary: ProjectSummary) => void;
     private readonly forgetSessions: (endpointId: string, views: readonly ProjectView[]) => void;
     private readonly afterResume: () => Promise<void>;
     private readonly unsubscribe: Array<() => void> = [];
@@ -430,7 +430,7 @@ export class ProjectClient {
             this.baseShared = [...(draft?.base.shared ?? result.document.shared ?? [])];
             this.locallyDrafted = draft !== null;
             const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
-            this.onLoad();
+            this.onLoad(result.summary);
             this.opened = true;
             this.documents.getState().load(draft?.document ?? result.document, local);
             // In the same tick as the canvas, so the panels never paint the project that just left.
