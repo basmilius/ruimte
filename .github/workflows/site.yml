@@ -18,15 +18,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # The token the station deploys with; the Custom Domains `ruimte.app` and `www.ruimte.app` sit on the same zone.
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
     defaults:
       run:
         working-directory: apps/site
     steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
@@ -34,3 +32,6 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run deploy
+        env:
+          # The token the station deploys with; the Custom Domains `ruimte.app` and `www.ruimte.app` sit on the same zone.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

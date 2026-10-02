@@ -17,7 +17,7 @@ runs:
           } | shasum -a 256 | cut -d ' ' -f 1
         )
         echo "key=$toolchain" >> "$GITHUB_OUTPUT"
-    - uses: Swatinem/rust-cache@v2
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
       with:
         shared-key: macos-release-${{ steps.toolchain.outputs.key }}
         cache-bin: false
@@ -27,7 +27,7 @@ runs:
     # Swift binaries are reused only when their sources and toolchain match exactly.
     - name: Cache Swift release products
       id: swift
-      uses: actions/cache@v5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: |
           apps/computer-use/.build
