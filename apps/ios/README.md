@@ -448,9 +448,11 @@ The app is an Xcode Cloud product in App Store Connect, built from this reposito
 the committed project and `Ruimte.xcodeproj/xcshareddata/xcodecloud/manifest.json`. Its
 `Release` workflow starts on every `v*` tag, the tag of a Ruimte release, and archives the
 app for TestFlight and the App Store. `ci_scripts/ci_post_clone.sh` sets `MARKETING_VERSION`
-from that tag, generates the project and installs the required Metal component, so the app
-carries the desktop's version; `ci_pre_xcodebuild.sh` uses `CI_BUILD_NUMBER` for the build
-number.
+from that tag and `CURRENT_PROJECT_VERSION` from `CI_BUILD_NUMBER`, generates the project
+and installs the required Metal component, so the app carries the desktop's version. Both are
+set in the spec because `agvtool` reads a test target's `GENERATE_INFOPLIST_FILE = YES` as a
+plist path and fails. A `Check` workflow builds and tests the app on an iPhone simulator on
+main and on pull requests that touch `apps/ios`, `packages/contracts` or `packages/pulsar`.
 
 Onboarding refuses a project whose Swift packages live in repositories the team cannot grant
 access to, and every package here is someone else's public repository. The product was made

@@ -12,6 +12,10 @@ case "${CI_TAG:-}" in
         sed -i '' "s/^\(    MARKETING_VERSION:\).*/\1 ${CI_TAG#v}/" apps/ios/project.yml
         ;;
 esac
+# Set in the spec rather than with agvtool, which takes a test target's GENERATE_INFOPLIST_FILE = YES for a plist path.
+if [ -n "${CI_BUILD_NUMBER:-}" ]; then
+    sed -i '' "s/^\(    CURRENT_PROJECT_VERSION:\).*/\1 ${CI_BUILD_NUMBER}/" apps/ios/project.yml
+fi
 xcodegen generate --spec apps/ios/project.yml
 # The Xcode Cloud image may carry the toolchain already, and xcodebuild then answers with an error.
 if ! output=$(xcodebuild -downloadComponent MetalToolchain 2>&1); then
