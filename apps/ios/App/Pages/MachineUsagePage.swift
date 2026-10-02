@@ -8,6 +8,9 @@ struct MachineUsagePage: View {
     @State private var state = RemotePageState()
     @State private var limits: JSONValue?
     @State private var accounts: ProviderAccountList?
+    /// Per CLI, what the machine types to log in under an account; a CLI without one has no login to offer.
+    @State private var loginCommands: [String: String] = [:]
+    @State private var login: UsageLogin?
     @State private var days = 7
     @Environment(\.locale) private var locale
     private var models: [JSONValue] { state.value?.list("models") ?? [] }
@@ -24,6 +27,9 @@ struct MachineUsagePage: View {
             usageList
         }
         .navigationTitle("Usage")
+        .mobileSheet(item: $login) { login in
+            AccountLoginSheet(client: client, kind: login.kind, accountID: login.accountID, name: login.name)
+        }
         .task(id: days) {
             await RemotePageLifecycle.run(
                 client: client, events: ["usage.changed", "usage.limitsChanged", "accounts.changed"],
@@ -115,7 +121,14 @@ struct MachineUsagePage: View {
     @ViewBuilder private func limitRows(_ section: UsageLimitSection) -> some View {
         switch section.quiet {
         case .signedOut:
-            Text("Not logged in. Log in on the machine to see its limits.").foregroundStyle(MobileStyle.muted)
+            if loginCommands[section.kind] != nil {
+                Text("Not logged in. Log in to see its limits.").foregroundStyle(MobileStyle.muted)
+                Button("Log in", lucideIcon: "log-in") {
+                    login = UsageLogin(kind: section.kind, accountID: section.id, name: section.name)
+                }
+            } else {
+                Text("Not logged in. Log in on the machine to see its limits.").foregroundStyle(MobileStyle.muted)
+            }
         case .notRead(let message):
             Text(message ?? "Not read yet. Its limits appear once the machine has read them.")
                 .foregroundStyle(MobileStyle.muted)
@@ -163,8 +176,19 @@ struct MachineUsagePage: View {
                 ]))
             limits = try await client.request("usage.limits")
             // A machine from before accounts does not know the request, and its limits read as they always did.
-            accounts = (try? await client.request(WireRequest.accountsList.rawValue)).map(ProviderAccountList.init)
+            let list = try? await client.request(WireRequest.accountsList.rawValue)
+            accounts = list.map(ProviderAccountList.init)
+            loginCommands = (list?["loginCommands"]?.objectValue ?? [:]).compactMapValues(\.stringValue)
             return result
         }
     }
+}
+
+/// A signed-out account a person asked to log in to.
+private struct UsageLogin: Identifiable {
+    let kind: String
+    let accountID: String
+    let name: String
+
+    var id: String { accountID }
 }

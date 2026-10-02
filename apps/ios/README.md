@@ -95,7 +95,10 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   another; a CLI with several accounts names the account in its rows, and one CLI's widget then shows that
   account's cost of today.
 - The usage page has a limits section per account, titled with the account once a CLI has several. An account
-  that is signed out or not read yet says so instead of drawing empty bars.
+  that is signed out or not read yet says so instead of drawing empty bars. A signed-out account offers Log in where the machine
+  names a login command for its CLI, as the desktop's usage page does: the CLI's own login runs in a terminal of its
+  own on the machine (`session.login`, no approval since the machine picks the command), the sheet closes by itself
+  once the account reads logged in, and closing it ends that session.
 
 ## AI conversations
 
