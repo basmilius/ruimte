@@ -1,5 +1,6 @@
 import type { AgentKind, GitResolveAiResult, GitResolveBlock } from '@ruimte/contracts';
 import { fingerprint, splitBlocks, splitLines, type MergeBlock } from '@ruimte/merge';
+import type { ChatProvider } from '@ruimte/agents/providers/provider';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import { readConflict } from './conflict.ts';
 import { streamCommand, toplevel, GitError } from './run.ts';
@@ -19,7 +20,7 @@ const block = (label: string, lines: readonly string[]): string => `${label}:\n$
  * sees. JSON, because a model left to write freely opens with a sentence about what it is about to
  * do, and that sentence would end up in the code.
  */
-export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], ours: string, theirs: string): string => {
+export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], ours: string, theirs: string): ResolvePrompt => {
     const parts: string[] = [
         `Resolve the merge conflicts in ${path}.`,
         '',
@@ -33,6 +34,9 @@ export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], 
         '- Leave a conflict out of the answer when picking a side is a judgement only the author can make.',
         ''
     ];
+    let bytes = Buffer.byteLength(parts.join('\n'));
+    const asked: number[] = [];
+    const skipped: number[] = [];
     for (const [index, entry] of blocks.entries()) {
         if (entry.kind !== 'conflict') {
             continue;
@@ -45,7 +49,7 @@ export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], 
             .slice(index + 1)
             .flatMap((next) => (next.kind === 'stable' ? next.base : []))
             .slice(0, CONTEXT_LINES);
-        parts.push(
+        const part = [
             `Conflict ${index}`,
             block('Lines before', before),
             block('Both sides started from', entry.base),
@@ -53,12 +57,35 @@ export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], 
             block(`Side "${theirs}"`, entry.theirs),
             block('Lines after', after),
             ''
-        );
-        if (parts.join('\n').length > MAX_PROMPT_BYTES) {
-            break;
+        ];
+        // Measured before it goes in, so one side that reformatted a whole file never takes the prompt past the cap.
+        const size = Buffer.byteLength(`\n${part.join('\n')}`);
+        if (bytes + size > MAX_PROMPT_BYTES) {
+            skipped.push(index);
+            continue;
         }
+        parts.push(...part);
+        bytes += size;
+        asked.push(index);
     }
-    return parts.join('\n');
+    return { prompt: parts.join('\n'), asked, skipped };
+};
+
+export interface ResolvePrompt {
+    prompt: string;
+    /* The blocks the prompt asks about, by index. */
+    asked: number[];
+    /* The conflicts left out because they would not fit; those stay with the person. */
+    skipped: number[];
+}
+
+/* How a one-shot CLI gets its prompt: on stdin where it reads it there, since an argument is capped and shows in the process list. */
+export const oneShotRun = (provider: ChatProvider, prompt: string): { args: string[]; stdin?: string } | null => {
+    if (provider.oneShotStdinArgs) {
+        return { args: [...provider.oneShotStdinArgs], stdin: prompt };
+    }
+    const args = provider.oneShotArgs?.(prompt) ?? null;
+    return args === null ? null : { args };
 };
 
 /* The blocks out of whatever the CLI wrote around them; anything that is not a stretch of lines is dropped. */
@@ -126,18 +153,24 @@ export const resolveWithAgent = async (
     if (provider === null) {
         throw new GitError('git-failed', 'No agent CLI on this machine can resolve a conflict.');
     }
-    const args = provider.oneShotArgs?.(buildResolvePrompt(path, blocks, sides.ours, sides.theirs)) ?? null;
-    if (args === null) {
+    const built = buildResolvePrompt(path, blocks, sides.ours, sides.theirs);
+    const tooLarge = built.skipped.length === 0 ? '' : `${built.skipped.length} of ${open.length} conflicts are too large to hand to ${provider.name}. `;
+    if (built.asked.length === 0) {
+        return { blocks: [], note: `${tooLarge}They are left for you.` };
+    }
+    const run = oneShotRun(provider, built.prompt);
+    if (run === null) {
         throw new GitError('git-failed', `${provider.name} cannot answer a single prompt.`);
     }
     let kill: (() => void) | null = null;
     const timer = setTimeout(() => kill?.(), TIMEOUT_MS);
     try {
-        const result = await streamCommand(provider.command[0]!, args, top, {
+        const result = await streamCommand(provider.command[0]!, run.args, top, {
             onSpawn: (stop) => {
                 kill = stop;
                 options.onSpawn?.(stop);
-            }
+            },
+            ...(run.stdin === undefined ? {} : { stdin: run.stdin })
         });
         if (result.code !== 0) {
             throw new GitError('git-failed', `${provider.name} stopped: ${result.stderr.trim() || 'no output'}`);
@@ -145,15 +178,15 @@ export const resolveWithAgent = async (
         const answers: GitResolveBlock[] = [];
         for (const answer of parseResolution(result.stdout)) {
             const entry = blocks[answer.index];
-            // An answer for a stretch that is not a conflict is one the model made up.
-            if (entry !== undefined && entry.kind === 'conflict') {
+            // An answer for a stretch it was not asked about is one the model made up.
+            if (entry !== undefined && entry.kind === 'conflict' && built.asked.includes(answer.index)) {
                 answers.push({ index: answer.index, fingerprint: fingerprint(entry), lines: answer.lines });
             }
         }
         const left = open.length - answers.length;
         return {
             blocks: answers,
-            ...(left > 0 ? { note: `${provider.name} left ${left} of ${open.length} conflicts for you.` } : {})
+            ...(left > 0 ? { note: `${tooLarge}${provider.name} left ${left} of ${open.length} conflicts for you.` } : {})
         };
     } finally {
         clearTimeout(timer);

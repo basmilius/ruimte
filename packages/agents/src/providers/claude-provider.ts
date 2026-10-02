@@ -20,6 +20,8 @@ export const createClaudeProvider = (options: ClaudeBackendOptions = {}): ChatPr
     },
     detect: detectCli,
     oneShotArgs: (prompt) => ['-p', prompt, '--output-format', 'text'],
+    // `-p` without a prompt argument reads the prompt from stdin.
+    oneShotStdinArgs: ['-p', '--output-format', 'text'],
     // `claude [options] [prompt]`: the prompt is the positional, and without -p the session stays.
     firstPromptArgs: (prompt) => [prompt],
     createBackend: (launch, host) => new ClaudeBackend(launch, host, options)

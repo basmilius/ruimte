@@ -89,6 +89,8 @@ export interface StreamOptions {
     /* Runs it in a process group of its own, which `kill` ends whole: a hook git started keeps the
        output pipes open after git itself is gone, and the call would never come back. */
     group?: boolean;
+    /* What the command reads on stdin; without it stdin is closed. */
+    stdin?: string;
 }
 
 /*
@@ -131,7 +133,7 @@ export const streamCommand = async (command: string, args: string[], cwd: string
         proc = Bun.spawn([command, ...args], {
             cwd,
             env: { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C', ...options.env },
-            stdin: 'ignore',
+            stdin: options.stdin === undefined ? 'ignore' : new TextEncoder().encode(options.stdin),
             stdout: 'pipe',
             stderr: 'pipe',
             detached: options.group === true

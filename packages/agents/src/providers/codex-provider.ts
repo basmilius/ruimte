@@ -18,6 +18,8 @@ export const createCodexProvider = (options: CodexBackendOptions = {}): ChatProv
     // Read-only and without an approval to wait for: the run only has to read what it is handed. A chat's
     // title is asked in a folder that need not be a repository, and ephemeral keeps the run out of Codex's thread list.
     oneShotArgs: (prompt) => ['exec', '--color', 'never', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral', prompt],
+    // A prompt of `-` is read from stdin.
+    oneShotStdinArgs: ['exec', '--color', 'never', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral', '-'],
     // `codex [OPTIONS] [PROMPT]`: the positional starts the interactive session on that prompt.
     firstPromptArgs: (prompt) => [prompt],
     createBackend: (launch, host) => new CodexBackend(launch, host, options)
