@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, Hand, MessageCircleQuestionMark } from 'lucide-react';
-import { focusPromptStart } from '../../prompts/logic/focus';
+import { focusPromptHeading, focusPromptStart } from '../../prompts/logic/focus';
 import { orderPrompts, type PendingPrompt } from '../../prompts/logic/prompts';
 import { answerPrompt, isBlockingSubject, promptCreatedAt, promptIdOf, type PromptSubject } from '../../prompts/logic/subjects';
 import { useFocusAfterAnswer } from '../../prompts/logic/useFocusAfterAnswer';
@@ -60,9 +60,14 @@ export function PromptComposer({
 
     useEffect(() => {
         if (focused && expanded && !elsewhere && !ref.current?.querySelector('.prompt-card')?.contains(document.activeElement)) {
-            focusPromptStart(ref.current);
+            // Keys meant for the draft may still be coming, and on a button the next Space would answer the card.
+            if (hasDraft) {
+                focusPromptHeading(ref.current);
+            } else {
+                focusPromptStart(ref.current);
+            }
         }
-    }, [activeKey, expanded, focused, elsewhere]);
+    }, [activeKey, expanded, focused, elsewhere, hasDraft]);
 
     return (
         <div ref={ref} onPointerDownCapture={session.onPointerDownCapture} onClickCapture={session.onClickCapture}>

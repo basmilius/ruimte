@@ -14,6 +14,7 @@ export interface ApprovalButton {
     description?: string;
     /* The Allow: drawn last, filled, and the one that says it is sending. */
     primary: boolean;
+    lasting?: boolean;
     onPress(): void;
 }
 
@@ -46,7 +47,14 @@ export function ApprovalActions({
                             {sending ? t('sending') : button.label}
                         </PromptPrimary>
                     ) : (
-                        <Button key={button.id} size="sm" disabled={locked} aria-description={button.description} onClick={button.onPress}>
+                        <Button
+                            key={button.id}
+                            size="sm"
+                            disabled={locked}
+                            aria-description={button.description}
+                            data-prompt-lasting={button.lasting ? '' : undefined}
+                            onClick={button.onPress}
+                        >
                             {button.label}
                         </Button>
                     )

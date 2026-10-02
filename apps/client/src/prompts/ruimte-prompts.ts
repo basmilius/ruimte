@@ -55,7 +55,7 @@ export const computerButtons = (): ApprovalButtonSpec[] => {
     const choose = (choiceId: ComputerApprovalChoice) => ({ kind: 'choose', choiceId }) as const;
     return [
         { id: 'deny', label: i18next.t('prompts:computer.deny'), primary: false, action: choose('deny') },
-        { id: 'always', label: i18next.t('prompts:computer.always'), primary: false, action: choose('always') },
+        { id: 'always', label: i18next.t('prompts:computer.always'), primary: false, lasting: true, action: choose('always') },
         { id: 'once', label: i18next.t('prompts:computer.once'), primary: true, action: choose('once') }
     ];
 };

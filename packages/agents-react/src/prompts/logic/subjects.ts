@@ -51,6 +51,8 @@ export interface ApprovalButtonSpec {
     label: string;
     description?: string;
     primary: boolean;
+    /* Grants beyond this one request, so the keyboard never starts on it. */
+    lasting?: boolean;
     action: PromptAction;
 }
 
@@ -78,6 +80,7 @@ export const approvalButtons = (subject: PromptSubject, reason: string): Approva
                       label: item.allowAlways.label,
                       description: item.allowAlways.description,
                       primary: false,
+                      lasting: true,
                       action: { kind: 'approve', decision: 'allow-always' } as const
                   }
               ]
