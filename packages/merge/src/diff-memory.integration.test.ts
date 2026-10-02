@@ -3,8 +3,9 @@ import { memoryUsage } from 'bun:jsc';
 import { diffLines } from './diff.ts';
 
 /*
- * A file of its own, so the process has not peaked higher on another test before this one runs: the
- * peak only ever grows, so a high one from elsewhere could hide a regression, never fake one.
+ * An integration test, since the peak is the whole process's: in the parallel default run another
+ * file's work counts along. Run on its own a high peak from elsewhere could hide a regression, never
+ * fake one.
  */
 const sides = (length: number): [string[], string[]] => [
     Array.from({ length }, (_, index) => (index % 2 === 0 ? `same ${index}` : `left ${index}`)),
