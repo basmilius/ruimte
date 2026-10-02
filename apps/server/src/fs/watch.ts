@@ -49,8 +49,8 @@ export class FolderWatcher {
     watch(clientId: string, path: string): Promise<void> {
         const root = resolve(path);
         for (const [, existing] of this.watches.all(clientId)) {
-            // A recursive watch above it already reports everything this one would.
-            if (existing.recursive && isUnder(root, existing.root)) {
+            // The same folder or a recursive watch above it already reports everything this one would.
+            if (existing.root === root || (existing.recursive && isUnder(root, existing.root))) {
                 return Promise.resolve();
             }
         }

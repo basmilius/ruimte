@@ -71,6 +71,16 @@ describe('FolderWatcher', () => {
         expect(fake.watchers.every((watch) => watch.closed)).toBe(true);
     });
 
+    test('a second watch of the same folder opens no second watcher, so nothing outlives the client', async () => {
+        const watcher = watcherOn('linux');
+        await watcher.watch('client-1', root);
+        await watcher.watch('client-1', root);
+        expect(fake.openOn(root)).toHaveLength(1);
+
+        watcher.detachAll('client-1');
+        expect(fake.openOn(root)).toHaveLength(0);
+    });
+
     test('a recursive watch covers the folders under it, whichever came first', async () => {
         const watcher = watcherOn('darwin');
         await watcher.watch('client-1', join(root, 'src'));
