@@ -175,11 +175,11 @@ struct GitAbortConfirmation: ViewModifier {
     }
 }
 
-/// One stretch being edited by hand.
+/// One stretch, or the whole file when `block` is nil, being edited by hand.
 private struct GitBlockEdit: Identifiable {
-    let block: Int
+    let block: Int?
     let text: String
-    var id: Int { block }
+    var id: Int { block ?? -1 }
 }
 
 /// One unmerged file. The stretches that merge by themselves are folded; every conflict shows both sides
@@ -240,6 +240,9 @@ struct GitConflictFilePage: View {
                         Button("Ask an agent about this file", lucideIcon: "sparkles") {
                             Task { await session.ask(client: client, paths: [path]) }
                         }
+                        Button("Edit the whole file", lucideIcon: "square-pen") {
+                            editing = GitBlockEdit(block: nil, text: draft.lines(in: file).joined(separator: "\n"))
+                        }
                     } label: {
                         Label("Resolve for me", lucideIcon: "sparkles")
                     }.disabled(session.busy)
@@ -258,8 +261,12 @@ struct GitConflictFilePage: View {
             await session.open(client: client, path: path)
         }
         .mobileSheet(item: $editing) { edit in
-            GitBlockEditSheet(initial: edit.text) { text in
-                session.answer(path, block: edit.block, lines: GitConflictModel.editedLines(text))
+            GitBlockEditSheet(title: edit.block == nil ? "Edit the whole file" : "Edit stretch", initial: edit.text) { text in
+                if let block = edit.block {
+                    session.answer(path, block: block, lines: GitConflictModel.editedLines(text))
+                } else {
+                    session.editWhole(path, text: text)
+                }
                 editing = nil
             } onCancel: {
                 editing = nil
@@ -421,6 +428,7 @@ private struct GitLinesView: View {
 
 /// One stretch written by hand, starting from what it stands at now.
 private struct GitBlockEditSheet: View {
+    let title: String
     let initial: String
     let onSave: (String) -> Void
     let onCancel: () -> Void
@@ -433,7 +441,7 @@ private struct GitBlockEditSheet: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .padding(.horizontal)
-                .navigationTitle("Edit stretch")
+                .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }

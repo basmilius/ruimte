@@ -108,6 +108,52 @@ struct GitConflictDraft: Equatable {
         return next
     }
 
+    /// The draft after the whole file was written by hand, put back into stretches the way the desktop's
+    /// editor keeps them: every stretch keeps its place through the edit, a conflict whose lines changed
+    /// is answered, and one nobody touched stays open. Lines typed on the edge of a conflict go to the
+    /// conflict, since that is what they were written against.
+    func editedWhole(_ edited: [String], in file: GitConflictFile) -> GitConflictDraft {
+        let before = file.blocks.indices.map { lines(of: $0, in: file) }
+        let changes = ThreeWayMerge.diffLines(before.flatMap { $0 }, edited)
+        var bounds = [0]
+        var at = 0
+        for index in file.blocks.indices.dropLast() {
+            at += before[index].count
+            let toEarlier = file.blocks[index].kind == .conflict || file.blocks[index + 1].kind != .conflict
+            bounds.append(min(max(Self.map(at, through: changes, toEarlier: toEarlier), bounds[bounds.count - 1]), edited.count))
+        }
+        bounds.append(edited.count)
+        var next = GitConflictDraft()
+        for (index, block) in file.blocks.enumerated() {
+            let now = Array(edited[bounds[index]..<max(bounds[index], bounds[index + 1])])
+            let previous = answers[index]
+            if now == before[index] {
+                next.answers[index] = previous
+            } else if block.kind == .conflict || now != (ThreeWayMerge.autoLines(block) ?? block.ours) {
+                next.answers[index] = GitBlockAnswer(lines: now)
+            }
+        }
+        return next
+    }
+
+    /// Where a line boundary of the old text lands in the edited one. Lines that replace or join the
+    /// boundary go to the stretch before it when `toEarlier`, else to the one after.
+    private static func map(_ position: Int, through changes: [MergeChange], toEarlier: Bool) -> Int {
+        var offset = 0
+        for change in changes {
+            if change.baseStart > position { break }
+            if change.baseEnd < position {
+                offset = change.otherEnd - change.baseEnd
+                continue
+            }
+            if change.baseStart == change.baseEnd { return toEarlier ? change.otherEnd : change.otherStart }
+            if position == change.baseStart { return change.otherStart }
+            if position == change.baseEnd { return change.otherEnd }
+            return toEarlier ? change.otherEnd : change.otherStart
+        }
+        return position + offset
+    }
+
     /// Proposals put in where nobody answered yet: what a person wrote stays as they left it.
     mutating func propose(_ proposals: [(index: Int, lines: [String])]) {
         for proposal in proposals where answers[proposal.index]?.byAgent != false {
@@ -280,6 +326,11 @@ func gitRefusalCode(_ error: any Error) -> String? {
         var draft = draft(path)
         draft.answers[block] = GitBlockAnswer(lines: lines)
         drafts[path] = draft
+    }
+
+    func editWhole(_ path: String, text: String) {
+        guard let file = files[path] else { return }
+        drafts[path] = draft(path).editedWhole(GitConflictModel.editedLines(text), in: file)
     }
 
     func clear(_ path: String, block: Int) {

@@ -104,6 +104,50 @@ final class GitConflictTests: XCTestCase {
         XCTAssertEqual(carried.answers[after.conflictIndexes[0]], GitBlockAnswer(lines: ["kept"]))
     }
 
+    private var twoConflicts: GitConflictFile {
+        GitConflictFile(answer: answer(base: "a\nb\nc\nd\ne\n", ours: "a\nX\nc\nY\ne\n", theirs: "a\nP\nc\nQ\ne\n"))
+    }
+
+    func testEditingTheWholeFileOutsideAConflictLeavesItOpen() {
+        let file = twoConflicts
+        let draft = GitConflictDraft().editedWhole(["a", "X", "c2", "Y", "e"], in: file)
+        XCTAssertEqual(draft.open(in: file), file.conflictIndexes)
+        XCTAssertEqual(draft.content(of: file), "a\nX\nc2\nY\ne\n")
+    }
+
+    func testEditingInsideAConflictAnswersIt() {
+        let file = twoConflicts
+        let draft = GitConflictDraft().editedWhole(["a", "X and P", "c", "Y", "e"], in: file)
+        XCTAssertEqual(draft.answers[file.conflictIndexes[0]], GitBlockAnswer(lines: ["X and P"]))
+        XCTAssertEqual(draft.open(in: file), [file.conflictIndexes[1]])
+        XCTAssertEqual(draft.content(of: file), "a\nX and P\nc\nY\ne\n")
+    }
+
+    func testALineTypedOnTheEdgeOfAConflictGoesToTheConflict() {
+        let file = twoConflicts
+        let draft = GitConflictDraft().editedWhole(["a", "X", "c", "new", "Y", "e"], in: file)
+        XCTAssertEqual(draft.answers[file.conflictIndexes[1]], GitBlockAnswer(lines: ["new", "Y"]))
+        XCTAssertEqual(draft.lines(in: file), ["a", "X", "c", "new", "Y", "e"])
+    }
+
+    func testAnEditAcrossStretchesKeepsTheTextAsTyped() {
+        let file = twoConflicts
+        let edited = ["a", "joined", "e", "tail"]
+        let draft = GitConflictDraft().editedWhole(edited, in: file)
+        XCTAssertEqual(draft.lines(in: file), edited)
+        XCTAssertTrue(draft.open(in: file).count < 2)
+    }
+
+    func testAProposalNobodyTouchedStaysAProposal() {
+        let file = twoConflicts
+        var draft = GitConflictDraft()
+        draft.answers[file.conflictIndexes[0]] = GitBlockAnswer(lines: ["P"], byAgent: true)
+        let next = draft.editedWhole(["a", "P", "c", "Y!", "e"], in: file)
+        XCTAssertEqual(next.answers[file.conflictIndexes[0]], GitBlockAnswer(lines: ["P"], byAgent: true))
+        XCTAssertEqual(next.answers[file.conflictIndexes[1]], GitBlockAnswer(lines: ["Y!"]))
+        XCTAssertTrue(next.open(in: file).isEmpty)
+    }
+
     func testAStretchTypedByHandIsItsLines() {
         XCTAssertEqual(GitConflictModel.editedLines(""), [])
         XCTAssertEqual(GitConflictModel.editedLines("a\n\nb"), ["a", "", "b"])
@@ -132,6 +176,20 @@ final class GitConflictTests: XCTestCase {
         XCTAssertEqual(resolve?["hash"], .string("h1"))
         XCTAssertEqual(resolve?["content"], .string("a\ntheirs\nc\n"))
         XCTAssertNil(resolve?["take"])
+    }
+
+    @MainActor func testAWholeFileWrittenByHandGoesOutOverTheDigestItWasReadAt() async {
+        let machine = ConflictMachine()
+        let session = GitConflictSession(cwd: "/repo")
+        await session.load(client: machine)
+        await session.open(client: machine, path: "a.ts")
+        session.editWhole("a.ts", text: "a\nboth\nc")
+        XCTAssertEqual(session.ready, ["a.ts"])
+        let saved = await session.save(client: machine, paths: ["a.ts"])
+        XCTAssertTrue(saved)
+        let resolve = machine.sent.first { $0.type == "git.resolve" }?.payload
+        XCTAssertEqual(resolve?["content"], .string("a\nboth\nc\n"))
+        XCTAssertEqual(resolve?["hash"], .string("h1"))
     }
 
     @MainActor func testAFileThatMovedRefusesAndIsReadAgainKeepingTheWork() async {

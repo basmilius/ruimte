@@ -226,6 +226,24 @@ enum GitWorktreeText {
         return branch
     }
 
+    /// Git refusing a merge over a changed file of the person's, which a stash would move out of the way.
+    static func isOverwriteRefusal(code: String, message: String) -> Bool {
+        code == "git-failed"
+            && (message.range(of: "would be overwritten by merge", options: .caseInsensitive) != nil
+                || message.range(of: "commit your changes or stash them", options: .caseInsensitive) != nil)
+    }
+
+    /// What the stash before a retried merge is called, so it is found again.
+    static func stashMessage(_ branch: String) -> String { "Before merging \(branch)" }
+
+    /// The checkout a worktree's branch is merged into: the folder when that is on the target, or the
+    /// worktree that has it out. Nil when nothing has it out, which the daemon refuses too.
+    static func targetCheckout(folder: String, folderBranch: String?, worktrees: [GitWorktree], into: String?) -> String? {
+        guard let into else { return nil }
+        if folderBranch == into { return folder }
+        return worktrees.first { $0.branch == into && !$0.missing }?.path
+    }
+
     /// The one thing a person can do about a refusal, in words, for the codes that have one.
     static func refusalHint(_ code: String) -> String? {
         switch code {
@@ -331,6 +349,44 @@ enum GitWorktreeText {
             }
         }
         await load(client: client)
+    }
+
+    /// The person's own changes in the target checkout parked in a stash named after the merge, and the
+    /// merge run again as it was set up. Only ever on their explicit word, after git refused to overwrite.
+    func stashAndRetry(client: any MachineRequesting, request: GitWorktreeMergeRequest) async {
+        guard !busy else { return }
+        busy = true
+        let into = request.into ?? request.worktree.fromBranch
+        let message = GitWorktreeText.stashMessage(request.worktree.branch)
+        var target: String?
+        do {
+            let status = try await client.request("git.status", payload: .object(["cwd": .string(repo)]))
+            let list = try await client.request("git.worktree-list", payload: .object(["repo": .string(repo)]))
+            target = GitWorktreeText.targetCheckout(
+                folder: repo, folderBranch: status["branch"]?.stringValue,
+                worktrees: list.list("worktrees").map(GitWorktree.init(json:)), into: into)
+            if let target {
+                _ = try await client.request(
+                    "git.action",
+                    payload: .object([
+                        "cwd": .string(target), "actionId": .string(UUID().uuidString), "kind": .string("stash"),
+                        "subject": .string(message),
+                    ]))
+            }
+        } catch {
+            busy = false
+            problem = "Stashing failed: \(gitMessage(error, action: "stash on the phone"))"
+            return
+        }
+        busy = false
+        guard let target else {
+            problem = "\(into ?? "The target branch") is not checked out anywhere."
+            return
+        }
+        note = nil
+        await merge(client: client, request: request)
+        let stashed = "Your changes in \((target as NSString).lastPathComponent) are in the stash \"\(message)\"."
+        note = [stashed, note].compactMap { $0 }.joined(separator: "\n")
     }
 
     func cancelMerge(client: any MachineRequesting) async {

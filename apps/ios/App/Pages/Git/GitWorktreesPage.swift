@@ -212,6 +212,14 @@ struct GitWorktreesPage: View {
                         Task { await state.merge(client: client, request: retry) }
                     }.disabled(state.busy)
                 }
+                if GitWorktreeText.isOverwriteRefusal(code: code, message: message) {
+                    Text(
+                        "Stash and retry moves your own changes in the target checkout into a stash named \"\(GitWorktreeText.stashMessage(request.worktree.branch))\" and runs the merge again."
+                    ).font(.caption).foregroundStyle(MobileStyle.muted)
+                    Button("Stash and retry", lucideIcon: "archive") {
+                        Task { await state.stashAndRetry(client: client, request: request) }
+                    }.disabled(state.busy)
+                }
                 if code == "agent-working" {
                     Button("Stop the agents and merge", lucideIcon: "git-merge") {
                         var retry = request

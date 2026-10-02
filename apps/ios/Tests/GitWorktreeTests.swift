@@ -87,6 +87,47 @@ final class GitWorktreeTests: XCTestCase {
             "Removed worktree lexer and its branch. \"git branch lexer 0123456789ab\" brings it back.")
     }
 
+    func testOnlyGitRefusingToOverwriteOffersAStash() {
+        let message = "error: Your local changes to the following files would be overwritten by merge:\n\ta.ts"
+        XCTAssertTrue(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: message))
+        XCTAssertTrue(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: "Please commit your changes or stash them before you merge."))
+        XCTAssertFalse(GitWorktreeText.isOverwriteRefusal(code: "target-dirty", message: message))
+        XCTAssertFalse(GitWorktreeText.isOverwriteRefusal(code: "git-failed", message: "fatal: refusing to merge unrelated histories"))
+    }
+
+    func testTheStashGoesToTheCheckoutThatHasTheTargetOut() {
+        let others = [
+            GitWorktree(path: "/wt/gone", branch: "develop", missing: true),
+            GitWorktree(path: "/wt/develop", branch: "develop"),
+        ]
+        XCTAssertEqual(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "main"), "/repo")
+        XCTAssertEqual(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "develop"), "/wt/develop")
+        XCTAssertNil(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: "release"))
+        XCTAssertNil(GitWorktreeText.targetCheckout(folder: "/repo", folderBranch: "main", worktrees: others, into: nil))
+    }
+
+    @MainActor func testStashAndRetryParksTheTargetsChangesUnderTheMergesNameAndMergesAgain() async {
+        let machine = WorktreeMachine()
+        machine.conflicts = false
+        let state = GitWorktreesState(repo: "/repo")
+        await state.stashAndRetry(client: machine, request: GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge))
+        let stash = machine.sent.first { $0.type == "git.action" }?.payload
+        XCTAssertEqual(stash?["cwd"], .string("/repo"))
+        XCTAssertEqual(stash?["kind"], .string("stash"))
+        XCTAssertEqual(stash?["subject"], .string("Before merging lexer"))
+        XCTAssertEqual(machine.sent.map(\.type).filter { $0 == "git.worktree-merge" || $0 == "git.action" }, ["git.action", "git.worktree-merge"])
+        XCTAssertEqual(state.note, "Your changes in repo are in the stash \"Before merging lexer\".\nMerged lexer into main.")
+    }
+
+    @MainActor func testNoStashIsMadeWhenNothingHasTheTargetOut() async {
+        let machine = WorktreeMachine()
+        machine.branch = "develop"
+        let state = GitWorktreesState(repo: "/repo")
+        await state.stashAndRetry(client: machine, request: GitWorktreeMergeRequest(worktree: worktree(), strategy: .merge))
+        XCTAssertFalse(machine.sent.contains { $0.type == "git.action" || $0.type == "git.worktree-merge" })
+        XCTAssertEqual(state.problem, "main is not checked out anywhere.")
+    }
+
     @MainActor func testAMergeThatConflictsWaitsInTheCheckoutItRanIn() async {
         let machine = WorktreeMachine()
         let state = GitWorktreesState(repo: "/repo")
@@ -108,11 +149,23 @@ final class GitWorktreeTests: XCTestCase {
 
 @MainActor private final class WorktreeMachine: MachineRequesting {
     var refusal: (code: String, message: String)?
+    var conflicts = true
+    var branch = "main"
+    var sent: [(type: String, payload: JSONValue)] = []
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+        sent.append((type, payload))
         switch type {
+        case "git.status":
+            return .object(["branch": .string(branch)])
         case "git.worktree-merge":
             if let refusal { throw MachineClientError.server(code: refusal.code, message: refusal.message) }
+            if !conflicts {
+                return .object([
+                    "actionId": payload["actionId"] ?? .null, "summary": .string("Merged lexer into main."),
+                    "output": .string(""), "cwd": .string("/repo"),
+                ])
+            }
             return .object([
                 "actionId": payload["actionId"] ?? .null, "summary": .string("1 file conflicts in /repo."),
                 "output": .string(""), "cwd": .string("/repo"), "conflicts": .array([.string("a.ts")]),
