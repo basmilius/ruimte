@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '@ruimte/agents/watch-seam';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { tooNewMessage, viewFilePathIn, viewFilePathOf, viewIdOfFile, type JsonDocumentRead, type JsonDocumentReadOptions } from './project-files.ts';
-import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
+import type { ProjectPlace, ProjectStore, ProjectViewFiles } from './project-store.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { errorText } from '../error-text.ts';
 import { Serializer } from '@ruimte/agents/serializer';
@@ -85,7 +85,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
      * leaves no file behind, so opening one never writes.
      */
     open(projectId: string, viewId: string): Promise<TDocument> {
-        return this.locked(async () => {
+        return this.lockedInPlace(async () => {
             const state = await this.stateOf(projectId, viewId);
             const outcome = await this.kind.read(this.pathOf(projectId, viewId));
             if (outcome.kind === 'invalid') {
@@ -109,7 +109,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     }
 
     save(projectId: string, viewId: string, baseRev: number, content: TContent, origin: string | null = null): Promise<number> {
-        return this.locked(async () => {
+        return this.lockedInPlace(async () => {
             const state = await this.stateOf(projectId, viewId);
             const current = state.open.get(viewId) ?? { rev: 0, lastText: '' };
             if (baseRev !== current.rev) {
@@ -145,7 +145,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
 
     /* A duplicated view starts from the same content at rev 0; ids are unique inside a file only. */
     copy(projectId: string, from: string, to: string): Promise<void> {
-        return this.locked(async () => {
+        return this.lockedInPlace(async () => {
             const state = await this.stateOf(projectId, to);
             const outcome = await this.kind.read(this.pathOf(projectId, from));
             if (outcome.kind !== 'ok') {
@@ -214,6 +214,11 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
 
     protected locked<T>(work: () => Promise<T>): Promise<T> {
         return this.writes.run(work);
+    }
+
+    /* Under the project's lock as well, which a save that shares or unshares the view moves its file under. */
+    protected lockedInPlace<T>(work: (place: (projectId: string) => Promise<ProjectPlace>) => Promise<T>): Promise<T> {
+        return this.writes.run(() => this.projects.viewFileWork(work));
     }
 
     /* A view that is open here saves against this rev from now on, and its watcher stays quiet. */

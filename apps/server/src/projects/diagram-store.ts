@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { DIAGRAM_VERSION, EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument } from '@ruimte/contracts';
 import type { WatchSeams } from '@ruimte/agents/watch-seam';
 import { diagramsDirOf, parseDiagram, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathOf, writeDiagram } from './project-files.ts';
-import { ProjectError, type ProjectStore } from './project-store.ts';
+import { ProjectError, type ProjectPlace, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
 
@@ -46,14 +46,14 @@ export class DiagramStore extends ProjectViewFileStore<DiagramDocument, DiagramC
      * A file under the name that is not a diagram is refused, never written over.
      */
     write(projectId: string, viewId: string, content: DiagramContent): Promise<number> {
-        return this.locked(async () => {
+        return this.lockedInPlace(async (placeOf) => {
             const problem = diagramProblemIn(content);
             if (problem) {
                 throw new DiagramError('diagram-invalid', problem);
             }
-            let place: Awaited<ReturnType<ProjectStore['place']>>;
+            let place: ProjectPlace;
             try {
-                place = await this.projects.place(projectId);
+                place = await placeOf(projectId);
             } catch (e) {
                 if (e instanceof ProjectError && (e.code === 'project-not-found' || e.code === 'project-missing')) {
                     throw new DiagramError('project-not-found', e.message);

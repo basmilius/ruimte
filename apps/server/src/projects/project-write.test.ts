@@ -145,6 +145,28 @@ describe('durable project saves', () => {
         expect((await projects.openProject({ projectId })).document.name).toBe('pulled');
     });
 
+    test('a drawing saved while its view is being shared lands in the one file the view moved to', async () => {
+        const path = documentPathInFolder(folder);
+        const { promise: gate, resolve: open } = Promise.withResolvers<void>();
+        const { promise: paused, resolve: pause } = Promise.withResolvers<void>();
+        duringAt = 1;
+        duringWrite = async () => {
+            pause();
+            await gate;
+        };
+        const sharing = projects.save(projectId, 1, content, ['sketch']);
+        await paused;
+        const drawing = drawings.save(projectId, 'sketch', 1, {
+            elements: [{ kind: 'text', id: 'later', x: 0, y: 0, w: 160, h: 40, text: 'drawn meanwhile', size: 24, stroke: 'ink', strokeWidth: 2, seed: 2 }]
+        });
+        open();
+
+        expect(await Promise.all([sharing, drawing])).toEqual([2, 2]);
+        expect(await stat(viewFilePathOf(path, 'drawing', 'sketch', [])).catch(() => null)).toBeNull();
+        expect(await readFile(viewFilePathOf(path, 'drawing', 'sketch', ['sketch']), 'utf8')).toContain('drawn meanwhile');
+        expect(await stat(pendingWritePathOf(path)).catch(() => null)).toBeNull();
+    });
+
     test('a view edited while the project files are written is preserved beside the recovery record', async () => {
         const path = documentPathInFolder(folder);
         const source = viewFilePathOf(path, 'drawing', 'sketch', []);

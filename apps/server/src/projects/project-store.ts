@@ -139,6 +139,12 @@ export interface ProjectViewFiles {
     closeProject(projectId: string): void;
 }
 
+export interface ProjectPlace {
+    documentPath: string;
+    views: ProjectView[];
+    shared: string[];
+}
+
 /* What the store needs of the launches: they may start with a project and they end with it. */
 export interface ProjectLaunches {
     opened(projectId: string): void;
@@ -747,11 +753,22 @@ export class ProjectStore {
      * Where the project file sits and which views it holds, read from disk whether the project is open
      * or not: a diagram written after the person switched away still has to land in its own folder.
      */
-    place(projectId: string): Promise<{ documentPath: string; views: ProjectView[]; shared: string[] }> {
-        return this.locked(async () => {
-            const { path, content, shared } = await this.readCurrent(projectId);
-            return { documentPath: path, views: content.views, shared };
-        });
+    place(projectId: string): Promise<ProjectPlace> {
+        return this.locked(() => this.placeUnlocked(projectId));
+    }
+
+    private async placeUnlocked(projectId: string): Promise<ProjectPlace> {
+        const { path, content, shared } = await this.readCurrent(projectId);
+        return { documentPath: path, views: content.views, shared };
+    }
+
+    /*
+     * Runs work on a drawing or diagram file under the lock a save moves those files under, so the
+     * side of the folder a view is on cannot change between finding its file and writing it. The
+     * work gets `place` without the lock it already holds.
+     */
+    viewFileWork<T>(work: (place: (projectId: string) => Promise<ProjectPlace>) => Promise<T>): Promise<T> {
+        return this.locked(() => work((projectId) => this.placeUnlocked(projectId)));
     }
 
     /* Deliberately not `readSharedFile`: a verb that finds a broken file refuses, it does not move a person's file aside. */
