@@ -324,7 +324,7 @@ A client that is not paired gets in on a statement from the address book (`src/p
 
 - On an account, only a v2 statement of that account lets a client in; one without the v2 fields is refused, so a broker or an address book from before v2 cannot open a bound machine.
 - Taken off its account by a person, no statement lets anyone in until the machine signs for an account again.
-- On no account yet, a v1 statement still lets a client in, with a warning in the log, so the iPhone app from before v2 reaches a machine nobody bound yet. A statement never puts the machine on an account.
+- On no account yet, a v2 statement of any account lets a client in, since its machine key says that account lists this machine, which only a registration the machine signed does; one without the v2 fields is refused (`account-required`), so a client older than 0.12 gets in only by link. A statement never puts the machine on an account.
 
 Each client a statement let in keeps the account it came through. Going on an account cuts off a client another account let in; leaving the account cuts off every client a statement let in, and closes their sockets at once. A client paired by link keeps its access through both.
 

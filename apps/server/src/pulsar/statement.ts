@@ -142,9 +142,6 @@ export class StatementGate {
             this.log.warn(`Refused a statement for key ${tag}: ${result.refused}`);
             return 'refused';
         }
-        if (accountId === null) {
-            this.log.warn(`Took a statement for key ${tag} that names no account; this machine is on none yet, so it still takes one from an older client`);
-        }
         if (result.created) {
             this.log.log(`Paired "${label}" (key ${tag}) through a statement from the address book`);
         }

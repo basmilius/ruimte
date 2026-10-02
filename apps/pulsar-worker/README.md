@@ -58,8 +58,9 @@ A statement (`POST /v1/statements`) carries two signatures with the statement ke
 from before v2 reads. `accountSignature` is over `accessStatementV2Message`, which adds the key this
 account's row lists the machine with (`machinePublicKey`) and the account (`accountId`). A machine id is
 no secret, so a second account can list the same id under a key of its own; the v2 statement it gets
-names that key, and the machine refuses a statement that does not name its own key. A machine bound to
-an account refuses one without the v2 fields, and one for another account (`apps/server/README.md`).
+names that key, and the machine refuses a statement that does not name its own key. A daemon from 0.13
+refuses one without the v2 fields, and a machine bound to an account one for another account
+(`apps/server/README.md`).
 
 A machine is on one account at a time and only moves itself, so `POST /v1/machines` and a device link
 refuse a machine key that another account lists with `machine-on-other-account` (409). A row an account

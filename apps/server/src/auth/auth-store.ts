@@ -109,8 +109,8 @@ export const statementAccountRefusal = (binding: Binding, accountId: string | nu
         }
         return accountId === binding.id ? null : 'wrong-account';
     }
-    // TODO(Bas): refuse a statement that names no account here too, once the iPhone app that passes statement v2 on is live.
-    return null;
+    // Its key in a statement v2 says an account lists this machine, which only a registration the machine signed puts there.
+    return accountId === null ? 'account-required' : null;
 };
 
 export interface AccountChange {
