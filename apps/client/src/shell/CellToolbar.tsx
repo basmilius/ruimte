@@ -116,7 +116,9 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         render={<header />}
                         ref={bar}
                         draggable={grabbable}
-                        aria-label={t('cellToolbar.drag', { name: visibleTitle ?? t('cellToolbar.view') })}
+                        aria-label={t('cellToolbar.drag', {
+                            name: visibleTitle ?? t('cellToolbar.view')
+                        })}
                         className={clsx(
                             'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
                             focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
@@ -144,6 +146,14 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             a name here would take the room the strip needs. */}
                             {files ? (
                                 <Icon icon={Files} size={14} className="shrink-0" />
+                            ) : view.kind === 'browser' ? (
+                                /* The address field beside it already says where the page is, so the
+                                   title would only take its room. */
+                                <Tooltip label={visibleTitle}>
+                                    <span className="inline-flex shrink-0">
+                                        <ViewGlyph id={view.id} kind={view.kind} icon={viewIconOf(view)} provider={null} path={null} />
+                                    </span>
+                                </Tooltip>
                             ) : (
                                 <>
                                     <ViewGlyph
