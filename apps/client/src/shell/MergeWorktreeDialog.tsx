@@ -24,7 +24,7 @@ import {
 import { nodesInWorktree } from '@/shell/panels/worktree-rows';
 import { Segmented, Switch, Button, Dialog, Field, FieldHint, Input } from '@basmilius/desktop-ui';
 import { nodeWorking } from '@/state/agent-work';
-import { useChats } from '@ruimte/agents-react/state/chats';
+import { useChats, type ChatStatuses } from '@ruimte/agents-react/state/chats';
 import { useEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
@@ -50,7 +50,7 @@ export function MergeWorktreeDialog() {
     const strategy = useSettings((s) => s.worktreeMergeStrategy);
     const nodes = useProjectNodes();
     const sessions = useSessions((s) => s.byKey);
-    const chats = useChats((s) => s.byKey);
+    const chats = useChats((s) => s.statusByKey);
     const [reading, setReading] = useState<Reading | null>(null);
     const [draft, setDraft] = useState<{ request: WorktreeMergeRequest | null; commitFirst: boolean; subject: string | null; remove: boolean }>({
         request: null,
@@ -233,12 +233,7 @@ export function MergeWorktreeDialog() {
 }
 
 /* A terminal whose shell still runs or a chat whose CLI is up, in a turn or not. */
-const nodeLive = (
-    node: WorktreeNode,
-    sessions: ReturnType<typeof useSessions.getState>['byKey'],
-    chats: ReturnType<typeof useChats.getState>['byKey'],
-    endpointId: string
-): boolean => {
+const nodeLive = (node: WorktreeNode, sessions: ReturnType<typeof useSessions.getState>['byKey'], chats: ChatStatuses, endpointId: string): boolean => {
     const key = endpointKey(endpointId, node.id);
     if (node.kind === 'terminal') {
         const session = sessions[key];

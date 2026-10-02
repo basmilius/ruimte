@@ -47,7 +47,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
-    const chats = useChats((s) => s.byKey);
+    const chats = useChats((s) => s.statusByKey);
     const sectionRef = useRef<HTMLElement>(null);
     const shown = worktrees.length > 0;
 

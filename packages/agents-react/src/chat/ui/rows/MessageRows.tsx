@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Bot, Brain, Check, ChevronDown, CircleAlert, File, Info, MessageCircleQuestionMark, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAttachment, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/agent-contracts';
 import { fileBadge, formatBytes, isImageAttachment } from '../../attachments';
-import { useChatRow } from '../../../state/chats';
+import { useChatRow, useCurrentItem } from '../../../state/chats';
 import { chatHost } from '../../../host';
 import { useChatScope } from '../../../scope';
 import { useProviders } from '../../../state/providers';
@@ -115,16 +115,6 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
         </div>
     );
 }
-
-/*
- * The item as the thread holds it now. The row was derived from the structure, which a delta leaves
- * alone, so only this row renders again when a word arrives.
- */
-const useCurrentItem = <T extends ChatAssistantItem | ChatThinkingItem>(chatId: string, derived: T): T =>
-    useChatRow(chatId, (row) => {
-        const item = row?.items[derived.id];
-        return item?.kind === derived.kind ? (item as T) : derived;
-    });
 
 /*
  * Who wrote a message, for a screen reader only: one heading per message is what lets VoiceOver's

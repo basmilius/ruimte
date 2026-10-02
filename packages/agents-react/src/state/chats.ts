@@ -7,9 +7,9 @@ export interface ChatState {
     items: Record<string, ChatItem>;
     /*
      * The items as the timeline groups them: the same map as `items`, except that a delta growing a
-     * reply or a thought that already has text leaves it as it was. The rows are derived from this,
-     * so a word arriving touches the row that draws it and not the whole thread; that row reads its
-     * text from `items`.
+     * reply or a thought that already has text, or the output of a running call, leaves it as it was.
+     * The rows are derived from this, so a word arriving touches the row that draws it and not the
+     * whole thread; that row reads its text from `items` with `useCurrentItem`.
      */
     structure: Record<string, ChatItem>;
     order: string[];
@@ -151,15 +151,15 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
             if (item?.kind === 'assistant' || item?.kind === 'thinking') {
                 const grown = { ...item, text: item.text + event.text };
                 // The first text is structure after all, since an empty reply that is not streaming has no row.
-                // A sub-agent's text is drawn from inside its parent's row, which only the rows carry.
-                if (item.text === '' || (item.kind === 'assistant' && item.parentToolUseId)) {
+                if (item.text === '') {
                     return withItem(state, grown);
                 }
                 return { ...state, items: { ...state.items, [event.itemId]: grown } };
             }
             if (item?.kind === 'tool' && item.state === 'running') {
                 const progress = item.progress ?? { startedAt: null, description: null, output: null };
-                return withItem(state, { ...item, progress: { ...progress, output: (progress.output ?? '') + event.text } });
+                const grown = { ...item, progress: { ...progress, output: (progress.output ?? '') + event.text } };
+                return { ...state, items: { ...state.items, [event.itemId]: grown } };
             }
             return state;
         }
@@ -260,3 +260,10 @@ export const useChatRow = <T>(chatId: string, select: (row: ChatState | undefine
     const { keyOf } = useChatScope();
     return useChats((s) => select(s.byKey[keyOf(chatId)]));
 };
+
+/* The item as the thread holds it now, for a row derived from the structure, which a delta leaves alone. */
+export const useCurrentItem = <T extends ChatItem>(chatId: string, derived: T): T =>
+    useChatRow(chatId, (row) => {
+        const item = row?.items[derived.id];
+        return item?.kind === derived.kind ? (item as T) : derived;
+    });

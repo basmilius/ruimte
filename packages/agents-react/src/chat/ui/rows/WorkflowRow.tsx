@@ -97,7 +97,7 @@ export function WorkflowRow({
     return (
         <div>
             <div className="flex items-center gap-1">
-                <div className="min-w-0 grow">{running ? <WorkLiveRow tool={tool} /> : <WorkRow tool={tool} detail={workflow.name ?? undefined} />}</div>
+                <div className="min-w-0 grow">{running ? <WorkLiveRow chatId={chatId ?? ''} tool={tool} /> : <WorkRow tool={tool} detail={workflow.name ?? undefined} />}</div>
                 {running && chatId && workflow.taskId && <IconButton icon={Square} size="xs" label={t('activity.stop')} onClick={stop} />}
             </div>
             {running && workflow.stalledAt !== undefined && (

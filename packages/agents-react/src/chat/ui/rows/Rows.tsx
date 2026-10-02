@@ -52,13 +52,13 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         case 'work':
             return <WorkRow tool={row.tool} />;
         case 'work-live':
-            return <WorkLiveRow tool={row.tool} />;
+            return <WorkLiveRow chatId={chatId} tool={row.tool} />;
         case 'workflow':
             return <WorkflowRow chatId={chatId} tool={row.tool} workflow={row.workflow} onOpenAgent={openConversation} />;
         case 'work-group':
             return <WorkGroupRow tools={row.tools} summary={row.summary} expanded={row.expanded} onToggle={() => toggleGroup(row.id)} />;
         case 'subagent':
-            return <SubagentBranchRow branch={row} onToggle={toggleSubagent} onOpenConversation={openConversation} />;
+            return <SubagentBranchRow chatId={chatId} branch={row} onToggle={toggleSubagent} onOpenConversation={openConversation} />;
         case 'turn-fold':
             return <TurnFoldRow turn={row.turn} label={row.label} work={row.work} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
         case 'forks':

@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
-import type { ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
+import type { ChatAssistantItem, ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
 import type { SubagentBranch } from '../../logic/timeline';
 import { formatElapsedShort } from '@basmilius/desktop-ui/format';
 import { Icon, useNow } from '@basmilius/desktop-ui';
@@ -14,6 +14,7 @@ import { useSubagentSupport } from '../../subagent-support';
 import { canOpenSubagent, crumbOf, type SubagentStep } from '../../subagent-view';
 import { chatHost, type SubagentTask } from '../../../host';
 import { useChatScope } from '../../../scope';
+import { useCurrentItem } from '../../../state/chats';
 
 // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
 const CHILDREN_MAX_PX = 320;
@@ -23,18 +24,23 @@ const CHILDREN_MAX_PX = 320;
  * but off a timeline it has already grouped and folded, and it writes an answer at the size of a
  * message; here every step is a line and the text is the aside under it.
  */
-function ChildRow({ item }: { item: ChatItem }) {
+function ChildRow({ chatId, item }: { chatId: string; item: ChatItem }) {
     if (item.kind === 'tool') {
-        return item.state === 'running' ? <WorkLiveRow tool={item} /> : <WorkRow tool={item} />;
+        return item.state === 'running' ? <WorkLiveRow chatId={chatId} tool={item} /> : <WorkRow tool={item} />;
     }
     if (item.kind === 'assistant') {
-        return (
-            <div className="-mx-1 px-1 pb-2 text-xs text-text-muted select-text">
-                <Markdown text={item.text} />
-            </div>
-        );
+        return <ChildText chatId={chatId} item={item} />;
     }
     return null;
+}
+
+function ChildText({ chatId, item: derived }: { chatId: string; item: ChatAssistantItem }) {
+    const item = useCurrentItem(chatId, derived);
+    return (
+        <div className="-mx-1 px-1 pb-2 text-xs text-text-muted select-text">
+            <Markdown text={item.text} />
+        </div>
+    );
 }
 
 function StatusPill({ item, task }: { item: ChatSubagentItem; task: SubagentTask | null }) {
@@ -58,7 +64,7 @@ function StatusPill({ item, task }: { item: ChatSubagentItem; task: SubagentTask
 }
 
 /* What the sub-agent did, live: its own tool calls and the text it wrote, as ordinary rows. */
-function SubagentWork({ item, work }: { item: ChatSubagentItem; work: ChatItem[] }) {
+function SubagentWork({ chatId, item, work }: { chatId: string; item: ChatSubagentItem; work: ChatItem[] }) {
     const { t } = useTranslation('agent-chat');
     const scroller = useRef<HTMLDivElement>(null);
     const running = item.status === 'running';
@@ -76,7 +82,7 @@ function SubagentWork({ item, work }: { item: ChatSubagentItem; work: ChatItem[]
         <div ref={scroller} className="ml-6 overflow-y-auto" style={{ maxHeight: CHILDREN_MAX_PX }}>
             {item.itemsTruncated && <div className="pb-1 text-xs text-text-faint">{t('rows.subagent.truncated')}</div>}
             {work.map((child) => (
-                <ChildRow key={child.id} item={child} />
+                <ChildRow key={child.id} chatId={chatId} item={child} />
             ))}
         </div>
     );
@@ -108,12 +114,14 @@ function SubagentResult({ itemId, result }: { itemId: string; result: string }) 
  * the work the thread kept and, once it settled, the report it wrote.
  */
 export function SubagentRow({
+    chatId,
     item,
     work,
     expanded,
     onToggle,
     onOpenConversation
 }: {
+    chatId: string;
     item: ChatSubagentItem;
     work: ChatItem[];
     expanded: boolean;
@@ -152,7 +160,7 @@ export function SubagentRow({
             />
             {expanded && (
                 <div className="mb-1">
-                    <SubagentWork item={item} work={work} />
+                    <SubagentWork chatId={chatId} item={item} work={work} />
                     {item.result !== null && <SubagentResult itemId={item.id} result={item.result} />}
                 </div>
             )}
@@ -165,10 +173,12 @@ export function SubagentRow({
  * work is folded or not, since opening the parent shows its conversation and not theirs.
  */
 export function SubagentBranchRow({
+    chatId,
     branch,
     onToggle,
     onOpenConversation
 }: {
+    chatId: string;
     branch: SubagentBranch;
     onToggle(id: string): void;
     onOpenConversation?(step: SubagentStep): void;
@@ -176,6 +186,7 @@ export function SubagentBranchRow({
     return (
         <>
             <SubagentRow
+                chatId={chatId}
                 item={branch.item}
                 work={branch.children}
                 expanded={branch.expanded}
@@ -185,7 +196,7 @@ export function SubagentBranchRow({
             {branch.nested.length > 0 && (
                 <div className="ml-6">
                     {branch.nested.map((child) => (
-                        <SubagentBranchRow key={child.id} branch={child} onToggle={onToggle} onOpenConversation={onOpenConversation} />
+                        <SubagentBranchRow key={child.id} chatId={chatId} branch={child} onToggle={onToggle} onOpenConversation={onOpenConversation} />
                     ))}
                 </div>
             )}

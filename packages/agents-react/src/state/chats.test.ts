@@ -42,7 +42,7 @@ describe('applyEvent', () => {
         expect(next.items.r).toEqual({ ...reply, text: 'Hello there' });
     });
 
-    test('the first text of a reply, an item event and tool output all change the structure', () => {
+    test('the first text of a reply and an item event change the structure', () => {
         const empty: ChatItem = { id: 'r', kind: 'assistant', createdAt: 0, turnId: null, text: '', streaming: false };
         const tool: ChatItem = {
             id: 'x',
@@ -62,8 +62,38 @@ describe('applyEvent', () => {
         expect(first.structure).not.toBe(state.structure);
         expect(first.structure.r).toEqual({ ...empty, text: 'Hi' });
 
-        expect(applyEvent(first, { type: 'delta', itemId: 'x', text: 'out' }).structure).not.toBe(first.structure);
         expect(applyEvent(first, { type: 'item', item: { ...empty, text: 'Hi', streaming: false } }).structure).not.toBe(first.structure);
+    });
+
+    test("a stream of tool output and a sub-agent's words leaves the structure of a long thread as it was", () => {
+        const thread: ChatItem[] = Array.from({ length: 5000 }, (_, i) => user(`u${i}`, `message ${i}`));
+        const tool: ChatItem = {
+            id: 'x',
+            kind: 'tool',
+            createdAt: 0,
+            turnId: null,
+            toolUseId: 'x',
+            name: 'Bash',
+            input: {},
+            state: 'running',
+            output: null,
+            parentToolUseId: null
+        };
+        const child: ChatItem = { id: 'c', kind: 'assistant', createdAt: 0, turnId: null, text: 'Reading', streaming: true, parentToolUseId: 'task-1' };
+        const items = Object.fromEntries([...thread, tool, child].map((item) => [item.id, item]));
+        const start: ChatState = { info: info(), items, structure: items, order: Object.keys(items) };
+
+        let state = start;
+        for (let i = 0; i < 500; i++) {
+            state = applyEvent(state, { type: 'delta', itemId: 'x', text: `line ${i}\n` });
+            state = applyEvent(state, { type: 'delta', itemId: 'c', text: '.' });
+        }
+
+        expect(state.structure).toBe(start.structure);
+        expect(state.order).toBe(start.order);
+        const grown = state.items.x;
+        expect(grown?.kind === 'tool' ? grown.progress?.output?.split('\n').length : null).toBe(501);
+        expect(state.items.c).toEqual({ ...child, text: `Reading${'.'.repeat(500)}` });
     });
 
     test('a reset replaces the items and their order along with the info', () => {

@@ -9,6 +9,7 @@ import { useOpenForFind } from '../find-reveal';
 import { chatHost } from '../../../host';
 import { lazyNamed } from '../../../lazy';
 import { useChatActions } from '../../actions';
+import { useCurrentItem } from '../../../state/chats';
 import { formatClockDuration, formatElapsedShort } from '@basmilius/desktop-ui/format';
 import { Icon, Spinner, useTickingText } from '@basmilius/desktop-ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
@@ -137,8 +138,9 @@ export function RunningFor({ startedAt }: { startedAt: number }) {
 }
 
 /* A call still running: its timer on the line, and for a provider that streams output, the last lines under it. */
-export function WorkLiveRow({ tool }: { tool: ChatToolItem }) {
+export function WorkLiveRow({ chatId, tool: derived }: { chatId: string; tool: ChatToolItem }) {
     const [open, setOpen] = useState(false);
+    const tool = useCurrentItem(chatId, derived);
     const tail = liveOutput(tool);
     return (
         <div>

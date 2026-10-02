@@ -7,7 +7,6 @@ import { FindBar } from '@/find/FindBar';
 import { clearFindHighlights, setFindHighlights } from '@/find/highlights';
 import { compileFind, stepIndex } from '@/find/query';
 import { useFind, type FindState } from '@/find/use-find';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
 
 const NOTHING: ChatSearch = { hits: [], invalid: false };
 
@@ -37,16 +36,16 @@ export interface ChatFind {
 export const useChatFind = (options: TimelineFindOptions): ChatFind => {
     const { chatId, rows, structure, order } = options;
     const find = useFind(options.frame, options.enabled);
-    const items = useChatRow(chatId, (row) => (find.open ? row?.items : undefined));
+    // The structure and not the items, so a streamed word does not search the whole thread again; a reply is searched once it settles.
     const search = useMemo(() => {
-        if (!find.open || items === undefined || order === undefined) {
+        if (!find.open || structure === undefined || order === undefined) {
             return NOTHING;
         }
         return searchChat(
-            order.flatMap((id) => items[id] ?? []),
+            order.flatMap((id) => structure[id] ?? []),
             find.query
         );
-    }, [find.open, find.query, items, order]);
+    }, [find.open, find.query, structure, order]);
     const rowIndex = useMemo(() => indexRows(rows), [rows]);
     // In the order the thread shows them, which is not always the order the items came in.
     const ordered = useMemo(
