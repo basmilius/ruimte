@@ -24,12 +24,26 @@ COPY packages/contracts/package.json ./packages/contracts/package.json
 COPY packages/drawing/package.json ./packages/drawing/package.json
 COPY packages/diagram/package.json ./packages/diagram/package.json
 COPY packages/pulsar/package.json ./packages/pulsar/package.json
+COPY packages/agent-contracts/package.json ./packages/agent-contracts/package.json
+COPY packages/actions/package.json ./packages/actions/package.json
+COPY packages/agents/package.json ./packages/agents/package.json
+COPY packages/csp/package.json ./packages/csp/package.json
+COPY packages/merge/package.json ./packages/merge/package.json
+COPY packages/plan/package.json ./packages/plan/package.json
+COPY packages/service/package.json ./packages/service/package.json
 RUN bun install
 
 COPY packages/contracts/src ./packages/contracts/src
 COPY packages/pulsar/src ./packages/pulsar/src
 COPY packages/drawing/src ./packages/drawing/src
 COPY packages/diagram/src ./packages/diagram/src
+COPY packages/agent-contracts/src ./packages/agent-contracts/src
+COPY packages/actions/src ./packages/actions/src
+COPY packages/agents/src ./packages/agents/src
+COPY packages/csp/src ./packages/csp/src
+COPY packages/merge/src ./packages/merge/src
+COPY packages/plan/src ./packages/plan/src
+COPY packages/service/src ./packages/service/src
 COPY apps/server/src ./apps/server/src
 COPY apps/server/bin ./apps/server/bin
 COPY apps/server/docker/entrypoint.sh /usr/local/bin/ruimte-entrypoint
