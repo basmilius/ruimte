@@ -885,8 +885,13 @@ export class ChatCore {
         for (const chatId of this.chats.keys()) {
             this.cancelWaiting(chatId);
         }
-        await Promise.all([...this.chats.keys()].map((chatId) => this.persistNow(chatId, true)));
-        await Promise.all([...this.chats.values()].map((session) => session.dispose()));
+        // A thread that cannot be written still ends its CLI, whose process group would otherwise outlive the host.
+        const written = await Promise.allSettled([...this.chats.keys()].map((chatId) => this.persistNow(chatId, true)));
+        await Promise.allSettled([...this.chats.values()].map((session) => session.dispose()));
+        const failed = written.find((result) => result.status === 'rejected');
+        if (failed) {
+            throw failed.reason;
+        }
     }
 
     /*

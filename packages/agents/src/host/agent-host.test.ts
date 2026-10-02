@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AGENT_EVENT_SCHEMAS, parseServerFrame, type ChatInfo, type ChatItem, type FramePort, type ReplyError, type ReplyOk } from '@ruimte/agent-contracts';
 import { ChatCore } from '../chat/chat-core.ts';
+import { ChatStore } from '../chat/chat-store.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
+import type { SpawnChatProcess } from '../chat/chat-process.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { AgentHost } from './agent-host.ts';
 import { memoryPortPair } from './memory-port.ts';
@@ -235,6 +237,53 @@ describe('AgentHost over a port', () => {
         const argv = claude.started.at(-1)!.argv;
         expect(argv.some((arg) => arg.startsWith('--add-dir'))).toBe(false);
         expect(argv).toContain('--resume');
+    });
+
+    test('ends every CLI on close, even when the thread of one chat cannot be written', async () => {
+        class BrokenStore extends ChatStore {
+            override write(...args: Parameters<ChatStore['write']>): Promise<number> {
+                return args[0] === 'chat-broken' ? Promise.reject(new Error('The disk is full')) : super.write(...args);
+            }
+        }
+        // A CLI whose process group outlives its closed input, as one running a dev server does, ends only on a signal.
+        const signaled: string[] = [];
+        const spawn: SpawnChatProcess = (options) => {
+            const child = claude.spawn(options);
+            return {
+                ...child,
+                stdin: { ...child.stdin, end: () => undefined },
+                kill: (signal) => {
+                    signaled.push(signal);
+                    child.kill(signal);
+                }
+            };
+        };
+        await host.close();
+        host = await AgentHost.open({
+            dataDir,
+            env: { HOME: dataDir, PATH: process.env.PATH },
+            background: false,
+            command: ['claude'],
+            spawn,
+            core: (options) => new ChatCore({ ...options, store: new BrokenStore(dataDir) })
+        });
+        const [renderer, utility] = memoryPortPair();
+        host.connect(utility);
+        client = new Client(renderer);
+        const launched = claude.started.length;
+        for (const chatId of ['chat-broken', 'chat-fine']) {
+            ok(await client.request('chat.create', { chatId, provider: 'claude', cwd: dataDir }));
+            ok(await client.request('chat.send', { chatId, text: 'hello there' }));
+        }
+        await client.until(() => claude.started.length === launched + 2);
+
+        const closed = await host.close().then(
+            () => null,
+            (e: unknown) => (e instanceof Error ? e.message : String(e))
+        );
+        expect(closed).toBe('The disk is full');
+        expect(signaled).toEqual(['SIGTERM', 'SIGTERM']);
+        host = await AgentHost.open({ dataDir, env: { HOME: dataDir, PATH: process.env.PATH }, background: false, command: ['claude'], spawn: claude.spawn });
     });
 
     test('refuses a chat whose record it cannot read, and leaves the record and its log as they are', async () => {

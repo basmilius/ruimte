@@ -150,10 +150,13 @@ export const wireAgents = <Core extends ChatCore = ChatCore>(options: AgentWirin
             accounts.start();
         },
         stop: async () => {
-            usage.stop();
-            limits.stop();
-            accounts.stop();
-            await chats.shutdown();
+            try {
+                usage.stop();
+                limits.stop();
+                accounts.stop();
+            } finally {
+                await chats.shutdown();
+            }
         }
     };
 };

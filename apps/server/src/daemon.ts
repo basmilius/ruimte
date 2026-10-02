@@ -1154,13 +1154,17 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         // Before anything is awaited: a `bun --watch` reload restarts the module during the first
         // await, so a turn in flight would otherwise never reach its file.
         chats.persistAllSync();
-        try {
-            await taskWiring.coordinator.settled();
-            await snapshotSchedule.flush();
-            await chats.shutdown();
-        } catch (e) {
-            console.error('Snapshot on shutdown failed:', errorText(e));
-        }
+        // Each on its own: a step that fails must not keep the chats' CLIs, and what they started, running past the daemon.
+        const step = async (what: string, run: () => Promise<void>): Promise<void> => {
+            try {
+                await run();
+            } catch (e) {
+                console.error(`${what} on shutdown failed:`, errorText(e));
+            }
+        };
+        await step('Settling tasks', () => taskWiring.coordinator.settled());
+        await step('Writing terminal snapshots', () => snapshotSchedule.flush());
+        await step('Writing chats', () => chats.shutdown());
         await computer.stop();
         manager.killAll();
         browsers.closeAll();
