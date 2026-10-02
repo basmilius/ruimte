@@ -6,12 +6,53 @@ on:
   pull_request:
   # release.yml runs these jobs on the tagged commit, so a red one keeps the draft from being published.
   workflow_call:
+    inputs:
+      full:
+        description: Run all native checks regardless of changed paths
+        type: boolean
+        default: true
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    if: ${{ !inputs.full }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      rust: ${{ steps.paths.outputs.rust }}
+      swift_pulsar: ${{ steps.paths.outputs.RuimtePulsar }}
+      swift_transport: ${{ steps.paths.outputs.RuimteTransport }}
+      computer_use: ${{ steps.paths.outputs.computer_use }}
+      foundation_models: ${{ steps.paths.outputs.foundation_models }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: paths
+        with:
+          # Git detection also works for fork PRs without pull-requests permission in callers.
+          token: ''
+          filters: |
+            rust:
+              - '.github/**'
+              - 'apps/ios-device-bridge/**'
+            RuimtePulsar:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+            RuimteTransport:
+              - '.github/**'
+              - 'apps/ios/Packages/RuimtePulsar/**'
+              - 'apps/ios/Packages/RuimteTransport/**'
+            computer_use:
+              - '.github/**'
+              - 'apps/computer-use/**'
+            foundation_models:
+              - '.github/**'
+              - 'apps/foundation-models/**'
+
   verify:
     runs-on: macos-latest
     steps:
@@ -38,6 +79,8 @@ jobs:
       - run: bun run test:integration
 
   rust:
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.rust == 'true') }}
     runs-on: macos-latest
     defaults:
       run:
@@ -50,15 +93,26 @@ jobs:
       - run: cargo test --locked
 
   # The packages declare swift-tools-version 6.4, which takes Xcode 27; macos-latest still carries 26.
-  swift:
+  swift-pulsar:
+    name: swift (RuimtePulsar)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_pulsar == 'true') }}
     runs-on: xcode-27
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [RuimtePulsar, RuimteTransport]
     defaults:
       run:
-        working-directory: apps/ios/Packages/${{ matrix.package }}
+        working-directory: apps/ios/Packages/RuimtePulsar
+    steps:
+      - uses: actions/checkout@v5
+      - run: swift test
+
+  swift-transport:
+    name: swift (RuimteTransport)
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.swift_transport == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/ios/Packages/RuimteTransport
     steps:
       - uses: actions/checkout@v5
       - run: swift test
@@ -66,6 +120,8 @@ jobs:
   # The same runner as the iOS packages, for the tests. `integration` compiles the helper for release on
   # macos-latest, the runner the release itself builds on.
   computer-use:
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.computer_use == 'true') }}
     runs-on: xcode-27
     defaults:
       run:
@@ -76,6 +132,8 @@ jobs:
       - run: swift test
 
   foundation-models:
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.foundation_models == 'true') }}
     runs-on: xcode-27
     defaults:
       run:
@@ -84,3 +142,14 @@ jobs:
       - uses: actions/checkout@v5
       - run: swift build
       - run: swift test
+
+  checks:
+    name: CI checks
+    if: ${{ always() }}
+    needs: [changes, verify, integration, rust, swift-pulsar, swift-transport, computer-use, foundation-models]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: jq -e 'all(.[]; . == "success" or . == "skipped")' <<< "$RESULTS"

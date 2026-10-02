@@ -68,6 +68,8 @@ jobs:
     needs: version
     if: needs.version.outputs.libraries == 'true'
     uses: ./.github/workflows/ci.yml
+    with:
+      full: true
     permissions:
       contents: read
 
@@ -106,6 +108,7 @@ jobs:
           name: ${{ matrix.target }}
           path: binaries/${{ matrix.target }}
           if-no-files-found: error
+          retention-days: 7
 
   publish:
     needs: [version, verify, binaries]

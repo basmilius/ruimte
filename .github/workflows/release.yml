@@ -43,6 +43,8 @@ jobs:
   # ci.yml on the tagged commit, alongside packaging. A red job keeps the release a draft.
   verify:
     uses: ./.github/workflows/ci.yml
+    with:
+      full: true
     permissions:
       contents: read
 
