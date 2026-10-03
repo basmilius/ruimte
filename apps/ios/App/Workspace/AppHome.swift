@@ -14,6 +14,7 @@ struct AppHome: View {
     @State private var settings = false
     @State private var pairing = false
     @State private var recentProjects = false
+    @State private var selectedMachine: String?
     @State private var signIn = false
     @State private var pairAfterDismiss = false
     @State private var now = NowModel()
@@ -186,7 +187,10 @@ struct AppHome: View {
             .ignoresSafeArea(.container, edges: .vertical)
             .allowsHitTesting(false)
         }
-        .onChange(of: homeSection) { _, _ in detailPath = NavigationPath() }
+        .onChange(of: homeSection) { _, _ in
+            detailPath = NavigationPath()
+            selectedMachine = nil
+        }
         .onChange(of: activeProject?.id) { _, _ in detailPath = NavigationPath() }
         .onChange(of: activeProject?.section) { _, _ in detailPath = NavigationPath() }
         .onChange(of: activeProject?.selectedViewID) { _, _ in detailPath = NavigationPath() }
@@ -198,7 +202,9 @@ struct AppHome: View {
         } else {
             switch homeSection ?? .projects {
             case .projects: homeContent
-            case .machines: MachinesPage(runtime: runtime, pair: { pairing = true })
+            case .machines:
+                MachinesPage(runtime: runtime, pair: { pairing = true }, open: { selectedMachine = $0 })
+                    .navigationDestination(item: $selectedMachine) { MachineRoutePage(runtime: runtime, machineID: $0) }
             case .settings: MobileSettings(runtime: runtime, embedded: true)
             }
         }
@@ -206,7 +212,7 @@ struct AppHome: View {
 
     /// The Projects section of the iPad, which keeps its plus menu for pairing, machines and signing in.
     private var homeContent: some View {
-        ProjectsPage(runtime: runtime, projects: projects, showingRecent: $recentProjects) {
+        ProjectsPage(runtime: runtime, projects: projects, showRecent: { recentProjects = true }) {
             if let restoreProblem {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -232,6 +238,9 @@ struct AppHome: View {
         }
         .navigationTitle("Projects")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $recentProjects) {
+            RecentProjectsPage(runtime: runtime, projects: projects)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -452,14 +461,15 @@ struct MachinesPage: View {
     let runtime: AppRuntime
     var showsPairingRow = true
     let pair: () -> Void
-    @State private var selectedMachine: String?
+    /// Opens a machine by its id, on whichever stack the page stands.
+    let open: (String) -> Void
 
     var body: some View {
         MobileList {
             Section("Your machines") {
                 ForEach(runtime.machines, id: \.id) { machine in
                     Button {
-                        selectedMachine = machine.id
+                        open(machine.id)
                     } label: {
                         MobileRow(
                             title: machine.name, subtitle: reach(runtime.session(for: machine)),
@@ -478,11 +488,6 @@ struct MachinesPage: View {
                 .modifier(MobileSidebarRow())
             }
         }
-        .navigationDestination(item: $selectedMachine) { id in
-            if let machine = runtime.machines.first(where: { $0.id == id }) {
-                MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
-            }
-        }
         .navigationTitle("Machines")
         .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
     }
@@ -490,6 +495,17 @@ struct MachinesPage: View {
     private func reach(_ session: SharedMachineSession) -> String {
         if session.connected { return session.relayed == true ? "Connected via relay" : "Connected" }
         return session.problem ?? "Not connected"
+    }
+}
+
+struct MachineRoutePage: View {
+    let runtime: AppRuntime
+    let machineID: String
+
+    var body: some View {
+        if let machine = runtime.machines.first(where: { $0.id == machineID }) {
+            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
+        }
     }
 }
 

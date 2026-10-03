@@ -3,54 +3,69 @@ import Observation
 
 enum PhoneTab: Hashable {
     case now, projects, machines, search
-}
 
-/// A page Now or Search pushes over its root: a view of a project, or a notification still finding its project.
-enum PhoneDestination: Hashable, Identifiable {
-    case view(ProjectViewTarget)
-    case notification(NotificationDestination)
-
-    var id: String {
+    var title: String {
         switch self {
-        case .view(let target): "view:\(target.id)"
-        case .notification(let notification): "notification:\(notification.id.uuidString)"
+        case .now: "Now"
+        case .projects: "Projects"
+        case .machines: "Machines"
+        case .search: "Search"
         }
     }
 }
 
-/// Where the iPhone stands: the tab, and the one page each tab pushes. Nothing goes deeper than two levels, so
-/// a project opened from a machine goes to Projects and a view opened from Now stays under Now.
+/// A page pushed over the tabs. Each one covers the tab bar, which leaves and returns with the push and the pop.
+enum PhoneRoute: Hashable {
+    case project(WorkspaceNavigation)
+    case view(ProjectViewTarget)
+    /// A notification still finding the project that holds its node.
+    case notification(NotificationDestination)
+    case recentProjects
+    /// A machine, by its id.
+    case machine(String)
+}
+
+/// Where the iPhone stands: the tab under the stack and the pages pushed over it. Nothing goes deeper than two
+/// levels, so a project opened from a machine goes to Projects and a view opened from Now stays under Now.
+///
+/// Every route is a value of `path`, which the stack only shortens once a pop settles; a swipe back the person takes
+/// back leaves it as it was, so nothing here clears a route on a page's disappearance.
 @MainActor @Observable
 final class PhoneRouter {
     var tab = PhoneTab.now
-    /// The project open in Projects.
-    var project: WorkspaceNavigation?
-    var showingRecent = false
-    var now: PhoneDestination?
-    var search: PhoneDestination?
+    var path: [PhoneRoute] = []
 
-    /// Opens a project in Projects, and with `view` that view once the project holds it.
+    /// The project open over Projects.
+    var project: WorkspaceNavigation? {
+        if case .project(let navigation) = path.first { return navigation }
+        return nil
+    }
+
+    /// Opens a project over Projects, and with `view` that view once the project holds it.
     func openProject(_ workspace: MobileWorkspace, view: String? = nil) {
         let navigation = WorkspaceNavigation(workspace: workspace)
         navigation.pendingViewID = view
-        showingRecent = false
-        project = navigation
         tab = .projects
+        path = [.project(navigation)]
     }
 
-    /// Shows a view outside its project's list. Search keeps it under its own field; every other tab hands it to Now.
+    /// Shows a view outside its project's list. Search keeps it over its own field; every other tab hands it to Now.
     func show(_ target: ProjectViewTarget, from origin: PhoneTab) {
-        if origin == .search {
-            search = .view(target)
-        } else {
-            now = .view(target)
-            tab = .now
-        }
+        tab = origin == .search ? .search : .now
+        path = [.view(target)]
     }
 
     /// A notification lands on Now: its chat or terminal on top, or for a machine's overview Now itself.
     func open(_ notification: NotificationDestination) {
         tab = .now
-        now = notification.target == "machine" || notification.nodeID.isEmpty ? nil : .notification(notification)
+        path = notification.target == "machine" || notification.nodeID.isEmpty ? [] : [.notification(notification)]
+    }
+
+    func showRecentProjects() {
+        path = [.recentProjects]
+    }
+
+    func showMachine(_ id: String) {
+        path = [.machine(id)]
     }
 }

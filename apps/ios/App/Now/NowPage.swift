@@ -8,9 +8,7 @@ struct NowPage: View {
     let open: (ProjectViewTarget) -> Void
     let openProject: (ProjectViewTarget) -> Void
     let pair: () -> Void
-    @State private var newChat = false
     @State private var showingSnoozed = false
-    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         let board = now.board
@@ -106,26 +104,6 @@ struct NowPage: View {
                     }
                 }
             }
-        }
-        .navigationTitle("Now")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            if !runtime.machines.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        newChat = true
-                    } label: {
-                        Image(lucide: "square-pen").accessibilityLabel("New chat")
-                    }
-                    .accessibilityIdentifier("now.newChat")
-                }
-            }
-            if let settingsLink {
-                SettingsToolbarItem(link: settingsLink)
-            }
-        }
-        .mobileSheet(isPresented: $newChat) {
-            NowNewChatSheet(runtime: runtime, now: now) { target in open(target) }
         }
         .onChange(of: now.liveRequests) { _, live in now.answers.keep(live) }
         .refreshable { await now.refresh() }

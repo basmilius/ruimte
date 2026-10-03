@@ -5,12 +5,13 @@ import SwiftUI
 struct ProjectsPage<Notice: View>: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
-    @Binding var showingRecent: Bool
+    /// On the iPhone's Projects tab, whose bar and search belong to the tabs around it.
+    var inTabs = false
+    let showRecent: () -> Void
     @ViewBuilder let notice: () -> Notice
     @State private var search = ""
     @State private var newChat: NewChatTarget?
     @Environment(\.openMobileWorkspace) private var openWorkspace
-    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         MobileList {
@@ -62,9 +63,7 @@ struct ProjectsPage<Notice: View>: View {
                     .modifier(MobileSidebarRow())
                     .accessibilityIdentifier("projects.chats.\(row.machine.id)")
                 }
-                Button {
-                    showingRecent = true
-                } label: {
+                Button(action: showRecent) {
                     HStack(spacing: 12) {
                         Image(lucide: "clock-arrow-left").frame(width: 20, height: 20).frame(width: 32)
                         Text("Recently closed")
@@ -90,9 +89,6 @@ struct ProjectsPage<Notice: View>: View {
             }
         }
         .modifier(ProjectListWidth())
-        .navigationDestination(isPresented: $showingRecent) {
-            RecentProjectsPage(runtime: runtime, projects: projects)
-        }
         .mobileSheet(item: $newChat) { target in
             if let machine = runtime.machines.first(where: { $0.id == target.machineID }) {
                 let session = runtime.session(for: machine)
@@ -101,17 +97,10 @@ struct ProjectsPage<Notice: View>: View {
                 }
             }
         }
-        .searchable(text: $search, prompt: "Search projects or machines")
+        .modifier(ProjectsSearch(enabled: !inTabs, text: $search))
         .toolbar {
-            if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
-                // A status, not a control, so it wears no glass and leaves the buttons beside it their own.
-                ToolbarItem(id: "projects.updating", placement: .topBarTrailing) {
-                    MobileLoadingRow("Updating projects")
-                }
-                .sharedBackgroundVisibility(.hidden)
-            }
-            if let settingsLink {
-                SettingsToolbarItem(link: settingsLink)
+            if !inTabs && (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
+                ProjectsUpdatingItem()
             }
         }
         .refreshable {
@@ -126,5 +115,25 @@ struct ProjectsPage<Notice: View>: View {
         runtime.loading || projects.loading
             || (projects.open.isEmpty && projects.recent.isEmpty && !runtime.machines.isEmpty
                 && !projects.hasConnectedMachine && runtime.problem == nil && projects.problems.isEmpty)
+    }
+}
+
+/// The Search tab finds projects on the iPhone, and a tab's own field would not reach the bar above the tabs.
+private struct ProjectsSearch: ViewModifier {
+    let enabled: Bool
+    @Binding var text: String
+
+    func body(content: Content) -> some View {
+        if enabled { content.searchable(text: $text, prompt: "Search projects or machines") } else { content }
+    }
+}
+
+/// A status, not a control, so it wears no glass and leaves the buttons beside it their own.
+struct ProjectsUpdatingItem: ToolbarContent {
+    var body: some ToolbarContent {
+        ToolbarItem(id: "projects.updating", placement: .topBarTrailing) {
+            MobileLoadingRow("Updating projects")
+        }
+        .sharedBackgroundVisibility(.hidden)
     }
 }

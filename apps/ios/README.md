@@ -126,9 +126,12 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 ## Navigation on an iPhone
 
-Four tabs, each at most two levels deep: Now, Projects, Machines and Search. Settings opens as a sheet from the
-avatar, the last item on the right of the bar on every tab and on a project's page, and the tab bar folds in while a
-list scrolls down. The avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in
+Four tabs, each at most two levels deep: Now, Projects, Machines and Search. They stand as the root of one
+navigation stack (`PhoneHome`), and every page opens on that stack over the whole tab view, so the tab bar leaves
+with a push and comes back with the pop, following the finger on a swipe back. A tab's page is hosted apart from the
+stack's bar, so the title and the bar's items of each tab sit on the tab view, chosen by the selected tab. Settings
+opens as a sheet from the avatar, the last item on the right of the bar on every tab and on a project's page, and the
+tab bar folds in while a list scrolls down. The avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in
 Caches and asked again once per launch), else the first letter of its name.
 
 - Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
@@ -156,16 +159,19 @@ Caches and asked again once per launch), else the first letter of its name.
   `unknown-request` keeps its snoozes on this phone, for that machine only, until an update makes it list them.
 - The write button on Now starts a chat with one of a machine's installed agents in the machine's Chats
   (`project.newChat`) or as a new chat view at the end of one of its open projects, and opens it.
-- Projects lists the open projects, New chat, each machine's Chats and Recently closed. A project page is its list
+- Projects lists the open projects, New chat, each machine's Chats and Recently closed. Search finds a project by
+  name, so this tab has no field of its own. A project page is its list
   of views. Its bar holds the project's menu beside the avatar: New view (New chat in Chats) in a group of its own,
   then Files, Git and Launches (none of these in Chats) and Usage, each a sheet; Files and Git open large and pull
-  down to medium. A view opens over the project and hides the tab bar.
+  down to medium. A view opens over the project.
 - Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
   projects (which open under Projects), Chats, files, processes, usage and machine settings.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
   opens over Search in its project; a project opens under Projects.
 
-`PhoneRouter` holds the tab and the page each tab pushes. A view opened outside its project's list
+`PhoneRouter` holds the tab and the stack's path. Each route (a project, a view, a notification, a machine, Recently
+closed) replaces what was pushed, and a project goes to Projects. The stack only shortens the path once a pop
+settles, so a swipe back the person takes back leaves the route standing. A view opened outside its project's list
 (`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
 project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
 project's Views, Files, Git and Search as tabs.

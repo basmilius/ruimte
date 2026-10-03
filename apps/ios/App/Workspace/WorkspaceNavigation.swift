@@ -11,7 +11,6 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var pendingViewID: String?
     /// The view pushed over the project's list on an iPhone.
     var openedViewID: String?
-    /// The sheets the tab bar's accessory opens on an iPhone, kept here since the accessory sits outside the page.
     var adding = false
     var newChat = false
     var showingUsage = false
