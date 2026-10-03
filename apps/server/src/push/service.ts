@@ -45,6 +45,8 @@ interface NodeState {
     startedAt: number;
 }
 
+const APPROVAL_MAX_AGE_MS = 110_000;
+
 const sendToAddressBook = async (push: PushEnvelope): Promise<number> => {
     const response = await fetch(`${ADDRESS_BOOK_URL}/v1/push`, {
         method: 'POST',
@@ -64,7 +66,8 @@ export class PushService {
     private readonly options: PushServiceOptions;
     private readonly connectedSessions = new Map<string, number>();
     private readonly nodes = new Map<string, NodeState>();
-    private readonly approvals = new Map<string, Set<string>>();
+    /* The approvals each chat still waits on, by request id, so the end of a snooze raises the card again. */
+    private readonly approvals = new Map<string, Map<string, PushAlertContent>>();
     private readonly activityTimes = new Map<string, { phase: string; at: number }>();
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
@@ -170,21 +173,16 @@ export class PushService {
                 }
             } else if (chat.type === 'item' && chat.item.kind === 'approval') {
                 const item = chat.item;
-                const seen = this.approvals.get(chatId) ?? new Set<string>();
-                this.approvals.set(chatId, seen);
+                const waiting = this.approvals.get(chatId) ?? new Map<string, PushAlertContent>();
+                this.approvals.set(chatId, waiting);
                 if (item.decision !== 'pending') {
-                    seen.delete(item.requestId);
+                    waiting.delete(item.requestId);
                     return;
                 }
-                if (seen.has(item.requestId)) {
+                if (waiting.has(item.requestId)) {
                     return;
                 }
-                seen.add(item.requestId);
-                // The end of the snooze says the node waits; an approval card from before it has run out by then.
-                if (this.snoozed(chatId)) {
-                    return;
-                }
-                this.enqueue({
+                const card: PushAlertContent = {
                     kind: 'approval',
                     target: 'chat',
                     nodeId: chatId,
@@ -196,8 +194,12 @@ export class PushService {
                         { id: 'deny', kind: 'deny', label: 'Deny' },
                         ...(item.canAllowAlways ? [{ id: 'allow-always', kind: 'remember' as const, label: 'Always allow' }] : [])
                     ],
-                    expiresAt: this.now() + 110_000
-                });
+                    expiresAt: this.now() + APPROVAL_MAX_AGE_MS
+                };
+                waiting.set(item.requestId, card);
+                if (!this.snoozed(chatId)) {
+                    this.enqueue(card);
+                }
             }
         }
     }
@@ -229,7 +231,8 @@ export class PushService {
             this.needsYou(target, nodeId, title);
         }
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
-            const phase = status === 'running' ? 'running' : status === 'needs-you' ? 'needs-you' : 'done';
+            // A snoozed wait is as quiet on the node's own activity as in the machine counts.
+            const phase = status === 'running' ? 'running' : status === 'needs-you' && !this.snoozed(nodeId) ? 'needs-you' : 'done';
             this.track(this.deliverActivity(nodeId, { title: clipText(title, 160), phase, startedAt }));
         }
     }
@@ -254,21 +257,34 @@ export class PushService {
     }
 
     /*
-     * A snoozed node takes back the alert it already raised, as the desktop closes its notification. Its
-     * end is a new wait for a node that still needs you, so the alert comes again, as on the desktop.
+     * A snoozed node takes back the alert it already raised, as the desktop closes its notification, and
+     * its activity goes quiet. A snooze that runs out on a node still waiting is a new wait and raises the
+     * alert again, the approval cards it waits on if it has any; one a person ended raises nothing.
      */
     private snoozeChanged({ kind, nodeId }: SnoozeChange): void {
         const node = this.activityNodes().find((entry) => entry.nodeId === nodeId);
+        if (kind === 'snoozed' && node) {
+            this.options.snoozes?.noteStatus(nodeId, node.status === 'needs-you');
+        }
         if (kind === 'snoozed') {
-            if (node) {
-                this.options.snoozes?.noteStatus(nodeId, node.status === 'needs-you');
-            }
             const entry = this.attention.snapshot().find((candidate) => candidate.nodeId === nodeId);
             if (entry && entry.readThrough < entry.issuedAt) {
                 this.read(nodeId, entry.issuedAt);
             }
-        } else if (node?.status === 'needs-you') {
-            this.needsYou(node.target, nodeId, this.options.titleFor?.(nodeId) || node.title);
+        }
+        if (kind === 'woke' && node?.status === 'needs-you') {
+            const cards = [...(this.approvals.get(nodeId)?.values() ?? [])];
+            for (const card of cards) {
+                this.enqueue({ ...card, expiresAt: this.now() + APPROVAL_MAX_AGE_MS });
+            }
+            if (cards.length === 0) {
+                this.needsYou(node.target, nodeId, this.options.titleFor?.(nodeId) || node.title);
+            }
+        }
+        if (node?.status === 'needs-you') {
+            const title = clipText(this.options.titleFor?.(nodeId) || node.title, 160);
+            const phase = kind === 'snoozed' ? 'done' : 'needs-you';
+            this.track(this.deliverActivity(nodeId, { title, phase, startedAt: this.nodes.get(nodeId)?.startedAt ?? this.now() }));
         }
         this.synchronizeActivities();
     }

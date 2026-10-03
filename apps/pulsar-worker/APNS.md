@@ -63,9 +63,9 @@ keep node IDs and read timestamps away from Pulsar and APNs.
 
 A snoozed node (`snooze.set`, kept in `snoozes.json`) reads its alert, so the phone
 drops it the way the desktop closes its notification, and raises none while the snooze
-holds. The machine's Live Activity counts it nowhere. When the snooze runs out or a
-person ends it while the node still needs you, a new alert goes out, the desktop's rule
-for the end of a snooze.
+holds. The machine's Live Activity counts it nowhere, and its own activity shows it done.
+When the snooze runs out while the node still needs you, a new alert goes out: the
+approval cards it waits on, or an attention alert. A snooze a person ends raises nothing.
 
 Apple schedules background pushes opportunistically, so immediate removal is not
 guaranteed, least of all after a force quit or with Background App Refresh off.

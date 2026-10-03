@@ -62,11 +62,11 @@ describe('a snooze on the machine', () => {
         expect(events).toEqual([{ event: 'snooze.changed', payload: { snoozes: [{ projectId: 'project-1', nodeId: 'node-1', until }] } }]);
     });
 
-    test('a person ending it wakes the node', () => {
+    test('a person ending it says so, which is no wake', () => {
         store.set('project-1', 'node-1', clock.now() + 60_000);
         store.clear('node-1');
         expect(store.list()).toEqual([]);
-        expect(changes.at(-1)).toEqual({ kind: 'woke', nodeId: 'node-1' });
+        expect(changes.at(-1)).toEqual({ kind: 'cleared', nodeId: 'node-1' });
     });
 
     test('a moment already past ends it like clearing does', () => {

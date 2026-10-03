@@ -624,6 +624,71 @@ describe('a snoozed node', () => {
         expect(alerts()).toHaveLength(1);
     });
 
+    test('a snooze a person ends raises nothing, though the node still waits', async () => {
+        status('running', 'node', snoozing);
+        status('needs-you', 'node', snoozing);
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        await snoozing.settled();
+        const before = alerts().length;
+        snoozes.clear('node');
+        clock.advance(60_000);
+        await snoozing.settled();
+        expect(alerts()).toHaveLength(before);
+    });
+
+    test('a snooze that runs out on an approval raises the card with its choices again', async () => {
+        const approval = {
+            event: 'chat.event' as const,
+            payload: {
+                chatId: 'node',
+                event: {
+                    type: 'item' as const,
+                    item: {
+                        id: 'request',
+                        createdAt: NOW,
+                        turnId: null,
+                        kind: 'approval' as const,
+                        requestId: 'request',
+                        toolUseId: null,
+                        toolName: 'Bash',
+                        input: {},
+                        description: 'Run test',
+                        canAllowAlways: false,
+                        decision: 'pending' as const
+                    }
+                }
+            }
+        };
+        status('running', 'node', snoozing);
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        status('needs-you', 'node', snoozing);
+        snoozing.consume(approval);
+        await snoozing.settled();
+        expect(alerts()).toEqual([]);
+        clock.advance(60_000);
+        await snoozing.settled();
+        expect(alerts().map((push) => decrypt(push))).toEqual([
+            expect.objectContaining({
+                kind: 'approval',
+                nodeId: 'node',
+                requestId: 'request',
+                choices: [expect.objectContaining({ id: 'allow' }), expect.objectContaining({ id: 'deny' })]
+            })
+        ]);
+    });
+
+    test("a followed node's own activity goes quiet while it is snoozed", async () => {
+        await auth.setPush(sessionId, { ...subscription, activities: true });
+        status('running', 'node', snoozing);
+        status('needs-you', 'node', snoozing);
+        snoozes.set('project', 'node', clock.now() + 60_000);
+        await snoozing.settled();
+        clock.advance(60_000);
+        await snoozing.settled();
+        const phases = pushes.filter((push) => push.pushType === 'liveactivity').map((push) => push.activity.phase);
+        expect(phases).toEqual(['running', 'needs-you', 'done', 'needs-you']);
+    });
+
     test('leaves the machine activity until it runs out', async () => {
         await auth.setPush(sessionId, { ...subscription, follow: [], followAll: true, activities: true, activityScope: 'machine' });
         status('running', 'first', snoozing);

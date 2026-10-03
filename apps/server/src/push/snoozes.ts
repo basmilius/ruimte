@@ -10,9 +10,9 @@ import type { SessionSink } from '../sessions/manager.ts';
 /* A timer asleep with the machine runs late by as long as it slept, so the wall clock is read again at least this often. */
 export const MAX_WAIT_MS = 60_000;
 
-/* Set: a node was put aside. Woke: its snooze ran out or a person ended it, so a node still waiting is a new wait. */
+/* Woke: the snooze ran out by itself, so a node still waiting is a new wait. Cleared: a person ended it early, and knows. */
 export interface SnoozeChange {
-    kind: 'snoozed' | 'woke';
+    kind: 'snoozed' | 'woke' | 'cleared';
     nodeId: string;
 }
 
@@ -104,7 +104,7 @@ export class SnoozeStore {
     clear(nodeId: string): void {
         if (this.remove((entry) => entry.nodeId === nodeId).length > 0) {
             this.changed();
-            this.tell({ kind: 'woke', nodeId });
+            this.tell({ kind: 'cleared', nodeId });
         }
     }
 
