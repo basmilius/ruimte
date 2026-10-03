@@ -10,10 +10,16 @@ protocol PhoneRouted: UIViewController {
 final class PhonePageController: UIHostingController<AnyView>, PhoneRouted {
     /// Nil for a tab's root.
     let route: PhoneRoute?
+    private let updateBar: (@MainActor (UINavigationItem) -> Void)?
 
-    init(route: PhoneRoute?, page: AnyView) {
+    init(route: PhoneRoute?, page: AnyView, bar: PhoneBar? = nil) {
         self.route = route
+        updateBar = bar?.update
         super.init(rootView: page)
+        if let bar {
+            navigationItem.rightBarButtonItems = bar.items.reversed()
+            followBar()
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -23,6 +29,15 @@ final class PhonePageController: UIHostingController<AnyView>, PhoneRouted {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = MobileStyle.surfaceColor
+    }
+
+    private func followBar() {
+        guard let updateBar else { return }
+        withObservationTracking {
+            updateBar(navigationItem)
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.followBar() }
+        }
     }
 }
 
@@ -123,9 +138,10 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
         }
     }
 
-    /// SwiftUI hands a page's title and toolbar to its navigation item only when it lays the page out, which UIKit
-    /// does after the bar started the push, so the items would pop in at its end instead of morphing. The push
-    /// waits for the next layout pass, so laying the page out now, on the stack, lands before it.
+    /// SwiftUI hands a page's title to its navigation item only when it lays the page out, which UIKit does after
+    /// the bar started the push. The push waits for the next layout pass, so laying the page out now, on the stack,
+    /// lands before it. A `.toolbar` comes a pass later still, so the pages whose items morph have them in UIKit
+    /// (`PhoneBar`).
     private func layOutBeforeTransition(_ page: UIViewController) {
         guard page.viewIfLoaded?.window == nil else { return }
         page.view.frame = view.bounds

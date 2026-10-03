@@ -12,11 +12,7 @@ struct WorkspacePage: View {
     @State private var search = ""
     @State private var searching = false
     @State private var showProcesses = false
-    @State private var showLaunches = false
-    @State private var showFiles = false
-    @State private var showGit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.settingsLink) private var settingsLink
     @Environment(\.openProjectView) private var openProjectView
     var body: some View {
         Group {
@@ -64,9 +60,7 @@ struct WorkspacePage: View {
         .navigationTitle(isSidebar ? "" : workspace.title)
         .modifier(PhoneSubtitle(text: isSidebar ? nil : workspace.session.machine.name))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if isSidebar { tabletToolbar } else { phoneToolbar }
-        }
+        .toolbar(if: isSidebar) { tabletToolbar }
         .task { workspace.start() }
         .task(id: workspace.ready) { await openPendingView() }
         .mobileSheet(isPresented: $navigation.newChat) {
@@ -90,30 +84,34 @@ struct WorkspacePage: View {
                     }
             }
         }
-        .mobileSheet(isPresented: $showFiles) {
+        .mobileSheet(isPresented: $navigation.showingFiles) {
             NavigationStack {
                 ProjectFilesPage(workspace: workspace) { id in
-                    showFiles = false
+                    navigation.showingFiles = false
                     openView(id)
                 }
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showFiles = false } }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { navigation.showingFiles = false }
+                        }
                     }
             }
         }
-        .mobileSheet(isPresented: $showGit) {
+        .mobileSheet(isPresented: $navigation.showingGit) {
             NavigationStack {
                 GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showGit = false } }
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { navigation.showingGit = false } }
                     }
             }
         }
-        .mobileSheet(isPresented: $showLaunches) {
+        .mobileSheet(isPresented: $navigation.showingLaunches) {
             NavigationStack {
                 LaunchesPage(client: workspace.client, projectID: workspace.projectID, folder: workspace.folder)
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showLaunches = false } }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { navigation.showingLaunches = false }
+                        }
                     }
             }
         }
@@ -170,44 +168,13 @@ struct WorkspacePage: View {
         }
     }
 
-    /// The project's menu beside the avatar, so Settings is one tap away here too. The Chats project's folder is the
-    /// machine's own, so its menu holds New chat and Usage only.
-    @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
-        ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
-            Menu {
-                Section {
-                    if workspace.isScratch {
-                        Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
-                    } else {
-                        Button("New view", lucideIcon: "plus") { navigation.adding = true }
-                    }
-                }
-                Section {
-                    if !workspace.isScratch {
-                        Button("Files", lucideIcon: "folder") { showFiles = true }
-                        Button("Git", lucideIcon: "git-branch") { showGit = true }
-                        Button("Launches", lucideIcon: "rocket") { showLaunches = true }
-                    }
-                    Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
-                }
-            } label: {
-                Image(lucide: "ellipsis")
-            }
-            .accessibilityLabel("Project menu")
-            .accessibilityIdentifier("project.menu")
-            .disabled(!workspace.ready)
-        }
-        if let settingsLink {
-            SettingsToolbarItem(link: settingsLink)
-        }
-    }
-
+    /// The iPhone's project menu is UIKit's (`PhoneBars.project`).
     @ToolbarContentBuilder private var tabletToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 // The Chats project's folder is the machine's own, so it has no launches.
                 if !workspace.isScratch {
-                    Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                    Button("Launches", lucideIcon: "rocket") { navigation.showingLaunches = true }
                 }
                 Button("Processes", lucideIcon: "activity") { showProcesses = true }
                 Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }

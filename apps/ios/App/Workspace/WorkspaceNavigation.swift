@@ -12,6 +12,9 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var adding = false
     var newChat = false
     var showingUsage = false
+    var showingFiles = false
+    var showingGit = false
+    var showingLaunches = false
 
     init(workspace: MobileWorkspace) { self.workspace = workspace }
 

@@ -4,15 +4,16 @@ import SwiftUI
 struct MachineProjectsPage: View {
     @Bindable var session: SharedMachineSession
     let runtime: AppRuntime
+    /// On an iPhone, whose bar holds Open folder in UIKit (`PhoneBars.machine`).
+    var barRequests: BarRequests? = nil
     @State private var lease: MachineNavigationLease?
     @State private var projects: [JSONValue] = []
     @State private var search = ""
     @State private var work = RemotePageState()
-    @State private var openingFolder = false
+    @State private var ownRequests = BarRequests()
     @State private var projectName = ""
     @State private var folder = ""
     @Environment(\.openMobileWorkspace) private var openWorkspace
-    @Environment(\.settingsLink) private var settingsLink
     @State private var createFolder = false
     @State private var unsubscribe: (() -> Void)?
     @State private var destination: MachineDestination?
@@ -132,12 +133,10 @@ struct MachineProjectsPage: View {
             }
         }
         .searchable(text: $search, prompt: "Find a project")
-        .toolbar {
+        .toolbar(if: barRequests == nil) {
             ToolbarItem(id: "machine.openFolder", placement: .topBarTrailing) {
-                Button("Open folder", lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
-            }
-            if let settingsLink {
-                SettingsToolbarItem(link: settingsLink)
+                Button("Open folder", lucideIcon: "folder-open") { requests.openFolder = true }
+                    .disabled(!session.connected)
             }
         }
         .task {
@@ -160,7 +159,7 @@ struct MachineProjectsPage: View {
                 openWorkspace(MobileWorkspace(session: session, projectID: place.projectID), view: place.viewID)
             }
         }
-        .mobileSheet(isPresented: $openingFolder) {
+        .mobileSheet(isPresented: Bindable(requests).openFolder) {
             NavigationStack {
                 MobileForm {
                     TextField("Name", text: $projectName)
@@ -170,7 +169,7 @@ struct MachineProjectsPage: View {
                     if let problem = work.problem { Text(problem).foregroundStyle(.red) }
                 }.navigationTitle("Open project")
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { openingFolder = false } }
+                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { requests.openFolder = false } }
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Open") { Task { await openFolder() } }.disabled(work.busy || folder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
@@ -179,6 +178,7 @@ struct MachineProjectsPage: View {
         }
     }
     /// The projects without the machine's Chats project, which has a section of its own.
+    private var requests: BarRequests { barRequests ?? ownRequests }
     private var listed: [JSONValue] { projects.filter { !NewChat.isChats($0) } }
     private var chats: JSONValue? { projects.first(where: NewChat.isChats) }
 
@@ -214,7 +214,7 @@ struct MachineProjectsPage: View {
                 await session.releaseProject(id)
                 openWorkspace(MobileWorkspace(session: session, projectID: id))
             }
-            openingFolder = false
+            requests.openFolder = false
         }
     }
 }

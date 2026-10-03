@@ -506,10 +506,11 @@ struct MachinesPage: View {
 struct MachineRoutePage: View {
     let runtime: AppRuntime
     let machineID: String
+    var requests: BarRequests? = nil
 
     var body: some View {
         if let machine = runtime.machines.first(where: { $0.id == machineID }) {
-            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
+            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime, barRequests: requests)
         }
     }
 }

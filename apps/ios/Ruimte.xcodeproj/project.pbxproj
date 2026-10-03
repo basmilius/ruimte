@@ -24,6 +24,7 @@
 		148743B855ACFEF035CEBC99 /* GitConflictsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95314D030AE576A5A1837749 /* GitConflictsPage.swift */; };
 		1629BC6BC76E7910FB6FB442 /* clip.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8DE7FE0547CCCD8397A54AF2 /* clip.mp4 */; };
 		163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */; };
+		19305DBEC13CB88DE8338C17 /* PhoneBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8762AD6A6153354C0B76632 /* PhoneBar.swift */; };
 		1AF6F6A85AF5D021863DCA66 /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F0CACBC269A20D7663C70E5 /* TaskStore.swift */; };
 		1C0BD40EBEFD2C31F8448E29 /* NotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3C0289192C090FF4945D5A /* NotificationPreferences.swift */; };
 		1C3CB02C227E64106F86125E /* ChatBookmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23C5CBDE2125C2680DFC11D /* ChatBookmarkTests.swift */; };
@@ -266,6 +267,7 @@
 		F9423B6A7EA1879C4A9987D4 /* SubagentPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93217FEE09EFAED02A0593EA /* SubagentPages.swift */; };
 		FA7A07035B58FB139BD8D8B2 /* SearchPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3C280A49506D171C893DB2 /* SearchPage.swift */; };
 		FADD5421D0533E71A2170DA6 /* ModelName.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEB9671E1EB8AD3BD5E84D0F /* ModelName.swift */; };
+		FB8D5A63B208F32A994CC70C /* PhoneBarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C69DB1510E0F67755FCC69D /* PhoneBarTests.swift */; };
 		FBCC63860740FE29DB14145A /* RemotePageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D8DF2FFC207D5E1CCBA09A /* RemotePageState.swift */; };
 		FBFDD77FD5548521F3B790B9 /* archive.zip in Resources */ = {isa = PBXBuildFile; fileRef = 9740DA191CE68BB6C7CBAD73 /* archive.zip */; };
 		FE4A928C3F92055BC800BEA4 /* SnoozeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76C42CE1B94D201D3793B3D4 /* SnoozeTests.swift */; };
@@ -376,6 +378,7 @@
 		2AB8990ABCF1414440995DE4 /* ProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsPage.swift; sourceTree = "<group>"; };
 		2BE20C3032455CE771452578 /* ChatSendTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSendTests.swift; sourceTree = "<group>"; };
 		2C204ABF7BF115B3485C914E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2C69DB1510E0F67755FCC69D /* PhoneBarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneBarTests.swift; sourceTree = "<group>"; };
 		2CCBBAD2C00600A5196B2916 /* AccountSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsPage.swift; sourceTree = "<group>"; };
 		2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageBackdrop.swift; sourceTree = "<group>"; };
 		2E14367D383EB07F4C4F8872 /* GitPullRequestPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPullRequestPage.swift; sourceTree = "<group>"; };
@@ -528,6 +531,7 @@
 		C62961727B814F8C43E406CD /* DrawingAuthoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingAuthoring.swift; sourceTree = "<group>"; };
 		C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ruimte.entitlements; sourceTree = "<group>"; };
 		C67F6B6A322AFD73FF85C3BE /* ChatMenuActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMenuActions.swift; sourceTree = "<group>"; };
+		C8762AD6A6153354C0B76632 /* PhoneBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneBar.swift; sourceTree = "<group>"; };
 		C93464A87752188B15F2F555 /* UsageTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTheme.swift; sourceTree = "<group>"; };
 		CA006750F3FAD76E2C565AD3 /* LastProjectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastProjectTests.swift; sourceTree = "<group>"; };
 		CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineProjectsPage.swift; sourceTree = "<group>"; };
@@ -905,6 +909,7 @@
 				FA3AB193736D4225923AF7F5 /* NowBoardTests.swift */,
 				27E68DFC13E24C17BCE2204B /* NowRequestTests.swift */,
 				28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */,
+				2C69DB1510E0F67755FCC69D /* PhoneBarTests.swift */,
 				790A276F3F897F846F138C09 /* PhonePopGestureTests.swift */,
 				5DAC3BBE10240D8F0B9E349A /* PhoneRouterTests.swift */,
 				710B2DB25A631005B674A223 /* PlanOutlineTests.swift */,
@@ -977,6 +982,7 @@
 			isa = PBXGroup;
 			children = (
 				B7E49234CBDC57F0121F7139 /* AccountAvatar.swift */,
+				C8762AD6A6153354C0B76632 /* PhoneBar.swift */,
 				CE48345F04BA4B8E778C12FD /* PhoneHome.swift */,
 				298438BCC7AE8C2A9356DCC1 /* PhonePopGesture.swift */,
 				0E342A07018739FE303A2EAF /* PhoneRouter.swift */,
@@ -1390,6 +1396,7 @@
 				B89F5945C273D24E097E2568 /* NowBoardTests.swift in Sources */,
 				99A0D3D88CC159C1EEAB2DF5 /* NowRequestTests.swift in Sources */,
 				CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */,
+				FB8D5A63B208F32A994CC70C /* PhoneBarTests.swift in Sources */,
 				6EFDF4B229208DA928E78AB7 /* PhonePopGestureTests.swift in Sources */,
 				F38A8826258A06EF947C6676 /* PhoneRouterTests.swift in Sources */,
 				C0EAB79CF03B546D88E005CC /* PlanOutlineTests.swift in Sources */,
@@ -1547,6 +1554,7 @@
 				AF856CCE0FC3592A271DB4E9 /* NowPage.swift in Sources */,
 				5CEB79B66FAAA86099A7C200 /* NowRequest.swift in Sources */,
 				2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */,
+				19305DBEC13CB88DE8338C17 /* PhoneBar.swift in Sources */,
 				AE7A98A4109235647F3EA5AD /* PhoneHome.swift in Sources */,
 				39D8055DCC664871E8C9B660 /* PhonePopGesture.swift in Sources */,
 				EF468123D0DBEDC10D883F36 /* PhoneRouter.swift in Sources */,

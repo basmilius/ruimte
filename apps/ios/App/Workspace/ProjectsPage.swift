@@ -5,14 +5,14 @@ import SwiftUI
 struct ProjectsPage<Notice: View>: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
-    /// On the iPhone's Projects tab, which leaves finding a project to the Search tab.
+    /// On the iPhone's Projects tab, which leaves finding a project to the Search tab and has its bar items in UIKit
+    /// (`PhoneBars.projects`).
     var inTabs = false
     let showRecent: () -> Void
     @ViewBuilder let notice: () -> Notice
     @State private var search = ""
     @State private var newChat: NewChatTarget?
     @Environment(\.openMobileWorkspace) private var openWorkspace
-    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         MobileList {
@@ -99,12 +99,9 @@ struct ProjectsPage<Notice: View>: View {
             }
         }
         .modifier(ProjectsSearch(enabled: !inTabs, text: $search))
-        .toolbar {
+        .toolbar(if: !inTabs) {
             if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
                 ProjectsUpdatingItem()
-            }
-            if let settingsLink {
-                SettingsToolbarItem(link: settingsLink)
             }
         }
         .refreshable {

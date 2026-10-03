@@ -153,13 +153,23 @@ gave the recognizer, so the swipe still yields to the scroll views under it. Con
 itself keeps it, and there only the edge swipe goes back: a scroll view that scrolls sideways or zooms (a canvas, a
 drawing, a document scene, a code or diff line wider than the screen, a web page, an image), a pan the app added (a
 terminal's selection) and text with a selection. A list row's swipe actions open with a swipe toward the leading
-edge, which never goes back. A stack lays a page out as soon as it stands on the stack, before the push starts on
-the next layout pass, since SwiftUI only hands the page's title and items to its navigation item when it lays the
-page out; otherwise the items of a project or a machine pop in at the end of the push instead of morphing out of
-the tab's. Settings opens as a sheet from the avatar, the last item on the right of the bar on every tab, on a
-project's page and on a machine's, and the tab bar folds in while a list scrolls down. The
-avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in Caches and asked again
-once per launch), else the first letter of its name.
+edge, which never goes back.
+
+A stack lays a page out as soon as it stands on the stack, before the push starts on the next layout pass, since
+SwiftUI only hands a page's title and items to its navigation item when it lays the page out. For a `.toolbar` that
+is still a pass too late: the bar has started the push by then, so the items of a project or a machine popped in a
+frame after it instead of morphing out of the tab's. The bars of the four tabs, a project and a machine are therefore
+UIKit's (`PhoneBar.swift`): `PhoneHome` builds each page's `UIBarButtonItem`s with the page and sets them, with the
+title of a project or a machine, on its navigation item before the push, and those pages give SwiftUI no `.toolbar`
+on an iPhone. They follow what they show through Observation (the account, the machines, a project that becomes ready).
+A project's menu is a `UIMenu` with the same actions as before, its sheets on `WorkspaceNavigation`; Now's write
+button and a machine's Open folder ask their page through `BarRequests`. An item that morphs carries the same
+`identifier` on every page, which is how UIKit matches items across a push. Settings opens as a sheet from the
+avatar, the last item on the right of the bar on every tab, on a project's page and on a machine's, sharing its glass
+with the item beside it, and the tab bar folds in while a list scrolls down. The avatar is one `UIBarButtonItem`
+under the identifier `settings`, a new one on each page since both bars stand during a push. It shows the account's
+GitHub picture as the desktop does (`AccountAvatar.swift`, kept in Caches and asked again once per launch), else the
+first letter of its name.
 
 - Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
   machines that are not connected. `NowModel` reads each machine's open projects with `project.sidebar`, again on

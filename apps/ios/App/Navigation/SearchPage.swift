@@ -10,7 +10,6 @@ struct SearchPage: View {
     let open: (ProjectViewTarget) -> Void
     @State private var query = ""
     @Environment(\.openMobileWorkspace) private var openWorkspace
-    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         let views = ViewSearch.views(now.entries, query: query)
@@ -56,11 +55,6 @@ struct SearchPage: View {
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, prompt: "Views and projects")
-        .toolbar {
-            if let settingsLink {
-                SettingsToolbarItem(link: settingsLink)
-            }
-        }
     }
 
     private func subtitle(_ project: String, _ machine: String) -> String {
