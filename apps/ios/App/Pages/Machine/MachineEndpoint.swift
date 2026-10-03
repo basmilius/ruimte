@@ -103,6 +103,15 @@ struct MachineUpdate: Equatable, Sendable {
     var note: String? {
         installable && !app ? "Open Ruimte on the machine to install it there." : nil
     }
+
+    /// What the person reads before the restart: what installs and what that ends on the machine right now.
+    static func restartQuestion(update: MachineUpdate?, work: MachineWork, machine: String) -> String {
+        let named = update?.version.map { "Ruimte \($0)" } ?? "The update"
+        let downloads = update?.status == "ready" ? "" : " downloads,"
+        let installs = "\(named)\(downloads) installs and Ruimte restarts on \(machine)."
+        if work.idle { return "\(installs) Nothing that runs there ends." }
+        return "\(installs) That ends \(work.summary) running there now."
+    }
 }
 
 /// Where installing an update stands, from the first question to the restart.
@@ -304,7 +313,7 @@ final class MachineEndpoint {
 
     /// The first ask, which only learns what a restart would end.
     func askToInstall() async {
-        guard install == .idle || install == .started else { return }
+        guard install != .asking, install != .installing else { return }
         install = .asking
         do {
             let answer = try await client.request(
@@ -344,6 +353,45 @@ final class MachineEndpoint {
         case "update-no-app": return "Ruimte is not open on this machine. Install the update there."
         case "update-none": return "There is no update to install on this machine."
         default: return message
+        }
+    }
+}
+
+/// How a machine is reached, in the line under its name.
+enum MachineReach {
+    static func line(
+        connected: Bool, connecting: Bool, relayed: Bool?, latency: Int?, problem: String?, lastSeen: Date?
+    ) -> String {
+        if connected {
+            let route =
+                switch relayed {
+                case .some(true): "Connected via relay"
+                case .some(false): "Connected directly"
+                case .none: "Connected"
+                }
+            return latency.map { "\(route) · \($0) ms" } ?? route
+        }
+        if connecting { return "Connecting" }
+        if let lastSeen {
+            return "Last connected \(lastSeen.formatted(.relative(presentation: .named, unitsStyle: .wide)))"
+        }
+        return problem ?? "Not connected"
+    }
+}
+
+/// One bar of a machine's row: the window of a CLI's default account that runs out first.
+struct MachineLimitLine: Identifiable, Equatable {
+    let kind: String
+    let label: String
+    let used: Double
+
+    var id: String { kind }
+
+    /// The session window where a CLI has one, since that is the limit a person hits within a day.
+    static func lines(_ providers: [UsageWidgetSnapshot.Provider]) -> [MachineLimitLine] {
+        providers.filter { $0.accountID == $0.kind }.compactMap { provider in
+            let window = provider.windows.first { $0.kind == "session" } ?? provider.windows.first
+            return window.map { MachineLimitLine(kind: provider.kind, label: $0.label, used: $0.used) }
         }
     }
 }
