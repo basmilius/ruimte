@@ -227,24 +227,10 @@ struct ChatScreen: View {
         ) { crumb in
             SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
         }
-        .inspector(
-            isPresented: Binding(
-                get: { padCells != nil && model.presentation.conversationRequest != nil },
-                set: { if !$0 { model.presentation.conversationRequest = nil } })
-        ) {
-            if let crumb = model.presentation.conversationRequest, let padCells {
-                SubagentInspector(
-                    model: model, crumb: crumb, session: machineSession,
-                    openAsView: {
-                        model.presentation.conversationRequest = nil
-                        padCells.openSubagent(
-                            PadSubagent(chatID: model.chatID, toolUseID: crumb.toolUseID, title: crumb.description))
-                    },
-                    close: { model.presentation.conversationRequest = nil }
-                )
-                .id(crumb.toolUseID)
-                .inspectorColumnWidth(min: 300, ideal: 380, max: 520)
-            }
+        .onChange(of: model.presentation.conversationRequest) { _, crumb in
+            guard let crumb, let padCells else { return }
+            model.presentation.conversationRequest = nil
+            padCells.inspectSubagent(PadSubagentPane(model: model, crumb: crumb, session: machineSession))
         }
         .onAppear {
             chatPresentationLog.notice("chat appeared \(model.chatID, privacy: .public)")

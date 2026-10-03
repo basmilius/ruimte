@@ -123,6 +123,64 @@ final class PadRouterTests: XCTestCase {
         XCTAssertNil(router.inspector, "The Chats project has no folder of its own")
     }
 
+    @MainActor func testAProjectRowOpensOnTheRouterOfTheAccountThatIsSignedInNow() {
+        let (runtime, machine, connections) = fixture()
+        defer { connections.shutdown() }
+        let before = PadRouter()
+        let after = PadRouter()
+        XCTAssertEqual(before.openAction(), before.openAction())
+        XCTAssertNotEqual(
+            before.openAction(), after.openAction(),
+            "An action equal to the old router's would never reach the rows, which kept opening there")
+
+        var closed = false
+        let open = after.openAction { closed = true }
+        open(MobileWorkspace(session: runtime.session(for: machine), projectID: "app"))
+        XCTAssertTrue(closed)
+        XCTAssertEqual(after.project?.workspace.projectID, "app")
+        XCTAssertEqual(after.detail, .project)
+        XCTAssertNil(before.project)
+    }
+
+    @MainActor func testTheInspectorOnlyStandsBesideAProjectsContent() {
+        let (runtime, machine, connections) = fixture()
+        defer { connections.shutdown() }
+        let router = PadRouter()
+        router.inspector = .files
+        XCTAssertFalse(router.showsInspector)
+        router.openProject(MobileWorkspace(session: runtime.session(for: machine), projectID: "app"))
+        router.toggle(.files)
+        XCTAssertTrue(router.showsInspector)
+        router.detail = .now
+        XCTAssertFalse(router.showsInspector)
+    }
+
+    @MainActor func testASubagentStaysInTheInspectorUntilItsChatLeavesTheContent() {
+        let (runtime, machine, connections) = fixture()
+        defer { connections.shutdown() }
+        let router = PadRouter()
+        let session = runtime.session(for: machine)
+        router.openProject(
+            MobileWorkspace(
+                session: session, projectID: "chats",
+                summary: .object(["projectId": .string("chats"), "scratch": .bool(true)])))
+        router.show(view: "chat")
+        let pane = PadSubagentPane(
+            model: ChatModel(client: session.rpc, chatID: "chat"),
+            crumb: SubagentCrumb(toolUseID: "tool", description: "Find loops"), session: nil)
+        router.inspect(pane)
+        XCTAssertEqual(router.inspector, .subagent(pane))
+        XCTAssertTrue(router.showsInspector, "A sub-agent needs no project folder")
+
+        router.show(view: "chat")
+        XCTAssertNil(router.inspector)
+
+        router.inspect(pane)
+        router.show(subagent: PadSubagent(chatID: "chat", toolUseID: "tool", title: "Find loops"))
+        XCTAssertNil(router.inspector, "Open as view takes the sub-agent out of the inspector")
+        XCTAssertEqual(router.subagent?.toolUseID, "tool")
+    }
+
     @MainActor func testANotificationFindsItsNodeAndAMachineOverviewOpensNow() {
         let router = PadRouter()
         router.detail = .machines

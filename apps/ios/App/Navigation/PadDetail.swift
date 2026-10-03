@@ -1,8 +1,8 @@
 import RuimtePulsar
 import SwiftUI
 
-/// The content column beside the iPad's sidebar, with the files or git of the sidebar's project in an inspector
-/// beside it. Each page has a stack of its own, so a page pushed inside one never outlives a switch to another.
+/// The content column beside the iPad's sidebar. Each page has a stack of its own, so a page pushed inside one never
+/// outlives a switch to another.
 struct PadDetailColumn: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
@@ -18,11 +18,6 @@ struct PadDetailColumn: View {
 
     var body: some View {
         content
-            .inspector(isPresented: inspectorShown) {
-                inspector
-                    .modifier(InspectorEdge())
-                    .inspectorColumnWidth(min: 300, ideal: 360, max: 520)
-            }
             .mobileSheet(isPresented: $diagnostics) {
                 NavigationStack {
                     ConnectionScreen(runtime: runtime)
@@ -135,29 +130,6 @@ struct PadDetailColumn: View {
         }
     }
 
-    private var inspectorShown: Binding<Bool> {
-        Binding(
-            get: { router.inspector != nil && router.offersFilesAndGit && router.detail == .project },
-            set: { if !$0 { router.inspector = nil } })
-    }
-
-    @ViewBuilder private var inspector: some View {
-        if let navigation = router.project {
-            let workspace = navigation.workspace
-            NavigationStack {
-                switch router.inspector {
-                case .files:
-                    ProjectFilesPage(workspace: workspace) { router.show(view: $0) }
-                case .git:
-                    GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
-                case nil:
-                    EmptyView()
-                }
-            }
-            .id("\(navigation.id):\(String(describing: router.inspector))")
-        }
-    }
-
     /// Where the write button starts a chat: the open project, or with the Chats project open, Chats itself.
     private var chatProject: NowChatProject? {
         guard let workspace = router.project?.workspace, !workspace.isScratch else { return nil }
@@ -168,6 +140,41 @@ struct PadDetailColumn: View {
     private func openProject(_ target: ProjectViewTarget) {
         guard let machine = runtime.machines.first(where: { $0.id == target.machineID }) else { return }
         router.openProject(MobileWorkspace(session: runtime.session(for: machine), projectID: target.projectID))
+    }
+}
+
+/// The inspector beside the content, which stands on the split view itself: inside the content column it shared that
+/// column's navigation, so what it pushed took the content's place.
+struct PadInspectorPane: View {
+    let router: PadRouter
+
+    var body: some View {
+        if case .subagent(let pane) = router.inspector {
+            SubagentInspector(
+                model: pane.model, crumb: pane.crumb, session: pane.session,
+                openAsView: {
+                    router.show(
+                        subagent: PadSubagent(
+                            chatID: pane.model.chatID, toolUseID: pane.crumb.toolUseID, title: pane.crumb.description))
+                },
+                close: { router.inspector = nil }
+            )
+            .id(pane.crumb.toolUseID)
+        } else if let navigation = router.project {
+            let workspace = navigation.workspace
+            NavigationStack {
+                switch router.inspector {
+                case .files:
+                    ProjectFilesPage(workspace: workspace) { router.show(view: $0) }
+                case .git:
+                    GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
+                case .subagent, nil:
+                    EmptyView()
+                }
+            }
+            .id("\(navigation.id):\(router.inspector == .git ? "git" : "files")")
+            .modifier(InspectorEdge())
+        }
     }
 }
 
@@ -188,7 +195,11 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
                 .toolbar(content: toolbar)
         }
         .id(shownKey)
-        .environment(\.padCells, PadCellActions(openSubagent: { router.show(subagent: $0) }))
+        .environment(
+            \.padCells,
+            PadCellActions(
+                openSubagent: { router.show(subagent: $0) }, inspectSubagent: { router.inspect($0) })
+        )
         .opacity(machineLost ? 0.3 : 1)
         .allowsHitTesting(!machineLost)
         .overlay {
@@ -285,9 +296,10 @@ private struct PadNotificationPage: View {
     }
 }
 
-/// What the iPad's content offers the page in it: a sub-agent as a view of its own.
+/// What the iPad's content offers the page in it: a sub-agent as a view of its own, or beside it in the inspector.
 struct PadCellActions {
     let openSubagent: (PadSubagent) -> Void
+    let inspectSubagent: (PadSubagentPane) -> Void
 }
 
 extension EnvironmentValues {

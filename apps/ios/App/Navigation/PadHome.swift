@@ -32,6 +32,9 @@ struct PadHome: View {
                 openPalette: { palette = true }, open: open, pair: pair, signIn: signIn)
         }
         .navigationSplitViewStyle(.balanced)
+        .inspector(isPresented: inspectorShown) {
+            PadInspectorPane(router: router).inspectorColumnWidth(min: 300, ideal: 360, max: 520)
+        }
         .overlayPreferenceValue(SidebarBounds.self) { anchor in
             GeometryReader { geometry in
                 if let anchor, sidebarVisibility != .detailOnly {
@@ -52,13 +55,7 @@ struct PadHome: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        .environment(
-            \.openMobileWorkspace,
-            OpenMobileWorkspaceAction(id: "pad") { workspace, view in
-                palette = false
-                router.openProject(workspace, view: view)
-            }
-        )
+        .environment(\.openMobileWorkspace, router.openAction { palette = false })
         .mobileSheet(isPresented: $palette, onDismiss: runAfterPalette) {
             NavigationStack {
                 SearchPage(
@@ -75,6 +72,10 @@ struct PadHome: View {
             if now.loaded { NeedsYouWidgetRecorder.record(board) }
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
+    }
+
+    private var inspectorShown: Binding<Bool> {
+        Binding(get: { router.showsInspector }, set: { if !$0 { router.inspector = nil } })
     }
 
     private var settingsLink: SettingsLink {

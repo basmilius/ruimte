@@ -12,9 +12,11 @@ enum PadDetail: Hashable {
     case notification(NotificationDestination)
 }
 
-/// What stands in the inspector column beside the content: the project's files or its git.
+/// What stands in the inspector column beside the content: the project's files, its git, or a sub-agent of the chat
+/// in the content.
 enum PadInspector: Hashable {
     case files, git
+    case subagent(PadSubagentPane)
 }
 
 /// Where the iPad stands. The sidebar lists Now, the machines and the open projects; a project opened from anywhere is
@@ -62,6 +64,15 @@ final class PadRouter {
         return navigation
     }
 
+    /// What a project row in the sidebar or a sheet opens with. The action compares by its id, so the id names this
+    /// router: a signed-in account brings a new router, and an action equal to the old one would keep opening there.
+    func openAction(before: @escaping () -> Void = {}) -> OpenMobileWorkspaceAction {
+        OpenMobileWorkspaceAction(id: "pad:\(ObjectIdentifier(self).hashValue)") { [weak self] workspace, view in
+            before()
+            self?.openProject(workspace, view: view)
+        }
+    }
+
     /// Leaves the project, for the sidebar's back button, one that was closed or a machine that went.
     func closeProject() {
         project = nil
@@ -74,6 +85,7 @@ final class PadRouter {
     /// Shows a view of the project in the sidebar in the content.
     func show(view id: String) {
         guard let project else { return }
+        closeSubagentPane()
         // A node opens on its own; what the project remembers as open is the canvas it stands on.
         let canvas = project.workspace.views.first { $0.list("nodes").contains { $0.stableID == id } }
         project.workspace.select(canvas?.stableID ?? id)
@@ -97,12 +109,14 @@ final class PadRouter {
     }
 
     func show(file path: String) {
+        closeSubagentPane()
         file = path
         subagent = nil
         detail = .project
     }
 
     func show(subagent: PadSubagent) {
+        closeSubagentPane()
         self.subagent = subagent
         file = nil
         detail = .project
@@ -114,6 +128,23 @@ final class PadRouter {
         return !project.workspace.isScratch
     }
 
+    /// The inspector only stands beside a project's content.
+    var showsInspector: Bool {
+        guard detail == .project, let inspector else { return false }
+        if case .subagent = inspector { return true }
+        return offersFilesAndGit
+    }
+
+    /// A sub-agent of the chat in the content, beside it in the inspector.
+    func inspect(_ pane: PadSubagentPane) {
+        inspector = .subagent(pane)
+    }
+
+    /// A sub-agent belongs to the chat it ran in, so it leaves the inspector with that chat.
+    private func closeSubagentPane() {
+        if case .subagent = inspector { inspector = nil }
+    }
+
     func toggle(_ panel: PadInspector) {
         guard offersFilesAndGit else { return }
         inspector = inspector == panel ? nil : panel
@@ -122,6 +153,22 @@ final class PadRouter {
     /// A notification's node opens in its project once Now says which one holds it.
     func open(_ notification: NotificationDestination) {
         detail = notification.target == "machine" || notification.nodeID.isEmpty ? .now : .notification(notification)
+    }
+}
+
+/// A sub-agent in the inspector, with the chat it ran in.
+struct PadSubagentPane: Hashable {
+    let model: ChatModel
+    let crumb: SubagentCrumb
+    let session: SharedMachineSession?
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.model === rhs.model && lhs.crumb == rhs.crumb
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(model))
+        hasher.combine(crumb)
     }
 }
 
