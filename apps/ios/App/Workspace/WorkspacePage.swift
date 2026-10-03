@@ -49,7 +49,8 @@ struct WorkspacePage: View {
                 PhoneProjectList(
                     workspace: workspace, state: listState, views: listedViews,
                     selectedID: navigation.selectedViewID, open: openView, act: act, header: sidebar.header,
-                    highlightedID: sidebar.router.detail == .project ? sidebar.router.shownID : nil
+                    highlightedID: sidebar.router.detail == .project ? sidebar.router.shownID : nil,
+                    openBeside: { sidebar.router.showBeside(view: $0) }
                 )
                 .safeAreaInset(edge: .bottom, spacing: 0) { newViewFooter }
                 .overlay {

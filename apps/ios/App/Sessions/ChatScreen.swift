@@ -36,6 +36,8 @@ struct ChatScreen: View {
     @State private var bookmarkName = ""
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Set in a cell beside the iPad's sidebar, where a sub-agent opens in an inspector and a fork in the next cell.
+    @Environment(\.padCells) private var padCells
     let title: String
     let isPrepared: Bool
     /// The project the chat stands in, which is what a fork's way back and a summary's way to the fork need.
@@ -220,10 +222,29 @@ struct ChatScreen: View {
         }
         .navigationDestination(
             item: Binding(
-                get: { model.presentation.conversationRequest },
+                get: { padCells == nil ? model.presentation.conversationRequest : nil },
                 set: { model.presentation.conversationRequest = $0 })
         ) { crumb in
             SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
+        }
+        .inspector(
+            isPresented: Binding(
+                get: { padCells != nil && model.presentation.conversationRequest != nil },
+                set: { if !$0 { model.presentation.conversationRequest = nil } })
+        ) {
+            if let crumb = model.presentation.conversationRequest, let padCells {
+                SubagentInspector(
+                    model: model, crumb: crumb, session: machineSession,
+                    openAsView: {
+                        model.presentation.conversationRequest = nil
+                        padCells.openSubagent(
+                            PadSubagent(chatID: model.chatID, toolUseID: crumb.toolUseID, title: crumb.description))
+                    },
+                    close: { model.presentation.conversationRequest = nil }
+                )
+                .id(crumb.toolUseID)
+                .inspectorColumnWidth(min: 300, ideal: 380, max: 520)
+            }
         }
         .onAppear {
             chatPresentationLog.notice("chat appeared \(model.chatID, privacy: .public)")
@@ -462,7 +483,11 @@ struct ChatScreen: View {
         Task {
             await model.refreshForks()
             guard !id.isEmpty, let places = model.presentation.places, await places.arrival(id) else { return }
-            model.presentation.openRequest = id
+            if let padCells {
+                padCells.openBeside(id)
+            } else {
+                model.presentation.openRequest = id
+            }
         }
     }
 

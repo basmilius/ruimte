@@ -13,6 +13,11 @@ struct SubagentCrumb: Hashable, Identifiable {
         toolUseID = item.text("toolUseId")
         description = ChatSubagents.title(item)
     }
+
+    init(toolUseID: String, description: String) {
+        self.toolUseID = toolUseID
+        self.description = description
+    }
 }
 
 /// The list of a chat's sub-agents as its toolbar opens it.

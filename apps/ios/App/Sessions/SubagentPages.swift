@@ -475,3 +475,57 @@ private struct SubagentComposerDock: View {
         .frame(maxWidth: .infinity)
     }
 }
+
+/// A sub-agent beside its chat on an iPad, as an inspector: its conversation with Stop, and Open as view, which gives
+/// it a cell of its own on this iPad only, as the desktop does. The chat stays usable beside it.
+struct SubagentInspector: View {
+    let model: ChatModel
+    let crumb: SubagentCrumb
+    let session: SharedMachineSession?
+    let openAsView: () -> Void
+    let close: () -> Void
+    @State private var ending: EndingAgents?
+    @State private var failure: String?
+
+    var body: some View {
+        NavigationStack {
+            SubagentConversationPage(model: model, crumb: crumb, session: session)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button(role: .close, action: close) }
+                    if let record, let stop = ChatSubagents.stop(record, turnRunning: turnRunning) {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button("Stop", lucideIcon: "square", role: .destructive) {
+                                switch stop {
+                                case .task: Task { ending = await model.stopTaskQuestion(record) { await run(record) } }
+                                case .mark: Task { await run(record) }
+                                }
+                            }
+                        }
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Open as view", lucideIcon: "columns-2", action: openAsView)
+                    }
+                }
+        }
+        .endingAgentsConfirmation($ending)
+        .alert(
+            "The sub-agent could not be stopped",
+            isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
+        ) {
+            Button("OK", role: .cancel) { failure = nil }
+        } message: {
+            Text(failure ?? "")
+        }
+    }
+
+    private var record: JSONValue? { model.presentation.subagent(toolUseID: crumb.toolUseID)?.value }
+    private var turnRunning: Bool { model.info["activeTurnId"]?.stringValue != nil }
+
+    private func run(_ item: JSONValue) async {
+        do {
+            try await model.stopSubagent(item)
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+}

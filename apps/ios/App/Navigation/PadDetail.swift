@@ -199,12 +199,48 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
     private var workspace: MobileWorkspace { navigation.workspace }
 
     var body: some View {
-        NavigationStack {
-            first
-                .modifier(MobilePageSurface())
-                .toolbar(content: toolbar)
+        HStack(spacing: 0) {
+            if let second = secondItem {
+                NavigationStack {
+                    first.modifier(MobilePageSurface())
+                }
+                .id(firstKey)
+                MobileStyle.border.frame(width: 1).ignoresSafeArea()
+                NavigationStack {
+                    ProjectItemPage(workspace: workspace, item: second)
+                        .modifier(MobilePageSurface())
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button {
+                                    router.closeSecondCell()
+                                } label: {
+                                    Image(lucide: "x").accessibilityLabel("Close this cell")
+                                }
+                                .accessibilityIdentifier("pad.closeCell")
+                            }
+                        }
+                        .toolbar(content: toolbar)
+                }
+                .id(second.stableID)
+            } else {
+                NavigationStack {
+                    first
+                        .modifier(MobilePageSurface())
+                        .toolbar(content: toolbar)
+                }
+                .id(firstKey)
+            }
         }
-        .id(router.file ?? navigation.selectedViewID ?? "")
+        .environment(
+            \.padCells,
+            PadCellActions(
+                openBeside: { router.showBeside(view: $0) }, openSubagent: { router.show(subagent: $0) }))
+        // A view dragged out of the sidebar opens in the cell beside the one shown, as in the desktop's split grid.
+        .dropDestination(for: String.self) { ids, _ in
+            guard let id = ids.first, workspace.item(id) != nil else { return false }
+            router.showBeside(view: id)
+            return true
+        }
         .opacity(machineLost ? 0.3 : 1)
         .allowsHitTesting(!machineLost)
         .overlay {
@@ -219,6 +255,15 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
         }
     }
 
+    private var firstKey: String {
+        router.file ?? router.subagent?.toolUseID ?? navigation.selectedViewID ?? ""
+    }
+
+    private var secondItem: JSONValue? {
+        guard workspace.ready, let id = router.secondViewID else { return nil }
+        return workspace.item(id)
+    }
+
     @ViewBuilder private var first: some View {
         if let path = router.file {
             FileContentPage(
@@ -226,6 +271,8 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
                 project: FilesProject(workspace: workspace, openView: { router.show(view: $0) }))
         } else if !workspace.ready {
             opening
+        } else if let subagent = router.subagent {
+            PadSubagentPage(workspace: workspace, subagent: subagent) { router.show(view: subagent.chatID) }
         } else if let id = navigation.selectedViewID, let item = workspace.item(id) {
             ProjectItemPage(workspace: workspace, item: item).id(id)
         } else {
@@ -291,6 +338,54 @@ private struct PadNotificationPage: View {
             } else {
                 searched = true
             }
+        }
+    }
+}
+
+/// What a cell beside the iPad's sidebar offers the page in it: the cell next to it, and a sub-agent as a view.
+struct PadCellActions {
+    let openBeside: (String) -> Void
+    let openSubagent: (PadSubagent) -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var padCells: PadCellActions?
+}
+
+/// A sub-agent opened as a view of its own: its conversation, holding its chat while it shows.
+private struct PadSubagentPage: View {
+    let workspace: MobileWorkspace
+    let subagent: PadSubagent
+    let showChat: () -> Void
+    @State private var model: ChatModel?
+
+    var body: some View {
+        Group {
+            if let model {
+                SubagentConversationPage(
+                    model: model, crumb: SubagentCrumb(toolUseID: subagent.toolUseID, description: subagent.title),
+                    session: workspace.session)
+            } else {
+                MobileLoadingRow("Opening")
+                    .navigationTitle(subagent.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Show chat", lucideIcon: "messages-square", action: showChat)
+            }
+        }
+        .task {
+            guard model == nil else { return }
+            if let chat = workspace.item(subagent.chatID) { try? await workspace.ensureSession(chat) }
+            let session = workspace.session
+            model = session.retainChat(
+                ChatModel(client: workspace.client, chatID: subagent.chatID, machineID: session.machine.id))
+        }
+        .onDisappear {
+            if let model { workspace.session.releaseChat(model) }
+            model = nil
         }
     }
 }

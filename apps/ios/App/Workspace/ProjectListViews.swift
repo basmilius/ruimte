@@ -15,6 +15,8 @@ struct PhoneProjectList: View {
     var header: AnyView?
     /// The row whose view the iPad shows beside the sidebar.
     var highlightedID: String?
+    /// Opens a view in the iPad's cell beside the one shown, from a row's menu or by dragging the row there.
+    var openBeside: ((String) -> Void)?
 
     var body: some View {
         let sections = WorkspaceViewSections.split(views)
@@ -42,7 +44,7 @@ struct PhoneProjectList: View {
                     ForEach(section.items, id: \.stableID) { item in
                         ProjectListCell(
                             workspace: workspace, item: item, state: state, sources: sources,
-                            highlightedID: highlightedID, open: open, act: act)
+                            highlightedID: highlightedID, openBeside: openBeside, open: open, act: act)
                     }
                     .onMove { indices, destination in move(section: section, from: indices, to: destination) }
                 }
@@ -99,6 +101,7 @@ private struct ProjectListCell: View {
     let state: ProjectListState
     let sources: ProjectMarkSources
     let highlightedID: String?
+    let openBeside: ((String) -> Void)?
     let open: (String) -> Void
     let act: (ProjectRowAction, JSONValue) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -139,7 +142,9 @@ private struct ProjectListCell: View {
                 .accessibilityAddTraits(highlightedID == item.stableID ? .isSelected : [])
                 .accessibilityIdentifier("workspace.view.\(item.stableID)")
                 .contextMenu {
-                    ProjectRowMenu(item: item, isView: true, status: marks.status, workspace: workspace, act: act)
+                    ProjectRowMenu(
+                        item: item, isView: true, status: marks.status, workspace: workspace, openBeside: openBeside,
+                        act: act)
                 } preview: {
                     ProjectRowPreview(workspace: workspace, item: item, marks: marks, nodes: nodes, sources: sources)
                 }
@@ -167,7 +172,8 @@ private struct ProjectListCell: View {
                     .accessibilityIdentifier("workspace.node.\(node.stableID)")
                     .contextMenu {
                         ProjectRowMenu(
-                            item: node, isView: false, status: nodeMarks.status, workspace: workspace, act: act)
+                            item: node, isView: false, status: nodeMarks.status, workspace: workspace,
+                            openBeside: openBeside, act: act)
                     } preview: {
                         ProjectRowPreview(workspace: workspace, item: node, marks: nodeMarks, nodes: [], sources: sources)
                     }
@@ -175,6 +181,7 @@ private struct ProjectListCell: View {
             }
         }
         .modifier(MobileSidebarRow())
+        .modifier(DraggableRow(id: item.stableID, enabled: openBeside != nil))
     }
 
     private func title(_ row: JSONValue) -> String {
@@ -224,10 +231,16 @@ private struct ProjectRowMenu: View {
     let isView: Bool
     let status: AgentStatus?
     let workspace: MobileWorkspace
+    let openBeside: ((String) -> Void)?
     let act: (ProjectRowAction, JSONValue) -> Void
 
     var body: some View {
         let actions = ProjectListLogic.actions(for: item, isView: isView, status: status)
+        if let openBeside, item.text("kind") != "unknown" {
+            Section {
+                Button("Open beside", lucideIcon: "columns-2") { openBeside(item.stableID) }
+            }
+        }
         Section {
             if actions.contains(.rename) { Button("Rename", lucideIcon: "pencil") { act(.rename, item) } }
             if actions.contains(.icon) { Button("Change icon", lucideIcon: "palette") { act(.icon, item) } }
@@ -317,6 +330,21 @@ private struct ProjectRowPreview: View {
         case "browser": return item.text("url", fallback: "No address yet.")
         case "file": return item.text("path")
         default: return marks.draft ? "A message is waiting to be sent." : "Nothing is running."
+        }
+    }
+}
+
+/// A row the iPad's content takes as a drop, to open its view in the cell beside the one shown. The list's own drag
+/// still reorders it.
+private struct DraggableRow: ViewModifier {
+    let id: String
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.itemProvider { NSItemProvider(object: id as NSString) }
+        } else {
+            content
         }
     }
 }
