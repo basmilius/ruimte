@@ -53,6 +53,9 @@ struct PlanSheet: View {
                 }
             }
             .modifier(MobilePageSurface())
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let plan { actionBar(plan) }
+            }
             .navigationTitle(chatTitle)
             .navigationSubtitle(planPosition)
             .navigationBarTitleDisplayMode(.inline)
@@ -198,10 +201,29 @@ struct PlanSheet: View {
                 Button("Collapse all", lucideIcon: "chevrons-down-up") { collapsed = plan.foldableIDs }
             }
             Button("Copy as Markdown", lucideIcon: "copy") { UIPasteboard.general.string = plan.markdown }
+            Button("Send results to chat", lucideIcon: "send") { sendResults(plan) }
+                .disabled(plan.resultsText == nil)
         } label: {
             Image(lucide: "circle-ellipsis")
         }
         .accessibilityLabel("Plan actions")
+    }
+
+    /// Back to the chat, or back with the steps that did not pass in its draft, which the person sends.
+    private func actionBar(_ plan: PlanDocument) -> some View {
+        HStack(spacing: 8) {
+            PlanBarButton(title: "Show chat") { dismiss() }
+            PlanBarButton(title: "Send results") { sendResults(plan) }
+                .disabled(plan.resultsText == nil)
+                .accessibilityHint("Puts the failed, blocked, warning and info steps in the chat's message")
+        }
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 12)
+    }
+
+    private func sendResults(_ plan: PlanDocument) {
+        guard let text = plan.resultsText else { return }
+        model.offerDraft(text)
+        dismiss()
     }
 
     private var emptyText: String {
@@ -745,5 +767,23 @@ enum PlanMarkdown {
         if let date = formatter.date(from: text) { return date }
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: text)
+    }
+}
+
+private struct PlanBarButton: View {
+    let title: String
+    let action: () -> Void
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isEnabled ? MobileStyle.text : MobileStyle.faint)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(MobileStyle.active, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(ChatComposerButtonStyle())
     }
 }

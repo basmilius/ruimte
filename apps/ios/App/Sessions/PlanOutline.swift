@@ -383,6 +383,24 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         return blocks.joined(separator: "\n\n") + "\n"
     }
 
+    /// The steps that did not simply pass, as `resultsText` in the desktop client writes them for the chat's prompt;
+    /// nil when there are none.
+    var resultsText: String? {
+        let leaves = steps.flatMap(\.leaves)
+        let headings: [(PlanStepState, String)] = [
+            (.failed, "Failed"), (.blocked, "Blocked"), (.warning, "Warning"), (.info, "Info"),
+        ]
+        let blocks = headings.compactMap { state, heading -> String? in
+            let lines = leaves.filter { $0.state == state }.map { step in
+                let note = step.note.flatMap { $0.isEmpty ? nil : $0.replacing(/\s*\n\s*/, with: " ") }
+                return "- \(step.title)" + (note.map { ": \($0)" } ?? "")
+            }
+            return lines.isEmpty ? nil : ([heading + ":"] + lines).joined(separator: "\n")
+        }
+        guard !blocks.isEmpty else { return nil }
+        return (["Results of the plan \"\(title)\":"] + blocks).joined(separator: "\n\n")
+    }
+
     /// One step as a line of Markdown, as Copy in the desktop client writes it.
     func markdown(for step: PlanStep) -> String {
         let state = step.state
