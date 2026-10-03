@@ -56,7 +56,7 @@ struct TerminalScreen: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(id: "terminal.actions", placement: .topBarTrailing) {
                 Menu {
                     Section("Font size") {
                         ForEach([10.0, 12, 13, 14, 16, 18, 20], id: \.self) { size in

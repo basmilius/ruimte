@@ -104,6 +104,26 @@ final class NowBoardTests: XCTestCase {
         XCTAssertNil(NowBoard.locate("", machineID: "mac", in: projects))
     }
 
+    func testPreviewHoldsTheRowATargetOpensAndItsProjectsName() {
+        let projects = [
+            project("a", name: "A", opened: 1, views: [view("chat", kind: "chat", name: "Plan")]),
+            project(
+                "b", name: "B", opened: 2,
+                views: [view("canvas", kind: "canvas", nodes: [node("term", kind: "terminal", title: "Shell")])]),
+        ]
+        let chat = NowBoard.preview(
+            ProjectViewTarget(machineID: "mac", projectID: "a", viewID: "chat", itemID: "chat"), in: projects)
+        XCTAssertEqual(chat?.item.text("name"), "Plan")
+        XCTAssertEqual(chat?.projectName, "A")
+        let term = NowBoard.preview(
+            ProjectViewTarget(machineID: "mac", projectID: "b", viewID: "canvas", itemID: "term"), in: projects)
+        XCTAssertEqual(term?.item.text("kind"), "terminal")
+        XCTAssertEqual(term?.projectName, "B")
+        XCTAssertNil(
+            NowBoard.preview(
+                ProjectViewTarget(machineID: "mac", projectID: "a", viewID: "canvas", itemID: "term"), in: projects))
+    }
+
     func testViewSearchMatchesTitleOrProject() {
         let input = NowMachineInput(
             machineID: "mac", machineName: "MacBook Pro",

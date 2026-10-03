@@ -101,7 +101,7 @@ struct PhoneHome: View {
     @ViewBuilder private func destination(_ destination: PhoneDestination) -> some View {
         switch destination {
         case .view(let target):
-            ProjectViewPage(runtime: runtime, target: target).id(target.id)
+            ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target)).id(target.id)
         case .notification(let notification):
             NotificationRoutePage(runtime: runtime, now: now, destination: notification).id(notification.id)
         }

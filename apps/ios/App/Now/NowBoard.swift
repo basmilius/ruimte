@@ -13,6 +13,12 @@ struct ProjectViewTarget: Hashable, Identifiable {
     var id: String { "\(machineID):\(projectID):\(itemID)" }
 }
 
+/// What a view's page draws while its project opens: its row for the title and the bar, and the project's name.
+struct ProjectViewPreview {
+    let item: JSONValue
+    let projectName: String
+}
+
 /// What one machine's attention store holds, keyed by node id.
 struct NowAttention: Equatable {
     var statuses: [String: AgentStatus] = [:]
@@ -108,7 +114,7 @@ struct NowBoard: Equatable {
         for (machine, project) in projects {
             guard let summary = project["summary"], let views = project["views"]?.arrayValue else { continue }
             let projectID = summary.text("projectId")
-            let projectName = NewChat.isChats(summary) ? "Chats" : summary.text("name", fallback: "Untitled project")
+            let projectName = Self.projectName(summary)
             for view in views where !isDivider(view) {
                 let viewID = view.text("id")
                 let rows = [view] + view.list("nodes")
@@ -158,6 +164,21 @@ struct NowBoard: Equatable {
             }
         }
         return nil
+    }
+
+    /// The row a target opens and its project's name, as the machine's `project.sidebar` entries last told them.
+    static func preview(_ target: ProjectViewTarget, in projects: [JSONValue]) -> ProjectViewPreview? {
+        guard
+            let project = projects.first(where: { $0["summary"]?.text("projectId") == target.projectID }),
+            let summary = project["summary"],
+            let view = project["views"]?.arrayValue?.first(where: { $0.text("id") == target.viewID }),
+            let item = ([view] + view.list("nodes")).first(where: { $0.text("id") == target.itemID })
+        else { return nil }
+        return ProjectViewPreview(item: item, projectName: projectName(summary))
+    }
+
+    private static func projectName(_ summary: JSONValue) -> String {
+        NewChat.isChats(summary) ? "Chats" : summary.text("name", fallback: "Untitled project")
     }
 
     private static func isDivider(_ view: JSONValue) -> Bool {

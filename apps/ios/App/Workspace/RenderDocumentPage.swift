@@ -40,7 +40,11 @@ struct RenderDocumentPage: View {
                 Text(problem).font(.caption).padding().background(.regularMaterial)
             }
         }
-        .toolbar { Button("Refresh", lucideIcon: "refresh-cw") { generation += 1 } }
+        .toolbar {
+            ToolbarItem(id: "\(kind).actions", placement: .topBarTrailing) {
+                Button("Refresh", lucideIcon: "refresh-cw") { generation += 1 }
+            }
+        }
         .task {
             if subscription == nil {
                 subscription = client.subscribe(kind + ".changed") { event in

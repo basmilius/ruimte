@@ -486,11 +486,13 @@ struct ProjectItemPage: View {
     let item: JSONValue
     /// Opened outside the project's list, from Now, Search or a notification, so the title names the project.
     var showsProject = false
+    /// The project's name until the project behind a view opened outside its list has opened.
+    var projectName: String?
     @State private var ready = false
     @State private var problem: String?
     @State private var selectedMember: String?
     private var isPresent: Bool {
-        workspace.views.contains {
+        !workspace.ready || workspace.views.contains {
             $0.stableID == item.stableID || $0.list("nodes").contains { $0.stableID == item.stableID }
         }
     }
@@ -522,7 +524,7 @@ struct ProjectItemPage: View {
                     Button("Retry") { Task { await prepare() } }
                 }
             } else if !ready {
-                MobileLoadingRow("Opening")
+                MobileLoadingRow("Opening").toolbar { OpeningViewToolbar(kind: current.text("kind")) }
             } else {
                 switch current.text("kind") {
                 case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
@@ -587,7 +589,7 @@ struct ProjectItemPage: View {
             }
         }
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
-        .modifier(PhoneSubtitle(text: showsProject ? workspace.title : nil))
+        .modifier(PhoneSubtitle(text: showsProject ? subtitle : nil))
         // A view fills the screen; its composer or keyboard bar stands where the tab bar would.
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
@@ -595,14 +597,15 @@ struct ProjectItemPage: View {
             Task { await workspace.session.markSeen(item.stableID) }
         }
         .onDisappear { workspace.session.attention.blur(item.stableID) }
-        .task(id: workspace.session.generation) { await prepare() }
+        .task(id: "\(workspace.session.generation):\(workspace.ready)") { await prepare() }
     }
+    private var subtitle: String { workspace.ready ? workspace.title : projectName ?? workspace.title }
     private var title: String { current.text("name", fallback: current.text("title", fallback: current.text("kind"))) }
     private func absolutePath(_ path: String) -> String {
         path.hasPrefix("/") || path.hasPrefix("~") ? path : workspace.folder + "/" + path
     }
     private func prepare() async {
-        guard isPresent else { return }
+        guard workspace.ready, isPresent else { return }
         let needsSession = ["chat", "terminal"].contains(current.text("kind"))
         guard !needsSession || workspace.session.connected else { return }
         do {
@@ -611,6 +614,28 @@ struct ProjectItemPage: View {
             ready = true
             problem = nil
         } catch { if !Task.isCancelled { problem = error.localizedDescription } }
+    }
+}
+
+/// The trailing item a view's page will have, under the same id, while the page waits for its session: a push only
+/// morphs into items that are there when it starts.
+private struct OpeningViewToolbar: ToolbarContent {
+    let kind: String
+
+    var body: some ToolbarContent {
+        if let glyph = OpeningViewToolbar.glyph(for: kind) {
+            ToolbarItem(id: "\(kind).actions", placement: .topBarTrailing) {
+                Button {} label: { Image(lucide: glyph) }.disabled(true)
+            }
+        }
+    }
+
+    static func glyph(for kind: String) -> String? {
+        switch kind {
+        case "terminal": "type"
+        case "diagram": "refresh-cw"
+        default: nil
+        }
     }
 }
 

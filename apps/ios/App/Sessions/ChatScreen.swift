@@ -95,7 +95,7 @@ struct ChatScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(id: "chat.actions", placement: .topBarTrailing) {
                 Menu {
                     chatMenu
                 } label: {

@@ -5,11 +5,14 @@ import SwiftUI
 /// project's sessions, plans and forks the way a view opened from the list has them.
 struct ProjectViewPage: View {
     let target: ProjectViewTarget
+    /// Lets the page stand with its title and bar from the first frame of the push, which is what the bar morphs into.
+    let preview: ProjectViewPreview?
     @State private var workspace: MobileWorkspace?
     @State private var arrived: Bool?
 
-    init(runtime: AppRuntime, target: ProjectViewTarget) {
+    init(runtime: AppRuntime, target: ProjectViewTarget, preview: ProjectViewPreview?) {
         self.target = target
+        self.preview = preview
         let machine = runtime.machines.first { $0.id == target.machineID }
         _workspace = State(
             initialValue: machine.map {
@@ -20,8 +23,9 @@ struct ProjectViewPage: View {
     var body: some View {
         Group {
             if let workspace {
-                if workspace.ready, let item = workspace.item(target.itemID) {
-                    ProjectItemPage(workspace: workspace, item: item, showsProject: true)
+                if let item = shownItem(workspace) {
+                    ProjectItemPage(
+                        workspace: workspace, item: item, showsProject: true, projectName: preview?.projectName)
                 } else if workspace.ready && arrived == false {
                     ContentUnavailableView(
                         "This view was removed", lucideIcon: "square-x",
@@ -60,6 +64,12 @@ struct ProjectViewPage: View {
             arrived = await workspace.arrival(of: target.itemID)
         }
     }
+
+    /// One expression for the preview and the opened row, so the page under them stays the same view.
+    private func shownItem(_ workspace: MobileWorkspace) -> JSONValue? {
+        if workspace.ready { return workspace.item(target.itemID) }
+        return workspace.problem == nil ? preview?.item : nil
+    }
 }
 
 /// A notification's chat or terminal, opened in its project once the machine says which one holds it. A node no
@@ -74,7 +84,7 @@ struct NotificationRoutePage: View {
     var body: some View {
         Group {
             if let target {
-                ProjectViewPage(runtime: runtime, target: target)
+                ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target))
             } else if searched {
                 NotificationSessionPage(runtime: runtime, destination: destination)
                     .toolbar(.hidden, for: .tabBar)

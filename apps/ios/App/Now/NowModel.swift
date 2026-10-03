@@ -113,6 +113,10 @@ final class NowModel {
         await feed.refresh()
         return NowBoard.locate(itemID, machineID: machineID, in: feed.projects)
     }
+
+    func preview(of target: ProjectViewTarget) -> ProjectViewPreview? {
+        NowBoard.preview(target, in: feeds[target.machineID]?.projects ?? [])
+    }
 }
 
 @MainActor @Observable
