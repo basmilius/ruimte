@@ -77,3 +77,22 @@ final class ChatPromptState {
         }
     }
 }
+
+/// Takes the keyboard from the draft while a request holds the composer, and gives it back once the last request is
+/// handled, only if the draft had it.
+struct ChatDraftFocusHandoff {
+    private var resumes = false
+
+    /// The draft's focus after the active request changed, or nil to leave it as it is.
+    mutating func focus(from previous: String?, to next: String?, focused: Bool, visible: Bool) -> Bool? {
+        if next != nil && previous == nil {
+            resumes = focused
+            return false
+        }
+        if next == nil && resumes && visible {
+            resumes = false
+            return true
+        }
+        return nil
+    }
+}

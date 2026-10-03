@@ -95,5 +95,21 @@ final class ChatPromptStateTests: XCTestCase {
         XCTAssertNil(state.active)
     }
 
+    func testTheDraftGetsItsKeyboardBackOnlyAfterTheLastRequest() {
+        var handoff = ChatDraftFocusHandoff()
+        XCTAssertEqual(handoff.focus(from: nil, to: "a", focused: true, visible: true), false)
+        XCTAssertNil(handoff.focus(from: "a", to: "b", focused: false, visible: true))
+        XCTAssertEqual(handoff.focus(from: "b", to: nil, focused: false, visible: true), true)
+        XCTAssertNil(handoff.focus(from: nil, to: nil, focused: true, visible: true))
+    }
+
+    func testAnUnfocusedOrHiddenDraftStaysWithoutTheKeyboard() {
+        var handoff = ChatDraftFocusHandoff()
+        XCTAssertEqual(handoff.focus(from: nil, to: "a", focused: false, visible: true), false)
+        XCTAssertNil(handoff.focus(from: "a", to: nil, focused: false, visible: true))
+        XCTAssertEqual(handoff.focus(from: nil, to: "b", focused: true, visible: true), false)
+        XCTAssertNil(handoff.focus(from: "b", to: nil, focused: false, visible: false))
+    }
+
     private enum Failure: Error { case expected }
 }
