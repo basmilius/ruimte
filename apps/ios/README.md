@@ -58,9 +58,12 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   deletes it to the machine's trash after a question (`fs.delete`). An edit is written over the mtime it was read at
   (`fs.write` with `expectedMtime`), so a file that moved on the machine refuses with the edit kept, to reload or copy.
 - Filesystem updates, usage and machine access management. Destructive actions require confirmation.
-- Launches of a project, in the project menu (behind More on an iPad): each with its state (at rest, needs approval, starting, running, stopping,
-  passed, failed), how long it runs and on which port, grouped by the checkout it runs in. Launch, Restart and Stop,
-  and Force stop only while a launch is stopping, as on the desktop; Stop all from the plus menu. A tap shows the
+- Launches of a project, in the project menu (behind More on an iPad): each with a dot in the color of its state, its
+  command and a line that says what it does (running and on which port, needs approval, passed or stopped how long
+  ago, failed with its exit code), grouped by the checkout it runs in. The output and Stop while it runs, Approve
+  while it waits for a person, Launch otherwise, Restart in its menu and Force stop only while a launch is stopping,
+  as on the desktop; Stop all from the plus menu. What the machine finds in the project and is no launch yet stands
+  under "Found in this project", a row per file, and Add imports it. A tap shows the
   launch's output, the machine's own terminal for it, followed and never resized; a group shows the member that runs
   or failed. The phone is a person to the machine, as every paired client is, so a launch nobody approved here
   shows the command, folder and every variable it would run with, and only Launch on that sheet sends the approval
@@ -162,18 +165,43 @@ once per launch), else the first letter of its name.
   `unknown-request` keeps its snoozes on this phone, for that machine only, until an update makes it list them.
 - The write button on Now starts a chat with one of a machine's installed agents in the machine's Chats
   (`project.newChat`) or as a new chat view at the end of one of its open projects, and opens it.
-- Projects lists the open projects, New chat, each machine's Chats and Recently closed. Search finds a project by
-  name, so this tab has no field of its own. A project page is its list
-  of views. Its bar holds the project's menu beside the avatar: New view (New chat in Chats) in a group of its own,
-  then Files, Git and Launches (none of these in Chats) and Usage, each a sheet; Files and Git open large and pull
-  down to medium. A view opens over the project.
+- Projects lists the open projects under the machine each is on, with a green dot while it answers and "via relay"
+  when it answers through one, and the machine's Chats among them; New chat and Recently closed follow. A row's
+  second line is its branch (`git.status` of the folder, asked when the list shows and on a pull) and how many views
+  it holds; beside it stand how many of its nodes need you and a spinner while one works, both from the
+  `project.sidebar` answers Now already reads (`ProjectOverview`, `ProjectGitLines`). Search finds a project by name,
+  so this tab has no field of its own.
+- A project page is its part of the desktop's sidebar (`PhoneProjectList`): the views in the project's order, and
+  under a canvas the nodes on it that run, folded with its chevron (remembered on the phone). Each row wears the
+  draft dot of a chat with an unsent message on this phone, a process warning (`processes.listAlerts` and
+  `processes.alerts`), the shared mark of a view in the team's file, a task mark, and its status: an amber dot when
+  it needs you, a spinner while it works, the alarm clock while snoozed. A long press shows the row with what it
+  waits on over its menu: Rename, Change icon and View settings (name, mark and a browser's address), then Fork for a
+  chat whose CLI forks (the chat opens with the fork sheet on its last turn), Snooze and Stop turn while it works,
+  then Delete. A drag reorders a section; dividers keep their place. The title names the machine and the branch with
+  what changed on it. Files and Git sit in the bar before the project's menu, which holds New view (New chat in
+  Chats), then Launches and Usage, then Project settings. New view has no form: an agent, a kind or a divider is one
+  tap that makes the view and opens it; a browser then asks its address in View settings, a heading its words, and
+  File picks a file in the project's files. Project settings holds the name (`project.setIdentity`), the color (in
+  the project file, from the palette of the design), the initial, a symbol or an image (`project.setIcon`), the
+  launches and Close project, which says what closing ends (`project.closing`) before `project.close`. While the
+  machine does not answer and a try failed, the list dims under a glass card that says so, when it was last
+  connected, and offers Diagnostics and Other project; it goes once the machine is back. A view opens over the
+  project.
 - Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
   projects (which open under Projects), Chats, files, processes, usage, agents and machine settings.
-- Search finds views and projects by name over every machine from what Now and Projects already read. A view
-  opens over Search in its project; a project opens under Projects.
+- Search is the desktop's command palette (`SearchPage`, `CommandPalette.swift`): views, projects, files and commands
+  over every project of every machine, without searching text inside chats. Every typed word has to appear; a name
+  that starts with the query ranks first, then one where every word starts a word. Files come from `fs.search` in the
+  folder of each open project. The commands are the ones that mean something on a phone: New chat, a new view or
+  terminal in a project, its Files, Git, Launches and settings, opening a folder (on the machine's page), Usage,
+  Recently closed, pairing, Settings and the appearance. Nothing typed shows what needs you and the most used
+  commands. A view or a file opens over Search in its project; a project and its sheets open under Projects.
 
 `PhoneRouter` holds the tab and the stack's path. Each route (a project, a view, a notification, a machine, Recently
-closed) replaces what was pushed, and a project goes to Projects. The stack only shortens the path once a pop
+closed, a file Search found) replaces what was pushed, and a project goes to Projects. A sheet a command asks of a
+project waits until the project opened (`pendingSheet`), since one asked for during the push would not stand. The
+stack only shortens the path once a pop
 settles, so a swipe back the person takes back leaves the route standing. A view opened outside its project's list
 (`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
 project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a

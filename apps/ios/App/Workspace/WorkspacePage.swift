@@ -25,6 +25,7 @@ struct WorkspacePage: View {
     @State private var newView: NewViewResult?
     /// A view New view made that opens once its settings asked what it shows.
     @State private var openAfterSettings: String?
+    @State private var afterSettings: AfterProjectSettings?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
@@ -163,13 +164,21 @@ struct WorkspacePage: View {
                 NewViewSheet(workspace: workspace) { newView = $0 }
             }
         }
-        .mobileSheet(isPresented: $navigation.showingSettings) {
+        .mobileSheet(
+            isPresented: $navigation.showingSettings,
+            onDismiss: {
+                // The next sheet or the way back waits for this one to be gone.
+                if afterSettings == .launches { navigation.showingLaunches = true }
+                if afterSettings == .leave { dismiss() }
+                afterSettings = nil
+            }
+        ) {
             ProjectSettingsPage(workspace: workspace) {
+                afterSettings = .launches
                 navigation.showingSettings = false
-                navigation.showingLaunches = true
             } closed: {
+                afterSettings = .leave
                 navigation.showingSettings = false
-                dismiss()
             }
         }
         .mobileSheet(isPresented: $showDiagnostics) {
@@ -694,6 +703,11 @@ private struct PhoneSubtitle: ViewModifier {
     func body(content: Content) -> some View {
         if let text { content.navigationSubtitle(text) } else { content }
     }
+}
+
+/// Where Project settings leads once it is gone: to the launches, or out of a project that was closed.
+private enum AfterProjectSettings {
+    case launches, leave
 }
 
 private struct ViewDeletion {

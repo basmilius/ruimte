@@ -141,10 +141,7 @@ struct ProjectSettingsPage: View {
                     LabeledContent("Machine", value: workspace.session.machine.name)
                 }
                 Section {
-                    Button {
-                        dismiss()
-                        showLaunches()
-                    } label: {
+                    Button(action: showLaunches) {
                         LabeledContent {
                             Text(launches.map(String.init) ?? "")
                         } label: {
