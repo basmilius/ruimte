@@ -258,6 +258,18 @@ enum GitWorktreeText {
     }
 }
 
+/// The worktrees of each repository a git sheet reaches, kept while a person walks between its pages.
+@MainActor final class GitWorktreesStore {
+    private var states: [String: GitWorktreesState] = [:]
+
+    func state(_ repo: String) -> GitWorktreesState {
+        if let known = states[repo] { return known }
+        let made = GitWorktreesState(repo: repo)
+        states[repo] = made
+        return made
+    }
+}
+
 /// The worktrees of one repository and everything done to them from the phone.
 @MainActor @Observable final class GitWorktreesState {
     let repo: String
@@ -270,9 +282,31 @@ enum GitWorktreeText {
     var progress: String?
     var outcome: GitWorktreeMergeOutcome?
     private(set) var mergeAction: String?
+    /// The questions on screen: a new worktree's branch, the merge sheet, the removal and taking a merge back.
+    var creating = false
+    var merging: GitWorktree?
+    var removal: GitWorktreeRemoval?
+    var confirmAbort: String?
 
     init(repo: String) {
         self.repo = repo
+    }
+
+    /// The merge sheet, asked with the work counted now and not with the numbers on the row.
+    func ask(client: any MachineRequesting, merge worktree: GitWorktree) async {
+        guard let fresh = await fresh(client: client, path: worktree.path), !fresh.missing else {
+            note = "There is no worktree left to merge."
+            return
+        }
+        merging = fresh
+    }
+
+    func ask(client: any MachineRequesting, remove worktree: GitWorktree) async {
+        guard let fresh = await fresh(client: client, path: worktree.path) else {
+            note = "This worktree is already gone."
+            return
+        }
+        removal = GitWorktreeText.removal(fresh)
     }
 
     func load(client: any MachineRequesting) async {

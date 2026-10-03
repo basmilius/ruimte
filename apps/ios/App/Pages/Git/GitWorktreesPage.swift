@@ -8,40 +8,23 @@ struct GitWorktreesPage: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
     let repo: String
+    var workspace: MobileWorkspace?
     @State private var state: GitWorktreesState
-    @State private var creating = false
-    @State private var merging: GitWorktree?
-    @State private var removal: GitWorktreeRemoval?
-    @State private var confirmAbort: String?
     @State private var diff: GitDiffTarget?
 
-    init(client: any MachineRequesting, repositories: GitRepositories, repo: String) {
+    init(client: any MachineRequesting, repositories: GitRepositories, repo: String, workspace: MobileWorkspace? = nil) {
         self.client = client
         self.repositories = repositories
         self.repo = repo
+        self.workspace = workspace
         _state = State(initialValue: GitWorktreesState(repo: repo))
     }
 
     var body: some View {
         MobileList {
-            if state.busy {
-                HStack(spacing: 10) {
-                    MobileLoadingRow("Working")
-                    Text(state.progress ?? "Working").font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                    if state.mergeAction != nil {
-                        Spacer(minLength: 8)
-                        Button("Cancel") { Task { await state.cancelMerge(client: client) } }.font(.caption)
-                    }
-                }
-            }
-            if let problem = state.problem, !state.unsupported {
-                Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
-            }
-            if let note = state.note {
-                Text(note).font(.caption).foregroundStyle(MobileStyle.muted)
-            }
+            GitWorktreeStatusRows(client: client, state: state)
             if let outcome = state.outcome {
-                outcomeSection(outcome)
+                GitWorktreeOutcomeSection(client: client, repositories: repositories, state: state, outcome: outcome)
             }
             if state.unsupported {
                 ContentUnavailableView(
@@ -56,7 +39,10 @@ struct GitWorktreesPage: View {
             } else {
                 Section {
                     ForEach(state.worktrees) { worktree in
-                        row(worktree)
+                        GitWorktreeRow(
+                            client: client, state: state, worktree: worktree,
+                            occupants: workspace.flatMap { GitWorktreeOccupants.line(in: $0.views, path: worktree.path) }
+                        ) { diff = $0 }
                     }
                 }
             }
@@ -68,69 +54,70 @@ struct GitWorktreesPage: View {
         }
         .toolbar {
             ToolbarItem {
-                Button("New worktree", lucideIcon: "plus") { creating = true }.disabled(state.busy || state.unsupported)
+                Button("New worktree", lucideIcon: "plus") { state.creating = true }
+                    .disabled(state.busy || state.unsupported)
             }
         }
         .task(id: repo) {
             await RemotePageLifecycle.run(client: client, events: ["git.worktrees"], load: { await state.load(client: client) })
         }
         .refreshable { await state.load(client: client) }
-        .mobileSheet(isPresented: $creating) {
-            GitPromptSheet(pending: .createWorktree(repo: repo)) { branch, _ in
-                creating = false
-                Task { await state.add(client: client, branch: branch) }
-            } onCancel: {
-                creating = false
-            }
+        .modifier(GitWorktreeDialogs(client: client, state: state))
+    }
+}
+
+/// What the worktrees of a repository are doing right now: a merge at work, what went wrong, what went through.
+struct GitWorktreeStatusRows: View {
+    let client: any MachineRequesting
+    let state: GitWorktreesState
+
+    var body: some View {
+        if state.busy {
+            GitBusyRow(
+                text: state.progress ?? "Working",
+                cancel: state.mergeAction == nil ? nil : { Task { await state.cancelMerge(client: client) } })
         }
-        .mobileSheet(item: $merging) { worktree in
-            GitWorktreeMergeSheet(worktree: worktree) { request in
-                merging = nil
-                Task { await state.merge(client: client, request: request) }
-            } onCancel: {
-                merging = nil
-            }
+        if let problem = state.problem, !state.unsupported {
+            Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
         }
-        .confirmationDialog(
-            removal?.title ?? "", isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }),
-            titleVisibility: .visible, presenting: removal
-        ) { pending in
-            Button(pending.confirmLabel, role: .destructive) {
-                Task { removal = await state.remove(client: client, removal: pending) }
-            }
-            if pending.force && !pending.worktree.missing {
-                Button("Merge first") { merging = pending.worktree }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { pending in
-            Text(pending.detail)
-        }
-        .confirmationDialog(
-            "Abort the merge?", isPresented: Binding(get: { confirmAbort != nil }, set: { if !$0 { confirmAbort = nil } }),
-            titleVisibility: .visible, presenting: confirmAbort
-        ) { cwd in
-            Button("Abort merge", role: .destructive) { Task { await state.abortMerge(client: client, cwd: cwd) } }
-            Button("Cancel", role: .cancel) {}
-        } message: { cwd in
-            Text("\((cwd as NSString).lastPathComponent) goes back to how it was before the merge.")
+        if let note = state.note {
+            Text(note).font(.caption).foregroundStyle(MobileStyle.muted)
         }
     }
+}
 
-    private func row(_ worktree: GitWorktree) -> some View {
+/// One worktree: its branch, where it came from and what it holds, who works in it, and merging it back or
+/// removing it with the questions of `GitWorktreeText`.
+struct GitWorktreeRow: View {
+    let client: any MachineRequesting
+    let state: GitWorktreesState
+    let worktree: GitWorktree
+    /// Who works there, as the project's nodes say; nil outside a project or when nobody does.
+    var occupants: String?
+    let onDiff: (GitDiffTarget) -> Void
+
+    private var diffTarget: GitDiffTarget {
+        GitDiffTarget(cwd: worktree.path, path: nil, staged: false, commit: nil, base: worktree.base)
+    }
+
+    var body: some View {
         Button {
             guard !worktree.missing else { return }
-            diff = GitDiffTarget(cwd: worktree.path, path: nil, staged: false, commit: nil, base: worktree.base)
+            onDiff(diffTarget)
         } label: {
             HStack(spacing: 10) {
-                Image(lucide: worktree.missing ? "folder-x" : "git-branch", size: 15).foregroundStyle(MobileStyle.muted)
+                Image(lucide: worktree.missing ? "folder-x" : "folder-git-2", size: 15)
+                    .foregroundStyle(MobileStyle.muted)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        Text(worktree.branch).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
+                        Text((worktree.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
                         if worktree.locked {
                             Image(lucide: "lock", size: 12).foregroundStyle(MobileStyle.muted)
                                 .accessibilityLabel("Locked")
                         }
                     }
+                    Text([worktree.branch, occupants].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption.monospaced()).foregroundStyle(MobileStyle.muted).lineLimit(1)
                     let detail = GitWorktreeText.rowDetail(worktree)
                     if !detail.isEmpty {
                         Text(detail).font(.caption)
@@ -145,41 +132,34 @@ struct GitWorktreesPage: View {
         .modifier(MobileSidebarRow())
         .disabled(state.busy)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button("Remove", role: .destructive) { Task { await ask(remove: worktree) } }
+            Button("Remove", role: .destructive) { Task { await state.ask(client: client, remove: worktree) } }
             if !worktree.missing {
-                Button("Merge") { Task { await ask(merge: worktree) } }.tint(MobileStyle.accent)
+                Button("Merge") { Task { await state.ask(client: client, merge: worktree) } }.tint(MobileStyle.accent)
             }
         }
         .contextMenu {
             if !worktree.missing {
-                Button("View changes", lucideIcon: "eye") {
-                    diff = GitDiffTarget(cwd: worktree.path, path: nil, staged: false, commit: nil, base: worktree.base)
-                }
-                Button("Merge…", lucideIcon: "git-merge") { Task { await ask(merge: worktree) } }
+                Button("View changes", lucideIcon: "eye") { onDiff(diffTarget) }
+                Button(
+                    worktree.fromBranch.map { "Merge into \($0)…" } ?? "Merge…", lucideIcon: "git-merge"
+                ) { Task { await state.ask(client: client, merge: worktree) } }
             }
-            Button("Remove…", lucideIcon: "trash-2", role: .destructive) { Task { await ask(remove: worktree) } }
+            Button("Remove…", lucideIcon: "trash", role: .destructive) {
+                Task { await state.ask(client: client, remove: worktree) }
+            }
         }
     }
+}
 
-    /// The questions are asked with the work counted now, not with the numbers on the row.
-    private func ask(merge worktree: GitWorktree) async {
-        guard let fresh = await state.fresh(client: client, path: worktree.path), !fresh.missing else {
-            state.note = "There is no worktree left to merge."
-            return
-        }
-        merging = fresh
-    }
+/// How a worktree merge ended when it did not simply go through: conflicts to resolve or take back, or a
+/// refusal with the one thing a person can do about it.
+struct GitWorktreeOutcomeSection: View {
+    let client: any MachineRequesting
+    let repositories: GitRepositories
+    let state: GitWorktreesState
+    let outcome: GitWorktreeMergeOutcome
 
-    private func ask(remove worktree: GitWorktree) async {
-        let fresh = await state.fresh(client: client, path: worktree.path)
-        guard let fresh else {
-            state.note = "This worktree is already gone."
-            return
-        }
-        removal = GitWorktreeText.removal(fresh)
-    }
-
-    @ViewBuilder private func outcomeSection(_ outcome: GitWorktreeMergeOutcome) -> some View {
+    var body: some View {
         switch outcome {
         case .conflict(let cwd, let files, let summary):
             Section {
@@ -192,7 +172,7 @@ struct GitWorktreesPage: View {
                 } label: {
                     Label("Resolve", lucideIcon: "file-exclamation-point")
                 }
-                Button("Abort merge", lucideIcon: "ban", role: .destructive) { confirmAbort = cwd }
+                Button("Abort merge", lucideIcon: "ban", role: .destructive) { state.confirmAbort = cwd }
                     .disabled(state.busy)
             } header: {
                 Text("The merge waits for you")
@@ -232,6 +212,57 @@ struct GitWorktreesPage: View {
                 Text("Merging \(request.worktree.branch) failed")
             }
         }
+    }
+}
+
+/// The questions of the worktree actions, put on a page once.
+struct GitWorktreeDialogs: ViewModifier {
+    let client: any MachineRequesting
+    @Bindable var state: GitWorktreesState
+
+    func body(content: Content) -> some View {
+        content
+            .mobileSheet(isPresented: $state.creating) {
+                GitPromptSheet(pending: .createWorktree(repo: state.repo)) { branch in
+                    state.creating = false
+                    Task { await state.add(client: client, branch: branch) }
+                } onCancel: {
+                    state.creating = false
+                }
+            }
+            .mobileSheet(item: $state.merging) { worktree in
+                GitWorktreeMergeSheet(worktree: worktree) { request in
+                    state.merging = nil
+                    Task { await state.merge(client: client, request: request) }
+                } onCancel: {
+                    state.merging = nil
+                }
+            }
+            .confirmationDialog(
+                state.removal?.title ?? "",
+                isPresented: Binding(get: { state.removal != nil }, set: { if !$0 { state.removal = nil } }),
+                titleVisibility: .visible, presenting: state.removal
+            ) { pending in
+                Button(pending.confirmLabel, role: .destructive) {
+                    Task { state.removal = await state.remove(client: client, removal: pending) }
+                }
+                if pending.force && !pending.worktree.missing {
+                    Button("Merge first") { state.merging = pending.worktree }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { pending in
+                Text(pending.detail)
+            }
+            .confirmationDialog(
+                "Abort the merge?",
+                isPresented: Binding(get: { state.confirmAbort != nil }, set: { if !$0 { state.confirmAbort = nil } }),
+                titleVisibility: .visible, presenting: state.confirmAbort
+            ) { cwd in
+                Button("Abort merge", role: .destructive) { Task { await state.abortMerge(client: client, cwd: cwd) } }
+                Button("Cancel", role: .cancel) {}
+            } message: { cwd in
+                Text("\((cwd as NSString).lastPathComponent) goes back to how it was before the merge.")
+            }
     }
 }
 

@@ -110,18 +110,11 @@ struct GitConflictStatusRows: View {
 
     var body: some View {
         if let run = session.agentRun {
-            HStack(spacing: 10) {
-                MobileLoadingRow("Asking an agent")
-                Text("Asking an agent: \((run.path as NSString).lastPathComponent), \(run.done + 1) of \(run.total)")
-                    .font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                Spacer(minLength: 8)
-                Button("Cancel") { Task { await session.cancelAgent(client: client) } }.font(.caption)
-            }
+            GitBusyRow(
+                text: "Asking an agent: \((run.path as NSString).lastPathComponent), \(run.done + 1) of \(run.total)",
+                cancel: { Task { await session.cancelAgent(client: client) } })
         } else if session.busy {
-            HStack(spacing: 10) {
-                MobileLoadingRow("Working")
-                Text(session.progress ?? "Working").font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-            }
+            GitBusyRow(text: session.progress ?? "Working")
         }
         if let problem = session.problem, !session.unsupported {
             Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
@@ -297,7 +290,7 @@ struct GitConflictFilePage: View {
                 .disabled(session.busy || file.kind == "deleted-by-us")
             Button("Take \(session.theirs)", lucideIcon: "check") { Task { await take("theirs") } }
                 .disabled(session.busy || file.kind == "deleted-by-them")
-            Button("Drop the file", lucideIcon: "trash-2", role: .destructive) { confirmDrop = true }
+            Button("Drop the file", lucideIcon: "trash", role: .destructive) { confirmDrop = true }
                 .disabled(session.busy)
         } header: {
             Text(path).textCase(nil)

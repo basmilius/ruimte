@@ -100,7 +100,7 @@ struct WorkspacePage: View {
         }
         .mobileSheet(isPresented: $showGit) {
             NavigationStack {
-                GitPage(client: workspace.client, folder: workspace.folder)
+                GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) { Button("Done") { showGit = false } }
                     }
@@ -271,7 +271,7 @@ struct WorkspacePage: View {
                     if isSidebar {
                         viewList(query: "")
                     } else {
-                        GitPage(client: workspace.client, folder: workspace.folder)
+                        GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                     }
                 } label: {
                     Label("Git", lucideIcon: "git-branch")

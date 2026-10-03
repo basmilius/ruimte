@@ -11,264 +11,218 @@ func gitRepoIcon(_ kind: String) -> String {
     }
 }
 
-/// What the whole git page shows: every repository the project folder holds, the changes of each
-/// grouped the way a person acts on them, and the history of all of them together. The staged files
-/// say where a commit lands, so there is no repository to pick first. A folder with exactly one
-/// repository reads as the page always did.
+/// The git sheet: Changes, History and Branches as segments under a pill that says where the project stands and
+/// switches between the project folder and its worktrees. Every repository the folder holds is in it at once;
+/// the staged files say where a commit lands, so there is no repository to pick first. A folder with exactly one
+/// repository reads as one repository.
 struct GitPage: View {
     let client: any MachineRequesting
     let folder: String
+    /// The project, which a worktree's occupants and binding a group need; nil leaves those out.
+    var workspace: MobileWorkspace?
+    /// A worktree of the project the sheet looks at instead of the project folder.
+    @State private var root: String?
     @State private var repositories = GitRepositories()
-    @State private var commitSheet = false
-    @State private var confirmation: GitConfirmation?
+    @State private var projectWorktrees: GitWorktreesState
+    @State private var segment = GitSegment.changes
+    @State private var history = GitHistoryModel()
+    @State private var commitModel: GitCommitModel?
+    @State private var committing = false
+    @State private var showRepositories = false
+    @State private var pullRequest: String?
+    @State private var canPullRequest = false
     @State private var diff: GitDiffTarget?
     @State private var conflictFile: GitConflictTarget?
     @State private var note: String?
+    @State private var detent = PresentationDetent.large
 
+    init(client: any MachineRequesting, folder: String, workspace: MobileWorkspace? = nil) {
+        self.client = client
+        self.folder = folder
+        self.workspace = workspace
+        _projectWorktrees = State(initialValue: GitWorktreesState(repo: folder))
+    }
+
+    private var current: String { root ?? folder }
     private var checkouts: [GitCheckout] { repositories.checkouts }
 
     var body: some View {
-        MobileList {
-            if let problem = repositories.problem {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
-                    Button("Try again") { Task { await repositories.reload(client: client, folder: folder) } }
-                }.padding(.vertical, 8)
-            }
-            if repositories.busy {
-                HStack(spacing: 10) {
-                    MobileLoadingRow("Working")
-                    Text(repositories.step ?? repositories.progress ?? "Working")
-                        .font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
+        Group {
+            switch segment {
+            case .changes:
+                GitChangesList(
+                    client: client, repositories: repositories, folder: current, note: $note,
+                    onDiff: { diff = $0 }, onConflict: { conflictFile = $0 }, onCommit: openCommit)
+            case .history:
+                MobileList {
+                    GitHistoryRows(
+                        client: client, history: history, named: repositories.named,
+                        reload: { Task { await history.load(client: client, sources: checkouts) } },
+                        onOpen: { diff = $0 })
+                }
+                .task(id: checkouts.map(\.path)) { await history.load(client: client, sources: checkouts) }
+                .refreshable { await history.load(client: client, sources: checkouts) }
+            case .branches:
+                if let first = checkouts.first {
+                    GitBranchesSegment(
+                        client: client, repositories: repositories, path: first.path,
+                        workspace: root == nil ? workspace : nil, onDiff: { diff = $0 }
+                    )
+                    .id(current)
+                } else {
+                    MobileLoadingRow("Loading").frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            if let note {
-                Text(note).font(.caption).foregroundStyle(MobileStyle.muted)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Picker("Show", selection: $segment) {
+                ForEach(GitSegment.allCases) { segment in
+                    Text(segment.title).tag(segment)
+                }
             }
-            if repositories.loading {
-                MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
-            } else if checkouts.isEmpty {
-                ContentUnavailableView("No Git repository", lucideIcon: "git-branch", description: Text(folder))
-            } else {
-                waiting
-                changes
-                repositoriesSection
-            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 20).padding(.vertical, 8)
         }
         .navigationTitle("Git")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $diff) { target in
             GitDiffPage(client: client, target: target)
         }
         .navigationDestination(item: $conflictFile) { target in
             GitConflictFilePage(client: client, session: repositories.conflicts.session(target.cwd), path: target.path)
         }
+        .navigationDestination(isPresented: $committing) {
+            if let commitModel {
+                GitCommitPage(client: client, model: commitModel) { note = $0 }
+            }
+        }
+        .navigationDestination(isPresented: $showRepositories) {
+            GitRepositoriesPage(
+                client: client, repositories: repositories, workspace: workspace,
+                title: workspace?.title ?? (current as NSString).lastPathComponent)
+        }
+        .navigationDestination(item: $pullRequest) { path in
+            GitPullRequestPage(client: client, repositories: repositories, path: path, subject: "") { note = $0 }
+        }
         .toolbar {
-            ToolbarItem {
-                Menu {
-                    menuItems
-                } label: {
-                    Label("More git actions", lucideIcon: "ellipsis")
-                }.disabled(repositories.busy || checkouts.isEmpty)
-            }
-            ToolbarItem {
-                Button("Commit", lucideIcon: "circle-check") { commitSheet = true }
-                    .disabled(repositories.busy || GitPanel.commitTargets(checkouts).targets.isEmpty)
-            }
+            ToolbarItem(placement: .topBarLeading) { pill }
+            ToolbarItem(placement: .topBarTrailing) { moreMenu }
         }
-        .task(id: folder) { await repositories.run(client: client, folder: folder) }
-        .refreshable { await repositories.reload(client: client, folder: folder) }
-        .mobileSheet(isPresented: $commitSheet) {
-            GitCommitSheet(client: client, repositories: repositories, isPresented: $commitSheet) { note = $0 }
+        .task(id: current) {
+            await repositories.run(client: client, folder: current)
         }
-        .confirmationDialog(
-            confirmation?.title ?? "", isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }),
-            titleVisibility: .visible, presenting: confirmation
-        ) { pending in
-            Button(pending.confirmLabel, role: .destructive) { Task { await confirm(pending) } }
-            Button("Cancel", role: .cancel) {}
-        } message: { pending in
-            Text(pending.detail)
+        .task(id: folder) {
+            await RemotePageLifecycle.run(
+                client: client, events: ["git.worktrees"], load: { await projectWorktrees.load(client: client) })
         }
+        .task(id: checkouts.first?.path) {
+            guard let probe = checkouts.first?.path else { return }
+            let answer = try? await client.request("git.capabilities", payload: .object(["cwd": .string(probe)]))
+            canPullRequest = answer?["gh"] == .bool(true)
+        }
+        .presentationDetents([.medium, .large], selection: $detent)
     }
 
-    @ViewBuilder private var changes: some View {
-        if repositories.changeCount == 0 {
-            ContentUnavailableView("Working tree clean", lucideIcon: "circle-check")
-        }
-        ForEach(gitFileGroups, id: \.self) { group in
-            let sections = checkouts.map { ($0, $0.files(state: group)) }.filter { !$0.1.isEmpty }
-            if !sections.isEmpty {
-                Section {
-                    ForEach(sections, id: \.0.id) { checkout, files in
-                        if repositories.named {
-                            GitRepoHeaderRow(
-                                checkout: checkout, count: files.count, staged: group == "staged",
-                                conflicted: group == "conflicted", busy: repositories.busy
-                            ) {
-                                Task {
-                                    await repositories.stage(
-                                        client: client, cwd: checkout.path, paths: files.map { $0.text("path") },
-                                        staged: group != "staged")
-                                }
-                            }
-                        }
-                        ForEach(files, id: \.stableID) { file in
-                            fileRow(checkout: checkout, file: file, group: group)
-                        }
+    /// Where the project stands, and the way to its worktrees and its repositories.
+    private var pill: some View {
+        Menu {
+            let worktrees = projectWorktrees.worktrees.filter { !$0.missing }
+            if !worktrees.isEmpty {
+                Section("Checkout") {
+                    Button {
+                        switchRoot(to: nil)
+                    } label: {
+                        Label(
+                            "Project folder",
+                            lucideIcon: root == nil ? "check" : "folder")
                     }
-                } header: {
-                    GitGroupHeader(
-                        group: group, count: sections.reduce(0) { $0 + $1.1.count }, busy: repositories.busy
-                    ) {
-                        Task {
-                            for (checkout, files) in sections {
-                                await repositories.stage(
-                                    client: client, cwd: checkout.path, paths: files.map { $0.text("path") },
-                                    staged: group != "staged")
-                            }
+                    ForEach(worktrees) { worktree in
+                        Button {
+                            switchRoot(to: worktree.path)
+                        } label: {
+                            Label(
+                                "\(worktree.branch) (worktree)",
+                                lucideIcon: root == worktree.path ? "check" : "folder-git-2")
                         }
                     }
                 }
             }
-        }
-        if checkouts.contains(where: { $0.status?["truncated"] == .bool(true) }) || repositories.truncated {
-            Text("Some of what changed was left out of this list.").font(.caption).foregroundStyle(MobileStyle.muted)
-        }
-    }
-
-    /// Every checkout that stopped halfway says so until it is finished or taken back.
-    @ViewBuilder private var waiting: some View {
-        let halted = checkouts.filter(\.halted)
-        if !halted.isEmpty {
-            Section("Waiting on you") {
-                ForEach(halted) { checkout in
-                    GitHaltedRows(
-                        client: client, repositories: repositories, checkout: checkout, named: repositories.named)
-                }
-            }
-        }
-    }
-
-    private func fileRow(checkout: GitCheckout, file: JSONValue, group: String) -> some View {
-        Button {
-            if group == "conflicted" {
-                conflictFile = GitConflictTarget(cwd: checkout.path, path: file.text("path"))
-            } else {
-                diff = GitDiffTarget(cwd: checkout.path, path: file.text("path"), staged: group == "staged", commit: nil)
+            if repositories.named {
+                Button("Repositories", lucideIcon: "folder-git-2") { showRepositories = true }
+            } else if !checkouts.isEmpty {
+                Button("Switch branch", lucideIcon: "git-branch") { segment = .branches }
             }
         } label: {
-            HStack(spacing: 10) {
-                Text(file.text("status")).font(.caption.monospaced())
-                    .foregroundStyle(gitStatusColor(file.text("status"))).frame(width: 22, alignment: .leading)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text((file.text("path") as NSString).lastPathComponent).lineLimit(1)
-                    Text(file.text("path")).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                        .truncationMode(.head)
+            HStack(spacing: 6) {
+                Image(lucide: root == nil ? "git-branch" : "folder-git-2", size: 14)
+                Text(GitPanel.pillTitle(checkouts)).font(.subheadline.weight(.medium)).lineLimit(1)
+                    .truncationMode(.middle)
+                if repositories.ahead > 0 {
+                    Text("↑\(repositories.ahead)").font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
                 }
-                Spacer(minLength: 8)
-                Text("+\(Int(file.number("added")))  −\(Int(file.number("deleted")))")
-                    .font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
+                if repositories.behind > 0 {
+                    Text("↓\(repositories.behind)").font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
+                }
             }
-            .modifier(MobileSidebarLabel(disclosure: true))
+            .frame(maxWidth: 200)
         }
-        .modifier(MobileSidebarRow())
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(group == "staged" ? "Unstage" : group == "conflicted" ? "Stage as resolved" : "Stage") {
-                Task {
-                    await repositories.stage(
-                        client: client, cwd: checkout.path, paths: [file.text("path")], staged: group != "staged")
-                }
-            }.tint(MobileStyle.accent).disabled(repositories.busy)
-            if group != "conflicted" {
-                Button("Discard", role: .destructive) {
-                    confirmation = .discard(cwd: checkout.path, path: file.text("path"))
-                }.disabled(repositories.busy)
-            }
-        }
-        .contextMenu {
-            Button(
-                group == "staged" ? "Unstage file" : group == "conflicted" ? "Stage as resolved" : "Stage file",
-                lucideIcon: group == "staged" ? "minus" : "plus"
-            ) {
-                Task {
-                    await repositories.stage(
-                        client: client, cwd: checkout.path, paths: [file.text("path")], staged: group != "staged")
-                }
-            }
-            if group != "conflicted" {
-                Button("Discard changes", lucideIcon: "trash-2", role: .destructive) {
-                    confirmation = .discard(cwd: checkout.path, path: file.text("path"))
-                }
-            }
-        }
+        .accessibilityLabel(root == nil ? "Branch" : "Worktree")
+        .accessibilityValue(GitPanel.pillTitle(checkouts))
+        .disabled(checkouts.isEmpty)
     }
 
-    @ViewBuilder private var repositoriesSection: some View {
-        Section("Repositories") {
-            ForEach(checkouts) { checkout in
+    private var moreMenu: some View {
+        Menu {
+            if repositories.named {
+                Button("Pull all", lucideIcon: "arrow-down") {
+                    Task { await repositories.actAll(client: client, kind: "pull") }
+                }
+                Button("Push all", lucideIcon: "arrow-up") { Task { await repositories.pushAll(client: client) } }
+                Button("Sync all", lucideIcon: "refresh-cw") {
+                    Task { await repositories.actAll(client: client, kind: "sync") }
+                }
+                Button("Fetch all", lucideIcon: "cloud-download") {
+                    Task { await repositories.actAll(client: client, kind: "fetch") }
+                }
+            } else if let only = checkouts.first {
+                Button("Pull", lucideIcon: "arrow-down") { act(only, "pull") }
+                Button(GitPanel.pushLabel(only), lucideIcon: "arrow-up") { act(only, GitPanel.pushKind(only)) }
+                Button("Sync", lucideIcon: "refresh-cw") { act(only, "sync") }
+                Button("Fetch", lucideIcon: "cloud-download") { act(only, "fetch") }
+                if canPullRequest && only.branch != nil {
+                    Divider()
+                    Button("Create pull request", lucideIcon: "git-pull-request") { pullRequest = only.path }
+                }
+                Divider()
                 NavigationLink {
-                    GitRepositoryPage(client: client, repositories: repositories, path: checkout.path)
+                    GitRepositoryPage(client: client, repositories: repositories, path: only.path, workspace: workspace)
                 } label: {
-                    HStack(spacing: 10) {
-                        Image(lucide: gitRepoIcon(checkout.kind), size: 16).foregroundStyle(MobileStyle.muted)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(checkout.label).lineLimit(1)
-                            if let failure = checkout.failure {
-                                Text(failure).font(.caption).foregroundStyle(.red).lineLimit(1)
-                            } else if let branch = checkout.branch {
-                                Text(branch).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                            }
-                        }
-                        Spacer(minLength: 8)
-                        GitAheadBehind(ahead: checkout.ahead, behind: checkout.behind)
-                    }
+                    Label("Repository", lucideIcon: "folder-git-2")
                 }
             }
-            NavigationLink {
-                GitLogPage(client: client, repositories: repositories)
-            } label: {
-                Label("History", lucideIcon: "git-commit-horizontal")
-            }
+        } label: {
+            Label("More git actions", lucideIcon: "ellipsis")
         }
+        .disabled(repositories.busy || checkouts.isEmpty)
     }
 
-    @ViewBuilder private var menuItems: some View {
-        if repositories.named {
-            Button("Pull all", lucideIcon: "arrow-down") { Task { await repositories.actAll(client: client, kind: "pull") } }
-            Button("Push all", lucideIcon: "arrow-up") { Task { await pushAll() } }
-            Button("Sync all", lucideIcon: "refresh-cw") { Task { await repositories.actAll(client: client, kind: "sync") } }
-            Button("Fetch all", lucideIcon: "cloud-download") { Task { await repositories.actAll(client: client, kind: "fetch") } }
-        } else if let only = checkouts.first {
-            Button("Pull", lucideIcon: "arrow-down") { Task { await repositories.act(client: client, cwd: only.path, kind: "pull") } }
-            Button("Push", lucideIcon: "arrow-up") { Task { await repositories.act(client: client, cwd: only.path, kind: "push") } }
-            Button("Sync", lucideIcon: "refresh-cw") { Task { await repositories.act(client: client, cwd: only.path, kind: "sync") } }
-            Button("Fetch", lucideIcon: "cloud-download") { Task { await repositories.act(client: client, cwd: only.path, kind: "fetch") } }
-        }
+    private func act(_ checkout: GitCheckout, _ kind: String) {
+        Task { await repositories.act(client: client, cwd: checkout.path, kind: kind) }
     }
 
-    /// Every repository that has something to push, one after another. A branch git has never seen is
-    /// published with an upstream in the same push, which is a different flag for git.
-    private func pushAll() async {
-        for entry in GitPanel.pushable(checkouts) {
-            await repositories.act(client: client, cwd: entry.checkout.path, kind: entry.kind)
-        }
+    /// The commit opens inside the sheet; what was typed stays while the sheet looks at the same checkout.
+    private func openCommit() {
+        if commitModel?.repositories !== repositories { commitModel = GitCommitModel(repositories: repositories) }
+        committing = true
     }
 
-    private func confirm(_ pending: GitConfirmation) async {
-        switch pending {
-        case .discard(let cwd, let path):
-            let stash = await repositories.discard(client: client, cwd: cwd, path: path)
-            note = stash == nil ? "Nothing to discard in \(path)." : "Discarded \(path). Restore it with git stash pop \(stash!)."
-        case .forcePush(let cwd):
-            await repositories.act(client: client, cwd: cwd, kind: "force-push")
-        case .deleteBranch(let cwd, let ref, let force):
-            await repositories.act(
-                client: client, cwd: cwd, kind: "delete-branch",
-                extra: force ? ["ref": .string(ref), "force": .bool(true)] : ["ref": .string(ref)])
-        case .checkout(let cwd, let ref):
-            await repositories.act(client: client, cwd: cwd, kind: "checkout", extra: ["ref": .string(ref), "stash": .bool(true)])
-        }
-        confirmation = nil
+    private func switchRoot(to path: String?) {
+        guard path != root else { return }
+        root = path
+        repositories = GitRepositories()
+        history = GitHistoryModel()
+        commitModel = nil
+        note = nil
     }
 }
 
@@ -355,18 +309,6 @@ struct GitHaltedRows: View {
 
     private var session: GitConflictSession { repositories.conflicts.session(checkout.path) }
 
-    private var title: String {
-        let what =
-            switch checkout.operation {
-            case "merge": "A merge waits on you"
-            case "rebase": "A rebase waits on you"
-            case "cherry-pick": "A cherry-pick waits on you"
-            case "revert": "A revert waits on you"
-            default: "Files conflict"
-            }
-        return named ? "\(what) (\(checkout.label))" : what
-    }
-
     var body: some View {
         NavigationLink {
             GitConflictsPage(client: client, session: session)
@@ -374,7 +316,7 @@ struct GitHaltedRows: View {
             HStack(spacing: 10) {
                 Image(lucide: "git-merge", size: 16).foregroundStyle(MobileStyle.statusNeedsYou)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title).lineLimit(1)
+                    Text(GitHaltedText.title(checkout, named: named)).lineLimit(1)
                     Text(
                         checkout.conflictCount == 0
                             ? "Every file is resolved."
@@ -395,10 +337,7 @@ struct GitHaltedRows: View {
             .modifier(GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) { Task { await finish("abort") } })
         }
         if session.busy {
-            HStack(spacing: 10) {
-                MobileLoadingRow("Working")
-                Text(session.progress ?? "Working").font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-            }
+            GitBusyRow(text: session.progress ?? "Working")
         }
         if let problem = session.problem {
             Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(.red)

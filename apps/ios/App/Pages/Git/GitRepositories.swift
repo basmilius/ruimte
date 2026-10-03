@@ -29,6 +29,7 @@ import SwiftUI
     @ObservationIgnored private var leases: [String: MachineSubscription] = [:]
     /// What was made of the conflicts of every checkout so far, kept while a person walks between pages.
     @ObservationIgnored let conflicts = GitConflictStore()
+    @ObservationIgnored let worktrees = GitWorktreesStore()
 
     func checkout(_ path: String) -> GitCheckout? { checkouts.first { $0.path == path } }
 

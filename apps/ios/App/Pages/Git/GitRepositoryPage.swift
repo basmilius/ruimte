@@ -2,33 +2,38 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// One repository of the project folder: where its branch stands, everything that acts on it alone,
-/// and the way into its branches and its history.
+/// One repository of the project folder: where its branch stands, everything that acts on it alone, its stash,
+/// and the way into its branches, its history, its worktrees and a pull request.
 struct GitRepositoryPage: View {
     let client: any MachineRequesting
     let repositories: GitRepositories
     let path: String
-    @State private var refs = GitRefsState()
-    @State private var confirmation: GitConfirmation?
-    @State private var stashSheet = false
-    @State private var prompt: GitPrompt?
+    var workspace: MobileWorkspace?
+    @State private var actions: GitBranchActions
+    @State private var pullRequest = false
     @State private var note: String?
 
+    init(client: any MachineRequesting, repositories: GitRepositories, path: String, workspace: MobileWorkspace? = nil) {
+        self.client = client
+        self.repositories = repositories
+        self.path = path
+        self.workspace = workspace
+        _actions = State(initialValue: GitBranchActions(repositories: repositories, path: path))
+    }
+
     private var checkout: GitCheckout? { repositories.checkout(path) }
+    private var refs: GitRefsState { actions.refs }
 
     var body: some View {
         MobileList {
             if repositories.busy {
-                HStack(spacing: 10) {
-                    MobileLoadingRow("Working")
-                    Text(repositories.progress ?? "Working").font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
-                }
+                GitBusyRow(text: repositories.progress ?? "Working")
             }
             if let problem = repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
             }
             if let note {
-                Text(note).font(.caption).foregroundStyle(MobileStyle.muted)
+                Text(note).font(.caption).foregroundStyle(MobileStyle.muted).textSelection(.enabled)
             }
             if let checkout {
                 Section {
@@ -48,34 +53,36 @@ struct GitRepositoryPage: View {
                             .font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
+                if GitPanel.diverged(checkout) {
+                    GitDivergedRow(client: client, repositories: repositories, checkout: checkout, named: false)
+                }
                 Section("Remote") {
                     action("Pull", icon: "arrow-down", kind: "pull")
-                    action(pushLabel(checkout), icon: "arrow-up", kind: pushKind(checkout))
+                    action(GitPanel.pushLabel(checkout), icon: "arrow-up", kind: GitPanel.pushKind(checkout))
                     action("Sync", icon: "refresh-cw", kind: "sync")
                     action("Fetch", icon: "cloud-download", kind: "fetch")
                     Button("Force push", lucideIcon: "triangle-alert", role: .destructive) {
-                        confirmation = .forcePush(cwd: path)
+                        actions.confirmation = .forcePush(cwd: path)
                     }.disabled(repositories.busy)
                 }
                 Section("Working tree") {
-                    Button("Stash changes", lucideIcon: "archive") { prompt = .stash(cwd: path) }
+                    Button("Stash changes", lucideIcon: "archive") { actions.prompt = .stash(cwd: path) }
                         .disabled(repositories.busy || checkout.files.isEmpty)
                     Button("Pop stash", lucideIcon: "archive-restore") {
                         if refs.stashes.count > 1 {
-                            stashSheet = true
+                            actions.popping = true
                         } else {
-                            Task { await repositories.act(client: client, cwd: path, kind: "stash-pop") }
+                            Task { await actions.pop(client: client, stash: nil) }
                         }
                     }.disabled(repositories.busy || refs.stashes.isEmpty)
                     if refs.capabilities {
-                        Button("Create pull request", lucideIcon: "git-pull-request") {
-                            prompt = .pullRequest(cwd: path, subject: refs.lastSubject)
-                        }.disabled(repositories.busy)
+                        Button("Create pull request", lucideIcon: "git-pull-request") { pullRequest = true }
+                            .disabled(repositories.busy || checkout.branch == nil)
                     }
                 }
                 Section {
                     NavigationLink {
-                        GitBranchesPage(client: client, repositories: repositories, refs: refs, path: path)
+                        GitBranchesPage(client: client, actions: actions)
                     } label: {
                         LabeledContent {
                             Text("\(refs.branches.count)").monospacedDigit().foregroundStyle(MobileStyle.muted)
@@ -89,7 +96,7 @@ struct GitRepositoryPage: View {
                         Label("History", lucideIcon: "git-commit-horizontal")
                     }
                     NavigationLink {
-                        GitWorktreesPage(client: client, repositories: repositories, repo: path)
+                        GitWorktreesPage(client: client, repositories: repositories, repo: path, workspace: workspace)
                     } label: {
                         Label("Worktrees", lucideIcon: "folder-git-2")
                     }
@@ -98,41 +105,17 @@ struct GitRepositoryPage: View {
         }
         .navigationTitle(checkout?.label ?? "Repository")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: path) { await refs.load(client: client, cwd: path) }
+        .navigationDestination(isPresented: $pullRequest) {
+            GitPullRequestPage(client: client, repositories: repositories, path: path, subject: refs.lastSubject) {
+                note = $0
+            }
+        }
+        .task(id: path) { await actions.load(client: client) }
         .refreshable {
             await repositories.refresh(client: client, cwd: path)
-            await refs.load(client: client, cwd: path)
+            await actions.load(client: client)
         }
-        .mobileSheet(isPresented: $stashSheet) {
-            GitStashSheet(stashes: refs.stashes, isPresented: $stashSheet) { ref in
-                Task { await repositories.act(client: client, cwd: path, kind: "stash-pop", extra: ["ref": .string(ref)]) }
-            }
-        }
-        .mobileSheet(item: $prompt) { pending in
-            GitPromptSheet(pending: pending) { first, second in
-                prompt = nil
-                Task { await run(pending, first: first, second: second) }
-            } onCancel: {
-                prompt = nil
-            }
-        }
-        .confirmationDialog(
-            confirmation?.title ?? "",
-            isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }),
-            titleVisibility: .visible, presenting: confirmation
-        ) { pending in
-            Button(pending.confirmLabel, role: .destructive) {
-                Task {
-                    if case .forcePush(let cwd) = pending {
-                        await repositories.act(client: client, cwd: cwd, kind: "force-push")
-                    }
-                    confirmation = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { pending in
-            Text(pending.detail)
-        }
+        .modifier(GitBranchDialogs(client: client, actions: actions))
     }
 
     private func action(_ title: String, icon: String, kind: String) -> some View {
@@ -140,35 +123,49 @@ struct GitRepositoryPage: View {
             Task { await repositories.act(client: client, cwd: path, kind: kind) }
         }.disabled(repositories.busy)
     }
+}
 
-    /// A branch git has never seen is published with an upstream in the same push, which is a different
-    /// word for a person and a different flag for git.
-    private func pushLabel(_ checkout: GitCheckout) -> String {
+extension GitPanel {
+    /// A branch git has never seen is published with an upstream in the same push, which is a different word for
+    /// a person and a different flag for git.
+    static func pushLabel(_ checkout: GitCheckout) -> String {
         checkout.status?["upstream"]?.stringValue == nil ? "Publish branch" : "Push"
     }
 
-    private func pushKind(_ checkout: GitCheckout) -> String {
+    static func pushKind(_ checkout: GitCheckout) -> String {
         checkout.status?["upstream"]?.stringValue == nil ? "publish" : "push"
     }
+}
 
-    private func run(_ pending: GitPrompt, first: String, second: String) async {
-        switch pending {
-        case .stash(let cwd):
-            await repositories.act(client: client, cwd: cwd, kind: "stash", extra: ["subject": .string(first)])
-            await refs.load(client: client, cwd: cwd)
-        case .pullRequest(let cwd, _):
-            let result = await repositories.act(
-                client: client, cwd: cwd, kind: "create-pr",
-                extra: ["subject": .string(first), "body": .string(second)])
-            note = result?["url"]?.stringValue ?? result?.text("summary")
-        case .createBranch(let cwd):
-            await repositories.act(client: client, cwd: cwd, kind: "create-branch", extra: ["name": .string(first)])
-            await refs.load(client: client, cwd: cwd)
-        case .renameBranch(let cwd, _):
-            await repositories.act(client: client, cwd: cwd, kind: "rename-branch", extra: ["name": .string(first)])
-            await refs.load(client: client, cwd: cwd)
-        case .createWorktree:
-            break
+/// A branch that moved on both sides. A pull only fast-forwards, so the person says here how the two come
+/// together; nothing merges or rebases on its own.
+struct GitDivergedRow: View {
+    let client: any MachineRequesting
+    let repositories: GitRepositories
+    let checkout: GitCheckout
+    let named: Bool
+
+    var body: some View {
+        let branch = checkout.branch ?? "This branch"
+        VStack(alignment: .leading, spacing: 8) {
+            Text(named ? "How should \(branch) in \(checkout.label) come together?" : "How should \(branch) come together?")
+                .font(.callout)
+            Text(
+                "It has \(checkout.ahead) commits of its own and \(checkout.behind) from \(checkout.status?["upstream"]?.stringValue ?? "the remote"). A pull only fast-forwards until you choose."
+            ).font(.caption).foregroundStyle(MobileStyle.muted)
+            HStack(spacing: 8) {
+                Button("Merge") { pull("merge") }
+                Button("Rebase") { pull("rebase") }
+            }
+            .buttonStyle(.bordered).font(.callout).disabled(repositories.busy)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func pull(_ strategy: String) {
+        Task {
+            await repositories.act(
+                client: client, cwd: checkout.path, kind: "pull", extra: ["strategy": .string(strategy)])
         }
     }
 }
@@ -184,6 +181,14 @@ struct GitRepositoryPage: View {
 
     var branches: [JSONValue] { refs.filter { $0.text("kind") == "local" } }
     var current: String? { refs.first { $0["current"] == .bool(true) }?.text("name") }
+
+    /// Forgets what was read, for a page that now points at another repository.
+    func clear() {
+        refs = []
+        stashes = []
+        capabilities = false
+        lastSubject = ""
+    }
 
     func load(client: any MachineRequesting, cwd: String) async {
         loading = refs.isEmpty

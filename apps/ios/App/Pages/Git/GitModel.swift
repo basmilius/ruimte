@@ -115,3 +115,100 @@ extension GitPanel {
         return (rows, logs.contains { $0.cursor != nil })
     }
 }
+
+/// The three parts of the git sheet, in the order the design draws its segments.
+enum GitSegment: String, CaseIterable, Identifiable {
+    case changes, history, branches
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .changes: "Changes"
+        case .history: "History"
+        case .branches: "Branches"
+        }
+    }
+}
+
+extension GitPanel {
+    /// A branch that moved on both sides, which a pull does not bring together until a person says how.
+    static func diverged(_ checkout: GitCheckout) -> Bool {
+        checkout.isRepository && checkout.ahead > 0 && checkout.behind > 0
+    }
+
+    /// What the pill at the top of the sheet says: the branch of the one repository, or how many there are.
+    static func pillTitle(_ checkouts: [GitCheckout]) -> String {
+        if checkouts.count > 1 { return "\(checkouts.count) repositories" }
+        guard let only = checkouts.first else { return "Git" }
+        if let branch = only.branch { return branch }
+        return only.status?["detached"] == .bool(true) ? "Detached HEAD" : "No commits"
+    }
+
+    /// The words on the commit bar: how many files go in, which is everything when nothing is staged yet.
+    static func commitTitle(_ checkouts: [GitCheckout]) -> String {
+        let plan = commitTargets(checkouts)
+        guard !plan.targets.isEmpty else { return "Commit" }
+        let count = plan.targets.reduce(0) { total, checkout in
+            total + (plan.stageAll ? checkout.files.count : checkout.files(state: "staged").count)
+        }
+        return count == 1 ? "Commit 1 file" : "Commit \(count) files"
+    }
+
+    /// One line per repository on the repositories page: where it stands, in a word or two.
+    static func repositoryState(_ checkout: GitCheckout) -> String {
+        if let failure = checkout.failure { return failure }
+        guard checkout.isRepository else { return "Not a repository" }
+        if diverged(checkout) { return "diverged" }
+        let changed = checkout.files.count
+        return changed == 0 ? "clean" : "\(changed) changed"
+    }
+}
+
+/// Git at work, with the desktop's spinner and the last line git wrote.
+struct GitBusyRow: View {
+    let text: String
+    var cancel: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Spinner(size: 14, label: "Working").foregroundStyle(MobileStyle.statusRunning)
+            Text(text).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
+            if let cancel {
+                Spacer(minLength: 8)
+                Button("Cancel", action: cancel).font(.caption)
+            }
+        }
+    }
+}
+
+/// A wide button that floats over the bottom of a git page, glass since it stands above the list.
+struct GitBarButton: View {
+    let title: String
+    var prominent = true
+    var role: ButtonRole?
+    let action: () -> Void
+
+    var body: some View {
+        if prominent {
+            label.buttonStyle(.glassProminent).tint(role == .destructive ? .red : MobileStyle.accent)
+        } else {
+            label.buttonStyle(.glass)
+        }
+    }
+
+    private var label: some View {
+        Button(role: role, action: action) {
+            Text(title).font(.body.weight(.semibold)).lineLimit(1).frame(maxWidth: .infinity, minHeight: 36)
+        }
+    }
+}
+
+/// The bar the buttons of a git page stand in, over the bottom of its list.
+struct GitBottomBar<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(spacing: 10) { content }
+            .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
+    }
+}
