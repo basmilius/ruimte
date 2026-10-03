@@ -1,7 +1,8 @@
 import i18next from 'i18next';
 import { canShareView, isCanvasView, isOpenableView, type ProjectView } from '@ruimte/contracts';
 import { forkRefusal, lastSettledTurn } from '@ruimte/agents-react/chat/logic/fork';
-import { canKeepAwake, desktop, isApplePlatform } from '@/desktop/bridge';
+import { desktop, isApplePlatform } from '@/desktop/bridge';
+import { keepAwakeAvailable, keepAwakeChoice } from '@/state/keep-awake';
 import { newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canOpenWindows } from '@/project/windows';
 import { canOpenAsView, type SessionHandoff } from '@/project/views';
@@ -19,7 +20,6 @@ import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { providersOf } from '@ruimte/agents-react/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useSessions } from '@/state/sessions';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
 
@@ -137,7 +137,7 @@ export const menuContext = (host: MenuHost): MenuContext => {
         chosenLaunch: chosenLaunchId(),
         releaseNotes: typeof desktop()?.releaseNotes === 'function',
         fullscreen: typeof document !== 'undefined' && document.fullscreenElement !== null,
-        keepAwake: host === 'desktop' && canKeepAwake() ? useSettings.getState().keepAwake : null,
+        keepAwake: host === 'desktop' && keepAwakeAvailable() ? keepAwakeChoice().keepAwake : null,
         settingsOpen: ui.settings.open,
         windows: host === 'desktop' && canOpenWindows(),
         newChat: offersNewChat(newChatMachine(), useNewChat.getState().refused)

@@ -28,7 +28,7 @@ import { startRemovalWatch } from '@/pulsar/removal-watch';
 import { pool } from '@/transport';
 import { startWakeReconnect } from '@/transport/wake';
 import { desktop } from '@/desktop/bridge';
-import { startKeepAwake } from '@/state/keep-awake';
+import { startKeepAwake, startKeepAwakeMove } from '@/state/keep-awake';
 import { startLastSeen } from '@/state/last-seen-watch';
 import { startSharedStorage } from '@/state/shared-storage';
 import { refuseStrayDrops } from '@/canvas/drop';
@@ -82,6 +82,7 @@ void bootWindow();
 startShowViewWatch();
 startPageHolds();
 startKeepAwake();
+startKeepAwakeMove();
 /* Before the account, since a `/link` address must leave the address bar and wait for whoever signs in. */
 startLinkRequest();
 void startPulsarAccount();

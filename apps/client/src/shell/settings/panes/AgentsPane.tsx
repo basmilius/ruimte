@@ -2,7 +2,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import type { RuntimeMode } from '@ruimte/contracts';
 import { rememberChatPreferences, useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
-import { canKeepAwake } from '@/desktop/bridge';
+import { setKeepAwake, useKeepAwakeAvailable, useKeepAwakeChoice, useMachineKeepsAwake } from '@/state/keep-awake';
 import { MachineSwitchSections } from '@/shell/settings/MachineSwitchSection';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { Switch, Select, type SelectItem } from '@basmilius/desktop-ui';
@@ -27,14 +27,14 @@ export function AgentsPane() {
     const { t } = useTranslation('settings');
     const preferences = useChatPreferences();
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
-    const keepAwake = useSettings((s) => s.keepAwake);
-    const keepAwakeOnBattery = useSettings((s) => s.keepAwakeOnBattery);
-    const keepAwakeDisplay = useSettings((s) => s.keepAwakeDisplay);
+    const { keepAwake, keepAwakeOnBattery, keepAwakeDisplay } = useKeepAwakeChoice();
     const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const chatStreaming = useSettings((s) => s.chatStreaming);
     const update = useSettings((s) => s.update);
     // A browser cannot keep anything awake, so it is told nothing about a choice it has no way to honor.
-    const awake = canKeepAwake();
+    const awake = useKeepAwakeAvailable();
+    // The machine holds the display only with battery allowed; the shell from before weighed the power source itself.
+    const displayNeedsBattery = useMachineKeepsAwake() && !keepAwakeOnBattery;
     const keepAwakeDescription = KEEP_AWAKE_DESCRIPTIONS[keepAwake];
 
     return (
@@ -153,7 +153,7 @@ export function AgentsPane() {
                                         description: t('agents.keepAwake.mode.always.description')
                                     }
                                 ]}
-                                onValueChange={(value) => update({ keepAwake: value })}
+                                onValueChange={(value) => setKeepAwake({ keepAwake: value })}
                             />
                         }
                     />
@@ -166,7 +166,7 @@ export function AgentsPane() {
                         control={
                             <Switch
                                 checked={keepAwakeOnBattery}
-                                onCheckedChange={(checked) => update({ keepAwakeOnBattery: checked })}
+                                onCheckedChange={(checked) => setKeepAwake({ keepAwakeOnBattery: checked })}
                                 label={t('agents.keepAwake.battery.label')}
                             />
                         }
@@ -176,11 +176,11 @@ export function AgentsPane() {
                     <SettingsRow
                         indent
                         label={t('agents.keepAwake.display.label')}
-                        description={t('agents.keepAwake.display.description')}
+                        description={t(displayNeedsBattery ? 'agents.keepAwake.display.needsBattery' : 'agents.keepAwake.display.description')}
                         control={
                             <Switch
                                 checked={keepAwakeDisplay}
-                                onCheckedChange={(checked) => update({ keepAwakeDisplay: checked })}
+                                onCheckedChange={(checked) => setKeepAwake({ keepAwakeDisplay: checked })}
                                 label={t('agents.keepAwake.display.label')}
                             />
                         }

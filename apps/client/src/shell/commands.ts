@@ -16,7 +16,7 @@ import {
     toggleFlagAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
-import { canKeepAwake } from '@/desktop/bridge';
+import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
 import { openFocusedFind } from '@/find/hosts';
@@ -36,7 +36,6 @@ import { isScratchProject, shownFolderOf, useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 import { hasLocalMachine } from '@/state/local-machine';
 import { providersOf } from '@ruimte/agents-react/state/providers';
-import { useSettings } from '@/state/settings';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
@@ -537,22 +536,22 @@ export const appCommands = (): Command[] => {
             : []),
         ...(inWorkspace && !scratch ? launchCommands() : []),
         { id: 'theme', label: i18next.t('shell:palette.commands.toggleTheme'), run: () => useTheme.getState().toggle() },
-        ...(canKeepAwake()
+        ...(keepAwakeAvailable()
             ? [
                   {
                       id: 'keep-awake-off',
                       label: i18next.t('shell:palette.commands.keepAwakeOff'),
-                      run: () => useSettings.getState().update({ keepAwake: 'off' })
+                      run: () => setKeepAwake({ keepAwake: 'off' })
                   },
                   {
                       id: 'keep-awake-working',
                       label: i18next.t('shell:palette.commands.keepAwakeWorking'),
-                      run: () => useSettings.getState().update({ keepAwake: 'working' })
+                      run: () => setKeepAwake({ keepAwake: 'working' })
                   },
                   {
                       id: 'keep-awake-always',
                       label: i18next.t('shell:palette.commands.keepAwakeAlways'),
-                      run: () => useSettings.getState().update({ keepAwake: 'always' })
+                      run: () => setKeepAwake({ keepAwake: 'always' })
                   }
               ]
             : []),

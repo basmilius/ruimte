@@ -16,6 +16,13 @@ export const startEndpointWatch = (): (() => void) =>
                     refuseStatements: payload.refuseStatements === true,
                     ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                     resumeAtReset: payload.resumeAtReset === true,
+                    ...(payload.keepAwake === undefined
+                        ? {}
+                        : {
+                              keepAwake: payload.keepAwake,
+                              keepAwakeOnBattery: payload.keepAwakeOnBattery === true,
+                              keepAwakeDisplay: payload.keepAwakeDisplay === true
+                          }),
                     ...(payload.broker === undefined ? {} : { broker: payload.broker, brokerFixed: payload.brokerFixed === true })
                 });
                 // A daemon from before the broker setting sends no URL, which says nothing about its broker.
@@ -23,6 +30,7 @@ export const startEndpointWatch = (): (() => void) =>
                     useEndpoints.getState().learnBrokerUrl(endpointId, payload.brokerUrl);
                 }
                 adoptMachineName(endpointId, payload.label, payload.nameSource);
-            })
+            }),
+            link.on('endpoint.updateChanged', ({ update }) => useServers.getState().setUpdate(endpointId, update))
         ]
     }));

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { EndpointNameSource, ProjectIconChoice, Reachability } from '@ruimte/contracts';
+import type { EndpointNameSource, KeepAwakeMode, MachineUpdate, ProjectIconChoice, Reachability } from '@ruimte/contracts';
 import type { BrokerSetting } from '@ruimte/pulsar';
 import { useEndpointId } from '@/state/keys';
 
@@ -27,6 +27,14 @@ export interface ServerInfo {
     /* Whether a chat that stopped on a limit may be taken up again on a clock; false for a daemon without the setting. */
     resumeAtReset: boolean;
     appleFoundationEnabled: boolean | null;
+    /* When the machine keeps itself awake; null for a daemon from before, whose desktop app holds it per window. */
+    keepAwake: KeepAwakeMode | null;
+    keepAwakeOnBattery: boolean;
+    keepAwakeDisplay: boolean;
+    /* Whether the machine can hold a block on sleep at all. */
+    keepAwakeAvailable: boolean;
+    /* Where the update of the desktop app on the machine stands; null for a daemon from before. */
+    update: MachineUpdate | null;
     /* The broker a person picked for this machine; null for a daemon that predates the setting. */
     broker: BrokerSetting | null;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
@@ -53,6 +61,11 @@ const UNKNOWN: ServerInfo = {
     streamingAllowed: null,
     resumeAtReset: false,
     appleFoundationEnabled: null,
+    keepAwake: null,
+    keepAwakeOnBattery: false,
+    keepAwakeDisplay: false,
+    keepAwakeAvailable: false,
+    update: null,
     broker: null,
     brokerFixed: false,
     reachability: null,
@@ -75,6 +88,11 @@ interface ServersStore {
             | 'streamingAllowed'
             | 'resumeAtReset'
             | 'appleFoundationEnabled'
+            | 'keepAwake'
+            | 'keepAwakeOnBattery'
+            | 'keepAwakeDisplay'
+            | 'keepAwakeAvailable'
+            | 'update'
             | 'broker'
             | 'brokerFixed'
             | 'reachability'
@@ -88,8 +106,23 @@ interface ServersStore {
     setIdentity(
         endpointId: string,
         info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> &
-            Partial<Pick<ServerInfo, 'refuseStatements' | 'streamingAllowed' | 'resumeAtReset' | 'appleFoundationEnabled' | 'broker' | 'brokerFixed'>>
+            Partial<
+                Pick<
+                    ServerInfo,
+                    | 'refuseStatements'
+                    | 'streamingAllowed'
+                    | 'resumeAtReset'
+                    | 'appleFoundationEnabled'
+                    | 'keepAwake'
+                    | 'keepAwakeOnBattery'
+                    | 'keepAwakeDisplay'
+                    | 'broker'
+                    | 'brokerFixed'
+                >
+            >
     ): void;
+    /* The update of the desktop app on the machine moved on, from `endpoint.updateChanged`. */
+    setUpdate(endpointId: string, update: MachineUpdate): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;
 }
@@ -112,6 +145,10 @@ export const useServers = create<ServersStore>((set, get) => ({
     setIdentity(endpointId, info) {
         const current = get().byEndpoint[endpointId] ?? UNKNOWN;
         set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
+    },
+    setUpdate(endpointId, update) {
+        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
+        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, update } } });
     },
     forget(endpointId) {
         const { [endpointId]: _gone, ...rest } = get().byEndpoint;

@@ -393,8 +393,10 @@
             },
             "display": {
                 "label": "Keep the display on",
-                "description": "Off, the display can still turn off while the computer stays awake."
-            }
+                "description": "Off, the display can still turn off while the computer stays awake.",
+                "needsBattery": "Only together with Also on battery, since macOS cannot keep the display on for the power adapter alone."
+            },
+            "saveFailed": "Keep awake could not be changed"
         },
         "chats": {
             "title": "Chats",

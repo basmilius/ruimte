@@ -4,7 +4,9 @@ import { useChats, type ChatState } from '@ruimte/agents-react/state/chats';
 import { useSessions, type SessionState } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import type { DesktopBridge, KeepAwakeRequest } from '@/desktop/bridge';
-import { keepAwakeTeller, keepAwakeWanted, startKeepAwake, type KeepAwakeSettings } from '@/state/keep-awake';
+import { keepAwakeChoice, keepAwakeTeller, keepAwakeToMove, keepAwakeWanted, startKeepAwake, type KeepAwakeSettings } from '@/state/keep-awake';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 
 const agent = (status: AgentStatus, live = true): AgentInfo => ({
     kind: 'claude',
@@ -106,6 +108,16 @@ describe('what the shell is told', () => {
         useSessions.setState({ byKey: {} });
         useChats.setState({ byKey: {} });
         useSettings.setState(settings('off', { keepAwakeDisplay: false, keepAwakeOnBattery: false }));
+        useServers.setState({ byEndpoint: {} });
+    });
+
+    test("nothing from the shell once this computer's machine holds the block itself", () => {
+        const told: (KeepAwakeRequest | null)[] = [];
+        useSettings.setState({ keepAwake: 'always' });
+        const stop = startKeepAwake((request) => told.push(request));
+        useServers.setState({ byEndpoint: { [LOCAL_ENDPOINT_ID]: machine({ keepAwake: 'off' }) } });
+        stop?.();
+        expect(told).toEqual([SYSTEM, null]);
     });
 
     test('nothing at all in a browser, which has no shell to ask', () => {
@@ -159,5 +171,33 @@ describe('what the shell is told', () => {
         working('running');
         stop?.();
         expect(told).toEqual([SYSTEM, null]);
+    });
+});
+
+const machine = (patch: Partial<ServerInfo>): ServerInfo => ({ ...serverInfoOf('nobody'), keepAwakeAvailable: true, ...patch });
+
+describe('where the setting is kept', () => {
+    test('the machine once it holds keep awake, this client against a daemon from before', () => {
+        const local = settings('working', { keepAwakeOnBattery: true });
+        expect(keepAwakeChoice(machine({ keepAwake: 'always', keepAwakeDisplay: true }), local)).toEqual(settings('always', { keepAwakeDisplay: true }));
+        expect(keepAwakeChoice(machine({ keepAwake: null }), local)).toEqual(local);
+        expect(keepAwakeChoice(machine({ keepAwake: 'always', keepAwakeAvailable: false }), local)).toEqual(local);
+    });
+});
+
+describe('moving the setting this client kept to its machine', () => {
+    test('onto a machine still at its defaults, once', () => {
+        const local = settings('working', { keepAwakeOnBattery: true });
+        expect(keepAwakeToMove(machine({ keepAwake: 'off' }), local)).toEqual(local);
+        expect(keepAwakeToMove(machine({ keepAwake: 'off' }), settings('off'))).toBeNull();
+    });
+
+    test('a machine someone already set keeps what it has, and this client only drops its own', () => {
+        expect(keepAwakeToMove(machine({ keepAwake: 'always' }), settings('working'))).toEqual(settings('off'));
+    });
+
+    test('nothing moves to a daemon from before or one that cannot hold a block', () => {
+        expect(keepAwakeToMove(machine({ keepAwake: null }), settings('working'))).toBeNull();
+        expect(keepAwakeToMove(machine({ keepAwake: 'off', keepAwakeAvailable: false }), settings('working'))).toBeNull();
     });
 });

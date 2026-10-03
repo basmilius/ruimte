@@ -393,8 +393,10 @@
             },
             "display": {
                 "label": "Het scherm aan laten",
-                "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft."
-            }
+                "description": "Uit mag het scherm nog uitgaan terwijl de computer wakker blijft.",
+                "needsBattery": "Alleen samen met Ook op de batterij, omdat macOS het scherm niet alleen op de netadapter aan kan houden."
+            },
+            "saveFailed": "Wakker houden kon niet worden aangepast"
         },
         "chats": {
             "title": "Chats",
