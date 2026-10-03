@@ -94,7 +94,7 @@ struct AppHome: View {
         .onChange(of: runtime.account?.id) { _, account in
             // The account restored on launch may land after the last project reopened.
             if restoring == nil || activeProject !== restoring { activeProject = nil }
-            router = PhoneRouter()
+            router.reset()
             if account != nil { signIn = false }
         }
         .onChange(of: runtime.notifications.destination) { _, destination in
@@ -308,7 +308,7 @@ struct AppHome: View {
 
     private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {
         guard isPad else {
-            withAnimation(reduceMotion ? nil : .default) { router.openProject(workspace, view: view) }
+            router.openProject(workspace, view: view)
             return
         }
         restoreProblem = nil

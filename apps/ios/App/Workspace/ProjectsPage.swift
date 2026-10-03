@@ -5,13 +5,14 @@ import SwiftUI
 struct ProjectsPage<Notice: View>: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
-    /// On the iPhone's Projects tab, whose bar and search belong to the tabs around it.
+    /// On the iPhone's Projects tab, which leaves finding a project to the Search tab.
     var inTabs = false
     let showRecent: () -> Void
     @ViewBuilder let notice: () -> Notice
     @State private var search = ""
     @State private var newChat: NewChatTarget?
     @Environment(\.openMobileWorkspace) private var openWorkspace
+    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         MobileList {
@@ -99,8 +100,11 @@ struct ProjectsPage<Notice: View>: View {
         }
         .modifier(ProjectsSearch(enabled: !inTabs, text: $search))
         .toolbar {
-            if !inTabs && (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
+            if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
                 ProjectsUpdatingItem()
+            }
+            if let settingsLink {
+                SettingsToolbarItem(link: settingsLink)
             }
         }
         .refreshable {
@@ -118,7 +122,6 @@ struct ProjectsPage<Notice: View>: View {
     }
 }
 
-/// The Search tab finds projects on the iPhone, and a tab's own field would not reach the bar above the tabs.
 private struct ProjectsSearch: ViewModifier {
     let enabled: Bool
     @Binding var text: String

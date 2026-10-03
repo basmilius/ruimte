@@ -9,8 +9,6 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var selectedViewID: String?
     /// A view to open once the project is there, such as a chat a machine just made.
     var pendingViewID: String?
-    /// The view pushed over the project's list on an iPhone.
-    var openedViewID: String?
     var adding = false
     var newChat = false
     var showingUsage = false

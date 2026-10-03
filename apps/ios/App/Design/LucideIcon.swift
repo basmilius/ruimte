@@ -1,6 +1,7 @@
 import LucideSwift
 import RuimtePulsar
 import SwiftUI
+import UIKit
 
 struct LucideIcon: View {
     let name: String
@@ -35,6 +36,20 @@ struct LucideIcon: View {
         if images.count >= 256, let cachedKey = images.keys.first { images.removeValue(forKey: cachedKey) }
         images[key] = image
         return image
+    }
+
+    /// The icon as a template image, for a UIKit control such as a tab.
+    @MainActor static func uiImage(named name: String, size: CGFloat = 20) -> UIImage {
+        let bounds = CGRect(x: 0, y: 0, width: size, height: size)
+        let path = UIBezierPath(cgPath: (icon(named: name) ?? .circleQuestionMark).shape.path(in: bounds).cgPath)
+        path.lineWidth = size / 12
+        path.lineCapStyle = .round
+        path.lineJoinStyle = .round
+        return UIGraphicsImageRenderer(size: bounds.size).image { _ in
+            UIColor.black.setStroke()
+            path.stroke()
+        }
+        .withRenderingMode(.alwaysTemplate)
     }
 }
 

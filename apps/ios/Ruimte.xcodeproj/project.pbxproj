@@ -213,6 +213,7 @@
 		C81AED68D1D59B9F20EFA3C5 /* NowCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C313F3BEFC69407AE4E76C7 /* NowCard.swift */; };
 		CAF7E05732303B93FF25B469 /* MobileScrollViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8449B851575DF02B5169572E /* MobileScrollViewport.swift */; };
 		CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */; };
+		CC84D3E8A11C29CB051D1CCE /* PhoneTabController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098AC0C98F2FF0237758C194 /* PhoneTabController.swift */; };
 		CEF23498D3257D01BBB5E7F9 /* GitConflicts.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC0BE5E522E5F6A8F483BC0 /* GitConflicts.swift */; };
 		D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */; };
 		D43A11554C08D7C39C95FAE9 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
@@ -318,6 +319,7 @@
 		089B611A941366002AA1307E /* RenderDocumentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDocumentPage.swift; sourceTree = "<group>"; };
 		08DFEA6F2EAF61D3A5B6C07E /* GitLogPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitLogPage.swift; sourceTree = "<group>"; };
 		09560ACAFE1C98C861659AE3 /* image.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = image.tiff; sourceTree = "<group>"; };
+		098AC0C98F2FF0237758C194 /* PhoneTabController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneTabController.swift; sourceTree = "<group>"; };
 		09CCDDD483546BE641151534 /* RuimteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuimteApp.swift; sourceTree = "<group>"; };
 		09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileJSON.swift; sourceTree = "<group>"; };
 		0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewIconPicker.swift; sourceTree = "<group>"; };
@@ -934,6 +936,7 @@
 				B7E49234CBDC57F0121F7139 /* AccountAvatar.swift */,
 				CE48345F04BA4B8E778C12FD /* PhoneHome.swift */,
 				0E342A07018739FE303A2EAF /* PhoneRouter.swift */,
+				098AC0C98F2FF0237758C194 /* PhoneTabController.swift */,
 				9A5221AF91DEE568E2DF38A4 /* ProjectViewPage.swift */,
 				8E3C280A49506D171C893DB2 /* SearchPage.swift */,
 			);
@@ -1493,6 +1496,7 @@
 				2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */,
 				AE7A98A4109235647F3EA5AD /* PhoneHome.swift in Sources */,
 				EF468123D0DBEDC10D883F36 /* PhoneRouter.swift in Sources */,
+				CC84D3E8A11C29CB051D1CCE /* PhoneTabController.swift in Sources */,
 				67C3C7D5685AB8294FBE2666 /* PlanOutline.swift in Sources */,
 				DF70EC4BAFF7F692F3C49854 /* PlanSheet.swift in Sources */,
 				B813CD6EB25AA3268C59EAAE /* PlanStore.swift in Sources */,

@@ -17,6 +17,7 @@ struct WorkspacePage: View {
     @State private var showGit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.settingsLink) private var settingsLink
+    @Environment(\.openProjectView) private var openProjectView
     var body: some View {
         Group {
             if workspace.ready {
@@ -66,7 +67,6 @@ struct WorkspacePage: View {
         .toolbar {
             if isSidebar { tabletToolbar } else { phoneToolbar }
         }
-        .navigationDestination(item: $navigation.openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
         .task(id: workspace.ready) { await openPendingView() }
         .mobileSheet(isPresented: $navigation.newChat) {
@@ -303,14 +303,6 @@ struct WorkspacePage: View {
             }
     }
 
-    @ViewBuilder private func viewDestination(_ id: String) -> some View {
-        if let item = workspace.views.first(where: { $0.stableID == id }) {
-            ProjectItemPage(workspace: workspace, item: item).id(id)
-        } else {
-            ContentUnavailableView("This view was removed", lucideIcon: "square-x")
-        }
-    }
-
     private var listedViews: [JSONValue] {
         workspace.views.filter { WorkspaceViewSections.isListed($0, selectedID: navigation.selectedViewID) }
     }
@@ -429,8 +421,8 @@ struct WorkspacePage: View {
             navigation.section = .views
             navigation.selectedViewID = id
             searching = false
-            if !isSidebar { navigation.openedViewID = id }
         }
+        if !isSidebar { openProjectView?(id, in: navigation) }
     }
 
     private func viewRow(_ item: JSONValue) -> some View {
@@ -453,6 +445,20 @@ struct WorkspacePage: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A view opened from its project's list on an iPhone.
+struct ProjectViewDestination: View {
+    let workspace: MobileWorkspace
+    let id: String
+
+    var body: some View {
+        if let item = workspace.views.first(where: { $0.stableID == id }) {
+            ProjectItemPage(workspace: workspace, item: item)
+        } else {
+            ContentUnavailableView("This view was removed", lucideIcon: "square-x").modifier(MobilePageSurface())
+        }
     }
 }
 
