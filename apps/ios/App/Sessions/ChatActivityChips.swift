@@ -25,12 +25,15 @@ enum ChatBackground {
 }
 
 /// What the chat keeps working on beside the thread, in one small row over the composer: its sub-agents and what runs
-/// in the background. Each chip opens the list it counts.
+/// in the background. Each chip opens the list it counts as a flyout over the chip.
 struct ChatActivityChips: View {
     let model: ChatModel
     let tasks: TaskStore?
+    /// The full list of the chat's sub-agents, the done ones included.
+    let openList: () -> Void
     @State private var showingSubagents = false
     @State private var showingBackground = false
+    @State private var afterFlyout: (() -> Void)?
 
     var body: some View {
         let subagents = model.activitySubagents
@@ -46,8 +49,12 @@ struct ChatActivityChips: View {
                     ) {
                         SubagentStatusIcon(word: word, size: 13)
                     }
-                    .mobileSheet(isPresented: $showingSubagents) {
-                        ChatSubagentActivity(model: model, tasks: tasks, items: subagents) {
+                    .popover(isPresented: $showingSubagents, arrowEdge: .bottom) {
+                        ChatSubagentActivity(model: model, tasks: tasks, items: subagents) { next in
+                            afterFlyout = next
+                            showingSubagents = false
+                        } openList: {
+                            afterFlyout = openList
                             showingSubagents = false
                         }
                     }
@@ -57,13 +64,18 @@ struct ChatActivityChips: View {
                     chip(ChatBackground.label(background), showing: $showingBackground) {
                         Image(lucide: shells > 0 ? "square-terminal" : "activity", size: 13)
                     }
-                    .mobileSheet(isPresented: $showingBackground) {
+                    .popover(isPresented: $showingBackground, arrowEdge: .bottom) {
                         ChatBackgroundActivity(model: model, tasks: background)
                     }
                 }
                 Spacer(minLength: 0)
             }
             .padding(.bottom, 4)
+            .onChange(of: showingSubagents) { _, showing in
+                guard !showing, let action = afterFlyout else { return }
+                afterFlyout = nil
+                action()
+            }
         }
     }
 
@@ -102,43 +114,25 @@ struct ChatActivityChips: View {
     }
 }
 
-private struct ChatActivityList<Rows: View>: View {
-    let title: String
-    @ViewBuilder let rows: () -> Rows
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) { rows() }
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
-
 private struct ChatSubagentActivity: View {
     let model: ChatModel
     let tasks: TaskStore?
     let items: [JSONValue]
-    let close: () -> Void
+    /// Closes the flyout and runs what is given once it has gone.
+    let close: (@escaping () -> Void) -> Void
+    let openList: () -> Void
     @State private var ending: EndingAgents?
     @State private var failure: String?
 
     var body: some View {
-        ChatActivityList(title: ChatBackground.counted(items.count, "sub-agent")) {
+        ChatFlyout(heading: ChatBackground.counted(items.count, "sub-agent"), width: 310) {
             ForEach(items, id: \.stableID) { item in
                 let task = ChatSubagents.taskID(item).flatMap { tasks?.task($0) }
                 let word = ChatSubagents.statusWord(item, task: task)
                 let title = ChatSubagents.title(item)
                 HStack(spacing: 4) {
                     Button {
-                        close()
-                        model.presentation.conversationRequest = SubagentCrumb(item)
+                        close { model.presentation.conversationRequest = SubagentCrumb(item) }
                     } label: {
                         HStack(spacing: 10) {
                             if let word { SubagentStatusIcon(word: word, size: 15) }
@@ -155,6 +149,8 @@ private struct ChatSubagentActivity: View {
                     stopButton(item, title: title)
                 }
             }
+            ChatFlyoutDivider()
+            ChatFlyoutRow(title: "All sub-agents", icon: "bot", action: openList)
         }
         .endingAgentsConfirmation($ending)
         .alert(
@@ -196,7 +192,7 @@ private struct ChatBackgroundActivity: View {
     @State private var failure: String?
 
     var body: some View {
-        ChatActivityList(title: ChatBackground.label(tasks)) {
+        ChatFlyout(heading: ChatBackground.label(tasks), width: 310) {
             ForEach(tasks, id: \.stableID) { task in
                 let command = task["command"]?.stringValue ?? ""
                 let description = task.text("description")

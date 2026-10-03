@@ -186,6 +186,7 @@ struct ChatScreen: View {
             }
         }
         .mobileSheet(isPresented: $composerSheets.settings) { ChatRunSettings(model: model) }
+        .mobileSheet(isPresented: $composerSheets.compare) { ModelComparisonSheet() }
         .mobileSheet(isPresented: $showingPlans) {
             if let plans = machineSession?.plans {
                 PlanSheet(store: plans, chatID: model.chatID, chatTitle: title, model: model)
@@ -476,7 +477,9 @@ struct ChatScreen: View {
                     ChatLimitBanner(
                         model: model, resumeAllowed: machineSession?.icons.resumeAtReset ?? false, openFork: openFork)
                 }
-                ChatActivityChips(model: model, tasks: machineSession?.tasks)
+                ChatActivityChips(model: model, tasks: machineSession?.tasks) {
+                    subagentList = SubagentListRoute(chatID: model.chatID)
+                }
                 ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 ChatComposerRow(showsStop: model.working) {
                     ChatComposerView(
