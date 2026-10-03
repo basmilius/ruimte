@@ -5,7 +5,7 @@ import RuimteTransport
 import SwiftUI
 
 /// How a machine is reached, as the heading over its projects says it.
-enum MachineReach: Equatable {
+enum MachineLinkState: Equatable {
     case connected(relayed: Bool)
     /// Not answered yet, and no try to reach it failed.
     case connecting
@@ -81,7 +81,7 @@ struct ProjectOverviewRow: Identifiable {
 
 struct ProjectMachineGroup: Identifiable {
     let machine: Machine
-    let reach: MachineReach
+    let reach: MachineLinkState
     var rows: [ProjectOverviewRow]
     var id: String { machine.id }
 }
@@ -105,7 +105,7 @@ enum ProjectOverview {
     /// Per machine, the projects in the order they were opened and the machine's Chats after them. A machine goes
     /// first when one of its projects was opened last; a machine without any of these has no group.
     static func groups(
-        open: [UnifiedProjectRow], chats: [UnifiedProjectRow], reach: (Machine) -> MachineReach,
+        open: [UnifiedProjectRow], chats: [UnifiedProjectRow], reach: (Machine) -> MachineLinkState,
         activity: (UnifiedProjectRow.ID) -> ProjectActivity?, git: (UnifiedProjectRow.ID) -> ProjectGitLine?
     ) -> [ProjectMachineGroup] {
         var order: [String] = []

@@ -9,49 +9,58 @@ struct TerminalScreen: View {
     @AppStorage("ruimte.ios.terminalFontSize") private var fontSize = 14.0
     @AppStorage("ruimte.ios.appearance") private var theme = "system"
     @State private var clearing = false
+    @State private var keyboardShown = false
     let title: String
+    /// False while the session is still being made, so the page stands with its bar before the screen attaches.
+    let isPrepared: Bool
+    let held: TerminalHeldCommand?
 
-    init(client: any MachineRequesting, sessionID: String, title: String) {
+    init(
+        client: any MachineRequesting, sessionID: String, title: String, isPrepared: Bool = true,
+        held: TerminalHeldCommand? = nil
+    ) {
         _model = State(initialValue: TerminalModel(client: client, sessionID: sessionID))
         self.title = title
+        self.isPrepared = isPrepared
+        self.held = held
     }
+
+    private var usable: Bool { model.connected && !model.loading && !model.exited }
 
     var body: some View {
         VStack(spacing: 0) {
             if let error = model.error { SessionErrorBanner(message: error) { model.attach() } }
-            if model.loading { MobileLoadingRow("Loading terminal…").padding() }
-            HStack {
-                MobileStatus(
-                    title: model.exited ? "Exited" : model.connected ? "Connected" : "Reconnecting",
-                    color: model.exited ? .secondary : model.connected ? .green : .orange)
-                Spacer()
-                Label("\(model.cols) × \(model.rows)", lucideIcon: "grid-3x3")
-                    .font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
-                    .accessibilityLabel("Following desktop terminal, \(model.cols) columns and \(model.rows) rows")
-            }
-            .padding(.horizontal, 18).padding(.vertical, 12)
-            .background(MobileStyle.canvas)
             NativeTerminal(model: model, fontSize: fontSize, theme: theme)
                 .padding(.horizontal, 12).padding(.top, 12)
                 .background(MobileStyle.surface)
-            HStack(spacing: 8) {
-                terminalKey("esc", label: "Escape", input: "\u{1b}")
-                terminalKey("tab", label: "Tab", input: "\t")
-                terminalKey("⌃C", label: "Control C, interrupt", input: "\u{03}")
-                terminalKey("⌃D", label: "Control D, end input", input: "\u{04}")
-                Spacer(minLength: 0)
-                Button {
-                    clearing = true
-                } label: {
-                    Image(lucide: "eraser").frame(width: 44, height: 44)
+                .overlay {
+                    if model.loading { MobileLoadingRow("Loading terminal…") }
                 }
-                .accessibilityLabel("Clear scrollback")
-                .keyboardShortcut("k", modifiers: .command)
+                .overlay(alignment: .top) {
+                    if isPrepared && (model.exited || !model.connected) {
+                        MobileStatus(
+                            title: model.exited ? "Exited" : "Reconnecting",
+                            color: model.exited ? .secondary : .orange
+                        )
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .glassEffect(.regular, in: .capsule)
+                        .padding(.top, 8)
+                    }
+                }
+        }
+        .background(MobileStyle.surface)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            GlassEffectContainer(spacing: 8) {
+                VStack(spacing: 8) {
+                    if let held {
+                        TerminalHeldPrompt(held: held)
+                    }
+                    TerminalKeyBar(model: model, keyboardShown: keyboardShown)
+                        .disabled(!usable)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(.bar)
-            .overlay(alignment: .top) { Rectangle().fill(MobileStyle.border).frame(height: 0.5) }
-            .disabled(!model.connected || model.loading || model.exited)
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -68,33 +77,32 @@ struct TerminalScreen: View {
                         Text("Light").tag("light")
                         Text("Dark").tag("dark")
                     }
-                    Button("Reload screen", lucideIcon: "refresh-cw") { model.attach() }
+                    Section("Following the machine's \(model.cols) × \(model.rows)") {
+                        Button("Reload screen", lucideIcon: "refresh-cw") { model.attach() }
+                        Button("Clear scrollback", lucideIcon: "eraser") { clearing = true }
+                            .keyboardShortcut("k", modifiers: .command)
+                            .disabled(!usable)
+                    }
                 } label: {
-                    Image(lucide: "type")
+                    Image(lucide: "ellipsis")
                 }
-                .accessibilityLabel("Terminal appearance")
+                .accessibilityLabel("Terminal actions")
             }
         }
-        .onAppear { model.start() }
+        .onAppear { if isPrepared { model.start() } }
+        .onChange(of: isPrepared) { _, prepared in if prepared { model.start() } }
         .onDisappear { model.stop() }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardShown = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardShown = false
+        }
         .confirmationDialog("Clear terminal scrollback?", isPresented: $clearing, titleVisibility: .visible) {
             Button("Clear scrollback", role: .destructive) { Task { await model.clear() } }
         } message: {
             Text("This clears the shared terminal scrollback on every client.")
         }
-    }
-
-    private func terminalKey(_ title: String, label: String, input: String) -> some View {
-        Button {
-            model.write(input)
-        } label: {
-            Text(title).font(.system(.subheadline, design: .monospaced).weight(.medium))
-                .frame(minWidth: 44, minHeight: 44)
-                .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 10))
-                .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(MobileStyle.border, lineWidth: 0.5) }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
     }
 }
 
@@ -118,6 +126,8 @@ private struct NativeTerminal: UIViewRepresentable {
             terminal.feed(text: text)
         }
         model.resizeDisplay = { [weak container] cols, rows in container?.setDimensions(cols: cols, rows: rows) }
+        model.applicationCursor = { [weak container] in container?.terminal.getTerminal().applicationCursor ?? false }
+        model.toggleKeyboard = { [weak container] in container?.toggleKeyboard() }
         model.flushOutput()
     }
 
@@ -140,7 +150,7 @@ private struct NativeTerminal: UIViewRepresentable {
     @MainActor final class Coordinator: NSObject, @preconcurrency TerminalViewDelegate {
         var model: TerminalModel
         init(model: TerminalModel) { self.model = model }
-        func send(source: TerminalView, data: ArraySlice<UInt8>) { model.write(String(decoding: data, as: UTF8.self)) }
+        func send(source: TerminalView, data: ArraySlice<UInt8>) { model.type(String(decoding: data, as: UTF8.self)) }
         func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
             // Following the remote PTY must never resize another client's shell.
         }
@@ -227,6 +237,14 @@ final class TerminalContainer: UIScrollView {
     override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
         if recognizer === focusTap { return !terminal.frame.contains(recognizer.location(in: self)) }
         return super.gestureRecognizerShouldBegin(recognizer)
+    }
+
+    func toggleKeyboard() {
+        if terminal.isFirstResponder {
+            _ = terminal.resignFirstResponder()
+        } else if terminal.isUserInteractionEnabled {
+            _ = terminal.becomeFirstResponder()
+        }
     }
 
     /// A grid smaller than the screen leaves room beside it, where a tap still brings up the keyboard.

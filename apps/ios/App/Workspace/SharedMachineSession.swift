@@ -36,6 +36,7 @@ final class SharedMachineSession {
     @ObservationIgnored lazy var tasks = TaskStore(client: rpc)
     @ObservationIgnored lazy var plans = PlanStore(client: rpc)
     @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
+    @ObservationIgnored lazy var endpoint = MachineEndpoint(client: rpc, machineID: machine.id)
     @ObservationIgnored lazy var usageWidget = UsageWidgetRecorder(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var snoozes = MachineSnoozes(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var rpc = MachineClient(send: { [weak self] text in
@@ -118,6 +119,7 @@ final class SharedMachineSession {
         tasks.start()
         plans.start()
         icons.start()
+        endpoint.start()
         usageWidget.start()
         startPreferences()
     }
@@ -151,6 +153,7 @@ final class SharedMachineSession {
         tasks.stop()
         plans.stop()
         icons.stop()
+        endpoint.stop()
         usageWidget.stop()
         stopPreferences()
         lease?.release()
@@ -226,6 +229,7 @@ final class SharedMachineSession {
         tasks.stop()
         plans.stop()
         icons.stop()
+        endpoint.stop()
         usageWidget.stop()
         stopPreferences()
         projectSubscriptions.invalidate()

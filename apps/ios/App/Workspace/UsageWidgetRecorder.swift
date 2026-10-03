@@ -1,22 +1,27 @@
 import Foundation
+import Observation
 import RuimtePulsar
 import RuimteTransport
 import WidgetKit
 
-/// Keeps the usage widgets' snapshot of one machine current while the app holds a connection to it.
-@MainActor
+/// Keeps the usage widgets' snapshot of one machine current while the app holds a connection to it. The machines list
+/// draws its limits from the same snapshot.
+@MainActor @Observable
 final class UsageWidgetRecorder {
     private static let costLifetime: TimeInterval = 5 * 60
-    private let machineID: String
-    private let client: any MachineRequesting
-    private var unsubscribe: (() -> Void)?
-    private var unobserve: (() -> Void)?
-    private var running: Task<Void, Never>?
-    private var revision = 0
+    /// The limits per account as last read, also from an earlier launch while the machine is away.
+    private(set) var providers: [UsageWidgetSnapshot.Provider]
+    @ObservationIgnored private let machineID: String
+    @ObservationIgnored private let client: any MachineRequesting
+    @ObservationIgnored private var unsubscribe: (() -> Void)?
+    @ObservationIgnored private var unobserve: (() -> Void)?
+    @ObservationIgnored private var running: Task<Void, Never>?
+    @ObservationIgnored private var revision = 0
 
     init(machineID: String, client: any MachineRequesting) {
         self.machineID = machineID
         self.client = client
+        providers = UsageWidgetStore.snapshot(machineID: machineID)?.providers ?? []
     }
 
     func start() {
@@ -75,6 +80,7 @@ final class UsageWidgetRecorder {
         var snapshot = UsageWidgetStore.snapshot(machineID: machineID) ?? UsageWidgetSnapshot()
         snapshot.providers = Self.providers(limits)
         snapshot.updatedAt = now
+        providers = snapshot.providers
         if known == nil || snapshot.cost.map({ now.timeIntervalSince($0.fetchedAt) > Self.costLifetime }) ?? true {
             let day = UsageWidgetSnapshot.day(of: now)
             let payload = JSONValue.object([

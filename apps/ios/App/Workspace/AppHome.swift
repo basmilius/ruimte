@@ -464,61 +464,6 @@ private struct ProjectHomeGlyph: View {
     }
 }
 
-/// Every machine with how it is reached; a machine opens its projects, files, processes, usage and settings. The
-/// iPhone's Machines tab pairs from its plus, the iPad's section from a row of its own.
-struct MachinesPage: View {
-    let runtime: AppRuntime
-    var showsPairingRow = true
-    let pair: () -> Void
-    /// Opens a machine by its id, on whichever stack the page stands.
-    let open: (String) -> Void
-
-    var body: some View {
-        MobileList {
-            Section("Your machines") {
-                ForEach(runtime.machines, id: \.id) { machine in
-                    Button {
-                        open(machine.id)
-                    } label: {
-                        MobileRow(
-                            title: machine.name, subtitle: reach(runtime.session(for: machine)),
-                            symbol: machine.icon?.value ?? "monitor"
-                        )
-                        .modifier(MobileSidebarLabel(disclosure: true))
-                    }
-                    .modifier(MobileSidebarRow())
-                    .accessibilityIdentifier("machines.\(machine.id)")
-                }
-            }
-            if showsPairingRow {
-                Button(action: pair) {
-                    Label("Use a pairing link", lucideIcon: "link").modifier(MobileSidebarLabel())
-                }
-                .modifier(MobileSidebarRow())
-            }
-        }
-        .navigationTitle("Machines")
-        .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
-    }
-
-    private func reach(_ session: SharedMachineSession) -> String {
-        if session.connected { return session.relayed == true ? "Connected via relay" : "Connected" }
-        return session.problem ?? "Not connected"
-    }
-}
-
-struct MachineRoutePage: View {
-    let runtime: AppRuntime
-    let machineID: String
-    var settingsLink: SettingsLink?
-
-    var body: some View {
-        if let machine = runtime.machines.first(where: { $0.id == machineID }) {
-            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime, settingsLink: settingsLink)
-        }
-    }
-}
-
 private struct PresentationWindow: UIViewRepresentable {
     let found: (UIWindow?) -> Void
     func makeUIView(context: Context) -> Reader {

@@ -31,7 +31,7 @@ struct ProjectGroupsList: View {
                             ? "projects.chats.\(overview.row.machine.id)" : "projects.project.\(overview.id.projectID)")
                 }
             } header: {
-                MachineReachHeading(
+                MachineLinkStateHeading(
                     machine: group.machine, icon: runtime.session(for: group.machine).icons.icon?.value,
                     reach: group.reach)
             }
@@ -42,10 +42,10 @@ struct ProjectGroupsList: View {
 
 /// A machine's name over its projects, with a green dot while it answers and "via relay" when it answers through
 /// one.
-struct MachineReachHeading: View {
+struct MachineLinkStateHeading: View {
     let machine: Machine
     let icon: String?
-    let reach: MachineReach
+    let reach: MachineLinkState
     @ScaledMetric(relativeTo: .caption) private var glyph = 12.0
 
     var body: some View {

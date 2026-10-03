@@ -8,25 +8,41 @@ struct RenderDocumentPage: View {
     let projectID: String
     let viewID: String
     let kind: String
+    /// The diagram's project, for asking an agent to change it; nil where there is no project to start a chat in.
+    var agent: DiagramAgentTarget?
+    /// Opens the chat a question went to.
+    var openChat: (String) -> Void = { _ in }
     @State private var work = RemotePageState()
     @State private var generation = 0
     @State private var connection: (() -> Void)?
     @State private var subscription: (() -> Void)?
+    @State private var zoom: SceneZoomRequest?
+    @State private var agentModel: DiagramAgentModel?
+    @State private var asking = false
+    @State private var copied = false
+    private var isEmptyDiagram: Bool { kind == "diagram" && work.value?.list("elements").isEmpty == true }
     var body: some View {
         Group {
             if let scene = work.value {
                 MobileScrollViewport { insets in
-                    NativeScene(scene: scene, viewportInsets: insets)
+                    NativeScene(scene: scene, zoom: zoom, viewportInsets: insets)
                 }
                 .overlay {
-                    if kind == "diagram" && scene.list("elements").isEmpty {
-                        ContentUnavailableView(
-                            "This diagram is empty", lucideIcon: "workflow",
-                            description: Text("An agent fills it with ruimte-context view diagram.")
-                        )
-                        .allowsHitTesting(false)
-                        .accessibilityIdentifier("diagram.empty")
+                    if isEmptyDiagram {
+                        if let agentModel {
+                            DiagramEmptyState(model: agentModel, sent: openChat)
+                        } else {
+                            ContentUnavailableView(
+                                "Nothing in this diagram yet", lucideIcon: "workflow",
+                                description: Text("An agent draws it with ruimte-context view diagram.")
+                            )
+                            .allowsHitTesting(false)
+                            .accessibilityIdentifier("diagram.empty")
+                        }
                     }
+                }
+                .overlay(alignment: .trailing) {
+                    if !isEmptyDiagram { zoomControls }
                 }
             } else if let problem = work.problem {
                 ContentUnavailableView(
@@ -35,17 +51,32 @@ struct RenderDocumentPage: View {
                 MobileLoadingRow("Loading \(kind)")
             }
         }
-        .overlay(alignment: .bottom) {
-            if work.value != nil, let problem = work.problem {
-                Text(problem).font(.caption).padding().background(.regularMaterial)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if work.value != nil && !isEmptyDiagram {
+                bottomBar
             }
         }
         .toolbar {
             ToolbarItem(id: "\(kind).actions", placement: .topBarTrailing) {
-                Button("Refresh", lucideIcon: "refresh-cw") { generation += 1 }
+                Menu {
+                    Button("Reload", lucideIcon: "refresh-cw") { generation += 1 }
+                    if work.value != nil {
+                        Button("Copy as image", lucideIcon: "copy") { copyImage() }
+                    }
+                } label: {
+                    Image(lucide: "ellipsis")
+                }
+                .accessibilityLabel("Diagram actions")
             }
         }
+        .mobileSheet(isPresented: $asking) {
+            if let agentModel {
+                DiagramAgentSheet(model: agentModel, sent: openChat).presentationDetents([.medium, .large])
+            }
+        }
+        .sensoryFeedback(.success, trigger: copied)
         .task {
+            if agentModel == nil, let agent { agentModel = DiagramAgentModel(target: agent) }
             if subscription == nil {
                 subscription = client.subscribe(kind + ".changed") { event in
                     if event.text("projectId") == projectID && event.text("viewId") == viewID { generation += 1 }
@@ -66,15 +97,89 @@ struct RenderDocumentPage: View {
             connection = nil
         }
     }
+
+    private var bottomBar: some View {
+        VStack(spacing: 8) {
+            if let problem = work.problem {
+                Text(problem).font(.footnote).padding(.horizontal, 16).padding(.vertical, 8)
+                    .glassEffect(.regular, in: .capsule)
+            }
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    if agentModel != nil {
+                        Button {
+                            asking = true
+                        } label: {
+                            Label("Change with an agent", lucideIcon: "sparkles")
+                                .font(.body.weight(.medium))
+                                .padding(.horizontal, 18).frame(minHeight: 48)
+                                .contentShape(.capsule)
+                        }
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        Spacer(minLength: 0)
+                    }
+                    Button {
+                        copyImage()
+                    } label: {
+                        Image(lucide: "copy", size: 18).frame(width: 48, height: 48)
+                    }
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .accessibilityLabel("Copy as image")
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+    }
+
+    private var zoomControls: some View {
+        VStack(spacing: 0) {
+            zoomButton("Zoom in", icon: "plus", action: .step(1.5))
+            zoomButton("Zoom out", icon: "minus", action: .step(1 / 1.5))
+            zoomButton("Fit", icon: "scan", action: .fit)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .padding(.trailing, 12)
+    }
+
+    private func zoomButton(_ label: String, icon: String, action: SceneZoomRequest.Action) -> some View {
+        Button {
+            zoom = SceneZoomRequest(action: action)
+        } label: {
+            Image(lucide: icon, size: 17).frame(width: 44, height: 44).contentShape(.rect)
+        }
+        .accessibilityLabel(label)
+    }
+
+    private func copyImage() {
+        guard let scene = work.value else { return }
+        let surface = SceneSurface()
+        surface.configure(scene)
+        UIPasteboard.general.image = surface.image()
+        copied.toggle()
+    }
+}
+
+/// A zoom the controls beside a scene ask for; a new id is a new press.
+struct SceneZoomRequest: Equatable {
+    enum Action: Equatable {
+        case step(CGFloat)
+        case fit
+    }
+    let id = UUID()
+    let action: Action
 }
 
 private struct NativeScene: UIViewRepresentable {
     let scene: JSONValue
+    let zoom: SceneZoomRequest?
     let viewportInsets: UIEdgeInsets
     func makeUIView(context: Context) -> SceneScrollView { SceneScrollView() }
     func updateUIView(_ view: SceneScrollView, context: Context) {
         view.viewportInsets = viewportInsets
         view.setScene(scene)
+        if let zoom { view.perform(zoom) }
     }
 }
 
@@ -89,6 +194,7 @@ private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
     private let surface = SceneSurface()
     private var scene: JSONValue?
     private var needsFit = true
+    private var lastZoom: UUID?
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
@@ -111,16 +217,26 @@ private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
         needsFit = first
         setNeedsLayout()
     }
+    func perform(_ request: SceneZoomRequest) {
+        guard request.id != lastZoom else { return }
+        lastZoom = request.id
+        switch request.action {
+        case .step(let factor): setZoomScale(zoomScale * factor, animated: true)
+        case .fit: setZoomScale(fitScale, animated: true)
+        }
+    }
+    private var fitScale: CGFloat {
+        let viewport = bounds.inset(by: viewportInsets)
+        return max(
+            minimumZoomScale,
+            min(1, min(viewport.width / surface.bounds.width, viewport.height / surface.bounds.height)))
+    }
     override func layoutSubviews() {
         super.layoutSubviews()
         let viewport = bounds.inset(by: viewportInsets)
         if needsFit && bounds.width > 0 && bounds.height > 0 {
             needsFit = false
-            setZoomScale(
-                max(
-                    minimumZoomScale,
-                    min(1, min(viewport.width / surface.bounds.width, viewport.height / surface.bounds.height))),
-                animated: false)
+            setZoomScale(fitScale, animated: false)
         }
         updateDrawing()
         contentInset = UIEdgeInsets(
@@ -130,7 +246,10 @@ private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
     }
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { surface }
     func scrollViewDidScroll(_ scrollView: UIScrollView) { updateDrawing() }
-    func scrollViewDidZoom(_ scrollView: UIScrollView) { updateDrawing() }
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        updateDrawing()
+        setNeedsLayout()
+    }
     private func updateDrawing() {
         surface.show(convert(bounds, to: surface), scale: traitCollection.displayScale * zoomScale)
     }
@@ -144,7 +263,10 @@ class SceneSurface: UIView {
         super.init(frame: frame)
         isOpaque = false
         addSubview(drawing)
-        drawing.paint = { [weak self] context in self?.drawScene(context) }
+        drawing.paint = { [weak self] context in
+            guard let self else { return }
+            drawScene(context, from: drawing.frame.origin)
+        }
     }
     func show(_ rect: CGRect, scale: CGFloat) {
         drawing.contentScaleFactor = max(0.05, scale)
@@ -168,10 +290,23 @@ class SceneSurface: UIView {
         accessibilityTraits = .image
         drawing.setNeedsDisplay()
     }
-    private func drawScene(_ context: CGContext) {
+    /// The whole scene as a picture on the page's own surface color, at most 4096 pixels a side.
+    func image() -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = max(0.05, min(3, 4096 / max(1, max(bounds.width, bounds.height))))
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: bounds.size, format: format).image { renderer in
+            MobileStyle.surfaceColor.resolvedColor(with: traitCollection).setFill()
+            renderer.fill(CGRect(origin: .zero, size: bounds.size))
+            drawScene(renderer.cgContext, from: .zero)
+        }
+    }
+    /// Draws the scene with `origin` of the surface at the context's top left.
+    private func drawScene(_ context: CGContext, from origin: CGPoint) {
         context.translateBy(
-            x: 32 - (scene["bounds"]?.number("x") ?? 0) - drawing.frame.minX,
-            y: 32 - (scene["bounds"]?.number("y") ?? 0) - drawing.frame.minY)
+            x: 32 - (scene["bounds"]?.number("x") ?? 0) - origin.x,
+            y: 32 - (scene["bounds"]?.number("y") ?? 0) - origin.y)
+
         for element in scene.list("elements") {
             context.saveGState()
             let cx = element.number("centerX")

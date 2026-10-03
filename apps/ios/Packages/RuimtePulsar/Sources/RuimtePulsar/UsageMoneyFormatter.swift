@@ -7,9 +7,10 @@ public struct UsageMoneyFormatter: Sendable {
     public let rateDate: String?
     private let factor: Double
 
-    public init(locale: Locale, rate: JSONValue?) {
+    /// `currency` is the one a person picked, else the region's: euros in a euro region, dollars anywhere else.
+    public init(locale: Locale, rate: JSONValue?, currency: String? = nil) {
         self.locale = locale
-        preferredCurrency = locale.currency?.identifier == "EUR" ? "EUR" : "USD"
+        preferredCurrency = currency ?? (locale.currency?.identifier == "EUR" ? "EUR" : "USD")
         // usage.summary prices are USD; an absent or invalid rate must never relabel those amounts as euros.
         if preferredCurrency == "EUR", rate?["currency"]?.stringValue == "EUR",
             let value = rate?["rate"]?.numberValue, value.isFinite, value > 0

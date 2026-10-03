@@ -76,10 +76,10 @@ final class ProjectOverviewTests: XCTestCase {
 
     func testReachSaysConnectingUntilATryFailed() {
         XCTAssertEqual(
-            MachineReach(connected: true, relayed: nil, failedAttempts: 0, problem: nil), .connected(relayed: false))
-        XCTAssertEqual(MachineReach(connected: false, relayed: nil, failedAttempts: 0, problem: nil), .connecting)
-        XCTAssertEqual(MachineReach(connected: false, relayed: nil, failedAttempts: 1, problem: nil), .offline)
-        XCTAssertEqual(MachineReach(connected: false, relayed: nil, failedAttempts: 0, problem: "Gone"), .offline)
+            MachineLinkState(connected: true, relayed: nil, failedAttempts: 0, problem: nil), .connected(relayed: false))
+        XCTAssertEqual(MachineLinkState(connected: false, relayed: nil, failedAttempts: 0, problem: nil), .connecting)
+        XCTAssertEqual(MachineLinkState(connected: false, relayed: nil, failedAttempts: 1, problem: nil), .offline)
+        XCTAssertEqual(MachineLinkState(connected: false, relayed: nil, failedAttempts: 0, problem: "Gone"), .offline)
     }
 
     func testGitLineReadsTheBranchAndTheChangedFiles() {

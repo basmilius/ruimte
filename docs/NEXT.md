@@ -260,9 +260,7 @@ existing binary reply path, range streaming and explicit direct-connection failu
 1. Add typing to physical iOS devices behind the existing backend input capability. Verify Unicode,
    multiline text and the taken-over/stopped state on an actual device. Android's current text
    path is limited to ASCII, so do not claim Unicode parity without a fix.
-2. Render a device node/view in the iOS app, using the existing device schema, stream and input
-   requests. Define behavior for a disconnected device and an unsupported video format.
-3. Decide how to merge into a branch checked out nowhere. The current code intentionally refuses
+2. Decide how to merge into a branch checked out nowhere. The current code intentionally refuses
    `target-not-checked-out`. A ref-only merge needs its own conflict/result path and must never move
    a ref behind a working tree; implement it only after updating that invariant deliberately.
 

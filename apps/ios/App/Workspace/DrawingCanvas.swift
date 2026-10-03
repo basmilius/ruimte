@@ -60,7 +60,8 @@ final class DrawingCanvasScrollView: UIScrollView, UIScrollViewDelegate {
         surface.showStyle = showStyle
         surface.zoom = zoomScale
         surface.requestViewport = { [weak self] action in self?.apply(action) }
-        panGestureRecognizer.minimumNumberOfTouches = model.tool == .pan ? 1 : 2
+        let fingerPans = model.tool == .pan || model.pencilDraws
+        panGestureRecognizer.minimumNumberOfTouches = fingerPans ? 1 : 2
         panGestureRecognizer.allowedTouchTypes = (model.tool == .pan ? [UITouch.TouchType.direct, .pencil] : [.direct])
             .map { NSNumber(value: $0.rawValue) }
         if displayed != scene {
@@ -281,6 +282,11 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
         guard let model else { return }
         becomeFirstResponder()
         guard model.tool != .pan else { return }
+        if touches.contains(where: { $0.type == .pencil }) {
+            model.pencilDraws = true
+        } else if model.pencilDraws {
+            return
+        }
         if activeTouch?.type == .pencil, !touches.contains(where: { $0.type == .pencil }) { return }
         if let pencil = touches.first(where: { $0.type == .pencil }) {
             cancelGesture()
@@ -305,7 +311,9 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
         case .select:
             beginSelection(
                 at: start, additive: model.additiveSelection || event?.modifierFlags.contains(.shift) == true)
-        default: gesture = .shape(model.tool, UUID().uuidString)
+        default:
+            gesture = .shape(model.tool, UUID().uuidString)
+            start = DrawingSnap.point(start, enabled: model.snap)
         }
         update(touch, event: event)
     }
@@ -416,7 +424,8 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
     }
     private func update(_ touch: UITouch, event: UIEvent?) {
         guard let model, let gesture else { return }
-        let point = documentPoint(touch.location(in: self))
+        let exact = documentPoint(touch.location(in: self))
+        let point = DrawingSnap.point(exact, enabled: model.snap)
         let constrained = model.constrain || event?.modifierFlags.contains(.shift) == true
         switch gesture {
         case .pen:
@@ -438,7 +447,8 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
                 tool: tool, from: start, to: point, style: model.style, id: id, constrained: constrained)
             preview(original + (pendingShape.map { [$0] } ?? []))
         case .move:
-            var delta = CGPoint(x: point.x - start.x, y: point.y - start.y)
+            let from = DrawingSnap.point(start, enabled: model.snap)
+            var delta = CGPoint(x: point.x - from.x, y: point.y - from.y)
             if constrained { if abs(delta.x) > abs(delta.y) { delta.y = 0 } else { delta.x = 0 } }
             working = original.map {
                 selectionAtStart.contains($0.stableID) && $0["locked"] != .bool(true)
@@ -446,7 +456,7 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
             }
             preview(working)
         case .marquee:
-            let rect = DrawingGeometry.bounds([start, point])
+            let rect = DrawingGeometry.bounds([start, exact])
             model.selection = selectionAtStart.union(
                 original.filter { $0["locked"] != .bool(true) && DrawingGeometry.box($0).intersects(rect) }.map(
                     \.stableID))
@@ -481,7 +491,8 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
             }
             preview(working)
         case .rotate(let center, let angle):
-            var delta = atan2(point.y - center.y, point.x - center.x) - angle
+            var delta = atan2(exact.y - center.y, exact.x - center.x) - angle
+
             if constrained { delta = (delta / (.pi / 12)).rounded() * (.pi / 12) }
             working = original.map {
                 selectionAtStart.contains($0.stableID) && $0["locked"] != .bool(true)

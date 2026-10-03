@@ -49,7 +49,7 @@ struct PhoneHome: View {
                 }
 
                 Tab(value: PhoneTab.machines) {
-                    MachinesPage(runtime: runtime, showsPairingRow: false, pair: pair, open: router.showMachine)
+                    MachinesPage(runtime: runtime, pair: pair, open: router.showMachine)
                 } label: {
                     Label("Machines", lucideIcon: "monitor")
                 }

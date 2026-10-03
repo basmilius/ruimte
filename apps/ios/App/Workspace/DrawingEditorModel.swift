@@ -18,6 +18,13 @@ final class DrawingEditorModel {
     var constrain = false
     var style = DrawingStyle()
     var exportBackground = false
+    /// Whether points land on the canvas grid while drawing, as the desktop's setting of that name; per phone.
+    var snap = UserDefaults.standard.bool(forKey: DrawingEditorModel.snapKey) {
+        didSet { UserDefaults.standard.set(snap, forKey: DrawingEditorModel.snapKey) }
+    }
+    /// Once a Pencil drew on this page, or the system says only a Pencil draws, a finger pans and only the Pencil
+    /// draws with the tool.
+    var pencilDraws = UIPencilInteraction.prefersPencilOnlyDrawing
     @ObservationIgnored var viewportCenter = CGPoint.zero
     var problem: String?
     private let client: any MachineRequesting
@@ -43,7 +50,10 @@ final class DrawingEditorModel {
         }
     }
 
+    static let snapKey = "ruimte.ios.drawingSnap"
+
     var elements: [JSONValue] { document?.list("elements") ?? [] }
+
     var dirty: Bool { document?.list("elements") != base?.list("elements") }
 
     func start() async {

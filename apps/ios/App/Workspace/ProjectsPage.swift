@@ -131,7 +131,7 @@ struct ProjectsPage<Notice: View>: View {
             open: visibleProjects, chats: projects.chats,
             reach: { machine in
                 let session = runtime.session(for: machine)
-                return MachineReach(
+                return MachineLinkState(
                     connected: session.connected, relayed: session.relayed, failedAttempts: session.failedAttempts,
                     problem: session.problem)
             },

@@ -14,13 +14,25 @@ struct CanvasPage: View {
     @State private var renameID: String?
     @State private var name = ""
     @State private var linkID: String?
+    @State private var groupingID: String?
+    @State private var savingLayout = false
+    @State private var layoutName = ""
     @State private var removal: NodeRemoval?
     private var canvas: JSONValue { workspace.views.first { $0.stableID == viewID } ?? .object([:]) }
+    private var nodes: [JSONValue] { canvas.list("nodes") }
+    private var locks: CanvasLocks { workspace.locks(for: viewID) }
+    private var status: CanvasStatus {
+        let attention = workspace.session.attention
+        let snoozes = workspace.session.snoozes
+        return CanvasStatus(
+            needsYou: nodes.map(\.stableID).filter { attention.needsYou($0) && snoozes.until($0) == nil },
+            working: nodes.filter { attention.statuses[$0.stableID] == .running }.count)
+    }
     var body: some View {
         Group {
             if listed {
                 MobileList {
-                    ForEach(canvas.list("nodes"), id: \.stableID) { node in
+                    ForEach(nodes, id: \.stableID) { node in
                         Button {
                             selectedID = node.stableID
                         } label: {
@@ -40,7 +52,7 @@ struct CanvasPage: View {
                         .contextMenu { nodeActions(node) }
                     }
                 }
-            } else {
+            } else if workspace.ready {
                 MobileScrollViewport { insets in
                     CanvasViewport(
                         canvas: canvas, statuses: workspace.session.attention.statuses,
@@ -51,15 +63,14 @@ struct CanvasPage: View {
                             }
                         },
                         unseen: workspace.session.attention.unseen,
-                        needingYou: Set(
-                            canvas.list("nodes").filter { workspace.session.attention.needsYou($0.stableID) }.map(
-                                \.stableID)), camera: workspace.camera(for: viewID), fit: fit, viewportInsets: insets,
+                        needingYou: Set(status.needsYou), camera: workspace.camera(for: viewID), fit: fit,
+                        locks: locks, viewportInsets: insets,
                         open: { selectedID = $0 }, menu: { menuID = $0 },
                         cameraChanged: { workspace.setCamera($0, viewID: viewID) }
                     )
                 }
                 .overlay {
-                    if canvas.list("nodes").isEmpty && canvas.list("texts").isEmpty {
+                    if nodes.isEmpty && canvas.list("texts").isEmpty {
                         CanvasStartGrid(
                             workspace: workspace, viewID: viewID,
                             compose: { kind in
@@ -69,33 +80,55 @@ struct CanvasPage: View {
                             added: { fit += 1 })
                     }
                 }
+            } else {
+                MobileStyle.canvas.ignoresSafeArea()
             }
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .bottomBar) {
-                Button(listed ? "Show canvas" : "Show list", lucideIcon: listed ? "layout-grid" : "list") {
-                    listed.toggle()
-                }
-                Spacer()
-                Button("Fit canvas", lucideIcon: "maximize-2") { fit += 1 }.disabled(listed)
-                Spacer()
-                Button("Add node", lucideIcon: "plus") {
-                    addingKind = "chat"
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            CanvasDock(
+                status: status, locks: locks, layouts: CanvasEditing.layoutNames(canvas),
+                add: { kind in
+                    addingKind = kind
                     adding = true
+                },
+                fit: {
+                    listed = false
+                    fit += 1
+                },
+                openNext: { selectedID = status.next(after: selectedID) },
+                setLocks: { workspace.setLocks($0, viewID: viewID) },
+                applyLayout: { name in
+                    Task { await workspace.updateView(viewID) { CanvasEditing.applyingLayout($0, name: name) } }
+                },
+                deleteLayout: { name in
+                    Task { await workspace.updateView(viewID) { CanvasEditing.deletingLayout($0, name: name) } }
+                },
+                saveLayout: {
+                    layoutName = ""
+                    savingLayout = true
+                }
+            )
+            .disabled(!workspace.ready)
+        }
+        .toolbar {
+            ToolbarItem(id: "canvas.actions", placement: .topBarTrailing) {
+                Button(listed ? "Show canvas" : "Show as a list", lucideIcon: listed ? "layout-grid" : "list") {
+                    listed.toggle()
                 }
             }
         }
         .navigationDestination(item: $selectedID) { id in
-            if let node = canvas.list("nodes").first(where: { $0.stableID == id }) {
+            if let node = nodes.first(where: { $0.stableID == id }) {
                 ProjectItemPage(workspace: workspace, item: node)
             }
         }
         .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: viewID, kind: addingKind) }
         .confirmationDialog(
-            "Node", isPresented: Binding(get: { menuID != nil }, set: { if !$0 { menuID = nil } }),
+            nodes.first(where: { $0.stableID == menuID })?.text("title") ?? "Node",
+            isPresented: Binding(get: { menuID != nil }, set: { if !$0 { menuID = nil } }),
             titleVisibility: .visible
         ) {
-            if let node = canvas.list("nodes").first(where: { $0.stableID == menuID }) { nodeActions(node) }
+            if let node = nodes.first(where: { $0.stableID == menuID }) { nodeActions(node) }
         }
         .alert("Rename node", isPresented: Binding(get: { renameID != nil }, set: { if !$0 { renameID = nil } })) {
             TextField("Title", text: $name)
@@ -117,35 +150,25 @@ struct CanvasPage: View {
             }
             Button("Cancel", role: .cancel) { renameID = nil }
         }
+        .alert("Save layout", isPresented: $savingLayout) {
+            TextField("Name", text: $layoutName)
+            Button("Save") {
+                let name = layoutName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { return }
+                Task { await workspace.updateView(viewID) { CanvasEditing.savingLayout($0, name: name) } }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Where every node stands now. A layout with this name is replaced.")
+        }
         .mobileSheet(isPresented: Binding(get: { linkID != nil }, set: { if !$0 { linkID = nil } })) {
-            NavigationStack {
-                MobileList {
-                    Section("Link to a node") {
-                        ForEach(canvas.list("nodes").filter { $0.stableID != linkID }, id: \.stableID) { node in
-                            Button(node.text("title")) { Task { await link(to: node.stableID) } }
-                        }
-                    }
-                    Section("Existing connections") {
-                        ForEach(
-                            canvas.list("edges").filter { $0.text("from") == linkID || $0.text("to") == linkID },
-                            id: \.stableID
-                        ) { edge in
-                            HStack {
-                                Text(edgeName(edge))
-                                Spacer()
-                                Button("Remove", lucideIcon: "trash", role: .destructive) {
-                                    Task {
-                                        await workspace.updateView(viewID) {
-                                            $0.setting(
-                                                "edges",
-                                                .array($0.list("edges").filter { $0.stableID != edge.stableID }))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }.navigationTitle("Context links").toolbar { Button("Done") { linkID = nil } }
+            if let linkID {
+                CanvasLinkSheet(workspace: workspace, viewID: viewID, sourceID: linkID) { self.linkID = nil }
+            }
+        }
+        .mobileSheet(isPresented: Binding(get: { groupingID != nil }, set: { if !$0 { groupingID = nil } })) {
+            if let groupingID {
+                CanvasGroupSheet(workspace: workspace, viewID: viewID, firstID: groupingID) { self.groupingID = nil }
             }
         }
         .confirmationDialog(
@@ -167,56 +190,43 @@ struct CanvasPage: View {
         }
     }
     @ViewBuilder private func nodeActions(_ node: JSONValue) -> some View {
-        Button("Open", lucideIcon: "square-arrow-out-up-right") { selectedID = node.stableID }
-        if node.text("kind") != "unknown" {
-            Button("Rename", lucideIcon: "pencil") {
-                name = node.text("title")
-                renameID = node.stableID
+        ForEach(CanvasNodeAction.actions(for: node), id: \.self) { action in
+            switch action {
+            case .openAsView:
+                Button {
+                    Task { await promote(node) }
+                } label: {
+                    Label("Open as view", lucideIcon: "maximize-2")
+                    Text("Keeps its session")
+                }
+            case .linkAsContext:
+                Button("Link as context", lucideIcon: "link") { linkID = node.stableID }
+            case .groupSelection:
+                Button("Group selection", lucideIcon: "layout-grid") { groupingID = node.stableID }
+            case .rename:
+                Button("Rename", lucideIcon: "pencil") {
+                    name = node.text("title")
+                    renameID = node.stableID
+                }
+            case .snooze:
+                let snoozes = workspace.session.snoozes
+                SnoozeMenu(until: snoozes.until(node.stableID)) {
+                    snoozes.snooze(node.stableID, until: $0)
+                } wake: {
+                    snoozes.clear(node.stableID)
+                }
+            case .delete:
+                Button("Delete", lucideIcon: "trash", role: .destructive) {
+                    Task {
+                        let question = await SessionEnding.question(for: node, client: workspace.client)
+                        removal = NodeRemoval(id: node.stableID, question: question)
+                    }
+                }
             }
         }
-        Button("Context links", lucideIcon: "link") { linkID = node.stableID }
-        if ["chat", "terminal", "browser"].contains(node.text("kind")) {
-            Button("Open as view", lucideIcon: "panel-left") { Task { await promote(node) } }
-        }
-        Button("Remove", lucideIcon: "trash", role: .destructive) {
-            Task {
-                let question = await SessionEnding.question(for: node, client: workspace.client)
-                removal = NodeRemoval(id: node.stableID, question: question)
-            }
-        }
-    }
-    private func edgeName(_ edge: JSONValue) -> String {
-        let names = [edge.text("from"), edge.text("to")].map { id in
-            canvas.list("nodes").first { $0.stableID == id }?.text("title") ?? id
-        }
-        return names.joined(separator: " → ")
-    }
-    private func link(to id: String) async {
-        guard let source = linkID else { return }
-        await workspace.updateView(viewID) { view in
-            guard !view.list("edges").contains(where: { $0.text("from") == source && $0.text("to") == id }) else {
-                return view
-            }
-            let edge: JSONValue = .object([
-                "id": .string("edge-" + UUID().uuidString), "from": .string(source), "to": .string(id),
-            ])
-            return view.setting("edges", .array(view.list("edges") + [edge]))
-        }
-        if workspace.problem == nil { linkID = nil }
     }
     private func promote(_ node: JSONValue) async {
-        var view: JSONValue = .object([
-            "id": .string(node.stableID), "kind": node["kind"]!, "name": .string(node.text("title")),
-        ])
-        if node.text("kind") == "browser" {
-            view = view.setting("url", node["url"] ?? .string(""))
-        } else {
-            var metadata: [String: JSONValue] = [:]
-            for key in ["cwd", "command", "resume", "provider", "providerFixed", "runtimeMode", "accent"] {
-                metadata[key] = node[key]
-            }
-            view = view.setting("node", .object(metadata))
-        }
+        let view = CanvasEditing.view(for: node)
         await workspace.edit { document in
             var views = document.list("views").map {
                 $0.stableID == viewID ? canvasWithoutNode($0, id: node.stableID) : $0
@@ -226,6 +236,155 @@ struct CanvasPage: View {
             return document.setting("views", .array(views))
         }
         workspace.select(node.stableID)
+    }
+}
+
+/// Picks the node that reads this one, and lists the links it already has.
+private struct CanvasLinkSheet: View {
+    let workspace: MobileWorkspace
+    let viewID: String
+    let sourceID: String
+    let done: () -> Void
+    private var canvas: JSONValue { workspace.views.first { $0.stableID == viewID } ?? .object([:]) }
+    private var source: JSONValue? { canvas.list("nodes").first { $0.stableID == sourceID } }
+    private var targets: [JSONValue] {
+        let others = canvas.list("nodes").filter {
+            CanvasEditing.canLink(canvas.list("edges"), from: sourceID, to: $0.stableID)
+        }
+        return others.filter { CanvasEditing.isAgent($0.text("kind")) }
+            + others.filter { !CanvasEditing.isAgent($0.text("kind")) }
+    }
+    private var links: [JSONValue] {
+        canvas.list("edges").filter { $0.text("from") == sourceID || $0.text("to") == sourceID }
+    }
+
+    var body: some View {
+        NavigationStack {
+            MobileList {
+                Section {
+                    ForEach(targets, id: \.stableID) { node in
+                        Button {
+                            Task {
+                                await workspace.updateView(viewID) {
+                                    CanvasEditing.linking($0, from: sourceID, to: node.stableID) {
+                                        "edge-" + UUID().uuidString
+                                    }
+                                }
+                                if workspace.problem == nil { done() }
+                            }
+                        } label: {
+                            Label {
+                                Text(node.text("title")).foregroundStyle(MobileStyle.text)
+                            } icon: {
+                                WorkspaceViewIcon(item: node)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Who reads \(source?.text("title") ?? "this node")")
+                } footer: {
+                    Text(
+                        "An agent reads what a line runs into it from, with ruimte-context. "
+                            + "Between two agents the line runs both ways.")
+                }
+                if !links.isEmpty {
+                    Section("Links") {
+                        ForEach(links, id: \.stableID) { edge in
+                            HStack {
+                                Text(edgeName(edge))
+                                Spacer()
+                                Button("Remove", lucideIcon: "trash", role: .destructive) {
+                                    Task {
+                                        await workspace.updateView(viewID) {
+                                            $0.setting(
+                                                "edges",
+                                                .array($0.list("edges").filter { $0.stableID != edge.stableID }))
+                                        }
+                                    }
+                                }
+                                .labelStyle(.iconOnly)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Link as context").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", action: done) } }
+        }
+    }
+
+    private func edgeName(_ edge: JSONValue) -> String {
+        let names = [edge.text("from"), edge.text("to")].map { id in
+            canvas.list("nodes").first { $0.stableID == id }?.text("title") ?? id
+        }
+        return names.joined(separator: " to ")
+    }
+}
+
+/// Picks the nodes a new group frames, starting from the one the menu was opened on.
+private struct CanvasGroupSheet: View {
+    let workspace: MobileWorkspace
+    let viewID: String
+    let done: () -> Void
+    @State private var picked: Set<String>
+    private var nodes: [JSONValue] {
+        (workspace.views.first { $0.stableID == viewID }?.list("nodes") ?? []).filter { $0.text("kind") != "group" }
+    }
+
+    init(workspace: MobileWorkspace, viewID: String, firstID: String, done: @escaping () -> Void) {
+        self.workspace = workspace
+        self.viewID = viewID
+        self.done = done
+        _picked = State(initialValue: [firstID])
+    }
+
+    var body: some View {
+        NavigationStack {
+            MobileList {
+                Section {
+                    ForEach(nodes, id: \.stableID) { node in
+                        Button {
+                            if picked.contains(node.stableID) {
+                                picked.remove(node.stableID)
+                            } else {
+                                picked.insert(node.stableID)
+                            }
+                        } label: {
+                            HStack {
+                                Label {
+                                    Text(node.text("title")).foregroundStyle(MobileStyle.text)
+                                } icon: {
+                                    WorkspaceViewIcon(item: node)
+                                }
+                                Spacer()
+                                if picked.contains(node.stableID) {
+                                    Image(lucide: "check").foregroundStyle(MobileStyle.accent)
+                                }
+                            }
+                        }
+                        .accessibilityAddTraits(picked.contains(node.stableID) ? .isSelected : [])
+                    }
+                } footer: {
+                    Text("The group is a frame around them, with room for its title.")
+                }
+            }
+            .navigationTitle("Group selection").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: done) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Group") {
+                        let ids = nodes.map(\.stableID).filter { picked.contains($0) }
+                        Task {
+                            await workspace.updateView(viewID) {
+                                CanvasEditing.grouping($0, ids: ids, groupID: "group-" + UUID().uuidString) ?? $0
+                            }
+                            if workspace.problem == nil { done() }
+                        }
+                    }
+                    .disabled(picked.isEmpty)
+                }
+            }
+        }
     }
 }
 
@@ -259,6 +418,7 @@ private struct CanvasViewport: UIViewRepresentable {
     let needingYou: Set<String>
     let camera: JSONValue?
     let fit: Int
+    let locks: CanvasLocks
     let viewportInsets: UIEdgeInsets
     let open: (String) -> Void
     let menu: (String) -> Void
@@ -271,6 +431,9 @@ private struct CanvasViewport: UIViewRepresentable {
         view.open = open
         view.menu = menu
         view.cameraChanged = cameraChanged
+        // Only gestures are refused; fitting from the dock moves the camera all the same.
+        view.isScrollEnabled = !locks.pan
+        view.pinchGestureRecognizer?.isEnabled = !locks.zoom
         view.update(canvas, camera: camera, fit: fit)
     }
 }
@@ -428,6 +591,8 @@ private final class CanvasSurface: UIView {
     var unseen = Set<String>()
     var needingYou = Set<String>()
     private var nodes: [JSONValue] = []
+    /// Groups first, so their frames lie under the nodes they hold.
+    private var drawOrder: [Int] = []
     private var texts: [JSONValue] = []
     private var edges: [JSONValue] = []
     private var nodeMap: [String: JSONValue] = [:]
@@ -450,6 +615,11 @@ private final class CanvasSurface: UIView {
     }
     func configure(_ canvas: JSONValue) {
         nodes = canvas.list("nodes")
+        drawOrder = nodes.indices.sorted { lhs, rhs in
+            let lhsGroup = nodes[lhs].text("kind") == "group"
+            let rhsGroup = nodes[rhs].text("kind") == "group"
+            return lhsGroup != rhsGroup ? lhsGroup : lhs < rhs
+        }
         texts = canvas.list("texts")
         edges = canvas.list("edges")
         nodeMap = Dictionary(nodes.map { ($0.stableID, $0) }, uniquingKeysWith: { _, last in last })
@@ -485,11 +655,19 @@ private final class CanvasSurface: UIView {
         if keys == ["large"] { return Array(nodes.indices) }
         return Set((keys + ["large"]).flatMap { grid[$0] ?? [] }).sorted()
     }
+    /// The node under a point, front first; a group only answers on its title band, so a tap inside its frame
+    /// reaches what it holds or the canvas.
     func hit(_ point: CGPoint) -> String? {
         let world = CGPoint(x: point.x + origin.x, y: point.y + origin.y)
-        return candidates(CGRect(origin: world, size: CGSize(width: 1, height: 1))).reversed().first(where: {
-            nodeRect(nodes[$0]).contains(world)
-        }).map { nodes[$0].stableID }
+        let order = Dictionary(uniqueKeysWithValues: drawOrder.enumerated().map { ($1, $0) })
+        return candidates(CGRect(origin: world, size: CGSize(width: 1, height: 1)))
+            .sorted { order[$0, default: 0] > order[$1, default: 0] }
+            .first(where: { index in
+                let frame = nodeRect(nodes[index])
+                guard nodes[index].text("kind") == "group" else { return frame.contains(world) }
+                return CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: CanvasEditing.groupHeader)
+                    .contains(world)
+            }).map { nodes[$0].stableID }
     }
     func redraw() { drawing.setNeedsDisplay() }
     private func updateDrawing() {
@@ -502,25 +680,21 @@ private final class CanvasSurface: UIView {
     private func drawScene(_ context: CGContext) {
         let viewport = visible.offsetBy(dx: origin.x, dy: origin.y).insetBy(dx: -96, dy: -96)
         context.translateBy(x: -origin.x - drawing.frame.minX, y: -origin.y - drawing.frame.minY)
-        context.setStrokeColor(UIColor.tertiaryLabel.cgColor)
-        context.setLineWidth(1.5)
-        for edge in edges {
-            guard let from = nodeMap[edge.text("from")], let to = nodeMap[edge.text("to")] else { continue }
-            let a = nodeRect(from)
-            let b = nodeRect(to)
-            guard a.union(b).intersects(viewport) else { continue }
-            let start = CGPoint(x: a.midX, y: a.midY)
-            let end = CGPoint(x: b.midX, y: b.midY)
-            context.move(to: start)
-            context.addLine(to: end)
-            context.strokePath()
+        let visibleIndices = Set(candidates(viewport))
+        for index in drawOrder where visibleIndices.contains(index) && nodes[index].text("kind") == "group" {
+            drawGroup(nodes[index], viewport: viewport)
         }
-        for index in candidates(viewport) {
+        drawEdges(viewport: viewport)
+        for index in drawOrder where visibleIndices.contains(index) && nodes[index].text("kind") != "group" {
             let node = nodes[index]
             let frame = nodeRect(node)
             guard frame.intersects(viewport) else { continue }
             let path = UIBezierPath(roundedRect: frame, cornerRadius: 16)
-            MobileStyle.panelColor.setFill()
+            if node.text("kind") == "note" {
+                CanvasSurface.noteColor(node.text("color")).setFill()
+            } else {
+                MobileStyle.panelColor.setFill()
+            }
             path.fill()
             UIColor.separator.setStroke()
             path.lineWidth = 1
@@ -567,6 +741,77 @@ private final class CanvasSurface: UIView {
             }
         }
     }
+    /// The paper a note takes, by the names the desktop offers; a name this version does not know reads as yellow.
+    static func noteColor(_ name: String) -> UIColor {
+        let tone: UIColor =
+            switch name {
+            case "green": .systemGreen
+            case "blue": .systemBlue
+            case "pink": .systemPink
+            case "gray": .systemGray
+            default: .systemYellow
+            }
+        return UIColor { traits in
+            MobileStyle.panelColor.resolvedColor(with: traits).blended(
+                with: tone.resolvedColor(with: traits), share: traits.userInterfaceStyle == .dark ? 0.3 : 0.22)
+        }
+    }
+
+    /// A group is a frame with its title in a chip on the band at its top.
+    private func drawGroup(_ group: JSONValue, viewport: CGRect) {
+        let frame = nodeRect(group)
+        guard frame.intersects(viewport) else { return }
+        let collapsed = group["collapsed"]?.boolValue == true
+        let tint = MobileStyle.accentColor
+        let path = UIBezierPath(roundedRect: frame, cornerRadius: 18)
+        tint.withAlphaComponent(collapsed ? 0.14 : 0.06).setFill()
+        path.fill()
+        tint.withAlphaComponent(0.45).setStroke()
+        path.lineWidth = 1.5
+        path.stroke()
+        let font = UIFont.preferredFont(forTextStyle: .subheadline).withWeight(.semibold)
+        let title = group.text("title", fallback: "Group")
+        let width = min(frame.width - 24, (title as NSString).size(withAttributes: [.font: font]).width + 20)
+        let chip = CGRect(x: frame.minX + 12, y: frame.minY + 8, width: max(0, width), height: font.lineHeight + 8)
+        tint.withAlphaComponent(0.22).setFill()
+        UIBezierPath(roundedRect: chip, cornerRadius: chip.height / 2).fill()
+        drawText(title, rect: chip.insetBy(dx: 10, dy: 4), font: font, color: tint)
+    }
+
+    /// Lines between nodes. One an agent reads along is amber and carries its label in a chip halfway.
+    private func drawEdges(viewport: CGRect) {
+        for edge in edges {
+            guard let from = nodeMap[edge.text("from")], let to = nodeMap[edge.text("to")] else { continue }
+            let a = nodeRect(from)
+            let b = nodeRect(to)
+            guard a.union(b).intersects(viewport) else { continue }
+            let context = CanvasEditing.isContext(edge, nodes: nodeMap)
+            let color = context ? MobileStyle.statusNeedsYouColor : UIColor.tertiaryLabel
+            let start = CGPoint(x: a.midX, y: a.midY)
+            let end = CGPoint(x: b.midX, y: b.midY)
+            let line = UIBezierPath()
+            line.move(to: start)
+            line.addLine(to: end)
+            line.lineWidth = context ? 2 : 1.5
+            color.setStroke()
+            line.stroke()
+            let label = edge.text("label")
+            guard !label.isEmpty else { continue }
+            let font = UIFont.preferredFont(forTextStyle: .caption1).withWeight(.semibold)
+            let size = (label as NSString).size(withAttributes: [.font: font])
+            let chip = CGRect(
+                x: (start.x + end.x) / 2 - size.width / 2 - 8, y: (start.y + end.y) / 2 - size.height / 2 - 3,
+                width: size.width + 16, height: size.height + 6)
+            MobileStyle.canvasColor.setFill()
+            let shape = UIBezierPath(roundedRect: chip, cornerRadius: chip.height / 2)
+            shape.fill()
+            color.setStroke()
+            shape.lineWidth = 1
+            shape.stroke()
+            drawText(label, rect: chip.insetBy(dx: 8, dy: 3), font: font, color: color)
+        }
+    }
+
     private func drawText(_ text: String, rect: CGRect, font: UIFont, color: UIColor) {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingTail
@@ -575,7 +820,9 @@ private final class CanvasSurface: UIView {
     }
     private func updateAccessibility() {
         let viewport = visible.offsetBy(dx: origin.x, dy: origin.y)
-        accessibilityElements = candidates(viewport).compactMap { index -> CanvasAccessibleNode? in
+        accessibilityElements = drawOrder.filter(Set(candidates(viewport)).contains).compactMap {
+            index -> CanvasAccessibleNode? in
+
             let node = nodes[index]
             let rect = nodeRect(node)
             guard rect.intersects(viewport) else { return nil }
@@ -600,4 +847,21 @@ private final class CanvasDrawing: UIView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func draw(_ rect: CGRect) { if let context = UIGraphicsGetCurrentContext() { paint(context) } }
+}
+
+extension UIFont {
+    fileprivate func withWeight(_ weight: UIFont.Weight) -> UIFont { .systemFont(ofSize: pointSize, weight: weight) }
+}
+
+extension UIColor {
+    /// This color with `share` of another mixed in, both resolved already.
+    fileprivate func blended(with other: UIColor, share: CGFloat) -> UIColor {
+        var (red, green, blue, alpha) = (CGFloat(0), CGFloat(0), CGFloat(0), CGFloat(0))
+        var (otherRed, otherGreen, otherBlue, otherAlpha) = (CGFloat(0), CGFloat(0), CGFloat(0), CGFloat(0))
+        getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        other.getRed(&otherRed, green: &otherGreen, blue: &otherBlue, alpha: &otherAlpha)
+        let mix = { (base: CGFloat, added: CGFloat) in base + (added - base) * share }
+        return UIColor(
+            red: mix(red, otherRed), green: mix(green, otherGreen), blue: mix(blue, otherBlue), alpha: alpha)
+    }
 }
