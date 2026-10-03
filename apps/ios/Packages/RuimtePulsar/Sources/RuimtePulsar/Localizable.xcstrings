@@ -2,97 +2,314 @@
   "sourceLanguage" : "en",
   "strings" : {
     "Apple returned an incomplete sign-in response. Please try again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple gaf een onvolledig inlogantwoord terug. Probeer het opnieuw."
+          }
+        }
+      }
     },
     "Apple sign-in is not available right now. Try again later or sign in with GitHub." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inloggen met Apple is nu niet beschikbaar. Probeer het later opnieuw of log in met GitHub."
+          }
+        }
+      }
     },
     "Apple's response does not belong to this sign-in. Please try again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het antwoord van Apple hoort niet bij deze inlogpoging. Probeer het opnieuw."
+          }
+        }
+      }
     },
     "Converted to euros at the ECB rate of %@." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omgerekend naar euro's tegen de ECB-koers van %@."
+          }
+        }
+      }
     },
     "Notifications could not be registered." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meldingen konden niet worden geregistreerd."
+          }
+        }
+      }
     },
     "Paste an HTTPS pairing link ending in /pair#token." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plak een HTTPS pairing link die eindigt op /pair#token."
+          }
+        }
+      }
     },
     "Showing US dollars until a euro exchange rate is available." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedragen staan in Amerikaanse dollars tot er een wisselkoers voor de euro is."
+          }
+        }
+      }
     },
     "Signing in did not work (%@)." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inloggen lukte niet (%@)."
+          }
+        }
+      }
     },
     "Signing in was canceled." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inloggen is geannuleerd."
+          }
+        }
+      }
     },
     "The address book answered %lld." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het adresboek antwoordde %lld."
+          }
+        }
+      }
     },
     "The address book answered with something this client cannot read." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het adresboek antwoordde met iets wat deze client niet kan lezen."
+          }
+        }
+      }
     },
     "The address book could not be reached." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het adresboek kon niet worden bereikt."
+          }
+        }
+      }
     },
     "The address book needs an HTTPS address." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het adresboek heeft een HTTPS-adres nodig."
+          }
+        }
+      }
     },
     "The address book returned no HTTP response." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het adresboek gaf geen HTTP-antwoord terug."
+          }
+        }
+      }
     },
     "The answer from the browser does not belong to this sign-in. Try again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het antwoord van de browser hoort niet bij deze inlogpoging. Probeer het opnieuw."
+          }
+        }
+      }
     },
     "The browser came back without a valid sign-in code. Try again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De browser kwam terug zonder geldige inlogcode. Probeer het opnieuw."
+          }
+        }
+      }
     },
     "The browser returned to an unexpected address. Try signing in again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De browser keerde terug naar een onverwacht adres. Probeer opnieuw in te loggen."
+          }
+        }
+      }
     },
     "The machine answered with something this app cannot read." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine antwoordde met iets wat deze app niet kan lezen."
+          }
+        }
+      }
     },
     "The machine could not be reached." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine kon niet worden bereikt."
+          }
+        }
+      }
     },
     "The machine refused this link. It may be used or expired." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine weigerde deze link. Misschien is hij al gebruikt of verlopen."
+          }
+        }
+      }
     },
     "The machine returned no HTTP response." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine gaf geen HTTP-antwoord terug."
+          }
+        }
+      }
     },
     "The notification could not be verified." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De melding kon niet worden geverifieerd."
+          }
+        }
+      }
     },
     "The sign-in browser could not open. Try again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De inlogbrowser kon niet openen. Probeer het opnieuw."
+          }
+        }
+      }
     },
     "This Apple sign-in expired. Please try again." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze inlogpoging met Apple is verlopen. Probeer het opnieuw."
+          }
+        }
+      }
     },
     "This device has no key to bind a session to." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit apparaat heeft geen sleutel om een sessie aan te koppelen."
+          }
+        }
+      }
     },
     "This notification belongs to another device." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze melding hoort bij een ander apparaat."
+          }
+        }
+      }
     },
     "This notification has expired. Open the session to see its current state." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze melding is verlopen. Open de sessie om de huidige stand te zien."
+          }
+        }
+      }
     },
     "This notification is from a machine that is no longer trusted." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze melding komt van een machine die niet meer vertrouwd wordt."
+          }
+        }
+      }
     },
     "This notification was already delivered." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze melding is al afgeleverd."
+          }
+        }
+      }
     },
     "This pairing address is invalid." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit koppeladres is ongeldig."
+          }
+        }
+      }
     },
     "Your account answered with a statement for something else." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je account antwoordde met een verklaring voor iets anders."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

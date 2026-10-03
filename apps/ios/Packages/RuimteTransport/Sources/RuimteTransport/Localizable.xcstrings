@@ -2,127 +2,414 @@
   "sourceLanguage" : "en",
   "strings" : {
     "A broker signal names the machine but is not signed by it." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een broker-signaal noemt de machine, maar is niet door hem ondertekend."
+          }
+        }
+      }
     },
     "No network path to the machine: ICE failed." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen netwerkpad naar de machine: ICE is mislukt."
+          }
+        }
+      }
     },
     "The broker challenge names a different host." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De broker-challenge noemt een andere host."
+          }
+        }
+      }
     },
     "The broker is limiting this client. Try again later." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De broker beperkt deze client. Probeer het later opnieuw."
+          }
+        }
+      }
     },
     "The broker needs a secure WebSocket URL." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De broker heeft een beveiligde WebSocket-URL nodig."
+          }
+        }
+      }
     },
     "The broker refused this connection attempt." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De broker weigerde deze verbindingspoging."
+          }
+        }
+      }
     },
     "The broker returned expired ICE credentials." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De broker gaf verlopen ICE-gegevens terug."
+          }
+        }
+      }
     },
     "The broker sent invalid UTF-8." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De broker stuurde ongeldige UTF-8."
+          }
+        }
+      }
     },
     "The channel opened before its answer was applied." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het kanaal ging open voordat het antwoord ervan was toegepast."
+          }
+        }
+      }
     },
     "The data channel is not open." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het datakanaal is niet open."
+          }
+        }
+      }
     },
     "The data channel refused a frame." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het datakanaal weigerde een frame."
+          }
+        }
+      }
     },
     "The data channel sent invalid UTF-8." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het datakanaal stuurde ongeldige UTF-8."
+          }
+        }
+      }
     },
     "The direct connection closed." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De directe verbinding is gesloten."
+          }
+        }
+      }
     },
     "The direct connection did not come up within 20 seconds." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De directe verbinding kwam niet binnen 20 seconden tot stand."
+          }
+        }
+      }
     },
     "The file changed while it played." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het bestand veranderde tijdens het afspelen."
+          }
+        }
+      }
     },
     "The machine connection is not authenticated." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding met de machine is niet geauthenticeerd."
+          }
+        }
+      }
     },
     "The machine did not answer %@ in time." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine antwoordde niet op tijd op %@."
+          }
+        }
+      }
     },
     "The machine did not prove its identity over this connection." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine bewees zijn identiteit niet over deze verbinding."
+          }
+        }
+      }
     },
     "The machine ended this connection: %@." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine beëindigde deze verbinding: %@."
+          }
+        }
+      }
     },
     "The machine is reconnecting." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine maakt opnieuw verbinding."
+          }
+        }
+      }
     },
     "The machine is reconnecting. Try again when it is connected." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine maakt opnieuw verbinding. Probeer het opnieuw als hij verbonden is."
+          }
+        }
+      }
     },
     "The machine refused this connection." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine weigerde deze verbinding."
+          }
+        }
+      }
     },
     "The machine response is too large to load on this device." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het antwoord van de machine is te groot om op dit apparaat te laden."
+          }
+        }
+      }
     },
     "The machine sent a binary message before the handshake." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een binair bericht vóór de handshake."
+          }
+        }
+      }
     },
     "The machine sent a reply this app cannot read." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een antwoord dat deze app niet kan lezen."
+          }
+        }
+      }
     },
     "The machine sent an empty piece before the end of the resource." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een leeg stuk vóór het einde van de resource."
+          }
+        }
+      }
     },
     "The machine sent an empty piece." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een leeg stuk."
+          }
+        }
+      }
     },
     "The machine sent an invalid message fragment." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een ongeldig berichtfragment."
+          }
+        }
+      }
     },
     "The machine sent an invalid piece of the file." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een ongeldig stuk van het bestand."
+          }
+        }
+      }
     },
     "The machine sent an invalid resource piece." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine stuurde een ongeldig stuk van de resource."
+          }
+        }
+      }
     },
     "The machine stopped answering over the direct connection." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine antwoordt niet meer over de directe verbinding."
+          }
+        }
+      }
     },
     "The player asked past the end of the file." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De speler vroeg om iets voorbij het einde van het bestand."
+          }
+        }
+      }
     },
     "The resource changed while it was loading." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De resource veranderde tijdens het laden."
+          }
+        }
+      }
     },
     "The resource could not be loaded." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De resource kon niet worden geladen."
+          }
+        }
+      }
     },
     "The spool lost a piece of the file." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De spool is een stuk van het bestand kwijtgeraakt."
+          }
+        }
+      }
     },
     "This machine connection was released." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze verbinding met de machine is vrijgegeven."
+          }
+        }
+      }
     },
     "This machine runs a newer Ruimte than this app. Update this app." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze machine draait een nieuwere Ruimte dan deze app. Werk deze app bij."
+          }
+        }
+      }
     },
     "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze machine draait een oudere Ruimte. Werk Ruimte daar bij, of herstart hem om de update op te pikken."
+          }
+        }
+      }
     },
     "This resource exceeds the direct connection size limit." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze resource is groter dan de limiet van de directe verbinding."
+          }
+        }
+      }
     },
     "WebRTC could not create a connection." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebRTC kon geen verbinding maken."
+          }
+        }
+      }
     },
     "WebRTC could not create a data channel." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WebRTC kon geen datakanaal maken."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

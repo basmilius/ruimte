@@ -35,6 +35,7 @@
 		1AF6F6A85AF5D021863DCA66 /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F0CACBC269A20D7663C70E5 /* TaskStore.swift */; };
 		1C0BD40EBEFD2C31F8448E29 /* NotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3C0289192C090FF4945D5A /* NotificationPreferences.swift */; };
 		1C3CB02C227E64106F86125E /* ChatBookmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23C5CBDE2125C2680DFC11D /* ChatBookmarkTests.swift */; };
+		1CA991202CE1A29CEC79B400 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7648DC1CF8BCDD56D3BDB551 /* LocalizationTests.swift */; };
 		1D2828131C689B78A675A365 /* TerminalCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */; };
 		1D6CEEA1B77289B22B60489B /* ViewSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B046BB9BDAA4FBBD682034 /* ViewSettingsSheet.swift */; };
 		2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
@@ -519,6 +520,7 @@
 		73A903FD92446808968DF451 /* SpinnerMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerMotionTests.swift; sourceTree = "<group>"; };
 		74E4C2C52FD8BC54585448F0 /* GitWorktreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitWorktreeTests.swift; sourceTree = "<group>"; };
 		75DA6517FBC9FBF6C79776E2 /* document-scenes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "document-scenes.json"; sourceTree = "<group>"; };
+		7648DC1CF8BCDD56D3BDB551 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
 		76C42CE1B94D201D3793B3D4 /* SnoozeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeTests.swift; sourceTree = "<group>"; };
 		78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasPage.swift; sourceTree = "<group>"; };
 		78E4415FA265BC3864D12E58 /* MobileSidebarList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSidebarList.swift; sourceTree = "<group>"; };
@@ -1042,6 +1044,7 @@
 				74E4C2C52FD8BC54585448F0 /* GitWorktreeTests.swift */,
 				4F29B9E631BA0053CAC8D2A6 /* IceCandidateTests.swift */,
 				C207235C16067C091A466267 /* LaunchTests.swift */,
+				7648DC1CF8BCDD56D3BDB551 /* LocalizationTests.swift */,
 				7B02D669F665402B085C9E9C /* MachineIconTests.swift */,
 				A51F132752C92894717FD771 /* MachinePageTests.swift */,
 				ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */,
@@ -1420,6 +1423,7 @@
 			knownRegions = (
 				Base,
 				en,
+				nl,
 			);
 			mainGroup = D927DFB4C45849E607D0FC81;
 			minimizedProjectReferenceProxies = 1;
@@ -1566,6 +1570,7 @@
 				66B75BD5EB0FFB4A733B63F3 /* GitWorktreeTests.swift in Sources */,
 				0A14CC9ED096B72837DF02F5 /* IceCandidateTests.swift in Sources */,
 				B47147E370E83943F5901E04 /* LaunchTests.swift in Sources */,
+				1CA991202CE1A29CEC79B400 /* LocalizationTests.swift in Sources */,
 				EF671DDC2475C1E41165F98F /* MachineIconTests.swift in Sources */,
 				276FDD68935BC64F1AC25ED0 /* MachinePageTests.swift in Sources */,
 				C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */,

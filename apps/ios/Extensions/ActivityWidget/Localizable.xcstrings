@@ -2,25 +2,143 @@
   "sourceLanguage" : "en",
   "strings" : {
     "·" : {
-
+      "shouldTranslate" : false
     },
     "%@" : {
-
+      "shouldTranslate" : false
     },
     "%lld" : {
-
+      "shouldTranslate" : false
     },
     "%lld agents need you" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 agent needs you"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld agents need you"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 agent wacht op jou"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld agents wachten op jou"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld agents running" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 agent running"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld agents running"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 agent bezig"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld agents bezig"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld projects" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 project"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld projects"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 project"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld projecten"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld running" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld actief"
+          }
+        }
+      }
     },
     "%lld running · %lld needs you" : {
       "localizations" : {
@@ -29,11 +147,24 @@
             "state" : "new",
             "value" : "%1$lld running · %2$lld needs you"
           }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld actief · %2$lld wacht op jou"
+          }
         }
       }
     },
     "%lld working" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld bezig"
+          }
+        }
+      }
     },
     "+%lld more · %lld running" : {
       "localizations" : {
@@ -41,6 +172,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "+%1$lld more · %2$lld running"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%1$lld meer · %2$lld actief"
           }
         }
       }
@@ -52,137 +189,445 @@
             "state" : "new",
             "value" : "+%1$lld more · %2$lld running · %3$lld needs you"
           }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%1$lld meer · %2$lld actief · %3$lld wacht op jou"
+          }
         }
       }
     },
     "Account" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
+          }
+        }
+      }
     },
     "AI chat" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-chat"
+          }
+        }
+      }
     },
     "Claude limits and today's cost of one machine." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude-limieten en de kosten van vandaag van één machine."
+          }
+        }
+      }
     },
     "Claude usage" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude-verbruik"
+          }
+        }
+      }
     },
     "Codex limits and today's cost of one machine." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex-limieten en de kosten van vandaag van één machine."
+          }
+        }
+      }
     },
     "Codex usage" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex-verbruik"
+          }
+        }
+      }
     },
     "How many agents wait for you, and how many are working." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoeveel agents op jou wachten en hoeveel er bezig zijn."
+          }
+        }
+      }
     },
     "Last known status" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laatst bekende status"
+          }
+        }
+      }
     },
     "Machine" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Machine"
+          }
+        }
+      }
     },
     "need you" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "wachten op jou"
+          }
+        }
+      }
     },
     "needs you" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "wacht op jou"
+          }
+        }
+      }
     },
     "Needs you" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht op jou"
+          }
+        }
+      }
     },
     "Needs you list" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht op jou (lijst)"
+          }
+        }
+      }
     },
     "No agents running" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen actieve agents"
+          }
+        }
+      }
     },
     "No usage limits reported." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen verbruikslimieten doorgegeven."
+          }
+        }
+      }
     },
     "No weekly limit reported." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen weeklimiet doorgegeven."
+          }
+        }
+      }
     },
     "Nothing needs you." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niets wacht op jou."
+          }
+        }
+      }
     },
     "Now" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nu"
+          }
+        }
+      }
     },
     "Open Ruimte and choose a machine for this widget." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Ruimte en kies een machine voor deze widget."
+          }
+        }
+      }
     },
     "Open Ruimte to see what waits for you." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Ruimte om te zien wat op jou wacht."
+          }
+        }
+      }
     },
     "Open Ruimte to see your agents." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Ruimte om je agents te zien."
+          }
+        }
+      }
     },
     "Open Ruimte to see your projects." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Ruimte om je projecten te zien."
+          }
+        }
+      }
     },
     "Open Ruimte while this machine is online to load its usage." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Ruimte terwijl deze machine online is om het verbruik te laden."
+          }
+        }
+      }
     },
     "Open this session" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze sessie openen"
+          }
+        }
+      }
     },
     "Project" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project"
+          }
+        }
+      }
     },
     "Review" : {
-      "comment" : "Button that opens a session waiting for you"
+      "comment" : "Button that opens a session waiting for you",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekijken"
+          }
+        }
+      }
     },
     "Review this session" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze sessie bekijken"
+          }
+        }
+      }
     },
     "Running" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draait"
+          }
+        }
+      }
     },
     "Terminal agent" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terminal-agent"
+          }
+        }
+      }
     },
     "The agents that wait for you. Tap one to open it." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De agents die op jou wachten. Tik op een agent om die te openen."
+          }
+        }
+      }
     },
     "The machine has not sent a recent update." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine heeft geen recente update gestuurd."
+          }
+        }
+      }
     },
     "The views of one project and what each is doing." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De weergaven van één project en wat elk ervan doet."
+          }
+        }
+      }
     },
     "The views of one project and what each is doing. Tap one to open it." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De weergaven van één project en wat elk ervan doet. Tik op een weergave om die te openen."
+          }
+        }
+      }
     },
     "This project has no views yet." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit project heeft nog geen weergaven."
+          }
+        }
+      }
     },
     "This project is no longer open." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit project is niet meer open."
+          }
+        }
+      }
     },
     "Today" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vandaag"
+          }
+        }
+      }
     },
     "Usage" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbruik"
+          }
+        }
+      }
     },
     "Usage limits and today's cost of one machine." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbruikslimieten en de kosten van vandaag van één machine."
+          }
+        }
+      }
     },
     "Waiting for an update" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht op een update"
+          }
+        }
+      }
     },
     "Waiting for your input" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wacht op je input"
+          }
+        }
+      }
     },
     "Work finished" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Werk klaar"
+          }
+        }
+      }
     },
     "Working" : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezig"
+          }
+        }
+      }
     },
     "Your agents have finished their work." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je agents zijn klaar met hun werk."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

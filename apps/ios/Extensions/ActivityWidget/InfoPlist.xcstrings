@@ -13,7 +13,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Ruimte-activiteit"
           }
         }
@@ -26,6 +26,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "RuimteActivityWidget"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "RuimteActivityWidget"
           }
         }

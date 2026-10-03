@@ -2,7 +2,14 @@
   "sourceLanguage" : "en",
   "strings" : {
     "Open Ruimte to see the latest update." : {
-
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Ruimte om de nieuwste update te zien."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

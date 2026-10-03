@@ -10,6 +10,12 @@
             "state" : "new",
             "value" : "Ruimte"
           }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruimte"
+          }
         }
       }
     },
@@ -20,6 +26,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "Ruimte"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "Ruimte"
           }
         }
@@ -37,7 +49,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Ruimte gebruikt de camera als je een foto maakt om bij een bericht te voegen."
           }
         }
@@ -55,7 +67,7 @@
         },
         "nl" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Maak direct verbinding met je machines op hetzelfde wifinetwerk."
           }
         }
