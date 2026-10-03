@@ -1,5 +1,6 @@
 import RuimtePulsar
 import SwiftUI
+import UIKit
 
 /// The iPhone: four tabs, Settings behind the avatar on each, and the project's New view and Usage as the tab bar's
 /// accessory. The iPad keeps its split view in `AppHome`.
@@ -158,7 +159,7 @@ struct SettingsToolbarItem: ToolbarContent {
         ToolbarSpacer(.fixed, placement: .topBarTrailing)
         ToolbarItem(id: "settings", placement: .topBarTrailing) {
             Button(action: link.show) {
-                AccountAvatar(account: link.account)
+                AccountAvatar.image(for: link.account)
             }
             .accessibilityLabel("Settings")
             .accessibilityIdentifier("home.settings")
@@ -166,19 +167,35 @@ struct SettingsToolbarItem: ToolbarContent {
     }
 }
 
-/// The account's initial, or the person mark while nobody is signed in, as the way into Settings.
-struct AccountAvatar: View {
-    let account: Account?
+/// The account's initial, or the person mark while nobody is signed in, as the way into Settings. Both are a bare
+/// image the size of an icon: the bar gives an image a glass circle of the system's size, which no Dynamic Type size
+/// stretches, and anything else a capsule around whatever it draws.
+enum AccountAvatar {
+    static let glyphSize = CGSize(width: 20, height: 20)
+    @MainActor private static var glyphs: [String: Image] = [:]
 
-    var body: some View {
-        if let initial = (account?.login ?? "").first.map({ String($0).uppercased() }) {
-            Text(initial)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(MobileStyle.onAccent)
-                .frame(width: 28, height: 28)
-                .background(MobileStyle.accent, in: .circle)
-        } else {
-            Image(lucide: "circle-user-round")
+    static func initial(of login: String?) -> String? {
+        login?.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() }
+    }
+
+    @MainActor static func image(for account: Account?) -> Image {
+        guard let initial = initial(of: account?.login) else { return Image(lucide: "circle-user-round") }
+        if let image = glyphs[initial] { return image }
+        let image = Image(uiImage: glyph(initial))
+        glyphs[initial] = image
+        return image
+    }
+
+    /// The letter in the weight and size of a bar button's title, centered on its capitals so a letter without a
+    /// descender sits in the middle of the circle.
+    static func glyph(_ initial: String) -> UIImage {
+        let font = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        let text = NSAttributedString(string: initial, attributes: [.font: font, .foregroundColor: UIColor.black])
+        let width = text.size().width
+        let baseline = (glyphSize.height + font.capHeight) / 2
+        return UIGraphicsImageRenderer(size: glyphSize).image { _ in
+            text.draw(at: CGPoint(x: (glyphSize.width - width) / 2, y: baseline - font.ascender))
         }
+        .withRenderingMode(.alwaysTemplate)
     }
 }
