@@ -1,5 +1,6 @@
 import Observation
 import SwiftUI
+import UIKit
 import WebKit
 
 @MainActor @Observable
@@ -22,35 +23,117 @@ private final class BrowserState {
         problem = nil
         webView?.load(URLRequest(url: url))
     }
+    /// An edit left without going anywhere gives the bar back the page's own address.
+    func restoreAddress() {
+        if let url = webView?.url { address = url.absoluteString }
+    }
 }
+
 
 struct BrowserPage: View {
     @State private var state: BrowserState
+    @State private var editing = false
+    @FocusState private var addressFocused: Bool
     init(url: String) { _state = State(initialValue: BrowserState(url)) }
+    private var url: URL? {
+        URL(string: state.address).flatMap { ["http", "https"].contains($0.scheme?.lowercased() ?? "") ? $0 : nil }
+    }
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                TextField("Address", text: $state.address).keyboardType(.URL).textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.go).onSubmit { state.navigate() }
-                Button(state.loading ? "Stop" : "Reload", lucideIcon: state.loading ? "x" : "refresh-cw") {
-                    if state.loading { state.webView?.stopLoading() } else { state.navigate() }
-                }.labelStyle(.iconOnly)
-            }.padding(12).background(.bar)
-            if let problem = state.problem { Text(problem).font(.caption).foregroundStyle(.red).padding() }
-            MobileScrollViewport(edges: .bottom) { insets in
-                BrowserContent(state: state, viewportInsets: insets)
-            }
-        }.toolbar {
-            ToolbarItemGroup(placement: .bottomBar) {
-                Button("Back", lucideIcon: "chevron-left") { state.webView?.goBack() }.disabled(!state.back)
-                Button("Forward", lucideIcon: "chevron-right") { state.webView?.goForward() }.disabled(!state.forward)
-                Spacer()
-                if let url = URL(string: state.address), ["http", "https"].contains(url.scheme ?? "") {
-                    ShareLink(item: url)
+        MobileScrollViewport { insets in
+            BrowserContent(state: state, viewportInsets: insets)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 8) {
+                if let problem = state.problem {
+                    Text(problem).font(.footnote).multilineTextAlignment(.center)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                        .glassEffect(.regular, in: .capsule)
                 }
+                GlassEffectContainer(spacing: 8) {
+                    HStack(spacing: 8) {
+                        if !editing {
+                            Button {
+                                state.webView?.goBack()
+                            } label: {
+                                Image(lucide: "chevron-left", size: 18).frame(width: 48, height: 48)
+                            }
+                            .disabled(!state.back)
+                            .glassEffect(.regular.interactive(), in: .circle)
+                            .accessibilityLabel("Back")
+                        }
+                        address
+                        if !editing {
+                            moreMenu
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+        }
+    }
+
+    /// The address as Safari shows it: the host while browsing, the whole address to edit after a tap.
+    private var address: some View {
+        HStack(spacing: 8) {
+            Image(lucide: url?.scheme == "https" ? "lock" : "globe", size: 14).foregroundStyle(MobileStyle.muted)
+            if editing {
+                TextField("Address", text: $state.address)
+                    .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .submitLabel(.go)
+                    .focused($addressFocused)
+                    .onSubmit {
+                        state.navigate()
+                        editing = false
+                    }
+                Button("Cancel") {
+                    editing = false
+                    state.restoreAddress()
+                }
+                .font(.subheadline)
+            } else {
+                Button {
+                    editing = true
+                    addressFocused = true
+                } label: {
+                    Text(url?.host() ?? state.address).lineLimit(1).truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Address, \(state.address)")
+                Button {
+                    if state.loading { state.webView?.stopLoading() } else { state.webView?.reload() }
+                } label: {
+                    Image(lucide: state.loading ? "x" : "rotate-cw", size: 15).frame(width: 32, height: 44)
+                }
+                .accessibilityLabel(state.loading ? "Stop" : "Reload")
             }
         }
+        .font(.subheadline)
+        .padding(.horizontal, 14)
+        .frame(minHeight: 48)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .onChange(of: addressFocused) { _, focused in
+            if !focused && editing {
+                editing = false
+                state.restoreAddress()
+            }
+        }
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            Button("Forward", lucideIcon: "chevron-right") { state.webView?.goForward() }.disabled(!state.forward)
+            if let url {
+                ShareLink(item: url) { Label("Share", lucideIcon: "share") }
+                Button("Copy link", lucideIcon: "copy") { UIPasteboard.general.url = url }
+                Button("Open in Safari", lucideIcon: "compass") { UIApplication.shared.open(url) }
+            }
+        } label: {
+            Image(lucide: "ellipsis", size: 18).frame(width: 48, height: 48)
+        }
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel("Page actions")
     }
 }
 
