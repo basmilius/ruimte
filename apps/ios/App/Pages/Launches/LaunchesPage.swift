@@ -159,7 +159,7 @@ struct LaunchesPage: View {
             LaunchMenuItems(store: store, view: view)
             Button("Show output", lucideIcon: "square-terminal") { output = launch.id }
             Button("Edit…", lucideIcon: "pencil") { sheet = .edit(launch.id) }
-            Button("Delete…", lucideIcon: "trash-2", role: .destructive) { deleting = launch }
+            Button("Delete…", lucideIcon: "trash", role: .destructive) { deleting = launch }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Delete", role: .destructive) { deleting = launch }

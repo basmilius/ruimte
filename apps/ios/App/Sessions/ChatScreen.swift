@@ -354,7 +354,7 @@ struct ChatScreen: View {
                 .disabled(!isPrepared)
         }
         Section {
-            Button("Clear conversation", lucideIcon: "trash-2", role: .destructive) { showingClear = true }
+            Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
                 .disabled(!isPrepared)
         }
     }
