@@ -51,13 +51,17 @@ export const verbsNote = ({
     computer?: boolean;
     device?: boolean;
 }): string => {
-    /* Told what it is not ("not a node on a canvas"), a chat of its own reasons from the canvas in every
-       answer, so this says what it can do and names the canvas only as a place to open something. */
     if (standalone) {
         return [
-            "Ruimte: `ruimte-context` is a command you run in your shell, not a tool. It reads the context linked to this chat and manages the project's views; `ruimte-context help` lists its verbs and nouns.",
-            "Delegate work within this chat with your CLI's own subagents, and keep any model the person asked for.",
-            'Only when the person asks for an agent, note or drawing in Ruimte itself, open it with `ruimte-context` and name where it goes with --view.',
+            "Ruimte: `ruimte-context` is a command you run in your shell, not a tool. This chat runs in a view with no canvas links, so skip linked-context discovery. It manages the project's views; `ruimte-context help` lists its verbs and nouns.",
+            "Delegate routine work with your CLI's own subagents. Keep any model the person asked for.",
+            ...(depth < MAX_AGENT_DEPTH
+                ? [
+                      `For an agent or model the person names, use \`ruimte-context agent <cli> --task <title> --prompt <assignment>\`, with <cli> one of ${CLI_NAMES}${depth < MAX_TEAM_DEPTH ? '; `team --task` starts several agents' : ''}. These agents stay hidden and their results return to this chat; end your turn after delegating instead of polling.`,
+                      'Use --view only when the person asks to place the agent on a canvas.'
+                  ]
+                : []),
+            'For a note or drawing the person asks for in Ruimte, name its destination with --view.',
             ALERT_NOTE,
             ...(computer ? [COMPUTER_NOTE] : []),
             ...(device ? [DEVICE_NOTE] : []),

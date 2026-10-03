@@ -67,6 +67,7 @@ import {
 import { PROJECT_WRITE_IO, ProjectWriteRaced, ProjectWriteStuck, recoverProjectWrite, writeProjectFiles, type ProjectWriteIO } from './project-write.ts';
 import { ProjectHolds } from './project-holds.ts';
 import { placesOf, ProjectIndex } from './project-index.ts';
+import { HiddenAgentStore } from '../agents/hidden-agents.ts';
 import { IdentityCache, readIdeaName, servedIcon, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '@ruimte/agents/coded-error';
@@ -212,7 +213,8 @@ export class ProjectStore {
     readonly home: string;
     readonly scratchFolder: string;
     /* Every known project's last document, which outlives `release`: the sessions of a project keep running after a client lets go of it. */
-    readonly index = new ProjectIndex();
+    readonly index: ProjectIndex;
+    readonly hiddenAgents: HiddenAgentStore;
     private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
     private readonly open = new Map<string, OpenProject>();
     /* Which client has which project on screen. `project.changed` goes to every socket, since a
@@ -241,6 +243,8 @@ export class ProjectStore {
 
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
+        this.hiddenAgents = new HiddenAgentStore(home);
+        this.index = new ProjectIndex(this.hiddenAgents);
         this.scratchFolder = scratchFolderOf(home);
         this.seams = seams;
         this.writeIO = writeIO;
@@ -1002,6 +1006,7 @@ export class ProjectStore {
      * than what this read, so it is left alone.
      */
     async warmIndex(): Promise<void> {
+        await this.hiddenAgents.load();
         const entries = await this.loadRegistry();
         await Promise.all(
             entries.map(async (entry) => {

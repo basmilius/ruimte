@@ -38,8 +38,8 @@ export const callerKind = (content: ProjectContent, caller: string): string | nu
 };
 
 /* Refuses a task from anything but a chat: a terminal agent has no turn the daemon can start with the result. */
-export const requireChatParent = (content: ProjectContent, caller: string): void => {
-    const kind = callerKind(content, caller);
+export const requireChatParent = (content: ProjectContent, caller: string, hiddenKind?: string): void => {
+    const kind = callerKind(content, caller) ?? hiddenKind ?? null;
     if (kind !== 'chat') {
         throw new VerbRefusal(
             'not-a-chat-parent',

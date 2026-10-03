@@ -59,17 +59,17 @@ const TEAM_DETAIL: readonly string[] = [
     'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
     `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex"},{"title":"Shell","prompt":"Run the lexer tests","provider":"claude","terminal":true}]'`,
-    'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
+    'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first when visible, then one line per role in the order of --roles, with its task id last under --task; hidden roles have - for view and edge and no group row',
     'prints\treads\tid\tfrom\tto\tone line per --reads node per role, under the roles: the line drawn from that node into that agent',
     'prints\tnext\tthe last line under --task, saying what to do while the tasks run',
     'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read; a line only joins two nodes of one canvas',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
-    "edges\tWithout --task, ruimte-context link new --to <the role's id> draws the line back, which is how you read what a role has done; its id is the first field of that role's row",
+    "edges\tYou can read each agent you opened with ruimte-context read <the role's id> through its lineage, including a hidden role, without a line back",
     'edges\tWith --task no line back is needed, since the results of the roles arrive as your next message once they all settled',
     'edges\truimte-context link list lists what is drawn on the canvas now',
     ...readsLines('every role'),
     'where\tThe group lands on the first free spot right of you, or right of everything when you are none of its nodes',
-    'where\tFrom any other view name a canvas with --view; the edge column of every row then shows -',
+    'where\tFrom a chat view the agents stay hidden, without a group or edges; --task shows their work in this chat. --view explicitly places the team on that canvas',
     `group\tThe agents stand in rows of at most ${TEAM_COLUMNS} inside the frame, and the frame is sized to hold them`,
     'refusal\tA role that is wrong is named by its place in the array, counting from 0',
     'paths\t--cwd is resolved against the project folder and has to stay inside it or a worktree of its repository',
@@ -185,21 +185,29 @@ export const teamVerb = defineStandaloneActionVerb({
             edge === null ? '-' : dryRun ? `${edge.from} -> ${edge.to}` : (edge.edgeId ?? '-');
         if (dryRun) {
             return [
-                ['dry-run', 'group', field(group.title), group.viewId, '-', '-'].join('\t'),
+                ...(group ? [['dry-run', 'group', field(group.title), group.viewId, '-', '-'].join('\t')] : []),
                 ...started.agents.map((agent) =>
-                    ['dry-run', agent.kind, field(agent.title), group.viewId, agent.provider, edgeOf(agent.edge), ...(tasked ? ['<new task>'] : [])].join('\t')
+                    [
+                        'dry-run',
+                        agent.kind,
+                        field(agent.title),
+                        group?.viewId ?? '-',
+                        agent.provider,
+                        edgeOf(agent.edge),
+                        ...(tasked ? ['<new task>'] : [])
+                    ].join('\t')
                 ),
                 ...started.reads.map((line) => ['dry-run', 'reads', `${line.from} -> ${line.to}`].join('\t'))
             ];
         }
         return [
-            [group.nodeId, 'group', field(group.title), group.viewId, '-', '-'].join('\t'),
+            ...(group ? [[group.nodeId, 'group', field(group.title), group.viewId, '-', '-'].join('\t')] : []),
             ...started.agents.map((agent) =>
                 [
                     agent.nodeId,
                     agent.kind,
                     field(agent.title),
-                    group.viewId,
+                    group?.viewId ?? '-',
                     agent.provider,
                     edgeOf(agent.edge),
                     ...(agent.taskId === null ? [] : [agent.taskId])

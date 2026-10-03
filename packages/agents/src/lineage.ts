@@ -109,14 +109,11 @@ export class AgentLineageStore {
         return this.opened.get(nodeId)?.depth ?? 0;
     }
 
-    /*
-     * The agent nodes this caller opened that are still on a canvas; a deleted node is pruned away.
-     * Only the agent ones: a caller that makes notes would otherwise use up the room it has for agents.
-     */
-    openedCount(callerId: string): number {
+    // A host may exclude completed hidden agents while keeping their lineage for later reads and tasks.
+    openedCount(callerId: string, include: (nodeId: string) => boolean = () => true): number {
         let count = 0;
         for (const entry of this.opened.all()) {
-            if (entry.openedBy === callerId && openedByAgent(entry)) {
+            if (entry.openedBy === callerId && openedByAgent(entry) && include(entry.nodeId)) {
                 count += 1;
             }
         }

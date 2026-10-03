@@ -2225,7 +2225,7 @@ export const ACTION_DEFINITIONS = {
     },
     'agent.start': {
         title: 'Start an agent',
-        description: 'Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have',
+        description: 'Starts an agent on your canvas, or a hidden agent from a chat view; --view explicitly places it on a canvas',
         effect: 'external',
         domain: 'agents',
         actors: AGENT,
@@ -2236,7 +2236,7 @@ export const ACTION_DEFINITIONS = {
             promptFile: z.string().min(1).nullable().describe('The same prompt out of a file, for one with exact bytes'),
             cwd: z.string().min(1).nullable().describe('The directory the agent starts in'),
             reads: agentReads,
-            viewId: viewId.nullable().describe('The canvas to add to, by view id'),
+            viewId: viewId.nullable().describe('The canvas to add to; null uses your canvas or keeps the agent hidden from a chat view'),
             beside: nodeId.nullable().describe('Puts the node directly right of this node, top edges level'),
             group: nodeId.nullable().describe('Puts the node inside this group node of that canvas'),
             title: givenName.nullable().describe('The title; without one the node is called after the CLI, and the session may rename it'),
@@ -2251,7 +2251,7 @@ export const ACTION_DEFINITIONS = {
         output: z.object({
             nodeId,
             kind: agentNodeKind,
-            viewId,
+            viewId: viewId.nullable(),
             provider: AgentKindSchema,
             // The line from you into the agent; null when you are no node on that canvas.
             edge: drawnLine.nullable(),
@@ -2262,7 +2262,7 @@ export const ACTION_DEFINITIONS = {
     },
     'team.start': {
         title: 'Start a team',
-        description: `Opens up to ${MAX_OPENED_PER_CALLER} agents at once in a group, each with an edge from you into it when you are a node on that canvas`,
+        description: `Starts up to ${MAX_OPENED_PER_CALLER} agents, grouped on your canvas or hidden from a chat view; --view explicitly places the team on a canvas`,
         effect: 'external',
         domain: 'agents',
         actors: AGENT,
@@ -2282,7 +2282,7 @@ export const ACTION_DEFINITIONS = {
                 .max(MAX_OPENED_PER_CALLER),
             cwd: z.string().min(1).nullable().describe('The directory every agent starts in'),
             reads: agentReads,
-            viewId: viewId.nullable().describe('The canvas to add to, by view id'),
+            viewId: viewId.nullable().describe('The canvas to add to; null uses your canvas or keeps the agents hidden from a chat view'),
             mode: RuntimeModeSchema.nullable().describe(
                 'The permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own'
             ),
@@ -2294,7 +2294,7 @@ export const ACTION_DEFINITIONS = {
                 )
         }),
         output: z.object({
-            group: z.object({ nodeId, title: z.string(), viewId }),
+            group: z.object({ nodeId, title: z.string(), viewId }).nullable(),
             agents: z.array(
                 z.object({
                     nodeId,

@@ -20,19 +20,19 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 
 const AGENT_DETAIL: readonly string[] = [
     ...chatKinds().flatMap(modelLines),
-    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (chat or terminal), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task',
+    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new agent, its kind (chat or terminal), its canvas (- when hidden), the CLI it runs, its edge (- when none was drawn) and, with --task, the task id',
     'prints\treads\tid\tfrom\tto\tone line per --reads node, under the first: the line drawn from it into the new agent',
     'prints\tnext\tthe last line under --task, saying what to do while the task runs',
     `kinds\tchat\tThe default for ${chatKinds().join(', ')}: the CLI as a thread in the node, fixed to that CLI, with no model picker on the composer; its last answer settles a task`,
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in; the only kind for a CLI without a chat backend, and a terminal child has to call done to settle a task',
     'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',
     'edge\tA line only joins two nodes of one canvas, so from any other view the edge column shows -',
-    'edge\tOne way only: you do not read the new agent through it. ruimte-context link new --to <its id> draws the line back when you want that too',
+    'edge\tOne way only: the edge makes you readable to the child. You can read an agent you opened with ruimte-context read <its id> through its lineage, including a hidden agent, without a line back',
     'edge\truimte-context link list lists what is drawn on the canvas now',
     ...readsLines('the new agent'),
     'without a prompt\tLeave --prompt out and the node opens with the CLI waiting, so the person types the first thing themselves',
     'groups\truimte-context node list lists the nodes of a canvas; a row of kind group is what --group takes',
-    'where\tWithout --view the view you are in, when that is a canvas; from any other view, name one with --view',
+    'where\tWithout --view an agent on a canvas opens a node there; from a chat view it opens a hidden agent, reachable through its task row and ruimte-context read <id>. --view explicitly places it on that canvas',
     'where\tWithout --beside and --group the first free spot right of the caller, or right of everything when the caller is none of its nodes',
     'group\tThe node lands in a row under the title bar of the group, which grows when it has no room; a collapsed group also takes the id into its members',
     'paths\t--cwd and --prompt-file are resolved against the project folder, never against your own directory; both may also be absolute',
@@ -160,7 +160,7 @@ export const agentVerb = defineStandaloneActionVerb({
                 [
                     'dry-run',
                     started.kind,
-                    started.viewId,
+                    started.viewId ?? '-',
                     started.provider,
                     edge ? `${edge.from} -> ${edge.to}` : '-',
                     ...(flags.task === undefined ? [] : ['<new task>'])
@@ -169,9 +169,14 @@ export const agentVerb = defineStandaloneActionVerb({
             ];
         }
         return [
-            [started.nodeId, started.kind, started.viewId, started.provider, edge?.edgeId ?? '-', ...(started.taskId === null ? [] : [started.taskId])].join(
-                '\t'
-            ),
+            [
+                started.nodeId,
+                started.kind,
+                started.viewId ?? '-',
+                started.provider,
+                edge?.edgeId ?? '-',
+                ...(started.taskId === null ? [] : [started.taskId])
+            ].join('\t'),
             ...started.reads.map((line) => ['reads', line.edgeId ?? '-', line.from, line.to].join('\t')),
             ...(flags.task === undefined ? [] : [nextLine(false)])
         ];

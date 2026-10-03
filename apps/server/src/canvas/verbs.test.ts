@@ -186,6 +186,7 @@ afterEach(async () => {
 });
 
 const host = (): CanvasHost => ({
+    hiddenAgents: store.hiddenAgents,
     locate: (id) => store.index.locate(id),
     read: (id) => store.read(id),
     revision: (id) => store.revision(id),
@@ -577,14 +578,14 @@ describe('help', () => {
     test('help agent covers what a first-time caller cannot see from the canvas', async () => {
         const { lines } = await post('help', ['agent']);
         expect(lines).toContain(
-            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (chat or terminal), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task'
+            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new agent, its kind (chat or terminal), its canvas (- when hidden), the CLI it runs, its edge (- when none was drawn) and, with --task, the task id'
         );
         // Which CLIs open as a chat, from the registry rather than from a sentence that can drift.
         expect(lines.some((line) => line.startsWith('flag\t--terminal\t') && line.includes('claude, codex'))).toBe(true);
         expect(lines.some((line) => line.startsWith('flag\t--prompt T\t') && line.includes(String(MAX_PROMPT_LENGTH)))).toBe(true);
         expect(lines.some((line) => line.startsWith('paths\t') && line.includes('worktree'))).toBe(true);
         expect(lines.some((line) => line.startsWith('without a prompt\t'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('One way only') && line.includes('ruimte-context link new'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('ruimte-context read') && line.includes('hidden agent'))).toBe(true);
         expect(lines.some((line) => line.startsWith('groups\t') && line.includes('ruimte-context node list'))).toBe(true);
         // An apostrophe in a prompt is where a shell eats the argument, which no refusal can explain afterwards.
         expect(lines.some((line) => line.startsWith('quoting\t') && line.includes("'\\''"))).toBe(true);
@@ -594,10 +595,10 @@ describe('help', () => {
     test('help team answers what its own output cannot say', async () => {
         const { lines } = await post('help', ['team']);
         expect(lines).toContain(
-            'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart'
+            'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first when visible, then one line per role in the order of --roles, with its task id last under --task; hidden roles have - for view and edge and no group row'
         );
         // The way back into a role's work, which agent says and team did not.
-        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context link new --to'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context read') && line.includes('hidden role'))).toBe(true);
         // Which CLIs open a chat role, from the registry rather than from a phrase that can drift.
         expect(lines.some((line) => line.startsWith('roles\tterminal\t') && line.includes('claude, codex'))).toBe(true);
         expect(lines.some((line) => line.startsWith('depth\t') && line.includes(`A role lands at depth ${MAX_TEAM_DEPTH}`) && line.includes('agent'))).toBe(
@@ -1665,14 +1666,6 @@ describe('team', () => {
     });
 
     test('a caller that is not a node on the canvas gets a team without edges', async () => {
-        // Without --view a chat that is a view of its own is told both halves: name a canvas, and no edge comes with it.
-        for (const verb of [
-            ['team', ...args(THREE)],
-            ['agent', 'claude']
-        ]) {
-            const refused = await post(verb[0]!, verb.slice(1), 'chat');
-            expect(refused.lines[0]).toBe(`refused\tview-required\t${OPENING_OFF_CANVAS}`);
-        }
         const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
         expect(lines.every((line) => line.split('\t')[3] === 'board')).toBe(true);
         // No caller on that canvas, so no edge to name in the last column either.
@@ -1807,7 +1800,7 @@ describe('the depth limit', () => {
         }
         const refused = await post('agent', ['claude']);
         expect(refused.lines[0]).toBe(
-            `refused\ttoo-many-agents\tYou have ${MAX_OPENED_PER_CALLER} agent nodes open and this would open 1 more; one caller may have ${MAX_OPENED_PER_CALLER} open at a time, and the count frees when a person removes them`
+            `refused\ttoo-many-agents\tYou have ${MAX_OPENED_PER_CALLER} agents open and this would open 1 more; one caller may have ${MAX_OPENED_PER_CALLER} open at a time. Removing a canvas node or finishing a hidden agent frees the count`
         );
         expect((await post('team', args('Crew'))).lines[0]).toStartWith('refused\ttoo-many-agents\t');
         expect((await onDisk()).rev).toBe(1);

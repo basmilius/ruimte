@@ -11,6 +11,7 @@ import {
     type ProjectView,
     type ViewSessionNode
 } from '@ruimte/contracts';
+import type { HiddenAgentStore } from '../agents/hidden-agents.ts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */
@@ -68,20 +69,35 @@ export const placesOf = (views: readonly ProjectView[]): Map<string, string | nu
  */
 export class ProjectIndex {
     private readonly projects = new Map<string, IndexedProject>();
+    private readonly hiddenAgents: HiddenAgentStore | undefined;
     /* Told which ids a project still places, so state the daemon holds against a node id (a first
        prompt waiting for its session) goes the moment the node does. */
     onPlaces: ((projectId: string, ids: ReadonlySet<string>) => void) | null = null;
+
+    constructor(hiddenAgents?: HiddenAgentStore) {
+        this.hiddenAgents = hiddenAgents;
+        if (hiddenAgents) {
+            hiddenAgents.onChange = (projectId) => this.changedPlaces(projectId);
+        }
+    }
+
+    private changedPlaces(projectId: string): void {
+        this.onPlaces?.(
+            projectId,
+            new Set([...(this.projects.get(projectId)?.places.keys() ?? []), ...(this.hiddenAgents?.inProject(projectId).map((agent) => agent.node.id) ?? [])])
+        );
+    }
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
     set(projectId: string, folder: string, content: Pick<ProjectContent, 'views' | 'flags'>): void {
         const places = placesOf(content.views);
         this.projects.set(projectId, { folder, content, sources: flaggedSources(deriveProjectContextSources(content.views, folder), content.flags), places });
-        this.onPlaces?.(projectId, new Set(places.keys()));
+        this.changedPlaces(projectId);
     }
 
     remove(projectId: string): void {
         this.projects.delete(projectId);
-        this.onPlaces?.(projectId, new Set());
+        this.changedPlaces(projectId);
     }
 
     has(projectId: string): boolean {
@@ -125,7 +141,7 @@ export class ProjectIndex {
                 }
             }
         }
-        return null;
+        return this.hiddenAgents?.get(id)?.node.title ?? null;
     }
 
     /* The canvas an id is a node on, with its nodes and lines; null for a view of its own and for an
@@ -160,6 +176,10 @@ export class ProjectIndex {
 
     /* The terminal or chat under `id`, a node or a view of its own, as a source a read takes; null for anything else. */
     agentSource(id: string): ContextSource | null {
+        const hidden = this.hiddenAgents?.get(id);
+        if (hidden && this.projects.has(hidden.projectId)) {
+            return { id, kind: hidden.node.kind, title: hidden.node.title };
+        }
         for (const project of this.projects.values()) {
             for (const view of project.content.views) {
                 if ((view.kind === 'chat' || view.kind === 'terminal') && view.id === id) {
@@ -179,12 +199,16 @@ export class ProjectIndex {
      * client that never had it on screen, which has no document of its own to count.
      */
     sessionNodes(projectId: string): ViewSessionNode[] {
-        return (this.projects.get(projectId)?.content.views ?? []).flatMap(sessionNodesOfView);
+        return [
+            ...(this.projects.get(projectId)?.content.views ?? []).flatMap(sessionNodesOfView),
+            ...(this.hiddenAgents?.inProject(projectId).map((agent) => ({ id: agent.node.id, kind: agent.node.kind })) ?? [])
+        ];
     }
 
     /* Every project that places this id; more than one only when two copies of one canvas are known here. */
     projectsPlacing(id: string): string[] {
-        return [...this.projects].filter(([, project]) => project.places.has(id)).map(([projectId]) => projectId);
+        const hidden = this.hiddenAgents?.get(id);
+        return [...this.projects].filter(([projectId, project]) => project.places.has(id) || hidden?.projectId === projectId).map(([projectId]) => projectId);
     }
 
     locate(id: string): IndexedPlace | null {
@@ -193,6 +217,11 @@ export class ProjectIndex {
             if (canvasId !== undefined) {
                 return { projectId, folder: project.folder, canvasId };
             }
+        }
+        const hidden = this.hiddenAgents?.get(id);
+        const project = hidden === undefined ? undefined : this.projects.get(hidden.projectId);
+        if (hidden && project) {
+            return { projectId: hidden.projectId, folder: project.folder, canvasId: null };
         }
         return null;
     }

@@ -21,6 +21,7 @@ export interface EndChildrenWiringDeps {
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
     now?: () => number;
     log?: (line: string) => void;
+    ended?: (nodeIds: readonly string[]) => Promise<void>;
 }
 
 export interface EndChildrenWiring {
@@ -49,7 +50,8 @@ export const wireEndChildren = ({
     sessions,
     enqueue,
     now = Date.now,
-    log = console.error
+    log = console.error,
+    ended
 }: EndChildrenWiringDeps): EndChildrenWiring => {
     const ending = endChildren({
         lineage,
@@ -61,6 +63,7 @@ export const wireEndChildren = ({
             await chats.stop(nodeId, reason);
             await sessions.end(nodeId);
         },
+        ended,
         now
     });
     const live = (nodeId: string): boolean => {

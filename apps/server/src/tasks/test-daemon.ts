@@ -37,6 +37,7 @@ import { isPlanFileName, PlanStore } from '../plans/plan-store.ts';
 import { nodeAccount, nodeMode, startAgentWork } from '../outbox/start-agent.ts';
 import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
+import { openedAgentCount } from '../agents/hidden-agents.ts';
 import type { AccountLaunches } from '@ruimte/agents/providers/accounts/launch';
 import type { LimitsUpdate } from '@ruimte/agents/usage/limits/normalize';
 import { ProviderRegistry } from '../providers/registry.ts';
@@ -111,6 +112,7 @@ export const bootTestDaemon = async ({
     env = { PATH: process.env.PATH, HOME: home },
     onLimits
 }: TestDaemonOptions): Promise<TestDaemon> => {
+    await store.hiddenAgents.load();
     const prompts = new PendingPromptStore(home);
     await prompts.load();
     const lineage = new AgentLineageStore(home);
@@ -162,6 +164,7 @@ export const bootTestDaemon = async ({
         ...(onLimits ? { onLimits } : {}),
         firstPrompt: (id) => prompts.take(id),
         onInterruptedRun: outboxLink.onInterruptedRun,
+        standalone: (id) => store.index.locate(id)?.canvasId === null,
         messageNotes: (chatId) => new NoticeNotes(notices, chatId, MESSAGE_WORDS),
         taskRows: (chatId) => tasks.ofParent(chatId),
         dropWakes: (chatId) => tasks.dropWake(chatId),
@@ -233,6 +236,7 @@ export const bootTestDaemon = async ({
         ceiling: (id: string) => lineage.ceilingOf(id)
     };
     const host: CanvasHost = {
+        hiddenAgents: store.hiddenAgents,
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
         revision: (id) => store.revision(id),
@@ -264,7 +268,7 @@ export const bootTestDaemon = async ({
               }
             : {}),
         depthOf: (nodeId) => lineage.depthOf(nodeId),
-        openedCount: (callerId) => lineage.openedCount(callerId),
+        openedCount: (callerId) => openedAgentCount({ lineage, hiddenAgents: store.hiddenAgents, tasks, outbox, chats, sessions }, callerId),
         recordMade: (record) => lineage.put(record),
         madeBy: (nodeId) => lineage.madeBy(nodeId),
         agentsDeleteAnyView: () => false,

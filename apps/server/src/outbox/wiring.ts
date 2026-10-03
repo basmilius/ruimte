@@ -17,6 +17,7 @@ import type { OutboxStore, OutboxWork } from './outbox.ts';
 import { OutboxWorker, type OutboxClock } from '@ruimte/agents/outbox/outbox-worker';
 import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 import { startAgentHandler } from './start-agent.ts';
+import { placesOf } from '../projects/project-index.ts';
 
 export interface OutboxLinkOptions {
     outbox: OutboxStore;
@@ -172,6 +173,12 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
         chats,
         sessions,
         enqueue,
+        ended: async (nodeIds) => {
+            const projectIds = new Set(nodeIds.map((id) => lineage.projectOf(id)).filter((id) => id !== null));
+            for (const projectId of projectIds) {
+                await projects.hiddenAgents.pruneOrphans(projectId, new Set(placesOf(projects.index.viewsOf(projectId) ?? []).keys()));
+            }
+        },
         ...(deps.now ? { now: deps.now } : {}),
         ...(deps.log ? { log: deps.log } : {})
     });

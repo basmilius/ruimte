@@ -45,6 +45,13 @@ export const startActions: ActionHandlers<ServerActionContext> = {
             throw new VerbRefusal('two-places', '--beside and --group both say where the node goes; give one of them');
         }
         const readIds = readsOf(input.reads);
+        const hidden = input.viewId === null && place.canvasId === null;
+        if (hidden && (input.beside !== null || input.group !== null || readIds.length > 0)) {
+            throw new VerbRefusal('view-required', '--beside, --group and --reads place nodes or lines on a canvas; name one with --view');
+        }
+        if (hidden && host.hiddenAgents === undefined) {
+            throw new VerbRefusal('view-required', OPENING_OFF_CANVAS);
+        }
         requireInstalled(await host.installedAgents(), kind);
 
         // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
@@ -77,26 +84,26 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                 // Counted again under the lock the last start wrote its node down in: a call at the same moment read the same count.
                 depthForOpening(caller, 'agent', 1);
                 if (input.task !== null) {
-                    requireChatParent(content, caller.caller);
+                    requireChatParent(content, caller.caller, host.hiddenAgents?.get(caller.caller)?.node.kind);
                 }
-                const canvas = canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
-                if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
+                const canvas = hidden ? null : canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
+                if (canvas && canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                     throw canvasFull(canvas, 1);
                 }
-                const anchor = input.beside === null ? undefined : canvas.nodes.find((node) => node.id === input.beside);
-                if (input.beside !== null && !anchor) {
+                const anchor = input.beside === null ? undefined : canvas?.nodes.find((node) => node.id === input.beside);
+                if (canvas && input.beside !== null && !anchor) {
                     throw refuseMissingNodes(content, [input.beside], canvas.id, 'the agent this opens has nothing there to stand beside', nodeLines(canvas));
                 }
-                const group = input.group === null ? undefined : canvas.nodes.find((node) => node.id === input.group && node.kind === 'group');
-                if (input.group !== null && !group) {
+                const group = input.group === null ? undefined : canvas?.nodes.find((node) => node.id === input.group && node.kind === 'group');
+                if (canvas && input.group !== null && !group) {
                     throw new VerbRefusal('unknown-group', `${input.group} is not a group on ${canvas.id}`, groupLines(canvas));
                 }
-                const read = nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agent this opens' });
+                const read = canvas ? nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agent this opens' }) : [];
 
                 const size = NODE_SIZE[chat ? 'chat' : 'terminal'];
-                const self = canvas.nodes.find((node) => node.id === caller.caller) ?? null;
-                const inGroup = group ? placeInGroup(group, groupMembers(group, canvas.nodes), size) : null;
-                const rect = inGroup?.rect ?? (anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, self));
+                const self = canvas?.nodes.find((node) => node.id === caller.caller) ?? null;
+                const inGroup = group && canvas ? placeInGroup(group, groupMembers(group, canvas.nodes), size) : null;
+                const rect = inGroup?.rect ?? (anchor ? placeBeside(anchor, size) : canvas ? placeFree(canvas.nodes, size, self) : { x: 0, y: 0, ...size });
                 const kindName = chat ? ('chat' as const) : ('terminal' as const);
 
                 if (dryRun) {
@@ -106,7 +113,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                             output: {
                                 nodeId: NEW_NODE,
                                 kind: kindName,
-                                viewId: canvas.id,
+                                viewId: canvas?.id ?? null,
                                 provider: kind,
                                 edge: self ? { edgeId: null, from: self.id, to: NEW_NODE } : null,
                                 reads: read.map((node) => ({ edgeId: null, from: node.id, to: NEW_NODE })),
@@ -116,7 +123,11 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                     };
                 }
 
-                const id = newId(kindName, content);
+                const id = newId(
+                    kindName,
+                    content,
+                    host.hiddenAgents?.inProject(place.projectId).map((agent) => agent.node.id)
+                );
                 const taken = [id];
                 const mint = (): string => {
                     const fresh = newId('edge', content, taken);
@@ -144,55 +155,67 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                     }
                     return { edgeId: line.id, from: source.id, to: id };
                 });
-                const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
+                const nodes = [
+                    ...(canvas?.nodes ?? []).map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)),
+                    node
+                ];
                 const output: ActionOutput<'agent.start'> = {
                     nodeId: id,
                     kind: kindName,
-                    viewId: canvas.id,
+                    viewId: canvas?.id ?? null,
                     provider: kind,
                     edge: edge ? { edgeId: edge.id, from: edge.from, to: edge.to } : null,
                     reads: readLines,
                     taskId: null
                 };
 
-                return {
-                    landed: async () => {
-                        await host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true, ceiling });
-                        if (input.worktree && cwd !== undefined) {
-                            await host.claimWorktree(place.folder, cwd, id);
-                        }
-                        // Before the agent starts, so a child that is done at once finds its task open.
-                        if (input.task !== null && prompt !== null) {
-                            const task = await host.tasks.open({
-                                projectId: place.projectId,
-                                parentId: caller.caller,
-                                childId: id,
-                                title: input.task,
-                                prompt
-                            });
-                            output.taskId = task.id;
-                        }
-                        if (prompt !== null) {
-                            await host.holdPrompt(place.projectId, id, input.task === null ? prompt : `${prompt}${taskBrief(chat)}`);
-                        }
-                        await host.startAgent({
+                const start = async (): Promise<void> => {
+                    if (hidden) {
+                        await host.hiddenAgents!.put({ projectId: place.projectId, openedBy: caller.caller, node: { ...node, kind: kindName } });
+                    }
+                    await host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: caller.caller, depth, agent: true, ceiling });
+                    if (input.worktree && cwd !== undefined) {
+                        await host.claimWorktree(place.folder, cwd, id);
+                    }
+                    // Before the agent starts, so a child that is done at once finds its task open.
+                    if (input.task !== null && prompt !== null) {
+                        const task = await host.tasks.open({
                             projectId: place.projectId,
-                            nodeId: id,
-                            openedBy: caller.caller,
-                            node: kindName,
-                            provider: kind,
-                            ...(selection ? { selection } : {}),
-                            cwd: cwd ?? place.folder,
-                            ...(runtimeMode === undefined ? {} : { runtimeMode }),
-                            ...(account === undefined ? {} : { account })
+                            parentId: caller.caller,
+                            childId: id,
+                            title: input.task,
+                            prompt
                         });
-                    },
-                    content: {
-                        ...content,
-                        views: content.views.map((view) =>
-                            view.id === canvas.id ? { ...canvas, nodes, edges: [...canvas.edges, ...(edge ? [edge] : []), ...reading] } : view
-                        )
-                    },
+                        output.taskId = task.id;
+                    }
+                    if (prompt !== null) {
+                        await host.holdPrompt(place.projectId, id, input.task === null ? prompt : `${prompt}${taskBrief(chat)}`);
+                    }
+                    await host.startAgent({
+                        projectId: place.projectId,
+                        nodeId: id,
+                        openedBy: caller.caller,
+                        node: kindName,
+                        provider: kind,
+                        ...(selection ? { selection } : {}),
+                        cwd: cwd ?? place.folder,
+                        ...(runtimeMode === undefined ? {} : { runtimeMode }),
+                        ...(account === undefined ? {} : { account })
+                    });
+                };
+                if (hidden) {
+                    await start();
+                }
+                return {
+                    landed: hidden ? undefined : start,
+                    content: canvas
+                        ? {
+                              ...content,
+                              views: content.views.map((view) =>
+                                  view.id === canvas.id ? { ...canvas, nodes, edges: [...canvas.edges, ...(edge ? [edge] : []), ...reading] } : view
+                              )
+                          }
+                        : null,
                     // Started is not done: the outbox starts the agent, and its task or its first turn says how it went.
                     result: { output, operation: { id: operationIdOf('agent.start', [id]), status: 'running' } }
                 };
@@ -227,6 +250,13 @@ export const startActions: ActionHandlers<ServerActionContext> = {
         const depth = depthForOpening(caller, 'team', roles.length);
         const ceiling = modeForOpening(caller, input.mode ?? undefined);
         const readIds = readsOf(input.reads);
+        const hidden = input.viewId === null && place.canvasId === null;
+        if (hidden && readIds.length > 0) {
+            throw new VerbRefusal('view-required', '--reads draws lines on a canvas; name one with --view');
+        }
+        if (hidden && host.hiddenAgents === undefined) {
+            throw new VerbRefusal('view-required', OPENING_OFF_CANVAS);
+        }
         if (input.worktree && input.cwd !== null) {
             throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agents start; give one of them');
         }
@@ -258,18 +288,18 @@ export const startActions: ActionHandlers<ServerActionContext> = {
             .mutate<{ output: ActionOutput<'team.start'>; operation?: { id: string; status: 'running' } }>(place.projectId, async (content) => {
                 depthForOpening(caller, 'team', roles.length);
                 if (input.task) {
-                    requireChatParent(content, caller.caller);
+                    requireChatParent(content, caller.caller, host.hiddenAgents?.get(caller.caller)?.node.kind);
                 }
-                const canvas = canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
+                const canvas = hidden ? null : canvasFor(content, place, input.viewId ?? undefined, OPENING_OFF_CANVAS);
                 // The group counts too, which is the one node a caller does not name in its roles.
-                if (canvas.nodes.length + roles.length + 1 > MAX_CANVAS_NODES) {
+                if (canvas && canvas.nodes.length + roles.length + 1 > MAX_CANVAS_NODES) {
                     throw canvasFull(canvas, roles.length + 1);
                 }
 
-                const read = nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agents this opens' });
+                const read = canvas ? nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agents this opens' }) : [];
                 const layout = placeTeam(roles.map((role) => NODE_SIZE[kindOf(role)]));
-                const self = canvas.nodes.find((node) => node.id === caller.caller) ?? null;
-                const origin = placeFree(canvas.nodes, layout.frame, self);
+                const self = canvas?.nodes.find((node) => node.id === caller.caller) ?? null;
+                const origin = canvas ? placeFree(canvas.nodes, layout.frame, self) : { x: 0, y: 0, ...layout.frame };
 
                 if (dryRun) {
                     // The role rather than a placeholder every row would share: the plan is what to read before anything is made.
@@ -278,7 +308,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                         content: null,
                         result: {
                             output: {
-                                group: { nodeId: NEW_NODE, title: input.label, viewId: canvas.id },
+                                group: canvas ? { nodeId: NEW_NODE, title: input.label, viewId: canvas.id } : null,
                                 agents: roles.map((role, index) => ({
                                     nodeId: placeholders[index]!,
                                     kind: kindOf(role),
@@ -293,7 +323,7 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                     };
                 }
 
-                const taken: string[] = [];
+                const taken = host.hiddenAgents?.inProject(place.projectId).map((agent) => agent.node.id) ?? [];
                 const mint = (prefix: string): string => {
                     const id = newId(prefix, content, taken);
                     taken.push(id);
@@ -304,9 +334,13 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                    rule the client reads membership by, so there is no memberIds to fill in here. */
                 const groupId = mint('group');
                 const group: ProjectNode = { id: groupId, kind: 'group', title: input.label, ...origin };
-                const nodes: ProjectNode[] = [group];
+                const nodes: ProjectNode[] = canvas ? [group] : [];
                 const edges: ProjectEdge[] = [];
-                const output: ActionOutput<'team.start'> = { group: { nodeId: groupId, title: input.label, viewId: canvas.id }, agents: [], reads: [] };
+                const output: ActionOutput<'team.start'> = {
+                    group: canvas ? { nodeId: groupId, title: input.label, viewId: canvas.id } : null,
+                    agents: [],
+                    reads: []
+                };
 
                 for (const [index, role] of roles.entries()) {
                     const chat = kindOf(role) === 'chat';
@@ -350,51 +384,61 @@ export const startActions: ActionHandlers<ServerActionContext> = {
                     });
                 }
 
-                return {
-                    landed: async () => {
-                        const batchId = input.task ? `batch-${randomBytes(6).toString('hex')}` : undefined;
-                        // Every task before any agent starts, so a role that is done at once never finds its team complete without the others.
-                        for (const [index, made] of output.agents.entries()) {
-                            await host.recordMade({ projectId: place.projectId, nodeId: made.nodeId, openedBy: caller.caller, depth, agent: true, ceiling });
-                            const roleCwd = roleCwds[index];
-                            if (input.worktree && roleCwd !== undefined) {
-                                await host.claimWorktree(place.folder, roleCwd, made.nodeId);
-                            }
-                            if (batchId !== undefined) {
-                                const task = await host.tasks.open({
-                                    projectId: place.projectId,
-                                    parentId: caller.caller,
-                                    childId: made.nodeId,
-                                    title: made.title,
-                                    prompt: roles[index]!.prompt,
-                                    batchId
-                                });
-                                made.taskId = task.id;
-                            }
+                const start = async (): Promise<void> => {
+                    const batchId = input.task ? `batch-${randomBytes(6).toString('hex')}` : undefined;
+                    // Every task before any agent starts, so a role that is done at once never finds its team complete without the others.
+                    for (const [index, made] of output.agents.entries()) {
+                        if (hidden) {
+                            const node = nodes.find((candidate) => candidate.id === made.nodeId)!;
+                            await host.hiddenAgents!.put({ projectId: place.projectId, openedBy: caller.caller, node: { ...node, kind: made.kind } });
                         }
-                        for (const [index, made] of output.agents.entries()) {
-                            const chat = made.kind === 'chat';
-                            const prompt = roles[index]!.prompt;
-                            await host.holdPrompt(place.projectId, made.nodeId, input.task ? `${prompt}${taskBrief(chat)}` : prompt);
-                            await host.startAgent({
+                        await host.recordMade({ projectId: place.projectId, nodeId: made.nodeId, openedBy: caller.caller, depth, agent: true, ceiling });
+                        const roleCwd = roleCwds[index];
+                        if (input.worktree && roleCwd !== undefined) {
+                            await host.claimWorktree(place.folder, roleCwd, made.nodeId);
+                        }
+                        if (batchId !== undefined) {
+                            const task = await host.tasks.open({
                                 projectId: place.projectId,
-                                nodeId: made.nodeId,
-                                openedBy: caller.caller,
-                                node: made.kind,
-                                provider: made.provider,
-                                ...(selections[index] ? { selection: selections[index] } : {}),
-                                cwd: roleCwds[index] ?? place.folder,
-                                ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] }),
-                                ...(accounts[index] === undefined ? {} : { account: accounts[index] })
+                                parentId: caller.caller,
+                                childId: made.nodeId,
+                                title: made.title,
+                                prompt: roles[index]!.prompt,
+                                batchId
                             });
+                            made.taskId = task.id;
                         }
-                    },
-                    content: {
-                        ...content,
-                        views: content.views.map((view) =>
-                            view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, ...nodes], edges: [...canvas.edges, ...edges] } : view
-                        )
-                    },
+                    }
+                    for (const [index, made] of output.agents.entries()) {
+                        const chat = made.kind === 'chat';
+                        const prompt = roles[index]!.prompt;
+                        await host.holdPrompt(place.projectId, made.nodeId, input.task ? `${prompt}${taskBrief(chat)}` : prompt);
+                        await host.startAgent({
+                            projectId: place.projectId,
+                            nodeId: made.nodeId,
+                            openedBy: caller.caller,
+                            node: made.kind,
+                            provider: made.provider,
+                            ...(selections[index] ? { selection: selections[index] } : {}),
+                            cwd: roleCwds[index] ?? place.folder,
+                            ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] }),
+                            ...(accounts[index] === undefined ? {} : { account: accounts[index] })
+                        });
+                    }
+                };
+                if (hidden) {
+                    await start();
+                }
+                return {
+                    landed: hidden ? undefined : start,
+                    content: canvas
+                        ? {
+                              ...content,
+                              views: content.views.map((view) =>
+                                  view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, ...nodes], edges: [...canvas.edges, ...edges] } : view
+                              )
+                          }
+                        : null,
                     result: {
                         output,
                         operation: {

@@ -132,6 +132,7 @@ import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
 import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
+import { openedAgentCount } from './agents/hidden-agents.ts';
 import { dropEmptyMark } from './projects/scratch-project.ts';
 import { probeCodexNoDaemon, takesNoteOnLine } from './providers/launch.ts';
 import { ModelCatalogFeed } from './providers/model-catalogs.ts';
@@ -397,6 +398,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         accounts: providerAccounts
     });
     const projects = new ProjectStore(config.home);
+    await projects.hiddenAgents.load();
     projects.attachTracked(isTrackedPath);
     const outboxWiring = wireOutbox({
         link: outboxLink,
@@ -582,6 +584,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         note: (id: string, text: string) => chats.addNote(id, 'info', text)
     };
     const canvasHost = {
+        hiddenAgents: projects.hiddenAgents,
         locate: (id: string) => projects.index.locate(id),
         read: (projectId: string) => projects.read(projectId),
         revision: (projectId: string) => projects.revision(projectId),
@@ -613,7 +616,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             read: (targetId: string, sourceId: string, tail: number | null, subagent: string | null) => context.answer(targetId, sourceId, tail, subagent)
         },
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
-        openedCount: (callerId: string) => lineage.openedCount(callerId),
+        openedCount: (callerId: string) =>
+            openedAgentCount({ lineage, hiddenAgents: projects.hiddenAgents, tasks, outbox, chats, sessions: manager }, callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean; ceiling?: RuntimeMode }) =>
             lineage.put(record),
         madeBy: (nodeId: string) => lineage.madeBy(nodeId),

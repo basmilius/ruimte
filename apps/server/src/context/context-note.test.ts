@@ -106,20 +106,27 @@ describe('contextPrompt', () => {
     });
 });
 
-test('a standalone chat delegates inside the chat and only opens canvas agents when requested', () => {
-    for (const depth of [0, 1, 2]) {
+test('a chat view skips canvas context discovery and opens hidden agents with the requested model', () => {
+    for (const depth of [0, 1]) {
         const note = chatPrompt({ sources: [device], depth, standalone: true });
-        // Defined by what it is not, a chat of its own starts every answer from the canvas it is not on.
-        expect(note).not.toContain('not a node on a canvas');
-        expect(note).not.toContain('standalone');
         expect(note).toContain('a command you run in your shell, not a tool');
         expect(note).toContain("your CLI's own subagents");
-        expect(note).toContain('keep any model the person asked for');
-        expect(note).toContain('Only when the person asks for an agent');
+        expect(note).toContain('Keep any model the person asked for');
+        expect(note).toContain('no canvas links, so skip linked-context discovery');
+        expect(note).not.toContain('context linked to this chat');
+        expect(note).toContain('These agents stay hidden');
+        expect(note).toContain('end your turn after delegating instead of polling');
+        expect(note).toContain('Use --view only when the person asks to place the agent on a canvas');
         expect(note).toContain('--view');
         expect(note).not.toContain('never a subagent of your own');
         expect(note).toContain('"iPhone 18 Pro Max" (device)');
     }
+});
+
+test('a hidden agent at the depth limit is not told to start another agent', () => {
+    const note = verbsNote({ depth: 2, standalone: true });
+    expect(note).not.toContain('ruimte-context agent');
+    expect(note).not.toContain('team --task');
 });
 
 describe('chatPrompt', () => {

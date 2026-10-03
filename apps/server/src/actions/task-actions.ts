@@ -50,14 +50,21 @@ export const taskActions: ActionHandlers<ServerActionContext> = {
             throw new VerbRefusal('self-task', `${nodeId} is you; a task is what you give another agent`);
         }
         const content = await host.read(place.projectId);
-        requireChatParent(content, caller);
+        requireChatParent(content, caller, host.hiddenAgents?.get(caller)?.node.kind);
         // Only the nodes this same call would accept, so a refusal answers with what can be asked instead.
         const lines = (): string[] =>
             orNote(
-                openedAgents(content, caller, (id) => host.madeBy(id)).map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
+                [
+                    ...openedAgents(content, caller, (id) => host.madeBy(id)),
+                    ...(host.hiddenAgents
+                        ?.inProject(place.projectId)
+                        .filter((agent) => host.madeBy(agent.node.id) === caller)
+                        .map((agent) => agent.node) ?? [])
+                ].map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
                 'You have opened no agent that is still in this project; ruimte-context agent --task opens one with a task of its own'
             );
-        const target = nodeOf(content, nodeId);
+        const hidden = host.hiddenAgents?.get(nodeId);
+        const target = nodeOf(content, nodeId) ?? (hidden?.projectId === place.projectId ? hidden.node : undefined);
         if (!target) {
             const own = ownViewOf(content, nodeId);
             if (own) {
