@@ -1,15 +1,16 @@
 import SwiftUI
 
-/// The desktop's About: the light app icon in its orbit, the version, the links of the desktop's about section, the
+/// The desktop's About: the light app icon in its eclipse, the version, the links of the desktop's about section, the
 /// licenses of what the app is built with and the notes of this version.
 struct AboutPage: View {
     @State private var releaseNotes: ReleaseNotes?
+    @State private var eclipseAnchor: CGFloat?
 
     var body: some View {
-        MobileForm {
+        Form {
             Section {
                 VStack(spacing: 6) {
-                    AppIconImage(size: 76)
+                    AppIconImage(size: 76).eclipseAnchor($eclipseAnchor)
                     Text("Ruimte").font(.title2.weight(.bold)).padding(.top, 10)
                     Text("Space for AI Engineering.").font(.subheadline).foregroundStyle(MobileStyle.muted)
                     Text("\(AppVersion.marketing) (\(AppVersion.build))")
@@ -18,7 +19,6 @@ struct AboutPage: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 24)
                 .padding(.bottom, 20)
-                .background(IconOrbit())
                 .listRowBackground(Color.clear)
                 .accessibilityElement(children: .combine)
             }
@@ -45,7 +45,18 @@ struct AboutPage: View {
             } footer: {
                 Text("Projects and sessions stay on your machines. This app connects to them remotely.")
             }
+            .listRowBackground(MobileStyle.panel)
         }
+        .scrollContentBackground(.hidden)
+        .background {
+            // Behind the form rather than in its first row, so the sky runs under the bar to the top of the screen.
+            ZStack {
+                MobileStyle.canvas
+                Eclipse(scene: .about, anchor: eclipseAnchor)
+            }
+            .ignoresSafeArea()
+        }
+        .foregroundStyle(MobileStyle.text)
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)
         .mobileSheet(item: $releaseNotes) { ReleaseNotesSheet(notes: $0) }
@@ -79,7 +90,9 @@ struct LicensesPage: View {
     }
 
     private static func text(_ name: String) -> String {
-        Bundle.main.url(forResource: name, withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        Bundle.main.url(forResource: name, withExtension: "txt").flatMap {
+            try? String(contentsOf: $0, encoding: .utf8)
+        }
             ?? "This license text is missing from the app."
     }
 }

@@ -311,9 +311,12 @@ terminal or canvas that still waits for its project or session shows a spinner o
 
 Three steps (`App/Onboarding`), centered on an iPad as on an iPhone.
 
-- The welcome (`WelcomePage`) shows the light app icon in the desktop's orbit, with the two ways in: Continue with
+- The welcome (`WelcomePage`) shows the light app icon in the desktop's eclipse, with the two ways in: Continue with
   Apple or GitHub, as `/v1/providers` offers them, or Connect directly to your computer with a pairing link. When the
   providers do not load it says so and offers Try again; a failed sign-in is an alert.
+- The eclipse (`App/Design/Eclipse.swift`) is the desktop's `ui/Eclipse.tsx` with its seeded stars, colors and
+  timings, and stands still under Reduce Motion. On the welcome and on About it is the page's background, edge to
+  edge under the bars, centered on the icon as the page scrolls.
 - Add a machine (`PairMachinePage`, the same sheet as the plus on Machines) takes a pairing link only, with the steps
   that find one: Settings, Account, Show pairing link in Ruimte on the computer, or `ruimte pair` there. When the
   sheet opens and the clipboard looks like a web address (`detectPatterns`, which asks nothing), it reads the
@@ -343,7 +346,7 @@ Then Appearance (theme, terminal font size), Agents, Files and Git (hidden files
   Computer Use shows only its state (`computer.status`): turning it on and letting an agent into an app happens on
   the machine itself. Installing a CLI or adding an account does too.
 - Notifications and Live Activities: see below.
-- About shows the light app icon in the desktop's orbit, the version and build, the desktop's links, the licenses
+- About shows the light app icon in the desktop's eclipse, the version and build, the desktop's links, the licenses
   of what the app ships (`App/Design/Lucide-LICENSE.txt`, `App/Resources/package-licenses.txt` for Highlightr,
   highlight.js, SwiftTerm and WebRTC, and `App/Resources/document-renderer-licenses.txt`) and What's new.
 - Release notes come from `App/Resources/release-notes.json` in the bundle, never the network. The file names the

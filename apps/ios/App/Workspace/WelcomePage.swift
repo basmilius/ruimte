@@ -11,9 +11,7 @@ struct WelcomePage: View {
     var begin: () -> Void = {}
     @State private var retrying = false
     @State private var chosen: ProviderId?
-
-    private static let iconSize: CGFloat = 104
-    private static let orbitCenter: CGFloat = 340
+    @State private var eclipseAnchor: CGFloat?
 
     private var busy: Bool { runtime.loading || runtime.signingIn || runtime.signingOut || retrying }
 
@@ -35,7 +33,13 @@ struct WelcomePage: View {
             }
             .scrollBounceBehavior(.basedOnSize)
         }
-        .background(MobileStyle.canvas)
+        .background {
+            ZStack {
+                MobileStyle.canvas
+                Eclipse(scene: .welcome, anchor: eclipseAnchor)
+            }
+            .ignoresSafeArea()
+        }
         .alert(
             "Sign-in failed",
             isPresented: Binding(
@@ -51,7 +55,7 @@ struct WelcomePage: View {
 
     private var introduction: some View {
         VStack(spacing: 8) {
-            AppIconImage(size: Self.iconSize)
+            AppIconImage(size: 104).eclipseAnchor($eclipseAnchor)
             Text("Ruimte")
                 .font(.largeTitle.weight(.bold))
                 .padding(.top, 20)
@@ -66,11 +70,6 @@ struct WelcomePage: View {
         }
         .multilineTextAlignment(.center)
         .fixedSize(horizontal: false, vertical: true)
-        .background(alignment: .top) {
-            IconOrbit(center: Self.orbitCenter, diameters: [190, 310, 450, 620], glow: 440)
-                .frame(width: 2 * Self.orbitCenter + 100, height: 2 * Self.orbitCenter)
-                .offset(y: Self.iconSize / 2 - Self.orbitCenter)
-        }
     }
 
     @ViewBuilder private var signInOptions: some View {

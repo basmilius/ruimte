@@ -39,6 +39,7 @@
 		1D6CEEA1B77289B22B60489B /* ViewSettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B046BB9BDAA4FBBD682034 /* ViewSettingsSheet.swift */; };
 		2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
 		2078E1D5C84F273F381AA240 /* LaunchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D2983C599BF780FEA70F8A /* LaunchModel.swift */; };
+		20FD9CD7B6EE162D24028A36 /* EclipseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 858D931897B958E9E67522DD /* EclipseTests.swift */; };
 		226093BDE4A09AE44CB9B90A /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D69D1BF9802A60BF9D50BA2B /* GitPage.swift */; };
 		22D4E7461B92CDB6FA1056BB /* ChatSubagentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2397286316071E20E0ED2DC4 /* ChatSubagentRow.swift */; };
 		232274F1989E0BA90BB73CA8 /* image.webp in Resources */ = {isa = PBXBuildFile; fileRef = 868B09445FC666B30675BD85 /* image.webp */; };
@@ -114,7 +115,6 @@
 		5789AC87C3A36DD33EE7D7DD /* NotificationsSettingsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */; };
 		57C70128D7E7DE01BD71D1B7 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0176519421C237EC5BB286 /* Onboarding.swift */; };
 		57F5769498648C0AA29CA200 /* GitMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239F0E1B7C5B1C206BD8CD02 /* GitMergeTests.swift */; };
-		58B623B280C8B678A1CA578E /* IconOrbit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25AC9889B0332419609BC27C /* IconOrbit.swift */; };
 		58B79741FE1C9246375FDB8F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 826308F387A7269E62AF6C7C /* Assets.xcassets */; };
 		58BF3F0A0775099E0F8F4F77 /* ChatMenuActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194877F799CF0BBA08C0BA8F /* ChatMenuActionTests.swift */; };
 		59959A4B0DD426A2CB3F1DCF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
@@ -216,6 +216,7 @@
 		AE7A98A4109235647F3EA5AD /* PhoneHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE48345F04BA4B8E778C12FD /* PhoneHome.swift */; };
 		AEFABCFC364116F1A99CC8A8 /* SharedMachineSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653536E5B98BEFB676B13733 /* SharedMachineSession.swift */; };
 		AF856CCE0FC3592A271DB4E9 /* NowPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86350DF4914846B3127196EC /* NowPage.swift */; };
+		AF99D4E5799AA84EBCD05563 /* Eclipse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438FE4C69B257D442F78A06B /* Eclipse.swift */; };
 		AFB579E716E1378515894206 /* ConnectionProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */; };
 		B0223299D3235AB1697E0B54 /* NowNewChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17A37FD46C9D7AF5C8D62B5B /* NowNewChat.swift */; };
 		B19D7A8A5C383000468AB38A /* PadRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE7E6464F6778045BEA08EC /* PadRouter.swift */; };
@@ -258,6 +259,7 @@
 		C35D8DC07DB34F01AB96DE63 /* ChatComposerMorph.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEBA4D8875D163CC1E085C98 /* ChatComposerMorph.swift */; };
 		C3F95FAA2A6A70480F88D00A /* ProjectOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C17B8085F7C45F68CEA43FF /* ProjectOverview.swift */; };
 		C4E36B847635300A645681AE /* image.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5EEF2A1565431D8E3D196AC0 /* image.gif */; };
+		C6D413800C46944C57D951B5 /* EclipseStars.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D5CDF11702A94CAD3FAE682 /* EclipseStars.swift */; };
 		C753D5E02FBD111AD87DB0EC /* ChatDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AC34FA6BB3E2D39E24D463 /* ChatDraftTests.swift */; };
 		C7B1C89782EBA8CF74012E0C /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
 		C7FB859B4CE1EDA8A7906FE0 /* MachineDevicePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA47C6A96B4F7241EE6B652 /* MachineDevicePreview.swift */; };
@@ -417,7 +419,6 @@
 		239F0E1B7C5B1C206BD8CD02 /* GitMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMergeTests.swift; sourceTree = "<group>"; };
 		24DD77D09560CA9FC325C462 /* SettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPage.swift; sourceTree = "<group>"; };
 		25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionProbe.swift; sourceTree = "<group>"; };
-		25AC9889B0332419609BC27C /* IconOrbit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconOrbit.swift; sourceTree = "<group>"; };
 		26E964FFD73FB59D62676602 /* AccountDeletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletion.swift; sourceTree = "<group>"; };
 		277C90606C3586426EE8CE7F /* RuimtePulsar */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimtePulsar; path = Packages/RuimtePulsar; sourceTree = SOURCE_ROOT; };
 		27E68DFC13E24C17BCE2204B /* NowRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowRequestTests.swift; sourceTree = "<group>"; };
@@ -445,11 +446,13 @@
 		3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Lucide-LICENSE.txt"; sourceTree = "<group>"; };
 		3C313F3BEFC69407AE4E76C7 /* NowCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowCard.swift; sourceTree = "<group>"; };
 		3CBB92CD25F5D79234F2DAAA /* MachinePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachinePage.swift; sourceTree = "<group>"; };
+		3D5CDF11702A94CAD3FAE682 /* EclipseStars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EclipseStars.swift; sourceTree = "<group>"; };
 		3D803A055A81FD7C2DFD3B8A /* tone.aac */ = {isa = PBXFileReference; path = tone.aac; sourceTree = "<group>"; };
 		3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RuimteNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4105DA5DA1335746AF2CD167 /* tone.opus */ = {isa = PBXFileReference; path = tone.opus; sourceTree = "<group>"; };
 		429F4D64FA8A6FD134400A6C /* RuimteUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RuimteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		433946B3E4C5D74991B5FDA5 /* image.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = image.jpg; sourceTree = "<group>"; };
+		438FE4C69B257D442F78A06B /* Eclipse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Eclipse.swift; sourceTree = "<group>"; };
 		445B9BB2968F1A7C458F650A /* ChatRunSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRunSettings.swift; sourceTree = "<group>"; };
 		4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileWorkspace.swift; sourceTree = "<group>"; };
 		453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RuimteActivityWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -529,6 +532,7 @@
 		826308F387A7269E62AF6C7C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		830913A49860F17303353605 /* MachineEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineEndpoint.swift; sourceTree = "<group>"; };
 		8449B851575DF02B5169572E /* MobileScrollViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileScrollViewport.swift; sourceTree = "<group>"; };
+		858D931897B958E9E67522DD /* EclipseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EclipseTests.swift; sourceTree = "<group>"; };
 		86350DF4914846B3127196EC /* NowPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPage.swift; sourceTree = "<group>"; };
 		868B09445FC666B30675BD85 /* image.webp */ = {isa = PBXFileReference; path = image.webp; sourceTree = "<group>"; };
 		8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsPage.swift; sourceTree = "<group>"; };
@@ -823,7 +827,8 @@
 			isa = PBXGroup;
 			children = (
 				0FC200AD66C0ACA562FAF1D4 /* AccountDot.swift */,
-				25AC9889B0332419609BC27C /* IconOrbit.swift */,
+				438FE4C69B257D442F78A06B /* Eclipse.swift */,
+				3D5CDF11702A94CAD3FAE682 /* EclipseStars.swift */,
 				3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */,
 				92115E2E20A2788AC95AD41F /* LucideIcon.swift */,
 				F1D776C986DA3812669E3E1D /* MobileByteCount.swift */,
@@ -1017,6 +1022,7 @@
 				0416D221A1F144614E3E9A43 /* DocumentSceneTests.swift */,
 				073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */,
 				E0EA4FE8F41A92E6DF5B35CD /* DrawingToolbarTests.swift */,
+				858D931897B958E9E67522DD /* EclipseTests.swift */,
 				A6321857DC856275AF3D6F68 /* FilePreviewTests.swift */,
 				974733B9574512335A62B518 /* GitConflictTests.swift */,
 				239F0E1B7C5B1C206BD8CD02 /* GitMergeTests.swift */,
@@ -1533,6 +1539,7 @@
 				36FDA8A2969517F544C26207 /* DocumentSceneTests.swift in Sources */,
 				DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */,
 				0B7FE4C6D2DE9E12A91F6906 /* DrawingToolbarTests.swift in Sources */,
+				20FD9CD7B6EE162D24028A36 /* EclipseTests.swift in Sources */,
 				C2AC2BD4033C5764494105B5 /* FilePreviewTests.swift in Sources */,
 				BC4CE43B950E84F0FCE87BFC /* GitConflictTests.swift in Sources */,
 				57F5769498648C0AA29CA200 /* GitMergeTests.swift in Sources */,
@@ -1656,6 +1663,8 @@
 				2713C14E0E58D28E9F2CC645 /* DrawingEditorPage.swift in Sources */,
 				290C515FDEC7C2A90EB7AA84 /* DrawingExport.swift in Sources */,
 				D039697DB61689EDC2F469C7 /* DrawingToolbar.swift in Sources */,
+				AF99D4E5799AA84EBCD05563 /* Eclipse.swift in Sources */,
+				C6D413800C46944C57D951B5 /* EclipseStars.swift in Sources */,
 				B39223B40680A1CF2F954289 /* FileAudioPlayer.swift in Sources */,
 				D94B9A219172036093CE9911 /* FileFallbackView.swift in Sources */,
 				5AF66E29949C7CDE62057D6B /* FileGrep.swift in Sources */,
@@ -1682,7 +1691,6 @@
 				9FEF1C5D72210474DA0C05B4 /* GitWorktreeBinding.swift in Sources */,
 				52044F16FB5C9FC9FF67A877 /* GitWorktrees.swift in Sources */,
 				DFF7EA05554B39FA0B032ACA /* GitWorktreesPage.swift in Sources */,
-				58B623B280C8B678A1CA578E /* IconOrbit.swift in Sources */,
 				B98F3680E193F865D98DA277 /* LastProject.swift in Sources */,
 				BA0600DD7F0BEB97CB88E30D /* LaunchEditing.swift in Sources */,
 				06196DC3AE8B98374122DB81 /* LaunchEditorSheet.swift in Sources */,
