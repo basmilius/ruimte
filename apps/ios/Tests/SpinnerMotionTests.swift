@@ -54,8 +54,8 @@ final class SpinnerMotionTests: XCTestCase {
         XCTAssertEqual(SpinnerMotion.easeInOut(0.75), 0.8709, accuracy: 1e-3)
     }
 
-    private func assertClose(_ actual: CGPoint, _ expected: CGPoint, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(actual.x, expected.x, accuracy: 0.01, file: file, line: line)
-        XCTAssertEqual(actual.y, expected.y, accuracy: 0.01, file: file, line: line)
+    private func assertClose(_ actual: CGPoint, _ expected: CGPoint, line: UInt = #line) {
+        XCTAssertEqual(actual.x, expected.x, accuracy: 0.01, line: line)
+        XCTAssertEqual(actual.y, expected.y, accuracy: 0.01, line: line)
     }
 }
