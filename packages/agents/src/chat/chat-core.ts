@@ -1113,6 +1113,11 @@ export class ChatCore {
         // After the thread, so a client reading it has already had this info and the status is a no-op there.
         if (event.type === 'info' || event.type === 'reset') {
             this.announceStatus(chatId, event.info);
+        } else if (event.type === 'item' && (event.item.kind === 'approval' || event.item.kind === 'question')) {
+            const session = this.chats.get(chatId);
+            if (session) {
+                this.announceStatus(chatId, session.info);
+            }
         }
     }
 
@@ -1123,8 +1128,16 @@ export class ChatCore {
      * rest on connect.
      */
     private announceStatus(chatId: string, info: ChatInfo): void {
-        // A limit, the resume owed after it and subagents still at work are what a header shows of an idle chat, so they count as a change too.
-        const said = JSON.stringify([info.status, info.limit ?? null, info.resumeAt ?? null, info.resumeAtReset ?? null, info.delegating ?? false]);
+        // A limit, the resume owed after it and subagents still at work are what a header shows of an idle chat, so they count as a change too,
+        // and so does a request opening or settling while the chat already waits on another.
+        const said = JSON.stringify([
+            info.status,
+            info.limit ?? null,
+            info.resumeAt ?? null,
+            info.resumeAtReset ?? null,
+            info.delegating ?? false,
+            info.requests?.map((request) => request.requestId) ?? []
+        ]);
         if (this.announced.get(chatId) === said) {
             return;
         }

@@ -47,7 +47,19 @@ describe('chat history', () => {
     });
 
     test('pending requests are available outside the page and item indices remain stable', () => {
-        const approval = { id: 'a', kind: 'approval', decision: 'pending', requestId: 'r' } as ChatItem;
+        const approval: ChatItem = {
+            id: 'a',
+            kind: 'approval',
+            createdAt: 0,
+            turnId: null,
+            requestId: 'r',
+            toolUseId: null,
+            toolName: 'Bash',
+            input: { command: 'ls' },
+            description: null,
+            canAllowAlways: false,
+            decision: 'pending'
+        };
         const thread = new ChatThread(info, [approval, message(0), message(1)]);
         expect(thread.history(1).items).toEqual([message(1)]);
         expect(thread.pending() as ChatItem[]).toEqual([approval]);

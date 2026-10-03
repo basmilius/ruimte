@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { ChatError } from './errors.ts';
+import { requestSummaries } from './request-summary.ts';
 import type { AgentStatus, ChatApprovalItem, ChatEvent, ChatHistoryResult, ChatInfo, ChatItem, ChatQuestionItem } from '@ruimte/agent-contracts';
 
 /*
@@ -20,6 +21,7 @@ export class ChatThread {
             this.indices.set(item.id, this.order.length);
             this.order.push(item.id);
         }
+        this.syncRequests();
     }
 
     get(id: string): ChatItem | undefined {
@@ -46,6 +48,9 @@ export class ChatThread {
             this.order.push(item.id);
         }
         this.items.set(item.id, item);
+        if (item.kind === 'approval' || item.kind === 'question') {
+            this.syncRequests();
+        }
         return { type: 'item', item, historyIndex: this.indices.get(item.id)! };
     }
 
@@ -76,6 +81,7 @@ export class ChatThread {
         this.historyGeneration = randomUUID();
         this.order.length = 0;
         this.info = { ...this.info, ...patch };
+        this.syncRequests();
         return { type: 'reset', info: this.info, items: [] };
     }
 
@@ -117,6 +123,16 @@ export class ChatThread {
             (item): item is ChatApprovalItem | ChatQuestionItem =>
                 (item.kind === 'approval' && item.decision === 'pending') || (item.kind === 'question' && item.state === 'pending')
         );
+    }
+
+    /*
+     * `info.requests` follows the request items, so whatever event comes next carries what the chat waits on,
+     * and a log read back rebuilds it the same way.
+     */
+    private syncRequests(): void {
+        const { requests: _requests, ...rest } = this.info;
+        const pending = this.pending();
+        this.info = pending.length === 0 ? rest : { ...rest, requests: requestSummaries(pending) };
     }
 
     history(limit = 60, cursor?: string): ChatHistoryResult {
