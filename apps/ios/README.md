@@ -603,6 +603,22 @@ Release sets `PUSH_ENVIRONMENT: production` while a local development profile gr
 `aps-environment: development`, so a locally signed Release build registers against the
 wrong APNs environment. Test notifications on a Debug build.
 
+## Languages
+
+The app speaks English and Dutch and follows the language of the device; English is the source and
+the fallback. Every target has its own String Catalog: `Localizable.xcstrings` for the app, the widget
+and Live Activity extension, the notification extension and both packages (whose strings pass
+`bundle: .module`), and `InfoPlist.xcstrings` for the permission prompts and display names. The
+compiler extracts the keys (`SWIFT_EMIT_LOC_STRINGS`), and a build in Xcode or
+`xcodebuild -exportLocalizations` writes new ones into the catalogs. A literal SwiftUI takes as a
+`LocalizedStringKey` is a key already; a sentence that travels as a `String` (a title a model
+returns, a problem, an error, a label passed to `MobileRow` or `Button(_:lucideIcon:)`) goes through
+`String(localized:)`. A count is one key with plural variations, never a hand-written singular.
+Names, paths, git refs, wire values, model and CLI names, what the machine says and log lines stay
+as they are. The Dutch follows the desktop's glossary in `apps/client/src/i18n/README.md`, so a
+daemon is a machine there too. `LocalizationTests` fails when a key in any catalog has no Dutch, or
+when its Dutch drops or adds a placeholder.
+
 ## Native Apple sign-in
 
 Apple uses the system authorization sheet, with no browser callback. The app asks
