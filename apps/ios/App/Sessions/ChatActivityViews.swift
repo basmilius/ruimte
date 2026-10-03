@@ -73,7 +73,9 @@ struct ChatWorkingRow: View {
         .font(.footnote).foregroundStyle(MobileStyle.muted)
         .frame(minHeight: 28)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(presentation.isAnimating ? "Agent is working" : presentation.activityLabel)
+        .accessibilityLabel(
+            presentation.isAnimating ? String(localized: "Agent is working") : presentation.activityLabel
+        )
         .accessibilityIdentifier("chat.working")
     }
 }
@@ -92,7 +94,7 @@ struct ChatThinkingRow: View {
                 HStack(spacing: 8) {
                     Image(lucide: "brain", size: 14)
                     if streaming {
-                        ChatLiveLabel(text: "Thinking...")
+                        ChatLiveLabel(text: String(localized: "Thinking..."))
                     } else {
                         Text(
                             "Thought for \(ChatToolPresentation.elapsed(item.number("endedAt", fallback: item.number("createdAt")) - item.number("createdAt")))"
@@ -128,7 +130,7 @@ struct ChatToolRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Image(lucide: failed ? "circle-alert" : ChatToolPresentation.icon(item.text("name")), size: 14)
-                        ChatLiveLabel(text: item.text("name", fallback: "Tool"), active: running)
+                        ChatLiveLabel(text: item.text("name", fallback: String(localized: "Tool")), active: running)
                         Spacer(minLength: 4)
                         if running {
                             ChatElapsed(

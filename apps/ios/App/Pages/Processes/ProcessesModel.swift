@@ -215,10 +215,10 @@ enum ProcessAlertAction: String, Equatable {
 
     var label: String {
         switch self {
-        case .interrupt: "Interrupt"
-        case .terminate: "Terminate"
-        case .show: "Show process"
-        case .resume: "Resume"
+        case .interrupt: String(localized: "Interrupt", comment: "Button that interrupts a process")
+        case .terminate: String(localized: "Terminate", comment: "Button that terminates a process")
+        case .show: String(localized: "Show process")
+        case .resume: String(localized: "Resume", comment: "Button that resumes an agent")
         }
     }
 }
@@ -247,7 +247,7 @@ enum ProcessesText {
 
     static func rate(_ value: Double?) -> String {
         guard let value else { return unreadable }
-        return "\(mobileByteCount(value))/s"
+        return String(localized: "\(mobileByteCount(value))/s", comment: "Data rate, %@ is a byte count, per second")
     }
 
     /// Read and written together, which is what the disk column and its sort mean.
@@ -257,10 +257,16 @@ enum ProcessesText {
 
     static func duration(_ milliseconds: Double) -> String {
         let seconds = max(0, Int(milliseconds / 1000))
-        if seconds < 60 { return "\(seconds)s" }
+        if seconds < 60 { return String(localized: "\(seconds)s", comment: "Duration in seconds, abbreviated") }
         let minutes = seconds / 60
-        if minutes < 60 { return seconds % 60 == 0 ? "\(minutes)m" : "\(minutes)m \(seconds % 60)s" }
-        return minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes / 60)h \(minutes % 60)m"
+        if minutes < 60 {
+            return seconds % 60 == 0
+                ? String(localized: "\(minutes)m", comment: "Duration in minutes, abbreviated")
+                : String(localized: "\(minutes)m \(seconds % 60)s", comment: "Duration, minutes and seconds, abbreviated")
+        }
+        return minutes % 60 == 0
+            ? String(localized: "\(minutes / 60)h", comment: "Duration in hours, abbreviated")
+            : String(localized: "\(minutes / 60)h \(minutes % 60)m", comment: "Duration, hours and minutes, abbreviated")
     }
 
     static func agentName(_ kind: String) -> String {
@@ -275,14 +281,19 @@ enum ProcessesText {
 
     /// The warning in one sentence a person reads without knowing what a hook is.
     static func alert(_ alert: ProcessAlert, now: Double) -> String {
-        let name = alert.name ?? "A process"
+        let name = alert.name ?? String(localized: "A process")
         switch alert.kind {
-        case "silent": return "Working, but silent for \(duration(now - alert.since))"
-        case "busy-after-turn": return "\(name) still uses \(percent(alert.value)) of a core after its turn ended"
-        case "memory": return "\(name) uses \(bytes(alert.value))"
-        case "agent-gone": return "\(agentName(alert.name ?? "The agent")) has exited, but still shows as running"
-        case "orphan": return "\(name) is still running after its terminal closed"
-        case "probe-hung": return "\(name), started by Ruimte, has run for \(duration(now - alert.since))"
+        case "silent":
+            return String(localized: "Working, but silent for \(duration(now - alert.since))", comment: "%@ is a duration")
+        case "busy-after-turn":
+            return String(localized: "\(name) still uses \(percent(alert.value)) of a core after its turn ended")
+        case "memory": return String(localized: "\(name) uses \(bytes(alert.value))", comment: "%@ is a process name, then an amount of memory")
+        case "agent-gone":
+            let agent = agentName(alert.name ?? String(localized: "The agent"))
+            return String(localized: "\(agent) has exited, but still shows as running")
+        case "orphan": return String(localized: "\(name) is still running after its terminal closed")
+        case "probe-hung":
+            return String(localized: "\(name), started by Ruimte, has run for \(duration(now - alert.since))")
         default: return name
         }
     }
@@ -301,11 +312,11 @@ enum ProcessesText {
 
     static func kindName(_ kind: String) -> String {
         switch kind {
-        case "terminal": "Terminal"
-        case "chat": "Chat"
-        case "app": "Ruimte app"
-        case "daemon": "Machine tasks"
-        default: "Other processes"
+        case "terminal": String(localized: "Terminal")
+        case "chat": String(localized: "Chat")
+        case "app": String(localized: "Ruimte app")
+        case "daemon": String(localized: "Machine tasks")
+        default: String(localized: "Other processes")
         }
     }
 
@@ -337,7 +348,7 @@ enum ProcessesText {
             if let index = sections.firstIndex(where: { $0.id == id }) {
                 sections[index].groups.append(group)
             } else {
-                let title = group.projectID.map { projectNames[$0] ?? "Another project" } ?? "Machine tasks"
+                let title = group.projectID.map { projectNames[$0] ?? String(localized: "Another project") } ?? String(localized: "Machine tasks")
                 sections.append(ProcessSection(id: id, title: title, groups: [group]))
             }
         }
@@ -357,8 +368,11 @@ enum ProcessesText {
 
     static func forceQuestion(_ target: ProcessTarget) -> (title: String, detail: String) {
         (
-            "Force quit \(target.name)?",
-            "SIGKILL ends process \(target.pid) immediately. It cannot save or clean up, so files it was writing may be left incomplete."
+            String(localized: "Force quit \(target.name)?"),
+            String(
+                localized:
+                    "SIGKILL ends process \(target.pid) immediately. It cannot save or clean up, so files it was writing may be left incomplete."
+            )
         )
     }
 }
@@ -494,7 +508,7 @@ enum ProcessesText {
                 ]))
             problem = nil
         } catch {
-            problem = "Could not signal \(target.name): \(error.localizedDescription)"
+            problem = String(localized: "Could not signal \(target.name): \(error.localizedDescription)")
         }
     }
 
@@ -505,7 +519,7 @@ enum ProcessesText {
     func act(_ alert: ProcessAlert, _ action: ProcessAlertAction) async {
         let groups = sample?.groups ?? []
         let target = alert.pid.flatMap { pid in
-            alert.startTime.map { ProcessTarget(pid: pid, startTime: $0, name: alert.name ?? "The process") }
+            alert.startTime.map { ProcessTarget(pid: pid, startTime: $0, name: alert.name ?? String(localized: "The process")) }
         }
         switch action {
         case .show:
@@ -521,7 +535,7 @@ enum ProcessesText {
                 _ = try await client.request(WireRequest.agentResume.rawValue, payload: .object(["sessionId": .string(node)]))
                 problem = nil
             } catch {
-                problem = "Could not resume the agent: \(error.localizedDescription)"
+                problem = String(localized: "Could not resume the agent: \(error.localizedDescription)")
             }
         case .interrupt, .terminate:
             // A chat has a turn to cancel, which is the interrupt its CLI understands.
@@ -532,7 +546,7 @@ enum ProcessesText {
                     _ = try await client.request(WireRequest.chatCancel.rawValue, payload: .object(["chatId": .string(node)]))
                     problem = nil
                 } catch {
-                    problem = "Could not interrupt the turn: \(error.localizedDescription)"
+                    problem = String(localized: "Could not interrupt the turn: \(error.localizedDescription)")
                 }
                 return
             }

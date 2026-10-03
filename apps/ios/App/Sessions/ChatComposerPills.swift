@@ -56,19 +56,21 @@ struct ChatComposerPills: View {
     private var addMenu: some View {
         Menu {
             if model.canAttach {
-                Button("Photos", lucideIcon: "image") { open { sheets.photos = true } }
+                Button(String(localized: "Photos"), lucideIcon: "image") { open { sheets.photos = true } }
                 if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    Button("Camera", lucideIcon: "camera") { open { sheets.camera = true } }
+                    Button(String(localized: "Camera"), lucideIcon: "camera") { open { sheets.camera = true } }
                 }
-                Button("File", lucideIcon: "paperclip") { open { sheets.files = true } }
+                Button(String(localized: "File"), lucideIcon: "paperclip") { open { sheets.files = true } }
             }
             Section {
-                Button("Mention file or chat", lucideIcon: "at-sign") { open { sheets.picker = "@" } }
-                Button("Use skill", lucideIcon: "sparkles") { open { sheets.picker = "$" } }
-                Button("Command", lucideIcon: "circle-slash") { open { sheets.picker = "/" } }
+                Button(String(localized: "Mention file or chat"), lucideIcon: "at-sign") {
+                    open { sheets.picker = "@" }
+                }
+                Button(String(localized: "Use skill"), lucideIcon: "sparkles") { open { sheets.picker = "$" } }
+                Button(String(localized: "Command"), lucideIcon: "circle-slash") { open { sheets.picker = "/" } }
             }
             .disabled(!model.connected)
-            Button("Expand editor", lucideIcon: "maximize-2") { open { sheets.expanded = true } }
+            Button(String(localized: "Expand editor"), lucideIcon: "maximize-2") { open { sheets.expanded = true } }
         } label: {
             Image(lucide: "plus", size: 18).foregroundStyle(MobileStyle.text)
                 .frame(width: 38, height: 38)
@@ -91,12 +93,12 @@ struct ChatComposerPills: View {
             .modifier(ChatComposerPill())
         }
         .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
-        .accessibilityLabel(model.queue.count == 1 ? "1 message in queue" : "\(model.queue.count) messages in queue")
+        .accessibilityLabel("\(model.queue.count) messages in queue")
     }
 
     private var modelMenu: some View {
         let slug = model.selection.text("model")
-        let name = slug.isEmpty ? "Choose model" : ModelName.of(slug, in: model.models)
+        let name = slug.isEmpty ? String(localized: "Choose model") : ModelName.of(slug, in: model.models)
         let live = model.models.filter { $0["legacy"]?.boolValue != true }
         let legacy = model.models.filter { $0["legacy"]?.boolValue == true }
         let choice = Binding(get: { slug }, set: { if $0 != slug { model.chooseModel($0) } })
@@ -113,8 +115,12 @@ struct ChatComposerPills: View {
                 }
             }
             Section {
-                Button("Compare models", lucideIcon: "chart-spline") { open { sheets.compare = true } }
-                Button("Run settings", lucideIcon: "sliders-horizontal") { open { sheets.settings = true } }
+                Button(String(localized: "Compare models"), lucideIcon: "chart-spline") {
+                    open { sheets.compare = true }
+                }
+                Button(String(localized: "Run settings"), lucideIcon: "sliders-horizontal") {
+                    open { sheets.settings = true }
+                }
             }
         } label: {
             HStack(spacing: 6) {
@@ -143,7 +149,7 @@ struct ChatComposerPills: View {
         let label = choices.first { $0.text("id") == current }?.text("label") ?? current
         return Menu {
             Picker(
-                option.text("label", fallback: "Effort"),
+                option.text("label", fallback: String(localized: "Effort")),
                 selection: Binding(
                     get: { current },
                     set: { if $0 != current { model.chooseOption("effort", value: .string($0)) } })
@@ -167,7 +173,7 @@ struct ChatComposerPills: View {
             .modifier(ChatComposerPill())
         }
         .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
-        .accessibilityLabel(option.text("label", fallback: "Effort"))
+        .accessibilityLabel(option.text("label", fallback: String(localized: "Effort")))
         .accessibilityValue(label)
     }
 

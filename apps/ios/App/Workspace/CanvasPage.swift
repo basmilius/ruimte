@@ -112,7 +112,10 @@ struct CanvasPage: View {
         }
         .toolbar {
             ToolbarItem(id: "canvas.actions", placement: .topBarTrailing) {
-                Button(listed ? "Show canvas" : "Show as a list", lucideIcon: listed ? "layout-grid" : "list") {
+                Button(
+                    listed ? String(localized: "Show canvas") : String(localized: "Show as a list"),
+                    lucideIcon: listed ? "layout-grid" : "list"
+                ) {
                     listed.toggle()
                 }
             }
@@ -124,7 +127,7 @@ struct CanvasPage: View {
         }
         .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: viewID, kind: addingKind) }
         .confirmationDialog(
-            nodes.first(where: { $0.stableID == menuID })?.text("title") ?? "Node",
+            nodes.first(where: { $0.stableID == menuID })?.text("title") ?? String(localized: "Node"),
             isPresented: Binding(get: { menuID != nil }, set: { if !$0 { menuID = nil } }),
             titleVisibility: .visible
         ) {
@@ -186,8 +189,11 @@ struct CanvasPage: View {
             Button("Cancel", role: .cancel) {}
         } message: { pending in
             Text(
-                pending.question.warning.map { "\($0) Its connections are removed too." }
-                    ?? "Its connections are removed too.")
+                pending.question.warning.map {
+                    String(
+                        localized: "\($0) Its connections are removed too.",
+                        comment: "%@ says which chats and terminals end with the node")
+                } ?? String(localized: "Its connections are removed too."))
         }
     }
     @ViewBuilder private func nodeActions(_ node: JSONValue) -> some View {
@@ -197,15 +203,15 @@ struct CanvasPage: View {
                 Button {
                     Task { await promote(node) }
                 } label: {
-                    Label("Open as view", lucideIcon: "maximize-2")
+                    Label(String(localized: "Open as view"), lucideIcon: "maximize-2")
                     Text("Keeps its session")
                 }
             case .linkAsContext:
-                Button("Link as context", lucideIcon: "link") { linkID = node.stableID }
+                Button(String(localized: "Link as context"), lucideIcon: "link") { linkID = node.stableID }
             case .groupSelection:
-                Button("Group selection", lucideIcon: "layout-grid") { groupingID = node.stableID }
+                Button(String(localized: "Group selection"), lucideIcon: "layout-grid") { groupingID = node.stableID }
             case .rename:
-                Button("Rename", lucideIcon: "pencil") {
+                Button(String(localized: "Rename"), lucideIcon: "pencil") {
                     name = node.text("title")
                     renameID = node.stableID
                 }
@@ -217,7 +223,7 @@ struct CanvasPage: View {
                     snoozes.clear(node.stableID)
                 }
             case .delete:
-                Button("Delete", lucideIcon: "trash", role: .destructive) {
+                Button(String(localized: "Delete"), lucideIcon: "trash", role: .destructive) {
                     Task {
                         let question = await SessionEnding.question(for: node, client: workspace.client)
                         removal = NodeRemoval(id: node.stableID, question: question)
@@ -282,11 +288,11 @@ private struct CanvasLinkSheet: View {
                         }
                     }
                 } header: {
-                    Text("Who reads \(source?.text("title") ?? "this node")")
+                    Text("Who reads \(source?.text("title") ?? String(localized: "this node"))")
                 } footer: {
                     Text(
-                        "An agent reads what a line runs into it from, with ruimte-context. "
-                            + "Between two agents the line runs both ways.")
+                        "An agent reads what a line runs into it from, with ruimte-context. Between two agents the line runs both ways."
+                    )
                 }
                 if !links.isEmpty {
                     Section("Links") {
@@ -294,7 +300,7 @@ private struct CanvasLinkSheet: View {
                             HStack {
                                 Text(edgeName(edge))
                                 Spacer()
-                                Button("Remove", lucideIcon: "trash", role: .destructive) {
+                                Button(String(localized: "Remove"), lucideIcon: "trash", role: .destructive) {
                                     Task {
                                         await workspace.updateView(viewID) {
                                             $0.setting(
@@ -315,10 +321,12 @@ private struct CanvasLinkSheet: View {
     }
 
     private func edgeName(_ edge: JSONValue) -> String {
-        let names = [edge.text("from"), edge.text("to")].map { id in
+        let name: (String) -> String = { id in
             canvas.list("nodes").first { $0.stableID == id }?.text("title") ?? id
         }
-        return names.joined(separator: " to ")
+        let from = name(edge.text("from"))
+        let to = name(edge.text("to"))
+        return String(localized: "\(from) to \(to)", comment: "A line between two nodes on a canvas")
     }
 }
 
@@ -394,8 +402,9 @@ private struct NodeRemoval {
     let question: SessionEnding.Question
 
     var confirmLabel: String {
-        if !question.chats.isEmpty { return "Remove and end chat" }
-        return question.terminals.isEmpty ? "Remove node" : "Remove and end terminal"
+        if !question.chats.isEmpty { return String(localized: "Remove and end chat") }
+        return question.terminals.isEmpty
+            ? String(localized: "Remove node") : String(localized: "Remove and end terminal")
     }
 }
 
@@ -709,7 +718,7 @@ private final class CanvasSurface: UIView {
                 color.setFill()
                 UIBezierPath(ovalIn: CGRect(x: frame.maxX - 28, y: frame.minY + 20, width: 10, height: 10)).fill()
             }
-            let title = node.text("title", fallback: node.text("kind"))
+            let title = node.text("title", fallback: NewViewFactory.kindTitle(node.text("kind")))
             drawText(
                 title,
                 rect: CGRect(
@@ -719,14 +728,15 @@ private final class CanvasSurface: UIView {
                 // The line into a task's node says so on the desktop; here the node carries the word itself.
                 let status = TaskMark.status(task)
                 drawText(
-                    "Task: " + TaskMark.word(status),
+                    String(localized: "Task: \(TaskMark.word(status))", comment: "%@ is the status of the task"),
                     rect: CGRect(x: frame.minX + 20, y: frame.minY + 50, width: frame.width - 40, height: 24),
                     font: .preferredFont(forTextStyle: .caption1), color: AgentWorkLook(taskStatus: status).uiColor)
             }
             let detail =
                 node.text("kind") == "note"
                 ? node.text("body")
-                : node.text("kind").capitalized + (node.text("url").isEmpty ? "" : "\n" + node.text("url"))
+                : NewViewFactory.kindTitle(node.text("kind"))
+                    + (node.text("url").isEmpty ? "" : "\n" + node.text("url"))
             drawText(
                 detail,
                 rect: CGRect(
@@ -771,7 +781,7 @@ private final class CanvasSurface: UIView {
         path.lineWidth = 1.5
         path.stroke()
         let font = UIFont.preferredFont(forTextStyle: .subheadline).withWeight(.semibold)
-        let title = group.text("title", fallback: "Group")
+        let title = group.text("title", fallback: String(localized: "Group"))
         let width = min(frame.width - 24, (title as NSString).size(withAttributes: [.font: font]).width + 20)
         let chip = CGRect(x: frame.minX + 12, y: frame.minY + 8, width: max(0, width), height: font.lineHeight + 8)
         tint.withAlphaComponent(0.22).setFill()
@@ -828,9 +838,16 @@ private final class CanvasSurface: UIView {
             let rect = nodeRect(node)
             guard rect.intersects(viewport) else { return nil }
             let element = CanvasAccessibleNode(accessibilityContainer: self)
-            element.accessibilityLabel =
-                node.text("title") + ", " + node.text("kind")
-                + (tasks[node.stableID].map { ", task " + TaskMark.word(TaskMark.status($0)) } ?? "")
+            let title = node.text("title")
+            let kind = NewViewFactory.kindTitle(node.text("kind"))
+            if let task = tasks[node.stableID] {
+                let word = TaskMark.word(TaskMark.status(task))
+                element.accessibilityLabel = String(
+                    localized: "\(title), \(kind), task \(word)",
+                    comment: "A node on a canvas: its title, its kind and the status of its task")
+            } else {
+                element.accessibilityLabel = "\(title), \(kind)"
+            }
             element.accessibilityTraits = .button
             element.accessibilityFrameInContainerSpace = rect.offsetBy(dx: -origin.x, dy: -origin.y)
             element.action = { [weak self] in self?.open(node.stableID) }

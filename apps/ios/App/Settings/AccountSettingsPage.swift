@@ -22,7 +22,8 @@ struct AccountSettingsPage: View {
             Section {
                 VStack(spacing: 8) {
                     AccountPicture(account: runtime.account, size: 64)
-                    Text(AccountAvatar.name(of: runtime.account) ?? "Not signed in").font(.title3.weight(.semibold))
+                    Text(AccountAvatar.name(of: runtime.account) ?? String(localized: "Not signed in"))
+                        .font(.title3.weight(.semibold))
                     if let account = runtime.account {
                         Text("Signed in with \(Self.providerName(account.provider))")
                             .font(.footnote).foregroundStyle(MobileStyle.muted)
@@ -51,7 +52,7 @@ struct AccountSettingsPage: View {
                     Button(role: .destructive) {
                         confirmSignOut = true
                     } label: {
-                        Label("Sign out", lucideIcon: "log-out")
+                        Label(String(localized: "Sign out"), lucideIcon: "log-out")
                     }
                     .disabled(runtime.signingOut)
                     .accessibilityIdentifier("settings.signOut")
@@ -60,7 +61,8 @@ struct AccountSettingsPage: View {
                     NavigationLink {
                         DeleteAccountPage(model: deletion(account))
                     } label: {
-                        Label("Delete account", lucideIcon: "trash").foregroundStyle(MobileStyle.statusError)
+                        Label(String(localized: "Delete account"), lucideIcon: "trash")
+                            .foregroundStyle(MobileStyle.statusError)
                     }
                     .accessibilityIdentifier("settings.deleteAccount")
                 } footer: {
@@ -82,8 +84,10 @@ struct AccountSettingsPage: View {
     }
 
     private func reach(_ session: SharedMachineSession) -> String {
-        if session.connected { return session.relayed == true ? "Connected via relay" : "Connected" }
-        return session.problem ?? "Not connected"
+        if session.connected {
+            return session.relayed == true ? String(localized: "Connected via relay") : String(localized: "Connected")
+        }
+        return session.problem ?? String(localized: "Not connected")
     }
 
     /// The window in front, which Sign in with Apple presents its sheet over.

@@ -123,11 +123,12 @@ private struct ActivityAgentRow: View {
             }
             Spacer(minLength: 4)
             if needsYou {
-                Text("Review").font(.system(size: 13, weight: .semibold)).foregroundStyle(.black)
+                Text("Review", comment: "Button that opens a session waiting for you")
+                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(.black)
                     .padding(.horizontal, 15).frame(height: 32)
                     .background(Color.activityNeedsYou, in: Capsule())
             } else {
-                ActivityStatus(text: "Running", color: .activityRunning, size: 12)
+                ActivityStatus(text: String(localized: "Running"), color: .activityRunning, size: 12)
             }
         }
         .frame(minHeight: 35)
@@ -180,22 +181,29 @@ private struct ActivityPresentation {
         return waiting > 0 ? .circleAlert : .loaderCircle
     }
     var title: String {
-        if stale { return "Waiting for an update" }
-        if state.phase == .done { return "Work finished" }
-        if waiting > 0 { return waiting == 1 ? "1 agent needs you" : "\(waiting) agents need you" }
-        return working == 1 ? "1 agent running" : "\(working) agents running"
+        if stale { return String(localized: "Waiting for an update") }
+        if state.phase == .done { return String(localized: "Work finished") }
+        if waiting > 0 { return String(localized: "\(Int(waiting)) agents need you") }
+        return String(localized: "\(Int(working)) agents running")
     }
     var subtitle: String {
-        if stale { return "The machine has not sent a recent update." }
-        if state.phase == .done { return "Your agents have finished their work." }
-        return "Open Ruimte to see your agents."
+        if stale { return String(localized: "The machine has not sent a recent update.") }
+        if state.phase == .done { return String(localized: "Your agents have finished their work.") }
+        return String(localized: "Open Ruimte to see your agents.")
     }
     var footer: String {
-        if stale { return "Last known status" }
-        if state.phase == .done { return "No agents running" }
-        let more = max(0, working + waiting - Int64(state.agents?.count ?? 0))
-        let counts = waiting > 0 ? "\(working) running · \(waiting) needs you" : "\(working) running"
-        return more > 0 && state.agents?.isEmpty == false ? "+\(more) more · \(counts)" : counts
+        if stale { return String(localized: "Last known status") }
+        if state.phase == .done { return String(localized: "No agents running") }
+        let more = Int(max(0, working + waiting - Int64(state.agents?.count ?? 0)))
+        let running = Int(working)
+        let needing = Int(waiting)
+        if more > 0 && state.agents?.isEmpty == false {
+            return waiting > 0
+                ? String(localized: "+\(more) more · \(running) running · \(needing) needs you")
+                : String(localized: "+\(more) more · \(running) running")
+        }
+        return waiting > 0
+            ? String(localized: "\(running) running · \(needing) needs you") : String(localized: "\(running) running")
     }
 }
 

@@ -7,7 +7,7 @@ import UIKit
 @MainActor @Observable
 final class ConnectionProbe {
     var machine: Machine?
-    var status = "Not connected"
+    var status = String(localized: "Not connected")
     var hello: ServerHelloResult?
     var relayed: Bool?
     var elapsedMilliseconds: Int?
@@ -25,10 +25,10 @@ final class ConnectionProbe {
         disconnect()
         self.machine = machine
         guard let key = runtime.key, let broker = machine.brokerUrl, let brokerURL = URL(string: broker), brokerURL.scheme == "wss" else {
-            status = "This machine needs a secure broker address."
+            status = String(localized: "This machine needs a secure broker address.")
             return
         }
-        status = "Connecting"
+        status = String(localized: "Connecting")
         startedAt = .now
         let events = LinkEvents(opened: { [weak self] in
             self?.opened()
@@ -40,7 +40,7 @@ final class ConnectionProbe {
             helloID = nil
             hello = nil
             relayed = nil
-            status = error?.localizedDescription ?? "Waiting to reconnect"
+            status = error?.localizedDescription ?? String(localized: "Waiting to reconnect")
             record(status)
             startedAt = .now
         }, route: { [weak self] relayed in
@@ -50,7 +50,9 @@ final class ConnectionProbe {
             let identity = PairingIdentity(machineID: machine.id, machineKey: machine.publicKey, clientKey: key.publicKey)
             return try runtime.pairings.open(identity: identity, requestAccess: {
                 guard let token = try await runtime.vault?.accessToken() else {
-                    throw AddressBookRequestError(code: "unauthorized", status: 0, message: "Sign in to connect to this machine.")
+                    throw AddressBookRequestError(
+                        code: "unauthorized", status: 0,
+                        message: String(localized: "Sign in to connect to this machine."))
                 }
                 let access = try await runtime.client.signalAccess(accessToken: token, machineID: machine.id, key: key, label: "Ruimte on \(UIDevice.current.model)")
                 return try JSONValue.decode(JSONEncoder().encode(access))
@@ -66,7 +68,7 @@ final class ConnectionProbe {
     func reconnect(runtime: AppRuntime) {
         guard let machine else { return }
         startedAt = .now
-        status = "Reconnecting"
+        status = String(localized: "Reconnecting")
         runtime.connections.reconnect(machineID: Self.connectionKey(machine.id))
     }
 
@@ -82,11 +84,11 @@ final class ConnectionProbe {
         hello = nil
         relayed = nil
         elapsedMilliseconds = nil
-        status = "Not connected"
+        status = String(localized: "Not connected")
     }
 
     private func opened() {
-        status = "Reading server.hello"
+        status = String(localized: "Reading server.hello")
         let identifier = UUID().uuidString
         helloID = identifier
         // A held connection can announce itself synchronously before hold returns its lease.
@@ -98,7 +100,7 @@ final class ConnectionProbe {
                 timeout = Task { @MainActor [weak self] in
                     do { try await Task.sleep(for: .seconds(30)) } catch { return }
                     guard let self, helloID == identifier else { return }
-                    status = "The machine did not answer server.hello."
+                    status = String(localized: "The machine did not answer server.hello.")
                     record(status)
                 }
             } catch { status = error.localizedDescription }
@@ -112,15 +114,16 @@ final class ConnectionProbe {
             timeout?.cancel()
             helloID = nil
             guard frame["ok"] == .bool(true), let result = frame["result"] else {
-                status = frame["error"]?["message"]?.stringValue ?? "The machine refused server.hello."
+                status =
+                    frame["error"]?["message"]?.stringValue ?? String(localized: "The machine refused server.hello.")
                 record(status)
                 return
             }
             hello = try JSONDecoder().decode(ServerHelloResult.self, from: result.encoded())
             let duration = startedAt.duration(to: .now).components
             elapsedMilliseconds = Int(duration.seconds * 1000 + duration.attoseconds / 1_000_000_000_000_000)
-            status = "Connected"
-            record("server.hello in \(elapsedMilliseconds ?? 0) ms")
+            status = String(localized: "Connected")
+            record(String(localized: "server.hello in \(elapsedMilliseconds ?? 0) ms"))
         } catch {
             status = error.localizedDescription
             record(status)

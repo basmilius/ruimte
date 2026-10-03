@@ -105,7 +105,9 @@ final class DrawingEditorModel {
                 result = try await client.request("drawing.open", payload: target)
             }
             guard revision == lifecycle else { return }
-            guard let document = result["document"] else { throw MachineClientError.invalid("The drawing is missing.") }
+            guard let document = result["document"] else {
+                throw MachineClientError.invalid(String(localized: "The drawing is missing."))
+            }
             receive(document)
         } catch is CancellationError {
         } catch {
@@ -133,7 +135,8 @@ final class DrawingEditorModel {
             render()
             save()
         } catch {
-            problem = "This drawing also changed on another device. Your unsaved drawing is kept on this device."
+            problem = String(
+                localized: "This drawing also changed on another device. Your unsaved drawing is kept on this device.")
         }
     }
 
@@ -163,8 +166,10 @@ final class DrawingEditorModel {
             replace(merged?.arrayValue ?? elements)
             return true
         } catch {
-            problem =
-                "An object changed on another device during this gesture. Its latest version is kept. Try the edit again."
+            problem = String(
+                localized:
+                    "An object changed on another device during this gesture. Its latest version is kept. Try the edit again."
+            )
             return false
         }
     }
@@ -176,7 +181,7 @@ final class DrawingEditorModel {
     }
     func updateText(_ element: JSONValue, text: String, isNew: Bool) {
         if !isNew, elements.first(where: { $0.stableID == element.stableID }) != element {
-            problem = "This text changed on another device. Reopen it to edit the latest version."
+            problem = String(localized: "This text changed on another device. Reopen it to edit the latest version.")
             return
         }
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && element.text("kind") == "text" {
@@ -230,7 +235,7 @@ final class DrawingEditorModel {
                 target.setting("baseRev", .number(0)).setting(
                     "content", .object(["elements": .array(json.list("elements"))])))
             insertCopies(json.list("elements"), at: viewportCenter)
-        } catch { problem = "The clipboard does not contain a valid Ruimte drawing." }
+        } catch { problem = String(localized: "The clipboard does not contain a valid Ruimte drawing.") }
     }
     func reorder(front: Bool) {
         let moving = selected.filter { $0["locked"] != .bool(true) }
@@ -357,16 +362,20 @@ final class DrawingEditorModel {
                 } catch MachineClientError.server(let code, _) where code == "rev-conflict" {
                     conflicts += 1
                     if conflicts > 2 {
-                        problem =
-                            "This drawing keeps changing on another device. Your changes are saved locally. Tap Retry to sync."
+                        problem = String(
+                            localized:
+                                "This drawing keeps changing on another device. Your changes are saved locally. Tap Retry to sync."
+                        )
                         return
                     }
                     await reload()
                     if problem != nil { return }
                 } catch {
-                    problem =
-                        "Your drawing is saved on this device and will sync when the connection returns. "
-                        + error.localizedDescription
+                    let reason = error.localizedDescription
+                    problem = String(
+                        localized:
+                            "Your drawing is saved on this device and will sync when the connection returns. \(reason)",
+                        comment: "%@ is the reason the save failed")
                     return
                 }
             }

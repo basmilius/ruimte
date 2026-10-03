@@ -27,7 +27,7 @@ struct GitRepositoryPage: View {
     var body: some View {
         MobileList {
             if repositories.busy {
-                GitBusyRow(text: repositories.progress ?? "Working")
+                GitBusyRow(text: repositories.progress ?? String(localized: "Working"))
             }
             if let problem = repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
@@ -40,16 +40,19 @@ struct GitRepositoryPage: View {
                     LabeledContent(
                         "Branch",
                         value: checkout.branch
-                            ?? (checkout.status?["detached"] == .bool(true) ? "Detached HEAD" : "No commits"))
+                            ?? (checkout.status?["detached"] == .bool(true)
+                                ? String(localized: "Detached HEAD") : String(localized: "No commits")))
                     if let upstream = checkout.status?["upstream"]?.stringValue {
                         LabeledContent("Upstream", value: upstream)
                     }
-                    LabeledContent("Ahead and behind", value: "\(checkout.ahead) ahead, \(checkout.behind) behind")
+                    LabeledContent(
+                        "Ahead and behind",
+                        value: String(localized: "\(checkout.ahead) ahead, \(checkout.behind) behind"))
                     if let base = checkout.status?["base"]?.stringValue {
                         LabeledContent("Base", value: base)
                     }
                     if checkout.status?["live"] == .bool(false) {
-                        Label("Too large to watch. Pull to refresh it.", lucideIcon: "refresh-cw", iconSize: 14)
+                        Label(String(localized: "Too large to watch. Pull to refresh it."), lucideIcon: "refresh-cw", iconSize: 14)
                             .font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                 }
@@ -57,18 +60,18 @@ struct GitRepositoryPage: View {
                     GitDivergedRow(client: client, repositories: repositories, checkout: checkout, named: false)
                 }
                 Section("Remote") {
-                    action("Pull", icon: "arrow-down", kind: "pull")
+                    action(String(localized: "Pull"), icon: "arrow-down", kind: "pull")
                     action(GitPanel.pushLabel(checkout), icon: "arrow-up", kind: GitPanel.pushKind(checkout))
-                    action("Sync", icon: "refresh-cw", kind: "sync")
-                    action("Fetch", icon: "cloud-download", kind: "fetch")
-                    Button("Force push", lucideIcon: "triangle-alert", role: .destructive) {
+                    action(String(localized: "Sync"), icon: "refresh-cw", kind: "sync")
+                    action(String(localized: "Fetch"), icon: "cloud-download", kind: "fetch")
+                    Button(String(localized: "Force push"), lucideIcon: "triangle-alert", role: .destructive) {
                         actions.confirmation = .forcePush(cwd: path)
                     }.disabled(repositories.busy)
                 }
                 Section("Working tree") {
-                    Button("Stash changes", lucideIcon: "archive") { actions.prompt = .stash(cwd: path) }
+                    Button(String(localized: "Stash changes"), lucideIcon: "archive") { actions.prompt = .stash(cwd: path) }
                         .disabled(repositories.busy || checkout.files.isEmpty)
-                    Button("Pop stash", lucideIcon: "archive-restore") {
+                    Button(String(localized: "Pop stash"), lucideIcon: "archive-restore") {
                         if refs.stashes.count > 1 {
                             actions.popping = true
                         } else {
@@ -76,7 +79,7 @@ struct GitRepositoryPage: View {
                         }
                     }.disabled(repositories.busy || refs.stashes.isEmpty)
                     if refs.capabilities {
-                        Button("Create pull request", lucideIcon: "git-pull-request") { pullRequest = true }
+                        Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") { pullRequest = true }
                             .disabled(repositories.busy || checkout.branch == nil)
                     }
                 }
@@ -87,23 +90,23 @@ struct GitRepositoryPage: View {
                         LabeledContent {
                             Text("\(refs.branches.count)").monospacedDigit().foregroundStyle(MobileStyle.muted)
                         } label: {
-                            Label("Branches", lucideIcon: "git-branch")
+                            Label(String(localized: "Branches"), lucideIcon: "git-branch")
                         }
                     }
                     NavigationLink {
                         GitLogPage(client: client, repositories: repositories, only: path)
                     } label: {
-                        Label("History", lucideIcon: "git-commit-horizontal")
+                        Label(String(localized: "History"), lucideIcon: "git-commit-horizontal")
                     }
                     NavigationLink {
                         GitWorktreesPage(client: client, repositories: repositories, repo: path, workspace: workspace)
                     } label: {
-                        Label("Worktrees", lucideIcon: "folder-git-2")
+                        Label(String(localized: "Worktrees"), lucideIcon: "folder-git-2")
                     }
                 }
             }
         }
-        .navigationTitle(checkout?.label ?? "Repository")
+        .navigationTitle(checkout?.label ?? String(localized: "Repository"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $pullRequest) {
             GitPullRequestPage(client: client, repositories: repositories, path: path, subject: refs.lastSubject) {
@@ -129,7 +132,7 @@ extension GitPanel {
     /// A branch git has never seen is published with an upstream in the same push, which is a different word for
     /// a person and a different flag for git.
     static func pushLabel(_ checkout: GitCheckout) -> String {
-        checkout.status?["upstream"]?.stringValue == nil ? "Publish branch" : "Push"
+        checkout.status?["upstream"]?.stringValue == nil ? String(localized: "Publish branch") : String(localized: "Push")
     }
 
     static func pushKind(_ checkout: GitCheckout) -> String {
@@ -146,12 +149,12 @@ struct GitDivergedRow: View {
     let named: Bool
 
     var body: some View {
-        let branch = checkout.branch ?? "This branch"
+        let branch = checkout.branch ?? String(localized: "This branch")
         VStack(alignment: .leading, spacing: 8) {
             Text(named ? "How should \(branch) in \(checkout.label) come together?" : "How should \(branch) come together?")
                 .font(.callout)
             Text(
-                "It has \(checkout.ahead) commits of its own and \(checkout.behind) from \(checkout.status?["upstream"]?.stringValue ?? "the remote"). A pull only fast-forwards until you choose."
+                "It has \(checkout.ahead) commits of its own and \(checkout.behind) from \(checkout.status?["upstream"]?.stringValue ?? String(localized: "the remote")). A pull only fast-forwards until you choose."
             ).font(.caption).foregroundStyle(MobileStyle.muted)
             HStack(spacing: 8) {
                 Button("Merge") { pull("merge") }

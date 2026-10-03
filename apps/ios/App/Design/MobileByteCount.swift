@@ -7,7 +7,9 @@ private let byteUnits = ["B", "KB", "MB", "GB", "TB"]
 /// number, and a size a machine never reported says so. The number follows the region, the divisor and the units
 /// never do.
 func mobileByteCount(_ bytes: Double?, whole: Bool = false, locale: Locale = .current) -> String {
-    guard var value = bytes, value.isFinite, value >= 0 else { return "Unavailable" }
+    guard var value = bytes, value.isFinite, value >= 0 else {
+        return String(localized: "Unavailable", comment: "A size the machine did not report")
+    }
     var unit = 0
     while value >= 1024, unit < byteUnits.count - 1 {
         value /= 1024

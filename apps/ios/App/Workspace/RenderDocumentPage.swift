@@ -33,7 +33,7 @@ struct RenderDocumentPage: View {
                             DiagramEmptyState(model: agentModel, sent: openChat)
                         } else {
                             ContentUnavailableView(
-                                "Nothing in this diagram yet", lucideIcon: "workflow",
+                                String(localized: "Nothing in this diagram yet"), lucideIcon: "workflow",
                                 description: Text("An agent draws it with ruimte-context view diagram.")
                             )
                             .allowsHitTesting(false)
@@ -46,9 +46,12 @@ struct RenderDocumentPage: View {
                 }
             } else if let problem = work.problem {
                 ContentUnavailableView(
-                    "Could not load \(kind)", lucideIcon: "triangle-alert", description: Text(problem))
+                    kind == "drawing"
+                        ? String(localized: "Could not load drawing") : String(localized: "Could not load diagram"),
+                    lucideIcon: "triangle-alert", description: Text(problem))
             } else {
-                MobileLoadingRow("Loading \(kind)")
+                MobileLoadingRow(
+                    kind == "drawing" ? String(localized: "Loading drawing") : String(localized: "Loading diagram"))
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -59,9 +62,9 @@ struct RenderDocumentPage: View {
         .toolbar {
             ToolbarItem(id: "\(kind).actions", placement: .topBarTrailing) {
                 Menu {
-                    Button("Reload", lucideIcon: "refresh-cw") { generation += 1 }
+                    Button(String(localized: "Reload"), lucideIcon: "refresh-cw") { generation += 1 }
                     if work.value != nil {
-                        Button("Copy as image", lucideIcon: "copy") { copyImage() }
+                        Button(String(localized: "Copy as image"), lucideIcon: "copy") { copyImage() }
                     }
                 } label: {
                     Image(lucide: "ellipsis")
@@ -110,7 +113,7 @@ struct RenderDocumentPage: View {
                         Button {
                             asking = true
                         } label: {
-                            Label("Change with an agent", lucideIcon: "sparkles")
+                            Label(String(localized: "Change with an agent"), lucideIcon: "sparkles")
                                 .font(.body.weight(.medium))
                                 .padding(.horizontal, 18).frame(minHeight: 48)
                                 .contentShape(.capsule)
@@ -134,9 +137,9 @@ struct RenderDocumentPage: View {
 
     private var zoomControls: some View {
         VStack(spacing: 0) {
-            zoomButton("Zoom in", icon: "plus", action: .step(1.5))
-            zoomButton("Zoom out", icon: "minus", action: .step(1 / 1.5))
-            zoomButton("Fit", icon: "scan", action: .fit)
+            zoomButton(String(localized: "Zoom in"), icon: "plus", action: .step(1.5))
+            zoomButton(String(localized: "Zoom out"), icon: "minus", action: .step(1 / 1.5))
+            zoomButton(String(localized: "Fit", comment: "Zooms so the whole diagram fits"), icon: "scan", action: .fit)
         }
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: .capsule)

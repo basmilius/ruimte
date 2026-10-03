@@ -25,8 +25,7 @@ import SwiftUI
     var ready: Bool { !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !repositories.busy }
 
     static func summary(files: Int, added: Int, deleted: Int) -> String {
-        let count = files == 1 ? "1 file" : "\(files) files"
-        return "\(count) · +\(added) −\(deleted)"
+        String(localized: "\(files) files · +\(added) −\(deleted)", comment: "Files, then lines added and removed")
     }
 
     /// What the branch carries over its base, and the last commit's subject as a title when none was given.
@@ -56,7 +55,7 @@ import SwiftUI
             extra: ["subject": .string(title.trimmingCharacters(in: .whitespacesAndNewlines)), "body": .string(body)])
         guard let result else { return nil }
         url = result["url"]?.stringValue.flatMap(URL.init(string:))
-        return result.text("summary", fallback: "The pull request is open.")
+        return result.text("summary", fallback: String(localized: "The pull request is open."))
     }
 }
 
@@ -80,7 +79,7 @@ struct GitPullRequestPage: View {
         MobileForm {
             Section {
                 HStack(spacing: 8) {
-                    branchChip(model.checkout?.status?["base"]?.stringValue ?? "default branch")
+                    branchChip(model.checkout?.status?["base"]?.stringValue ?? String(localized: "default branch"))
                     Image(lucide: "arrow-left", size: 14).foregroundStyle(MobileStyle.faint)
                         .accessibilityLabel("from")
                     branchChip(model.checkout?.branch ?? "HEAD")
@@ -101,7 +100,9 @@ struct GitPullRequestPage: View {
                 Text("Publishes the branch first if needed. The pull request opens in your browser.")
             }
             if model.repositories.busy {
-                Section { GitBusyRow(text: model.repositories.progress ?? "Opening the pull request") }
+                Section {
+                    GitBusyRow(text: model.repositories.progress ?? String(localized: "Opening the pull request"))
+                }
             }
             if let problem = model.repositories.problem {
                 Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red) }
@@ -111,7 +112,8 @@ struct GitPullRequestPage: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             GitBottomBar {
-                GitBarButton(title: "Create pull request") { Task { await create() } }.disabled(!model.ready)
+                GitBarButton(title: String(localized: "Create pull request")) { Task { await create() } }.disabled(
+                    !model.ready)
             }
         }
         .task { await model.load(client: client) }

@@ -121,12 +121,17 @@ import SwiftUI
     var notice: String? {
         switch phase {
         case .starting, .running: nil
-        case .landed(let email): email.map { "Logged in as \($0)" } ?? "Logged in"
+        case .landed(let email): email.map { String(localized: "Logged in as \($0)") } ?? String(localized: "Logged in")
         case .ended(let dropped):
-            dropped ? "The connection to the machine dropped, which ended the login." : "The login ended."
+            dropped
+                ? String(localized: "The connection to the machine dropped, which ended the login.")
+                : String(localized: "The login ended.")
         case .outdated:
-            "This machine needs an update before you can log in from here. Update Ruimte on it, or log in on the machine."
-        case .failed(let reason): "The login could not start: \(reason)"
+            String(
+                localized:
+                    "This machine needs an update before you can log in from here. Update Ruimte on it, or log in on the machine."
+            )
+        case .failed(let reason): String(localized: "The login could not start: \(reason)")
         }
     }
 }
@@ -163,11 +168,11 @@ struct AccountLoginSheet: View {
                 }
                 switch model.phase {
                 case .starting:
-                    MobileLoadingRow("Starting the login").frame(maxHeight: .infinity)
+                    MobileLoadingRow(String(localized: "Starting the login")).frame(maxHeight: .infinity)
                 case .outdated, .failed:
                     Spacer()
                 default:
-                    TerminalScreen(client: model.client, sessionID: model.sessionID, title: "Log in to \(model.name)")
+                    TerminalScreen(client: model.client, sessionID: model.sessionID, title: String(localized: "Log in to \(model.name)"))
                         .id(model.sessionID)
                 }
             }

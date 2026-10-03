@@ -23,7 +23,7 @@ struct CanvasDock: View {
                 HStack(spacing: 0) {
                     addMenu
                     Spacer(minLength: 0)
-                    control("Fit canvas", icon: "scan", action: fit)
+                    control(String(localized: "Fit canvas"), icon: "scan", action: fit)
                     Spacer(minLength: 0)
                     lockMenu
                     Spacer(minLength: 0)
@@ -69,12 +69,12 @@ struct CanvasDock: View {
 
     private var addMenu: some View {
         Menu {
-            Button("Chat", lucideIcon: "message-square") { add("chat") }
-            Button("Terminal", lucideIcon: "terminal") { add("terminal") }
-            Button("Browser", lucideIcon: "globe") { add("browser") }
-            Button("File", lucideIcon: "file-text") { add("file") }
-            Button("Note", lucideIcon: "sticky-note") { add("note") }
-            Button("Group", lucideIcon: "layout-grid") { add("group") }
+            Button(String(localized: "Chat"), lucideIcon: "message-square") { add("chat") }
+            Button(String(localized: "Terminal"), lucideIcon: "terminal") { add("terminal") }
+            Button(String(localized: "Browser"), lucideIcon: "globe") { add("browser") }
+            Button(String(localized: "File"), lucideIcon: "file-text") { add("file") }
+            Button(String(localized: "Note"), lucideIcon: "sticky-note") { add("note") }
+            Button(String(localized: "Group"), lucideIcon: "layout-grid") { add("group") }
         } label: {
             icon("plus")
         }
@@ -95,7 +95,7 @@ struct CanvasDock: View {
             }
             Section("The dock still works while locked.") {
                 Button(
-                    locks.all ? "Unlock everything" : "Lock everything",
+                    locks.all ? String(localized: "Unlock everything") : String(localized: "Lock everything"),
                     lucideIcon: locks.all ? "lock-open" : "lock"
                 ) {
                     setLocks(locks.locking(everything: !locks.all))
@@ -116,12 +116,14 @@ struct CanvasDock: View {
                 }
                 ForEach(layouts, id: \.self) { name in
                     Menu(name) {
-                        Button("Apply", lucideIcon: "layout-template") { applyLayout(name) }
-                        Button("Delete", lucideIcon: "trash", role: .destructive) { deleteLayout(name) }
+                        Button(String(localized: "Apply"), lucideIcon: "layout-template") { applyLayout(name) }
+                        Button(String(localized: "Delete"), lucideIcon: "trash", role: .destructive) {
+                            deleteLayout(name)
+                        }
                     }
                 }
             }
-            Button("Save current layout", lucideIcon: "save", action: saveLayout)
+            Button(String(localized: "Save current layout"), lucideIcon: "save", action: saveLayout)
         } label: {
             icon("layout-template")
         }

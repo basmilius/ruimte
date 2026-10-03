@@ -74,7 +74,7 @@ struct WelcomePage: View {
 
     @ViewBuilder private var signInOptions: some View {
         if runtime.loading || retrying {
-            MobileLoadingRow("Loading sign-in options")
+            MobileLoadingRow(String(localized: "Loading sign-in options"))
                 .frame(maxWidth: .infinity, minHeight: 56)
         } else if runtime.providers.isEmpty {
             VStack(spacing: 4) {
@@ -103,7 +103,7 @@ struct WelcomePage: View {
             begin()
             pair()
         } label: {
-            Label("Connect directly to your computer", lucideIcon: "link", iconSize: 15)
+            Label(String(localized: "Connect directly to your computer"), lucideIcon: "link", iconSize: 15)
                 .font(.subheadline)
                 .foregroundStyle(MobileStyle.text.opacity(0.8))
                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -160,7 +160,9 @@ private struct ProviderAccountButton: View {
     @ScaledMetric(relativeTo: .body) private var logoSize = 19
 
     private var apple: Bool { provider == .apple }
-    private var title: String { apple ? "Continue with Apple" : "Continue with GitHub" }
+    private var title: String {
+        apple ? String(localized: "Continue with Apple") : String(localized: "Continue with GitHub")
+    }
     private var solidFill: Color { colorScheme == .dark ? .white : .black }
     private var solidText: Color { colorScheme == .dark ? .black : .white }
 

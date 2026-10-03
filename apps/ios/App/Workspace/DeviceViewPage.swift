@@ -59,7 +59,7 @@ enum DeviceView {
         switch device.text("state") {
         case "booted":
             device["capabilities"]?["stream"]?.boolValue == true
-                ? .starting : .noStream("This machine cannot show this device's screen.")
+                ? .starting : .noStream(String(localized: "This machine cannot show this device's screen."))
         case "transitioning": .starting
         default: .stopped
         }
@@ -143,7 +143,9 @@ final class DeviceViewModel {
     var canStop: Bool {
         device?.text("state") == "booted" && device?["capabilities"]?["shutdown"]?.boolValue == true
     }
-    var title: String { reference.map { "\($0.text("name")) · \($0.text("runtime"))" } ?? "Device" }
+    var title: String {
+        reference.map { "\($0.text("name")) · \($0.text("runtime"))" } ?? String(localized: "Device")
+    }
 
     func start() {
         guard reference != nil, subscriptions.isEmpty else { return }
@@ -357,9 +359,9 @@ struct DeviceViewPage: View {
         }
         .overlay(alignment: .top) {
             if model.phase == .offline {
-                pill("Reconnecting to the machine", icon: "wifi-off")
+                pill(String(localized: "Reconnecting to the machine"), icon: "wifi-off")
             } else if model.phase == .streaming && !model.takesInput {
-                pill("Read-only preview", icon: "eye")
+                pill(String(localized: "Read-only preview"), icon: "eye")
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -377,13 +379,17 @@ struct DeviceViewPage: View {
                                     model.press(button)
                                 }
                             }
-                            Button("Rotate left", lucideIcon: "rotate-ccw") { model.rotate(left: true) }
-                            Button("Rotate right", lucideIcon: "rotate-cw") { model.rotate(left: false) }
+                            Button(String(localized: "Rotate left"), lucideIcon: "rotate-ccw") {
+                                model.rotate(left: true)
+                            }
+                            Button(String(localized: "Rotate right"), lucideIcon: "rotate-cw") {
+                                model.rotate(left: false)
+                            }
                         }
-                        Button("Reload", lucideIcon: "refresh-cw") { model.retry() }
+                        Button(String(localized: "Reload"), lucideIcon: "refresh-cw") { model.retry() }
                     }
                     if model.canStop {
-                        Button("Stop device", lucideIcon: "power", role: .destructive) {
+                        Button(String(localized: "Stop device"), lucideIcon: "power", role: .destructive) {
                             Task { await model.shutdown() }
                         }
                     }
@@ -400,13 +406,13 @@ struct DeviceViewPage: View {
     private var controls: some View {
         HStack(spacing: 4) {
             if model.buttons.contains("back") {
-                control("Back", icon: "undo-2") { model.press("back") }
+                control(DeviceViewPage.label("back"), icon: "undo-2") { model.press("back") }
             }
             if model.buttons.contains("home") {
-                control("Home", icon: "house") { model.press("home") }
+                control(DeviceViewPage.label("home"), icon: "house") { model.press("home") }
             }
             if model.buttons.contains("appSwitcher") {
-                control("App switcher", icon: "smartphone") { model.press("appSwitcher") }
+                control(DeviceViewPage.label("appSwitcher"), icon: "smartphone") { model.press("appSwitcher") }
             }
         }
         .buttonStyle(.plain)
@@ -428,11 +434,12 @@ struct DeviceViewPage: View {
     }
 
     @ViewBuilder private var message: some View {
-        let name = model.reference?.text("name") ?? "The device"
+        let name = model.reference?.text("name") ?? String(localized: "The device")
         switch model.phase {
         case .noReference:
             ContentUnavailableView(
-                "No device", lucideIcon: "circle-alert", description: Text("This view does not point at a device."))
+                String(localized: "No device"), lucideIcon: "circle-alert",
+                description: Text("This view does not point at a device."))
         case .finding, .starting, .streaming:
             VStack(spacing: 12) {
                 ProgressView()
@@ -440,14 +447,13 @@ struct DeviceViewPage: View {
                     .font(.subheadline).foregroundStyle(MobileStyle.muted)
             }
         case .notOnMachine:
+            let runtime = model.reference?.text("runtime") ?? String(localized: "this runtime")
             ContentUnavailableView(
-                "Not on this machine", lucideIcon: "smartphone",
-                description: Text(
-                    "\(name) with \(model.reference?.text("runtime") ?? "this runtime") "
-                        + "is not installed on this machine."))
+                String(localized: "Not on this machine"), lucideIcon: "smartphone",
+                description: Text("\(name) with \(runtime) is not installed on this machine."))
         case .listFailed(let problem), .failed(let problem):
             ContentUnavailableView {
-                Label("Could not show \(name)", lucideIcon: "triangle-alert", iconSize: 48)
+                Label(String(localized: "Could not show \(name)"), lucideIcon: "triangle-alert", iconSize: 48)
             } description: {
                 Text(problem)
             } actions: {
@@ -455,7 +461,7 @@ struct DeviceViewPage: View {
             }
         case .stopped:
             ContentUnavailableView {
-                Label("\(name) is stopped", lucideIcon: "smartphone", iconSize: 48)
+                Label(String(localized: "\(name) is stopped"), lucideIcon: "smartphone", iconSize: 48)
             } description: {
                 Text(
                     model.device?.text("kind") == "physical"
@@ -472,27 +478,28 @@ struct DeviceViewPage: View {
                 }
             }
         case .noStream(let problem):
-            ContentUnavailableView("No screen to show", lucideIcon: "monitor-off", description: Text(problem))
+            ContentUnavailableView(
+                String(localized: "No screen to show"), lucideIcon: "monitor-off", description: Text(problem))
         case .unsupportedFormat:
             ContentUnavailableView(
-                "Shown on the computer only", lucideIcon: "monitor-smartphone",
+                String(localized: "Shown on the computer only"), lucideIcon: "monitor-smartphone",
                 description: Text(
                     "\(name) sends its screen as video, which this app does not show yet. Simulators show here."))
         case .offline:
             ContentUnavailableView(
-                "Reconnecting to the machine", lucideIcon: "wifi-off",
+                String(localized: "Reconnecting to the machine"), lucideIcon: "wifi-off",
                 description: Text("The device shows again once the machine is back."))
         }
     }
 
     static func label(_ button: String) -> String {
         switch button {
-        case "swipeHome": "Swipe home"
-        case "appSwitcher": "App switcher"
-        case "lock": "Lock"
+        case "swipeHome": String(localized: "Swipe home", comment: "A button of a phone or tablet")
+        case "appSwitcher": String(localized: "App switcher", comment: "A button of a phone or tablet")
+        case "lock": String(localized: "Lock", comment: "A button of a phone or tablet")
         case "siri": "Siri"
-        case "back": "Back"
-        default: "Home"
+        case "back": String(localized: "Back", comment: "A button of a phone or tablet")
+        default: String(localized: "Home", comment: "A button of a phone or tablet")
         }
     }
 

@@ -114,7 +114,7 @@ private struct ProjectWidgetContent: View {
                     Text(project.machineName).font(.caption).foregroundStyle(color(RuimteColors.muted))
                 }
                 if project.views.isEmpty {
-                    message("This project has no views yet.")
+                    message(String(localized: "This project has no views yet."))
                 } else {
                     ForEach(project.views.prefix(family == .systemExtraLarge ? 12 : 9)) { view in
                         Link(destination: project.url(for: view) ?? NeedsYouWidgetSnapshot.nowURL) { row(view) }
@@ -122,7 +122,10 @@ private struct ProjectWidgetContent: View {
                     Spacer(minLength: 0)
                 }
             } else {
-                message(entry.recorded ? "This project is no longer open." : "Open Ruimte to see your projects.")
+                message(
+                    entry.recorded
+                        ? String(localized: "This project is no longer open.")
+                        : String(localized: "Open Ruimte to see your projects."))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

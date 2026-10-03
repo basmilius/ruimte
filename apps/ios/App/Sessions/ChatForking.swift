@@ -6,7 +6,7 @@ import RuimteTransport
 enum ChatForkShape: String, CaseIterable, Identifiable {
     case node, view
     var id: Self { self }
-    var label: String { self == .node ? "A node beside it" : "A new view" }
+    var label: String { self == .node ? String(localized: "A node beside it") : String(localized: "A new view") }
 }
 
 /// Where a fork goes on after, as the sheet words it.
@@ -20,10 +20,14 @@ struct ChatForkPoint: Equatable {
     let prompt: String?
 
     var label: String {
-        let place = last ? "After the last turn" : counted ? "After turn \(number) of \(total)" : "After this turn"
+        let place =
+            last
+            ? String(localized: "After the last turn")
+            : counted ? String(localized: "After turn \(number) of \(total)") : String(localized: "After this turn")
         guard let prompt else { return place }
         let short = prompt.count > 60 ? String(prompt.prefix(57)) + "..." : prompt
-        return "\(place): \"\(short)\""
+        return String(
+            localized: "\(place): \"\(short)\"", comment: "Where a fork goes on, then the prompt of that turn")
     }
 }
 
@@ -41,10 +45,9 @@ struct ChatMessageMark: Identifiable, Equatable {
 
 /// The fork rules of the desktop client, kept apart from the views so they can be tested.
 ///
-/// The refusals below are written out in English. The desktop client reads the same sentences from
-/// `fork.refusal.*`, `fork.point.*` and `fork.branch.*` in `apps/client/src/i18n/locales/en/chat.json`, and there is
-/// nothing that holds the two together: this app has no translation layer and is not getting one for these lines. A
-/// change to one of those keys has to be made here by hand.
+/// The desktop client reads the same English sentences as the refusals below from `fork.refusal.*`, `fork.point.*` and
+/// `fork.branch.*` in `apps/client/src/i18n/locales/en/chat.json`, and nothing holds the two together: a change to one
+/// of those keys has to be made here by hand.
 enum ChatForking {
     /// Whether a machine can fork this CLI's conversation and go on with it in a fork. Every kind the daemon knows is
     /// answered here, so a CLI added to `AgentKindSchema` is decided on before it is offered a fork.
@@ -62,20 +65,24 @@ enum ChatForking {
     /// Why a chat cannot be forked after this turn right now, or nil when it can.
     static func refusal(info: JSONValue, turn: JSONValue?) -> String? {
         guard info != .null, let turn, turn.text("kind") == "turn" else {
-            return "This turn is not in the conversation"
+            return String(localized: "This turn is not in the conversation")
         }
-        guard forkable(provider: info.text("provider")) else { return "This CLI has no conversation that can be forked" }
-        guard info["agentSessionId"]?.stringValue != nil else { return "The CLI never started a conversation here" }
+        guard forkable(provider: info.text("provider")) else {
+            return String(localized: "This CLI has no conversation that can be forked")
+        }
+        guard info["agentSessionId"]?.stringValue != nil else {
+            return String(localized: "The CLI never started a conversation here")
+        }
         if turn.text("state") == "running" || info["activeTurnId"]?.stringValue != nil {
-            return "Wait for the turn to end"
+            return String(localized: "Wait for the turn to end")
         }
         return nil
     }
 
     /// Why a fork cannot write a summary for its original right now, or nil when it can.
     static func summaryRefusal(info: JSONValue, originalPresent: Bool) -> String? {
-        if !originalPresent { return "The original is no longer in this project" }
-        if info["activeTurnId"]?.stringValue != nil { return "Wait for the turn to end" }
+        if !originalPresent { return String(localized: "The original is no longer in this project") }
+        if info["activeTurnId"]?.stringValue != nil { return String(localized: "Wait for the turn to end") }
         return nil
     }
 
@@ -107,9 +114,9 @@ enum ChatForking {
         guard let forkOf, let at = forkOf["at"]?.numberValue else { return nil }
         let time = moment(at)
         if complete, let index = turnIDs.firstIndex(of: forkOf.text("turnId")) {
-            return "Forked after turn \(index + 1), \(time)"
+            return String(localized: "Forked after turn \(index + 1), \(time)")
         }
-        return "Forked at \(time)"
+        return String(localized: "Forked at \(time)")
     }
 
     /// Whether a chat is a view of its own or a node on a canvas, and the name it goes by; nil when it is not in
@@ -117,10 +124,10 @@ enum ChatForking {
     static func origin(in views: [JSONValue], chatID: String) -> (shape: ChatForkShape, title: String)? {
         for view in views {
             if view.text("kind") == "chat" && view.stableID == chatID {
-                return (.view, view.text("name", fallback: "Chat"))
+                return (.view, view.text("name", fallback: String(localized: "Chat")))
             }
             if let node = view.list("nodes").first(where: { $0.stableID == chatID && $0.text("kind") == "chat" }) {
-                return (.node, node.text("title", fallback: "Chat"))
+                return (.node, node.text("title", fallback: String(localized: "Chat")))
             }
         }
         return nil
@@ -129,8 +136,8 @@ enum ChatForking {
     /// Why a branch cannot be the fork's, or nil when it can.
     static func branchRefusal(_ branch: String, taken: [String]) -> String? {
         let name = branch.trimmingCharacters(in: .whitespaces)
-        if name.isEmpty { return "Name the branch" }
-        if taken.contains(name) { return "A branch with this name exists already" }
+        if name.isEmpty { return String(localized: "Name the branch") }
+        if taken.contains(name) { return String(localized: "A branch with this name exists already") }
         return nil
     }
 
@@ -164,13 +171,15 @@ enum ChatForking {
     static func forks(chats: [JSONValue], chatID: String) -> [String: [String]] {
         var forks: [String: [String]] = [:]
         for chat in chats where chat["forkOf"]?.text("chatId") == chatID {
-            if let turn = chat["forkOf"]?["turnId"]?.stringValue { forks[turn, default: []].append(chat.text("chatId")) }
+            if let turn = chat["forkOf"]?["turnId"]?.stringValue {
+                forks[turn, default: []].append(chat.text("chatId"))
+            }
         }
         return forks
     }
 
     static func forksLabel(_ count: Int) -> String {
-        count == 1 ? "A fork goes on after this turn" : "\(count) forks go on after this turn"
+        String(localized: "\(count) forks go on after this turn")
     }
 
     /// The places the message index lists, in thread order.
@@ -203,10 +212,10 @@ enum ChatForking {
         )
     }
 
-    /// What a failed request says, with the one refusal an older machine gives its own wording.
-    static func message(for error: Error, action: String) -> String {
+    /// What a failed request says, with the one refusal an older machine gives its own wording, `update`.
+    static func message(for error: Error, update: String) -> String {
         if case MachineClientError.server(code: "unknown-request", message: _) = error {
-            return "Update Ruimte on this machine to \(action)."
+            return update
         }
         return error.localizedDescription
     }

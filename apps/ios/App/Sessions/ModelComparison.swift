@@ -82,13 +82,13 @@ enum ModelComparison {
 
     static func effortLabel(_ id: String) -> String {
         switch id {
-        case "low": "Low"
-        case "medium": "Medium"
-        case "high": "High"
-        case "xhigh": "Extra high"
-        case "max": "Max"
-        case "off": "No thinking"
-        case "thinking": "Thinking"
+        case "low": String(localized: "Low", comment: "Reasoning effort of a model")
+        case "medium": String(localized: "Medium", comment: "Reasoning effort of a model")
+        case "high": String(localized: "High", comment: "Reasoning effort of a model")
+        case "xhigh": String(localized: "Extra high", comment: "Reasoning effort of a model")
+        case "max": String(localized: "Max", comment: "Reasoning effort of a model")
+        case "off": String(localized: "No thinking", comment: "Reasoning effort of a model")
+        case "thinking": String(localized: "Thinking", comment: "Reasoning effort of a model")
         default: id.prefix(1).uppercased() + id.dropFirst()
         }
     }
@@ -98,7 +98,7 @@ enum ModelComparison {
         guard let first = model.points.first, let last = model.points.last else { return nil }
         let from = effortLabel(first.effort)
         let to = effortLabel(last.effort)
-        return from == to ? from : "\(from) to \(to)"
+        return from == to ? from : String(localized: "\(from) to \(to)", comment: "A range of reasoning efforts")
     }
 
     static func cost(_ value: Double) -> String {
@@ -112,11 +112,16 @@ enum ModelComparison {
     /// How long ago the address book read the numbers.
     static func updated(fetchedAt: Int64, now: Date) -> String {
         let past = max(0, now.timeIntervalSince1970 - Double(fetchedAt) / 1000)
-        let (unit, size): (String, Double) =
-            past < 3600 ? ("minute", 60) : past < 86_400 ? ("hour", 3600) : ("day", 86_400)
-        let count = Int(past / size)
-        if count == 0 { return "Updated just now" }
-        return "Updated \(count) \(unit)\(count == 1 ? "" : "s") ago"
+        if past < 60 {
+            return String(localized: "Updated just now")
+        }
+        if past < 3600 {
+            return String(localized: "Updated \(Int(past / 60)) minutes ago")
+        }
+        if past < 86_400 {
+            return String(localized: "Updated \(Int(past / 3600)) hours ago")
+        }
+        return String(localized: "Updated \(Int(past / 86_400)) days ago")
     }
 }
 
@@ -140,7 +145,11 @@ final class ModelComparisonModel {
 
     enum Scale: String, CaseIterable {
         case log, linear
-        var label: String { self == .log ? "Log" : "Linear" }
+        var label: String {
+            self == .log
+                ? String(localized: "Log", comment: "A logarithmic scale")
+                : String(localized: "Linear", comment: "A linear scale")
+        }
     }
 
     private(set) var load = Load.loading
@@ -150,7 +159,11 @@ final class ModelComparisonModel {
     var selected: ModelComparisonPoint?
     @ObservationIgnored private let fetch: @Sendable () async throws -> ModelBenchmarksResult
 
-    init(fetch: @escaping @Sendable () async throws -> ModelBenchmarksResult = { try await AddressBookClient().modelBenchmarks() }) {
+    init(
+        fetch: @escaping @Sendable () async throws -> ModelBenchmarksResult = {
+            try await AddressBookClient().modelBenchmarks()
+        }
+    ) {
         self.fetch = fetch
     }
 

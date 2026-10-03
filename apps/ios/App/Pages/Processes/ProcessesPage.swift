@@ -98,10 +98,10 @@ struct ProcessesPage: View {
                     coarseInterval: model.coarseInterval)
                 HStack(spacing: 8) {
                     ProcessChart(
-                        label: "CPU", headline: ProcessesText.percent(sample.machine.cpu), points: series.points,
+                        label: String(localized: "CPU"), headline: ProcessesText.percent(sample.machine.cpu), points: series.points,
                         window: series.window, end: sample.at, maximum: 100, machine: \.cpu, ruimte: \.cpuRuimte)
                     ProcessChart(
-                        label: "Memory", headline: ProcessesText.bytes(sample.machine.memoryUsed),
+                        label: String(localized: "Memory"), headline: ProcessesText.bytes(sample.machine.memoryUsed),
                         points: series.points, window: series.window, end: sample.at,
                         maximum: sample.machine.memoryTotal, machine: \.memory, ruimte: \.memoryRuimte)
                 }
@@ -167,19 +167,19 @@ struct ProcessesPage: View {
     @ViewBuilder private var content: some View {
         if model.unsupportedMachine {
             ContentUnavailableView(
-                "Needs an update", lucideIcon: "circle-alert",
+                String(localized: "Needs an update"), lucideIcon: "circle-alert",
                 description: Text("Update Ruimte on this machine to see its processes on the phone."))
         } else if model.supported == false {
             ContentUnavailableView(
-                "Not available", lucideIcon: "activity",
+                String(localized: "Not available"), lucideIcon: "activity",
                 description: Text("Process monitoring is not available on this platform yet."))
         } else if !model.connected {
-            ContentUnavailableView("The machine is not answering", lucideIcon: "activity")
+            ContentUnavailableView(String(localized: "The machine is not answering"), lucideIcon: "activity")
         } else if let sample = model.sample {
             charts(sample)
             list(sample)
         } else {
-            MobileLoadingRow("Measuring processes").frame(maxWidth: .infinity).padding()
+            MobileLoadingRow(String(localized: "Measuring processes")).frame(maxWidth: .infinity).padding()
         }
     }
 
@@ -191,10 +191,10 @@ struct ProcessesPage: View {
         Section {
             HStack(spacing: 8) {
                 ProcessChart(
-                    label: "CPU", headline: ProcessesText.percent(machine.cpu), points: series.points,
+                    label: String(localized: "CPU"), headline: ProcessesText.percent(machine.cpu), points: series.points,
                     window: series.window, end: sample.at, maximum: 100, machine: \.cpu, ruimte: \.cpuRuimte)
                 ProcessChart(
-                    label: "Memory", headline: ProcessesText.bytes(machine.memoryUsed), points: series.points,
+                    label: String(localized: "Memory"), headline: ProcessesText.bytes(machine.memoryUsed), points: series.points,
                     window: series.window, end: sample.at, maximum: machine.memoryTotal, machine: \.memory,
                     ruimte: \.memoryRuimte)
             }
@@ -218,9 +218,12 @@ struct ProcessesPage: View {
 
     /// Disk is the total for the processes Ruimte can read, so it is a line under the two charts and not one of them.
     private func diskLine(_ machine: ProcessMachine) -> String {
-        let rates =
-            "Disk reads \(ProcessesText.rate(machine.diskRead)) and writes \(ProcessesText.rate(machine.diskWrite))"
-        return machine.diskFree.map { "\(rates), \(ProcessesText.bytes($0)) free." } ?? "\(rates)."
+        let read = ProcessesText.rate(machine.diskRead)
+        let write = ProcessesText.rate(machine.diskWrite)
+        guard let free = machine.diskFree else {
+            return String(localized: "Disk reads \(read) and writes \(write).")
+        }
+        return String(localized: "Disk reads \(read) and writes \(write), \(ProcessesText.bytes(free)) free.")
     }
 
     @ViewBuilder private func list(_ sample: ProcessSample) -> some View {
@@ -275,7 +278,7 @@ struct ProcessesPage: View {
                         }
                     }
                     if !named.known {
-                        Text(group.projectID.flatMap { projectNames[$0] } ?? "another project")
+                        Text(group.projectID.flatMap { projectNames[$0] } ?? String(localized: "another project"))
                             .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1)
                     }
                 }
@@ -319,9 +322,9 @@ struct ProcessesPage: View {
 
     @ViewBuilder private func signalMenu(_ target: ProcessTarget) -> some View {
         Section("\(target.name) (\(target.pid))") {
-            Button("Interrupt", lucideIcon: "pause") { Task { await model.signal(target, .interrupt) } }
-            Button("Terminate", lucideIcon: "circle-stop") { Task { await model.signal(target, .terminate) } }
-            Button("Force quit…", lucideIcon: "octagon-x", role: .destructive) { forcing = target }
+            Button(String(localized: "Interrupt"), lucideIcon: "pause") { Task { await model.signal(target, .interrupt) } }
+            Button(String(localized: "Terminate"), lucideIcon: "circle-stop") { Task { await model.signal(target, .terminate) } }
+            Button(String(localized: "Force quit…"), lucideIcon: "octagon-x", role: .destructive) { forcing = target }
         }
     }
 
@@ -331,7 +334,7 @@ struct ProcessesPage: View {
                 Image(lucide: "triangle-alert", size: 14).foregroundStyle(MobileStyle.statusNeedsYou)
                 Text(ProcessesText.alert(alert, now: now)).font(.footnote)
                 Spacer(minLength: 4)
-                Button("Dismiss", lucideIcon: "x") { Task { await model.dismiss(alert) } }
+                Button(String(localized: "Dismiss"), lucideIcon: "x") { Task { await model.dismiss(alert) } }
                     .labelStyle(.iconOnly).frame(minWidth: 28, minHeight: 28)
                     .buttonStyle(.borderless)
             }

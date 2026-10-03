@@ -90,13 +90,15 @@ struct ChatComposerAccessory: View {
             }
             if !model.connected || model.loading {
                 Label(
-                    model.connected ? "Connecting… You can keep writing." : "Offline. Your draft stays on this iPhone.",
+                    model.connected
+                        ? String(localized: "Connecting… You can keep writing.")
+                        : String(localized: "Offline. Your draft stays on this iPhone."),
                     lucideIcon: "wifi-off", iconSize: 14
                 )
                 .font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 8)
             }
             if model.draft.utf16.count >= 100_000 {
-                Text("\(model.draft.utf16.count.formatted()) / 120,000").font(.caption).monospacedDigit()
+                Text("\(model.draft.utf16.count.formatted()) / \(120_000.formatted())").font(.caption).monospacedDigit()
                     .foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity, alignment: .trailing)
             }
         }

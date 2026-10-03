@@ -32,15 +32,16 @@ struct GitChangesList: View {
                 }.padding(.vertical, 8)
             }
             if repositories.busy {
-                GitBusyRow(text: repositories.step ?? repositories.progress ?? "Working")
+                GitBusyRow(text: repositories.step ?? repositories.progress ?? String(localized: "Working"))
             }
             if let note {
                 Text(note).font(.caption).foregroundStyle(MobileStyle.muted).textSelection(.enabled)
             }
             if repositories.loading {
-                MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
+                MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
             } else if checkouts.isEmpty {
-                ContentUnavailableView("No Git repository", lucideIcon: "git-branch", description: Text(folder))
+                ContentUnavailableView(
+                    String(localized: "No Git repository"), lucideIcon: "git-branch", description: Text(folder))
             } else {
                 waiting
                 ForEach(checkouts.filter(GitPanel.diverged)) { checkout in
@@ -53,7 +54,7 @@ struct GitChangesList: View {
         .refreshable { await repositories.reload(client: client, folder: folder) }
         .safeAreaInset(edge: .bottom, spacing: 0) { bar }
         .alert(
-            discard.map { "Discard changes in \(($0.path as NSString).lastPathComponent)?" } ?? "",
+            discard.map { String(localized: "Discard changes in \(($0.path as NSString).lastPathComponent)?") } ?? "",
             isPresented: Binding(get: { discard != nil }, set: { if !$0 { discard = nil } })
         ) {
             Button("Discard", role: .destructive) {
@@ -61,8 +62,10 @@ struct GitChangesList: View {
                 Task {
                     let stash = await repositories.discard(client: client, cwd: pending.cwd, path: pending.path)
                     note =
-                        stash.map { "Discarded \(pending.path). Restore it with git stash pop \($0)." }
-                        ?? "Nothing to discard in \(pending.path)."
+                        stash.map {
+                            String(localized: "Discarded \(pending.path). Restore it with git stash pop \($0).")
+                        }
+                        ?? String(localized: "Nothing to discard in \(pending.path).")
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -75,9 +78,11 @@ struct GitChangesList: View {
         if let halted, let operation = halted.operation {
             let session = repositories.conflicts.session(halted.path)
             GitBottomBar {
-                GitBarButton(title: "Abort", prominent: false, role: .destructive) { confirmAbort = true }
-                    .disabled(session.busy)
-                GitBarButton(title: "Continue") { Task { await finish(halted, "continue") } }
+                GitBarButton(title: String(localized: "Abort"), prominent: false, role: .destructive) {
+                    confirmAbort = true
+                }
+                .disabled(session.busy)
+                GitBarButton(title: String(localized: "Continue")) { Task { await finish(halted, "continue") } }
                     .disabled(session.busy || halted.conflictCount > 0)
             }
             .modifier(
@@ -111,7 +116,7 @@ struct GitChangesList: View {
 
     @ViewBuilder private var changes: some View {
         if repositories.changeCount == 0 {
-            ContentUnavailableView("Working tree clean", lucideIcon: "circle-check")
+            ContentUnavailableView(String(localized: "Working tree clean"), lucideIcon: "circle-check")
         }
         ForEach(gitFileGroups, id: \.self) { group in
             let sections = checkouts.map { ($0, $0.files(state: group)) }.filter { !$0.1.isEmpty }
@@ -172,7 +177,9 @@ struct GitChangesList: View {
                     Text((path as NSString).lastPathComponent).lineLimit(1)
                     Text(
                         group == "untracked"
-                            ? [folderName, "new"].filter { !$0.isEmpty }.joined(separator: " · ") : folderName
+                            ? [folderName, String(localized: "new", comment: "A file git does not track yet")].filter {
+                                !$0.isEmpty
+                            }.joined(separator: " · ") : folderName
                     )
                     .font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.head)
                 }
@@ -196,13 +203,17 @@ struct GitChangesList: View {
         }
         .contextMenu {
             Button(
-                group == "staged" ? "Unstage file" : group == "conflicted" ? "Stage as resolved" : "Stage file",
+                group == "staged"
+                    ? String(localized: "Unstage file")
+                    : group == "conflicted" ? String(localized: "Stage as resolved") : String(localized: "Stage file"),
                 lucideIcon: group == "staged" ? "minus" : "plus"
             ) {
                 Task { await stage(checkout, [file], group) }
             }
             if group != "conflicted" {
-                Button("Discard changes", lucideIcon: "trash", role: .destructive) { discard = (checkout.path, path) }
+                Button(String(localized: "Discard changes"), lucideIcon: "trash", role: .destructive) {
+                    discard = (checkout.path, path)
+                }
             }
         }
     }
@@ -246,7 +257,7 @@ struct GitHaltedCard: View {
         }
         .task(id: checkout.conflictCount) { await session.load(client: client) }
         if session.busy {
-            GitBusyRow(text: session.progress ?? "Working")
+            GitBusyRow(text: session.progress ?? String(localized: "Working"))
         }
         if let problem = session.problem {
             Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(.red)
@@ -262,11 +273,11 @@ enum GitHaltedText {
     static func title(_ checkout: GitCheckout, named: Bool) -> String {
         let what =
             switch checkout.operation {
-            case "merge": "A merge waits on you"
-            case "rebase": "A rebase waits on you"
-            case "cherry-pick": "A cherry-pick waits on you"
-            case "revert": "A revert waits on you"
-            default: "Files conflict"
+            case "merge": String(localized: "A merge waits on you")
+            case "rebase": String(localized: "A rebase waits on you")
+            case "cherry-pick": String(localized: "A cherry-pick waits on you")
+            case "revert": String(localized: "A revert waits on you")
+            default: String(localized: "Files conflict")
             }
         return named ? "\(what) (\(checkout.label))" : what
     }
@@ -275,9 +286,11 @@ enum GitHaltedText {
         let count = checkout.conflictCount
         let files =
             count == 0
-            ? "Every file is resolved; Continue finishes it."
-            : count == 1 ? "1 file conflicts." : "\(count) files conflict."
+            ? String(localized: "Every file is resolved; Continue finishes it.")
+            : String(localized: "\(count) files conflict.")
         guard let ours, let theirs else { return files }
-        return "\(ours) against \(theirs). \(files)"
+        return String(
+            localized: "\(ours) against \(theirs). \(files)",
+            comment: "%1$@ and %2$@ are git refs, %3$@ the sentence on how many files conflict")
     }
 }

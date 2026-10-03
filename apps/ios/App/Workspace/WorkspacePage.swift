@@ -97,7 +97,7 @@ struct WorkspacePage: View {
                             Spacer()
                             Button("Try again") { workspace.session.reconnect() }
                         } else {
-                            MobileLoadingRow("Reconnecting to your machine")
+                            MobileLoadingRow(String(localized: "Reconnecting to your machine"))
                         }
                     }.frame(maxWidth: .infinity).padding(8).background(.thinMaterial)
                 }
@@ -109,7 +109,7 @@ struct WorkspacePage: View {
                             openView(notice.text("viewId"))
                             workspace.notice = nil
                         }
-                        Button("Dismiss", lucideIcon: "x") { workspace.notice = nil }
+                        Button(String(localized: "Dismiss"), lucideIcon: "x") { workspace.notice = nil }
                             .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     }.padding().background(.thinMaterial)
                 }
@@ -310,26 +310,32 @@ struct WorkspacePage: View {
             Menu {
                 Section {
                     if workspace.isScratch {
-                        Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
+                        Button(String(localized: "New chat"), lucideIcon: "message-square-plus") {
+                            navigation.newChat = true
+                        }
                     } else {
-                        Button("New view", lucideIcon: "plus") { navigation.adding = true }
+                        Button(String(localized: "New view"), lucideIcon: "plus") { navigation.adding = true }
                     }
                 }
                 .disabled(!workspace.ready)
                 Section {
                     if !workspace.isScratch {
-                        Button("Files", lucideIcon: "folder") { navigation.showingFiles = true }
+                        Button(String(localized: "Files"), lucideIcon: "folder") { navigation.showingFiles = true }
                             .accessibilityIdentifier("project.files")
-                        Button("Git", lucideIcon: "git-branch") { navigation.showingGit = true }
+                        Button(String(localized: "Git"), lucideIcon: "git-branch") { navigation.showingGit = true }
                             .accessibilityIdentifier("project.git")
-                        Button("Launches", lucideIcon: "play") { navigation.showingLaunches = true }
+                        Button(String(localized: "Launches"), lucideIcon: "play") { navigation.showingLaunches = true }
                     }
-                    Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
+                    Button(String(localized: "Usage"), lucideIcon: "chart-no-axes-column") {
+                        navigation.showingUsage = true
+                    }
                 }
                 .disabled(!workspace.ready)
                 if !workspace.isScratch {
                     Section {
-                        Button("Project settings", lucideIcon: "settings-2") { navigation.showingSettings = true }
+                        Button(String(localized: "Project settings"), lucideIcon: "settings-2") {
+                            navigation.showingSettings = true
+                        }
                     }
                     .disabled(!workspace.ready)
                 }
@@ -346,10 +352,10 @@ struct WorkspacePage: View {
 
     @ViewBuilder private var openingStatus: some View {
         if let problem = workspace.problem
-            ?? (workspace.session.failedAttempts >= 3 ? "Could not connect to your machine." : nil)
+            ?? (workspace.session.failedAttempts >= 3 ? String(localized: "Could not connect to your machine.") : nil)
         {
             ContentUnavailableView {
-                Label("Could not open project", lucideIcon: "triangle-alert", iconSize: 48)
+                Label(String(localized: "Could not open project"), lucideIcon: "triangle-alert", iconSize: 48)
             } description: {
                 Text(problem)
             } actions: {
@@ -363,7 +369,7 @@ struct WorkspacePage: View {
                 }
             }
         } else {
-            MobileLoadingRow("Opening project")
+            MobileLoadingRow(String(localized: "Opening project"))
         }
     }
 
@@ -372,13 +378,13 @@ struct WorkspacePage: View {
         if let item = workspace.item(id) {
             ProjectItemPage(workspace: workspace, item: item).id(id)
         } else {
-            ContentUnavailableView("This view was removed", lucideIcon: "square-x")
+            ContentUnavailableView(String(localized: "This view was removed"), lucideIcon: "square-x")
         }
     }
 
     private var noChats: some View {
         ContentUnavailableView {
-            Label("No chats yet", lucideIcon: "messages-square", iconSize: 48)
+            Label(String(localized: "No chats yet"), lucideIcon: "messages-square", iconSize: 48)
         } actions: {
             Button("New chat") { navigation.newChat = true }.disabled(!workspace.session.connected)
         }
@@ -441,7 +447,8 @@ struct WorkspacePage: View {
             waited += 1
         }
         guard let turnID = model.presentation.lastSettledTurnID else {
-            forkProblem = model.error ?? "This chat has no turn that ended yet, so there is nothing to fork."
+            forkProblem =
+                model.error ?? String(localized: "This chat has no turn that ended yet, so there is nothing to fork.")
             return
         }
         model.presentation.forkRequest = ChatForkRequest(turnID: turnID)
@@ -533,7 +540,7 @@ struct WorkspacePage: View {
     /// The project's name over its views in the iPad's sidebar, where the bar holds the way back and its buttons.
     private var sidebarTitle: some View {
         Section {
-            Text(workspace.isScratch ? "Chats" : workspace.title).font(.title3.weight(.semibold))
+            Text(workspace.isScratch ? String(localized: "Chats") : workspace.title).font(.title3.weight(.semibold))
                 .foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                 .padding(.vertical, 8)
                 .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
@@ -549,11 +556,15 @@ struct WorkspacePage: View {
     @ToolbarContentBuilder private var sidebarToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                Button("Processes", lucideIcon: "activity") { showProcesses = true }
-                Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
+                Button(String(localized: "Processes"), lucideIcon: "activity") { showProcesses = true }
+                Button(String(localized: "Usage"), lucideIcon: "chart-no-axes-column") {
+                    navigation.showingUsage = true
+                }
                 if !workspace.isScratch {
                     Section {
-                        Button("Project settings", lucideIcon: "settings-2") { navigation.showingSettings = true }
+                        Button(String(localized: "Project settings"), lucideIcon: "settings-2") {
+                            navigation.showingSettings = true
+                        }
                     }
                 }
             } label: {
@@ -565,10 +576,10 @@ struct WorkspacePage: View {
         }
         ToolbarItem(placement: .topBarTrailing) {
             if workspace.isScratch {
-                Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
+                Button(String(localized: "New chat"), lucideIcon: "message-square-plus") { navigation.newChat = true }
                     .disabled(!workspace.ready)
             } else {
-                Button("Add view", lucideIcon: "plus") { navigation.adding = true }
+                Button(String(localized: "Add view"), lucideIcon: "plus") { navigation.adding = true }
                     .disabled(!workspace.ready)
                     .accessibilityIdentifier("sidebar.newView")
                     .popover(isPresented: $navigation.adding, arrowEdge: .top) {
@@ -646,7 +657,7 @@ struct ProjectItemPage: View {
         Group {
             if !isPresent {
                 ContentUnavailableView(
-                    "This view was removed", lucideIcon: "square-x",
+                    String(localized: "This view was removed"), lucideIcon: "square-x",
                     description: Text("Return to the project to choose another view."))
             } else if current.text("kind") == "chat" {
                 VStack(spacing: 0) {
@@ -659,7 +670,7 @@ struct ProjectItemPage: View {
                 }
             } else if let problem {
                 ContentUnavailableView {
-                    Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)
+                    Label(String(localized: "Could not open"), lucideIcon: "triangle-alert", iconSize: 48)
                 } description: {
                     Text(problem)
                 } actions: {
@@ -669,7 +680,9 @@ struct ProjectItemPage: View {
                 // The page stands with its content, and so its bar, from the first frame of the push. Swapping a
                 // spinner for it once the session is there made the bar drop its items as the push settled.
                 content.overlay {
-                    if !ready && ProjectItemPage.waitsForSession(current.text("kind")) { MobileLoadingRow("Opening") }
+                    if !ready && ProjectItemPage.waitsForSession(current.text("kind")) {
+                        MobileLoadingRow(String(localized: "Opening"))
+                    }
                 }
             }
         }
@@ -741,13 +754,13 @@ struct ProjectItemPage: View {
             .overlay {
                 if ready && CanvasEditing.members(of: current, in: canvasHolding).isEmpty {
                     ContentUnavailableView(
-                        "Nothing in this group", lucideIcon: "layout-grid",
+                        String(localized: "Nothing in this group"), lucideIcon: "layout-grid",
                         description: Text("Nodes inside its frame on the canvas are listed here."))
                 }
             }
         default:
             ContentUnavailableView(
-                "A newer view", lucideIcon: "circle-question-mark",
+                String(localized: "A newer view"), lucideIcon: "circle-question-mark",
                 description: Text(
                     "Open this view in a newer Ruimte. Its content is preserved when you edit this project."))
         }
@@ -759,7 +772,9 @@ struct ProjectItemPage: View {
     }
 
     private var subtitle: String { workspace.ready ? workspace.title : projectName ?? workspace.title }
-    private var title: String { current.text("name", fallback: current.text("title", fallback: current.text("kind"))) }
+    private var title: String {
+        current.text("name", fallback: current.text("title", fallback: NewViewFactory.kindTitle(current.text("kind"))))
+    }
     private func absolutePath(_ path: String) -> String {
         path.hasPrefix("/") || path.hasPrefix("~") ? path : workspace.folder + "/" + path
     }
@@ -807,7 +822,7 @@ struct AddProjectItem: View {
                         canvasID == nil
                             ? ["chat", "terminal", "canvas", "browser", "file", "drawing", "diagram", "separator", "subheader"]
                             : ["chat", "terminal", "browser", "file", "note", "group"], id: \.self
-                    ) { Text($0.capitalized).tag($0) }
+                    ) { Text(NewViewFactory.kindTitle($0)).tag($0) }
                 }
                 TextField("Name", text: $name)
                 if kind == "browser" || kind == "file" {
@@ -822,7 +837,7 @@ struct AddProjectItem: View {
                     }
                 }
                 if let problem = workspace.problem { Text(problem).foregroundStyle(.red) }
-            }.navigationTitle("Add \(canvasID == nil ? "view" : "node")")
+            }.navigationTitle(canvasID == nil ? "Add view" : "Add node")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {

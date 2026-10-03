@@ -53,8 +53,9 @@ struct ProjectGitLine: Equatable {
     }
 
     var text: String {
-        let name = branch ?? "Detached"
-        return changed == 0 ? name : "\(name) · \(changed) changed"
+        let name = branch ?? String(localized: "Detached", comment: "Git, a checkout that is on no branch")
+        return changed == 0
+            ? name : String(localized: "\(name) · \(changed) changed", comment: "%1$@ is the git branch, %2$lld files")
     }
 }
 
@@ -68,12 +69,13 @@ struct ProjectOverviewRow: Identifiable {
 
     /// The second line: the branch and the number of views, or for Chats how many chats it holds.
     var detail: String? {
-        if unavailable { return "Folder unavailable" }
+        if unavailable { return String(localized: "Folder unavailable") }
         if isChats {
-            guard let activity else { return "Your earlier chats" }
-            return activity.chats == 1 ? "1 chat" : activity.chats == 0 ? "No chats yet" : "\(activity.chats) chats"
+            guard let activity else { return String(localized: "Your earlier chats") }
+            return activity.chats == 0
+                ? String(localized: "No chats yet") : String(localized: "\(activity.chats) chats")
         }
-        let parts = [git?.branch, activity.map { $0.views == 1 ? "1 view" : "\($0.views) views" }]
+        let parts = [git?.branch, activity.map { String(localized: "\($0.views) views") }]
         let line = parts.compactMap { $0 }.joined(separator: " · ")
         return line.isEmpty ? nil : line
     }

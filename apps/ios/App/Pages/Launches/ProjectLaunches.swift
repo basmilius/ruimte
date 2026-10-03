@@ -11,12 +11,12 @@ enum LaunchSaveFailure: Error, Equatable {
 }
 
 enum LaunchesText {
-    static let outdated = "Update Ruimte on this machine to use launches on the phone."
+    static let outdated = String(localized: "Update Ruimte on this machine to use launches on the phone.")
 
     static func reason(_ error: any Error) -> String {
         switch error {
         case MachineClientError.server(code: "unknown-request", message: _): outdated
-        case LaunchSaveFailure.conflict: "The launches changed elsewhere while you edited them."
+        case LaunchSaveFailure.conflict: String(localized: "The launches changed elsewhere while you edited them.")
         case LaunchSaveFailure.failed(let reason): reason
         default: error.localizedDescription
         }
@@ -137,7 +137,7 @@ enum LaunchesText {
                 ask = nil
             }
         } catch {
-            problem = "Could not launch \(name(launchID)): \(message(error))"
+            problem = String(localized: "Could not launch \(name(launchID)): \(message(error))")
         }
     }
 
@@ -154,7 +154,7 @@ enum LaunchesText {
             _ = try await client.request(WireRequest.launchStop.rawValue, payload: .object(payload))
             problem = nil
         } catch {
-            problem = "Could not stop \(name(launchID)): \(message(error))"
+            problem = String(localized: "Could not stop \(name(launchID)): \(message(error))")
         }
     }
 
@@ -185,10 +185,10 @@ enum LaunchesText {
             try await save(LaunchEditing.saved(drafts), baseRev: document.rev)
             problem = nil
         } catch LaunchSaveFailure.conflict {
-            problem = "The launches changed elsewhere. Look again before deleting."
+            problem = String(localized: "The launches changed elsewhere. Look again before deleting.")
             await load()
         } catch {
-            problem = "Could not delete \(name(launchID)): \(LaunchesText.reason(error))"
+            problem = String(localized: "Could not delete \(name(launchID)): \(LaunchesText.reason(error))")
         }
     }
 

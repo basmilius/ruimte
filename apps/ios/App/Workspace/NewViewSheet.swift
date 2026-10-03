@@ -27,6 +27,25 @@ enum NewViewFactory {
         }
     }
 
+    /// What a person reads for a kind of view or node where it has no name of its own.
+    static func kindTitle(_ kind: String) -> String {
+        switch kind {
+        case "terminal": String(localized: "Terminal")
+        case "chat": String(localized: "Chat")
+        case "canvas": String(localized: "Canvas")
+        case "browser": String(localized: "Browser")
+        case "file": String(localized: "File")
+        case "drawing": String(localized: "Drawing")
+        case "diagram": String(localized: "Diagram")
+        case "device": String(localized: "Device")
+        case "group": String(localized: "Group")
+        case "note": String(localized: "Note")
+        case "separator": String(localized: "Separator")
+        case "subheader": String(localized: "Subheader")
+        default: kind.capitalized
+        }
+    }
+
     /// "Canvas", then "Canvas 2", until a name is free.
     static func freeName(_ views: [JSONValue], base: String) -> String {
         let taken = Set(views.compactMap { $0["name"]?.stringValue })
@@ -84,9 +103,10 @@ struct NewViewSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
-                    heading("Chat with")
+                    heading(String(localized: "Chat with"))
                     agentTiles
-                    heading("View").padding(.top, 10)
+                    heading(String(localized: "View", comment: "Heading over the kinds of view to make"))
+                        .padding(.top, 10)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                         ForEach(NewViewFactory.kinds, id: \.self) { kind in
                             Button {
@@ -94,7 +114,7 @@ struct NewViewSheet: View {
                             } label: {
                                 VStack(spacing: 6) {
                                     LucideIcon(name: WorkspaceViewIcon.name(for: .object(["kind": .string(kind)])), size: 18)
-                                    Text(kind.capitalized).font(.footnote)
+                                    Text(NewViewFactory.kindTitle(kind)).font(.footnote)
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 68)
                                 .background(MobileStyle.hover, in: .rect(cornerRadius: 18))
@@ -104,10 +124,10 @@ struct NewViewSheet: View {
                             .accessibilityIdentifier("newView.\(kind)")
                         }
                     }
-                    heading("Divide the list").padding(.top, 10)
+                    heading(String(localized: "Divide the list")).padding(.top, 10)
                     HStack(spacing: 8) {
-                        capsule("Separator", icon: "minus") { create("separator") }
-                        capsule("Subheader", icon: "type") { create("subheader") }
+                        capsule(String(localized: "Separator"), icon: "minus") { create("separator") }
+                        capsule(String(localized: "Subheader"), icon: "type") { create("subheader") }
                     }
                     if let problem = workspace.problem {
                         Text(problem).font(.footnote).foregroundStyle(MobileStyle.statusError).padding(.top, 8)
@@ -161,7 +181,8 @@ struct NewViewSheet: View {
                 }
             }
         } else {
-            MobileLoadingRow("Finding the agents on this machine").frame(maxWidth: .infinity, minHeight: 56)
+            MobileLoadingRow(String(localized: "Finding the agents on this machine"))
+                .frame(maxWidth: .infinity, minHeight: 56)
         }
     }
 

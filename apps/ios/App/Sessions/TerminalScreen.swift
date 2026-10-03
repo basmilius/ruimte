@@ -34,12 +34,12 @@ struct TerminalScreen: View {
                 .padding(.horizontal, 12).padding(.top, 12)
                 .background(MobileStyle.surface)
                 .overlay {
-                    if model.loading { MobileLoadingRow("Loading terminal…") }
+                    if model.loading { MobileLoadingRow(String(localized: "Loading terminal…")) }
                 }
                 .overlay(alignment: .top) {
                     if isPrepared && (model.exited || !model.connected) {
                         MobileStatus(
-                            title: model.exited ? "Exited" : "Reconnecting",
+                            title: model.exited ? String(localized: "Exited") : String(localized: "Reconnecting"),
                             color: model.exited ? .secondary : .orange
                         )
                         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -78,8 +78,8 @@ struct TerminalScreen: View {
                         Text("Dark").tag("dark")
                     }
                     Section("Following the machine's \(model.cols) × \(model.rows)") {
-                        Button("Reload screen", lucideIcon: "refresh-cw") { model.attach() }
-                        Button("Clear scrollback", lucideIcon: "eraser") { clearing = true }
+                        Button(String(localized: "Reload screen"), lucideIcon: "refresh-cw") { model.attach() }
+                        Button(String(localized: "Clear scrollback"), lucideIcon: "eraser") { clearing = true }
                             .keyboardShortcut("k", modifiers: .command)
                             .disabled(!usable)
                     }
@@ -286,11 +286,12 @@ final class RemoteTerminalView: TerminalView {
         while responder != nil, !(responder is UIViewController) { responder = responder?.next }
         guard let controller = responder as? UIViewController else { return }
         let alert = UIAlertController(
-            title: "Paste \(text.count) characters?", message: "The text will be sent to the running terminal.",
+            title: String(localized: "Paste \(text.count) characters?"),
+            message: String(localized: "The text will be sent to the running terminal."),
             preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         alert.addAction(
-            UIAlertAction(title: "Paste", style: .default) { [weak self] _ in
+            UIAlertAction(title: String(localized: "Paste"), style: .default) { [weak self] _ in
                 guard let self else { return }
                 let bracketed = getTerminal().bracketedPasteMode
                 if bracketed { send(txt: "\u{1b}[200~") }

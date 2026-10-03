@@ -145,7 +145,7 @@ struct LaunchEditorSheet: View {
         }
         if let shown, shown.id != model.draftID {
             Section {
-                Text("\(model.drafts.first { $0.id == shown.id }?.name ?? "Another launch"): \(shown.problem.message)")
+                Text("\(model.drafts.first { $0.id == shown.id }?.name ?? String(localized: "Another launch")): \(shown.problem.message)")
                     .foregroundStyle(.red)
             }
         }
@@ -203,7 +203,7 @@ struct LaunchEditorSheet: View {
             }
             ForEach(model.candidates) { candidate in
                 Toggle(
-                    candidate.name.isEmpty ? "Untitled" : candidate.name,
+                    candidate.name.isEmpty ? String(localized: "Untitled") : candidate.name,
                     isOn: Binding(
                         get: { model.draft.members.contains(candidate.id) },
                         set: { model.toggle(member: candidate.id, on: $0) }))
@@ -221,7 +221,7 @@ struct LaunchEditorSheet: View {
         Section("Directory") {
             Picker("Checkout", selection: $model.root) {
                 ForEach(model.roots, id: \.self) { root in
-                    Text(root.isEmpty ? "Project folder" : root).tag(root)
+                    Text(root.isEmpty ? String(localized: "Project folder") : root).tag(root)
                 }
             }
             .onChange(of: model.root) { model.moveFolder() }
@@ -250,20 +250,21 @@ struct LaunchEditorSheet: View {
                 HStack {
                     TextField("Name", text: $row.key).frame(maxWidth: 140)
                     TextField("Value", text: $row.value)
-                    Button("Remove \(row.key)", lucideIcon: "x") { model.removeVariable(row.id) }
+                    Button(String(localized: "Remove \(row.key)"), lucideIcon: "x") { model.removeVariable(row.id) }
                         .labelStyle(.iconOnly).buttonStyle(.borderless)
                 }
                 .font(.callout.monospaced()).textInputAutocapitalization(.never).autocorrectionDisabled()
             }
-            Button("Add variable", lucideIcon: "plus") { model.addVariable() }
+            Button(String(localized: "Add variable"), lucideIcon: "plus") { model.addVariable() }
         }
     }
 
     private static func kindHint(_ kind: String) -> String {
         switch kind {
-        case "task": "Runs until it is done, such as the tests or a build."
-        case "group": "Starts the launches checked below together."
-        default: "Keeps running, such as a web server. With an address it is running once the port answers."
+        case "task": String(localized: "Runs until it is done, such as the tests or a build.")
+        case "group": String(localized: "Starts the launches checked below together.")
+        default:
+            String(localized: "Keeps running, such as a web server. With an address it is running once the port answers.")
         }
     }
 }
@@ -306,7 +307,7 @@ struct LaunchImportSheet: View {
                         }
                     }
                 } else {
-                    MobileLoadingRow("Looking for run configurations and scripts")
+                    MobileLoadingRow(String(localized: "Looking for run configurations and scripts"))
                 }
             }
             .navigationTitle("Import launches")

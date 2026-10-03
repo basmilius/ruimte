@@ -23,9 +23,9 @@ enum PlanFilter: String, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .all: "All"
-        case .open: "Open"
-        case .issues: "Issues"
+        case .all: String(localized: "All", comment: "Show every step of a plan")
+        case .open: String(localized: "Open", comment: "Show the steps of a plan that are still open")
+        case .issues: String(localized: "Issues", comment: "Show the steps of a plan that did not pass")
         }
     }
 
@@ -236,19 +236,31 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         let progress = progress
         let warnings = progress.count(.warning)
         var parts: [String]
-        var extras: [(PlanStepState, String)]
+        var extras: [(PlanStepState, (Int) -> String)]
         if kind == .test {
-            parts = ["\(progress.finished) of \(progress.total) run", "\(progress.count(.done)) passed"]
-            extras = [(.warning, warnings == 1 ? "warning" : "warnings"), (.info, "info")]
+            parts = [
+                String(localized: "\(progress.finished) of \(progress.total) run"),
+                String(localized: "\(progress.count(.done)) passed"),
+            ]
+            extras = [
+                (.warning, { String(localized: "\($0) warnings") }),
+                (.info, { String(localized: "\($0) info", comment: "Count of test plan steps marked info") }),
+            ]
         } else {
             // In a steps plan a warning or info is still done; the extras say which of the done steps to read.
             let done = progress.count(.done) + warnings + progress.count(.info)
-            parts = ["\(done) of \(progress.total) done"]
-            extras = [(.warning, warnings == 1 ? "with a warning" : "with warnings"), (.info, "with info")]
+            parts = [String(localized: "\(done) of \(progress.total) done")]
+            extras = [
+                (.warning, { String(localized: "\($0) with warnings") }),
+                (.info, { String(localized: "\($0) with info") }),
+            ]
         }
-        extras += [(.failed, "failed"), (.skipped, "skipped"), (.blocked, "blocked")]
-        for (state, word) in extras where progress.count(state) > 0 {
-            parts.append("\(progress.count(state)) \(word)")
+        extras += [
+            (.failed, { String(localized: "\($0) failed") }), (.skipped, { String(localized: "\($0) skipped") }),
+            (.blocked, { String(localized: "\($0) blocked") }),
+        ]
+        for (state, phrase) in extras where progress.count(state) > 0 {
+            parts.append(phrase(progress.count(state)))
         }
         return parts.joined(separator: ", ")
     }
@@ -256,14 +268,14 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
     /// The same words as `stateLabel` in the desktop client: a test is passed, not done.
     func word(for state: PlanStepState) -> String {
         switch state {
-        case .open: kind == .test ? "Not run" : "Open"
-        case .active: kind == .test ? "Running" : "Active"
-        case .done: kind == .test ? "Passed" : "Done"
-        case .failed: "Failed"
-        case .skipped: "Skipped"
-        case .blocked: "Blocked"
-        case .warning: "Warning"
-        case .info: "Info"
+        case .open: kind == .test ? String(localized: "Not run") : String(localized: "Open", comment: "A plan step")
+        case .active: kind == .test ? String(localized: "Running") : String(localized: "Active")
+        case .done: kind == .test ? String(localized: "Passed") : String(localized: "Done")
+        case .failed: String(localized: "Failed")
+        case .skipped: String(localized: "Skipped")
+        case .blocked: String(localized: "Blocked")
+        case .warning: String(localized: "Warning")
+        case .info: String(localized: "Info")
         }
     }
 
@@ -388,7 +400,8 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
     var resultsText: String? {
         let leaves = steps.flatMap(\.leaves)
         let headings: [(PlanStepState, String)] = [
-            (.failed, "Failed"), (.blocked, "Blocked"), (.warning, "Warning"), (.info, "Info"),
+            (.failed, String(localized: "Failed")), (.blocked, String(localized: "Blocked")),
+            (.warning, String(localized: "Warning")), (.info, String(localized: "Info")),
         ]
         let blocks = headings.compactMap { state, heading -> String? in
             let lines = leaves.filter { $0.state == state }.map { step in
@@ -398,7 +411,7 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
             return lines.isEmpty ? nil : ([heading + ":"] + lines).joined(separator: "\n")
         }
         guard !blocks.isEmpty else { return nil }
-        return (["Results of the plan \"\(title)\":"] + blocks).joined(separator: "\n\n")
+        return ([String(localized: "Results of the plan \"\(title)\":")] + blocks).joined(separator: "\n\n")
     }
 
     /// One step as a line of Markdown, as Copy in the desktop client writes it.

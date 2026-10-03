@@ -16,11 +16,15 @@ enum TerminalSnapshot {
             try Task.checkCancellation()
             guard let session = result["sessions"]?.arrayValue?.first(where: { $0["sessionId"] == .string(sessionID) })
             else {
-                throw MachineClientError.server(code: "not-found", message: "This terminal is no longer available.")
+                throw MachineClientError.server(
+                    code: "not-found", message: String(localized: "This terminal is no longer available."))
             }
             for dimension in ["cols", "rows"] {
                 guard let value = session[dimension]?.numberValue, value.isFinite, value > 0, value.rounded() == value
-                else { throw MachineClientError.invalid("The machine did not report a valid terminal size.") }
+                else {
+                    throw MachineClientError.invalid(
+                        String(localized: "The machine did not report a valid terminal size."))
+                }
                 payload[dimension] = .number(value)
             }
             return try await attachment.snapshot(payload: .object(payload), onSnapshot: onSnapshot)

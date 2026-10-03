@@ -43,14 +43,15 @@ struct SubagentListPage: View {
         ) { model.items }
         let work = lists.work
         List {
-            section("Active", items: lists.active, work: work)
-            section("Done", items: lists.done, work: work)
+            section(String(localized: "Active", comment: "Sub-agents that still run"), items: lists.active, work: work)
+            section(String(localized: "Done", comment: "Sub-agents that finished"), items: lists.done, work: work)
         }
         .modifier(MobileSidebarList(minimumRowHeight: 56))
         .overlay {
             if lists.isEmpty {
                 ContentUnavailableView(
-                    "No sub-agents", lucideIcon: "bot", description: Text("This chat has no sub-agents to open."))
+                    String(localized: "No sub-agents"), lucideIcon: "bot",
+                    description: Text("This chat has no sub-agents to open."))
             }
         }
         .modifier(MobilePageSurface())
@@ -86,7 +87,9 @@ struct SubagentListPage: View {
                     .modifier(MobileSidebarRow())
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) { stopButton(item) }
                     .contextMenu {
-                        Button("Open conversation", lucideIcon: "messages-square") { opened = SubagentCrumb(item) }
+                        Button(String(localized: "Open conversation"), lucideIcon: "messages-square") {
+                            opened = SubagentCrumb(item)
+                        }
                         stopButton(item)
                     }
                 }
@@ -105,10 +108,14 @@ struct SubagentListPage: View {
         let turnRunning = model.info["activeTurnId"]?.stringValue != nil
         switch ChatSubagents.stop(item, turnRunning: turnRunning) {
         case .task:
-            Button("Stop task", lucideIcon: "square", role: .destructive) { askBeforeStoppingTask(item) }
+            Button(String(localized: "Stop task"), lucideIcon: "square", role: .destructive) {
+                askBeforeStoppingTask(item)
+            }
         case .mark:
             // No CLI stops one sub-agent on its own, so it may keep working until the chat's process ends.
-            Button("Mark as stopped", lucideIcon: "square", role: .destructive) { Task { await stop(item) } }
+            Button(String(localized: "Mark as stopped"), lucideIcon: "square", role: .destructive) {
+                Task { await stop(item) }
+            }
         case nil:
             EmptyView()
         }
@@ -138,7 +145,8 @@ extension ChatModel {
         guard let childID = item["childId"]?.stringValue else { return nil }
         let agents = await ChatSubagents.agentsEnded(with: [childID], client: client)
         return EndingAgents(
-            title: "Stop \(ChatSubagents.title(item))?", message: ChatSubagents.stopsTaskWarning(agents), run: run)
+            title: String(localized: "Stop \(ChatSubagents.title(item))?"),
+            message: ChatSubagents.stopsTaskWarning(agents), run: run)
     }
 }
 
@@ -205,7 +213,7 @@ private struct SubagentEntryRow: View {
             .contentShape(Rectangle())
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(word.map { "\(title), \($0.rawValue)" } ?? title)
+        .accessibilityLabel(word.map { "\(title), \($0.title)" } ?? title)
         .task(id: needsTail) {
             guard needsTail else {
                 tail?.stop()
@@ -292,7 +300,7 @@ struct SubagentInfoBar: View {
             HStack(spacing: 8) {
                 if let word = ChatSubagents.statusWord(item, task: nil) {
                     SubagentStatusIcon(word: word, size: 14)
-                    Text(word.rawValue.capitalized).font(.footnote).foregroundStyle(MobileStyle.text)
+                    Text(word.title).font(.footnote).foregroundStyle(MobileStyle.text)
                 }
                 SubagentEntryTime(item: item, task: nil)
                 Spacer(minLength: 0)
@@ -371,18 +379,18 @@ struct SubagentConversationPage: View {
         .overlay {
             switch conversation.status {
             case .loading:
-                MobileLoadingRow("Loading conversation…").allowsHitTesting(false)
+                MobileLoadingRow(String(localized: "Loading conversation…")).allowsHitTesting(false)
             case .failed where conversation.items.isEmpty:
                 ContentUnavailableView {
-                    Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)
+                    Label(String(localized: "Could not open"), lucideIcon: "triangle-alert", iconSize: 48)
                 } description: {
-                    Text(conversation.error ?? "The machine did not answer.")
+                    Text(conversation.error ?? String(localized: "The machine did not answer."))
                 } actions: {
                     if !conversation.unsupported { Button("Retry") { conversation.refresh() } }
                 }
             case .ready where conversation.items.isEmpty:
                 ContentUnavailableView(
-                    "Nothing to show yet", lucideIcon: "bot",
+                    String(localized: "Nothing to show yet"), lucideIcon: "bot",
                     description: Text("What this agent does appears here.")
                 ).allowsHitTesting(false)
             default:
@@ -391,7 +399,7 @@ struct SubagentConversationPage: View {
         }
         .overlay(alignment: .top) {
             if conversation.loadingEarlier {
-                MobileLoadingRow("Loading earlier messages")
+                MobileLoadingRow(String(localized: "Loading earlier messages"))
                     .padding(.top, 8)
                     .allowsHitTesting(false)
             }
@@ -495,7 +503,7 @@ struct SubagentInspector: View {
                     ToolbarItem(placement: .cancellationAction) { Button(role: .close, action: close) }
                     if let record, let stop = ChatSubagents.stop(record, turnRunning: turnRunning) {
                         ToolbarItem(placement: .primaryAction) {
-                            Button("Stop", lucideIcon: "square", role: .destructive) {
+                            Button(String(localized: "Stop"), lucideIcon: "square", role: .destructive) {
                                 switch stop {
                                 case .task: Task { ending = await model.stopTaskQuestion(record) { await run(record) } }
                                 case .mark: Task { await run(record) }
@@ -504,7 +512,7 @@ struct SubagentInspector: View {
                         }
                     }
                     ToolbarItem(placement: .primaryAction) {
-                        Button("Open as view", lucideIcon: "columns-2", action: openAsView)
+                        Button(String(localized: "Open as view"), lucideIcon: "columns-2", action: openAsView)
                     }
                 }
         }

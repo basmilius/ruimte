@@ -11,9 +11,9 @@ enum KeepAwakeMode: String, CaseIterable, Identifiable, Sendable {
 
     var label: String {
         switch self {
-        case .off: "Off"
-        case .working: "While agents work"
-        case .always: "Always"
+        case .off: String(localized: "Off", comment: "Keep awake setting")
+        case .working: String(localized: "While agents work")
+        case .always: String(localized: "Always", comment: "Keep awake setting")
         }
     }
 }
@@ -46,11 +46,12 @@ struct MachineWork: Equatable, Sendable {
     var idle: Bool { terminals == 0 && agents == 0 }
 
     var summary: String {
-        let parts = [
-            terminals == 0 ? nil : terminals == 1 ? "1 terminal" : "\(terminals) terminals",
-            agents == 0 ? nil : agents == 1 ? "1 agent" : "\(agents) agents",
-        ].compactMap { $0 }
-        return parts.joined(separator: " and ")
+        switch (terminals, agents) {
+        case (0, 0): return ""
+        case (_, 0): return String(localized: "\(terminals) terminals")
+        case (0, _): return String(localized: "\(agents) agents")
+        default: return String(localized: "\(terminals) terminals and \(agents) agents")
+        }
     }
 }
 
@@ -78,16 +79,22 @@ struct MachineUpdate: Equatable, Sendable {
     /// The steps the machine takes an install for; it downloads first where it has not yet.
     var installable: Bool { ["available", "downloading", "ready"].contains(status) }
 
-    private var named: String { version.map { "Ruimte \($0)" } ?? "A new version of Ruimte" }
+    private var named: String { version.map { "Ruimte \($0)" } ?? String(localized: "A new version of Ruimte") }
 
     /// The line over a machine's page, nil when there is nothing to tell.
     var headline: String? {
         switch status {
-        case "available": "\(named) is available on this machine."
+        case "available": String(localized: "\(named) is available on this machine.")
         case "downloading":
-            if let percent { "Downloading \(named), \(Int(percent))%." } else { "Downloading \(named)." }
-        case "ready": "\(named) is ready on this machine."
-        case "error": error.map { "The update failed: \($0)" } ?? "The update failed on this machine."
+            if let percent {
+                String(localized: "Downloading \(named), \(Int(percent))%.")
+            } else {
+                String(localized: "Downloading \(named).")
+            }
+        case "ready": String(localized: "\(named) is ready on this machine.")
+        case "error":
+            error.map { String(localized: "The update failed: \($0)") }
+                ?? String(localized: "The update failed on this machine.")
         default: nil
         }
     }
@@ -96,21 +103,30 @@ struct MachineUpdate: Equatable, Sendable {
     var action: String? {
         guard installable else { return nil }
         guard app else { return nil }
-        return status == "ready" ? "Restart" : "Update"
+        return status == "ready"
+            ? String(localized: "Restart", comment: "Button that restarts the app on a machine to install an update")
+            : String(localized: "Update", comment: "Button that installs an update")
     }
 
     /// Said under the headline when the app is not there to install it.
     var note: String? {
-        installable && !app ? "Open Ruimte on the machine to install it there." : nil
+        installable && !app ? String(localized: "Open Ruimte on the machine to install it there.") : nil
     }
 
     /// What the person reads before the restart: what installs and what that ends on the machine right now.
     static func restartQuestion(update: MachineUpdate?, work: MachineWork, machine: String) -> String {
-        let named = update?.version.map { "Ruimte \($0)" } ?? "The update"
-        let downloads = update?.status == "ready" ? "" : " downloads,"
-        let installs = "\(named)\(downloads) installs and Ruimte restarts on \(machine)."
-        if work.idle { return "\(installs) Nothing that runs there ends." }
-        return "\(installs) That ends \(work.summary) running there now."
+        let named = update?.version.map { "Ruimte \($0)" } ?? String(localized: "The update")
+        let installs =
+            update?.status == "ready"
+            ? String(localized: "\(named) installs and Ruimte restarts on \(machine).")
+            : String(localized: "\(named) downloads, installs and Ruimte restarts on \(machine).")
+        if work.idle {
+            return String(
+                localized: "\(installs) Nothing that runs there ends.", comment: "%@ is the sentence on what installs")
+        }
+        return String(
+            localized: "\(installs) That ends \(work.summary) running there now.",
+            comment: "%1$@ is the sentence on what installs, %2$@ what still runs, like 2 terminals")
     }
 }
 
@@ -295,7 +311,7 @@ final class MachineEndpoint {
             problem = nil
         } catch {
             keepAwake = previous
-            problem = "Keep awake could not be changed. \(error.localizedDescription)"
+            problem = String(localized: "Keep awake could not be changed. \(error.localizedDescription)")
         }
     }
 
@@ -350,8 +366,8 @@ final class MachineEndpoint {
             return error.localizedDescription
         }
         switch code {
-        case "update-no-app": return "Ruimte is not open on this machine. Install the update there."
-        case "update-none": return "There is no update to install on this machine."
+        case "update-no-app": return String(localized: "Ruimte is not open on this machine. Install the update there.")
+        case "update-none": return String(localized: "There is no update to install on this machine.")
         default: return message
         }
     }
@@ -365,17 +381,22 @@ enum MachineReach {
         if connected {
             let route =
                 switch relayed {
-                case .some(true): "Connected via relay"
-                case .some(false): "Connected directly"
-                case .none: "Connected"
+                case .some(true): String(localized: "Connected via relay")
+                case .some(false): String(localized: "Connected directly")
+                case .none: String(localized: "Connected")
                 }
-            return latency.map { "\(route) · \($0) ms" } ?? route
+            return latency.map {
+                String(
+                    localized: "\(route) · \($0) ms",
+                    comment: "How the machine is connected, then the round trip in milliseconds")
+            } ?? route
         }
-        if connecting { return "Connecting" }
+        if connecting { return String(localized: "Connecting") }
         if let lastSeen {
-            return "Last connected \(lastSeen.formatted(.relative(presentation: .named, unitsStyle: .wide)))"
+            let relative = lastSeen.formatted(.relative(presentation: .named, unitsStyle: .wide))
+            return String(localized: "Last connected \(relative)", comment: "%@ is a relative time, like 5 minutes ago")
         }
-        return problem ?? "Not connected"
+        return problem ?? String(localized: "Not connected")
     }
 }
 

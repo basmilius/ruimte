@@ -66,7 +66,9 @@ enum ChatFileChanges {
         let old = before.isEmpty ? [] : before.components(separatedBy: "\n")
         let new = after.isEmpty ? [] : after.components(separatedBy: "\n")
         // Provider edits describe a replacement fragment, not the complete file or its line numbers.
-        let diff = "Replacement\n" + (old.map { "-" + $0 } + new.map { "+" + $0 }).joined(separator: "\n")
+        let diff =
+            String(localized: "Replacement", comment: "Header of a diff that shows a replaced fragment") + "\n"
+            + (old.map { "-" + $0 } + new.map { "+" + $0 }).joined(separator: "\n")
         return ChatFileChange(path: path, diff: diff, added: new.count, deleted: old.count)
     }
 }
@@ -104,7 +106,9 @@ struct ChatDiffView: View {
                     .horizontal, 12)
             }
         }
-        .contextMenu { Button("Copy diff", lucideIcon: "copy") { UIPasteboard.general.string = diff } }
+        .contextMenu {
+            Button(String(localized: "Copy diff"), lucideIcon: "copy") { UIPasteboard.general.string = diff }
+        }
     }
 }
 
@@ -150,7 +154,7 @@ struct ChatChangedFilesRow: View {
             if !files.isEmpty || work.loading || work.problem != nil {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(
-                        "\(files.count) changed file\(files.count == 1 ? "" : "s")", lucideIcon: "file-diff",
+                        String(localized: "\(files.count) changed files"), lucideIcon: "file-diff",
                         iconSize: 14
                     )
                     .font(.footnote.weight(.medium))

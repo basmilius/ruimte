@@ -20,29 +20,32 @@ enum GitConfirmation: Identifiable {
 
     var title: String {
         switch self {
-        case .discard(_, let path): "Discard changes in \((path as NSString).lastPathComponent)?"
-        case .forcePush: "Force push this branch?"
-        case .deleteBranch(_, let ref, let force): force ? "Delete \(ref) anyway?" : "Delete \(ref)?"
-        case .checkout(_, let ref): "Switch to \(ref)?"
+        case .discard(_, let path): String(localized: "Discard changes in \((path as NSString).lastPathComponent)?")
+        case .forcePush: String(localized: "Force push this branch?")
+        case .deleteBranch(_, let ref, let force):
+            force ? String(localized: "Delete \(ref) anyway?") : String(localized: "Delete \(ref)?")
+        case .checkout(_, let ref): String(localized: "Switch to \(ref)?")
         }
     }
 
     var detail: String {
         switch self {
-        case .discard: "The file goes back to what it was, and git keeps a stash to undo it with."
-        case .forcePush: "The remote branch is replaced by this one. Commits only it has are lost."
+        case .discard: String(localized: "The file goes back to what it was, and git keeps a stash to undo it with.")
+        case .forcePush: String(localized: "The remote branch is replaced by this one. Commits only it has are lost.")
         case .deleteBranch(_, _, let force):
-            force ? "This branch has not been merged anywhere. Its commits are only reachable by hash." : "The branch is removed here; the remote keeps its own."
-        case .checkout: "Changes in the working tree are stashed first, so nothing is lost."
+            force
+                ? String(localized: "This branch has not been merged anywhere. Its commits are only reachable by hash.")
+                : String(localized: "The branch is removed here; the remote keeps its own.")
+        case .checkout: String(localized: "Changes in the working tree are stashed first, so nothing is lost.")
         }
     }
 
     var confirmLabel: String {
         switch self {
-        case .discard: "Discard"
-        case .forcePush: "Force push"
-        case .deleteBranch: "Delete"
-        case .checkout: "Switch"
+        case .discard: String(localized: "Discard")
+        case .forcePush: String(localized: "Force push")
+        case .deleteBranch: String(localized: "Delete")
+        case .checkout: String(localized: "Switch", comment: "Button that checks out a git branch")
         }
     }
 }

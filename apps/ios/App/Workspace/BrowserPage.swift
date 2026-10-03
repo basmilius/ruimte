@@ -17,7 +17,7 @@ private final class BrowserState {
         guard let url = URL(string: text.contains("://") ? text : "https://" + text),
             ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil
         else {
-            problem = "Enter an HTTP or HTTPS address."
+            problem = String(localized: "Enter an HTTP or HTTPS address.")
             return
         }
         problem = nil
@@ -123,11 +123,12 @@ struct BrowserPage: View {
 
     private var moreMenu: some View {
         Menu {
-            Button("Forward", lucideIcon: "chevron-right") { state.webView?.goForward() }.disabled(!state.forward)
+            Button(String(localized: "Forward"), lucideIcon: "chevron-right") { state.webView?.goForward() }
+                .disabled(!state.forward)
             if let url {
-                ShareLink(item: url) { Label("Share", lucideIcon: "share") }
-                Button("Copy link", lucideIcon: "copy") { UIPasteboard.general.url = url }
-                Button("Open in Safari", lucideIcon: "compass") { UIApplication.shared.open(url) }
+                ShareLink(item: url) { Label(String(localized: "Share"), lucideIcon: "share") }
+                Button(String(localized: "Copy link"), lucideIcon: "copy") { UIPasteboard.general.url = url }
+                Button(String(localized: "Open in Safari"), lucideIcon: "compass") { UIApplication.shared.open(url) }
             }
         } label: {
             Image(lucide: "ellipsis", size: 18).frame(width: 48, height: 48)

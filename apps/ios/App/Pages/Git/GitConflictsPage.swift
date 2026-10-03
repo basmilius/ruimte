@@ -22,10 +22,10 @@ struct GitConflictsPage: View {
             GitConflictStatusRows(client: client, session: session)
             if session.unsupported {
                 ContentUnavailableView(
-                    "Needs an update", lucideIcon: "circle-alert",
+                    String(localized: "Needs an update"), lucideIcon: "circle-alert",
                     description: Text("Update Ruimte on this machine to resolve conflicts on the phone."))
             } else if !session.loaded {
-                MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
+                MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
             } else {
                 files
                 GitOperationSection(client: client, session: session, confirmAbort: $confirmAbort)
@@ -36,7 +36,7 @@ struct GitConflictsPage: View {
         .toolbar {
             ToolbarItem {
                 let text = session.entries.filter { $0.kind == "text" }.map(\.path)
-                Button("Ask an agent about every file", lucideIcon: "sparkles") {
+                Button(String(localized: "Ask an agent about every file"), lucideIcon: "sparkles") {
                     Task { await session.ask(client: client, paths: text) }
                 }.disabled(session.busy || text.isEmpty)
             }
@@ -61,10 +61,11 @@ struct GitConflictsPage: View {
         Section {
             if session.entries.isEmpty {
                 ContentUnavailableView(
-                    "Nothing conflicts any more", lucideIcon: "circle-check",
+                    String(localized: "Nothing conflicts any more"), lucideIcon: "circle-check",
                     description: Text(
-                        session.operation.map { "Everything is resolved. Finish the \($0) below." }
-                            ?? "Nothing waits on you in this checkout."))
+                        session.operation.map {
+                            String(localized: "Everything is resolved. Finish the \($0) below.", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
+                        } ?? String(localized: "Nothing waits on you in this checkout.")))
             }
             ForEach(session.entries) { entry in
                 NavigationLink {
@@ -78,7 +79,7 @@ struct GitConflictsPage: View {
         }
         let ready = session.ready
         if ready.count > 1 {
-            Button("Mark \(ready.count) files resolved", lucideIcon: "check") {
+            Button(String(localized: "Mark \(ready.count) files resolved"), lucideIcon: "check") {
                 Task { await session.save(client: client, paths: ready) }
             }.disabled(session.busy)
         }
@@ -111,10 +112,11 @@ struct GitConflictStatusRows: View {
     var body: some View {
         if let run = session.agentRun {
             GitBusyRow(
-                text: "Asking an agent: \((run.path as NSString).lastPathComponent), \(run.done + 1) of \(run.total)",
+                text: String(
+                    localized: "Asking an agent: \((run.path as NSString).lastPathComponent), \(run.done + 1) of \(run.total)"),
                 cancel: { Task { await session.cancelAgent(client: client) } })
         } else if session.busy {
-            GitBusyRow(text: session.progress ?? "Working")
+            GitBusyRow(text: session.progress ?? String(localized: "Working"))
         }
         if let problem = session.problem, !session.unsupported {
             Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
@@ -142,9 +144,7 @@ struct GitOperationSection: View {
                 }.disabled(session.busy)
             } footer: {
                 Text(
-                    session.entries.isEmpty
-                        ? "Every file is resolved."
-                        : session.entries.count == 1 ? "1 file left." : "\(session.entries.count) files left.")
+                    session.entries.isEmpty ? "Every file is resolved." : "\(session.entries.count) files left.")
             }
         }
     }
@@ -163,7 +163,9 @@ struct GitAbortConfirmation: ViewModifier {
             Button(GitConflictModel.abortLabel(operation), role: .destructive, action: onAbort)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The checkout goes back to how it was before the \(operation). What was resolved so far is lost.")
+            Text(
+                "The checkout goes back to how it was before the \(operation). What was resolved so far is lost.",
+                comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
         }
     }
 }
@@ -216,7 +218,7 @@ struct GitConflictFilePage: View {
                     }
                 }
             } else if session.problem == nil {
-                MobileLoadingRow("Reading the file").frame(maxWidth: .infinity).padding()
+                MobileLoadingRow(String(localized: "Reading the file")).frame(maxWidth: .infinity).padding()
             }
         }
         .navigationTitle((path as NSString).lastPathComponent)
@@ -227,13 +229,15 @@ struct GitConflictFilePage: View {
                     Menu {
                         let wandable = draft.wandable(in: file).count
                         Button(
-                            wandable == 0 ? "Nothing left that resolves itself" : "Resolve the \(wandable) that need no choice",
+                            wandable == 0
+                                ? String(localized: "Nothing left that resolves itself")
+                                : String(localized: "Resolve the \(wandable) that need no choice", comment: "%lld counts conflicts"),
                             lucideIcon: "wand-sparkles"
                         ) { session.wand(path) }.disabled(wandable == 0)
-                        Button("Ask an agent about this file", lucideIcon: "sparkles") {
+                        Button(String(localized: "Ask an agent about this file"), lucideIcon: "sparkles") {
                             Task { await session.ask(client: client, paths: [path]) }
                         }
-                        Button("Edit the whole file", lucideIcon: "square-pen") {
+                        Button(String(localized: "Edit the whole file"), lucideIcon: "square-pen") {
                             editing = GitBlockEdit(block: nil, text: draft.lines(in: file).joined(separator: "\n"))
                         }
                     } label: {
@@ -242,7 +246,7 @@ struct GitConflictFilePage: View {
                     }
                     .buttonStyle(.glass)
                     .disabled(session.busy)
-                    GitBarButton(title: "Mark resolved") {
+                    GitBarButton(title: String(localized: "Mark resolved")) {
                         Task {
                             if await session.save(client: client, paths: [path]) { dismiss() }
                         }
@@ -255,7 +259,10 @@ struct GitConflictFilePage: View {
             await session.open(client: client, path: path)
         }
         .mobileSheet(item: $editing) { edit in
-            GitBlockEditSheet(title: edit.block == nil ? "Edit the whole file" : "Edit stretch", initial: edit.text) { text in
+            GitBlockEditSheet(
+                title: edit.block == nil ? String(localized: "Edit the whole file") : String(localized: "Edit stretch"),
+                initial: edit.text
+            ) { text in
                 if let block = edit.block {
                     session.answer(path, block: block, lines: GitConflictModel.editedLines(text))
                 } else {
@@ -270,7 +277,7 @@ struct GitConflictFilePage: View {
             Button("Drop the file", role: .destructive) { Task { await take("delete") } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The file is taken out of the checkout on both sides of the \(session.operation ?? "merge").")
+            Text("The file is taken out of the checkout on both sides of the \(session.operation ?? "merge").", comment: "%@ is a git operation: merge, rebase, cherry-pick or revert")
         }
     }
 
@@ -287,11 +294,11 @@ struct GitConflictFilePage: View {
     @ViewBuilder private func whole(_ file: GitConflictFile) -> some View {
         Section {
             Text(GitConflictModel.wholeDetail(kind: file.kind, ours: session.ours, theirs: session.theirs))
-            Button("Keep \(session.ours)", lucideIcon: "check") { Task { await take("ours") } }
+            Button(String(localized: "Keep \(session.ours)"), lucideIcon: "check") { Task { await take("ours") } }
                 .disabled(session.busy || file.kind == "deleted-by-us")
-            Button("Take \(session.theirs)", lucideIcon: "check") { Task { await take("theirs") } }
+            Button(String(localized: "Take \(session.theirs)"), lucideIcon: "check") { Task { await take("theirs") } }
                 .disabled(session.busy || file.kind == "deleted-by-them")
-            Button("Drop the file", lucideIcon: "trash", role: .destructive) { confirmDrop = true }
+            Button(String(localized: "Drop the file"), lucideIcon: "trash", role: .destructive) { confirmDrop = true }
                 .disabled(session.busy)
         } header: {
             Text(path).textCase(nil)
@@ -315,15 +322,15 @@ private struct GitMergedBlockView: View {
             GitLinesView(lines: lines, tint: kind == .stable ? nil : MobileStyle.accent)
         } label: {
             HStack(spacing: 8) {
-                Text(edited ? "Edited by you" : GitConflictModel.blockLabel(kind))
+                Text(edited ? String(localized: "Edited by you") : GitConflictModel.blockLabel(kind))
                     .font(.caption).foregroundStyle(kind == .stable ? MobileStyle.faint : MobileStyle.muted)
                 Spacer(minLength: 8)
-                Text(lines.count == 1 ? "1 line" : "\(lines.count) lines")
+                Text("\(lines.count) lines")
                     .font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.faint)
             }
         }
         .contextMenu {
-            Button("Edit", lucideIcon: "pencil", action: onEdit)
+            Button(String(localized: "Edit"), lucideIcon: "pencil", action: onEdit)
         }
     }
 }
@@ -342,8 +349,8 @@ private struct GitConflictBlockView: View {
     let onEdit: () -> Void
 
     private var state: String {
-        guard let answer else { return "Open" }
-        return answer.byAgent ? "Proposed by an agent" : "Answered"
+        guard let answer else { return String(localized: "Open", comment: "A conflict that still needs an answer") }
+        return answer.byAgent ? String(localized: "Proposed by an agent") : String(localized: "Answered")
     }
 
     var body: some View {
@@ -356,7 +363,9 @@ private struct GitConflictBlockView: View {
                     color: answer == nil ? MobileStyle.statusNeedsYou : answer!.byAgent ? MobileStyle.accent : MobileStyle.statusIdle)
             }
             if let answer {
-                side(answer.byAgent ? "The agent's proposal" : "Result", lines: answer.lines, tint: MobileStyle.statusIdle)
+                side(
+                    answer.byAgent ? String(localized: "The agent's proposal") : String(localized: "Result"),
+                    lines: answer.lines, tint: MobileStyle.statusIdle)
             }
             side(ours, lines: block.ours, tint: MobileStyle.accent)
             side(theirs, lines: block.theirs, tint: MobileStyle.statusNeedsYou)
@@ -367,12 +376,14 @@ private struct GitConflictBlockView: View {
                 Menu {
                     Button("Both, \(ours) first") { onAnswer(ThreeWayMerge.bothLines(block, oursFirst: true)) }
                     Button("Both, \(theirs) first") { onAnswer(ThreeWayMerge.bothLines(block, oursFirst: false)) }
-                    Button(answer?.byAgent == true ? "Edit the proposal" : "Edit by hand", lucideIcon: "pencil", action: onEdit)
+                    Button(
+                        answer?.byAgent == true ? String(localized: "Edit the proposal") : String(localized: "Edit by hand"),
+                        lucideIcon: "pencil", action: onEdit)
                     if answer != nil {
-                        Button("Clear the answer", lucideIcon: "rotate-ccw", role: .destructive, action: onClear)
+                        Button(String(localized: "Clear the answer"), lucideIcon: "rotate-ccw", role: .destructive, action: onClear)
                     }
                 } label: {
-                    Label("More answers", lucideIcon: "ellipsis")
+                    Label(String(localized: "More answers"), lucideIcon: "ellipsis")
                         .labelStyle(.iconOnly)
                 }
             }

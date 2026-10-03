@@ -19,22 +19,23 @@ struct PadNowPage: View {
             VStack(alignment: .leading, spacing: 22) {
                 if runtime.machines.isEmpty {
                     ContentUnavailableView {
-                        Label("No machines yet", lucideIcon: "monitor", iconSize: 48)
+                        Label(String(localized: "No machines yet"), lucideIcon: "monitor", iconSize: 48)
                     } description: {
                         Text("Connect your computer to see what your agents are doing.")
                     } actions: {
                         Button("Use a pairing link", action: pair)
                     }
                 } else if !now.loaded && board.isEmpty {
-                    MobileLoadingRow("Connecting to your machines").frame(maxWidth: .infinity, minHeight: 160)
+                    MobileLoadingRow(String(localized: "Connecting to your machines"))
+                        .frame(maxWidth: .infinity, minHeight: 160)
                 } else {
                     if board.needsYou.isEmpty {
                         NowNothingWaits(working: board.working.count, notifies: runtime.notifications.enabled)
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
                             NowHeader(
-                                title: "Needs you", count: board.needsYou.count, color: MobileStyle.statusNeedsYou,
-                                first: true)
+                                title: String(localized: "Needs you"), count: board.needsYou.count,
+                                color: MobileStyle.statusNeedsYou, first: true)
                             LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
                                 ForEach(board.needsYou) { entry in
                                     NowCard(
@@ -49,8 +50,13 @@ struct PadNowPage: View {
                     }
                     if !board.working.isEmpty || !board.finished.isEmpty {
                         HStack(alignment: .top, spacing: 14) {
-                            group("Working", entries: board.working, color: MobileStyle.statusRunning, board: board)
-                            group("Finished", entries: board.finished, color: MobileStyle.positive, board: board)
+                            group(
+                                String(localized: "Working"), empty: String(localized: "Nothing is working."),
+                                entries: board.working, color: MobileStyle.statusRunning, board: board)
+                            group(
+                                String(localized: "Finished"),
+                                empty: String(localized: "Nothing finished while you were away."),
+                                entries: board.finished, color: MobileStyle.positive, board: board)
                         }
                     }
                     if let first = board.snoozed.first?.snoozedUntil {
@@ -76,12 +82,14 @@ struct PadNowPage: View {
     }
 
     /// One of the two columns under the cards; an empty one keeps its place, so the other does not stretch across.
-    private func group(_ title: String, entries: [ProjectViewEntry], color: Color, board: NowBoard) -> some View {
+    private func group(
+        _ title: String, empty: String, entries: [ProjectViewEntry], color: Color, board: NowBoard
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             NowHeader(title: title, count: entries.count, color: color, first: true)
             VStack(spacing: 0) {
                 if entries.isEmpty {
-                    Text(title == "Working" ? "Nothing is working." : "Nothing finished while you were away.")
+                    Text(empty)
                         .font(.footnote).foregroundStyle(MobileStyle.faint)
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }

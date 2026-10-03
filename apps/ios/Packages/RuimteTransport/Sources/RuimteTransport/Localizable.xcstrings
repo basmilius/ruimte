@@ -1,7 +1,129 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A broker signal names the machine but is not signed by it." : {
 
+    },
+    "No network path to the machine: ICE failed." : {
+
+    },
+    "The broker challenge names a different host." : {
+
+    },
+    "The broker is limiting this client. Try again later." : {
+
+    },
+    "The broker needs a secure WebSocket URL." : {
+
+    },
+    "The broker refused this connection attempt." : {
+
+    },
+    "The broker returned expired ICE credentials." : {
+
+    },
+    "The broker sent invalid UTF-8." : {
+
+    },
+    "The channel opened before its answer was applied." : {
+
+    },
+    "The data channel is not open." : {
+
+    },
+    "The data channel refused a frame." : {
+
+    },
+    "The data channel sent invalid UTF-8." : {
+
+    },
+    "The direct connection closed." : {
+
+    },
+    "The direct connection did not come up within 20 seconds." : {
+
+    },
+    "The file changed while it played." : {
+
+    },
+    "The machine connection is not authenticated." : {
+
+    },
+    "The machine did not answer %@ in time." : {
+
+    },
+    "The machine did not prove its identity over this connection." : {
+
+    },
+    "The machine ended this connection: %@." : {
+
+    },
+    "The machine is reconnecting." : {
+
+    },
+    "The machine is reconnecting. Try again when it is connected." : {
+
+    },
+    "The machine refused this connection." : {
+
+    },
+    "The machine response is too large to load on this device." : {
+
+    },
+    "The machine sent a binary message before the handshake." : {
+
+    },
+    "The machine sent a reply this app cannot read." : {
+
+    },
+    "The machine sent an empty piece before the end of the resource." : {
+
+    },
+    "The machine sent an empty piece." : {
+
+    },
+    "The machine sent an invalid message fragment." : {
+
+    },
+    "The machine sent an invalid piece of the file." : {
+
+    },
+    "The machine sent an invalid resource piece." : {
+
+    },
+    "The machine stopped answering over the direct connection." : {
+
+    },
+    "The player asked past the end of the file." : {
+
+    },
+    "The resource changed while it was loading." : {
+
+    },
+    "The resource could not be loaded." : {
+
+    },
+    "The spool lost a piece of the file." : {
+
+    },
+    "This machine connection was released." : {
+
+    },
+    "This machine runs a newer Ruimte than this app. Update this app." : {
+
+    },
+    "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update." : {
+
+    },
+    "This resource exceeds the direct connection size limit." : {
+
+    },
+    "WebRTC could not create a connection." : {
+
+    },
+    "WebRTC could not create a data channel." : {
+
+    }
   },
   "version" : "1.0"
 }

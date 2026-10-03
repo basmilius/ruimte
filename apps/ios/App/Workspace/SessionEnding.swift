@@ -20,16 +20,11 @@ enum SessionEnding {
     static func warning(chats: Int, terminals: Int = 0, agents: Int) -> String? {
         var parts: [String] = []
         if chats > 0 {
-            parts.append(
-                chats == 1
-                    ? "The chat ends on this machine, and its conversation is gone."
-                    : "Its \(chats) chats end on this machine, and their conversations are gone.")
+            parts.append(String(localized: "Its \(chats) chats end on this machine, and their conversations are gone."))
         }
         if terminals > 0 {
             parts.append(
-                terminals == 1
-                    ? "The terminal ends on this machine, with everything running in it."
-                    : "Its \(terminals) terminals end on this machine, with everything running in them.")
+                String(localized: "Its \(terminals) terminals end on this machine, with everything running in them."))
         }
         guard !parts.isEmpty else { return nil }
         if agents > 0 { parts.append(ChatSubagents.endsAgentsWarning(agents)) }

@@ -95,7 +95,8 @@ private struct ExampleNotification: View {
                 HStack {
                     Text("Refactor reconnect loop").fontWeight(.semibold).lineLimit(1)
                     Spacer(minLength: 8)
-                    Text("now").font(.caption).foregroundStyle(MobileStyle.faint)
+                    Text("now", comment: "Time of a notification that just arrived")
+                        .font(.caption).foregroundStyle(MobileStyle.faint)
                 }
                 Text("Claude wants to edit pool.ts in Recept Maker.").foregroundStyle(MobileStyle.text.opacity(0.8))
             }

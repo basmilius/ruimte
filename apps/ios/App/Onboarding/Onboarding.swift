@@ -57,8 +57,8 @@ final class Onboarding {
     nonisolated static func connected(_ names: [String]) -> String? {
         switch names.count {
         case 0: nil
-        case 1: "\(names[0]) is connected"
-        default: "\(names.count) machines are connected"
+        case 1: String(localized: "\(names[0]) is connected", comment: "%@ is the machine name")
+        default: String(localized: "\(names.count) machines are connected")
         }
     }
 }

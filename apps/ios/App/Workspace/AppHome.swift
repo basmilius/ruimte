@@ -159,13 +159,13 @@ struct RecentProjectsPage: View {
                 Section { ProjectLinks(runtime: runtime, rows: visible) }
                     .listSectionSeparator(.hidden, edges: .top)
             } else if projects.loading {
-                MobileLoadingRow("Loading projects").frame(maxWidth: .infinity, minHeight: 120)
+                MobileLoadingRow(String(localized: "Loading projects")).frame(maxWidth: .infinity, minHeight: 120)
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             } else if !search.isEmpty {
                 ContentUnavailableView.search(text: search)
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             } else {
-                ContentUnavailableView("No recently closed projects", lucideIcon: "clock-arrow-left")
+                ContentUnavailableView(String(localized: "No recently closed projects"), lucideIcon: "clock-arrow-left")
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
         }
@@ -229,7 +229,7 @@ struct ProjectHomeRow: View {
                 ProjectHomeGlyph(summary: summary)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(summary.text("name", fallback: "Untitled project"))
+                Text(summary.text("name", fallback: String(localized: "Untitled project")))
                     .font(.callout).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                 HStack(spacing: 5) {
                     ProjectMachineGlyph(icon: session?.icons.icon)

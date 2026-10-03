@@ -109,16 +109,16 @@ struct MachineDevicesPage: View {
     @ViewBuilder private var content: some View {
         if !session.endpoint.streamingAllowed || devices.streamingOff {
             ContentUnavailableView(
-                "Streaming is off", lucideIcon: "circle-alert",
+                String(localized: "Streaming is off"), lucideIcon: "circle-alert",
                 description: Text("Browser and device streaming is disabled in this machine's settings."))
         } else if !session.connected {
-            ContentUnavailableView("The machine is not answering", lucideIcon: "circle-alert")
+            ContentUnavailableView(String(localized: "The machine is not answering"), lucideIcon: "circle-alert")
         } else if !devices.loaded {
-            MobileLoadingRow("Finding devices").frame(maxWidth: .infinity).padding()
+            MobileLoadingRow(String(localized: "Finding devices")).frame(maxWidth: .infinity).padding()
         } else if devices.devices.isEmpty {
             ContentUnavailableView(
-                "No devices", lucideIcon: "smartphone",
-                description: Text((["No devices were found on this machine."] + devices.notes).joined(separator: "\n")))
+                String(localized: "No devices"), lucideIcon: "smartphone",
+                description: Text(([String(localized: "No devices were found on this machine.")] + devices.notes).joined(separator: "\n")))
         } else {
             ForEach(devices.groups) { group in
                 Section {
@@ -163,7 +163,7 @@ struct MachineDevicesPage: View {
                 Button {
                     Task { await devices.boot(device) }
                 } label: {
-                    Label("Start", lucideIcon: "play").font(.footnote.weight(.semibold))
+                    Label(String(localized: "Start"), lucideIcon: "play").font(.footnote.weight(.semibold))
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
@@ -181,17 +181,17 @@ struct MachineDevicesPage: View {
     @ViewBuilder private func menu(_ device: MachineDevice) -> some View {
         Menu("Open as view") {
             ForEach(projects.listed, id: \.stableID) { project in
-                Button(project.text("name", fallback: "Untitled project")) {
+                Button(project.text("name", fallback: String(localized: "Untitled project"))) {
                     Task { await open(device, in: project) }
                 }
             }
         }
         .disabled(projects.listed.isEmpty)
         if device.state == "shutdown" && device.canBoot {
-            Button("Start", lucideIcon: "power") { Task { await devices.boot(device) } }
+            Button(String(localized: "Start"), lucideIcon: "power") { Task { await devices.boot(device) } }
         }
         if device.booted && device.canShutdown {
-            Button("Shut down", lucideIcon: "power-off") { Task { await devices.shutdown(device) } }
+            Button(String(localized: "Shut down"), lucideIcon: "power-off") { Task { await devices.shutdown(device) } }
         }
     }
 
@@ -204,7 +204,7 @@ struct MachineDevicesPage: View {
         workspace.start()
         await workspace.open()
         guard workspace.ready else {
-            problem = workspace.problem ?? "The project could not be opened."
+            problem = workspace.problem ?? String(localized: "The project could not be opened.")
             workspace.stop()
             return
         }
@@ -255,12 +255,12 @@ private struct RunningDeviceCard: View {
                 MobileStatus(
                     title: device.displayRuntime.isEmpty ? device.stateText : "\(device.stateText) · \(device.displayRuntime)",
                     color: MobileStyle.positive)
-                Text(preview.unavailable ?? "Read-only preview. Open it as a view in a project to use it.")
+                Text(preview.unavailable ?? String(localized: "Read-only preview. Open it as a view in a project to use it."))
                     .font(.caption).foregroundStyle(MobileStyle.muted)
                 HStack(spacing: 6) {
                     Menu {
                         ForEach(projects, id: \.stableID) { project in
-                            Button(project.text("name", fallback: "Untitled project")) { open(project) }
+                            Button(project.text("name", fallback: String(localized: "Untitled project"))) { open(project) }
                         }
                     } label: {
                         if opening {

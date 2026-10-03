@@ -198,12 +198,13 @@ struct NotificationDestination: Identifiable, Hashable {
             UNNotificationAction(
                 identifier: decision.actionIdentifier, title: title, options: [.authenticationRequired])
         }
-        let allow = action(.allow, "Allow")
-        let deny = action(.deny, "Deny")
+        let allow = action(.allow, String(localized: "Allow"))
+        let deny = action(.deny, String(localized: "Deny"))
         UNUserNotificationCenter.current().setNotificationCategories([
             UNNotificationCategory(identifier: "ruimte.approval", actions: [allow, deny], intentIdentifiers: []),
             UNNotificationCategory(
-                identifier: "ruimte.approval.remember", actions: [allow, action(.allowAlways, "Always allow"), deny],
+                identifier: "ruimte.approval.remember",
+                actions: [allow, action(.allowAlways, String(localized: "Always allow")), deny],
                 intentIdentifiers: []),
         ])
         tokenObservers.append(
@@ -237,7 +238,7 @@ struct NotificationDestination: Identifiable, Hashable {
         do {
             guard try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
             else {
-                problem = "Allow notifications for Ruimte in Settings to receive updates."
+                problem = String(localized: "Allow notifications for Ruimte in Settings to receive updates.")
                 return
             }
             _ = try SharedPushStore().key(create: true)

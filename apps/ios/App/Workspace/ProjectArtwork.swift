@@ -26,7 +26,7 @@ struct ProjectArtwork: View {
                 LucideIcon(name: project["icon"]?.text("value") ?? "folder", size: (size * 0.55).rounded())
                     .foregroundStyle(MobileStyle.accent)
             } else {
-                Text(String(project.text("name", fallback: "Project").prefix(1)).uppercased())
+                Text(String(project.text("name", fallback: String(localized: "Project")).prefix(1)).uppercased())
                     .font(.system(size: (size * 0.48).rounded(), weight: .semibold)).foregroundStyle(MobileStyle.accent)
             }
         }

@@ -31,7 +31,7 @@ struct ChatAttachmentButton: View {
                         Image(lucide: "file-text", size: 18).foregroundStyle(.tint)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(attachment["name"]?.stringValue ?? "Attachment")
+                        Text(attachment["name"]?.stringValue ?? String(localized: "Attachment"))
                             .font(.caption.weight(.medium)).lineLimit(1).truncationMode(.middle)
                         if let size = attachment["size"]?.numberValue {
                             Text(mobileAttachmentSize(size))
@@ -65,10 +65,10 @@ struct ChatAttachmentButton: View {
             let folder = FileManager.default.temporaryDirectory.appending(
                 path: "ruimte-attachment-\(UUID().uuidString)", directoryHint: .isDirectory)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            let rawName = attachment["name"]?.stringValue ?? "Attachment"
+            let rawName = attachment["name"]?.stringValue ?? String(localized: "Attachment")
             let safeName = URL(fileURLWithPath: rawName).lastPathComponent
             let url = folder.appendingPathComponent(
-                safeName.isEmpty || safeName == "." || safeName == ".." ? "Attachment" : safeName)
+                safeName.isEmpty || safeName == "." || safeName == ".." ? String(localized: "Attachment") : safeName)
             try resource.data.write(to: url, options: .atomic)
             downloaded = url
             preview = url

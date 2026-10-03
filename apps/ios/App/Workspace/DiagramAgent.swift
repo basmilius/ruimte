@@ -75,10 +75,12 @@ final class DiagramAgentModel {
         switch choice {
         case .new(let provider):
             let agent = agents.first { $0.agentKind == provider }
-            return "New \(agent?["name"]?.stringValue ?? provider) chat"
+            let name = agent?["name"]?.stringValue ?? provider
+            return String(localized: "New \(name) chat", comment: "%@ is the name of an agent, such as Claude Code")
         case .chat(let id):
-            return target.workspace.item(id).map { $0.text("name", fallback: $0.text("title", fallback: "Chat")) }
-                ?? "Chat"
+            let fallback = String(localized: "Chat")
+            return target.workspace.item(id).map { $0.text("name", fallback: $0.text("title", fallback: fallback)) }
+                ?? fallback
         }
     }
 
@@ -111,7 +113,7 @@ final class DiagramAgentModel {
                 if let failure = workspace.problem { throw MachineClientError.invalid(failure) }
             case .chat(let id):
                 guard let existing = workspace.item(id) else {
-                    throw MachineClientError.invalid("That chat is no longer in this project.")
+                    throw MachineClientError.invalid(String(localized: "That chat is no longer in this project."))
                 }
                 chat = existing
             }
@@ -147,8 +149,11 @@ struct DiagramAgentPicker: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(model.choice.map(model.name(of:)) ?? (model.loaded ? "Pick a chat" : "Looking for agents"))
-                    .lineLimit(1)
+                Text(
+                    model.choice.map(model.name(of:))
+                        ?? (model.loaded ? String(localized: "Pick a chat") : String(localized: "Looking for agents"))
+                )
+                .lineLimit(1)
                 Image(lucide: "chevron-down", size: 12)
             }
             .font(.footnote.weight(.medium))
@@ -249,7 +254,8 @@ struct DiagramEmptyState: View {
                         if model.sending {
                             ProgressView().frame(minWidth: 60)
                         } else {
-                            Label("Draw", lucideIcon: "sparkles").font(.subheadline.weight(.semibold))
+                            Label(String(localized: "Draw"), lucideIcon: "sparkles")
+                                .font(.subheadline.weight(.semibold))
                         }
                     }
                     .buttonStyle(.glassProminent)

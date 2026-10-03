@@ -80,9 +80,9 @@ enum LaunchDraftProblem: Equatable {
 
     var message: String {
         switch self {
-        case .name: "Give this launch a name."
-        case .command: "A service or a task needs a command."
-        case .members: "Check at least one launch for this group."
+        case .name: String(localized: "Give this launch a name.")
+        case .command: String(localized: "A service or a task needs a command.")
+        case .members: String(localized: "Check at least one launch for this group.")
         }
     }
 }
@@ -261,8 +261,8 @@ enum LaunchEditing {
     }
 
     /// The one place things were found, or how many: "2 folders".
-    private static func place(_ places: Set<String>, many: String) -> String {
-        places.count == 1 ? places.first ?? "" : "\(places.count) \(many)"
+    private static func place(_ places: Set<String>, many: (Int) -> String) -> String {
+        places.count == 1 ? places.first ?? "" : many(places.count)
     }
 
     /// A row under "Found in this project" per file things were found in: "3 scripts in package.json".
@@ -280,8 +280,11 @@ enum LaunchEditing {
         return order.compactMap { key in
             guard let entry = counts[key] else { return nil }
             let place = String(key.drop { $0 != ":" }.dropFirst())
-            let noun = entry.runs ? "run configuration" : "script"
-            return (key, "\(entry.count) \(noun)\(entry.count == 1 ? "" : "s") in \(place)")
+            let text =
+                entry.runs
+                ? String(localized: "\(entry.count) run configurations in \(place)")
+                : String(localized: "\(entry.count) scripts in \(place)")
+            return (key, text)
         }
     }
 
@@ -292,16 +295,16 @@ enum LaunchEditing {
         let scripts = usable.filter { $0.source != "run-xml" }
         var parts: [String] = []
         if !runFiles.isEmpty {
-            let location = place(Set(runFiles.map { directory($0.path) }), many: "folders")
-            parts.append(
-                runFiles.count == 1
-                    ? "1 run configuration in \(location)" : "\(runFiles.count) run configurations in \(location)")
+            let location = place(Set(runFiles.map { directory($0.path) })) { String(localized: "\($0) folders") }
+            parts.append(String(localized: "\(runFiles.count) run configurations in \(location)"))
         }
         if !scripts.isEmpty {
-            let location = place(Set(scripts.map(\.path)), many: "files")
-            parts.append(scripts.count == 1 ? "1 script in \(location)" : "\(scripts.count) scripts in \(location)")
+            let location = place(Set(scripts.map(\.path))) { String(localized: "\($0) files") }
+            parts.append(String(localized: "\(scripts.count) scripts in \(location)"))
         }
         guard let first = parts.first else { return nil }
-        return parts.count == 1 ? "\(first)." : "\(first) and \(parts[1])."
+        return parts.count == 1
+            ? "\(first)."
+            : String(localized: "\(first) and \(parts[1]).", comment: "Two counts of what was found, joined")
     }
 }

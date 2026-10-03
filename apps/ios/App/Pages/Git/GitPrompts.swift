@@ -20,27 +20,30 @@ enum GitPrompt: Identifiable {
 
     var title: String {
         switch self {
-        case .stash: "Stash changes"
-        case .createBranch: "New branch"
-        case .renameBranch: "Rename branch"
-        case .createWorktree: "New worktree"
+        case .stash: String(localized: "Stash changes")
+        case .createBranch: String(localized: "New branch")
+        case .renameBranch: String(localized: "Rename branch")
+        case .createWorktree: String(localized: "New worktree")
         }
     }
 
     var detail: String {
         switch self {
-        case .stash: "Everything that changed is set aside and the working tree goes back to HEAD."
-        case .createBranch: "Branches off what is checked out now and switches to it."
-        case .renameBranch: "Renames the branch that is checked out here."
+        case .stash: String(localized: "Everything that changed is set aside and the working tree goes back to HEAD.")
+        case .createBranch: String(localized: "Branches off what is checked out now and switches to it.")
+        case .renameBranch: String(localized: "Renames the branch that is checked out here.")
         case .createWorktree:
-            "Makes a second checkout of this branch beside the project. A branch that does not exist yet starts from what is checked out here."
+            String(
+                localized:
+                    "Makes a second checkout of this branch beside the project. A branch that does not exist yet starts from what is checked out here."
+            )
         }
     }
 
     var fieldLabel: String {
         switch self {
-        case .stash: "Message (optional)"
-        default: "Name"
+        case .stash: String(localized: "Message (optional)")
+        default: String(localized: "Name")
         }
     }
 
@@ -53,7 +56,10 @@ enum GitPrompt: Identifiable {
 
     var placeholder: String {
         switch self {
-        case .createBranch, .createWorktree: "feature/what-it-does"
+        case .createBranch, .createWorktree:
+            String(
+                localized: "feature/what-it-does", comment: "Example of a git branch name, lowercase and without spaces"
+            )
         default: ""
         }
     }
@@ -63,10 +69,10 @@ enum GitPrompt: Identifiable {
 
     var confirmLabel: String {
         switch self {
-        case .stash: "Stash"
-        case .createBranch: "Create"
-        case .renameBranch: "Rename"
-        case .createWorktree: "Create"
+        case .stash: String(localized: "Stash", comment: "Button that stashes git changes")
+        case .createBranch: String(localized: "Create")
+        case .renameBranch: String(localized: "Rename")
+        case .createWorktree: String(localized: "Create")
         }
     }
 }

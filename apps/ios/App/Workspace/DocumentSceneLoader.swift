@@ -9,7 +9,7 @@ enum DocumentSceneLoader {
         -> JSONValue
     {
         guard ["drawing", "diagram"].contains(kind) else {
-            throw MachineClientError.invalid("Unsupported document kind.")
+            throw MachineClientError.invalid(String(localized: "Unsupported document kind."))
         }
         let payload: JSONValue = .object(["projectId": .string(projectID), "viewId": .string(viewID)])
         do {
@@ -18,7 +18,7 @@ enum DocumentSceneLoader {
             let result = try await client.request(kind + ".open", payload: payload)
             try Task.checkCancellation()
             guard let document = result["document"] else {
-                throw MachineClientError.invalid("The machine did not return a document.")
+                throw MachineClientError.invalid(String(localized: "The machine did not return a document."))
             }
             return try await LocalDocumentRenderer.shared.render(kind: kind, document: document)
         }
@@ -32,13 +32,13 @@ actor LocalDocumentRenderer {
     func render(kind: String, document: JSONValue) throws -> JSONValue {
         try Task.checkCancellation()
         guard ["drawing", "diagram"].contains(kind) else {
-            throw MachineClientError.invalid("Unsupported document kind.")
+            throw MachineClientError.invalid(String(localized: "Unsupported document kind."))
         }
         let openRequest: WireRequest = kind == "drawing" ? .drawingOpen : .diagramOpen
         _ = try openRequest.validateResult(.object(["document": document]))
         let data = try document.encoded()
         guard data.count <= 8 * 1024 * 1024 else {
-            throw MachineClientError.invalid("This document is too large to render on this device.")
+            throw MachineClientError.invalid(String(localized: "This document is too large to render on this device."))
         }
         let engine = try engine()
         engine.exception = nil
@@ -47,7 +47,7 @@ actor LocalDocumentRenderer {
             kind, String(decoding: data, as: UTF8.self),
         ])
         guard engine.exception == nil, let json = rendered?.toString(), let resultData = json.data(using: .utf8) else {
-            throw MachineClientError.invalid("This document could not be rendered.")
+            throw MachineClientError.invalid(String(localized: "This document could not be rendered."))
         }
         try Task.checkCancellation()
         let result = try JSONValue.decode(resultData)
@@ -58,11 +58,11 @@ actor LocalDocumentRenderer {
         if let context { return context }
         guard let url = Bundle.main.url(forResource: "document-renderer", withExtension: "js"), let engine = JSContext()
         else {
-            throw MachineClientError.invalid("The document renderer is unavailable.")
+            throw MachineClientError.invalid(String(localized: "The document renderer is unavailable."))
         }
         engine.evaluateScript(try String(contentsOf: url, encoding: .utf8))
         guard engine.exception == nil, engine.objectForKeyedSubscript("ruimteRenderDocument")?.isObject == true else {
-            throw MachineClientError.invalid("The document renderer could not be loaded.")
+            throw MachineClientError.invalid(String(localized: "The document renderer could not be loaded."))
         }
         context = engine
         return engine

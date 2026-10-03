@@ -40,7 +40,7 @@ struct MachineFilesPage: View {
                 Button {
                     finding = true
                 } label: {
-                    Label("Find in files", lucideIcon: "text-search").modifier(MobileSidebarLabel(disclosure: true))
+                    Label(String(localized: "Find in files"), lucideIcon: "text-search").modifier(MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
             }
@@ -76,14 +76,16 @@ struct MachineFilesPage: View {
                 .contextMenu { if let project { entryMenu(entry, directory: directory, project: project) } }
             }
             if state.value != nil && entries.isEmpty {
-                ContentUnavailableView(search.isEmpty ? "Empty folder" : "No matching files", lucideIcon: "folder")
+                ContentUnavailableView(
+                    search.isEmpty ? String(localized: "Empty folder") : String(localized: "No matching files"),
+                    lucideIcon: "folder")
             }
             if state.value?["truncated"] == .bool(true) {
                 Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(
                     .secondary)
             }
         }
-        .navigationTitle(path == "~" ? "Files" : URL(fileURLWithPath: path).lastPathComponent)
+        .navigationTitle(path == "~" ? String(localized: "Files") : URL(fileURLWithPath: path).lastPathComponent)
         .navigationDestination(item: $selectedEntry) { entry in
             if entry.directory {
                 MachineFilesPage(client: client, path: entry.path, project: project, marks: marks)
@@ -101,7 +103,7 @@ struct MachineFilesPage: View {
                 Menu {
                     Toggle("Show hidden and ignored files", isOn: $hidden)
                 } label: {
-                    Label("File options", lucideIcon: "ellipsis")
+                    Label(String(localized: "File options"), lucideIcon: "ellipsis")
                 }
             }
         }
@@ -124,14 +126,14 @@ struct MachineFilesPage: View {
     @ViewBuilder private func entryMenu(_ entry: JSONValue, directory: Bool, project: FilesProject) -> some View {
         let entryPath = entry.text("path")
         if !directory {
-            Button("Open as view", lucideIcon: "columns-2") { Task { await project.openAsView(entryPath) } }
+            Button(String(localized: "Open as view"), lucideIcon: "columns-2") { Task { await project.openAsView(entryPath) } }
         }
         FileMentionMenu(project: project, path: entryPath, onMentioned: { note = $0 }) {
-            Label("Mention in chat", lucideIcon: "at-sign")
+            Label(String(localized: "Mention in chat"), lucideIcon: "at-sign")
         }
-        Button("Copy path", lucideIcon: "copy") { UIPasteboard.general.string = entryPath }
+        Button(String(localized: "Copy path"), lucideIcon: "copy") { UIPasteboard.general.string = entryPath }
         Divider()
-        Button("Delete", lucideIcon: "trash", role: .destructive) { deleting = entryPath }
+        Button(String(localized: "Delete"), lucideIcon: "trash", role: .destructive) { deleting = entryPath }
     }
 
     private func load() async {
@@ -203,7 +205,7 @@ struct FileContentPage: View {
                         RemotePageStatus(state: state) { Task { await load() } }
                         FilePDFView(document: pdf, page: $pdfPage)
                         FileFooter(items: [
-                            "Page \(pdfPage.formatted()) of \(pdf.pageCount.formatted())",
+                            String(localized: "Page \(pdfPage.formatted()) of \(pdf.pageCount.formatted())"),
                             mobileByteCount(value["size"]?.numberValue), value.text("mime"),
                         ])
                     }
@@ -312,7 +314,7 @@ struct FileContentPage: View {
                         SafeSVGPreview(data: svg).frame(minHeight: 360)
                     } else if value.text("kind") == "too-large" {
                         ContentUnavailableView(
-                            "File too large", lucideIcon: "file-text",
+                            String(localized: "File too large"), lucideIcon: "file-text",
                             description: Text(
                                 "This text file is \(mobileByteCount(value["size"]?.numberValue)). Open it on the machine."
                             ))
@@ -329,7 +331,7 @@ struct FileContentPage: View {
             }
             if edit.saving {
                 HStack(spacing: 10) {
-                    Spinner(size: 14, label: "Saving").foregroundStyle(MobileStyle.statusRunning)
+                    Spinner(size: 14, label: String(localized: "Saving")).foregroundStyle(MobileStyle.statusRunning)
                     Text("Saving").font(.caption).foregroundStyle(MobileStyle.muted)
                 }.padding(.horizontal).padding(.top, 8)
             }
@@ -349,24 +351,24 @@ struct FileContentPage: View {
     private func fileMenu(_ project: FilesProject) -> some View {
         Menu {
             if canEdit, let value = state.value {
-                Button("Edit", lucideIcon: "square-pen") {
+                Button(String(localized: "Edit"), lucideIcon: "square-pen") {
                     edit.begin(text: value.text("text"), mtime: value.number("mtime"))
                 }
             }
             if !isView {
-                Button("Open as view", lucideIcon: "columns-2") { Task { await project.openAsView(path) } }
+                Button(String(localized: "Open as view"), lucideIcon: "columns-2") { Task { await project.openAsView(path) } }
             }
             FileMentionMenu(project: project, path: path, onMentioned: { note = $0 }) {
-                Label("Mention in chat", lucideIcon: "at-sign")
+                Label(String(localized: "Mention in chat"), lucideIcon: "at-sign")
             }
             if let target = changes.diff {
-                Button("Show changes", lucideIcon: "file-diff") { diff = target }
+                Button(String(localized: "Show changes"), lucideIcon: "file-diff") { diff = target }
             }
-            Button("Copy path", lucideIcon: "copy") { UIPasteboard.general.string = path }
+            Button(String(localized: "Copy path"), lucideIcon: "copy") { UIPasteboard.general.string = path }
             Divider()
-            Button("Delete", lucideIcon: "trash", role: .destructive) { deleting = path }
+            Button(String(localized: "Delete"), lucideIcon: "trash", role: .destructive) { deleting = path }
         } label: {
-            Label("File actions", lucideIcon: "ellipsis")
+            Label(String(localized: "File actions"), lucideIcon: "ellipsis")
         }
     }
 
@@ -382,9 +384,9 @@ struct FileContentPage: View {
                     Text("Mention").font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 36)
                 }
                 .buttonStyle(.glass)
-                GitBarButton(title: "Diff", prominent: false) { diff = changes.diff }
+                GitBarButton(title: String(localized: "Diff"), prominent: false) { diff = changes.diff }
                     .disabled(changes.diff == nil)
-                GitBarButton(title: "Copy", prominent: false) {
+                GitBarButton(title: String(localized: "Copy"), prominent: false) {
                     UIPasteboard.general.string =
                         state.value?.text("kind") == "text" ? state.value?.text("text") : path
                 }
@@ -394,7 +396,7 @@ struct FileContentPage: View {
 
     private func save() async {
         if await edit.save(client: client, path: path) {
-            note = "Saved."
+            note = String(localized: "Saved.")
             await load()
         }
     }
@@ -410,12 +412,12 @@ struct FileContentPage: View {
 
     private func unsupportedReason(_ value: JSONValue) -> String {
         if !FileKinds.machineServes(mime: value.text("mime")) {
-            return "The machine only sends images, video, sound and PDFs to this app."
+            return String(localized: "The machine only sends images, video, sound and PDFs to this app.")
         }
         if !FileKinds.fitsInMemory(size: value["size"]?.numberValue) {
-            return "This app opens files up to \(mobileByteCount(WireConstants.bytesReadMaxBytes))."
+            return String(localized: "This app opens files up to \(mobileByteCount(WireConstants.bytesReadMaxBytes)).")
         }
-        return "This app has no preview for this file."
+        return String(localized: "This app has no preview for this file.")
     }
 
     @ViewBuilder private func mediaContents(_ value: JSONValue) -> some View {
@@ -431,7 +433,7 @@ struct FileContentPage: View {
                 client: client, path: path, mime: value.text("mime"), size: value["size"]?.numberValue,
                 reason: mediaProblem)
         } else {
-            MobileLoadingRow("Loading").frame(maxHeight: .infinity)
+            MobileLoadingRow(String(localized: "Loading")).frame(maxHeight: .infinity)
         }
     }
 
@@ -461,7 +463,7 @@ struct FileContentPage: View {
                 try? AVAudioSession.sharedInstance().setCategory(.playback, mode: isAudio ? .default : .moviePlayback)
                 player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             } else {
-                mediaProblem = "This device cannot play this file."
+                mediaProblem = String(localized: "This device cannot play this file.")
             }
         } catch {
             guard playerKey == key else { return }
@@ -503,11 +505,11 @@ struct FileContentPage: View {
                     next.svg = resource.data
                 } else if mime == "application/pdf" {
                     next.pdf = PDFDocument(data: resource.data)
-                    if next.pdf == nil { next.unreadable = "This PDF cannot be opened." }
+                    if next.pdf == nil { next.unreadable = String(localized: "This PDF cannot be opened.") }
                 } else {
                     let data = resource.data
                     next.image = await Task.detached(priority: .userInitiated) { FileImage.decode(data) }.value
-                    if next.image == nil { next.unreadable = "This device cannot show this picture." }
+                    if next.image == nil { next.unreadable = String(localized: "This device cannot show this picture.") }
                 }
                 try Task.checkCancellation()
             }

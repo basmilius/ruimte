@@ -10,16 +10,18 @@ struct PairMachinePage: View {
     @ScaledMetric(relativeTo: .body) private var fieldHeight = 56
     @ScaledMetric(relativeTo: .footnote) private var stepSize = 30
 
-    private static let steps = [
-        "Open Ruimte on your computer.",
-        "Go to Settings, Account, and choose Show pairing link. Or run `ruimte pair` in a terminal there.",
-        "Copy the link and paste it below. It works once and expires after ten minutes.",
-    ]
+    private static var steps: [LocalizedStringKey] {
+        [
+            "Open Ruimte on your computer.",
+            "Go to Settings, Account, and choose Show pairing link. Or run `ruimte pair` in a terminal there.",
+            "Copy the link and paste it below. It works once and expires after ten minutes.",
+        ]
+    }
 
     private var subtitle: String {
         runtime.account == nil
-            ? "Or sign in with the account your computer uses, and it shows up by itself."
-            : "A computer on your account shows up by itself."
+            ? String(localized: "Or sign in with the account your computer uses, and it shows up by itself.")
+            : String(localized: "A computer on your account shows up by itself.")
     }
 
     var body: some View {
@@ -39,7 +41,7 @@ struct PairMachinePage: View {
                                     .font(.footnote.weight(.semibold))
                                     .frame(width: stepSize, height: stepSize)
                                     .background(MobileStyle.text.opacity(0.08), in: .circle)
-                                Text(LocalizedStringKey(step)).font(.callout)
+                                Text(step).font(.callout)
                             }
                             .accessibilityElement(children: .combine)
                         }

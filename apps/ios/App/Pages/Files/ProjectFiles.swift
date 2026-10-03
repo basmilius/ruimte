@@ -22,7 +22,9 @@ import RuimteTransport
     func mention(_ path: String, in chat: FilesChat) async -> String? {
         guard let relative = FilesMention.relative(folder: folder, path: path) else { return nil }
         await ChatDraftInbox.mention(relative, machineID: workspace.session.machine.id, chatID: chat.id)
-        return "Added @\(relative) to the message in \(chat.title)."
+        return String(
+            localized: "Added @\(relative) to the message in \(chat.title).",
+            comment: "%1$@ is a file path, %2$@ the chat title")
     }
 
     /// The file as a view of the project, opened; a file that already has one opens that one.
@@ -68,11 +70,14 @@ enum FilesMention {
             if view.text("kind") == "chat" {
                 chats.append(
                     FilesChat(
-                        id: view.stableID, title: view.text("name", fallback: "Chat"),
+                        id: view.stableID, title: view.text("name", fallback: String(localized: "Chat")),
                         current: view.stableID == current))
             }
             for node in view.list("nodes") where node.text("kind") == "chat" {
-                chats.append(FilesChat(id: node.stableID, title: node.text("title", fallback: "Chat"), current: false))
+                chats.append(
+                    FilesChat(
+                        id: node.stableID, title: node.text("title", fallback: String(localized: "Chat")),
+                        current: false))
             }
         }
         return chats.filter(\.current) + chats.filter { !$0.current }
@@ -127,11 +132,11 @@ struct GitFileMarks: Equatable {
 
     static func spoken(_ mark: String) -> String {
         switch mark {
-        case "!": "Conflicted"
-        case "A": "New"
-        case "D": "Deleted"
-        case "R": "Renamed"
-        default: "Changed"
+        case "!": String(localized: "Conflicted", comment: "Git state of a file")
+        case "A": String(localized: "New", comment: "Git state of a file")
+        case "D": String(localized: "Deleted", comment: "Git state of a file")
+        case "R": String(localized: "Renamed", comment: "Git state of a file")
+        default: String(localized: "Changed", comment: "Git state of a file")
         }
     }
 
@@ -297,9 +302,10 @@ enum FileLineChanges {
             switch gitRefusalCode(error) {
             case "stale":
                 stale = true
-                problem = "This file changed on the machine since you opened it. Your edits are still here."
+                problem = String(
+                    localized: "This file changed on the machine since you opened it. Your edits are still here.")
             case "unknown-request":
-                problem = "Update Ruimte on this machine to edit files on the phone."
+                problem = String(localized: "Update Ruimte on this machine to edit files on the phone.")
             default:
                 problem = error.localizedDescription
             }

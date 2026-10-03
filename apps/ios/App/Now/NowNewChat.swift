@@ -20,7 +20,8 @@ extension NowModel {
                 let projectID = summary["projectId"]?.stringValue
             else { return nil }
             return NowChatProject(
-                machineID: machineID, projectID: projectID, name: summary.text("name", fallback: "Untitled project"))
+                machineID: machineID, projectID: projectID,
+                name: summary.text("name", fallback: String(localized: "Untitled project")))
         }
     }
 }
@@ -84,7 +85,7 @@ final class NowNewChatModel {
             do { try await Task.sleep(for: .milliseconds(100)) } catch { return nil }
         }
         guard workspace.ready else {
-            problem = workspace.problem ?? "The project did not open in time."
+            problem = workspace.problem ?? String(localized: "The project did not open in time.")
             return nil
         }
         let id = "chat-" + UUID().uuidString
@@ -145,12 +146,17 @@ struct NowNewChatSheet: View {
                             }
                         }
                     } else if model.catalog?.problem == nil {
-                        MobileLoadingRow(session?.connected == true ? "Looking for agents" : "Connecting to your machine")
+                        MobileLoadingRow(
+                            session?.connected == true
+                                ? String(localized: "Looking for agents")
+                                : String(localized: "Connecting to your machine"))
                     }
                 }
                 Section {
                     choice(
-                        "Chats on \(session?.machine.name ?? "this machine")", icon: "messages-square",
+                        session.map { String(localized: "Chats on \($0.machine.name)") }
+                            ?? String(localized: "Chats on this machine"),
+                        icon: "messages-square",
                         picked: model.projectID == nil
                     ) { model.projectID = nil }
                     ForEach(now.chatProjects(on: model.machineID)) { project in

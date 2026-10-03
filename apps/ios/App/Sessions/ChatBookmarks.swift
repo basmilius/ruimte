@@ -102,7 +102,8 @@ extension ChatModel {
             error = nil
             return true
         } catch {
-            self.error = ChatForking.message(for: error, action: "keep bookmarks")
+            self.error = ChatForking.message(
+                for: error, update: String(localized: "Update Ruimte on this machine to keep bookmarks."))
             return false
         }
     }
@@ -132,14 +133,14 @@ struct ChatBookmarkButtons: View {
 
     var body: some View {
         if presentation.bookmarks[itemID] == nil {
-            Button("Bookmark message", lucideIcon: "bookmark-plus") {
+            Button(String(localized: "Bookmark message"), lucideIcon: "bookmark-plus") {
                 presentation.bookmarkRequest = ChatBookmarkRequest(itemID: itemID, action: .add)
             }
         } else {
-            Button("Rename bookmark", lucideIcon: "pencil") {
+            Button(String(localized: "Rename bookmark"), lucideIcon: "pencil") {
                 presentation.bookmarkRequest = ChatBookmarkRequest(itemID: itemID, action: .rename)
             }
-            Button("Remove bookmark", lucideIcon: "bookmark-x") {
+            Button(String(localized: "Remove bookmark"), lucideIcon: "bookmark-x") {
                 presentation.bookmarkRequest = ChatBookmarkRequest(itemID: itemID, action: .remove)
             }
         }
@@ -166,7 +167,7 @@ struct ChatBookmarkList: View {
             .overlay {
                 if presentation.bookmarks.isEmpty {
                     ContentUnavailableView(
-                        "No bookmarks", lucideIcon: "bookmark",
+                        String(localized: "No bookmarks"), lucideIcon: "bookmark",
                         description: Text("Long-press a message to bookmark it."))
                 }
             }
@@ -205,12 +206,17 @@ struct ChatBookmarkList: View {
         .buttonStyle(.plain)
         .accessibilityHint("Jumps to this message")
         .contextMenu {
-            Button("Rename bookmark", lucideIcon: "pencil") { rename(bookmark.itemID) }
-            Button("Remove bookmark", lucideIcon: "bookmark-x", role: .destructive) { remove(bookmark.itemID) }
+            Button(String(localized: "Rename bookmark"), lucideIcon: "pencil") { rename(bookmark.itemID) }
+            Button(String(localized: "Remove bookmark"), lucideIcon: "bookmark-x", role: .destructive) {
+                remove(bookmark.itemID)
+            }
         }
         .swipeActions(edge: .trailing) {
-            Button("Remove", lucideIcon: "bookmark-x", role: .destructive) { remove(bookmark.itemID) }
-            Button("Rename", lucideIcon: "pencil") { rename(bookmark.itemID) }.tint(MobileStyle.accent)
+            Button(String(localized: "Remove"), lucideIcon: "bookmark-x", role: .destructive) {
+                remove(bookmark.itemID)
+            }
+            Button(String(localized: "Rename"), lucideIcon: "pencil") { rename(bookmark.itemID) }.tint(
+                MobileStyle.accent)
         }
     }
 }

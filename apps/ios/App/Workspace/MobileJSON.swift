@@ -16,7 +16,9 @@ extension JSONValue {
 struct WorkspaceConflict: LocalizedError {
     let path: String
     var errorDescription: String? {
-        "This changed both here and on the machine: \(path). Review the other version before saving."
+        String(
+            localized: "This changed both here and on the machine: \(path). Review the other version before saving.",
+            comment: "%@ is the path of the changed field in the project file")
     }
 }
 

@@ -241,18 +241,18 @@ struct UsageWidgetView: View {
                         }
                     }
                 } else {
-                    message("Open Ruimte while this machine is online to load its usage.")
+                    message(String(localized: "Open Ruimte while this machine is online to load its usage."))
                 }
             }
         } else {
-            message("Open Ruimte and choose a machine for this widget.")
+            message(String(localized: "Open Ruimte and choose a machine for this widget."))
         }
     }
 
     @ViewBuilder private func small(_ snapshot: UsageWidgetSnapshot) -> some View {
         let weeklies = rows(snapshot, kind: "weekly", limit: 2)
         if weeklies.isEmpty {
-            message("No weekly limit reported.")
+            message(String(localized: "No weekly limit reported."))
         } else {
             ForEach(weeklies) { UsageBarRow(row: $0, marked: provider == nil) }
         }
@@ -262,7 +262,7 @@ struct UsageWidgetView: View {
         let session = rows(snapshot, kind: "session", limit: 1).first
         let weeklies = rows(snapshot, kind: "weekly", limit: 3)
         if session == nil && weeklies.isEmpty {
-            message("No usage limits reported.")
+            message(String(localized: "No usage limits reported."))
         } else {
             HStack(alignment: .center, spacing: 16) {
                 if let session { UsageRing(row: session).padding(.top, 6) }

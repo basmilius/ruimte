@@ -1218,8 +1218,9 @@ private struct ChatTimelineRow: View {
                     ChatToolRow(item: item)
                 }
             case "subagent":
-                DisclosureGroup(item["description"]?.stringValue ?? "Agent") {
-                    Text(item["status"]?.stringValue ?? "").font(.caption)
+                DisclosureGroup(item["description"]?.stringValue ?? String(localized: "Agent")) {
+                    let status = item["status"]?.stringValue ?? ""
+                    Text(SubagentStatusWord(rawValue: status)?.title ?? status).font(.caption)
                     MarkdownMessage(
                         text: item["result"]?.stringValue ?? item["summary"]?.stringValue ?? item["prompt"]?.stringValue
                             ?? "")
@@ -1228,8 +1229,8 @@ private struct ChatTimelineRow: View {
                 let decision = item.text("decision")
                 Label(
                     [
-                        "allow": "Allowed", "allow-always": "Always allowed", "deny": "Declined",
-                        "cancelled": "No longer needed",
+                        "allow": String(localized: "Allowed"), "allow-always": String(localized: "Always allowed"),
+                        "deny": String(localized: "Declined"), "cancelled": String(localized: "No longer needed"),
                     ][decision, default: decision] + " · " + item.text("toolName"),
                     lucideIcon: decision == "deny" ? "circle-x" : "circle-check", iconSize: 14
                 )
@@ -1249,7 +1250,10 @@ private struct ChatTimelineRow: View {
                 ChatNoteRow(item: item, presentation: presentation)
             case "turn":
                 Label(
-                    item["label"]?.stringValue ?? "Turn \(item["state"]?.stringValue ?? "")",
+                    item["label"]?.stringValue
+                        ?? String(
+                            localized: "Turn \(item["state"]?.stringValue ?? "")",
+                            comment: "%@ is the state of the turn as the machine names it"),
                     lucideIcon: "circle-dashed", iconSize: 14
                 ).font(.caption).foregroundStyle(MobileStyle.muted)
                 if let files = item["checkpointDiff"]?["files"]?.arrayValue, !files.isEmpty {

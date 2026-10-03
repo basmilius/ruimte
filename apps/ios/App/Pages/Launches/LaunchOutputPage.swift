@@ -14,7 +14,7 @@ struct LaunchOutputPage: View {
             if let view = views[launchID] {
                 content(view, output: LaunchLogic.output(views: views, launch: view.launch))
             } else {
-                ContentUnavailableView("This launch was removed", lucideIcon: "rocket")
+                ContentUnavailableView(String(localized: "This launch was removed"), lucideIcon: "rocket")
             }
         }
         .modifier(MobilePageSurface())
@@ -39,7 +39,7 @@ struct LaunchOutputPage: View {
                     .id("\(status.sessionID):\(status.startedAt)")
             } else {
                 ContentUnavailableView {
-                    Label("\(view.launch.name) has not run since the machine started.", lucideIcon: "play", iconSize: 40)
+                    Label(String(localized: "\(view.launch.name) has not run since the machine started."), lucideIcon: "play", iconSize: 40)
                 } actions: {
                     if view.phase != .held {
                         Button("Launch \(view.launch.name)") { Task { await store.press(view.launch) } }

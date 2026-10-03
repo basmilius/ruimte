@@ -7,28 +7,29 @@ enum ChatRuntimeMode {
 
     static func label(_ mode: String) -> String {
         switch mode {
-        case "auto-accept-edits": "Auto-accept edits"
-        case "auto": "Auto"
-        case "full-access": "Full access"
-        default: "Supervised"
+        case "auto-accept-edits": String(localized: "Auto-accept edits")
+        case "auto": String(localized: "Auto", comment: "A permission mode")
+        case "full-access": String(localized: "Full access")
+        default: String(localized: "Supervised")
         }
     }
 
     static func short(_ mode: String) -> String {
         switch mode {
-        case "auto-accept-edits": "Edits"
-        case "auto": "Auto"
-        case "full-access": "Full access"
-        default: "Ask"
+        case "auto-accept-edits":
+            String(localized: "Edits", comment: "Short name of the permission mode that accepts file edits")
+        case "auto": String(localized: "Auto", comment: "A permission mode")
+        case "full-access": String(localized: "Full access")
+        default: String(localized: "Ask", comment: "Short name of the supervised permission mode")
         }
     }
 
     static func hint(_ mode: String) -> String {
         switch mode {
-        case "auto-accept-edits": "File edits go through, commands still ask"
-        case "auto": "The agent reviews routine actions itself"
-        case "full-access": "Never asks for approval"
-        default: "Asks before commands and file changes"
+        case "auto-accept-edits": String(localized: "File edits go through, commands still ask")
+        case "auto": String(localized: "The agent reviews routine actions itself")
+        case "full-access": String(localized: "Never asks for approval")
+        default: String(localized: "Asks before commands and file changes")
         }
     }
 
@@ -49,10 +50,11 @@ struct ChatContextUsage: Equatable {
 
         var label: String {
             switch self {
-            case .toolOutput: "Tool output"
-            case .filesRead: "Files read"
-            case .conversation: "Conversation"
-            case .system: "System"
+            case .toolOutput: String(localized: "Tool output")
+            case .filesRead: String(localized: "Files read")
+            case .conversation: String(localized: "Conversation")
+            case .system:
+                String(localized: "System", comment: "The part of a chat's context taken by the system prompt")
             }
         }
     }
@@ -94,8 +96,12 @@ struct ChatContextUsage: Equatable {
     /// "950", "172K", "1M" or "1.2M".
     static func tokens(_ value: Double) -> String {
         if value < 1000 { return "\(Int(value))" }
-        if value < 1_000_000 { return "\(Int((value / 1000).rounded()))K" }
-        return (value / 1_000_000).formatted(.number.precision(.fractionLength(0...1))) + "M"
+        if value < 1_000_000 {
+            return String(
+                localized: "\(Int((value / 1000).rounded()))K", comment: "Token count in thousands, abbreviated")
+        }
+        let millions = (value / 1_000_000).formatted(.number.precision(.fractionLength(0...1)))
+        return String(localized: "\(millions)M", comment: "Token count in millions, abbreviated")
     }
 }
 
@@ -110,7 +116,7 @@ struct ChatRunSettings: View {
     private var mode: String { model.runtimeMode }
     private var label: String {
         let slug = selection.text("model")
-        return slug.isEmpty ? "Choose model" : ModelName.of(slug, in: model.models)
+        return slug.isEmpty ? String(localized: "Choose model") : ModelName.of(slug, in: model.models)
     }
     private var windowOption: JSONValue? {
         selected.list("options").first { $0.text("id") == ChatContextUsage.windowOption && $0.text("type") == "select" }
@@ -216,14 +222,17 @@ struct ChatRunSettings: View {
                 HStack(spacing: 0) {
                     Text(ChatContextUsage.tokens(usage.used)).fontWeight(.semibold)
                     if let window = usage.window {
-                        Text(" of \(ChatContextUsage.tokens(window))").foregroundStyle(MobileStyle.muted)
+                        Text(
+                            " of \(ChatContextUsage.tokens(window))",
+                            comment: "Follows the tokens used: the size of the context window"
+                        ).foregroundStyle(MobileStyle.muted)
                     }
                 }
                 .monospacedDigit()
                 Spacer()
                 if let windowOption {
                     Picker(
-                        windowOption.text("label", fallback: "Context window"),
+                        windowOption.text("label", fallback: String(localized: "Context window")),
                         selection: Binding(
                             get: {
                                 selection["options"]?[ChatContextUsage.windowOption]?.stringValue
@@ -256,7 +265,7 @@ struct ChatRunSettings: View {
                         } catch { model.settingsProblem = error.localizedDescription }
                     }
                 } label: {
-                    Label("Compact now", lucideIcon: "minimize-2", iconSize: 15)
+                    Label(String(localized: "Compact now"), lucideIcon: "minimize-2", iconSize: 15)
                 }
                 .disabled(model.working || usage.used == 0)
             }

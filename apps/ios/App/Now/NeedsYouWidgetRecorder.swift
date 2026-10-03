@@ -24,7 +24,7 @@ enum NeedsYouWidgetRecorder {
     }
 
     private static func detail(_ entry: ProjectViewEntry) -> String {
-        guard entry.kind == "chat" else { return "Waiting in the terminal" }
-        return entry.requests.first?.summary ?? "Waiting for your answer"
+        guard entry.kind == "chat" else { return String(localized: "Waiting in the terminal") }
+        return entry.requests.first?.summary ?? String(localized: "Waiting for your answer")
     }
 }

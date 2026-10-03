@@ -100,13 +100,13 @@ import SwiftUI
         case "ready":
             let parts = [status?["plan"]?.stringValue, status?["email"]?.stringValue].compactMap { $0 }
                 .filter { !$0.isEmpty }
-            return parts.isEmpty ? "Signed in" : parts.joined(separator: " · ")
-        case "signed-out": return "Signed out"
-        case "disabled": return "Off"
-        case "checking", nil: return "Checking"
-        case "folder-missing": return "Its folder is missing"
-        case "not-found": return "Not installed"
-        default: return status?["message"]?.stringValue ?? "Unavailable"
+            return parts.isEmpty ? String(localized: "Signed in") : parts.joined(separator: " · ")
+        case "signed-out": return String(localized: "Signed out")
+        case "disabled": return String(localized: "Off", comment: "An agent account that is turned off")
+        case "checking", nil: return String(localized: "Checking")
+        case "folder-missing": return String(localized: "Its folder is missing")
+        case "not-found": return String(localized: "Not installed")
+        default: return status?["message"]?.stringValue ?? String(localized: "Unavailable")
         }
     }
 }
@@ -192,7 +192,7 @@ struct MachineAgentsPage: View {
     private func agentSubtitle(_ agent: MachineAgentsModel.Agent) -> String {
         var parts = [agent.version].compactMap { $0 }
         if agent.accounts.count == 1, let account = agent.accounts.first { parts.append(account.detail) }
-        if agent.accounts.count > 1 { parts.append("\(agent.accounts.count) accounts") }
+        if agent.accounts.count > 1 { parts.append(String(localized: "\(agent.accounts.count) accounts")) }
         return parts.joined(separator: " · ")
     }
 
@@ -273,7 +273,7 @@ struct MachineAgentsPage: View {
                 LabeledContent {
                     Text(computerState(computer))
                 } label: {
-                    Label("Computer Use", lucideIcon: "monitor")
+                    Label(String(localized: "Computer Use"), lucideIcon: "monitor")
                 }
             } header: {
                 Text("On this machine")
@@ -284,12 +284,14 @@ struct MachineAgentsPage: View {
     }
 
     private func computerState(_ computer: JSONValue) -> String {
-        guard computer["enabled"] == .bool(true) else { return "Off" }
-        if computer["running"] != .bool(true) { return "On, not running" }
-        if computer["accessibility"] == .bool(false) || computer["screenRecording"] == .bool(false) {
-            return "Needs permission"
+        guard computer["enabled"] == .bool(true) else {
+            return String(localized: "Off", comment: "Computer Use is turned off")
         }
-        return "On"
+        if computer["running"] != .bool(true) { return String(localized: "On, not running") }
+        if computer["accessibility"] == .bool(false) || computer["screenRecording"] == .bool(false) {
+            return String(localized: "Needs permission")
+        }
+        return String(localized: "On", comment: "Computer Use is turned on")
     }
 }
 

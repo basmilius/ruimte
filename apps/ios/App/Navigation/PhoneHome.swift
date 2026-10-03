@@ -33,7 +33,7 @@ struct PhoneHome: View {
                         pair: pair
                     )
                 } label: {
-                    Label("Now", lucideIcon: "inbox")
+                    Label(String(localized: "Now"), lucideIcon: "inbox")
                 }
                 .badge(now.board.needsYou.count)
 
@@ -45,13 +45,13 @@ struct PhoneHome: View {
                         EmptyView()
                     }
                 } label: {
-                    Label("Projects", lucideIcon: "folders")
+                    Label(String(localized: "Projects"), lucideIcon: "folders")
                 }
 
                 Tab(value: PhoneTab.machines) {
                     MachinesPage(runtime: runtime, pair: pair, open: router.showMachine)
                 } label: {
-                    Label("Machines", lucideIcon: "monitor")
+                    Label(String(localized: "Machines"), lucideIcon: "monitor")
                 }
 
                 Tab(value: PhoneTab.search, role: .search) {
@@ -59,7 +59,7 @@ struct PhoneHome: View {
                         now: now, projects: projects, runtime: runtime, navigator: router, showSettings: showSettings,
                         pair: pair)
                 } label: {
-                    Label("Search", lucideIcon: "search")
+                    Label(String(localized: "Search"), lucideIcon: "search")
                 }
             }
             .tabBarMinimizeBehavior(.onScrollDown)
@@ -102,9 +102,9 @@ struct PhoneHome: View {
         if router.tab == .machines {
             ToolbarItem(id: "machines.add", placement: .topBarTrailing) {
                 Menu {
-                    Button("Use a pairing link", lucideIcon: "link", action: pair)
+                    Button(String(localized: "Use a pairing link"), lucideIcon: "link", action: pair)
                     if runtime.account == nil {
-                        Button("Sign in", lucideIcon: "circle-user-round", action: signIn)
+                        Button(String(localized: "Sign in"), lucideIcon: "circle-user-round", action: signIn)
                     }
                 } label: {
                     Image(lucide: "plus").accessibilityLabel("Add a machine")

@@ -90,13 +90,13 @@ enum LaunchPhase: String, Equatable {
 
     var label: String {
         switch self {
-        case .idle: "At rest"
-        case .held: "needs approval"
-        case .starting: "starting"
-        case .running: "Running"
-        case .stopping: "stopping"
-        case .passed: "passed"
-        case .failed: "failed"
+        case .idle: String(localized: "At rest")
+        case .held: String(localized: "needs approval")
+        case .starting: String(localized: "starting")
+        case .running: String(localized: "Running")
+        case .stopping: String(localized: "stopping")
+        case .passed: String(localized: "passed", comment: "A task that ended successfully")
+        case .failed: String(localized: "failed")
         }
     }
 }
@@ -296,18 +296,27 @@ enum LaunchLogic {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .full
             return now - ended < 60_000
-                ? "just now"
+                ? String(localized: "just now")
                 : formatter.localizedString(
                     for: Date(timeIntervalSince1970: ended / 1000), relativeTo: Date(timeIntervalSince1970: now / 1000))
         }
         switch view.phase {
-        case .held: return "Needs approval"
-        case .starting: return "Starting…"
-        case .stopping: return "Stopping…"
-        case .running: return (["Running"] + (view.port.map { [":\($0)"] } ?? [])).joined(separator: " · ")
-        case .passed: return view.status?.endedAt.map { "Passed \(ago($0))" } ?? "Passed"
-        case .failed: return "Failed · exit \(view.status?.exitCode.map(String.init) ?? "?")"
-        case .idle: return view.status?.endedAt.map { "Stopped \(ago($0))" } ?? "Not running"
+        case .held: return String(localized: "Needs approval")
+        case .starting: return String(localized: "Starting…")
+        case .stopping: return String(localized: "Stopping…")
+        case .running:
+            return ([String(localized: "Running")] + (view.port.map { [":\($0)"] } ?? [])).joined(separator: " · ")
+        case .passed:
+            return view.status?.endedAt.map {
+                String(localized: "Passed \(ago($0))", comment: "%@ is a relative time, like 5 minutes ago")
+            } ?? String(localized: "Passed", comment: "A task that ended successfully")
+        case .failed:
+            let code = view.status?.exitCode.map(String.init) ?? "?"
+            return String(localized: "Failed · exit \(code)", comment: "%@ is the exit code of a process")
+        case .idle:
+            return view.status?.endedAt.map {
+                String(localized: "Stopped \(ago($0))", comment: "%@ is a relative time, like 5 minutes ago")
+            } ?? String(localized: "Not running")
         }
     }
 
@@ -321,12 +330,13 @@ enum LaunchLogic {
         case .running:
             return ([ran] + (view.port.map { [":\($0)"] } ?? [])).joined(separator: " · ")
         case .passed:
-            return "passed · \(ran)"
+            return String(localized: "passed · \(ran)", comment: "%@ is how long the task ran")
         case .failed:
-            return "exit \(status.exitCode.map(String.init) ?? "?") · \(ran)"
+            let code = status.exitCode.map(String.init) ?? "?"
+            return String(localized: "exit \(code) · \(ran)", comment: "An exit code, then how long the process ran")
         default:
             guard let ended = status.endedAt else { return "" }
-            return "stopped \(ProcessesText.duration(now - ended)) ago"
+            return String(localized: "stopped \(ProcessesText.duration(now - ended)) ago", comment: "%@ is a duration")
         }
     }
 }

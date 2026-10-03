@@ -45,17 +45,30 @@ struct CanvasStartGrid: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     agentSection
-                    section("Add") {
-                        tile("Chat", detail: "Choose a model", icon: "message-square") {
+                    section(String(localized: "Add")) {
+                        tile(
+                            String(localized: "Chat"), detail: String(localized: "Choose a model"),
+                            icon: "message-square"
+                        ) {
                             insert(kind: "chat", title: "Chat")
                         }
-                        tile("Terminal", detail: "A shell", icon: "terminal") {
+                        tile(String(localized: "Terminal"), detail: String(localized: "A shell"), icon: "terminal") {
                             insert(kind: "terminal", title: "Terminal")
                         }
-                        tile("Browser", detail: "A web page", icon: "globe") { compose("browser") }
-                        tile("File", detail: "From the machine", icon: "file-text") { compose("file") }
-                        tile("Note", detail: "Markdown", icon: "sticky-note") { compose("note") }
-                        tile("Group", detail: "Holds nodes", icon: "layout-grid") {
+                        tile(String(localized: "Browser"), detail: String(localized: "A web page"), icon: "globe") {
+                            compose("browser")
+                        }
+                        tile(
+                            String(localized: "File"), detail: String(localized: "From the machine"), icon: "file-text"
+                        ) {
+                            compose("file")
+                        }
+                        tile(String(localized: "Note"), detail: String(localized: "Markdown"), icon: "sticky-note") {
+                            compose("note")
+                        }
+                        tile(
+                            String(localized: "Group"), detail: String(localized: "Holds nodes"), icon: "layout-grid"
+                        ) {
                             insert(kind: "group", title: "Group", extra: ["memberIds": .array([])])
                         }
                     }
@@ -82,7 +95,7 @@ struct CanvasStartGrid: View {
     @ViewBuilder private var agentSection: some View {
         if providers == nil {
             if workspace.session.connected {
-                MobileLoadingRow("Looking for agents").frame(maxWidth: .infinity)
+                MobileLoadingRow(String(localized: "Looking for agents")).frame(maxWidth: .infinity)
             }
         } else if agents.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
@@ -95,12 +108,12 @@ struct CanvasStartGrid: View {
             .background(MobileStyle.panel, in: .rect(cornerRadius: 16))
             .accessibilityElement(children: .combine)
         } else {
-            section("Agents") {
+            section(String(localized: "Agents")) {
                 ForEach(agents, id: \.stableKind) { provider in
                     let chat = provider["capabilities"]?["chat"] == .bool(true)
                     tile(
-                        provider.text("name", fallback: provider.text("kind")), detail: chat ? "Chat" : "Terminal",
-                        icon: "bot"
+                        provider.text("name", fallback: provider.text("kind")),
+                        detail: chat ? String(localized: "Chat") : String(localized: "Terminal"), icon: "bot"
                     ) {
                         insert(
                             kind: chat ? "chat" : "terminal", title: provider.text("name", fallback: "Agent"),

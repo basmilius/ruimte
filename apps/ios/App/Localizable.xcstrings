@@ -1,7 +1,5989 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "" : {
 
+    },
+    " · EUR at the ECB rate of %@" : {
+      "comment" : "Appended to the usage provenance line; %@ is a date"
+    },
+    " of %@" : {
+      "comment" : "Follows the tokens used: the size of the context window"
+    },
+    "-%lld" : {
+
+    },
+    "…" : {
+
+    },
+    "·" : {
+
+    },
+    "· Offline" : {
+
+    },
+    "· this client" : {
+
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ per task" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@ per task"
+          }
+        }
+      }
+    },
+    "%@ · %lld changed" : {
+      "comment" : "%1$@ is the git branch, %2$lld files",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld changed"
+          }
+        }
+      }
+    },
+    "%@ · %lld ms" : {
+      "comment" : "How the machine is connected, then the round trip in milliseconds",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld ms"
+          }
+        }
+      }
+    },
+    "%@ · needs you" : {
+      "comment" : "%@ is the project, maybe with its machine"
+    },
+    "%@ · resets %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · resets %2$@"
+          }
+        }
+      }
+    },
+    "%@ · working" : {
+      "comment" : "%@ is the project, maybe with its machine"
+    },
+    "%@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "%@ (%lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$lld)"
+          }
+        }
+      }
+    },
+    "%@ (fork)" : {
+      "comment" : "The title a fork starts with"
+    },
+    "%@ (last opened)" : {
+
+    },
+    "%@ (worktree)" : {
+
+    },
+    "%@ / %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ %lld calls" : {
+      "comment" : "%@ is the name of a tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld calls"
+          }
+        }
+      }
+    },
+    "%@ $ " : {
+
+    },
+    "%@ against %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ against %2$@"
+          }
+        }
+      }
+    },
+    "%@ against %@. %@" : {
+      "comment" : "%1$@ and %2$@ are git refs, %3$@ the sentence on how many files conflict",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ against %2$@. %3$@"
+          }
+        }
+      }
+    },
+    "%@ already had a worktree." : {
+
+    },
+    "%@ and %@" : {
+      "comment" : "The last two parts of a list",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$@"
+          }
+        }
+      }
+    },
+    "%@ and %@." : {
+      "comment" : "Two counts of what was found, joined",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$@."
+          }
+        }
+      }
+    },
+    "%@ calls" : {
+
+    },
+    "%@ comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it." : {
+
+    },
+    "%@ deleted this file while it changed on %@." : {
+      "comment" : "Both are git refs",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ deleted this file while it changed on %2$@."
+          }
+        }
+      }
+    },
+    "%@ downloads, installs and Ruimte restarts on %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ downloads, installs and Ruimte restarts on %2$@."
+          }
+        }
+      }
+    },
+    "%@ goes back to how it was before the merge." : {
+
+    },
+    "%@ has exited, but still shows as running" : {
+
+    },
+    "%@ has not run since the machine started." : {
+
+    },
+    "%@ installs and Ruimte restarts on %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ installs and Ruimte restarts on %2$@."
+          }
+        }
+      }
+    },
+    "%@ is available on this machine." : {
+
+    },
+    "%@ is connected" : {
+      "comment" : "%@ is the machine name"
+    },
+    "%@ is not answering" : {
+
+    },
+    "%@ is not checked out anywhere." : {
+
+    },
+    "%@ is ready on this machine." : {
+
+    },
+    "%@ is still running after its terminal closed" : {
+
+    },
+    "%@ is stopped" : {
+
+    },
+    "%@ Its connections are removed too." : {
+      "comment" : "%@ says which chats and terminals end with the node"
+    },
+    "%@ model" : {
+
+    },
+    "%@ need an update before these choices apply there. Until then you hear only when an agent needs you." : {
+      "comment" : "%@ is a list of machine names"
+    },
+    "%@ needs an update before these choices apply there. Until then you hear only when an agent needs you." : {
+      "comment" : "%@ is the name of one machine"
+    },
+    "%@ Nothing that runs there ends." : {
+      "comment" : "%@ is the sentence on what installs"
+    },
+    "%@ Removed the worktree and its branch." : {
+      "comment" : "%@ is what the merge did"
+    },
+    "%@ Removed the worktree; its branch stays." : {
+      "comment" : "%@ is what the merge did"
+    },
+    "%@ runs its own login in this terminal. It closes by itself once you are logged in." : {
+
+    },
+    "%@ sends its screen as video, which this app does not show yet. Simulators show here." : {
+
+    },
+    "%@ sessions · %@ calls · at API rates" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ sessions · %2$@ calls · at API rates"
+          }
+        }
+      }
+    },
+    "%@ still uses %@ of a core after its turn ended" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ still uses %2$@ of a core after its turn ended"
+          }
+        }
+      }
+    },
+    "%@ stopped at %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ stopped at %2$@"
+          }
+        }
+      }
+    },
+    "%@ stopped here" : {
+
+    },
+    "%@ That ends %@ running there now." : {
+      "comment" : "%1$@ is the sentence on what installs, %2$@ what still runs, like 2 terminals",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ That ends %2$@ running there now."
+          }
+        }
+      }
+    },
+    "%@ The worktree stays: %@" : {
+      "comment" : "%1$@ is what the merge did, %2$@ why the worktree stays",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ The worktree stays: %2$@"
+          }
+        }
+      }
+    },
+    "%@ to %@" : {
+      "comment" : "A line between two nodes on a canvas\nA range of reasoning efforts",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "%@ tokens" : {
+      "comment" : "%@ is a compact number, like 12K"
+    },
+    "%@ uses %@" : {
+      "comment" : "%@ is a process name, then an amount of memory",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ uses %2$@"
+          }
+        }
+      }
+    },
+    "%@ uses port %lld. Stop it and launch %@?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ uses port %2$lld. Stop it and launch %3$@?"
+          }
+        }
+      }
+    },
+    "%@ with %@ is not installed on this machine." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ with %2$@ is not installed on this machine."
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@, task %@" : {
+      "comment" : "A node on a canvas: its title, its kind and the status of its task",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, task %3$@"
+          }
+        }
+      }
+    },
+    "%@, started by Ruimte, has run for %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, started by Ruimte, has run for %2$@"
+          }
+        }
+      }
+    },
+    "%@: \"%@\"" : {
+      "comment" : "Where a fork goes on, then the prompt of that turn",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: \"%2$@\""
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@/s" : {
+      "comment" : "Data rate, %@ is a byte count, per second"
+    },
+    "%@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$@"
+          }
+        }
+      }
+    },
+    "%@=" : {
+
+    },
+    "%@M" : {
+      "comment" : "Token count in millions, abbreviated"
+    },
+    "%lld" : {
+
+    },
+    "%lld accounts" : {
+
+    },
+    "%lld added, %lld removed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld added, %2$lld removed"
+          }
+        }
+      }
+    },
+    "%lld agents" : {
+
+    },
+    "%lld agents are still working." : {
+
+    },
+    "%lld agents are still working. You get a notification when one asks for you." : {
+
+    },
+    "%lld ahead, %lld behind" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld ahead, %2$lld behind"
+          }
+        }
+      }
+    },
+    "%lld attachments" : {
+
+    },
+    "%lld blocked" : {
+
+    },
+    "%lld changed" : {
+      "comment" : "Number of changed files in a git repository"
+    },
+    "%lld changed files" : {
+
+    },
+    "%lld chats" : {
+
+    },
+    "%lld chats and %lld terminals work here" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld chats and %2$lld terminals work here"
+          }
+        }
+      }
+    },
+    "%lld chats work here" : {
+
+    },
+    "%lld commits" : {
+
+    },
+    "%lld commits behind %@" : {
+      "comment" : "%@ is a git branch",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld commits behind %2$@"
+          }
+        }
+      }
+    },
+    "%lld commits that %@ lacks" : {
+      "comment" : "%@ is a git branch",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld commits that %2$@ lacks"
+          }
+        }
+      }
+    },
+    "%lld failed" : {
+
+    },
+    "%lld files" : {
+
+    },
+    "%lld files · +%lld −%lld" : {
+      "comment" : "Files, then lines added and removed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld files · +%2$lld −%3$lld"
+          }
+        }
+      }
+    },
+    "%lld files conflict" : {
+
+    },
+    "%lld files conflict in the next commit." : {
+
+    },
+    "%lld files conflict." : {
+
+    },
+    "%lld files left." : {
+
+    },
+    "%lld folders" : {
+
+    },
+    "%lld forks go on after this turn" : {
+
+    },
+    "%lld info" : {
+      "comment" : "Count of test plan steps marked info"
+    },
+    "%lld lines" : {
+
+    },
+    "%lld machines are connected" : {
+
+    },
+    "%lld matches in %lld files" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld matches in %2$lld files"
+          }
+        }
+      }
+    },
+    "%lld messages in queue" : {
+
+    },
+    "%lld monitors" : {
+
+    },
+    "%lld more lines" : {
+
+    },
+    "%lld more requests wait" : {
+
+    },
+    "%lld ms" : {
+      "comment" : "Duration in milliseconds"
+    },
+    "%lld need you" : {
+
+    },
+    "%lld need you. Open the next one." : {
+
+    },
+    "%lld new files" : {
+
+    },
+    "%lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld done" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld done"
+          }
+        }
+      }
+    },
+    "%lld of %lld open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld open"
+          }
+        }
+      }
+    },
+    "%lld of %lld run" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld run"
+          }
+        }
+      }
+    },
+    "%lld other clients still have it open, so nothing stops running. It moves to Recently closed on this phone only." : {
+
+    },
+    "%lld other tool calls" : {
+
+    },
+    "%lld passed" : {
+
+    },
+    "%lld percent" : {
+
+    },
+    "%lld pt" : {
+
+    },
+    "%lld questions" : {
+
+    },
+    "%lld repositories" : {
+
+    },
+    "%lld requests waiting" : {
+
+    },
+    "%lld run configurations in %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld run configurations in %2$@"
+          }
+        }
+      }
+    },
+    "%lld running" : {
+      "comment" : "Devices running"
+    },
+    "%lld running sessions end: a terminal loses its scrollback and an agent stops. The rest moves to Recently closed." : {
+
+    },
+    "%lld scripts in %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld scripts in %2$@"
+          }
+        }
+      }
+    },
+    "%lld shells" : {
+
+    },
+    "%lld skipped" : {
+
+    },
+    "%lld sub-agents" : {
+
+    },
+    "%lld terminals" : {
+
+    },
+    "%lld terminals and %lld agents" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld terminals and %2$lld agents"
+          }
+        }
+      }
+    },
+    "%lld terminals work here" : {
+
+    },
+    "%lld tool calls" : {
+
+    },
+    "%lld uncommitted files" : {
+
+    },
+    "%lld views" : {
+
+    },
+    "%lld warnings" : {
+
+    },
+    "%lld with info" : {
+
+    },
+    "%lld with warnings" : {
+
+    },
+    "%lld working" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "%lld%% used" : {
+
+    },
+    "%lldh" : {
+      "comment" : "Duration in hours, abbreviated"
+    },
+    "%lldh %lldm" : {
+      "comment" : "Duration in hours and minutes, abbreviated\nDuration, hours and minutes, abbreviated",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldh %2$lldm"
+          }
+        }
+      }
+    },
+    "%lldK" : {
+      "comment" : "Token count in thousands, abbreviated"
+    },
+    "%lldm" : {
+      "comment" : "Duration in minutes, abbreviated"
+    },
+    "%lldm %llds" : {
+      "comment" : "Duration in minutes and seconds, abbreviated\nDuration, minutes and seconds, abbreviated",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldm %2$llds"
+          }
+        }
+      }
+    },
+    "%llds" : {
+      "comment" : "Duration in seconds, abbreviated"
+    },
+    "↑%lld" : {
+
+    },
+    "↓%lld" : {
+
+    },
+    "+%lld" : {
+
+    },
+    "−%lld" : {
+
+    },
+    "1 hour" : {
+      "comment" : "Snooze for this long"
+    },
+    "1 needs you" : {
+
+    },
+    "3 working" : {
+
+    },
+    "7 days" : {
+
+    },
+    "10 minutes" : {
+      "comment" : "Snooze for this long"
+    },
+    "30 days" : {
+
+    },
+    "90 days" : {
+
+    },
+    "A branch with this name exists already" : {
+
+    },
+    "A chat in Chats has no folder of a project." : {
+
+    },
+    "a cherry-pick that stopped halfway" : {
+
+    },
+    "A cherry-pick waits on you" : {
+
+    },
+    "A computer on your account shows up by itself." : {
+
+    },
+    "A group" : {
+
+    },
+    "A merge commit; every commit of the worktree stays in the history." : {
+
+    },
+    "a merge that stopped halfway" : {
+
+    },
+    "A merge waits on you" : {
+
+    },
+    "A message is waiting to be sent." : {
+
+    },
+    "A message is written from one repository at a time." : {
+
+    },
+    "A new chat node goes on from there, beside the original. Nothing is sent until you write the first message." : {
+
+    },
+    "A new chat of %@ on this machine starts under the account you pick." : {
+
+    },
+    "A new chat view goes on from there, right after its canvas. Nothing is sent until you write the first message." : {
+
+    },
+    "A new chat view goes on from there, right after the original. Nothing is sent until you write the first message." : {
+
+    },
+    "A new version of Ruimte" : {
+
+    },
+    "A new view" : {
+
+    },
+    "A newer view" : {
+
+    },
+    "A node beside it" : {
+
+    },
+    "A pairing link comes from the machine itself: open Settings in Ruimte on %@ and choose Show pairing link under Apps with access, or run ruimte pair there." : {
+
+    },
+    "A process" : {
+
+    },
+    "A process misbehaves" : {
+
+    },
+    "a rebase that stopped halfway" : {
+
+    },
+    "A rebase waits on you" : {
+
+    },
+    "a revert that stopped halfway" : {
+
+    },
+    "A revert waits on you" : {
+
+    },
+    "A saved attachment is missing. Remove it and attach it again before sending." : {
+
+    },
+    "A service or a task needs a command." : {
+
+    },
+    "A shell" : {
+
+    },
+    "A turn finishes" : {
+
+    },
+    "A web page" : {
+
+    },
+    "A worktree is a second checkout of this repository on a branch of its own." : {
+
+    },
+    "A worktree is merged in the checkout that has the target branch out, and never by moving a branch behind a working tree. Check that branch out in the project folder or in a worktree first." : {
+
+    },
+    "Abort" : {
+
+    },
+    "Abort cherry-pick" : {
+
+    },
+    "Abort merge" : {
+
+    },
+    "Abort rebase" : {
+
+    },
+    "Abort revert" : {
+
+    },
+    "Abort the %@?" : {
+
+    },
+    "Abort the merge?" : {
+
+    },
+    "About" : {
+
+    },
+    "Accent" : {
+      "comment" : "Drawing color"
+    },
+    "Account" : {
+
+    },
+    "Account %@" : {
+      "comment" : "%@ is the account name"
+    },
+    "Account sign-in is unavailable right now." : {
+
+    },
+    "Active" : {
+      "comment" : "Sub-agents that still run"
+    },
+    "Actual size" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add a machine" : {
+
+    },
+    "Add a node" : {
+
+    },
+    "Add a reason" : {
+
+    },
+    "Add a service or a task first." : {
+
+    },
+    "Add context or expand editor" : {
+
+    },
+    "Add launches" : {
+
+    },
+    "Add message to queue" : {
+
+    },
+    "Add node" : {
+
+    },
+    "Add note" : {
+
+    },
+    "Add to queue…" : {
+
+    },
+    "Add to selection" : {
+
+    },
+    "Add variable" : {
+
+    },
+    "Add view" : {
+
+    },
+    "Added" : {
+      "comment" : "A line of a file that git sees as new"
+    },
+    "Added @%@ to the message in %@." : {
+      "comment" : "%1$@ is a file path, %2$@ the chat title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Added @%1$@ to the message in %2$@."
+          }
+        }
+      }
+    },
+    "Address" : {
+
+    },
+    "Address, %@" : {
+
+    },
+    "Address, such as http://localhost:8000" : {
+
+    },
+    "After the last turn" : {
+
+    },
+    "After this turn" : {
+
+    },
+    "After turn %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "After turn %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Agent" : {
+
+    },
+    "Agent command" : {
+
+    },
+    "Agent is working" : {
+
+    },
+    "Agents" : {
+
+    },
+    "Agents may delete any view or node" : {
+
+    },
+    "Agents on %@" : {
+
+    },
+    "Ahead and behind" : {
+
+    },
+    "AI & agents" : {
+      "comment" : "Group of icons"
+    },
+    "Alignment" : {
+
+    },
+    "All" : {
+      "comment" : "Notifications of a project: everything chosen above\nShow every step of a plan"
+    },
+    "All branches" : {
+
+    },
+    "All caught up" : {
+
+    },
+    "All processes" : {
+
+    },
+    "All sub-agents" : {
+
+    },
+    "Allow" : {
+
+    },
+    "Allow applies to all %lld files." : {
+
+    },
+    "Allow notifications for Ruimte in Settings to receive updates." : {
+
+    },
+    "Allow USB debugging on the device" : {
+
+    },
+    "Allowed" : {
+
+    },
+    "Also ends the %lld agents it opened. Their nodes stay on the canvas with what they did so far." : {
+
+    },
+    "Also on battery" : {
+
+    },
+    "Always" : {
+      "comment" : "Keep awake setting"
+    },
+    "Always allow" : {
+
+    },
+    "Always allowed" : {
+
+    },
+    "Amount" : {
+
+    },
+    "an agent" : {
+
+    },
+    "An agent draws it from the project. Describe what it should show, or pick a chat that knows." : {
+
+    },
+    "An agent draws it with ruimte-context view diagram." : {
+
+    },
+    "An agent is still working in the worktree." : {
+
+    },
+    "An agent needs you" : {
+
+    },
+    "An agent opened a view" : {
+
+    },
+    "An agent proposed answers for %lld conflicts." : {
+
+    },
+    "An agent reads what a line runs into it from, with ruimte-context. Between two agents the line runs both ways." : {
+
+    },
+    "An attachment changed. Attach it again before sending." : {
+
+    },
+    "An object changed on another device during this gesture. Its latest version is kept. Try the edit again." : {
+
+    },
+    "An open canvas" : {
+
+    },
+    "an operation that stopped halfway" : {
+
+    },
+    "Android devices" : {
+
+    },
+    "Android emulators" : {
+
+    },
+    "Another launch" : {
+
+    },
+    "another project" : {
+
+    },
+    "Another project" : {
+
+    },
+    "Answer" : {
+
+    },
+    "Answer in the chat" : {
+
+    },
+    "Answered" : {
+
+    },
+    "App switcher" : {
+      "comment" : "A button of a phone or tablet"
+    },
+    "Appearance" : {
+
+    },
+    "Apple asks you to confirm once more, so Ruimte can end Sign in with Apple for this account." : {
+
+    },
+    "Apple did not end Sign in with Apple for Ruimte, so your account is still here. Try again." : {
+
+    },
+    "Apply" : {
+
+    },
+    "Approval requests" : {
+
+    },
+    "Approve" : {
+
+    },
+    "Approve and launch %@" : {
+
+    },
+    "Approve, answer or snooze straight from the notification." : {
+
+    },
+    "Approve, answer or snooze straight from the notification. A Live Activity shows what is still running." : {
+
+    },
+    "Apps with access" : {
+
+    },
+    "Architect" : {
+
+    },
+    "Arrow" : {
+      "comment" : "Drawing tool"
+    },
+    "Arrowheads" : {
+
+    },
+    "Artist" : {
+
+    },
+    "Ask" : {
+      "comment" : "Short name of the supervised permission mode"
+    },
+    "Ask an agent about every file" : {
+
+    },
+    "Ask an agent about this file" : {
+
+    },
+    "Asking an agent: %@, %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Asking an agent: %1$@, %2$lld of %3$lld"
+          }
+        }
+      }
+    },
+    "Asks a question" : {
+
+    },
+    "Asks before commands and file changes" : {
+
+    },
+    "At rest" : {
+
+    },
+    "Attach as a text file" : {
+
+    },
+    "Attachment" : {
+
+    },
+    "Attachments" : {
+
+    },
+    "Attachments can total at most 10 MiB per message." : {
+
+    },
+    "Auto" : {
+      "comment" : "A permission mode"
+    },
+    "Auto-accept edits" : {
+
+    },
+    "Back" : {
+      "comment" : "A button of a phone or tablet"
+    },
+    "background" : {
+      "comment" : "A sub-agent that runs in the background, lowercase"
+    },
+    "Background" : {
+
+    },
+    "Base" : {
+
+    },
+    "binary" : {
+
+    },
+    "Binary file" : {
+
+    },
+    "Binary file, no diff" : {
+
+    },
+    "Bind" : {
+
+    },
+    "Bind a group to a worktree" : {
+
+    },
+    "Bind to a worktree" : {
+
+    },
+    "Blocked" : {
+
+    },
+    "Blue" : {
+      "comment" : "Drawing color"
+    },
+    "Bold" : {
+
+    },
+    "Bookmark message" : {
+
+    },
+    "Bookmark, %@" : {
+
+    },
+    "Bookmarks" : {
+
+    },
+    "Both, %@ first" : {
+
+    },
+    "Bound to" : {
+
+    },
+    "bound to %@" : {
+      "comment" : "%@ is the title of a group"
+    },
+    "Branch" : {
+
+    },
+    "branch name" : {
+
+    },
+    "Branches" : {
+
+    },
+    "Branches off what is checked out now and switches to it." : {
+
+    },
+    "Breakdown" : {
+
+    },
+    "Bring to front" : {
+
+    },
+    "Broker" : {
+      "comment" : "A connection through the broker"
+    },
+    "Browser" : {
+
+    },
+    "Browser and device streaming is disabled in this machine's settings." : {
+
+    },
+    "Browsers and apps paired with this machine." : {
+
+    },
+    "Bundled prices" : {
+
+    },
+    "Cache savings" : {
+
+    },
+    "Cache writes" : {
+
+    },
+    "Cached" : {
+      "comment" : "Input tokens read from a cache"
+    },
+    "Camera" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel sign-in" : {
+
+    },
+    "cancelled" : {
+      "comment" : "Status of a task an agent gave"
+    },
+    "Cancelled" : {
+
+    },
+    "Canvas" : {
+
+    },
+    "Cartoonist" : {
+
+    },
+    "Center" : {
+
+    },
+    "Change icon" : {
+
+    },
+    "Change with an agent" : {
+
+    },
+    "Changed" : {
+      "comment" : "A line of a file that git sees as changed\nGit state of a file"
+    },
+    "Changed on our side" : {
+
+    },
+    "Changed on their side" : {
+
+    },
+    "Changes" : {
+
+    },
+    "Changes in the working tree are stashed first, so nothing is lost." : {
+
+    },
+    "Changes in this request" : {
+
+    },
+    "Changing state" : {
+
+    },
+    "Chat" : {
+
+    },
+    "Chat with" : {
+
+    },
+    "Chats" : {
+      "comment" : "Name of the project that holds the chats outside any project"
+    },
+    "Chats in this project" : {
+
+    },
+    "Chats on %@" : {
+
+    },
+    "Chats on this machine" : {
+
+    },
+    "Chats resume after a limit" : {
+
+    },
+    "Check at least one launch for this group." : {
+
+    },
+    "Checked out in %@" : {
+
+    },
+    "Checking" : {
+
+    },
+    "Checkout" : {
+
+    },
+    "Choose a model" : {
+
+    },
+    "Choose a model in the chat" : {
+
+    },
+    "Choose a project in the sidebar." : {
+
+    },
+    "Choose a symbol…" : {
+
+    },
+    "Choose a view in the sidebar to get started." : {
+
+    },
+    "Choose an image…" : {
+
+    },
+    "Choose model" : {
+
+    },
+    "Choose one or more" : {
+
+    },
+    "Choose up to 8 files per message." : {
+
+    },
+    "Choose up to 16 conversations." : {
+
+    },
+    "Choose up to 16 skills." : {
+
+    },
+    "Choose up to 64 file mentions." : {
+
+    },
+    "Claude wants to edit pool.ts in Recept Maker." : {
+
+    },
+    "clean" : {
+      "comment" : "State of a git repository"
+    },
+    "Clear" : {
+
+    },
+    "Clear conversation" : {
+
+    },
+    "Clear scrollback" : {
+
+    },
+    "Clear terminal scrollback?" : {
+
+    },
+    "Clear the answer" : {
+
+    },
+    "Clear this conversation?" : {
+
+    },
+    "CLI" : {
+
+    },
+    "Close" : {
+
+    },
+    "Close %@?" : {
+
+    },
+    "Close project" : {
+
+    },
+    "Close suggestions" : {
+
+    },
+    "Code" : {
+      "comment" : "Group of icons"
+    },
+    "Collapse" : {
+
+    },
+    "Collapse all" : {
+
+    },
+    "Collapse done" : {
+
+    },
+    "Collapsed" : {
+
+    },
+    "Color" : {
+
+    },
+    "Color %@" : {
+
+    },
+    "Color and width" : {
+
+    },
+    "Command" : {
+
+    },
+    "Commands" : {
+
+    },
+    "Commit" : {
+      "comment" : "Git commit button"
+    },
+    "Commit %lld files" : {
+
+    },
+    "Commit and push" : {
+
+    },
+    "Commit in %@" : {
+      "comment" : "%@ lists repositories"
+    },
+    "Commit message" : {
+
+    },
+    "Commit or stash the changes in the target checkout first." : {
+
+    },
+    "Commit the uncommitted files first" : {
+
+    },
+    "Committed and pushed in %@." : {
+
+    },
+    "Committed and pushed in %lld repositories." : {
+
+    },
+    "Committed in %@." : {
+
+    },
+    "Committed in %lld repositories." : {
+
+    },
+    "Committing" : {
+
+    },
+    "Compact now" : {
+
+    },
+    "Compare models" : {
+
+    },
+    "Completed" : {
+
+    },
+    "Computer Use" : {
+
+    },
+    "Conflict" : {
+
+    },
+    "Conflict %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Conflict %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Conflicted" : {
+      "comment" : "Git state of a file"
+    },
+    "Connect" : {
+
+    },
+    "Connect and unlock it, then it shows here." : {
+
+    },
+    "Connect directly to your computer" : {
+
+    },
+    "Connect to one of your machines to test sign-in, WebRTC and reconnecting." : {
+
+    },
+    "Connect your computer to pick up your projects and conversations." : {
+
+    },
+    "Connect your computer to see what your agents are doing." : {
+
+    },
+    "Connected" : {
+
+    },
+    "Connected directly" : {
+
+    },
+    "Connected via relay" : {
+
+    },
+    "Connecting" : {
+
+    },
+    "Connecting to your machine" : {
+
+    },
+    "Connecting to your machines" : {
+
+    },
+    "Connecting…" : {
+
+    },
+    "Connecting… You can keep writing." : {
+
+    },
+    "Connection" : {
+
+    },
+    "Connection diagnostics" : {
+
+    },
+    "Connection lost" : {
+
+    },
+    "Connection test" : {
+
+    },
+    "Connection to server.hello" : {
+
+    },
+    "Connections" : {
+
+    },
+    "Constrain proportions and angles" : {
+
+    },
+    "Context" : {
+
+    },
+    "Context compacted" : {
+
+    },
+    "Context compacted from %@ tokens" : {
+
+    },
+    "Context used" : {
+
+    },
+    "Context window" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Continue on" : {
+
+    },
+    "Continue on %@" : {
+
+    },
+    "Continue rebase" : {
+
+    },
+    "Continue with" : {
+
+    },
+    "Continue with Apple" : {
+
+    },
+    "Continue with GitHub" : {
+
+    },
+    "Continued on its own" : {
+
+    },
+    "Control" : {
+
+    },
+    "Conversation" : {
+
+    },
+    "Conversation action" : {
+
+    },
+    "Conversation actions" : {
+
+    },
+    "Copied" : {
+
+    },
+    "Copy" : {
+
+    },
+    "Copy as image" : {
+
+    },
+    "Copy as Markdown" : {
+
+    },
+    "Copy code" : {
+
+    },
+    "Copy diff" : {
+
+    },
+    "Copy hash" : {
+
+    },
+    "Copy link" : {
+
+    },
+    "Copy message" : {
+
+    },
+    "Copy my edits" : {
+
+    },
+    "Copy name" : {
+
+    },
+    "Copy path" : {
+
+    },
+    "Copy PNG" : {
+
+    },
+    "Copy subject" : {
+
+    },
+    "Copy SVG" : {
+
+    },
+    "Copy the link and paste it below. It works once and expires after ten minutes." : {
+
+    },
+    "Cost axis" : {
+
+    },
+    "Cost per day" : {
+
+    },
+    "Cost per task" : {
+
+    },
+    "Could not connect to your machine." : {
+
+    },
+    "Could not continue on %@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not continue on %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "Could not delete" : {
+
+    },
+    "Could not delete %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not delete %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Could not fork" : {
+
+    },
+    "Could not interrupt the turn: %@" : {
+
+    },
+    "Could not launch %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not launch %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Could not load diagram" : {
+
+    },
+    "Could not load drawing" : {
+
+    },
+    "Could not look through the project." : {
+
+    },
+    "Could not open" : {
+
+    },
+    "Could not open drawing" : {
+
+    },
+    "Could not open project" : {
+
+    },
+    "Could not read this item." : {
+
+    },
+    "Could not read this photo." : {
+
+    },
+    "Could not reconnect to your machine." : {
+
+    },
+    "Could not restore the draft. %@" : {
+
+    },
+    "Could not resume the agent: %@" : {
+
+    },
+    "Could not save the draft. %@" : {
+
+    },
+    "Could not send. %@" : {
+
+    },
+    "Could not show %@" : {
+
+    },
+    "Could not shut down %@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not shut down %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "Could not signal %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not signal %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Could not start %@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not start %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "Could not stop %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Could not stop %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Count in" : {
+
+    },
+    "CPU" : {
+
+    },
+    "CPU %@, memory %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "CPU %1$@, memory %2$@"
+          }
+        }
+      }
+    },
+    "Create" : {
+
+    },
+    "Create folder if missing" : {
+
+    },
+    "Create pull request" : {
+
+    },
+    "Creates a checkout of this branch. Every terminal and chat you add to the group starts in it." : {
+
+    },
+    "Creating checkout" : {
+
+    },
+    "Cut" : {
+
+    },
+    "Dark" : {
+
+    },
+    "Dashed" : {
+
+    },
+    "Data & science" : {
+      "comment" : "Group of icons"
+    },
+    "Day" : {
+
+    },
+    "Declined" : {
+
+    },
+    "default branch" : {
+
+    },
+    "Default branch" : {
+
+    },
+    "Defaults" : {
+
+    },
+    "Delegated %lld tasks" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %@ anyway?" : {
+
+    },
+    "Delete %@?" : {
+
+    },
+    "Delete account" : {
+
+    },
+    "Delete branch" : {
+
+    },
+    "Delete chat" : {
+
+    },
+    "Delete launch" : {
+
+    },
+    "Delete this chat?" : {
+
+    },
+    "Delete this view?" : {
+
+    },
+    "Delete view" : {
+
+    },
+    "Delete…" : {
+
+    },
+    "Deleted" : {
+      "comment" : "Git state of a file"
+    },
+    "Deletes this account and every sign-in to it. Your machines and their projects stay." : {
+
+    },
+    "Deleting" : {
+
+    },
+    "Deny" : {
+
+    },
+    "Deny with a message" : {
+
+    },
+    "Description" : {
+
+    },
+    "Description (optional)" : {
+
+    },
+    "Deselect" : {
+
+    },
+    "Design & media" : {
+      "comment" : "Group of icons"
+    },
+    "Detached" : {
+      "comment" : "Git, a checkout that is on no branch"
+    },
+    "Detached HEAD" : {
+
+    },
+    "Details" : {
+
+    },
+    "Device" : {
+
+    },
+    "Device actions" : {
+
+    },
+    "Device key" : {
+
+    },
+    "Devices" : {
+
+    },
+    "Diagnostics" : {
+
+    },
+    "Diagram" : {
+
+    },
+    "Diagram actions" : {
+
+    },
+    "Diamond" : {
+      "comment" : "Drawing tool"
+    },
+    "Diff" : {
+
+    },
+    "Diff too large" : {
+
+    },
+    "Direct" : {
+      "comment" : "A direct connection"
+    },
+    "Directory" : {
+
+    },
+    "Discard" : {
+
+    },
+    "Discard changes" : {
+
+    },
+    "Discard changes in %@?" : {
+
+    },
+    "Discard local changes" : {
+
+    },
+    "Discard unsaved changes on this device?" : {
+
+    },
+    "Discarded %@. Restore it with git stash pop %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Discarded %1$@. Restore it with git stash pop %2$@."
+          }
+        }
+      }
+    },
+    "Disconnect" : {
+
+    },
+    "Disk" : {
+
+    },
+    "Disk reads %@ and writes %@, %@ free." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Disk reads %1$@ and writes %2$@, %3$@ free."
+          }
+        }
+      }
+    },
+    "Disk reads %@ and writes %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Disk reads %1$@ and writes %2$@."
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+
+    },
+    "Dismiss attachment message" : {
+
+    },
+    "Dismissed" : {
+
+    },
+    "diverged" : {
+      "comment" : "State of a git branch"
+    },
+    "Divide the list" : {
+
+    },
+    "done" : {
+      "comment" : "Status of a task an agent gave"
+    },
+    "Done" : {
+      "comment" : "Sub-agents that finished"
+    },
+    "Dotted" : {
+
+    },
+    "Down" : {
+      "comment" : "The down arrow key"
+    },
+    "Downloading %@, %lld%%." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading %1$@, %2$lld%%."
+          }
+        }
+      }
+    },
+    "Downloading %@." : {
+
+    },
+    "Draft" : {
+
+    },
+    "Draft saved" : {
+
+    },
+    "Drag to move the canvas. Choose Select to edit objects, or a drawing tool to create them. Pinch to zoom." : {
+
+    },
+    "Draw" : {
+
+    },
+    "Drawing" : {
+
+    },
+    "Drawing actions" : {
+
+    },
+    "Drawing and diagram renderer" : {
+
+    },
+    "Drawing canvas" : {
+
+    },
+    "Drawing style" : {
+
+    },
+    "Drop %@?" : {
+
+    },
+    "Drop the file" : {
+
+    },
+    "Duplicate" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit %@" : {
+
+    },
+    "Edit %lld files" : {
+
+    },
+    "Edit by hand" : {
+
+    },
+    "Edit launch" : {
+
+    },
+    "Edit note" : {
+
+    },
+    "Edit stretch" : {
+
+    },
+    "Edit text" : {
+
+    },
+    "Edit the proposal" : {
+
+    },
+    "Edit the whole file" : {
+
+    },
+    "Edit…" : {
+
+    },
+    "Edited %lld files" : {
+
+    },
+    "Edited %lld notebooks" : {
+
+    },
+    "Edited by you" : {
+
+    },
+    "Edits" : {
+      "comment" : "Short name of the permission mode that accepts file edits"
+    },
+    "Effort" : {
+
+    },
+    "Ellipse" : {
+      "comment" : "Drawing tool"
+    },
+    "Empty folder" : {
+
+    },
+    "End" : {
+
+    },
+    "End snooze" : {
+
+    },
+    "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas." : {
+
+    },
+    "Enter an HTTP or HTTPS address." : {
+
+    },
+    "Environment" : {
+
+    },
+    "Eraser" : {
+      "comment" : "Drawing tool"
+    },
+    "Error" : {
+
+    },
+    "Escape" : {
+      "comment" : "The Escape key"
+    },
+    "Every client that pairs with this machine sees these. Leave it empty for the machine's own name." : {
+
+    },
+    "Every file is resolved; Continue finishes it." : {
+
+    },
+    "Every file is resolved." : {
+
+    },
+    "Every sign-in to it, on every device." : {
+
+    },
+    "Everything above reaches the agent only as a summary" : {
+
+    },
+    "Everything is resolved. Finish the %@ below." : {
+      "comment" : "%@ is a git operation: merge, rebase, cherry-pick or revert"
+    },
+    "Everything that changed" : {
+
+    },
+    "Everything that changed is set aside and the working tree goes back to HEAD." : {
+
+    },
+    "Example: Claude wants to edit pool.ts in Recept Maker." : {
+
+    },
+    "exit %@ · %@" : {
+      "comment" : "An exit code, then how long the process ran",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "exit %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Exited" : {
+
+    },
+    "Expand" : {
+
+    },
+    "Expand all" : {
+
+    },
+    "Expand editor" : {
+
+    },
+    "Expanded" : {
+
+    },
+    "Export drawing" : {
+
+    },
+    "Export selection" : {
+
+    },
+    "Extra high" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "failed" : {
+      "comment" : "Status of a task an agent gave"
+    },
+    "Failed" : {
+
+    },
+    "Failed · exit %@" : {
+      "comment" : "%@ is the exit code of a process"
+    },
+    "Failed after %@" : {
+
+    },
+    "feature/what-it-does" : {
+      "comment" : "Example of a git branch name, lowercase and without spaces"
+    },
+    "Fetch" : {
+
+    },
+    "Fetch all" : {
+
+    },
+    "Fetched %lld pages" : {
+
+    },
+    "File" : {
+
+    },
+    "File actions" : {
+
+    },
+    "File edits go through, commands still ask" : {
+
+    },
+    "File options" : {
+
+    },
+    "File too large" : {
+
+    },
+    "Files" : {
+
+    },
+    "Files and conversations" : {
+
+    },
+    "Files and Git" : {
+
+    },
+    "Files conflict" : {
+
+    },
+    "Files must be at most 10 MiB." : {
+
+    },
+    "Files of %@" : {
+
+    },
+    "Files read" : {
+
+    },
+    "Fill" : {
+
+    },
+    "Filter this folder" : {
+
+    },
+    "Find a message" : {
+
+    },
+    "Find a project" : {
+
+    },
+    "Find an icon" : {
+
+    },
+    "Find in files" : {
+
+    },
+    "Find in this project…" : {
+
+    },
+    "Finding %@" : {
+
+    },
+    "Finding devices" : {
+
+    },
+    "Finding session" : {
+
+    },
+    "Finding the agents on this machine" : {
+
+    },
+    "Finding the conversation" : {
+
+    },
+    "Finish cherry-pick" : {
+
+    },
+    "Finish merge" : {
+
+    },
+    "Finish or abort what waits in the target checkout first." : {
+
+    },
+    "Finish or abort what waits in the worktree first." : {
+
+    },
+    "Finish revert" : {
+
+    },
+    "Finished" : {
+
+    },
+    "Fit" : {
+      "comment" : "Zooms so the whole diagram fits"
+    },
+    "Fit canvas" : {
+
+    },
+    "Fit drawing" : {
+
+    },
+    "Fit selection" : {
+
+    },
+    "Fold %@" : {
+
+    },
+    "Folder" : {
+
+    },
+    "Folder missing" : {
+
+    },
+    "Folder on this machine" : {
+
+    },
+    "Folder unavailable" : {
+
+    },
+    "Follow the system appearance" : {
+
+    },
+    "Following the machine's %lld × %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Following the machine's %1$lld × %2$lld"
+          }
+        }
+      }
+    },
+    "Font" : {
+
+    },
+    "Font size" : {
+
+    },
+    "For a question or a quick task" : {
+
+    },
+    "For a question or a quick task. It is kept under Chats on %@." : {
+
+    },
+    "Force push" : {
+
+    },
+    "Force push this branch?" : {
+
+    },
+    "Force quit" : {
+
+    },
+    "Force quit %@?" : {
+
+    },
+    "Force quit…" : {
+
+    },
+    "Force stop" : {
+
+    },
+    "Force stop %@" : {
+
+    },
+    "Fork" : {
+      "comment" : "A forked conversation\nStarts a new chat from this one"
+    },
+    "Fork conversation" : {
+
+    },
+    "Fork from here" : {
+
+    },
+    "Fork into" : {
+
+    },
+    "Fork of %@" : {
+
+    },
+    "Fork the conversation to use this account." : {
+
+    },
+    "Fork this conversation" : {
+
+    },
+    "Forked after turn %lld, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Forked after turn %1$lld, %2$@"
+          }
+        }
+      }
+    },
+    "Forked at %@" : {
+
+    },
+    "Forking" : {
+
+    },
+    "Forward" : {
+
+    },
+    "Found in this project" : {
+
+    },
+    "Found nothing to import in this project." : {
+
+    },
+    "from" : {
+
+    },
+    "from %@" : {
+      "comment" : "%@ is a git branch"
+    },
+    "From the machine" : {
+
+    },
+    "From the project file" : {
+
+    },
+    "Full access" : {
+
+    },
+    "General" : {
+      "comment" : "Group of icons"
+    },
+    "Git" : {
+
+    },
+    "Git of %@" : {
+
+    },
+    "Give this launch a name." : {
+
+    },
+    "Go back to the main agent to write" : {
+
+    },
+    "Go there" : {
+
+    },
+    "Go to Settings, Account, and choose Show pairing link. Or run `ruimte pair` in a terminal there." : {
+
+    },
+    "Goes on by itself at %@, when the limit resets." : {
+
+    },
+    "Goes on under %@, which has the most room left. The interrupted turn is sent again." : {
+
+    },
+    "Green" : {
+      "comment" : "Drawing color"
+    },
+    "Group" : {
+
+    },
+    "Group selection" : {
+
+    },
+    "Hachure" : {
+
+    },
+    "Hand" : {
+      "comment" : "Drawing tool"
+    },
+    "Hardware" : {
+      "comment" : "Group of icons"
+    },
+    "Hear when an agent needs you" : {
+
+    },
+    "Hidden" : {
+
+    },
+    "Hide" : {
+
+    },
+    "Hide keyboard" : {
+
+    },
+    "Hide summary" : {
+
+    },
+    "Hide task" : {
+
+    },
+    "Hides this model in the chart" : {
+
+    },
+    "High" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "History" : {
+
+    },
+    "Holds nodes" : {
+
+    },
+    "Home" : {
+      "comment" : "A button of a phone or tablet"
+    },
+    "How should %@ come together?" : {
+
+    },
+    "How should %@ in %@ come together?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "How should %1$@ in %2$@ come together?"
+          }
+        }
+      }
+    },
+    "https://" : {
+
+    },
+    "I've checked" : {
+
+    },
+    "Icon" : {
+      "comment" : "A project's mark: a symbol"
+    },
+    "Image" : {
+      "comment" : "A project's mark: a picture"
+    },
+    "Image preview unavailable" : {
+
+    },
+    "Import %lld" : {
+
+    },
+    "Import launches" : {
+
+    },
+    "Importing…" : {
+
+    },
+    "in %@" : {
+      "comment" : "How long a finished sub-agent took, after Done or Failed"
+    },
+    "In queue" : {
+
+    },
+    "Include background" : {
+
+    },
+    "Info" : {
+
+    },
+    "Infrastructure" : {
+      "comment" : "Group of icons"
+    },
+    "Initial" : {
+      "comment" : "A project's mark: the first letter of its name"
+    },
+    "Ink" : {
+      "comment" : "Drawing color"
+    },
+    "Install a CLI or add an account in Ruimte on the machine itself, under Agents." : {
+
+    },
+    "Install an agent CLI, then set it up under Agents in Ruimte's settings on your computer." : {
+
+    },
+    "Install Xcode to use iOS simulators and iPhones." : {
+
+    },
+    "Installed" : {
+
+    },
+    "Installing. The machine comes back on the new version in a moment." : {
+
+    },
+    "Intelligence" : {
+
+    },
+    "Intelligence against cost" : {
+
+    },
+    "Intelligence Index %@, %@ per task" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Intelligence Index %1$@, %2$@ per task"
+          }
+        }
+      }
+    },
+    "Intelligence Index against cost per task in USD" : {
+
+    },
+    "Interrupt" : {
+      "comment" : "Button that interrupts a process"
+    },
+    "iOS devices" : {
+
+    },
+    "iOS simulators" : {
+
+    },
+    "iOS simulators need a Mac." : {
+
+    },
+    "Issues" : {
+      "comment" : "Show the steps of a plan that did not pass"
+    },
+    "It goes from .ruimte/launches.json, for everyone who shares the project." : {
+
+    },
+    "It goes from the launches only you have on this machine." : {
+
+    },
+    "It goes to the Trash on the machine, where it can be put back." : {
+
+    },
+    "It has %lld commits of its own and %lld from %@. A pull only fast-forwards until you choose." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "It has %1$lld commits of its own and %2$lld from %3$@. A pull only fast-forwards until you choose."
+          }
+        }
+      }
+    },
+    "It holds %@." : {
+
+    },
+    "It holds %@. They are lost, and so is the branch. Files git ignores in it, such as .env or a local database, go too." : {
+
+    },
+    "It is locked with git worktree lock." : {
+
+    },
+    "It is merged in the checkout that has %@ out. Nothing is stashed and no branch is moved behind a working tree." : {
+
+    },
+    "It is no longer in %@." : {
+
+    },
+    "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link." : {
+
+    },
+    "It loses access the next time it connects. Pairing again needs a new link." : {
+
+    },
+    "Its %lld chats end on this machine, and their conversations are gone." : {
+
+    },
+    "Its %lld terminals end on this machine, with everything running in them." : {
+
+    },
+    "Its connections are removed too." : {
+
+    },
+    "Its folder is already gone, and the branch holds %@. Those commits are lost with the branch." : {
+
+    },
+    "Its folder is already gone." : {
+
+    },
+    "Its folder is missing" : {
+
+    },
+    "Its picture shows when you open it as a view." : {
+
+    },
+    "Its process ended." : {
+
+    },
+    "Its sub-agents are working" : {
+
+    },
+    "its target branch" : {
+
+    },
+    "Jumps to this message" : {
+
+    },
+    "just now" : {
+
+    },
+    "Keep %@" : {
+
+    },
+    "Keep awake" : {
+
+    },
+    "Keep awake could not be changed. %@" : {
+
+    },
+    "Keep editing" : {
+
+    },
+    "Keep the display on" : {
+
+    },
+    "Keep the tool after drawing" : {
+
+    },
+    "Keep tool" : {
+      "comment" : "Keyboard command, keeps the tool after one use"
+    },
+    "Keeps its session" : {
+
+    },
+    "Keeps running, such as a web server. With an address it is running once the port answers." : {
+
+    },
+    "Keyboard" : {
+
+    },
+    "Kind" : {
+
+    },
+    "Last 10 minutes" : {
+
+    },
+    "Last 24 hours" : {
+
+    },
+    "Last connected %@" : {
+      "comment" : "%@ is a relative time, like 5 minutes ago\n%@ is a relative time, such as 4 minutes ago"
+    },
+    "Last connected just now" : {
+
+    },
+    "Launch" : {
+
+    },
+    "Launch %@" : {
+
+    },
+    "Launch when the project opens" : {
+
+    },
+    "Launches" : {
+
+    },
+    "Launches of %@" : {
+
+    },
+    "Layouts" : {
+
+    },
+    "Leave it as it is to keep the name a session gives it." : {
+
+    },
+    "Left" : {
+
+    },
+    "Legacy" : {
+
+    },
+    "Legacy models" : {
+
+    },
+    "Licenses" : {
+
+    },
+    "Life & world" : {
+      "comment" : "Group of icons"
+    },
+    "Light" : {
+
+    },
+    "Limits" : {
+
+    },
+    "Line" : {
+      "comment" : "Drawing tool"
+    },
+    "Linear" : {
+      "comment" : "A linear scale"
+    },
+    "Lines removed above" : {
+
+    },
+    "Link as context" : {
+
+    },
+    "Links" : {
+
+    },
+    "Listed %lld patterns" : {
+
+    },
+    "Live Activity" : {
+
+    },
+    "Load more" : {
+
+    },
+    "Loading" : {
+
+    },
+    "Loading benchmarks" : {
+
+    },
+    "Loading changes..." : {
+
+    },
+    "Loading clients" : {
+
+    },
+    "Loading conversation…" : {
+
+    },
+    "Loading diagram" : {
+
+    },
+    "Loading drawing" : {
+
+    },
+    "Loading earlier messages" : {
+
+    },
+    "Loading image" : {
+
+    },
+    "Loading more commits" : {
+
+    },
+    "Loading projects" : {
+
+    },
+    "Loading sign-in options" : {
+
+    },
+    "Loading terminal…" : {
+
+    },
+    "Local" : {
+
+    },
+    "Lock" : {
+      "comment" : "A button of a phone or tablet\nKeyboard command, locks the selection"
+    },
+    "Lock everything" : {
+
+    },
+    "Locked" : {
+
+    },
+    "Log" : {
+      "comment" : "A logarithmic scale"
+    },
+    "Log in" : {
+
+    },
+    "Log in to %@" : {
+
+    },
+    "Logged in" : {
+
+    },
+    "Logged in as %@" : {
+
+    },
+    "Long-press a message to bookmark it." : {
+
+    },
+    "Looking at the folder..." : {
+
+    },
+    "Looking for agents" : {
+
+    },
+    "Looking for run configurations and scripts" : {
+
+    },
+    "Low" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "Lucide icons" : {
+
+    },
+    "Machine" : {
+
+    },
+    "Machine settings" : {
+
+    },
+    "Machine tasks" : {
+
+    },
+    "Machine unavailable" : {
+
+    },
+    "Machines" : {
+
+    },
+    "Made a worktree for %@." : {
+
+    },
+    "Makes a second checkout of this branch beside the project. A branch that does not exist yet starts from what is checked out here." : {
+
+    },
+    "Mark" : {
+
+    },
+    "Mark %@ as stopped" : {
+
+    },
+    "Mark %lld files resolved" : {
+
+    },
+    "Mark as %@" : {
+
+    },
+    "Mark as stopped" : {
+
+    },
+    "Mark resolved" : {
+
+    },
+    "Markdown" : {
+
+    },
+    "Marked %@ resolved." : {
+
+    },
+    "Marked %lld files resolved." : {
+
+    },
+    "Match case" : {
+
+    },
+    "Match this public key in the machine's Apps with access list." : {
+
+    },
+    "Max" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "Measuring processes" : {
+
+    },
+    "Medium" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "Memory" : {
+
+    },
+    "Mention" : {
+
+    },
+    "Mention file or chat" : {
+
+    },
+    "Mention in chat" : {
+
+    },
+    "Merge" : {
+      "comment" : "Git merge strategy"
+    },
+    "Merge %@" : {
+
+    },
+    "Merge %@ into %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Merge %1$@ into %2$@"
+          }
+        }
+      }
+    },
+    "Merge first" : {
+
+    },
+    "Merge into %@" : {
+
+    },
+    "Merge into %@ instead" : {
+
+    },
+    "Merge into %@…" : {
+
+    },
+    "Merge…" : {
+
+    },
+    "Merged." : {
+
+    },
+    "Merging %@ failed" : {
+
+    },
+    "Message" : {
+
+    },
+    "Message (optional)" : {
+
+    },
+    "Message the agent" : {
+
+    },
+    "Message the agent…" : {
+
+    },
+    "Messages" : {
+
+    },
+    "Messages and agent work appear here." : {
+
+    },
+    "Messages can contain at most 120,000 characters." : {
+
+    },
+    "Model" : {
+
+    },
+    "Model, %@" : {
+
+    },
+    "Model, effort, permissions" : {
+
+    },
+    "Models" : {
+
+    },
+    "Monitor" : {
+
+    },
+    "Mono" : {
+
+    },
+    "More answers" : {
+
+    },
+    "More changes were omitted from this snapshot." : {
+
+    },
+    "More git actions" : {
+
+    },
+    "Move selection" : {
+
+    },
+    "Move selection farther" : {
+
+    },
+    "Move to Trash" : {
+
+    },
+    "Muted" : {
+      "comment" : "Drawing color"
+    },
+    "Name" : {
+
+    },
+    "Name and icon" : {
+
+    },
+    "Name it, or leave it empty" : {
+
+    },
+    "Name the branch" : {
+
+    },
+    "Name the heading" : {
+
+    },
+    "Name this bookmark" : {
+
+    },
+    "Needs an update" : {
+
+    },
+    "needs approval" : {
+
+    },
+    "Needs approval" : {
+
+    },
+    "Needs permission" : {
+
+    },
+    "Needs you" : {
+
+    },
+    "Needs you only" : {
+
+    },
+    "Needs your attention" : {
+
+    },
+    "Never asks for approval" : {
+
+    },
+    "new" : {
+      "comment" : "A file git does not track yet"
+    },
+    "New" : {
+      "comment" : "Git state of a file"
+    },
+    "New · %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "New · %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "New %@ chat" : {
+      "comment" : "%@ is the name of an agent, such as Claude Code"
+    },
+    "New activity" : {
+
+    },
+    "New branch" : {
+
+    },
+    "New chat" : {
+
+    },
+    "New chat on %@" : {
+
+    },
+    "New launch" : {
+
+    },
+    "New terminal in %@" : {
+
+    },
+    "New view" : {
+
+    },
+    "New view in %@…" : {
+
+    },
+    "New worktree" : {
+
+    },
+    "Next" : {
+
+    },
+    "No address yet." : {
+
+    },
+    "No agent CLI on this machine." : {
+
+    },
+    "No agent is working right now." : {
+
+    },
+    "No agents are working or waiting for you on this machine." : {
+
+    },
+    "No agents on this machine" : {
+
+    },
+    "No bookmarks" : {
+
+    },
+    "No branches" : {
+
+    },
+    "No broker configured" : {
+
+    },
+    "No chat agent is installed on %@." : {
+
+    },
+    "No chats yet" : {
+
+    },
+    "No commits" : {
+
+    },
+    "No commits yet" : {
+
+    },
+    "No comparison" : {
+
+    },
+    "No device" : {
+
+    },
+    "No devices" : {
+
+    },
+    "No devices were found on this machine." : {
+
+    },
+    "No Git repository" : {
+
+    },
+    "No issues." : {
+
+    },
+    "No launches in this project yet." : {
+
+    },
+    "No longer needed" : {
+
+    },
+    "No machines on this account." : {
+
+    },
+    "No machines yet" : {
+
+    },
+    "No machines yet." : {
+
+    },
+    "No matches" : {
+
+    },
+    "No matching files" : {
+
+    },
+    "No messages waiting" : {
+
+    },
+    "No open projects" : {
+
+    },
+    "No plan" : {
+
+    },
+    "No price" : {
+
+    },
+    "No project open" : {
+
+    },
+    "No projects yet" : {
+
+    },
+    "No recently closed projects" : {
+
+    },
+    "No screen to show" : {
+
+    },
+    "No sign-in providers are available." : {
+
+    },
+    "No sub-agents" : {
+
+    },
+    "No thinking" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "No usage in this period." : {
+
+    },
+    "No worktrees" : {
+
+    },
+    "Node" : {
+
+    },
+    "Nodes inside its frame on the canvas are listed here." : {
+
+    },
+    "None" : {
+
+    },
+    "Not a repository" : {
+
+    },
+    "Not answered" : {
+
+    },
+    "Not available" : {
+
+    },
+    "Not beaten on both axes" : {
+
+    },
+    "Not completed" : {
+
+    },
+    "Not connected" : {
+
+    },
+    "Not installed" : {
+
+    },
+    "Not logged in. Log in on the machine to see its limits." : {
+
+    },
+    "Not logged in. Log in to see its limits." : {
+
+    },
+    "Not measured" : {
+
+    },
+    "Not now" : {
+
+    },
+    "Not on this machine" : {
+
+    },
+    "Not read yet. Its limits appear once the machine has read them." : {
+
+    },
+    "Not run" : {
+
+    },
+    "Not running" : {
+
+    },
+    "Not signed in" : {
+
+    },
+    "Not supported: %@" : {
+
+    },
+    "Note" : {
+
+    },
+    "Note: %@" : {
+
+    },
+    "Nothing conflicts any more" : {
+
+    },
+    "Nothing drawn yet" : {
+
+    },
+    "Nothing else has access to this machine." : {
+
+    },
+    "Nothing finished while you were away." : {
+
+    },
+    "Nothing in it is lost: it holds no uncommitted files, no new files and no commits that %@ lacks." : {
+
+    },
+    "Nothing in it is running. It moves to Recently closed just as it was left." : {
+
+    },
+    "Nothing in this diagram yet" : {
+
+    },
+    "Nothing in this file needs a choice." : {
+
+    },
+    "Nothing in this group" : {
+
+    },
+    "Nothing is open." : {
+
+    },
+    "Nothing is running." : {
+
+    },
+    "Nothing is saved until you import. What you import counts as your approval on this machine." : {
+
+    },
+    "Nothing is working." : {
+
+    },
+    "Nothing left that resolves itself" : {
+
+    },
+    "Nothing matches %@" : {
+
+    },
+    "Nothing needs you" : {
+
+    },
+    "Nothing saved yet" : {
+
+    },
+    "Nothing to discard in %@." : {
+
+    },
+    "Nothing to show yet" : {
+
+    },
+    "Nothing to show yet." : {
+
+    },
+    "Nothing waits on you in this checkout." : {
+
+    },
+    "nothing yet" : {
+
+    },
+    "Notifications" : {
+
+    },
+    "Notifications and Live Activities" : {
+
+    },
+    "Notifications reach this iPhone while Ruimte is closed. Approval messages are encrypted for it." : {
+
+    },
+    "Notifications to your phones and tablets." : {
+
+    },
+    "Notify me when" : {
+
+    },
+    "now" : {
+      "comment" : "Time of a notification that just arrived"
+    },
+    "Now" : {
+
+    },
+    "Off" : {
+      "comment" : "An agent account that is turned off\nComputer Use is turned off\nKeep awake setting\nNotifications of a project: none"
+    },
+    "Offline" : {
+
+    },
+    "Offline. Your draft stays on this iPhone." : {
+
+    },
+    "OK" : {
+
+    },
+    "On" : {
+      "comment" : "Computer Use is turned on"
+    },
+    "On screen" : {
+
+    },
+    "On this machine" : {
+
+    },
+    "On which machine?" : {
+
+    },
+    "On, not running" : {
+
+    },
+    "One commit on the target with the message below." : {
+
+    },
+    "Only %@ checks this step" : {
+
+    },
+    "Only on this machine" : {
+
+    },
+    "Only once it is approved on this machine." : {
+
+    },
+    "Only the beginning of this agent's work is kept." : {
+
+    },
+    "Open" : {
+      "comment" : "A conflict that still needs an answer\nA plan step\nOpens a view\nShow the steps of a plan that are still open"
+    },
+    "Open a folder as a project…" : {
+
+    },
+    "Open a folder on %@…" : {
+
+    },
+    "Open a folder on this machine." : {
+
+    },
+    "Open a project on your computer or choose one from Recently closed." : {
+
+    },
+    "Open a pull request" : {
+
+    },
+    "Open as view" : {
+
+    },
+    "Open chat" : {
+
+    },
+    "Open conversation" : {
+
+    },
+    "Open folder" : {
+
+    },
+    "Open fork" : {
+
+    },
+    "Open image" : {
+
+    },
+    "Open in Safari" : {
+
+    },
+    "Open notification settings" : {
+
+    },
+    "Open project" : {
+
+    },
+    "Open Ruimte on the machine to install it there." : {
+
+    },
+    "Open Ruimte on your computer." : {
+
+    },
+    "Open this view in a newer Ruimte. Its content is preserved when you edit this project." : {
+
+    },
+    "Opening" : {
+
+    },
+    "Opening project" : {
+
+    },
+    "Opening the pull request" : {
+
+    },
+    "Opens the chat" : {
+
+    },
+    "Opens the conversation" : {
+
+    },
+    "Opens the terminal" : {
+
+    },
+    "Or sign in with the account your computer uses, and it shows up by itself." : {
+
+    },
+    "Orange" : {
+      "comment" : "Drawing color"
+    },
+    "Other processes" : {
+
+    },
+    "Other project" : {
+
+    },
+    "Outcome" : {
+
+    },
+    "Output" : {
+      "comment" : "Output tokens"
+    },
+    "Output of %@" : {
+
+    },
+    "Packages" : {
+
+    },
+    "Page %@ of %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "Page actions" : {
+
+    },
+    "Pair a machine to see its projects, devices and processes." : {
+
+    },
+    "Paired" : {
+
+    },
+    "Paired with a link · %lld machines" : {
+
+    },
+    "Paired with a link %@ · last seen %@" : {
+      "comment" : "%1$@ is a date, %2$@ a relative time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paired with a link %1$@ · last seen %2$@"
+          }
+        }
+      }
+    },
+    "Pairing succeeded, but this machine needs a public key and secure broker before iOS can connect." : {
+
+    },
+    "Pan" : {
+      "comment" : "Drawing tool"
+    },
+    "Paragraph by paragraph" : {
+
+    },
+    "passed" : {
+      "comment" : "A task that ended successfully"
+    },
+    "Passed" : {
+      "comment" : "A task that ended successfully"
+    },
+    "passed · %@" : {
+      "comment" : "%@ is how long the task ran"
+    },
+    "Passed %@" : {
+      "comment" : "%@ is a relative time, like 5 minutes ago"
+    },
+    "Paste" : {
+
+    },
+    "Paste %lld characters?" : {
+
+    },
+    "Paste a pairing link" : {
+
+    },
+    "Paste into message" : {
+
+    },
+    "Paste this long text" : {
+
+    },
+    "Pasted image" : {
+
+    },
+    "Pasted text" : {
+
+    },
+    "Path on the machine" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Pen" : {
+      "comment" : "Drawing tool"
+    },
+    "Per project" : {
+
+    },
+    "Period" : {
+
+    },
+    "Permissions" : {
+
+    },
+    "Photo %lld" : {
+
+    },
+    "Photos" : {
+
+    },
+    "Pick a chat" : {
+
+    },
+    "Pick a pen or a shape below and draw with a finger or Apple Pencil. Tap the tool again for its options." : {
+
+    },
+    "Pick a side for this file." : {
+
+    },
+    "Pick up your projects and check in on your agents." : {
+
+    },
+    "PID" : {
+
+    },
+    "Pinching is ignored" : {
+
+    },
+    "Pink" : {
+      "comment" : "Drawing color"
+    },
+    "Plan" : {
+
+    },
+    "Plan %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Plan %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Plan actions" : {
+
+    },
+    "Planning" : {
+      "comment" : "Group of icons"
+    },
+    "Platform" : {
+
+    },
+    "Play" : {
+
+    },
+    "Pop" : {
+
+    },
+    "Pop stash" : {
+
+    },
+    "Pop this stash" : {
+
+    },
+    "Port %lld is in use" : {
+
+    },
+    "Position" : {
+
+    },
+    "Preview" : {
+
+    },
+    "Preview %@" : {
+
+    },
+    "Preview of %@" : {
+
+    },
+    "Previous" : {
+
+    },
+    "Prices from LiteLLM, %@" : {
+
+    },
+    "Process" : {
+
+    },
+    "Process monitoring is not available on this platform yet." : {
+
+    },
+    "Process warning" : {
+
+    },
+    "Processed" : {
+      "comment" : "Tokens processed"
+    },
+    "Processes" : {
+
+    },
+    "Project" : {
+
+    },
+    "Project folder" : {
+
+    },
+    "Project menu" : {
+
+    },
+    "Project settings" : {
+
+    },
+    "Projects" : {
+
+    },
+    "Projects and sessions stay on your machines. This app connects to them remotely." : {
+
+    },
+    "Proposed by an agent" : {
+
+    },
+    "Protocol" : {
+
+    },
+    "Publish branch" : {
+
+    },
+    "Publishes the branch first if needed. The pull request opens in your browser." : {
+
+    },
+    "Pull" : {
+
+    },
+    "Pull all" : {
+
+    },
+    "Purple" : {
+      "comment" : "Drawing color"
+    },
+    "Push" : {
+
+    },
+    "Push %lld repositories" : {
+
+    },
+    "Push all" : {
+
+    },
+    "Put something on it to get started." : {
+
+    },
+    "Puts the failed, blocked, warning and info steps in the chat's message" : {
+
+    },
+    "Question %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Question %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "Queue (%lld)" : {
+
+    },
+    "Quick Look" : {
+
+    },
+    "Ran %lld commands" : {
+
+    },
+    "Read %lld files" : {
+
+    },
+    "Read-only preview" : {
+
+    },
+    "Read-only preview. Open it as a view in a project to use it." : {
+
+    },
+    "Reading server.hello" : {
+
+    },
+    "Reading the file" : {
+
+    },
+    "Reading the launches" : {
+
+    },
+    "Reason for declining, optional" : {
+
+    },
+    "Rebase" : {
+      "comment" : "Git merge strategy"
+    },
+    "Rebase onto this branch" : {
+
+    },
+    "Recent checks" : {
+
+    },
+    "Recently closed" : {
+
+    },
+    "Reconnect" : {
+
+    },
+    "Reconnecting" : {
+
+    },
+    "Reconnecting to the machine" : {
+
+    },
+    "Reconnecting to your machine" : {
+
+    },
+    "Rectangle" : {
+      "comment" : "Drawing tool"
+    },
+    "Red" : {
+      "comment" : "Drawing color"
+    },
+    "Redo" : {
+
+    },
+    "Refactor reconnect loop" : {
+
+    },
+    "Refresh devices" : {
+
+    },
+    "Refresh machines" : {
+
+    },
+    "Refuse gestures" : {
+
+    },
+    "Regular expression" : {
+
+    },
+    "Relay" : {
+      "comment" : "A connection through the relay"
+    },
+    "Reload" : {
+
+    },
+    "Reload and drop my edits" : {
+
+    },
+    "Reload conversation" : {
+
+    },
+    "Reload screen" : {
+
+    },
+    "Remote" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove %@" : {
+
+    },
+    "Remove and end chat" : {
+
+    },
+    "Remove and end terminal" : {
+
+    },
+    "Remove anyway" : {
+
+    },
+    "Remove bookmark" : {
+
+    },
+    "Remove conversation %@" : {
+
+    },
+    "Remove from queue" : {
+
+    },
+    "Remove node" : {
+
+    },
+    "Remove the worktree and its branch afterwards" : {
+
+    },
+    "Remove this node from the canvas?" : {
+
+    },
+    "Remove worktree %@?" : {
+
+    },
+    "Remove…" : {
+
+    },
+    "Removed worktree %@ and its branch. \"%@\" brings it back." : {
+      "comment" : "%2$@ is a git command",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed worktree %1$@ and its branch. \"%2$@\" brings it back."
+          }
+        }
+      }
+    },
+    "Removed worktree %@." : {
+
+    },
+    "Removed worktree %@. The branch %@ stays." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Removed worktree %1$@. The branch %2$@ stays."
+          }
+        }
+      }
+    },
+    "Rename" : {
+
+    },
+    "Rename bookmark" : {
+
+    },
+    "Rename branch" : {
+
+    },
+    "Rename chat" : {
+
+    },
+    "Rename node" : {
+
+    },
+    "Rename view" : {
+
+    },
+    "Renamed" : {
+      "comment" : "Git state of a file"
+    },
+    "Renames the branch that is checked out here." : {
+
+    },
+    "Replacement" : {
+      "comment" : "Header of a diff that shows a replaced fragment"
+    },
+    "Reply…" : {
+
+    },
+    "Report" : {
+
+    },
+    "Report a problem" : {
+
+    },
+    "Repositories" : {
+
+    },
+    "Repository" : {
+
+    },
+    "Require relay for this test" : {
+
+    },
+    "Resolve" : {
+
+    },
+    "Resolve the %lld that need no choice" : {
+      "comment" : "%lld counts conflicts"
+    },
+    "Resolve the cherry-pick" : {
+
+    },
+    "Resolve the conflicts" : {
+
+    },
+    "Resolve the merge" : {
+
+    },
+    "Resolve the rebase" : {
+
+    },
+    "Resolve the revert" : {
+
+    },
+    "Resolve with an agent" : {
+
+    },
+    "Restart" : {
+      "comment" : "Button that restarts the app on a machine to install an update"
+    },
+    "Restart Ruimte on %@?" : {
+
+    },
+    "Result" : {
+
+    },
+    "Results of the plan \"%@\":" : {
+
+    },
+    "Resume" : {
+      "comment" : "Button that resumes an agent"
+    },
+    "Resume at reset" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Retry registration" : {
+
+    },
+    "Retry save" : {
+
+    },
+    "Return to the project to choose another view." : {
+
+    },
+    "Revoke" : {
+
+    },
+    "Revoke %@?" : {
+
+    },
+    "Right" : {
+
+    },
+    "Rotate left" : {
+
+    },
+    "Rotate right" : {
+
+    },
+    "Ruimte" : {
+
+    },
+    "Ruimte %@" : {
+
+    },
+    "Ruimte app" : {
+
+    },
+    "Ruimte found this link on the clipboard." : {
+
+    },
+    "Ruimte is not open on this machine. Install the update there." : {
+
+    },
+    "Ruimte reads a link from the clipboard when you open this screen." : {
+
+    },
+    "Ruimte was updated" : {
+
+    },
+    "Run" : {
+
+    },
+    "Run %@? It comes from the project file." : {
+
+    },
+    "Run a command" : {
+
+    },
+    "Run a command from the project file?" : {
+
+    },
+    "Run command" : {
+
+    },
+    "Run settings" : {
+
+    },
+    "Running" : {
+
+    },
+    "Running Android emulators" : {
+
+    },
+    "Running iOS simulators" : {
+
+    },
+    "Running, collapsed" : {
+
+    },
+    "Runs until it is done, such as the tests or a build." : {
+
+    },
+    "Sans" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save current layout" : {
+
+    },
+    "Save layout" : {
+
+    },
+    "Save my version" : {
+
+    },
+    "Save new draft and keep a backup of the old one" : {
+
+    },
+    "Saved layouts" : {
+
+    },
+    "Saved." : {
+
+    },
+    "Saving" : {
+
+    },
+    "Saving a launch approves its command on this machine." : {
+
+    },
+    "Scan again" : {
+
+    },
+    "Scanned %@, %@ files · %@%@" : {
+      "comment" : "A time, a file count, where the prices came from, then an optional currency note",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Scanned %1$@, %2$@ files · %3$@%4$@"
+          }
+        }
+      }
+    },
+    "Screen of the device" : {
+
+    },
+    "Scroll code horizontally" : {
+
+    },
+    "Scroll to latest message" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search branches" : {
+
+    },
+    "Search options" : {
+
+    },
+    "Search projects or machines" : {
+
+    },
+    "Searched %lld patterns" : {
+
+    },
+    "Searched the web %lld queries" : {
+
+    },
+    "Searches the text of every file under %@." : {
+
+    },
+    "Searching" : {
+
+    },
+    "Searching…" : {
+
+    },
+    "Select" : {
+      "comment" : "Drawing tool"
+    },
+    "Select a view" : {
+
+    },
+    "Select all" : {
+
+    },
+    "Selected ICE path" : {
+
+    },
+    "Selection" : {
+
+    },
+    "Selection style" : {
+
+    },
+    "Send" : {
+
+    },
+    "Send a message to try again." : {
+
+    },
+    "Send message" : {
+
+    },
+    "Send now" : {
+
+    },
+    "Send results" : {
+
+    },
+    "Send results to chat" : {
+
+    },
+    "Send to back" : {
+
+    },
+    "Sending…" : {
+
+    },
+    "Sent as soon as the current turn finishes." : {
+
+    },
+    "Sent to" : {
+
+    },
+    "Separator" : {
+
+    },
+    "Series" : {
+
+    },
+    "server.hello" : {
+
+    },
+    "server.hello in %lld ms" : {
+
+    },
+    "Service" : {
+
+    },
+    "Session unavailable" : {
+
+    },
+    "Set by %@" : {
+
+    },
+    "Set by %@ at %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Set by %1$@ at %2$@"
+          }
+        }
+      }
+    },
+    "Settings" : {
+
+    },
+    "Settings of %@" : {
+
+    },
+    "Shape" : {
+      "comment" : "Drawing tool"
+    },
+    "Share" : {
+
+    },
+    "Share PNG" : {
+
+    },
+    "Share SVG" : {
+
+    },
+    "Share with the team" : {
+
+    },
+    "Share with the team in .ruimte/launches.json" : {
+
+    },
+    "Shared launches go in .ruimte/launches.json and into git. Keep secrets out of the environment above." : {
+
+    },
+    "Shared with the team" : {
+
+    },
+    "Shell" : {
+
+    },
+    "Show" : {
+
+    },
+    "Show all" : {
+
+    },
+    "Show all %lld lines" : {
+
+    },
+    "Show all output" : {
+
+    },
+    "Show as a list" : {
+
+    },
+    "Show canvas" : {
+
+    },
+    "Show changes" : {
+
+    },
+    "Show chat" : {
+
+    },
+    "Show hidden and ignored files" : {
+
+    },
+    "Show hidden files" : {
+
+    },
+    "Show less" : {
+
+    },
+    "Show original" : {
+
+    },
+    "Show output" : {
+
+    },
+    "Show process" : {
+
+    },
+    "Show replies" : {
+
+    },
+    "Show result" : {
+
+    },
+    "Show summary" : {
+
+    },
+    "Show task" : {
+
+    },
+    "Shown" : {
+
+    },
+    "Shown on the computer only" : {
+
+    },
+    "Shows its options" : {
+
+    },
+    "Shows the step in the list" : {
+
+    },
+    "Shows this model in the chart" : {
+
+    },
+    "Shows working agents and agents that need you, per machine. Turn on notifications to keep it updated while Ruimte is closed." : {
+
+    },
+    "Shut down" : {
+
+    },
+    "SIGKILL ends process %lld immediately. It cannot save or clean up, so files it was writing may be left incomplete." : {
+
+    },
+    "Sign in" : {
+
+    },
+    "Sign in again" : {
+
+    },
+    "Sign in again to delete your account." : {
+
+    },
+    "Sign in to connect to this machine." : {
+
+    },
+    "Sign out" : {
+
+    },
+    "Sign out on this device?" : {
+
+    },
+    "Sign-in failed" : {
+
+    },
+    "Signed in" : {
+
+    },
+    "Signed in through an account %@ · last seen %@" : {
+      "comment" : "%1$@ is a date, %2$@ a relative time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Signed in through an account %1$@ · last seen %2$@"
+          }
+        }
+      }
+    },
+    "Signed in with %@" : {
+
+    },
+    "Signed in with %@ · %lld machines" : {
+      "comment" : "%@ is the sign-in provider, GitHub or Apple",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Signed in with %1$@ · %2$lld machines"
+          }
+        }
+      }
+    },
+    "Signed out" : {
+
+    },
+    "Signing in" : {
+
+    },
+    "Signing out" : {
+
+    },
+    "Size: %lld" : {
+
+    },
+    "Skills" : {
+
+    },
+    "Skipped" : {
+
+    },
+    "Slot" : {
+
+    },
+    "Snap to the grid" : {
+
+    },
+    "Snooze" : {
+
+    },
+    "Snoozed until %@" : {
+
+    },
+    "Snoozed until %@." : {
+      "comment" : "%@ is a moment, such as tomorrow at 9:00"
+    },
+    "Snoozed views stay quiet until their snooze ends, on every device." : {
+
+    },
+    "Snoozed, %lld" : {
+
+    },
+    "Solid" : {
+
+    },
+    "Some files of this commit were left out." : {
+
+    },
+    "Some models have no known price and are left out of the cost." : {
+
+    },
+    "Some of what changed was left out of this list." : {
+
+    },
+    "Something else…" : {
+
+    },
+    "Sort by" : {
+
+    },
+    "Sort processes" : {
+
+    },
+    "Source" : {
+
+    },
+    "Source on GitHub" : {
+
+    },
+    "Source: Artificial Analysis" : {
+
+    },
+    "Space for AI Engineering." : {
+
+    },
+    "Squash" : {
+      "comment" : "Git merge strategy"
+    },
+    "Stage" : {
+
+    },
+    "Stage all" : {
+
+    },
+    "Stage all and commit" : {
+
+    },
+    "Stage as resolved" : {
+
+    },
+    "Stage file" : {
+
+    },
+    "Stage what belongs in this commit first." : {
+
+    },
+    "Staged" : {
+      "comment" : "Git state of a file"
+    },
+    "Start" : {
+
+    },
+    "Start a conversation" : {
+
+    },
+    "Start chat" : {
+
+    },
+    "Start device" : {
+
+    },
+    "Start it to see its screen." : {
+
+    },
+    "Start over from the latest" : {
+
+    },
+    "starting" : {
+
+    },
+    "Starting the login" : {
+
+    },
+    "Starting the screen of %@" : {
+
+    },
+    "Starting…" : {
+
+    },
+    "Starts the launches checked below together." : {
+
+    },
+    "Stash" : {
+      "comment" : "Button that stashes git changes\nSection of git stashes"
+    },
+    "Stash and retry" : {
+
+    },
+    "Stash and retry moves your own changes in the target checkout into a stash named \"%@\" and runs the merge again." : {
+
+    },
+    "Stash changes" : {
+
+    },
+    "Stashing failed: %@" : {
+
+    },
+    "Status" : {
+
+    },
+    "Stays on this machine: it names a path outside the project." : {
+
+    },
+    "Steps" : {
+
+    },
+    "Sticky note" : {
+      "comment" : "Drawing tool"
+    },
+    "Stop" : {
+
+    },
+    "Stop %@" : {
+
+    },
+    "Stop %@?" : {
+
+    },
+    "Stop all" : {
+
+    },
+    "Stop and launch" : {
+
+    },
+    "Stop device" : {
+
+    },
+    "Stop task" : {
+
+    },
+    "Stop the agents and merge" : {
+
+    },
+    "Stop the turn and its sub-agents?" : {
+
+    },
+    "Stop turn" : {
+
+    },
+    "Stop with sub-agents" : {
+
+    },
+    "Stopped" : {
+
+    },
+    "Stopped %@" : {
+      "comment" : "%@ is a relative time, like 5 minutes ago"
+    },
+    "stopped %@ ago" : {
+      "comment" : "%@ is a duration"
+    },
+    "Stopped after %@" : {
+
+    },
+    "Stopped on a usage limit" : {
+
+    },
+    "Stopped on an error." : {
+
+    },
+    "stopping" : {
+
+    },
+    "Stopping…" : {
+
+    },
+    "Stops the current turn and sends this message." : {
+
+    },
+    "Stops the turn and marks the chat's own sub-agents as stopped." : {
+
+    },
+    "Stops writing" : {
+
+    },
+    "Strategy" : {
+
+    },
+    "Streaming is off" : {
+
+    },
+    "Streaming off" : {
+
+    },
+    "Stroke" : {
+
+    },
+    "Stroke and fill" : {
+
+    },
+    "Sub-agent" : {
+
+    },
+    "Sub-agent finished: %@" : {
+
+    },
+    "Sub-agents" : {
+
+    },
+    "Subfolder" : {
+
+    },
+    "Subheader" : {
+
+    },
+    "Summarize for the original" : {
+
+    },
+    "Summary" : {
+
+    },
+    "Supervised" : {
+
+    },
+    "Swipe home" : {
+      "comment" : "A button of a phone or tablet"
+    },
+    "Switch" : {
+      "comment" : "Button that checks out a git branch"
+    },
+    "Switch branch" : {
+
+    },
+    "Switch to %@?" : {
+
+    },
+    "Switch to this branch" : {
+
+    },
+    "Symbol" : {
+
+    },
+    "Sync" : {
+
+    },
+    "Sync all" : {
+
+    },
+    "System" : {
+      "comment" : "The part of a chat's context taken by the system prompt"
+    },
+    "Tab" : {
+      "comment" : "The Tab key"
+    },
+    "Take %@" : {
+
+    },
+    "Take the uncommitted files along" : {
+
+    },
+    "Taking the message out of the queue was interrupted. A copy is saved in your draft. Check the conversation and queue before sending again." : {
+
+    },
+    "Task" : {
+
+    },
+    "Task: %@" : {
+      "comment" : "%@ is the status of the task"
+    },
+    "Task: %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Task: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Tell the agent what to do instead" : {
+
+    },
+    "Terminal" : {
+
+    },
+    "Terminal actions" : {
+
+    },
+    "Terminal font size" : {
+
+    },
+    "Terminate" : {
+      "comment" : "Button that terminates a process"
+    },
+    "Test plan" : {
+
+    },
+    "Text" : {
+      "comment" : "Drawing tool"
+    },
+    "That chat is no longer in this project." : {
+
+    },
+    "That is not a pairing link. One looks like https://…/pair#code." : {
+
+    },
+    "That is not the name of this account. Type %@ to delete it." : {
+
+    },
+    "The account and the ways to sign in to it." : {
+
+    },
+    "The agent" : {
+
+    },
+    "The agent can act without asking for approval." : {
+
+    },
+    "The agent left every conflict to you." : {
+
+    },
+    "The agent reviews routine actions itself" : {
+
+    },
+    "The agent's proposal" : {
+
+    },
+    "The Android SDK was not found on this machine. Install it to use Android emulators and devices." : {
+
+    },
+    "the base branch" : {
+
+    },
+    "The benchmarks could not be loaded. Check the connection and try again." : {
+
+    },
+    "The branch is removed here; the remote keeps its own." : {
+
+    },
+    "The canvas stays in place" : {
+
+    },
+    "The chat gets the diagram's id and file, and writes it with ruimte-context." : {
+
+    },
+    "The chat works in the project's folder and is listed with its views." : {
+
+    },
+    "The checkout goes back to how it was before the %@. What was resolved so far is lost." : {
+      "comment" : "%@ is a git operation: merge, rebase, cherry-pick or revert"
+    },
+    "The cherry-pick is finished." : {
+
+    },
+    "The cherry-pick was taken back." : {
+
+    },
+    "The CLI never started a conversation here" : {
+
+    },
+    "The clipboard does not contain a valid Ruimte drawing." : {
+
+    },
+    "The commits on top of the target, in a straight line." : {
+
+    },
+    "The connection to the machine dropped, which ended the login." : {
+
+    },
+    "The device" : {
+
+    },
+    "The device key is not ready. Try again." : {
+
+    },
+    "The device shows again once the machine is back." : {
+
+    },
+    "The dock still works while locked." : {
+
+    },
+    "The document renderer could not be loaded." : {
+
+    },
+    "The document renderer is unavailable." : {
+
+    },
+    "The drawing is missing." : {
+
+    },
+    "The file changed on the machine and was read again. Answers that still fit were kept." : {
+
+    },
+    "The file goes back to what it was, and git keeps a stash to undo it with." : {
+
+    },
+    "The file is taken out of the checkout on both sides of the %@." : {
+      "comment" : "%@ is a git operation: merge, rebase, cherry-pick or revert"
+    },
+    "The files of this turn are no longer in the repository, so the worktree starts from HEAD." : {
+
+    },
+    "The files stay as they are now; the agent is told the folder is newer than this turn." : {
+
+    },
+    "The first %lld matches in %lld files. Narrow the search for the rest." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The first %1$lld matches in %2$lld files. Narrow the search for the rest."
+          }
+        }
+      }
+    },
+    "The first letter of the name, on the project's color." : {
+
+    },
+    "The group is a frame around them, with room for its title." : {
+
+    },
+    "The history could not be read." : {
+
+    },
+    "The latest scan failed. These are the last totals." : {
+
+    },
+    "The launches changed elsewhere while you edited them." : {
+
+    },
+    "The launches changed elsewhere. Look again before deleting." : {
+
+    },
+    "The limit resets at %@." : {
+
+    },
+    "The login could not start: %@" : {
+
+    },
+    "The login ended." : {
+
+    },
+    "The machine did not answer server.hello." : {
+
+    },
+    "The machine did not answer." : {
+
+    },
+    "The machine did not report a valid terminal size." : {
+
+    },
+    "The machine did not return a document." : {
+
+    },
+    "The machine did not say where the chat is." : {
+
+    },
+    "The machine did not say where the worktree is." : {
+
+    },
+    "The machine is not answering" : {
+
+    },
+    "The machine only sends images, video, sound and PDFs to this app." : {
+
+    },
+    "The machine refused server.hello." : {
+
+    },
+    "The machine stopped answering." : {
+
+    },
+    "The merge is finished." : {
+
+    },
+    "The merge waits for you" : {
+
+    },
+    "The merge was taken back." : {
+
+    },
+    "The model was overloaded" : {
+
+    },
+    "The new agent gets the last part of the conversation as text and can read the rest of the original itself." : {
+
+    },
+    "The operation is finished." : {
+
+    },
+    "The operation was taken back." : {
+
+    },
+    "The original is no longer in this project" : {
+
+    },
+    "The permissions and models are this iPhone's picks for the chats it starts, and every machine hears of them." : {
+
+    },
+    "The plan did not change" : {
+
+    },
+    "The process" : {
+
+    },
+    "The project could not be opened." : {
+
+    },
+    "The project did not open in time." : {
+
+    },
+    "The pull request is open." : {
+
+    },
+    "The rebase is finished." : {
+
+    },
+    "The rebase was taken back." : {
+
+    },
+    "the remote" : {
+
+    },
+    "The remote branch is replaced by this one. Commits only it has are lost." : {
+
+    },
+    "The rest is in the chat" : {
+
+    },
+    "The revert is finished." : {
+
+    },
+    "The revert was taken back." : {
+
+    },
+    "The same change on both sides" : {
+
+    },
+    "The send was interrupted. Check the conversation before sending again; the machine may already have received it." : {
+
+    },
+    "The sub-agent could not be stopped" : {
+
+    },
+    "The target branch is not checked out anywhere." : {
+
+    },
+    "The task could not be stopped" : {
+
+    },
+    "The text will be sent to the running terminal." : {
+
+    },
+    "The update" : {
+
+    },
+    "The update failed on this machine." : {
+
+    },
+    "The update failed: %@" : {
+
+    },
+    "The worktree starts from HEAD, without uncommitted work." : {
+
+    },
+    "The worktree starts from the files as they were after this turn; the original keeps its own." : {
+
+    },
+    "Theme" : {
+
+    },
+    "There are no benchmarks to show yet." : {
+
+    },
+    "There is no update to install on this machine." : {
+
+    },
+    "There is no worktree left to merge." : {
+
+    },
+    "These permissions apply to the agent's next actions." : {
+
+    },
+    "Thin" : {
+
+    },
+    "Thinking" : {
+      "comment" : "Reasoning effort of a model"
+    },
+    "Thinking..." : {
+
+    },
+    "This account has no name. Type %@ to confirm" : {
+
+    },
+    "This app has no preview for this file." : {
+
+    },
+    "This app opens files up to %@." : {
+
+    },
+    "This branch" : {
+
+    },
+    "This branch has not been merged anywhere. Its commits are only reachable by hash." : {
+
+    },
+    "This cannot be undone. Deleting your Ruimte account removes:" : {
+
+    },
+    "This changed both here and on the machine: %@. Review the other version before saving." : {
+      "comment" : "%@ is the path of the changed field in the project file"
+    },
+    "This chat" : {
+
+    },
+    "This chat has no plan anymore." : {
+
+    },
+    "This chat has no sub-agents to open." : {
+
+    },
+    "This chat has no turn that ended yet, so there is nothing to fork." : {
+
+    },
+    "This chat is no longer in the project" : {
+
+    },
+    "This clears the shared terminal scrollback on every client." : {
+
+    },
+    "This CLI has no conversation that can be forked" : {
+
+    },
+    "this client" : {
+
+    },
+    "This device cannot play this file." : {
+
+    },
+    "This device cannot show this picture." : {
+
+    },
+    "This document could not be rendered." : {
+
+    },
+    "This document is too large to render on this device." : {
+
+    },
+    "This draft was saved by a newer version of Ruimte." : {
+
+    },
+    "This drawing also changed on another device. Your unsaved drawing is kept on this device." : {
+
+    },
+    "This drawing keeps changing on another device. Your changes are saved locally. Tap Retry to sync." : {
+
+    },
+    "This file changed on the machine" : {
+
+    },
+    "This file changed on the machine since you opened it. Your edits are still here." : {
+
+    },
+    "This file is empty." : {
+
+    },
+    "This file is not UTF-8 text. Keep one side whole or drop it." : {
+
+    },
+    "This folder has more entries than the machine can list at once." : {
+
+    },
+    "This folder holds more repositories than the list carries." : {
+
+    },
+    "This folder is not in a git repository, so the fork works in the same folder." : {
+
+    },
+    "This folder is not in a git repository, so the fork works in the same folder. The files stay as they are now; the agent is told the folder is newer than this turn." : {
+
+    },
+    "This image could not be used. Pick a smaller one." : {
+
+    },
+    "This is a submodule. Pick the commit one side points at." : {
+
+    },
+    "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access." : {
+
+    },
+    "This item cannot be attached." : {
+
+    },
+    "this launch" : {
+
+    },
+    "This launch comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it here." : {
+
+    },
+    "This launch was removed" : {
+
+    },
+    "This license text is missing from the app." : {
+
+    },
+    "This machine cannot show this device's screen." : {
+
+    },
+    "This machine is no longer connected to this device." : {
+
+    },
+    "This machine is no longer in your account. Refresh your machines and try again." : {
+
+    },
+    "This machine is not connected." : {
+
+    },
+    "This machine keeps its Ruimte folder inside a git checkout, so it cannot hold chats outside a project." : {
+
+    },
+    "This machine lays its own folder or variables over this launch; they stay as they are." : {
+
+    },
+    "This machine needs a secure broker address." : {
+
+    },
+    "This machine needs an update before you can log in from here. Update Ruimte on it, or log in on the machine." : {
+
+    },
+    "this node" : {
+
+    },
+    "This PDF cannot be opened." : {
+
+    },
+    "This phone reaches the machines it paired with a link." : {
+
+    },
+    "This plan has no steps yet." : {
+
+    },
+    "This project changed elsewhere" : {
+
+    },
+    "This project has no chats yet" : {
+
+    },
+    "This project holds %lld repositories. Changes, fetch, pull and push cover all of them; branches, stashes and pull requests belong to one." : {
+
+    },
+    "This removes the conversation history and stops any active turn on every client." : {
+
+    },
+    "this runtime" : {
+
+    },
+    "This session has ended or was removed." : {
+
+    },
+    "This side holds nothing here." : {
+
+    },
+    "This terminal is no longer available." : {
+
+    },
+    "This text changed on another device. Reopen it to edit the latest version." : {
+
+    },
+    "This text file is %@. Open it on the machine." : {
+
+    },
+    "This turn is no longer in the conversation." : {
+
+    },
+    "This turn is not in the conversation" : {
+
+    },
+    "This view does not point at a device." : {
+
+    },
+    "This view was removed" : {
+
+    },
+    "This worktree is already gone." : {
+
+    },
+    "Thought for %@" : {
+
+    },
+    "Time" : {
+
+    },
+    "Title" : {
+
+    },
+    "Today" : {
+
+    },
+    "Tokens" : {
+
+    },
+    "Tokens per day" : {
+
+    },
+    "Tokens per hour" : {
+
+    },
+    "Tomorrow" : {
+      "comment" : "Snooze until tomorrow morning"
+    },
+    "Too large to show" : {
+
+    },
+    "Too large to watch. Pull to refresh it." : {
+
+    },
+    "Too many tries. Wait a minute, then try again." : {
+
+    },
+    "Took the merge back." : {
+
+    },
+    "Tool" : {
+
+    },
+    "Tool output" : {
+
+    },
+    "Tries again by itself at %@." : {
+
+    },
+    "Try again" : {
+
+    },
+    "Try saving again" : {
+
+    },
+    "Try sending again" : {
+
+    },
+    "Trying to reach the machine again…" : {
+
+    },
+    "Turn %@" : {
+      "comment" : "%@ is the state of the turn as the machine names it"
+    },
+    "Turn on a model in the list to draw it." : {
+
+    },
+    "Turn on notifications" : {
+
+    },
+    "Turned off for this machine. Turn it on in Ruimte's settings on your computer, under Agents." : {
+
+    },
+    "Turning Computer Use on and letting an agent into an app happens on the machine itself." : {
+
+    },
+    "Type %@ to confirm" : {
+
+    },
+    "Unavailable" : {
+      "comment" : "A size the machine did not report"
+    },
+    "Unbind" : {
+
+    },
+    "Unbinding leaves the worktree as it is; new nodes in the group start in the project folder again." : {
+
+    },
+    "Uncached" : {
+      "comment" : "Input tokens read without a cache"
+    },
+    "Unchanged" : {
+
+    },
+    "Undo" : {
+
+    },
+    "Undo the work after this turn" : {
+
+    },
+    "Unfold %@" : {
+
+    },
+    "Unlock" : {
+
+    },
+    "Unlock all" : {
+
+    },
+    "Unlock everything" : {
+
+    },
+    "Unnamed client" : {
+
+    },
+    "Unsnooze" : {
+
+    },
+    "Unstage" : {
+
+    },
+    "Unstage all" : {
+
+    },
+    "Unstage file" : {
+
+    },
+    "Unstaged" : {
+      "comment" : "Git state of a file"
+    },
+    "Unsupported document kind." : {
+
+    },
+    "Untitled" : {
+
+    },
+    "Untitled project" : {
+
+    },
+    "Untracked" : {
+      "comment" : "Git state of a file"
+    },
+    "Up" : {
+      "comment" : "The up arrow key"
+    },
+    "Update" : {
+      "comment" : "Badge on a machine that has a newer version to install\nButton that installs an update"
+    },
+    "Update Ruimte on this machine to abort a worktree merge on the phone." : {
+
+    },
+    "Update Ruimte on this machine to ask a fork for a summary." : {
+
+    },
+    "Update Ruimte on this machine to ask an agent to resolve conflicts." : {
+
+    },
+    "Update Ruimte on this machine to check off plans." : {
+
+    },
+    "Update Ruimte on this machine to continue on another account." : {
+
+    },
+    "Update Ruimte on this machine to delete files on the phone." : {
+
+    },
+    "Update Ruimte on this machine to edit files on the phone." : {
+
+    },
+    "Update Ruimte on this machine to end a snooze." : {
+
+    },
+    "Update Ruimte on this machine to finish a cherry-pick on the phone." : {
+
+    },
+    "Update Ruimte on this machine to finish a merge on the phone." : {
+
+    },
+    "Update Ruimte on this machine to finish a rebase on the phone." : {
+
+    },
+    "Update Ruimte on this machine to finish a revert on the phone." : {
+
+    },
+    "Update Ruimte on this machine to finish this operation on the phone." : {
+
+    },
+    "Update Ruimte on this machine to fork conversations." : {
+
+    },
+    "Update Ruimte on this machine to keep bookmarks." : {
+
+    },
+    "Update Ruimte on this machine to make worktrees on the phone." : {
+
+    },
+    "Update Ruimte on this machine to manage worktrees on the phone." : {
+
+    },
+    "Update Ruimte on this machine to merge worktrees on the phone." : {
+
+    },
+    "Update Ruimte on this machine to remove worktrees on the phone." : {
+
+    },
+    "Update Ruimte on this machine to resolve conflicts on the phone." : {
+
+    },
+    "Update Ruimte on this machine to resume chats at a reset." : {
+
+    },
+    "Update Ruimte on this machine to search in files on the phone." : {
+
+    },
+    "Update Ruimte on this machine to see its processes on the phone." : {
+
+    },
+    "Update Ruimte on this machine to snooze a chat." : {
+
+    },
+    "Update Ruimte on this machine to start chats outside a project." : {
+
+    },
+    "Update Ruimte on this machine to stash on the phone." : {
+
+    },
+    "Update Ruimte on this machine to use launches on the phone." : {
+
+    },
+    "Update Ruimte on this machine to write a commit message on the phone." : {
+
+    },
+    "Updated %lld days ago" : {
+
+    },
+    "Updated %lld hours ago" : {
+
+    },
+    "Updated %lld minutes ago" : {
+
+    },
+    "Updated %lld plans" : {
+
+    },
+    "Updated just now" : {
+
+    },
+    "Updating projects" : {
+
+    },
+    "Upstream" : {
+
+    },
+    "Usage" : {
+
+    },
+    "Usage of %@" : {
+
+    },
+    "Use a pairing link" : {
+
+    },
+    "Use default icon" : {
+
+    },
+    "Use machine version" : {
+
+    },
+    "Use skill" : {
+
+    },
+    "Use the dark appearance" : {
+
+    },
+    "Use the folder's icon" : {
+
+    },
+    "Use the initial" : {
+
+    },
+    "Use the light appearance" : {
+
+    },
+    "Used %lld skills" : {
+
+    },
+    "Value" : {
+
+    },
+    "Version" : {
+
+    },
+    "Version %@" : {
+
+    },
+    "via relay" : {
+
+    },
+    "Via relay" : {
+
+    },
+    "View" : {
+      "comment" : "Heading over the kinds of view to make"
+    },
+    "View changes" : {
+
+    },
+    "View full diff" : {
+
+    },
+    "View icon" : {
+
+    },
+    "View settings" : {
+
+    },
+    "Views" : {
+
+    },
+    "Views, files and commands" : {
+
+    },
+    "Wait for attachments to finish importing." : {
+
+    },
+    "Wait for the turn to end" : {
+
+    },
+    "Waiting for you" : {
+
+    },
+    "Waiting for you in the terminal" : {
+
+    },
+    "Waiting for you." : {
+
+    },
+    "Waiting for your answer" : {
+
+    },
+    "Waiting in the terminal" : {
+
+    },
+    "Waiting on you" : {
+
+    },
+    "Waiting to reconnect" : {
+
+    },
+    "Warning" : {
+
+    },
+    "Web & apps" : {
+      "comment" : "Group of icons"
+    },
+    "What changes and how it was tested" : {
+
+    },
+    "What happened?" : {
+
+    },
+    "What should change?" : {
+
+    },
+    "What should it show?" : {
+
+    },
+    "What this agent does appears here." : {
+
+    },
+    "What's new in %@" : {
+
+    },
+    "When complete" : {
+
+    },
+    "Where" : {
+
+    },
+    "Where every node stands now. A layout with this name is replaced." : {
+
+    },
+    "Which processes" : {
+
+    },
+    "While agents work" : {
+
+    },
+    "Who draws" : {
+
+    },
+    "Who reads %@" : {
+
+    },
+    "Whole word" : {
+
+    },
+    "Width" : {
+
+    },
+    "Without that commit the merge would leave half of the work behind." : {
+
+    },
+    "Woken by %lld tasks" : {
+
+    },
+    "Woken by %lld tasks: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Woken by %1$lld tasks: %2$@"
+          }
+        }
+      }
+    },
+    "Word by word" : {
+
+    },
+    "Work in a git worktree" : {
+
+    },
+    "Work it started still runs." : {
+
+    },
+    "Worked for %@" : {
+
+    },
+    "Working" : {
+
+    },
+    "Working for" : {
+      "comment" : "Followed by a running clock"
+    },
+    "Working on %@" : {
+
+    },
+    "working on it" : {
+      "comment" : "Status of a task an agent gave"
+    },
+    "Working on it." : {
+
+    },
+    "Working tree" : {
+
+    },
+    "Working tree clean" : {
+
+    },
+    "Working, but silent for %@" : {
+      "comment" : "%@ is a duration"
+    },
+    "worktree" : {
+
+    },
+    "Worktree" : {
+
+    },
+    "Worktrees" : {
+
+    },
+    "Wrap code lines" : {
+
+    },
+    "Write with %@" : {
+
+    },
+    "Writing & learning" : {
+      "comment" : "Group of icons"
+    },
+    "Writing the message" : {
+
+    },
+    "Writing..." : {
+
+    },
+    "Wrote %lld files" : {
+
+    },
+    "Yellow" : {
+      "comment" : "Drawing color"
+    },
+    "you" : {
+      "comment" : "Who set a plan step: the person"
+    },
+    "You" : {
+
+    },
+    "You stopped after %@" : {
+
+    },
+    "Your answer" : {
+
+    },
+    "Your changes in %@ are in the stash \"%@\"." : {
+      "comment" : "%1$@ is a folder, %2$@ the name of a git stash",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your changes in %1$@ are in the stash \"%2$@\"."
+          }
+        }
+      }
+    },
+    "Your drawing is saved on this device and will sync when the connection returns. %@" : {
+      "comment" : "%@ is the reason the save failed"
+    },
+    "Your earlier chats" : {
+
+    },
+    "Your edits are kept until you choose. Saving your version replaces conflicting changes on the machine." : {
+
+    },
+    "Your edits are still here. Saving over a file that moved would lose what changed it." : {
+
+    },
+    "Your machines from the account. Each keeps its projects; take one off the account on that machine before it joins another." : {
+
+    },
+    "Zoom" : {
+
+    },
+    "Zoom in" : {
+
+    },
+    "Zoom level" : {
+
+    },
+    "Zoom out" : {
+
+    }
   },
   "version" : "1.0"
 }

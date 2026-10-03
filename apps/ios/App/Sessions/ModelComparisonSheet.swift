@@ -13,10 +13,10 @@ struct ModelComparisonSheet: View {
             Group {
                 switch comparison.load {
                 case .loading:
-                    MobileLoadingRow("Loading benchmarks")
+                    MobileLoadingRow(String(localized: "Loading benchmarks"))
                 case .failed(let unavailable):
                     ContentUnavailableView {
-                        Label("No comparison", lucideIcon: "chart-spline", iconSize: 48)
+                        Label(String(localized: "No comparison"), lucideIcon: "chart-spline", iconSize: 48)
                     } description: {
                         Text(
                             unavailable
@@ -119,8 +119,8 @@ private struct ModelComparisonChart: View {
                 .symbolSize(40)
                 .accessibilityLabel("\(item.model.name), \(ModelComparison.effortLabel(item.point.effort))")
                 .accessibilityValue(
-                    "Intelligence Index \(ModelComparison.intelligence(item.point.intelligence)), "
-                        + "\(ModelComparison.cost(item.point.costPerTask)) per task")
+                    "Intelligence Index \(ModelComparison.intelligence(item.point.intelligence)), \(ModelComparison.cost(item.point.costPerTask)) per task"
+                )
             }
             if let selected = comparison.selected {
                 PointMark(
@@ -135,8 +135,7 @@ private struct ModelComparisonChart: View {
                         Text("\(selected.model.name) · \(ModelComparison.effortLabel(selected.point.effort))")
                             .font(.caption.weight(.semibold))
                         Text(
-                            "\(ModelComparison.intelligence(selected.point.intelligence)) · "
-                                + "\(ModelComparison.cost(selected.point.costPerTask)) per task"
+                            "\(ModelComparison.intelligence(selected.point.intelligence)) · \(ModelComparison.cost(selected.point.costPerTask)) per task"
                         )
                         .font(.caption).foregroundStyle(MobileStyle.muted)
                     }
@@ -248,7 +247,7 @@ private struct ModelComparisonLegend: View {
                     .frame(width: 14, height: 3)
                 Text(model.name).foregroundStyle(shown ? MobileStyle.text : MobileStyle.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(ModelComparison.effortRange(model) ?? "Not measured")
+                Text(ModelComparison.effortRange(model) ?? String(localized: "Not measured"))
                     .font(.caption).foregroundStyle(MobileStyle.muted)
             }
             .font(.subheadline)

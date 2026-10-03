@@ -164,10 +164,11 @@ struct ChatInlineImage: View {
                         }
                 }.buttonStyle(.plain).disabled(previewLoading).accessibilityLabel("Preview \(name)")
             } else if failure {
-                Label("Image preview unavailable", lucideIcon: "image", iconSize: 14).font(.caption).foregroundStyle(
-                    MobileStyle.muted)
+                Label(String(localized: "Image preview unavailable"), lucideIcon: "image", iconSize: 14).font(.caption)
+                    .foregroundStyle(
+                        MobileStyle.muted)
             } else {
-                MobileLoadingRow("Loading image").frame(width: 120, height: 80)
+                MobileLoadingRow(String(localized: "Loading image")).frame(width: 120, height: 80)
             }
         }
         .task(id: resource) {

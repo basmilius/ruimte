@@ -14,9 +14,9 @@ enum ProjectNotifyChoice: String, CaseIterable, Codable, Sendable {
 
     var label: String {
         switch self {
-        case .all: "All"
-        case .needsYou: "Needs you only"
-        case .off: "Off"
+        case .all: String(localized: "All", comment: "Notifications of a project: everything chosen above")
+        case .needsYou: String(localized: "Needs you only")
+        case .off: String(localized: "Off", comment: "Notifications of a project: none")
         }
     }
 

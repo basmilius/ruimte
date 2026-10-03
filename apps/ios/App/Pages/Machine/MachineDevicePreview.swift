@@ -42,7 +42,7 @@ final class MachineDevicePreview {
             opened = true
         } catch {
             if case .server(let code, _) = error as? MachineClientError, code == "device-format-unsupported" {
-                unavailable = "Its picture shows when you open it as a view."
+                unavailable = String(localized: "Its picture shows when you open it as a view.")
             } else {
                 unavailable = error.localizedDescription
             }

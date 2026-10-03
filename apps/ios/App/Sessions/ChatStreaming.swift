@@ -32,9 +32,9 @@ enum ChatStreamingMode: String, CaseIterable {
     /// The desktop's words under Settings, Chats, Show replies.
     var label: String {
         switch self {
-        case .words: "Word by word"
-        case .blocks: "Paragraph by paragraph"
-        case .whole: "When complete"
+        case .words: String(localized: "Word by word")
+        case .blocks: String(localized: "Paragraph by paragraph")
+        case .whole: String(localized: "When complete")
         }
     }
 }
@@ -71,7 +71,7 @@ struct ChatStreamingMessage: View {
         Group {
             if mode == .whole {
                 if streaming {
-                    ChatLiveLabel(text: "Writing...")
+                    ChatLiveLabel(text: String(localized: "Writing..."))
                 } else {
                     MarkdownMessage(text: text).modifier(ChatBlockArrival(enabled: sawWriting))
                 }
@@ -82,10 +82,10 @@ struct ChatStreamingMessage: View {
                         MarkdownMessage(text: chunk).modifier(
                             ChatBlockArrival(enabled: sawWriting && index >= initialBlocks))
                     }
-                    if streaming { ChatLiveLabel(text: "Writing...") }
+                    if streaming { ChatLiveLabel(text: String(localized: "Writing...")) }
                 }
             } else if text.isEmpty && streaming {
-                ChatLiveLabel(text: "Writing...").font(.body)
+                ChatLiveLabel(text: String(localized: "Writing...")).font(.body)
             } else {
                 MarkdownMessage(text: reduceMotion ? text : shown, streaming: streaming || shown != text)
             }

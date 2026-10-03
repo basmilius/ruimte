@@ -179,7 +179,7 @@ private struct ProjectListCell: View {
 
     private func title(_ row: JSONValue) -> String {
         let name = row.text("name", fallback: row.text("title"))
-        return name.isEmpty ? row.text("kind").capitalized : name
+        return name.isEmpty ? NewViewFactory.kindTitle(row.text("kind")) : name
     }
 }
 
@@ -209,7 +209,7 @@ struct ProjectRowMarksView: View {
             } else if marks.needsYou {
                 Circle().fill(MobileStyle.statusNeedsYou).frame(width: 6, height: 6).accessibilityLabel("Needs you")
             } else if marks.working {
-                Spinner(size: 12, label: "Working")
+                Spinner(size: 12, label: String(localized: "Working"))
                     .foregroundStyle(marks.status == .running ? MobileStyle.statusRunning : MobileStyle.faint)
             } else if marks.unseen {
                 Circle().fill(MobileStyle.accent).frame(width: 6, height: 6).accessibilityLabel("New activity")
@@ -229,14 +229,22 @@ private struct ProjectRowMenu: View {
     var body: some View {
         let actions = ProjectListLogic.actions(for: item, isView: isView, status: status)
         Section {
-            if actions.contains(.rename) { Button("Rename", lucideIcon: "pencil") { act(.rename, item) } }
-            if actions.contains(.icon) { Button("Change icon", lucideIcon: "palette") { act(.icon, item) } }
+            if actions.contains(.rename) {
+                Button(String(localized: "Rename"), lucideIcon: "pencil") { act(.rename, item) }
+            }
+            if actions.contains(.icon) {
+                Button(String(localized: "Change icon"), lucideIcon: "palette") { act(.icon, item) }
+            }
             if actions.contains(.settings) {
-                Button("View settings", lucideIcon: "sliders-horizontal") { act(.settings, item) }
+                Button(String(localized: "View settings"), lucideIcon: "sliders-horizontal") { act(.settings, item) }
             }
         }
         Section {
-            if actions.contains(.fork) { Button("Fork", lucideIcon: "git-fork") { act(.fork, item) } }
+            if actions.contains(.fork) {
+                Button(String(localized: "Fork", comment: "Starts a new chat from this one"), lucideIcon: "git-fork") {
+                    act(.fork, item)
+                }
+            }
             if actions.contains(.snooze) {
                 let snoozes = workspace.session.snoozes
                 SnoozeMenu(until: snoozes.until(item.stableID)) {
@@ -245,11 +253,13 @@ private struct ProjectRowMenu: View {
                     snoozes.clear(item.stableID)
                 }
             }
-            if actions.contains(.stopTurn) { Button("Stop turn", lucideIcon: "square") { act(.stopTurn, item) } }
+            if actions.contains(.stopTurn) {
+                Button(String(localized: "Stop turn"), lucideIcon: "square") { act(.stopTurn, item) }
+            }
         }
         if actions.contains(.delete) {
             Section {
-                Button("Delete", lucideIcon: "trash-2", role: .destructive) { act(.delete, item) }
+                Button(String(localized: "Delete"), lucideIcon: "trash-2", role: .destructive) { act(.delete, item) }
             }
         }
     }
@@ -268,7 +278,8 @@ private struct ProjectRowPreview: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 WorkspaceViewIcon(item: item, size: 14)
-                Text(item.text("name", fallback: item.text("title", fallback: item.text("kind").capitalized)))
+                let kind = NewViewFactory.kindTitle(item.text("kind"))
+                Text(item.text("name", fallback: item.text("title", fallback: kind)))
                     .font(.footnote.weight(.semibold)).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 ProjectRowMarksView(marks: marks)
@@ -282,7 +293,7 @@ private struct ProjectRowPreview: View {
                     ForEach(nodes.prefix(6), id: \.stableID) { node in
                         HStack(spacing: 8) {
                             WorkspaceViewIcon(item: node, size: 12).foregroundStyle(MobileStyle.muted)
-                            Text(node.text("title", fallback: node.text("kind").capitalized)).lineLimit(1)
+                            Text(node.text("title", fallback: NewViewFactory.kindTitle(node.text("kind")))).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             ProjectRowMarksView(marks: ProjectListLogic.marks(node: node, sources: sources))
                         }
@@ -304,19 +315,24 @@ private struct ProjectRowPreview: View {
         {
             return request.headline
         }
-        if let until = marks.snoozedUntil { return "Snoozed until \(SnoozeChoice.moment(until, from: .now))." }
+        if let until = marks.snoozedUntil {
+            let moment = SnoozeChoice.moment(until, from: .now)
+            return String(localized: "Snoozed until \(moment).", comment: "%@ is a moment, such as tomorrow at 9:00")
+        }
         switch marks.status {
-        case .needsYou: return "Waiting for you."
-        case .running: return "Working on it."
-        case .error: return "Stopped on an error."
-        case .exited: return "Its process ended."
+        case .needsYou: return String(localized: "Waiting for you.")
+        case .running: return String(localized: "Working on it.")
+        case .error: return String(localized: "Stopped on an error.")
+        case .exited: return String(localized: "Its process ended.")
         default: break
         }
-        if marks.delegating { return "Work it started still runs." }
+        if marks.delegating { return String(localized: "Work it started still runs.") }
         switch item.text("kind") {
-        case "browser": return item.text("url", fallback: "No address yet.")
+        case "browser": return item.text("url", fallback: String(localized: "No address yet."))
         case "file": return item.text("path")
-        default: return marks.draft ? "A message is waiting to be sent." : "Nothing is running."
+        default:
+            return marks.draft
+                ? String(localized: "A message is waiting to be sent.") : String(localized: "Nothing is running.")
         }
     }
 }

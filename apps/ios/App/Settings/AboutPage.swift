@@ -24,20 +24,22 @@ struct AboutPage: View {
             }
             Section {
                 link("ruimte.app", icon: "globe", url: "https://ruimte.app")
-                link("Source on GitHub", icon: "git-branch", url: "https://github.com/basmilius/ruimte")
                 link(
-                    "Report a problem", icon: "message-circle-question-mark",
+                    String(localized: "Source on GitHub"), icon: "git-branch",
+                    url: "https://github.com/basmilius/ruimte")
+                link(
+                    String(localized: "Report a problem"), icon: "message-circle-question-mark",
                     url: "https://github.com/basmilius/ruimte/issues/new")
                 NavigationLink {
                     LicensesPage()
                 } label: {
-                    Label("Licenses", lucideIcon: "file-text")
+                    Label(String(localized: "Licenses"), lucideIcon: "file-text")
                 }
                 if let notes = ReleaseNotes.bundled() {
                     Button {
                         releaseNotes = notes
                     } label: {
-                        Label("What's new in \(notes.version)", lucideIcon: "sparkles")
+                        Label(String(localized: "What's new in \(notes.version)"), lucideIcon: "sparkles")
                     }
                     .foregroundStyle(MobileStyle.text)
                     .accessibilityIdentifier("about.releaseNotes")
@@ -72,9 +74,9 @@ struct AboutPage: View {
 /// The licenses of the packages and scripts the app ships, from the text files in its bundle.
 struct LicensesPage: View {
     private static let files = [
-        ("Lucide-LICENSE", "Lucide icons"),
-        ("package-licenses", "Packages"),
-        ("document-renderer-licenses", "Drawing and diagram renderer"),
+        ("Lucide-LICENSE", String(localized: "Lucide icons")),
+        ("package-licenses", String(localized: "Packages")),
+        ("document-renderer-licenses", String(localized: "Drawing and diagram renderer")),
     ]
 
     var body: some View {
@@ -93,7 +95,7 @@ struct LicensesPage: View {
         Bundle.main.url(forResource: name, withExtension: "txt").flatMap {
             try? String(contentsOf: $0, encoding: .utf8)
         }
-            ?? "This license text is missing from the app."
+            ?? String(localized: "This license text is missing from the app.")
     }
 }
 

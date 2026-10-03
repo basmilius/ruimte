@@ -39,9 +39,10 @@ struct ChatPromptCard: View {
         guard isApproval else { return question.text("question") }
         if let first = changes.first {
             return changes.count == 1
-                ? "Edit \((first.path as NSString).lastPathComponent)" : "Edit \(changes.count) files"
+                ? String(localized: "Edit \((first.path as NSString).lastPathComponent)")
+                : String(localized: "Edit \(changes.count) files")
         }
-        return item.text("toolName") == "Bash" ? "Run command" : item.text("toolName")
+        return item.text("toolName") == "Bash" ? String(localized: "Run command") : item.text("toolName")
     }
 
     var body: some View {
@@ -54,7 +55,8 @@ struct ChatPromptCard: View {
                         .accessibilityLabel("Could not send. \(error)")
                 }
                 if !connected {
-                    Label("Not connected", lucideIcon: "wifi-off").font(.caption).foregroundStyle(MobileStyle.muted)
+                    Label(String(localized: "Not connected"), lucideIcon: "wifi-off").font(.caption).foregroundStyle(
+                        MobileStyle.muted)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -272,7 +274,7 @@ struct ChatPromptCard: View {
                         .accessibilityHint(rule.text("description"))
                 }
                 if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
-                primary("Allow", icon: "check") { approve("allow") }
+                primary(String(localized: "Allow"), icon: "check") { approve("allow") }
             } else {
                 if prompts.draft.index > 0 {
                     Button("Previous") { prompts.draft.index -= 1 }.frame(minHeight: 44).disabled(sending)
@@ -282,7 +284,9 @@ struct ChatPromptCard: View {
                 }
                 if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 primary(
-                    prompts.draft.index == questions.count - 1 ? "Answer" : "Next", icon: "arrow-up",
+                    prompts.draft.index == questions.count - 1
+                        ? String(localized: "Answer") : String(localized: "Next"),
+                    icon: "arrow-up",
                     enabled: !answer.value.isEmpty
                 ) {
                     answerFocused = false
@@ -307,12 +311,12 @@ struct ChatPromptCard: View {
     {
         HStack(spacing: 6) {
             if sending { ProgressView().tint(MobileStyle.onAccent) } else { Image(lucide: icon, size: 16) }
-            Text(sending ? "Sending…" : label)
+            Text(sending ? String(localized: "Sending…") : label)
         }
         .font(.subheadline.weight(.semibold)).padding(.horizontal, 16).frame(minHeight: 44)
         .modifier(
             ChatComposerAction(
-                prompt: true, icon: icon, title: sending ? "Sending…" : label, loading: sending,
+                prompt: true, icon: icon, title: sending ? String(localized: "Sending…") : label, loading: sending,
                 opacity: sending || !connected || !enabled ? 0.5 : 1,
                 enabled: !sending && connected && enabled, perform: action)
         )

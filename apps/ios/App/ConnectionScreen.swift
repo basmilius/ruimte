@@ -30,7 +30,7 @@ struct ConnectionScreen: View {
                             Task { await runtime.signOut() }
                         }
                     } else if runtime.loading {
-                        MobileLoadingRow("Loading sign-in options")
+                        MobileLoadingRow(String(localized: "Loading sign-in options"))
                     } else {
                         ForEach(runtime.providers, id: \.rawValue) { provider in
                             Button(provider == .github ? "Continue with GitHub" : "Continue with Apple") {
@@ -44,10 +44,10 @@ struct ConnectionScreen: View {
                             Button("Retry") { Task { await runtime.start() } }
                         }
                         if runtime.signingIn {
-                            MobileLoadingRow("Signing in")
+                            MobileLoadingRow(String(localized: "Signing in"))
                             Button("Cancel sign-in") { runtime.cancelSignIn() }
                         }
-                        if runtime.signingOut { MobileLoadingRow("Signing out") }
+                        if runtime.signingOut { MobileLoadingRow(String(localized: "Signing out")) }
                     }
                     if let problem = runtime.problem {
                         Text(problem).foregroundStyle(.red).textSelection(.enabled)
@@ -64,8 +64,11 @@ struct ConnectionScreen: View {
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(machine.name)
-                                    Text(machine.brokerUrl == nil ? "No broker configured" : machine.id)
-                                        .font(.caption).foregroundStyle(MobileStyle.muted)
+                                    Text(
+                                        machine.brokerUrl == nil
+                                            ? String(localized: "No broker configured") : machine.id
+                                    )
+                                    .font(.caption).foregroundStyle(MobileStyle.muted)
                                 }
                             }
                             .disabled(machine.brokerUrl == nil)
@@ -77,9 +80,15 @@ struct ConnectionScreen: View {
                         LabeledContent("Status", value: probe.status)
                         LabeledContent(
                             "Selected ICE path",
-                            value: probe.relayed.map { $0 ? "Via relay" : "Direct" } ?? "Not measured")
+                            value: probe.relayed.map {
+                                $0 ? String(localized: "Via relay") : String(localized: "Direct")
+                            } ?? String(localized: "Not measured"))
                         if let elapsed = probe.elapsedMilliseconds {
-                            LabeledContent("Connection to server.hello", value: "\(elapsed) ms").monospacedDigit()
+                            LabeledContent(
+                                "Connection to server.hello",
+                                value: String(localized: "\(elapsed) ms", comment: "Duration in milliseconds")
+                            )
+                            .monospacedDigit()
                         }
                         Button("Reconnect") { probe.reconnect(runtime: runtime) }
                         Button("Disconnect", role: .destructive) { probe.disconnect() }

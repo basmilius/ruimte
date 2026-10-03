@@ -128,23 +128,23 @@ struct GitBranchRow: View {
         .disabled(actions.repositories.busy || isCurrent || elsewhere != nil)
         .contextMenu {
             if !isCurrent && elsewhere == nil {
-                Button("Switch to this branch", lucideIcon: "git-branch") {
+                Button(String(localized: "Switch to this branch"), lucideIcon: "git-branch") {
                     Task { await actions.switchTo(client: client, branch: name) }
                 }
-                Button("Merge into \(actions.checkout?.branch ?? "HEAD")", lucideIcon: "git-merge") {
+                Button(String(localized: "Merge into \(actions.checkout?.branch ?? "HEAD")"), lucideIcon: "git-merge") {
                     Task { await actions.merge(client: client, branch: name) }
                 }
-                Button("Rebase onto this branch", lucideIcon: "git-pull-request-arrow") {
+                Button(String(localized: "Rebase onto this branch"), lucideIcon: "git-pull-request-arrow") {
                     Task { await actions.rebase(client: client, onto: name) }
                 }
             }
             if isCurrent {
-                Button("Rename branch", lucideIcon: "pencil") {
+                Button(String(localized: "Rename branch"), lucideIcon: "pencil") {
                     actions.prompt = .renameBranch(cwd: actions.path, branch: name)
                 }
             }
             if !isCurrent && ref.text("kind") == "local" {
-                Button("Delete branch", lucideIcon: "trash", role: .destructive) {
+                Button(String(localized: "Delete branch"), lucideIcon: "trash", role: .destructive) {
                     actions.confirmation = .deleteBranch(cwd: actions.path, ref: name, force: false)
                 }
             }
@@ -152,15 +152,18 @@ struct GitBranchRow: View {
     }
 
     private func detail(isCurrent: Bool, elsewhere: String?) -> String? {
-        if let elsewhere { return "Checked out in \((elsewhere as NSString).lastPathComponent)" }
+        if let elsewhere { return String(localized: "Checked out in \((elsewhere as NSString).lastPathComponent)") }
         if isCurrent, let checkout = actions.checkout {
             var parts: [String] = []
             if checkout.ahead > 0 { parts.append("↑\(checkout.ahead)") }
             if checkout.behind > 0 { parts.append("↓\(checkout.behind)") }
-            if !checkout.files.isEmpty { parts.append("\(checkout.files.count) changed") }
+            if !checkout.files.isEmpty {
+                parts.append(
+                    String(localized: "\(checkout.files.count) changed", comment: "Number of changed files in a git repository"))
+            }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
-        return ref["isDefault"] == .bool(true) ? "Default branch" : nil
+        return ref["isDefault"] == .bool(true) ? String(localized: "Default branch") : nil
     }
 }
 
@@ -215,7 +218,7 @@ struct GitBranchesPage: View {
     var body: some View {
         MobileList {
             if actions.repositories.busy {
-                GitBusyRow(text: actions.repositories.progress ?? "Working")
+                GitBusyRow(text: actions.repositories.progress ?? String(localized: "Working"))
             }
             if let problem = actions.repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
@@ -225,9 +228,9 @@ struct GitBranchesPage: View {
                 Text("All").tag(true)
             }.pickerStyle(.segmented)
             if actions.refs.loading && actions.refs.refs.isEmpty {
-                MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
+                MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
             } else if shown.isEmpty {
-                ContentUnavailableView("No branches", lucideIcon: "git-branch")
+                ContentUnavailableView(String(localized: "No branches"), lucideIcon: "git-branch")
             }
             ForEach(shown, id: \.stableID) { ref in
                 GitBranchRow(client: client, actions: actions, ref: ref)
@@ -238,7 +241,7 @@ struct GitBranchesPage: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem {
-                Button("New branch", lucideIcon: "plus") { actions.prompt = .createBranch(cwd: actions.path) }
+                Button(String(localized: "New branch"), lucideIcon: "plus") { actions.prompt = .createBranch(cwd: actions.path) }
                     .disabled(actions.repositories.busy)
             }
         }

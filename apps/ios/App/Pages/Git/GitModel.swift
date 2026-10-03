@@ -123,9 +123,9 @@ enum GitSegment: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .changes: "Changes"
-        case .history: "History"
-        case .branches: "Branches"
+        case .changes: String(localized: "Changes")
+        case .history: String(localized: "History")
+        case .branches: String(localized: "Branches")
         }
     }
 }
@@ -138,29 +138,31 @@ extension GitPanel {
 
     /// What the pill at the top of the sheet says: the branch of the one repository, or how many there are.
     static func pillTitle(_ checkouts: [GitCheckout]) -> String {
-        if checkouts.count > 1 { return "\(checkouts.count) repositories" }
+        if checkouts.count > 1 { return String(localized: "\(checkouts.count) repositories") }
         guard let only = checkouts.first else { return "Git" }
         if let branch = only.branch { return branch }
-        return only.status?["detached"] == .bool(true) ? "Detached HEAD" : "No commits"
+        return only.status?["detached"] == .bool(true) ? String(localized: "Detached HEAD") : String(localized: "No commits")
     }
 
     /// The words on the commit bar: how many files go in, which is everything when nothing is staged yet.
     static func commitTitle(_ checkouts: [GitCheckout]) -> String {
         let plan = commitTargets(checkouts)
-        guard !plan.targets.isEmpty else { return "Commit" }
+        guard !plan.targets.isEmpty else { return String(localized: "Commit", comment: "Git commit button") }
         let count = plan.targets.reduce(0) { total, checkout in
             total + (plan.stageAll ? checkout.files.count : checkout.files(state: "staged").count)
         }
-        return count == 1 ? "Commit 1 file" : "Commit \(count) files"
+        return String(localized: "Commit \(count) files")
     }
 
     /// One line per repository on the repositories page: where it stands, in a word or two.
     static func repositoryState(_ checkout: GitCheckout) -> String {
         if let failure = checkout.failure { return failure }
-        guard checkout.isRepository else { return "Not a repository" }
-        if diverged(checkout) { return "diverged" }
+        guard checkout.isRepository else { return String(localized: "Not a repository") }
+        if diverged(checkout) { return String(localized: "diverged", comment: "State of a git branch") }
         let changed = checkout.files.count
-        return changed == 0 ? "clean" : "\(changed) changed"
+        return changed == 0
+            ? String(localized: "clean", comment: "State of a git repository")
+            : String(localized: "\(changed) changed", comment: "Number of changed files in a git repository")
     }
 }
 
@@ -171,7 +173,7 @@ struct GitBusyRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Spinner(size: 14, label: "Working").foregroundStyle(MobileStyle.statusRunning)
+            Spinner(size: 14, label: String(localized: "Working")).foregroundStyle(MobileStyle.statusRunning)
             Text(text).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
             if let cancel {
                 Spacer(minLength: 8)

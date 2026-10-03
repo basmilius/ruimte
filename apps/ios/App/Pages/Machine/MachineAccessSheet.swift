@@ -15,7 +15,7 @@ struct MachineClientAccess: Identifiable, Equatable {
 
     init(_ value: JSONValue) {
         id = value.text("id")
-        label = value.text("label", fallback: "Unnamed client")
+        label = value.text("label", fallback: String(localized: "Unnamed client"))
         origin = value.text("origin", fallback: "link")
         createdAt = Date(timeIntervalSince1970: value.number("createdAt") / 1000)
         lastSeenAt = Date(timeIntervalSince1970: value.number("lastSeenAt") / 1000)
@@ -33,21 +33,30 @@ struct MachineClientAccess: Identifiable, Equatable {
     }
 
     func detail(now: Date = Date()) -> String {
-        let how = origin == "statement" ? "Signed in through an account" : "Paired with a link"
         let since = createdAt.formatted(.dateTime.day().month())
         let seen = lastSeenAt.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
-        return "\(how) \(since) · last seen \(seen)"
+        return origin == "statement"
+            ? String(
+                localized: "Signed in through an account \(since) · last seen \(seen)",
+                comment: "%1$@ is a date, %2$@ a relative time")
+            : String(localized: "Paired with a link \(since) · last seen \(seen)", comment: "%1$@ is a date, %2$@ a relative time")
     }
 
     /// What revoking this one means, which differs per way in.
     var revokeMessage: String {
         if current {
-            return "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access."
+            return String(
+                localized:
+                    "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access."
+            )
         }
         if origin == "statement" {
-            return "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link."
+            return String(
+                localized:
+                    "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link."
+            )
         }
-        return "It loses access the next time it connects. Pairing again needs a new link."
+        return String(localized: "It loses access the next time it connects. Pairing again needs a new link.")
     }
 }
 
@@ -127,7 +136,7 @@ struct MachineAccessSection: View {
     var body: some View {
         Section {
             if access.state.loading {
-                MobileLoadingRow("Loading clients").frame(maxWidth: .infinity)
+                MobileLoadingRow(String(localized: "Loading clients")).frame(maxWidth: .infinity)
             }
             ForEach(access.clients) { client in
                 HStack(spacing: 11) {
@@ -165,7 +174,7 @@ struct MachineAccessSection: View {
         }
         .task { await access.load() }
         .alert(
-            "Revoke \(revoking?.label ?? "this client")?",
+            "Revoke \(revoking?.label ?? String(localized: "this client"))?",
             isPresented: Binding(get: { revoking != nil }, set: { if !$0 { revoking = nil } }),
             presenting: revoking
         ) { client in

@@ -20,17 +20,17 @@ enum GitWorktreeOccupants {
             for node in view.list("nodes") {
                 count(node.text("kind"), node["cwd"]?.stringValue)
                 if node.text("kind") == "group", node["worktree"]?["path"]?.stringValue == path {
-                    groups.append(node.text("title", fallback: "A group"))
+                    groups.append(node.text("title", fallback: String(localized: "A group")))
                 }
             }
         }
-        var parts: [String] = []
-        if chats > 0 { parts.append(chats == 1 ? "1 chat" : "\(chats) chats") }
-        if terminals > 0 { parts.append(terminals == 1 ? "1 terminal" : "\(terminals) terminals") }
-        if !parts.isEmpty {
-            return GitWorktreeText.join(parts) + (chats + terminals == 1 ? " works here" : " work here")
+        switch (chats, terminals) {
+        case (0, 0): break
+        case (_, 0): return String(localized: "\(chats) chats work here")
+        case (0, _): return String(localized: "\(terminals) terminals work here")
+        default: return String(localized: "\(chats) chats and \(terminals) terminals work here")
         }
-        return groups.first.map { "bound to \($0)" }
+        return groups.first.map { String(localized: "bound to \($0)", comment: "%@ is the title of a group") }
     }
 }
 
@@ -60,7 +60,8 @@ enum GitWorktreeBinding {
                     return (path, worktree.text("branch"))
                 }
                 return GitBindableGroup(
-                    viewID: view.stableID, id: node.stableID, title: node.text("title", fallback: "Group"),
+                    viewID: view.stableID, id: node.stableID,
+                    title: node.text("title", fallback: String(localized: "Group")),
                     worktree: bound)
             }
         }
@@ -142,7 +143,7 @@ enum GitWorktreeBinding {
                 ]))
             let worktree = result["worktree"]
             guard let path = worktree?["path"]?.stringValue else {
-                problem = "The machine did not say where the worktree is."
+                problem = String(localized: "The machine did not say where the worktree is.")
                 return false
             }
             let bound = (path: path, branch: worktree?.text("branch", fallback: name) ?? name)
@@ -152,7 +153,8 @@ enum GitWorktreeBinding {
             problem = workspace.problem
             return workspace.problem == nil
         } catch {
-            problem = gitMessage(error, action: "make worktrees on the phone")
+            problem = gitMessage(
+                error, outdated: String(localized: "Update Ruimte on this machine to make worktrees on the phone."))
             return false
         }
     }
@@ -188,7 +190,7 @@ struct GitWorktreeBindSheet: View {
                 if let bound = model.group?.worktree {
                     Section {
                         LabeledContent("Bound to", value: bound.branch)
-                        Button("Unbind", lucideIcon: "unlink", role: .destructive) {
+                        Button(String(localized: "Unbind"), lucideIcon: "unlink", role: .destructive) {
                             Task {
                                 await model.unbind()
                                 if model.problem == nil { dismiss() }
@@ -205,7 +207,7 @@ struct GitWorktreeBindSheet: View {
                         .font(.body.monospaced()).autocorrectionDisabled().textInputAutocapitalization(.never)
                 }
                 if model.busy {
-                    Section { GitBusyRow(text: "Creating checkout") }
+                    Section { GitBusyRow(text: String(localized: "Creating checkout")) }
                 }
                 if let problem = model.problem {
                     Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red) }

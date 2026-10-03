@@ -73,7 +73,9 @@ struct ChatSubagentRow: View {
             HStack(spacing: 8) {
                 Image(lucide: "bot", size: 14)
                 // A node another agent opened with `--task` reads as the task it is.
-                ChatLiveLabel(text: item.text("origin") == "ruimte" ? "Task" : "Sub-agent", active: running)
+                ChatLiveLabel(
+                    text: item.text("origin") == "ruimte" ? String(localized: "Task") : String(localized: "Sub-agent"),
+                    active: running)
                 Spacer(minLength: 4)
                 if running {
                     ChatElapsed(startedAt: item.number("startedAt"))
@@ -81,7 +83,9 @@ struct ChatSubagentRow: View {
                     Text(item.text("status") == "failed" ? "Failed" : "Done")
                         .foregroundStyle(item.text("status") == "failed" ? Color.red : MobileStyle.muted)
                     if let end = item["finishedAt"]?.numberValue {
-                        Text("in \(ChatToolPresentation.elapsed(end - item.number("startedAt")))")
+                        Text(
+                            "in \(ChatToolPresentation.elapsed(end - item.number("startedAt")))",
+                            comment: "How long a finished sub-agent took, after Done or Failed")
                     }
                 }
                 Image(lucide: opens || !expanded ? "chevron-right" : "chevron-down", size: 12)
@@ -90,7 +94,7 @@ struct ChatSubagentRow: View {
             if item["background"]?.boolValue == true || running && !item.text("lastTool").isEmpty {
                 Text(
                     [
-                        item["background"]?.boolValue == true ? "Background" : "",
+                        item["background"]?.boolValue == true ? String(localized: "Background") : "",
                         running ? item.text("lastTool") : "",
                     ].filter { !$0.isEmpty }.joined(separator: " · ")
                 )

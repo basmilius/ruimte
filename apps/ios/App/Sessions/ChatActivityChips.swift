@@ -14,13 +14,13 @@ enum ChatBackground {
     static func label(_ tasks: [JSONValue]) -> String {
         let counts = counts(tasks)
         return [
-            counts.shells > 0 ? counted(counts.shells, "shell") : nil,
-            counts.monitors > 0 ? counted(counts.monitors, "monitor") : nil,
+            counts.shells > 0 ? String(localized: "\(counts.shells) shells") : nil,
+            counts.monitors > 0 ? String(localized: "\(counts.monitors) monitors") : nil,
         ].compactMap { $0 }.joined(separator: " · ")
     }
 
-    static func counted(_ count: Int, _ noun: String) -> String {
-        "\(count) \(noun)\(count == 1 ? "" : "s")"
+    static func subagents(_ count: Int) -> String {
+        String(localized: "\(count) sub-agents")
     }
 }
 
@@ -52,7 +52,7 @@ struct ChatActivityChips: View {
                     Menu {
                         subagentRows(subagents)
                     } label: {
-                        chip(ChatBackground.counted(ChatSubagents.badgeCount(words), "sub-agent")) {
+                        chip(ChatBackground.subagents(ChatSubagents.badgeCount(words))) {
                             SubagentStatusIcon(word: ChatSubagents.summaryWord(words), size: 13)
                         }
                     }
@@ -90,11 +90,11 @@ struct ChatActivityChips: View {
     }
 
     @ViewBuilder private func subagentRows(_ items: [JSONValue]) -> some View {
-        Section(ChatBackground.counted(items.count, "sub-agent")) {
+        Section(ChatBackground.subagents(items.count)) {
             ForEach(items, id: \.stableID) { item in
                 let task = task(of: item)
                 let word = ChatSubagents.statusWord(item, task: task)
-                let detail = [word?.rawValue.capitalized, ChatSubagents.entryTime(item, task: task, now: .now)]
+                let detail = [word?.title, ChatSubagents.entryTime(item, task: task, now: .now)]
                     .compactMap { $0 }.joined(separator: " · ")
                 Button {
                     model.presentation.conversationRequest = SubagentCrumb(item)
@@ -113,7 +113,7 @@ struct ChatActivityChips: View {
             ForEach(items, id: \.stableID) { item in stopRow(item) }
         }
         Section {
-            Button("All sub-agents", lucideIcon: "bot", action: openList)
+            Button(String(localized: "All sub-agents"), lucideIcon: "bot", action: openList)
         }
     }
 
@@ -121,12 +121,12 @@ struct ChatActivityChips: View {
         let title = ChatSubagents.title(item)
         switch ChatSubagents.stop(item, turnRunning: model.working) {
         case .task:
-            Button("Stop \(title)", lucideIcon: "square") {
+            Button(String(localized: "Stop \(title)"), lucideIcon: "square") {
                 Task { ending = await model.stopTaskQuestion(item) { await stop(item) } }
             }
         case .mark:
             // No CLI stops one sub-agent on its own, so it may keep working until the chat's process ends.
-            Button("Mark \(title) as stopped", lucideIcon: "square") { Task { await stop(item) } }
+            Button(String(localized: "Mark \(title) as stopped"), lucideIcon: "square") { Task { await stop(item) } }
         case nil:
             EmptyView()
         }
@@ -137,7 +137,7 @@ struct ChatActivityChips: View {
             try await model.stopSubagent(item)
         } catch {
             failure = ChatActivityFailure(
-                title: "The sub-agent could not be stopped", message: error.localizedDescription)
+                title: String(localized: "The sub-agent could not be stopped"), message: error.localizedDescription)
         }
     }
 
@@ -146,7 +146,7 @@ struct ChatActivityChips: View {
             ForEach(tasks, id: \.stableID) { task in
                 let command = task["command"]?.stringValue ?? ""
                 let description = task.text("description")
-                let title = [description, command].first { !$0.isEmpty } ?? task.text("kind").capitalized
+                let title = [description, command].first { !$0.isEmpty } ?? Self.kindTitle(task.text("kind"))
                 let startedAt = task.number("startedAt")
                 let elapsed = Date.now.timeIntervalSince1970 * 1000 - startedAt
                 let detail = [
@@ -174,8 +174,16 @@ struct ChatActivityChips: View {
                     "chat.stopTask", payload: model.target(["taskId": task["id"] ?? .null]))
             } catch {
                 failure = ChatActivityFailure(
-                    title: "The task could not be stopped", message: error.localizedDescription)
+                    title: String(localized: "The task could not be stopped"), message: error.localizedDescription)
             }
+        }
+    }
+
+    private static func kindTitle(_ kind: String) -> String {
+        switch kind {
+        case "shell": String(localized: "Shell")
+        case "monitor": String(localized: "Monitor")
+        default: kind.capitalized
         }
     }
 

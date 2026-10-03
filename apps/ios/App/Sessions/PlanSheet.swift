@@ -33,13 +33,13 @@ struct PlanSheet: View {
         plan?.activeSteps.map { PlanActivityHold.Step(id: $0.id, title: $0.title) } ?? []
     }
     private var agentName: String {
-        model.providers.first { $0["kind"] == model.info["provider"] }?.text("name") ?? "The agent"
+        model.providers.first { $0["kind"] == model.info["provider"] }?.text("name") ?? String(localized: "The agent")
     }
 
     /// "Plan 2 of 3", counted from the oldest as the desktop picker does; empty for a chat with one plan.
     private var planPosition: String {
         guard plans.count > 1, let plan, let index = plans.firstIndex(where: { $0.id == plan.id }) else { return "" }
-        return "Plan \(plans.count - index) of \(plans.count)"
+        return String(localized: "Plan \(plans.count - index) of \(plans.count)")
     }
 
     var body: some View {
@@ -49,7 +49,8 @@ struct PlanSheet: View {
                     list(plan)
                 } else {
                     ContentUnavailableView(
-                        "No plan", lucideIcon: "check-check", description: Text("This chat has no plan anymore."))
+                        String(localized: "No plan"), lucideIcon: "check-check",
+                        description: Text("This chat has no plan anymore."))
                 }
             }
             .modifier(MobilePageSurface())
@@ -76,7 +77,12 @@ struct PlanSheet: View {
             ) { request in
                 TextField("Note", text: $noteText, axis: .vertical)
                 Button("Cancel", role: .cancel) { noteRequest = nil }
-                Button(request.state.map { "Mark as \(plan?.word(for: $0).lowercased() ?? $0.rawValue)" } ?? "Save") {
+                Button(
+                    request.state.map {
+                        String(localized: "Mark as \(plan?.word(for: $0).lowercased() ?? $0.rawValue)")
+                    }
+                        ?? String(localized: "Save")
+                ) {
                     saveNote(request)
                 }
             } message: { request in
@@ -193,15 +199,19 @@ struct PlanSheet: View {
             .pickerStyle(.inline)
             Section {
                 Toggle("Collapse done", isOn: $collapseDone)
-                Button("Expand all", lucideIcon: "chevrons-up-down") {
+                Button(String(localized: "Expand all"), lucideIcon: "chevrons-up-down") {
                     collapsed = []
                     // Collapse done would keep finished groups folded, and all has to mean all.
                     collapseDone = false
                 }
-                Button("Collapse all", lucideIcon: "chevrons-down-up") { collapsed = plan.foldableIDs }
+                Button(String(localized: "Collapse all"), lucideIcon: "chevrons-down-up") {
+                    collapsed = plan.foldableIDs
+                }
             }
-            Button("Copy as Markdown", lucideIcon: "copy") { UIPasteboard.general.string = plan.markdown }
-            Button("Send results to chat", lucideIcon: "send") { sendResults(plan) }
+            Button(String(localized: "Copy as Markdown"), lucideIcon: "copy") {
+                UIPasteboard.general.string = plan.markdown
+            }
+            Button(String(localized: "Send results to chat"), lucideIcon: "send") { sendResults(plan) }
                 .disabled(plan.resultsText == nil)
         } label: {
             Image(lucide: "circle-ellipsis")
@@ -212,8 +222,8 @@ struct PlanSheet: View {
     /// Back to the chat, or back with the steps that did not pass in its draft, which the person sends.
     private func actionBar(_ plan: PlanDocument) -> some View {
         HStack(spacing: 8) {
-            PlanBarButton(title: "Show chat") { dismiss() }
-            PlanBarButton(title: "Send results") { sendResults(plan) }
+            PlanBarButton(title: String(localized: "Show chat")) { dismiss() }
+            PlanBarButton(title: String(localized: "Send results")) { sendResults(plan) }
                 .disabled(plan.resultsText == nil)
                 .accessibilityHint("Puts the failed, blocked, warning and info steps in the chat's message")
         }
@@ -228,9 +238,9 @@ struct PlanSheet: View {
 
     private var emptyText: String {
         switch filter {
-        case .issues: "No issues."
-        case .open: "Nothing is open."
-        case .all: "This plan has no steps yet."
+        case .issues: String(localized: "No issues.")
+        case .open: String(localized: "Nothing is open.")
+        case .all: String(localized: "This plan has no steps yet.")
         }
     }
 
@@ -257,7 +267,8 @@ struct PlanSheet: View {
             do {
                 try await store.apply(chatID: chatID, planID: plan.id, ops: ops)
             } catch {
-                failure = ChatForking.message(for: error, action: "check off plans")
+                failure = ChatForking.message(
+                    for: error, update: String(localized: "Update Ruimte on this machine to check off plans."))
             }
         }
     }
@@ -366,7 +377,8 @@ private struct PlanHeader: View {
 
     /// The kind and the counters on one line, spaced apart like the desktop header rather than joined by words.
     private var counters: String {
-        ([plan.kind == .test ? "Test plan" : "Steps"] + plan.progressSummary.components(separatedBy: ", "))
+        ([plan.kind == .test ? String(localized: "Test plan") : String(localized: "Steps")]
+            + plan.progressSummary.components(separatedBy: ", "))
             .joined(separator: "   ")
     }
 }
@@ -525,16 +537,20 @@ private struct PlanStepRow: View {
         .listRowBackground(rowBackground)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if plan.kind == .test && maySet {
-                Button("Passed", lucideIcon: "circle-check") { context.set(step, .done) }.tint(MobileStyle.positive)
-                Button("Info", lucideIcon: "info") { context.set(step, .info) }.tint(MobileStyle.muted)
+                Button(String(localized: "Passed"), lucideIcon: "circle-check") { context.set(step, .done) }.tint(
+                    MobileStyle.positive)
+                Button(String(localized: "Info"), lucideIcon: "info") { context.set(step, .info) }.tint(
+                    MobileStyle.muted)
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             if plan.kind == .test && maySet {
-                Button("Failed", lucideIcon: "circle-x") { context.set(step, .failed) }.tint(MobileStyle.statusError)
-                Button("Warning", lucideIcon: "triangle-alert") { context.set(step, .warning) }
+                Button(String(localized: "Failed"), lucideIcon: "circle-x") { context.set(step, .failed) }.tint(
+                    MobileStyle.statusError)
+                Button(String(localized: "Warning"), lucideIcon: "triangle-alert") { context.set(step, .warning) }
                     .tint(MobileStyle.statusNeedsYou)
-                Button("Skipped", lucideIcon: "circle-minus") { context.set(step, .skipped) }.tint(.gray)
+                Button(String(localized: "Skipped"), lucideIcon: "circle-minus") { context.set(step, .skipped) }.tint(
+                    .gray)
             }
         }
         .contextMenu { menu }
@@ -589,7 +605,9 @@ private struct PlanStepRow: View {
         } else {
             HStack(spacing: 4) {
                 if step.by == "person", step.state != .open {
-                    Text(["you", time].compactMap { $0 }.joined(separator: " · "))
+                    Text(
+                        [String(localized: "you", comment: "Who set a plan step: the person"), time].compactMap { $0 }
+                            .joined(separator: " · "))
                 }
                 if locked { Image(lucide: "lock", size: smallIcon) }
             }
@@ -606,12 +624,14 @@ private struct PlanStepRow: View {
                 statusPicker
             }
         }
-        Button(step.note == nil ? "Add note" : "Edit note", lucideIcon: "sticky-note") { context.note(step) }
-            .disabled(context.busy.contains(step.id))
+        Button(
+            step.note == nil ? String(localized: "Add note") : String(localized: "Edit note"), lucideIcon: "sticky-note"
+        ) { context.note(step) }
+        .disabled(context.busy.contains(step.id))
         if plan.mayUnlock(step) {
-            Button("Unlock", lucideIcon: "lock-open") { context.unlock(step) }
+            Button(String(localized: "Unlock"), lucideIcon: "lock-open") { context.unlock(step) }
         }
-        Button("Copy", lucideIcon: "copy") { UIPasteboard.general.string = plan.markdown(for: step) }
+        Button(String(localized: "Copy"), lucideIcon: "copy") { UIPasteboard.general.string = plan.markdown(for: step) }
     }
 
     @ViewBuilder private var statusPicker: some View {
@@ -628,15 +648,16 @@ private struct PlanStepRow: View {
     /// Who set the step and whether only the agent checks it, which the desktop keeps in the lock's tooltip.
     private var menuInfo: String? {
         var lines: [String] = []
-        if locked { lines.append("Only \(context.agentName) checks this step") }
+        if locked { lines.append(String(localized: "Only \(context.agentName) checks this step")) }
         if let setBy { lines.append(setBy) }
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     private var setBy: String? {
         guard let by = step.by, step.state != .open else { return nil }
-        let who = by == "person" ? "you" : context.agentName
-        return "Set by \(who)" + (time.map { " at \($0)" } ?? "")
+        let who =
+            by == "person" ? String(localized: "you", comment: "Who set a plan step: the person") : context.agentName
+        return time.map { String(localized: "Set by \(who) at \($0)") } ?? String(localized: "Set by \(who)")
     }
 
     private var time: String? {
@@ -648,12 +669,13 @@ private struct PlanStepRow: View {
     private var accessibilityValue: String {
         var parts: [String] = []
         if step.isParent {
-            parts.append("\(step.progress.finished) of \(step.progress.total)")
-            parts.append(collapsed ? "Collapsed" : "Expanded")
+            parts.append(String(localized: "\(step.progress.finished) of \(step.progress.total)"))
+            parts.append(collapsed ? String(localized: "Collapsed") : String(localized: "Expanded"))
         } else {
-            parts.append(stopped ? "\(context.agentName) stopped here" : plan.word(for: step.state))
+            parts.append(
+                stopped ? String(localized: "\(context.agentName) stopped here") : plan.word(for: step.state))
         }
-        if let note = step.note, !note.isEmpty { parts.append("Note: \(note)") }
+        if let note = step.note, !note.isEmpty { parts.append(String(localized: "Note: \(note)")) }
         if let menuInfo { parts.append(menuInfo.replacingOccurrences(of: "\n", with: ", ")) }
         return parts.joined(separator: ", ")
     }

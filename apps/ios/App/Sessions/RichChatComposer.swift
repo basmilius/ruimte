@@ -8,7 +8,7 @@ struct RichChatComposer: UIViewRepresentable {
     let mentions: [String]
     let skills: [String]
     @Binding var focused: Bool
-    var placeholder = "Message the agent…"
+    var placeholder = String(localized: "Message the agent…")
     var maximumHeight: CGFloat = 144
     var importItems: (([NSItemProvider]) -> Void)?
     var pasteLongText: ((String) -> Void)?
@@ -32,7 +32,7 @@ struct RichChatComposer: UIViewRepresentable {
         view.alwaysBounceVertical = false
         view.contentInsetAdjustmentBehavior = .never
         view.delegate = context.coordinator
-        view.accessibilityLabel = "Message the agent"
+        view.accessibilityLabel = String(localized: "Message the agent")
         view.accessibilityIdentifier = "chat.composer"
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view

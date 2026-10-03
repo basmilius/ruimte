@@ -37,18 +37,18 @@ struct ChatQueueSheet: View {
 
     private func card(_ message: JSONValue) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(message.text("text", fallback: "Attachments")).font(.body).lineLimit(6)
+            Text(message.text("text", fallback: String(localized: "Attachments"))).font(.body).lineLimit(6)
             let attachments = message.list("attachments").count
             if attachments > 0 {
-                Text(ChatBackground.counted(attachments, "attachment")).font(.caption)
+                Text("\(attachments) attachments").font(.caption)
                     .foregroundStyle(MobileStyle.muted)
             }
             HStack(spacing: 8) {
-                Button("Send now", lucideIcon: "zap") {
+                Button(String(localized: "Send now"), lucideIcon: "zap") {
                     Task { await model.queueAction(message, sendNow: true) }
                 }
                 .accessibilityHint("Stops the current turn and sends this message.")
-                Button("Edit", lucideIcon: "pencil") {
+                Button(String(localized: "Edit"), lucideIcon: "pencil") {
                     Task {
                         await model.queueAction(message, edit: true)
                         if model.queueProblem == nil {

@@ -28,13 +28,13 @@ struct GitWorktreesPage: View {
             }
             if state.unsupported {
                 ContentUnavailableView(
-                    "Needs an update", lucideIcon: "circle-alert",
+                    String(localized: "Needs an update"), lucideIcon: "circle-alert",
                     description: Text("Update Ruimte on this machine to manage worktrees on the phone."))
             } else if !state.loaded {
-                MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
+                MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
             } else if state.worktrees.isEmpty {
                 ContentUnavailableView(
-                    "No worktrees", lucideIcon: "git-branch",
+                    String(localized: "No worktrees"), lucideIcon: "git-branch",
                     description: Text("A worktree is a second checkout of this repository on a branch of its own."))
             } else {
                 Section {
@@ -54,7 +54,7 @@ struct GitWorktreesPage: View {
         }
         .toolbar {
             ToolbarItem {
-                Button("New worktree", lucideIcon: "plus") { state.creating = true }
+                Button(String(localized: "New worktree"), lucideIcon: "plus") { state.creating = true }
                     .disabled(state.busy || state.unsupported)
             }
         }
@@ -74,7 +74,7 @@ struct GitWorktreeStatusRows: View {
     var body: some View {
         if state.busy {
             GitBusyRow(
-                text: state.progress ?? "Working",
+                text: state.progress ?? String(localized: "Working"),
                 cancel: state.mergeAction == nil ? nil : { Task { await state.cancelMerge(client: client) } })
         }
         if let problem = state.problem, !state.unsupported {
@@ -139,12 +139,13 @@ struct GitWorktreeRow: View {
         }
         .contextMenu {
             if !worktree.missing {
-                Button("View changes", lucideIcon: "eye") { onDiff(diffTarget) }
+                Button(String(localized: "View changes"), lucideIcon: "eye") { onDiff(diffTarget) }
                 Button(
-                    worktree.fromBranch.map { "Merge into \($0)…" } ?? "Merge…", lucideIcon: "git-merge"
+                    worktree.fromBranch.map { String(localized: "Merge into \($0)…") } ?? String(localized: "Merge…"),
+                    lucideIcon: "git-merge"
                 ) { Task { await state.ask(client: client, merge: worktree) } }
             }
-            Button("Remove…", lucideIcon: "trash", role: .destructive) {
+            Button(String(localized: "Remove…"), lucideIcon: "trash", role: .destructive) {
                 Task { await state.ask(client: client, remove: worktree) }
             }
         }
@@ -170,9 +171,9 @@ struct GitWorktreeOutcomeSection: View {
                 NavigationLink {
                     GitConflictsPage(client: client, session: repositories.conflicts.session(cwd))
                 } label: {
-                    Label("Resolve", lucideIcon: "file-exclamation-point")
+                    Label(String(localized: "Resolve"), lucideIcon: "file-exclamation-point")
                 }
-                Button("Abort merge", lucideIcon: "ban", role: .destructive) { state.confirmAbort = cwd }
+                Button(String(localized: "Abort merge"), lucideIcon: "ban", role: .destructive) { state.confirmAbort = cwd }
                     .disabled(state.busy)
             } header: {
                 Text("The merge waits for you")
@@ -186,7 +187,7 @@ struct GitWorktreeOutcomeSection: View {
                 if code == "target-not-checked-out", let branch = GitWorktreeText.checkedOutBranch(message),
                     branch != request.worktree.branch
                 {
-                    Button("Merge into \(branch) instead", lucideIcon: "git-merge") {
+                    Button(String(localized: "Merge into \(branch) instead"), lucideIcon: "git-merge") {
                         var retry = request
                         retry.into = branch
                         Task { await state.merge(client: client, request: retry) }
@@ -196,12 +197,12 @@ struct GitWorktreeOutcomeSection: View {
                     Text(
                         "Stash and retry moves your own changes in the target checkout into a stash named \"\(GitWorktreeText.stashMessage(request.worktree.branch))\" and runs the merge again."
                     ).font(.caption).foregroundStyle(MobileStyle.muted)
-                    Button("Stash and retry", lucideIcon: "archive") {
+                    Button(String(localized: "Stash and retry"), lucideIcon: "archive") {
                         Task { await state.stashAndRetry(client: client, request: request) }
                     }.disabled(state.busy)
                 }
                 if code == "agent-working" {
-                    Button("Stop the agents and merge", lucideIcon: "git-merge") {
+                    Button(String(localized: "Stop the agents and merge"), lucideIcon: "git-merge") {
                         var retry = request
                         retry.stopAgent = true
                         Task { await state.merge(client: client, request: retry) }
@@ -290,7 +291,7 @@ struct GitWorktreeMergeSheet: View {
                     Text("It holds \(GitWorktreeText.mergeContents(worktree)).")
                 } footer: {
                     Text(
-                        "It is merged in the checkout that has \(worktree.fromBranch ?? "its target branch") out. Nothing is stashed and no branch is moved behind a working tree."
+                        "It is merged in the checkout that has \(worktree.fromBranch ?? String(localized: "its target branch")) out. Nothing is stashed and no branch is moved behind a working tree."
                     )
                 }
                 if worktree.hasLooseWork {
@@ -323,7 +324,9 @@ struct GitWorktreeMergeSheet: View {
                     Toggle("Remove the worktree and its branch afterwards", isOn: $remove)
                 }
             }
-            .navigationTitle(worktree.fromBranch.map { "Merge \(worktree.branch) into \($0)" } ?? "Merge \(worktree.branch)")
+            .navigationTitle(
+                worktree.fromBranch.map { String(localized: "Merge \(worktree.branch) into \($0)") }
+                    ?? String(localized: "Merge \(worktree.branch)"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }

@@ -28,13 +28,14 @@ struct ProjectViewPage: View {
                         workspace: workspace, item: item, showsProject: true, projectName: preview?.projectName)
                 } else if workspace.ready && arrived == false {
                     ContentUnavailableView(
-                        "This view was removed", lucideIcon: "square-x",
+                        String(localized: "This view was removed"), lucideIcon: "square-x",
                         description: Text("It is no longer in \(workspace.title)."))
                 } else if let problem = workspace.problem
-                    ?? (workspace.session.failedAttempts >= 3 ? "Could not connect to your machine." : nil)
+                    ?? (workspace.session.failedAttempts >= 3
+                        ? String(localized: "Could not connect to your machine.") : nil)
                 {
                     ContentUnavailableView {
-                        Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)
+                        Label(String(localized: "Could not open"), lucideIcon: "triangle-alert", iconSize: 48)
                     } description: {
                         Text(problem)
                     } actions: {
@@ -48,11 +49,11 @@ struct ProjectViewPage: View {
                         }
                     }
                 } else {
-                    MobileLoadingRow("Opening")
+                    MobileLoadingRow(String(localized: "Opening"))
                 }
             } else {
                 ContentUnavailableView(
-                    "Machine unavailable", lucideIcon: "triangle-alert",
+                    String(localized: "Machine unavailable"), lucideIcon: "triangle-alert",
                     description: Text("This machine is no longer connected to this device."))
             }
         }
@@ -87,7 +88,7 @@ struct NotificationRoutePage: View {
             } else if searched {
                 NotificationSessionPage(runtime: runtime, destination: destination)
             } else {
-                MobileLoadingRow("Finding the conversation").modifier(MobilePageSurface())
+                MobileLoadingRow(String(localized: "Finding the conversation")).modifier(MobilePageSurface())
             }
         }
         .task {

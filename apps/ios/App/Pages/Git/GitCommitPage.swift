@@ -30,7 +30,7 @@ import SwiftUI
         switch provider {
         case "claude": "Claude"
         case "codex": "Codex"
-        default: provider ?? "an agent"
+        default: provider ?? String(localized: "an agent")
         }
     }
 
@@ -74,7 +74,10 @@ import SwiftUI
         } catch is CancellationError {
         } catch {
             if gitRefusalCode(error) != "cancelled" {
-                repositories.problem = gitMessage(error, action: "write a commit message on the phone")
+                repositories.problem = gitMessage(
+                    error,
+                    outdated: String(localized: "Update Ruimte on this machine to write a commit message on the phone.")
+                )
             }
         }
     }
@@ -87,9 +90,14 @@ import SwiftUI
         guard ok else { return nil }
         subject = ""
         body = ""
-        let pushed = push ? " and pushed" : ""
-        return targets.count == 1
-            ? "Committed\(pushed) in \(targets[0].label)." : "Committed\(pushed) in \(targets.count) repositories."
+        if targets.count == 1 {
+            let label = targets[0].label
+            return push
+                ? String(localized: "Committed and pushed in \(label).") : String(localized: "Committed in \(label).")
+        }
+        return push
+            ? String(localized: "Committed and pushed in \(targets.count) repositories.")
+            : String(localized: "Committed in \(targets.count) repositories.")
     }
 }
 
@@ -107,7 +115,7 @@ struct GitCommitPage: View {
         @Bindable var model = model
         MobileList {
             if repositories.busy {
-                GitBusyRow(text: repositories.step ?? repositories.progress ?? "Committing")
+                GitBusyRow(text: repositories.step ?? repositories.progress ?? String(localized: "Committing"))
             }
             if let problem = repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
@@ -128,7 +136,7 @@ struct GitCommitPage: View {
                     } label: {
                         HStack(spacing: 8) {
                             if model.writing {
-                                Spinner(size: 14, label: "Writing the message")
+                                Spinner(size: 14, label: String(localized: "Writing the message"))
                                 Text("Writing the message")
                             } else {
                                 Image(lucide: "sparkles", size: 16)
@@ -163,9 +171,14 @@ struct GitCommitPage: View {
         .navigationDestination(item: $diff) { target in GitDiffPage(client: client, target: target) }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             GitBottomBar {
-                GitBarButton(title: "Commit and push") { Task { await commit(push: true) } }
+                GitBarButton(title: String(localized: "Commit and push")) { Task { await commit(push: true) } }
                     .disabled(!model.ready)
-                GitBarButton(title: model.plan.stageAll ? "Stage all and commit" : "Commit", prominent: false) {
+                GitBarButton(
+                    title: model.plan.stageAll
+                        ? String(localized: "Stage all and commit")
+                        : String(localized: "Commit", comment: "Git commit button"),
+                    prominent: false
+                ) {
                     Task { await commit(push: false) }
                 }.disabled(!model.ready)
             }
@@ -174,8 +187,11 @@ struct GitCommitPage: View {
     }
 
     private var title: String {
-        guard repositories.named, !model.plan.targets.isEmpty else { return "Commit" }
-        return "Commit in " + model.plan.targets.map(\.label).joined(separator: ", ")
+        guard repositories.named, !model.plan.targets.isEmpty else {
+            return String(localized: "Commit", comment: "Git commit button")
+        }
+        let labels = model.plan.targets.map(\.label).joined(separator: ", ")
+        return String(localized: "Commit in \(labels)", comment: "%@ lists repositories")
     }
 
     private func fileRow(_ checkout: GitCheckout, _ file: JSONValue) -> some View {

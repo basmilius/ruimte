@@ -103,7 +103,8 @@ struct FileGrepGroup: Identifiable, Equatable {
             answered = needle
             problem =
                 gitRefusalCode(error) == "unknown-request"
-                ? "Update Ruimte on this machine to search in files on the phone." : error.localizedDescription
+                ? String(localized: "Update Ruimte on this machine to search in files on the phone.")
+                : error.localizedDescription
         }
     }
 }
@@ -124,7 +125,7 @@ struct FileGrepPage: View {
         MobileList {
             if model.searching {
                 HStack(spacing: 10) {
-                    Spinner(size: 14, label: "Searching").foregroundStyle(MobileStyle.statusRunning)
+                    Spinner(size: 14, label: String(localized: "Searching")).foregroundStyle(MobileStyle.statusRunning)
                     Text("Searching").font(.caption).foregroundStyle(MobileStyle.muted)
                 }
             }
@@ -132,10 +133,10 @@ struct FileGrepPage: View {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
             }
             if let answered = model.answered, model.groups.isEmpty, model.problem == nil, !model.searching {
-                ContentUnavailableView("Nothing matches \(answered)", lucideIcon: "text-search")
+                ContentUnavailableView(String(localized: "Nothing matches \(answered)"), lucideIcon: "text-search")
             } else if model.answered == nil && !model.searching {
                 ContentUnavailableView(
-                    "Find in files", lucideIcon: "text-search",
+                    String(localized: "Find in files"), lucideIcon: "text-search",
                     description: Text(
                         "Searches the text of every file under \((model.cwd as NSString).lastPathComponent)."))
             }
@@ -188,7 +189,7 @@ struct FileGrepPage: View {
                     Toggle("Whole word", isOn: $model.wholeWord)
                     Toggle("Regular expression", isOn: $model.regex)
                 } label: {
-                    Label("Search options", lucideIcon: "sliders-horizontal")
+                    Label(String(localized: "Search options"), lucideIcon: "sliders-horizontal")
                 }
             }
         }
@@ -202,10 +203,11 @@ struct FileGrepPage: View {
     }
 
     private var summary: String {
-        let hits = model.hitCount == 1 ? "1 match" : "\(model.hitCount) matches"
-        let files = model.fileCount == 1 ? "1 file" : "\(model.fileCount) files"
+        let hits = model.hitCount
+        let files = model.fileCount
         return model.truncated
-            ? "The first \(hits) in \(files). Narrow the search for the rest." : "\(hits) in \(files)"
+            ? String(localized: "The first \(hits) matches in \(files) files. Narrow the search for the rest.")
+            : String(localized: "\(hits) matches in \(files) files")
     }
 
     private func absolute(_ path: String) -> String {

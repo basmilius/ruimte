@@ -50,7 +50,7 @@ struct TerminalHeldPrompt: View {
             Button {
                 held.run()
             } label: {
-                Label("Run", lucideIcon: "play").font(.subheadline.weight(.semibold))
+                Label(String(localized: "Run"), lucideIcon: "play").font(.subheadline.weight(.semibold))
             }
             .buttonStyle(.glassProminent)
             .tint(MobileStyle.accent)
@@ -70,8 +70,10 @@ struct TerminalKeyBar: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            key("esc", label: "Escape") { model.write(TerminalKeys.escape) }
-            key("tab", label: "Tab") { model.write(TerminalKeys.tab) }
+            key("esc", label: String(localized: "Escape", comment: "The Escape key")) {
+                model.write(TerminalKeys.escape)
+            }
+            key("tab", label: String(localized: "Tab", comment: "The Tab key")) { model.write(TerminalKeys.tab) }
             Button {
                 model.controlArmed.toggle()
             } label: {
@@ -81,11 +83,15 @@ struct TerminalKeyBar: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Control")
             .accessibilityAddTraits(model.controlArmed ? .isSelected : [])
-            key(lucide: "arrow-up", label: "Up") { model.arrow(up: true) }
-            key(lucide: "arrow-down", label: "Down") { model.arrow(up: false) }
+            key(lucide: "arrow-up", label: String(localized: "Up", comment: "The up arrow key")) {
+                model.arrow(up: true)
+            }
+            key(lucide: "arrow-down", label: String(localized: "Down", comment: "The down arrow key")) {
+                model.arrow(up: false)
+            }
             key(
                 lucide: keyboardShown ? "keyboard-off" : "keyboard",
-                label: keyboardShown ? "Hide keyboard" : "Keyboard"
+                label: keyboardShown ? String(localized: "Hide keyboard") : String(localized: "Keyboard")
             ) { model.toggleKeyboard?() }
         }
         .padding(.horizontal, 6).padding(.vertical, 4)

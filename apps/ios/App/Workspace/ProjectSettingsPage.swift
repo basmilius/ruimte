@@ -9,7 +9,13 @@ enum ProjectSettingsLogic {
     enum Mark: String, CaseIterable, Identifiable {
         case initial, icon, image
         var id: Self { self }
-        var title: String { rawValue.capitalized }
+        var title: String {
+            switch self {
+            case .initial: String(localized: "Initial", comment: "A project's mark: the first letter of its name")
+            case .icon: String(localized: "Icon", comment: "A project's mark: a symbol")
+            case .image: String(localized: "Image", comment: "A project's mark: a picture")
+            }
+        }
     }
 
     /// The colors a phone offers; a project keeps any other color its file holds until one of these is picked.
@@ -37,12 +43,18 @@ enum ProjectSettingsLogic {
     /// What closing does, in the words of the desktop's close dialog, from what `project.closing` counted.
     static func closing(sessions: Int, otherClients: Int) -> String {
         if otherClients > 0 {
-            let clients = otherClients == 1 ? "1 other client still has" : "\(otherClients) other clients still have"
-            return "\(clients) it open, so nothing stops running. It moves to Recently closed on this phone only."
+            return String(
+                localized:
+                    "\(otherClients) other clients still have it open, so nothing stops running. It moves to Recently closed on this phone only."
+            )
         }
-        if sessions == 0 { return "Nothing in it is running. It moves to Recently closed just as it was left." }
-        let running = sessions == 1 ? "1 running session ends" : "\(sessions) running sessions end"
-        return "\(running): a terminal loses its scrollback and an agent stops. The rest moves to Recently closed."
+        if sessions == 0 {
+            return String(localized: "Nothing in it is running. It moves to Recently closed just as it was left.")
+        }
+        return String(
+            localized:
+                "\(sessions) running sessions end: a terminal loses its scrollback and an agent stops. The rest moves to Recently closed."
+        )
     }
 
     /// A picked picture as a PNG the daemon takes, scaled down until it fits under the limit; nil when it cannot be
@@ -145,13 +157,15 @@ struct ProjectSettingsPage: View {
                         LabeledContent {
                             Text(launches.map(String.init) ?? "")
                         } label: {
-                            Label("Launches", lucideIcon: "play")
+                            Label(String(localized: "Launches"), lucideIcon: "play")
                         }
                     }
                     .foregroundStyle(MobileStyle.text)
                 }
                 Section {
-                    Button("Close project", lucideIcon: "x", role: .destructive) { Task { await askClose() } }
+                    Button(String(localized: "Close project"), lucideIcon: "x", role: .destructive) {
+                        Task { await askClose() }
+                    }
                 }
                 if let problem { Text(problem).foregroundStyle(MobileStyle.statusError) }
             }
@@ -159,7 +173,9 @@ struct ProjectSettingsPage: View {
             .navigationTitle("Project settings")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $pickingSymbol) {
-                IconChoiceGrid(selected: summary["icon"]?.text("value"), resetTitle: "Use the initial") { symbol in
+                IconChoiceGrid(
+                    selected: summary["icon"]?.text("value"), resetTitle: String(localized: "Use the initial")
+                ) { symbol in
                     pickingSymbol = false
                     let icon = symbol.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
                     Task { await setIdentity(icon: icon ?? .null) }
@@ -242,7 +258,7 @@ struct ProjectSettingsPage: View {
         guard let data = try? await item.loadTransferable(type: Data.self),
             let image = ProjectSettingsLogic.iconImage(data)
         else {
-            problem = "This image could not be used. Pick a smaller one."
+            problem = String(localized: "This image could not be used. Pick a smaller one.")
             return
         }
         await uploadImage(.object(["mime": .string(image.mime), "base64": .string(image.base64)]))

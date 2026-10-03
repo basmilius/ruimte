@@ -15,10 +15,10 @@ enum UsagePeriod: String, CaseIterable, Identifiable, Sendable {
     }
     var label: String {
         switch self {
-        case .today: "Today"
-        case .week: "7 days"
-        case .month: "30 days"
-        case .quarter: "90 days"
+        case .today: String(localized: "Today")
+        case .week: String(localized: "7 days")
+        case .month: String(localized: "30 days")
+        case .quarter: String(localized: "90 days")
         }
     }
 
@@ -43,7 +43,7 @@ enum UsageMetric: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .euro: "€"
         case .dollar: "$"
-        case .tokens: "Tokens"
+        case .tokens: String(localized: "Tokens")
         }
     }
     var currency: String? {
@@ -262,9 +262,9 @@ enum UsageBreakdown: String, CaseIterable, Identifiable, Sendable {
     var id: Self { self }
     var label: String {
         switch self {
-        case .models: "Models"
-        case .projects: "Projects"
-        case .day: "Day"
+        case .models: String(localized: "Models")
+        case .projects: String(localized: "Projects")
+        case .day: String(localized: "Day")
         }
     }
 }

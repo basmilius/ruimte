@@ -71,7 +71,9 @@ struct MachineProjectsPage: View {
                             openWorkspace(
                                 MobileWorkspace(session: session, projectID: chats.text("projectId"), summary: chats))
                         } label: {
-                            ChatsRowLabel(title: "Chats", detail: "Your earlier chats", icon: "messages-square")
+                            ChatsRowLabel(
+                                title: String(localized: "Chats"), detail: String(localized: "Your earlier chats"),
+                                icon: "messages-square")
                         }
                         .modifier(MobileSidebarRow())
                     }
@@ -96,10 +98,10 @@ struct MachineProjectsPage: View {
                     .modifier(MobileSidebarRow())
                 }
                 if list.work.loading {
-                    MobileLoadingRow("Loading projects")
+                    MobileLoadingRow(String(localized: "Loading projects"))
                 } else if session.connected && list.listed.isEmpty {
                     ContentUnavailableView(
-                        "No projects yet", lucideIcon: "folder",
+                        String(localized: "No projects yet"), lucideIcon: "folder",
                         description: Text("Open a folder on this machine."))
                 }
             }
@@ -115,7 +117,8 @@ struct MachineProjectsPage: View {
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Open folder", lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
+                Button(String(localized: "Open folder"), lucideIcon: "folder-open") { openingFolder = true }
+                    .disabled(!session.connected)
             }
         }
         .refreshable { await list.load() }

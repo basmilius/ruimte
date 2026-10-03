@@ -3,11 +3,30 @@
   "strings" : {
     "CFBundleDisplayName" : {
       "comment" : "Name of the widget and Live Activity extension.",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ruimte Activity"
+          }
+        },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Ruimte-activiteit"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "RuimteActivityWidget"
           }
         }
       }

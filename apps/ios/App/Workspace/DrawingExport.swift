@@ -17,6 +17,21 @@ import UIKit
         default: .label
         }
     }
+    static func title(_ name: String) -> String {
+        switch name {
+        case "ink": String(localized: "Ink", comment: "Drawing color")
+        case "muted": String(localized: "Muted", comment: "Drawing color")
+        case "accent": String(localized: "Accent", comment: "Drawing color")
+        case "red": String(localized: "Red", comment: "Drawing color")
+        case "orange": String(localized: "Orange", comment: "Drawing color")
+        case "yellow": String(localized: "Yellow", comment: "Drawing color")
+        case "green": String(localized: "Green", comment: "Drawing color")
+        case "blue": String(localized: "Blue", comment: "Drawing color")
+        case "purple": String(localized: "Purple", comment: "Drawing color")
+        case "pink": String(localized: "Pink", comment: "Drawing color")
+        default: name.capitalized
+        }
+    }
     static func font(_ name: String, size: Double) -> UIFont {
         switch name {
         case "mono": .monospacedSystemFont(ofSize: size, weight: .regular)

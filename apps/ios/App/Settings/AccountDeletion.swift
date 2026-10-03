@@ -55,7 +55,7 @@ import SwiftUI
         defer { busy = false }
         do {
             guard let token = try await accessToken() else {
-                problem = "Sign in again to delete your account."
+                problem = String(localized: "Sign in again to delete your account.")
                 return
             }
             var code: String?
@@ -81,11 +81,13 @@ import SwiftUI
 
     static func explain(_ error: AddressBookRequestError, name: String) -> String {
         switch error.code {
-        case "confirmation-mismatch": "That is not the name of this account. Type \(name) to delete it."
+        case "confirmation-mismatch":
+            String(localized: "That is not the name of this account. Type \(name) to delete it.")
         case "apple-revocation-failed":
-            "Apple did not end Sign in with Apple for Ruimte, so your account is still here. Try again."
-        case "unauthorized": "Sign in again to delete your account."
-        case "rate-limited": "Too many tries. Wait a minute, then try again."
+            String(
+                localized: "Apple did not end Sign in with Apple for Ruimte, so your account is still here. Try again.")
+        case "unauthorized": String(localized: "Sign in again to delete your account.")
+        case "rate-limited": String(localized: "Too many tries. Wait a minute, then try again.")
         default: error.message
         }
     }
@@ -141,7 +143,9 @@ struct DeleteAccountPage: View {
                     Task { await model.delete() }
                 } label: {
                     HStack {
-                        Label(model.busy ? "Deleting" : "Delete account", lucideIcon: "trash")
+                        Label(
+                            model.busy ? String(localized: "Deleting") : String(localized: "Delete account"),
+                            lucideIcon: "trash")
                         Spacer()
                         if model.busy { ProgressView() }
                     }
@@ -158,10 +162,12 @@ struct DeleteAccountPage: View {
     }
 
     private static let whatGoes = [
-        "The account and the ways to sign in to it.",
-        "Every sign-in to it, on every device.",
-        "Notifications to your phones and tablets.",
-        "Your machines from the account. Each keeps its projects; take one off the account on that machine "
-            + "before it joins another.",
+        String(localized: "The account and the ways to sign in to it."),
+        String(localized: "Every sign-in to it, on every device."),
+        String(localized: "Notifications to your phones and tablets."),
+        String(
+            localized:
+                "Your machines from the account. Each keeps its projects; take one off the account on that machine before it joins another."
+        ),
     ]
 }

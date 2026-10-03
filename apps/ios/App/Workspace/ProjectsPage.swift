@@ -30,7 +30,7 @@ struct ProjectsPage<Notice: View>: View {
                 .listSectionSeparator(.hidden, edges: .top)
             } else if loadingProjects {
                 Section {
-                    MobileLoadingRow("Loading projects")
+                    MobileLoadingRow(String(localized: "Loading projects"))
                         .frame(maxWidth: .infinity, minHeight: 120)
                         .accessibilityIdentifier("projects.loading")
                 }.listRowBackground(Color.clear).listRowSeparator(.hidden)
@@ -40,7 +40,7 @@ struct ProjectsPage<Notice: View>: View {
             } else {
                 Section {
                     ContentUnavailableView {
-                        Label("No open projects", lucideIcon: "folder", iconSize: 48)
+                        Label(String(localized: "No open projects"), lucideIcon: "folder", iconSize: 48)
                     } description: {
                         Text(
                             runtime.machines.isEmpty
@@ -62,10 +62,10 @@ struct ProjectsPage<Notice: View>: View {
                                 summary: row.summary))
                     } label: {
                         ChatsRowLabel(
-                            title: "Chats",
+                            title: String(localized: "Chats"),
                             detail: [
-                                projects.chats.count > 1 ? row.machine.name : "Your earlier chats",
-                                row.connected ? nil : "Offline",
+                                projects.chats.count > 1 ? row.machine.name : String(localized: "Your earlier chats"),
+                                row.connected ? nil : String(localized: "Offline"),
                             ].compactMap { $0 }.joined(separator: " · "),
                             icon: "messages-square")
                     }
@@ -171,7 +171,7 @@ private struct ProjectsSearch: ViewModifier {
 struct ProjectsUpdatingItem: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem(id: "projects.updating", placement: .topBarTrailing) {
-            MobileLoadingRow("Updating projects")
+            MobileLoadingRow(String(localized: "Updating projects"))
         }
         .sharedBackgroundVisibility(.hidden)
     }

@@ -11,9 +11,9 @@ enum SnoozeChoice: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .tenMinutes: "10 minutes"
-        case .hour: "1 hour"
-        case .tomorrow: "Tomorrow"
+        case .tenMinutes: String(localized: "10 minutes")
+        case .hour: String(localized: "1 hour")
+        case .tomorrow: String(localized: "Tomorrow")
         }
     }
 

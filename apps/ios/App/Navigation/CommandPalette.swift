@@ -98,36 +98,45 @@ enum PaletteCommands {
         for machine in machines {
             commands.append(
                 PaletteCommand(
-                    title: several ? "New chat on \(machine.name)" : "New chat", icon: "message-square-plus",
+                    title: several ? String(localized: "New chat on \(machine.name)") : String(localized: "New chat"),
+                    icon: "message-square-plus",
                     action: .newChat(machineID: machine.id)))
         }
         for row in projects where !NewChat.isChats(row.summary) && row.summary["available"] != .bool(false) {
-            let name = row.summary.text("name", fallback: "Untitled project")
+            let name = row.summary.text("name", fallback: String(localized: "Untitled project"))
             let entries: [(String, String, PaletteCommand.ProjectAction)] = [
-                ("New view in \(name)…", "plus", .newView),
-                ("New terminal in \(name)", "terminal", .newTerminal),
-                ("Files of \(name)", "folder", .files),
-                ("Git of \(name)", "git-branch", .git),
-                ("Launches of \(name)", "play", .launches),
-                ("Settings of \(name)", "settings-2", .settings),
+                (String(localized: "New view in \(name)…"), "plus", .newView),
+                (String(localized: "New terminal in \(name)"), "terminal", .newTerminal),
+                (String(localized: "Files of \(name)"), "folder", .files),
+                (String(localized: "Git of \(name)"), "git-branch", .git),
+                (String(localized: "Launches of \(name)"), "play", .launches),
+                (String(localized: "Settings of \(name)"), "settings-2", .settings),
             ]
             commands += entries.map { PaletteCommand(title: $0.0, icon: $0.1, action: .project(row.id, $0.2)) }
         }
         for machine in machines {
             commands.append(
                 PaletteCommand(
-                    title: several ? "Open a folder on \(machine.name)…" : "Open a folder as a project…",
+                    title: several
+                        ? String(localized: "Open a folder on \(machine.name)…")
+                        : String(localized: "Open a folder as a project…"),
                     icon: "folder-open", action: .openFolder(machineID: machine.id)))
             commands.append(
                 PaletteCommand(
-                    title: several ? "Usage of \(machine.name)" : "Usage", icon: "chart-no-axes-column",
+                    title: several ? String(localized: "Usage of \(machine.name)") : String(localized: "Usage"),
+                    icon: "chart-no-axes-column",
                     action: .usage(machineID: machine.id)))
         }
-        commands.append(PaletteCommand(title: "Recently closed", icon: "clock-arrow-left", action: .recentlyClosed))
-        commands.append(PaletteCommand(title: "Use a pairing link", icon: "link", action: .pair))
-        commands.append(PaletteCommand(title: "Settings", icon: "settings", action: .settings))
-        let looks = [("light", "Use the light appearance", "sun"), ("dark", "Use the dark appearance", "moon"),
-            ("system", "Follow the system appearance", "sun-moon")]
+        commands.append(
+            PaletteCommand(
+                title: String(localized: "Recently closed"), icon: "clock-arrow-left", action: .recentlyClosed))
+        commands.append(PaletteCommand(title: String(localized: "Use a pairing link"), icon: "link", action: .pair))
+        commands.append(PaletteCommand(title: String(localized: "Settings"), icon: "settings", action: .settings))
+        let looks = [
+            ("light", String(localized: "Use the light appearance"), "sun"),
+            ("dark", String(localized: "Use the dark appearance"), "moon"),
+            ("system", String(localized: "Follow the system appearance"), "sun-moon"),
+        ]
         for (value, title, icon) in looks where value != appearance {
             commands.append(PaletteCommand(title: title, icon: icon, action: .appearance(value)))
         }
@@ -189,8 +198,9 @@ final class PaletteFiles {
                 else { return [] }
                 return answer.list("files").compactMap(\.stringValue).map {
                     PaletteFile(
-                        project: row.id, projectName: row.summary.text("name", fallback: "Untitled project"), path: $0,
-                        folder: folder)
+                        project: row.id,
+                        projectName: row.summary.text("name", fallback: String(localized: "Untitled project")),
+                        path: $0, folder: folder)
                 }
             }
         }

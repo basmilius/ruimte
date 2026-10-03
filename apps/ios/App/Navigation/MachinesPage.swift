@@ -23,7 +23,7 @@ struct MachinesPage: View {
             }
             Section {
                 Button(action: pair) {
-                    MachineLinkLabel(title: "Use a pairing link", icon: "link")
+                    MachineLinkLabel(title: String(localized: "Use a pairing link"), icon: "link")
                 }
                 .foregroundStyle(MobileStyle.text)
             }
@@ -56,7 +56,8 @@ private struct MachineCard: View {
                     }
                     Spacer(minLength: 8)
                     if session.endpoint.update?.installable == true {
-                        Text("Update").font(.caption.weight(.semibold))
+                        Text("Update", comment: "Badge on a machine that has a newer version to install")
+                            .font(.caption.weight(.semibold))
                             .padding(.horizontal, 9).padding(.vertical, 4)
                             .foregroundStyle(MobileStyle.statusRunning)
                             .background(MobileStyle.statusRunning.opacity(0.12), in: Capsule())
@@ -130,9 +131,10 @@ struct PadMachinesPage: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
-                                Button("Use a pairing link", lucideIcon: "link", action: pair)
+                                Button(String(localized: "Use a pairing link"), lucideIcon: "link", action: pair)
                                 if runtime.account == nil {
-                                    Button("Sign in", lucideIcon: "circle-user-round", action: signIn)
+                                    Button(
+                                        String(localized: "Sign in"), lucideIcon: "circle-user-round", action: signIn)
                                 }
                             } label: {
                                 Image(lucide: "plus").accessibilityLabel("Add a machine")
@@ -147,7 +149,7 @@ struct PadMachinesPage: View {
                     MachineRoutePage(runtime: runtime, machineID: shownID)
                 } else {
                     ContentUnavailableView(
-                        "No machines yet", lucideIcon: "monitor",
+                        String(localized: "No machines yet"), lucideIcon: "monitor",
                         description: Text("Pair a machine to see its projects, devices and processes."))
                 }
             }

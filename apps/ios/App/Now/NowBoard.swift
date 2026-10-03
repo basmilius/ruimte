@@ -178,7 +178,9 @@ struct NowBoard: Equatable {
     }
 
     private static func projectName(_ summary: JSONValue) -> String {
-        NewChat.isChats(summary) ? "Chats" : summary.text("name", fallback: "Untitled project")
+        NewChat.isChats(summary)
+            ? String(localized: "Chats", comment: "Name of the project that holds the chats outside any project")
+            : summary.text("name", fallback: String(localized: "Untitled project"))
     }
 
     private static func isDivider(_ view: JSONValue) -> Bool {
@@ -187,10 +189,10 @@ struct NowBoard: Equatable {
 
     private static func defaultTitle(_ kind: String) -> String {
         switch kind {
-        case "chat": "Chat"
-        case "terminal": "Terminal"
-        case "browser": "Browser"
-        case "device": "Device"
+        case "chat": String(localized: "Chat")
+        case "terminal": String(localized: "Terminal")
+        case "browser": String(localized: "Browser")
+        case "device": String(localized: "Device")
         default: kind.capitalized
         }
     }

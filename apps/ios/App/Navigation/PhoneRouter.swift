@@ -6,10 +6,10 @@ enum PhoneTab: Hashable {
 
     var title: String {
         switch self {
-        case .now: "Now"
-        case .projects: "Projects"
-        case .machines: "Machines"
-        case .search: "Search"
+        case .now: String(localized: "Now")
+        case .projects: String(localized: "Projects")
+        case .machines: String(localized: "Machines")
+        case .search: String(localized: "Search")
         }
     }
 }

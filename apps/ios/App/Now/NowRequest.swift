@@ -69,7 +69,7 @@ struct NowRequest: Hashable, Identifiable {
                     truncated: approval["truncated"]?.boolValue == true,
                     allowAlways: approval["canAllowAlways"]?.boolValue == true
                         ? AllowAlways(
-                            label: rule?["label"]?.stringValue ?? "Always allow",
+                            label: rule?["label"]?.stringValue ?? String(localized: "Always allow"),
                             description: rule?.text("description") ?? "") : nil))
         case "question":
             let questions = (value["question"]?.list("questions") ?? []).map { question in
@@ -102,12 +102,13 @@ struct NowRequest: Hashable, Identifiable {
         switch kind {
         case .approval(let approval):
             if let path = approval.path {
-                return approval.files > 1 ? "Edit \(approval.files) files" : "Edit \(path)"
+                return approval.files > 1
+                    ? String(localized: "Edit \(approval.files) files") : String(localized: "Edit \(path)")
             }
-            if approval.command != nil { return "Run a command" }
+            if approval.command != nil { return String(localized: "Run a command") }
             return approval.subject.isEmpty ? approval.toolName : "\(approval.toolName) \(approval.subject)"
         case .questions(let questions):
-            return questions.count == 1 ? questions[0].text : "\(questions.count) questions"
+            return questions.count == 1 ? questions[0].text : String(localized: "\(questions.count) questions")
         }
     }
 
@@ -115,8 +116,12 @@ struct NowRequest: Hashable, Identifiable {
     var summary: String {
         switch kind {
         case .approval(let approval):
-            if let path = approval.path, approval.files <= 1 { "Edit \((path as NSString).lastPathComponent)" } else { headline }
-        case .questions: "Asks a question"
+            if let path = approval.path, approval.files <= 1 {
+                String(localized: "Edit \((path as NSString).lastPathComponent)")
+            } else {
+                headline
+            }
+        case .questions: String(localized: "Asks a question")
         }
     }
 

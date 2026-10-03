@@ -14,10 +14,11 @@ enum MachineLost {
     /// "Last connected 4 minutes ago", from when this phone last had a link, else when the machine was last seen.
     static func lastConnected(_ moment: Date?, now: Date) -> String? {
         guard let moment else { return nil }
-        if now.timeIntervalSince(moment) < 60 { return "Last connected just now" }
+        if now.timeIntervalSince(moment) < 60 { return String(localized: "Last connected just now") }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
-        return "Last connected \(formatter.localizedString(for: moment, relativeTo: now))"
+        let relative = formatter.localizedString(for: moment, relativeTo: now)
+        return String(localized: "Last connected \(relative)", comment: "%@ is a relative time, such as 4 minutes ago")
     }
 }
 
@@ -44,7 +45,7 @@ struct MachineLostCard: View {
                 }
                 .font(.footnote).foregroundStyle(MobileStyle.muted)
             } else {
-                Text(session.problem ?? "The machine stopped answering.")
+                Text(session.problem ?? String(localized: "The machine stopped answering."))
                     .font(.footnote).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
                 Button("Try again") { session.reconnect() }.font(.footnote.weight(.semibold))
             }

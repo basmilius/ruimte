@@ -97,7 +97,7 @@ private struct MarkdownBlockView: View {
                 {
                     ChatInlineImage(
                         resource: .object(["kind": .string("file"), "path": .string(file.path)]), name: media.name)
-                    Button(media.name.isEmpty ? "Open image" : media.name) {
+                    Button(media.name.isEmpty ? String(localized: "Open image") : media.name) {
                         if let url = ChatFileReference.url(file.path) { openURL(url) }
                     }.font(.caption).frame(minHeight: 44)
                 } else if let url = URL(string: media.target), ["http", "https"].contains(url.scheme) {
@@ -138,7 +138,7 @@ struct CodeMessage: View {
         if !text.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 0) {
-                    Text(language.isEmpty ? "Code" : language)
+                    Text(language.isEmpty ? String(localized: "Code") : language)
                         .font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted)
                         .padding(.leading, 14)
                     Spacer()
@@ -168,7 +168,9 @@ struct CodeMessage: View {
             }
             .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 12))
             .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(MobileStyle.border) }
-            .contextMenu { Button("Copy", lucideIcon: "copy") { UIPasteboard.general.string = text } }
+            .contextMenu {
+                Button(String(localized: "Copy"), lucideIcon: "copy") { UIPasteboard.general.string = text }
+            }
             .task(id: copied) {
                 guard copied else { return }
                 do { try await Task.sleep(for: .seconds(1.5)) } catch { return }

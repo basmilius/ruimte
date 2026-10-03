@@ -1,12 +1,43 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ruimte"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ruimte"
+          }
+        }
+      }
+    },
     "NSCameraUsageDescription" : {
       "comment" : "Shown when the app asks for the camera.",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ruimte uses the camera when you take a photo to attach to a message."
+          }
+        },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Ruimte gebruikt de camera als je een foto maakt om bij een bericht te voegen."
           }
         }
@@ -14,10 +45,17 @@
     },
     "NSLocalNetworkUsageDescription" : {
       "comment" : "Shown when the app asks for the local network.",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connect directly to your machines on the same Wi-Fi network."
+          }
+        },
         "nl" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Maak direct verbinding met je machines op hetzelfde wifinetwerk."
           }
         }

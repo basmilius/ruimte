@@ -12,7 +12,7 @@ final class NotificationService: UNNotificationServiceExtension {
         completion = contentHandler
         let content = (request.content.mutableCopy() as? UNMutableNotificationContent) ?? UNMutableNotificationContent()
         content.title = "Ruimte"
-        content.body = "Open Ruimte to see the latest update."
+        content.body = String(localized: "Open Ruimte to see the latest update.")
         content.categoryIdentifier = ""
         fallback = content
         do {

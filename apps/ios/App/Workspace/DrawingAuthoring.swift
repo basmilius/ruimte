@@ -65,6 +65,21 @@ enum DrawingTool: String, CaseIterable, Identifiable {
     case note = "Sticky note"
     case eraser = "Eraser"
     var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .pan: String(localized: "Pan", comment: "Drawing tool")
+        case .select: String(localized: "Select", comment: "Drawing tool")
+        case .rect: String(localized: "Rectangle", comment: "Drawing tool")
+        case .diamond: String(localized: "Diamond", comment: "Drawing tool")
+        case .ellipse: String(localized: "Ellipse", comment: "Drawing tool")
+        case .arrow: String(localized: "Arrow", comment: "Drawing tool")
+        case .line: String(localized: "Line", comment: "Drawing tool")
+        case .pen: String(localized: "Pen", comment: "Drawing tool")
+        case .text: String(localized: "Text", comment: "Drawing tool")
+        case .note: String(localized: "Sticky note", comment: "Drawing tool")
+        case .eraser: String(localized: "Eraser", comment: "Drawing tool")
+        }
+    }
     var symbol: String {
         switch self {
         case .pan: "hand"

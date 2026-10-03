@@ -45,7 +45,7 @@ struct PadDetailColumn: View {
             } else {
                 NavigationStack {
                     ContentUnavailableView(
-                        "No project open", lucideIcon: "folder",
+                        String(localized: "No project open"), lucideIcon: "folder",
                         description: Text("Choose a project in the sidebar."))
                         .modifier(MobilePageSurface())
                         .toolbar { toolbar }
@@ -234,7 +234,7 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
             ProjectItemPage(workspace: workspace, item: item).id(id)
         } else {
             ContentUnavailableView(
-                "Select a view", lucideIcon: "panel-left",
+                String(localized: "Select a view"), lucideIcon: "panel-left",
                 description: Text("Choose a view in the sidebar to get started."))
                 .navigationTitle(workspace.title)
                 .navigationBarTitleDisplayMode(.inline)
@@ -243,10 +243,10 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
 
     @ViewBuilder private var opening: some View {
         if let problem = workspace.problem
-            ?? (workspace.session.failedAttempts >= 3 ? "Could not connect to your machine." : nil)
+            ?? (workspace.session.failedAttempts >= 3 ? String(localized: "Could not connect to your machine.") : nil)
         {
             ContentUnavailableView {
-                Label("Could not open project", lucideIcon: "triangle-alert", iconSize: 48)
+                Label(String(localized: "Could not open project"), lucideIcon: "triangle-alert", iconSize: 48)
             } description: {
                 Text(problem)
             } actions: {
@@ -260,7 +260,7 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
                 }
             }
         } else {
-            MobileLoadingRow("Opening project")
+            MobileLoadingRow(String(localized: "Opening project"))
         }
     }
 
@@ -285,7 +285,7 @@ private struct PadNotificationPage: View {
             if searched {
                 NotificationSessionPage(runtime: runtime, destination: destination)
             } else {
-                MobileLoadingRow("Finding the conversation").modifier(MobilePageSurface())
+                MobileLoadingRow(String(localized: "Finding the conversation")).modifier(MobilePageSurface())
             }
         }
         .task {
@@ -323,14 +323,14 @@ private struct PadSubagentPage: View {
                     model: model, crumb: SubagentCrumb(toolUseID: subagent.toolUseID, description: subagent.title),
                     session: workspace.session)
             } else {
-                MobileLoadingRow("Opening")
+                MobileLoadingRow(String(localized: "Opening"))
                     .navigationTitle(subagent.title)
                     .navigationBarTitleDisplayMode(.inline)
             }
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Show chat", lucideIcon: "messages-square", action: showChat)
+                Button(String(localized: "Show chat"), lucideIcon: "messages-square", action: showChat)
             }
         }
         .task {

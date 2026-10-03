@@ -19,28 +19,33 @@ struct NotificationSessionPage: View {
                 if target == "machine" {
                     MachineActivityPage(session: session)
                 } else if target == "chat" {
-                    ChatScreen(client: session.rpc, chatID: destination.nodeID, title: "Chat", session: session)
+                    ChatScreen(
+                        client: session.rpc, chatID: destination.nodeID, title: String(localized: "Chat"),
+                        session: session)
                 } else if target == "terminal" {
-                    TerminalScreen(client: session.rpc, sessionID: destination.nodeID, title: "Terminal")
+                    TerminalScreen(
+                        client: session.rpc, sessionID: destination.nodeID, title: String(localized: "Terminal"))
                 } else if let problem = work.problem {
                     ContentUnavailableView(
-                        "Session unavailable", lucideIcon: "triangle-alert", description: Text(problem))
+                        String(localized: "Session unavailable"), lucideIcon: "triangle-alert",
+                        description: Text(problem))
                 } else {
-                    MobileLoadingRow("Finding session")
+                    MobileLoadingRow(String(localized: "Finding session"))
                 }
             } else if let problem = work.problem {
                 ContentUnavailableView(
-                    "Machine unavailable", lucideIcon: "triangle-alert", description: Text(problem))
+                    String(localized: "Machine unavailable"), lucideIcon: "triangle-alert",
+                    description: Text(problem))
             } else if let session, session.failedAttempts >= 3 {
                 ContentUnavailableView {
-                    Label("Machine unavailable", lucideIcon: "triangle-alert")
+                    Label(String(localized: "Machine unavailable"), lucideIcon: "triangle-alert")
                 } description: {
                     Text("Could not reconnect to your machine.")
                 } actions: {
                     Button("Try again") { session.reconnect() }
                 }
             } else {
-                MobileLoadingRow("Connecting to your machine")
+                MobileLoadingRow(String(localized: "Connecting to your machine"))
             }
         }
         .modifier(MobilePageSurface())
@@ -50,7 +55,8 @@ struct NotificationSessionPage: View {
         .task {
             guard lease == nil else { return }
             guard let machine = runtime.machines.first(where: { $0.id == destination.machineID }) else {
-                work.problem = "This machine is no longer in your account. Refresh your machines and try again."
+                work.problem = String(
+                    localized: "This machine is no longer in your account. Refresh your machines and try again.")
                 return
             }
             let shared = runtime.session(for: machine)
@@ -74,7 +80,7 @@ struct NotificationSessionPage: View {
                 try stillTheLatest()
                 guard terminals.contains(where: { $0.text("sessionId") == destination.nodeID }) else {
                     // A node that is in neither list is why this read found nothing, so it reads as the failure.
-                    throw TransportFailure.invalid("This session has ended or was removed.")
+                    throw TransportFailure.invalid(String(localized: "This session has ended or was removed."))
                 }
                 target = "terminal"
             }
@@ -98,7 +104,7 @@ private struct MachineActivityPage: View {
                 && !chats.contains(where: { active($0.text("status")) })
             {
                 ContentUnavailableView(
-                    "All caught up", lucideIcon: "circle-check",
+                    String(localized: "All caught up"), lucideIcon: "circle-check",
                     description: Text("No agents are working or waiting for you on this machine."))
             }
         }
@@ -125,18 +131,21 @@ private struct MachineActivityPage: View {
             NavigationLink {
                 ChatScreen(
                     client: session.rpc, chatID: chat.text("chatId", fallback: chat.stableID),
-                    title: chat.text("suggestedTitle", fallback: "Chat"), session: session)
+                    title: chat.text("suggestedTitle", fallback: String(localized: "Chat")), session: session)
             } label: {
-                Text(chat.text("suggestedTitle", fallback: "Chat"))
+                Text(chat.text("suggestedTitle", fallback: String(localized: "Chat")))
             }
         }
         ForEach(sessions.filter { $0["agent"]?.text("status") == status }, id: \.stableID) { terminal in
             NavigationLink {
                 TerminalScreen(
                     client: session.rpc, sessionID: terminal.text("sessionId"),
-                    title: terminal["agent"]?.text("suggestedTitle", fallback: "Terminal") ?? "Terminal")
+                    title: terminal["agent"]?.text("suggestedTitle", fallback: String(localized: "Terminal"))
+                        ?? String(localized: "Terminal"))
             } label: {
-                Text(terminal["agent"]?.text("suggestedTitle", fallback: "Terminal") ?? "Terminal")
+                Text(
+                    terminal["agent"]?.text("suggestedTitle", fallback: String(localized: "Terminal"))
+                        ?? String(localized: "Terminal"))
             }
         }
     }

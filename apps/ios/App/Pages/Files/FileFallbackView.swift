@@ -28,15 +28,15 @@ struct FileFallbackView: View {
         } actions: {
             if let file {
                 HStack(spacing: 12) {
-                    Button("Quick Look", lucideIcon: "eye") { preview = file }
+                    Button(String(localized: "Quick Look"), lucideIcon: "eye") { preview = file }
                         .buttonStyle(.borderedProminent)
-                    ShareLink(item: file) { Label("Share", lucideIcon: "share") }
+                    ShareLink(item: file) { Label(String(localized: "Share"), lucideIcon: "share") }
                         .buttonStyle(.bordered)
                 }
             } else if let problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
             } else if available {
-                MobileLoadingRow("Loading")
+                MobileLoadingRow(String(localized: "Loading"))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -54,7 +54,9 @@ struct MobileSettings: View {
                     NavigationLink {
                         MachineAgentsPage(session: runtime.session(for: machine))
                     } label: {
-                        Label("Agents on \(machine.name)", lucideIcon: machine.icon?.value ?? "monitor")
+                        Label(
+                            String(localized: "Agents on \(machine.name)"),
+                            lucideIcon: machine.icon?.value ?? "monitor")
                     }
                 }
             }
@@ -65,12 +67,12 @@ struct MobileSettings: View {
                 NavigationLink {
                     ConnectionScreen(runtime: runtime)
                 } label: {
-                    Label("Connection diagnostics", lucideIcon: "wifi")
+                    Label(String(localized: "Connection diagnostics"), lucideIcon: "wifi")
                 }
                 NavigationLink {
                     AboutPage()
                 } label: {
-                    Label("About", lucideIcon: "info")
+                    Label(String(localized: "About"), lucideIcon: "info")
                 }
                 .accessibilityIdentifier("settings.about")
             }
@@ -94,7 +96,7 @@ private struct AccountCard: View {
         HStack(spacing: 12) {
             AccountPicture(account: runtime.account, size: 40)
             VStack(alignment: .leading, spacing: 2) {
-                Text(AccountAvatar.name(of: runtime.account) ?? "Not signed in")
+                Text(AccountAvatar.name(of: runtime.account) ?? String(localized: "Not signed in"))
                     .font(.body.weight(.semibold)).lineLimit(1)
                 Text(subtitle).font(.footnote).foregroundStyle(MobileStyle.muted).lineLimit(1)
             }
@@ -104,9 +106,13 @@ private struct AccountCard: View {
     }
 
     private var subtitle: String {
-        let machines = runtime.machines.count == 1 ? "1 machine" : "\(runtime.machines.count) machines"
-        guard let account = runtime.account else { return "Paired with a link · \(machines)" }
-        return "Signed in with \(AccountSettingsPage.providerName(account.provider)) · \(machines)"
+        let machines = runtime.machines.count
+        guard let account = runtime.account else {
+            return String(localized: "Paired with a link · \(machines) machines")
+        }
+        return String(
+            localized: "Signed in with \(AccountSettingsPage.providerName(account.provider)) · \(machines) machines",
+            comment: "%@ is the sign-in provider, GitHub or Apple")
     }
 }
 

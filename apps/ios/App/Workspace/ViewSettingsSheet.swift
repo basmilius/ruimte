@@ -78,8 +78,9 @@ struct ViewSettingsSheet: View {
                 }
                 Section {
                     NavigationLink {
-                        IconChoiceGrid(selected: current["icon"]?.text("value"), resetTitle: "Use default icon") {
-                            name in
+                        IconChoiceGrid(
+                            selected: current["icon"]?.text("value"), resetTitle: String(localized: "Use default icon")
+                        ) { name in
                             let icon = name.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
                             Task { await workspace.updateView(item.stableID) { $0.setting("icon", icon) } }
                         }

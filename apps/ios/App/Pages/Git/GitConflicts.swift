@@ -183,58 +183,60 @@ enum GitConflictModel {
 
     static func title(_ operation: String?) -> String {
         switch operation {
-        case "merge": "Resolve the merge"
-        case "rebase": "Resolve the rebase"
-        case "cherry-pick": "Resolve the cherry-pick"
-        case "revert": "Resolve the revert"
-        default: "Resolve the conflicts"
+        case "merge": String(localized: "Resolve the merge")
+        case "rebase": String(localized: "Resolve the rebase")
+        case "cherry-pick": String(localized: "Resolve the cherry-pick")
+        case "revert": String(localized: "Resolve the revert")
+        default: String(localized: "Resolve the conflicts")
         }
     }
 
     static func continueLabel(_ operation: String) -> String {
         switch operation {
-        case "rebase": "Continue rebase"
-        case "cherry-pick": "Finish cherry-pick"
-        case "revert": "Finish revert"
-        default: "Finish merge"
+        case "rebase": String(localized: "Continue rebase")
+        case "cherry-pick": String(localized: "Finish cherry-pick")
+        case "revert": String(localized: "Finish revert")
+        default: String(localized: "Finish merge")
         }
     }
 
     static func abortLabel(_ operation: String) -> String {
         switch operation {
-        case "rebase": "Abort rebase"
-        case "cherry-pick": "Abort cherry-pick"
-        case "revert": "Abort revert"
-        default: "Abort merge"
+        case "rebase": String(localized: "Abort rebase")
+        case "cherry-pick": String(localized: "Abort cherry-pick")
+        case "revert": String(localized: "Abort revert")
+        default: String(localized: "Abort merge")
         }
     }
 
     static func wholeDetail(kind: String, ours: String, theirs: String) -> String {
         switch kind {
-        case "binary": "This file is not UTF-8 text. Keep one side whole or drop it."
-        case "deleted-by-them": "\(theirs) deleted this file while it changed on \(ours)."
-        case "deleted-by-us": "\(ours) deleted this file while it changed on \(theirs)."
-        case "submodule": "This is a submodule. Pick the commit one side points at."
-        default: "Pick a side for this file."
+        case "binary": String(localized: "This file is not UTF-8 text. Keep one side whole or drop it.")
+        case "deleted-by-them":
+            String(localized: "\(theirs) deleted this file while it changed on \(ours).", comment: "Both are git refs")
+        case "deleted-by-us":
+            String(localized: "\(ours) deleted this file while it changed on \(theirs).", comment: "Both are git refs")
+        case "submodule": String(localized: "This is a submodule. Pick the commit one side points at.")
+        default: String(localized: "Pick a side for this file.")
         }
     }
 
     static func blockLabel(_ kind: MergeBlockKind) -> String {
         switch kind {
-        case .stable: "Unchanged"
-        case .ours: "Changed on our side"
-        case .theirs: "Changed on their side"
-        case .both: "The same change on both sides"
-        case .conflict: "Conflict"
+        case .stable: String(localized: "Unchanged")
+        case .ours: String(localized: "Changed on our side")
+        case .theirs: String(localized: "Changed on their side")
+        case .both: String(localized: "The same change on both sides")
+        case .conflict: String(localized: "Conflict")
         }
     }
 }
 
 /// What a failed request says, with the refusal of a machine that does not know the request yet in words
-/// a person can act on.
-func gitMessage(_ error: any Error, action: String) -> String {
+/// a person can act on: `outdated`.
+func gitMessage(_ error: any Error, outdated: String) -> String {
     if case MachineClientError.server(code: "unknown-request", message: _) = error {
-        return "Update Ruimte on this machine to \(action)."
+        return outdated
     }
     return error.localizedDescription
 }
@@ -306,7 +308,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
             return
         } catch {
             if gitRefusalCode(error) == "unknown-request" { unsupported = true }
-            problem = gitMessage(error, action: "resolve conflicts on the phone")
+            problem = gitMessage(error, outdated: String(localized: "Update Ruimte on this machine to resolve conflicts on the phone."))
         }
         loaded = true
     }
@@ -318,7 +320,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
             files[path] = try await read(client: client, path: path)
         } catch is CancellationError {
         } catch {
-            problem = gitMessage(error, action: "resolve conflicts on the phone")
+            problem = gitMessage(error, outdated: String(localized: "Update Ruimte on this machine to resolve conflicts on the phone."))
         }
     }
 
@@ -369,14 +371,17 @@ func gitRefusalCode(_ error: any Error) -> String? {
                 files[path] = nil
                 drafts[path] = nil
             } catch {
-                problem = gitMessage(error, action: "resolve conflicts on the phone")
+                problem = gitMessage(error, outdated: String(localized: "Update Ruimte on this machine to resolve conflicts on the phone."))
                 await reread(client: client, path: path)
                 await load(client: client)
                 return false
             }
         }
         problem = nil
-        note = paths.count == 1 ? "Marked \((paths[0] as NSString).lastPathComponent) resolved." : "Marked \(paths.count) files resolved."
+        note =
+            paths.count == 1
+            ? String(localized: "Marked \((paths[0] as NSString).lastPathComponent) resolved.")
+            : String(localized: "Marked \(paths.count) files resolved.")
         await load(client: client)
         return true
     }
@@ -396,7 +401,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
             await load(client: client)
             return true
         } catch {
-            problem = gitMessage(error, action: "resolve conflicts on the phone")
+            problem = gitMessage(error, outdated: String(localized: "Update Ruimte on this machine to resolve conflicts on the phone."))
             if files[path] != nil { await reread(client: client, path: path) }
             return false
         }
@@ -432,12 +437,12 @@ func gitRefusalCode(_ error: any Error) -> String? {
             problem = nil
             let summary =
                 answered == 0
-                ? "The agent left every conflict to you."
-                : answered == 1 ? "An agent proposed an answer for 1 conflict." : "An agent proposed answers for \(answered) conflicts."
+                ? String(localized: "The agent left every conflict to you.")
+                : String(localized: "An agent proposed answers for \(answered) conflicts.")
             note = ([summary] + notes).joined(separator: "\n")
         } catch is CancellationError {
         } catch {
-            problem = gitMessage(error, action: "ask an agent to resolve conflicts")
+            problem = gitMessage(error, outdated: String(localized: "Update Ruimte on this machine to ask an agent to resolve conflicts."))
         }
     }
 
@@ -472,17 +477,47 @@ func gitRefusalCode(_ error: any Error) -> String? {
             drafts = [:]
             problem = nil
             if action == "abort" {
-                note = "The \(waiting) was taken back."
+                note = Self.takenBack(waiting)
             } else if left > 0 {
-                note = left == 1 ? "1 file conflicts in the next commit." : "\(left) files conflict in the next commit."
+                note = String(localized: "\(left) files conflict in the next commit.")
             } else {
-                note = "The \(waiting) is finished."
+                note = Self.finished(waiting)
             }
             await load(client: client)
             return left == 0
         } catch {
-            problem = gitMessage(error, action: "finish a \(waiting) on the phone")
+            problem = gitMessage(error, outdated: Self.outdatedFinish(waiting))
             return false
+        }
+    }
+
+    private static func takenBack(_ operation: String) -> String {
+        switch operation {
+        case "merge": String(localized: "The merge was taken back.")
+        case "rebase": String(localized: "The rebase was taken back.")
+        case "cherry-pick": String(localized: "The cherry-pick was taken back.")
+        case "revert": String(localized: "The revert was taken back.")
+        default: String(localized: "The operation was taken back.")
+        }
+    }
+
+    private static func finished(_ operation: String) -> String {
+        switch operation {
+        case "merge": String(localized: "The merge is finished.")
+        case "rebase": String(localized: "The rebase is finished.")
+        case "cherry-pick": String(localized: "The cherry-pick is finished.")
+        case "revert": String(localized: "The revert is finished.")
+        default: String(localized: "The operation is finished.")
+        }
+    }
+
+    private static func outdatedFinish(_ operation: String) -> String {
+        switch operation {
+        case "merge": String(localized: "Update Ruimte on this machine to finish a merge on the phone.")
+        case "rebase": String(localized: "Update Ruimte on this machine to finish a rebase on the phone.")
+        case "cherry-pick": String(localized: "Update Ruimte on this machine to finish a cherry-pick on the phone.")
+        case "revert": String(localized: "Update Ruimte on this machine to finish a revert on the phone.")
+        default: String(localized: "Update Ruimte on this machine to finish this operation on the phone.")
         }
     }
 
@@ -500,7 +535,7 @@ func gitRefusalCode(_ error: any Error) -> String? {
         } else {
             files[path] = after
             drafts[path] = draft(path).carried(from: before, to: after)
-            note = "The file changed on the machine and was read again. Answers that still fit were kept."
+            note = String(localized: "The file changed on the machine and was read again. Answers that still fit were kept.")
         }
     }
 }

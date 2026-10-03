@@ -40,6 +40,15 @@ enum SubagentStatusWord: String, CaseIterable {
         }
     }
 
+    var title: String {
+        switch self {
+        case .running: String(localized: "Running")
+        case .done: String(localized: "Done")
+        case .failed: String(localized: "Failed")
+        case .cancelled: String(localized: "Cancelled")
+        }
+    }
+
     var look: AgentWorkLook {
         switch self {
         case .running: .running
@@ -68,7 +77,7 @@ enum ChatSubagents {
 
     static func title(_ item: JSONValue) -> String {
         [item.text("description"), item.text("summary"), item.text("subagentType")].first { !$0.isEmpty }
-            ?? "Sub-agent"
+            ?? String(localized: "Sub-agent")
     }
 
     /// A row without a pointer of its own can only be opened by a machine that answers `chat.subagent` for it.
@@ -219,13 +228,14 @@ enum ChatSubagents {
             // reports about its progress. The tool row itself has no such fallback.
             let summary = ChatToolPresentation.summary(item)
             let detail = summary.isEmpty ? item["progress"]?.text("description") ?? "" : summary
-            return .tool(name: item.text("name", fallback: "Tool"), detail: oneLine(detail))
+            return .tool(name: item.text("name", fallback: String(localized: "Tool")), detail: oneLine(detail))
         case "assistant":
             let text = prose(item.text("text"))
             return text.isEmpty ? nil : .text(text)
         case "subagent":
             return .tool(
-                name: item.text("origin") == "ruimte" ? "Task" : "Agent", detail: oneLine(item.text("description")))
+                name: item.text("origin") == "ruimte" ? String(localized: "Task") : String(localized: "Agent"),
+                detail: oneLine(item.text("description")))
         default: return nil
         }
     }
@@ -286,7 +296,9 @@ enum ChatSubagents {
         guard milliseconds >= hour else { return ChatToolPresentation.elapsed(milliseconds) }
         let hours = Int(milliseconds / hour)
         let minutes = Int(milliseconds.truncatingRemainder(dividingBy: hour) / 60_000)
-        return minutes == 0 ? "\(hours)h" : "\(hours)h \(minutes)m"
+        return minutes == 0
+            ? String(localized: "\(hours)h", comment: "Duration in hours, abbreviated")
+            : String(localized: "\(hours)h \(minutes)m", comment: "Duration in hours and minutes, abbreviated")
     }
 
     /// The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was
@@ -317,30 +329,37 @@ enum ChatSubagents {
         var facts: [String] = []
         if let model = item["model"]?.stringValue, !model.isEmpty { facts.append(ModelName.fromSlug(model)) }
         if let type = item["subagentType"]?.stringValue, !type.isEmpty { facts.append(type) }
-        if item["background"]?.boolValue == true { facts.append("background") }
+        if item["background"]?.boolValue == true {
+            facts.append(String(localized: "background", comment: "A sub-agent that runs in the background, lowercase"))
+        }
         let usage = item["usage"]
         if let tokens = usage?["totalTokens"]?.numberValue, tokens > 0 {
-            facts.append("\(Int(tokens).formatted(.number.notation(.compactName).locale(locale))) tokens")
+            let count = Int(tokens).formatted(.number.notation(.compactName).locale(locale))
+            facts.append(String(localized: "\(count) tokens", comment: "%@ is a compact number, like 12K"))
         }
         if let calls = usage?["toolUses"]?.numberValue, calls > 0 {
-            facts.append(Int(calls) == 1 ? "1 tool call" : "\(Int(calls)) tool calls")
+            facts.append(String(localized: "\(Int(calls)) tool calls"))
         }
         return facts
     }
 
     static func stopsTaskWarning(_ agents: Int) -> String {
-        "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node "
-            + "stays on the canvas." + (agents == 0 ? "" : " " + endsAgentsWarning(agents))
+        let warning = String(
+            localized:
+                "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas."
+        )
+        return agents == 0 ? warning : "\(warning) \(endsAgentsWarning(agents))"
     }
 
     static func stopsSubagentsWarning(_ agents: Int) -> String {
-        "Stops the turn and marks the chat's own sub-agents as stopped. " + endsAgentsWarning(agents)
+        let warning = String(localized: "Stops the turn and marks the chat's own sub-agents as stopped.")
+        return "\(warning) \(endsAgentsWarning(agents))"
     }
 
     static func endsAgentsWarning(_ agents: Int) -> String {
-        agents == 1
-            ? "Also ends the agent it opened. Its node stays on the canvas with what it did so far."
-            : "Also ends the \(agents) agents it opened. Their nodes stay on the canvas with what they did so far."
+        String(
+            localized:
+                "Also ends the \(agents) agents it opened. Their nodes stay on the canvas with what they did so far.")
     }
 
     /// The live agents these nodes opened, counted once. A machine that does not know the question counts none.

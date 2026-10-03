@@ -27,7 +27,9 @@ final class MobileWorkspace {
     private var localTask: Task<Void, Never>?
     var views: [JSONValue] { document.list("views") }
     var folder: String { summary.text("folder", fallback: "~") }
-    var title: String { document.text("name", fallback: summary.text("name", fallback: "Project")) }
+    var title: String {
+        document.text("name", fallback: summary.text("name", fallback: String(localized: "Project")))
+    }
     /// The machine's Chats project, which holds the chats outside any project; its folder is the machine's own.
     var isScratch: Bool { summary["scratch"]?.boolValue == true }
     var client: any MachineRequesting { session.rpc }

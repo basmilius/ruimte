@@ -8,9 +8,9 @@ enum ChatSnoozeChoice: CaseIterable {
 
     var label: String {
         switch self {
-        case .tenMinutes: "10 minutes"
-        case .hour: "1 hour"
-        case .tomorrow: "Tomorrow"
+        case .tenMinutes: String(localized: "10 minutes", comment: "Snooze for this long")
+        case .hour: String(localized: "1 hour", comment: "Snooze for this long")
+        case .tomorrow: String(localized: "Tomorrow", comment: "Snooze until tomorrow morning")
         }
     }
 }
@@ -94,17 +94,20 @@ extension ChatModel {
             snoozedUntil = until.timeIntervalSince1970 * 1000
             error = nil
         } catch {
-            self.error = ChatForking.message(for: error, action: "snooze a chat")
+            self.error = ChatForking.message(
+                for: error, update: String(localized: "Update Ruimte on this machine to snooze a chat."))
         }
     }
 
     func unsnooze() async {
         do {
-            _ = try await client.request(WireRequest.snoozeClear.rawValue, payload: .object(["nodeId": .string(chatID)]))
+            _ = try await client.request(
+                WireRequest.snoozeClear.rawValue, payload: .object(["nodeId": .string(chatID)]))
             snoozedUntil = nil
             error = nil
         } catch {
-            self.error = ChatForking.message(for: error, action: "end a snooze")
+            self.error = ChatForking.message(
+                for: error, update: String(localized: "Update Ruimte on this machine to end a snooze."))
         }
     }
 

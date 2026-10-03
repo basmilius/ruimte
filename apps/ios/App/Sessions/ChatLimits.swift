@@ -11,7 +11,7 @@ struct ChatLimitView: Equatable {
 }
 
 /// The limit wording of the desktop client, `limit.*` in `packages/agents-react/src/locales/en/agent-chat.json`,
-/// written out by hand since this app has no translation layer.
+/// kept in step with it by hand.
 enum ChatLimits {
     /// Nil while the last turn stopped on nothing, or a turn runs. `moment` writes a time a limit names.
     static func view(info: JSONValue, moment: (Double) -> String) -> ChatLimitView? {
@@ -19,14 +19,15 @@ enum ChatLimits {
         let resumes = info["resumeAt"]?.numberValue.map(moment)
         if limit.text("kind") == "overload" {
             return ChatLimitView(
-                title: "The model was overloaded",
-                detail: resumes.map { "Tries again by itself at \($0)." } ?? "Send a message to try again.")
+                title: String(localized: "The model was overloaded"),
+                detail: resumes.map { String(localized: "Tries again by itself at \($0).") }
+                    ?? String(localized: "Send a message to try again."))
         }
         let resets = limit["resetsAt"]?.numberValue.map(moment)
         return ChatLimitView(
-            title: "Stopped on a usage limit",
-            detail: resumes.map { "Goes on by itself at \($0), when the limit resets." }
-                ?? resets.map { "The limit resets at \($0)." })
+            title: String(localized: "Stopped on a usage limit"),
+            detail: resumes.map { String(localized: "Goes on by itself at \($0), when the limit resets.") }
+                ?? resets.map { String(localized: "The limit resets at \($0).") })
     }
 
     /// A time today as a clock, any other with its day.
@@ -52,9 +53,9 @@ enum ChatLimits {
 
     /// How a session window reads in the account choice: "45% used · resets 14:00".
     static func sessionLine(_ window: AccountSessionWindow, now: Date = .now) -> String {
-        let used = "\(Int((window.used * 100).rounded()))% used"
+        let used = String(localized: "\(Int((window.used * 100).rounded()))% used")
         guard let resetsAt = window.resetsAt else { return used }
-        return "\(used) · resets \(moment(resetsAt, now: now))"
+        return String(localized: "\(used) · resets \(moment(resetsAt, now: now))")
     }
 }
 
@@ -112,8 +113,10 @@ extension ChatModel {
             let name = account.name(provider: usageProviderName(provider))
             self.error =
                 ChatForking.isUnknownRequest(error)
-                ? ChatForking.message(for: error, action: "continue on another account")
-                : "Could not continue on \(name). \(error.localizedDescription)"
+                ? ChatForking.message(
+                    for: error,
+                    update: String(localized: "Update Ruimte on this machine to continue on another account."))
+                : String(localized: "Could not continue on \(name). \(error.localizedDescription)")
             return nil
         }
     }
@@ -123,7 +126,8 @@ extension ChatModel {
             _ = try await client.request("chat.configure", payload: target(["resumeAtReset": .bool(on)]))
             error = nil
         } catch {
-            self.error = ChatForking.message(for: error, action: "resume chats at a reset")
+            self.error = ChatForking.message(
+                for: error, update: String(localized: "Update Ruimte on this machine to resume chats at a reset."))
         }
     }
 

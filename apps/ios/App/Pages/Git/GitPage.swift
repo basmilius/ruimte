@@ -71,7 +71,7 @@ struct GitPage: View {
                     )
                     .id(current)
                 } else {
-                    MobileLoadingRow("Loading").frame(maxWidth: .infinity, maxHeight: .infinity)
+                    MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
@@ -137,7 +137,7 @@ struct GitPage: View {
                         switchRoot(to: nil)
                     } label: {
                         Label(
-                            "Project folder",
+                            String(localized: "Project folder"),
                             lucideIcon: root == nil ? "check" : "folder")
                     }
                     ForEach(worktrees) { worktree in
@@ -145,16 +145,16 @@ struct GitPage: View {
                             switchRoot(to: worktree.path)
                         } label: {
                             Label(
-                                "\(worktree.branch) (worktree)",
+                                String(localized: "\(worktree.branch) (worktree)"),
                                 lucideIcon: root == worktree.path ? "check" : "folder-git-2")
                         }
                     }
                 }
             }
             if repositories.named {
-                Button("Repositories", lucideIcon: "folder-git-2") { showRepositories = true }
+                Button(String(localized: "Repositories"), lucideIcon: "folder-git-2") { showRepositories = true }
             } else if !checkouts.isEmpty {
-                Button("Switch branch", lucideIcon: "git-branch") { segment = .branches }
+                Button(String(localized: "Switch branch"), lucideIcon: "git-branch") { segment = .branches }
             }
         } label: {
             HStack(spacing: 6) {
@@ -178,30 +178,30 @@ struct GitPage: View {
     private var moreMenu: some View {
         Menu {
             if repositories.named {
-                Button("Pull all", lucideIcon: "arrow-down") {
+                Button(String(localized: "Pull all"), lucideIcon: "arrow-down") {
                     Task { await repositories.actAll(client: client, kind: "pull") }
                 }
-                Button("Push all", lucideIcon: "arrow-up") { Task { await repositories.pushAll(client: client) } }
-                Button("Sync all", lucideIcon: "refresh-cw") {
+                Button(String(localized: "Push all"), lucideIcon: "arrow-up") { Task { await repositories.pushAll(client: client) } }
+                Button(String(localized: "Sync all"), lucideIcon: "refresh-cw") {
                     Task { await repositories.actAll(client: client, kind: "sync") }
                 }
-                Button("Fetch all", lucideIcon: "cloud-download") {
+                Button(String(localized: "Fetch all"), lucideIcon: "cloud-download") {
                     Task { await repositories.actAll(client: client, kind: "fetch") }
                 }
             } else if let only = checkouts.first {
-                Button("Pull", lucideIcon: "arrow-down") { act(only, "pull") }
+                Button(String(localized: "Pull"), lucideIcon: "arrow-down") { act(only, "pull") }
                 Button(GitPanel.pushLabel(only), lucideIcon: "arrow-up") { act(only, GitPanel.pushKind(only)) }
-                Button("Sync", lucideIcon: "refresh-cw") { act(only, "sync") }
-                Button("Fetch", lucideIcon: "cloud-download") { act(only, "fetch") }
+                Button(String(localized: "Sync"), lucideIcon: "refresh-cw") { act(only, "sync") }
+                Button(String(localized: "Fetch"), lucideIcon: "cloud-download") { act(only, "fetch") }
                 if canPullRequest && only.branch != nil {
                     Divider()
-                    Button("Create pull request", lucideIcon: "git-pull-request") { pullRequest = only.path }
+                    Button(String(localized: "Create pull request"), lucideIcon: "git-pull-request") { pullRequest = only.path }
                 }
                 Divider()
-                Button("Repository", lucideIcon: "folder-git-2") { repositoryPage = only.path }
+                Button(String(localized: "Repository"), lucideIcon: "folder-git-2") { repositoryPage = only.path }
             }
         } label: {
-            Label("More git actions", lucideIcon: "ellipsis")
+            Label(String(localized: "More git actions"), lucideIcon: "ellipsis")
         }
         .disabled(repositories.busy || checkouts.isEmpty)
     }
@@ -263,13 +263,23 @@ struct GitGroupHeader: View {
 
     var body: some View {
         HStack {
-            Text(group.capitalized)
+            Text(Self.title(group))
             Text("\(count)").monospacedDigit().foregroundStyle(MobileStyle.faint)
             Spacer()
             if group != "conflicted" {
                 Button(group == "staged" ? "Unstage all" : "Stage all", action: onStage)
                     .font(.caption).buttonStyle(.plain).foregroundStyle(MobileStyle.accent).disabled(busy)
             }
+        }
+    }
+
+    static func title(_ group: String) -> String {
+        switch group {
+        case "conflicted": String(localized: "Conflicted", comment: "Git state of a file")
+        case "staged": String(localized: "Staged", comment: "Git state of a file")
+        case "unstaged": String(localized: "Unstaged", comment: "Git state of a file")
+        case "untracked": String(localized: "Untracked", comment: "Git state of a file")
+        default: group.capitalized
         }
     }
 }
@@ -319,8 +329,7 @@ struct GitHaltedRows: View {
                     Text(GitHaltedText.title(checkout, named: named)).lineLimit(1)
                     Text(
                         checkout.conflictCount == 0
-                            ? "Every file is resolved."
-                            : checkout.conflictCount == 1 ? "1 file conflicts" : "\(checkout.conflictCount) files conflict"
+                            ? "Every file is resolved." : "\(checkout.conflictCount) files conflict"
                     ).font(.caption).foregroundStyle(MobileStyle.muted)
                 }
             }
@@ -337,7 +346,7 @@ struct GitHaltedRows: View {
             .modifier(GitAbortConfirmation(operation: operation, isPresented: $confirmAbort) { Task { await finish("abort") } })
         }
         if session.busy {
-            GitBusyRow(text: session.progress ?? "Working")
+            GitBusyRow(text: session.progress ?? String(localized: "Working"))
         }
         if let problem = session.problem {
             Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(.red)

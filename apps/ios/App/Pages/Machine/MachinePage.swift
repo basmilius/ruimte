@@ -56,21 +56,21 @@ struct MachinePage: View {
                 }
             }
             Section {
-                row("Projects", icon: "folders", value: projects.listed.isEmpty ? nil : "\(projects.listed.count)") {
+                row(String(localized: "Projects"), icon: "folders", value: projects.listed.isEmpty ? nil : "\(projects.listed.count)") {
                     destination = .projects
                 }
-                row("Files", icon: "folder") { destination = .files }
+                row(String(localized: "Files"), icon: "folder") { destination = .files }
                     .disabled(!session.connected)
-                row("Devices", icon: "smartphone", value: devicesValue, highlighted: devices.runningCount > 0) {
+                row(String(localized: "Devices"), icon: "smartphone", value: devicesValue, highlighted: devices.runningCount > 0) {
                     destination = .devices
                 }
-                row("Processes", icon: "activity") { destination = .processes }
+                row(String(localized: "Processes"), icon: "activity") { destination = .processes }
                 usageRow
             }
             Section("On this machine") {
                 keepAwakeRows
                 LabeledContent("Connection", value: connectionValue)
-                row("Agents", icon: "bot") { destination = .agents }
+                row(String(localized: "Agents"), icon: "bot") { destination = .agents }
             }
         }
         .navigationTitle(name)
@@ -86,18 +86,18 @@ struct MachinePage: View {
         }
         .toolbar {
             ToolbarItem(id: "machine.openFolder", placement: .topBarTrailing) {
-                Button("Open folder", lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
+                Button(String(localized: "Open folder"), lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
             }
             ToolbarItem(id: "machine.menu", placement: .topBarTrailing) {
                 Menu {
                     if isPad {
-                        Button("Machine settings", lucideIcon: "pencil") { naming = true }
+                        Button(String(localized: "Machine settings"), lucideIcon: "pencil") { naming = true }
                     } else {
-                        Button("Name and icon", lucideIcon: "pencil") { naming = true }
-                        Button("Apps with access", lucideIcon: "key-round") { access = true }
+                        Button(String(localized: "Name and icon"), lucideIcon: "pencil") { naming = true }
+                        Button(String(localized: "Apps with access"), lucideIcon: "key-round") { access = true }
                     }
                     Divider()
-                    Button("Reconnect", lucideIcon: "refresh-cw") { session.reconnect() }
+                    Button(String(localized: "Reconnect"), lucideIcon: "refresh-cw") { session.reconnect() }
                 } label: {
                     Image(lucide: "ellipsis").accessibilityLabel("Machine")
                 }
@@ -168,17 +168,17 @@ struct MachinePage: View {
     }
 
     private var connectionValue: String {
-        guard session.connected else { return "Not connected" }
+        guard session.connected else { return String(localized: "Not connected") }
         switch session.relayed {
-        case .some(true): return "Relay"
-        case .some(false): return "Direct"
-        case .none: return "Broker"
+        case .some(true): return String(localized: "Relay", comment: "A connection through the relay")
+        case .some(false): return String(localized: "Direct", comment: "A direct connection")
+        case .none: return String(localized: "Broker", comment: "A connection through the broker")
         }
     }
 
     private var devicesValue: String? {
-        if !endpoint.streamingAllowed || devices.streamingOff { return "Streaming off" }
-        return devices.runningCount > 0 ? "\(devices.runningCount) running" : nil
+        if !endpoint.streamingAllowed || devices.streamingOff { return String(localized: "Streaming off") }
+        return devices.runningCount > 0 ? String(localized: "\(devices.runningCount) running", comment: "Devices running") : nil
     }
 
     private var usageMachines: [UsageMachine] {
@@ -193,7 +193,7 @@ struct MachinePage: View {
             destination = .usage
         } label: {
             VStack(alignment: .leading, spacing: 8) {
-                MachineLinkLabel(title: "Usage", icon: "chart-no-axes-column")
+                MachineLinkLabel(title: String(localized: "Usage"), icon: "chart-no-axes-column")
                 ForEach(MachineLimitLine.lines(session.usageWidget.providers)) { line in
                     MachineLimitRow(line: line)
                 }
@@ -308,7 +308,11 @@ struct MachineUpdateBanner: View {
             Image(lucide: update.status == "error" ? "triangle-alert" : "download", size: 16)
                 .foregroundStyle(update.status == "error" ? MobileStyle.statusNeedsYou : MobileStyle.statusRunning)
             VStack(alignment: .leading, spacing: 2) {
-                Text(install == .started ? "Installing. The machine comes back on the new version in a moment." : update.headline ?? "")
+                Text(
+                    install == .started
+                        ? String(localized: "Installing. The machine comes back on the new version in a moment.")
+                        : update.headline ?? ""
+                )
                     .font(.subheadline)
                 if let note = update.note, install != .started {
                     Text(note).font(.caption).foregroundStyle(MobileStyle.muted)

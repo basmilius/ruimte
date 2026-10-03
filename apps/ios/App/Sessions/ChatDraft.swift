@@ -42,8 +42,8 @@ enum ChatDraftLimits {
     static let pasteBytes = 32 * 1024
 
     static func attachmentProblem(count: Int, bytes: Int) -> String? {
-        if count > files { return "Choose up to 8 files per message." }
-        if bytes > Self.bytes { return "Attachments can total at most 10 MiB per message." }
+        if count > files { return String(localized: "Choose up to 8 files per message.") }
+        if bytes > Self.bytes { return String(localized: "Attachments can total at most 10 MiB per message.") }
         return nil
     }
 }
@@ -68,7 +68,9 @@ actor ChatDraftFiles {
         let file = directory.appendingPathComponent("draft.json")
         guard FileManager.default.fileExists(atPath: file.path) else { return nil }
         let record = try JSONDecoder().decode(ChatDraftRecord.self, from: Data(contentsOf: file))
-        guard record.version == 1 else { throw DraftFailure("This draft was saved by a newer version of Ruimte.") }
+        guard record.version == 1 else {
+            throw DraftFailure(String(localized: "This draft was saved by a newer version of Ruimte."))
+        }
         return record
     }
 
@@ -80,8 +82,10 @@ actor ChatDraftFiles {
     }
 
     func stage(data: Data, name: String, mime: String) throws -> ChatUpload {
-        guard !data.isEmpty else { throw DraftFailure("This file is empty.") }
-        guard data.count <= ChatDraftLimits.bytes else { throw DraftFailure("Files must be at most 10 MiB.") }
+        guard !data.isEmpty else { throw DraftFailure(String(localized: "This file is empty.")) }
+        guard data.count <= ChatDraftLimits.bytes else {
+            throw DraftFailure(String(localized: "Files must be at most 10 MiB."))
+        }
         let descriptor = ChatUploadDescriptor(id: UUID(), name: Self.safeName(name), mime: mime, size: data.count)
         let file = upload(descriptor)
         try FileManager.default.createDirectory(
@@ -130,7 +134,7 @@ actor ChatDraftFiles {
 
     private nonisolated static func safeName(_ raw: String) -> String {
         let name = String((raw as NSString).lastPathComponent.prefix(200))
-        return name.isEmpty || name == "." || name == ".." ? "Attachment" : name
+        return name.isEmpty || name == "." || name == ".." ? String(localized: "Attachment") : name
     }
 }
 
@@ -206,7 +210,7 @@ final class ChatComposition {
         do {
             record = try files.read() ?? ChatDraftRecord(text: defaults.string(forKey: legacyKey) ?? "")
         } catch {
-            storageProblem = "Could not restore the draft. \(error.localizedDescription)"
+            storageProblem = String(localized: "Could not restore the draft. \(error.localizedDescription)")
             canSave = false
         }
         text = record.text
@@ -219,7 +223,7 @@ final class ChatComposition {
         selection = NSRange(
             location: location, length: min(max(0, record.selectedLength), (record.text as NSString).length - location))
         if uploads.contains(where: { !FileManager.default.fileExists(atPath: $0.url.path) }) {
-            problem = "A saved attachment is missing. Remove it and attach it again before sending."
+            problem = String(localized: "A saved attachment is missing. Remove it and attach it again before sending.")
         }
         ChatDraftInbox.register(self, machineID: machineID, chatID: chatID)
     }
@@ -249,17 +253,23 @@ final class ChatComposition {
     var importing: Bool { imports.contains { $0.error == nil } }
     var restoreFailed: Bool { !canSave }
     var validation: String? {
-        if text.utf16.count > ChatDraftLimits.characters { return "Messages can contain at most 120,000 characters." }
+        if text.utf16.count > ChatDraftLimits.characters {
+            return String(localized: "Messages can contain at most 120,000 characters.")
+        }
         let tokens = ChatDraftSyntax.tokens(in: text, mentions: mentions, skills: skills)
-        if Set(tokens.filter { $0.kind == "@" }.map(\.value)).count > 64 { return "Choose up to 64 file mentions." }
-        if Set(tokens.filter { $0.kind == "$" }.map(\.value)).count > 16 { return "Choose up to 16 skills." }
-        if chats.count > 16 { return "Choose up to 16 conversations." }
+        if Set(tokens.filter { $0.kind == "@" }.map(\.value)).count > 64 {
+            return String(localized: "Choose up to 64 file mentions.")
+        }
+        if Set(tokens.filter { $0.kind == "$" }.map(\.value)).count > 16 {
+            return String(localized: "Choose up to 16 skills.")
+        }
+        if chats.count > 16 { return String(localized: "Choose up to 16 conversations.") }
         return ChatDraftLimits.attachmentProblem(count: uploads.count, bytes: uploads.reduce(0) { $0 + $1.size })
     }
 
     func reserve(_ name: String) -> UUID? {
         guard uploads.count + imports.count < ChatDraftLimits.files else {
-            problem = "Choose up to 8 files per message."
+            problem = String(localized: "Choose up to 8 files per message.")
             return nil
         }
         let id = UUID()
@@ -301,7 +311,7 @@ final class ChatComposition {
             try await files.save(snapshot, revision: current)
             storageProblem = nil
             defaults.removeObject(forKey: legacyKey)
-        } catch { storageProblem = "Could not save the draft. \(error.localizedDescription)" }
+        } catch { storageProblem = String(localized: "Could not save the draft. \(error.localizedDescription)") }
     }
 
     func recoverStorage() async {
@@ -311,7 +321,7 @@ final class ChatComposition {
                 canSave = true
             }
             await flush()
-        } catch { storageProblem = "Could not save the draft. \(error.localizedDescription)" }
+        } catch { storageProblem = String(localized: "Could not save the draft. \(error.localizedDescription)") }
     }
 
     func takeBack(_ incoming: ChatDraftRecord, uploads added: [ChatUpload]) throws {

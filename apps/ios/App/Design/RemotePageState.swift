@@ -133,7 +133,7 @@ struct RemotePageStatus: View {
     let state: RemotePageState
     let retry: () -> Void
     var body: some View {
-        if state.loading { MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding() }
+        if state.loading { MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding() }
         if let problem = state.problem {
             VStack(alignment: .leading, spacing: 12) {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)

@@ -64,7 +64,7 @@ final class NewChatModel {
                 payload: NewChat.payload(provider: provider, account: account(for: provider)))
             guard let projectID = result["summary"]?["projectId"]?.stringValue,
                 let viewID = result["viewId"]?.stringValue
-            else { throw MachineClientError.invalid("The machine did not say where the chat is.") }
+            else { throw MachineClientError.invalid(String(localized: "The machine did not say where the chat is.")) }
             problem = nil
             return NewChatPlace(projectID: projectID, viewID: viewID)
         } catch {
@@ -84,10 +84,14 @@ enum NewChat {
     /// The two refusals a machine gives that a person can do something about, in their own words.
     static func message(for error: Error) -> String {
         if case MachineClientError.server(let code, _) = error {
-            if code == "unknown-request" { return "Update Ruimte on this machine to start chats outside a project." }
+            if code == "unknown-request" {
+                return String(localized: "Update Ruimte on this machine to start chats outside a project.")
+            }
             if code == "scratch-unavailable" {
-                return
-                    "This machine keeps its Ruimte folder inside a git checkout, so it cannot hold chats outside a project."
+                return String(
+                    localized:
+                        "This machine keeps its Ruimte folder inside a git checkout, so it cannot hold chats outside a project."
+                )
             }
         }
         return error.localizedDescription
@@ -124,7 +128,10 @@ struct NewChatSheet: View {
                         }
                         ForEach(agents, id: \.agentKind) { agent in row(agent) }
                     } else if model.problem == nil {
-                        MobileLoadingRow(session.connected ? "Looking for agents" : "Connecting to your machine")
+                        MobileLoadingRow(
+                            session.connected
+                                ? String(localized: "Looking for agents")
+                                : String(localized: "Connecting to your machine"))
                     }
                 } header: {
                     Text("Chat with")
@@ -161,7 +168,11 @@ struct NewChatSheet: View {
             }
         } label: {
             HStack(spacing: 10) {
-                MobileRow(title: name, subtitle: account.map { "Account \($0)" } ?? "", symbol: "bot")
+                MobileRow(
+                    title: name,
+                    subtitle: account.map { String(localized: "Account \($0)", comment: "%@ is the account name") }
+                        ?? "",
+                    symbol: "bot")
                 if model.starting == kind { ProgressView() }
             }
             .modifier(MobileSidebarLabel())
@@ -206,7 +217,9 @@ struct NewChatRow: View {
     }
 
     private var label: some View {
-        ChatsRowLabel(title: "New chat", detail: "For a question or a quick task", icon: "message-square-plus")
+        ChatsRowLabel(
+            title: String(localized: "New chat"), detail: String(localized: "For a question or a quick task"),
+            icon: "message-square-plus")
     }
 }
 

@@ -84,9 +84,13 @@ struct ProjectOverviewLabel: View {
             )
             .frame(width: 32)
             VStack(alignment: .leading, spacing: 1) {
-                Text(overview.isChats ? "Chats" : overview.row.summary.text("name", fallback: "Untitled project"))
-                    .foregroundStyle(overview.unavailable || offline ? MobileStyle.muted : MobileStyle.text)
-                    .lineLimit(1).truncationMode(.tail)
+                Text(
+                    overview.isChats
+                        ? String(localized: "Chats")
+                        : overview.row.summary.text("name", fallback: String(localized: "Untitled project"))
+                )
+                .foregroundStyle(overview.unavailable || offline ? MobileStyle.muted : MobileStyle.text)
+                .lineLimit(1).truncationMode(.tail)
                 if let detail = overview.detail {
                     Text(detail).font(.caption)
                         .foregroundStyle(overview.unavailable ? MobileStyle.faint : MobileStyle.muted)
@@ -98,10 +102,10 @@ struct ProjectOverviewLabel: View {
                 if activity.needsYou > 0 {
                     Text("\(activity.needsYou)").font(.footnote.weight(.semibold)).monospacedDigit()
                         .foregroundStyle(MobileStyle.statusNeedsYou)
-                        .accessibilityLabel(activity.needsYou == 1 ? "1 needs you" : "\(activity.needsYou) need you")
+                        .accessibilityLabel("\(activity.needsYou) need you")
                 }
                 if activity.working {
-                    Spinner(size: 12, label: "Working").foregroundStyle(MobileStyle.statusRunning)
+                    Spinner(size: 12, label: String(localized: "Working")).foregroundStyle(MobileStyle.statusRunning)
                 }
             }
         }

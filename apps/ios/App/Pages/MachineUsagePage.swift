@@ -166,7 +166,7 @@ struct MachineUsagePage: View {
                 }
             }
             .frame(height: 170)
-            .accessibilityLabel(metric == .tokens ? "Tokens per \(unit == .hour ? "hour" : "day")" : "Cost per day")
+            .accessibilityLabel(metric == .tokens ? (unit == .hour ? "Tokens per hour" : "Tokens per day") : "Cost per day")
             HStack(spacing: 16) {
                 ForEach(report.providers) { provider in
                     HStack(spacing: 6) {
@@ -200,9 +200,12 @@ struct MachineUsagePage: View {
     private func tiles(_ report: UsageReport) -> some View {
         let tokens = report.total.tokens
         let tiles: [(String, String)] = [
-            ("Processed", UsageReport.tokens(tokens.total)), ("Uncached", UsageReport.tokens(tokens.input)),
-            ("Cached", UsageReport.tokens(tokens.cacheRead)), ("Cache writes", UsageReport.tokens(tokens.cacheWrite)),
-            ("Output", UsageReport.tokens(tokens.output)), ("Cache savings", money.string(usd: report.cacheSavingsUsd)),
+            (String(localized: "Processed", comment: "Tokens processed"), UsageReport.tokens(tokens.total)),
+            (String(localized: "Uncached", comment: "Input tokens read without a cache"), UsageReport.tokens(tokens.input)),
+            (String(localized: "Cached", comment: "Input tokens read from a cache"), UsageReport.tokens(tokens.cacheRead)),
+            (String(localized: "Cache writes"), UsageReport.tokens(tokens.cacheWrite)),
+            (String(localized: "Output", comment: "Output tokens"), UsageReport.tokens(tokens.output)),
+            (String(localized: "Cache savings"), money.string(usd: report.cacheSavingsUsd)),
         ]
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
             ForEach(tiles, id: \.0) { tile in
@@ -248,10 +251,10 @@ struct MachineUsagePage: View {
     }
 
     private func breakdownRow(_ row: UsageReport.Row, report: UsageReport, top: Double) -> some View {
-        let amount = metric == .tokens ? UsageReport.tokens(row.tokens) : row.costUsd.map { money.string(usd: $0) } ?? "No price"
+        let amount = metric == .tokens ? UsageReport.tokens(row.tokens) : row.costUsd.map { money.string(usd: $0) } ?? String(localized: "No price")
         let share = report.share(row, metric: metric)
         let title = breakdown == .day ? (UsageReport.date(row.title)?.formatted(.dateTime.weekday(.abbreviated).day().month()) ?? row.title) : row.title
-        var detail = breakdown == .projects ? row.detail : "\(Int(row.calls).formatted()) calls"
+        var detail = breakdown == .projects ? row.detail : String(localized: "\(Int(row.calls).formatted()) calls")
         if let share { detail += " · \(share.formatted(.percent.precision(.fractionLength(0))))" }
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
@@ -295,7 +298,7 @@ struct MachineUsagePage: View {
         case .signedOut:
             if loginCommands[section.kind] != nil {
                 Text("Not logged in. Log in to see its limits.").font(.callout).foregroundStyle(MobileStyle.muted)
-                Button("Log in", lucideIcon: "log-in") {
+                Button(String(localized: "Log in"), lucideIcon: "log-in") {
                     login = UsageLogin(kind: section.kind, accountID: section.id, name: section.name)
                 }
                 .buttonStyle(.bordered)
@@ -304,7 +307,7 @@ struct MachineUsagePage: View {
                     .foregroundStyle(MobileStyle.muted)
             }
         case .notRead(let message):
-            Text(message ?? "Not read yet. Its limits appear once the machine has read them.")
+            Text(message ?? String(localized: "Not read yet. Its limits appear once the machine has read them."))
                 .font(.callout).foregroundStyle(MobileStyle.muted)
         case nil:
             if let provider = section.entry {
@@ -327,12 +330,12 @@ struct MachineUsagePage: View {
             let scanned = Date(timeIntervalSince1970: (scan?.number("at") ?? 0) / 1000)
             let files = Int(scan?.number("files") ?? 0)
             let prices = summary["pricing"]?["fetchedAt"]?.numberValue.map {
-                "Prices from LiteLLM, \(Date(timeIntervalSince1970: $0 / 1000).formatted(.dateTime.day().month()))"
-            } ?? "Bundled prices"
+                String(localized: "Prices from LiteLLM, \(Date(timeIntervalSince1970: $0 / 1000).formatted(.dateTime.day().month()))")
+            } ?? String(localized: "Bundled prices")
             let rate =
                 money.currencyCode == "EUR"
                 ? money.rateDate.flatMap { UsageReport.date($0) }.map {
-                    " · EUR at the ECB rate of \($0.formatted(.dateTime.day().month()))"
+                    String(localized: " · EUR at the ECB rate of \($0.formatted(.dateTime.day().month()))", comment: "Appended to the usage provenance line; %@ is a date")
                 } ?? "" : ""
             VStack(spacing: 6) {
                 if scan?["failed"]?.boolValue == true {
@@ -342,7 +345,8 @@ struct MachineUsagePage: View {
                     Text(explanation)
                 }
                 Text(
-                    "Scanned \(scanned.formatted(date: .omitted, time: .shortened)), \(files.formatted()) files · \(prices)\(rate)"
+                    "Scanned \(scanned.formatted(date: .omitted, time: .shortened)), \(files.formatted()) files · \(prices)\(rate)",
+                    comment: "A time, a file count, where the prices came from, then an optional currency note"
                 )
             }
             .font(.caption).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)

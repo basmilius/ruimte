@@ -122,14 +122,14 @@ private struct NeedsYouListView: View {
                 Text("\(items.count)").font(.caption.weight(.semibold)).monospacedDigit()
                 Spacer(minLength: 4)
                 if let projects = entry.snapshot?.projects, projects > 0 {
-                    Text(projects == 1 ? "1 project" : "\(projects) projects").font(.caption)
+                    Text("\(projects) projects").font(.caption)
                 }
             }
             .foregroundStyle(colors.muted)
             if entry.snapshot == nil {
-                message("Open Ruimte to see what waits for you.", colors: colors)
+                message(String(localized: "Open Ruimte to see what waits for you."), colors: colors)
             } else if items.isEmpty {
-                message("Nothing needs you.", colors: colors)
+                message(String(localized: "Nothing needs you."), colors: colors)
             } else {
                 ForEach(items.prefix(family == .systemLarge ? 6 : 2)) { item in
                     Link(destination: item.url ?? NeedsYouWidgetSnapshot.nowURL) { row(item, colors: colors) }

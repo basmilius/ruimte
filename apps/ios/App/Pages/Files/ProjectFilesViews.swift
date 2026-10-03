@@ -72,9 +72,9 @@ struct FileLinesView: View {
 
     static func spoken(_ change: FileLineChange) -> String {
         switch change {
-        case .added: "Added"
-        case .modified: "Changed"
-        case .deleted: "Lines removed above"
+        case .added: String(localized: "Added", comment: "A line of a file that git sees as new")
+        case .modified: String(localized: "Changed", comment: "A line of a file that git sees as changed")
+        case .deleted: String(localized: "Lines removed above")
         }
     }
 
@@ -131,7 +131,10 @@ struct FileMentionMenu<Label: View>: View {
                 Text("This project has no chats yet")
             }
             ForEach(chats) { chat in
-                Button(chat.current ? "\(chat.title) (last opened)" : chat.title, lucideIcon: "message-square") {
+                Button(
+                    chat.current ? String(localized: "\(chat.title) (last opened)") : chat.title,
+                    lucideIcon: "message-square"
+                ) {
                     Task {
                         if let line = await project.mention(path, in: chat) { onMentioned(line) }
                     }
@@ -154,7 +157,7 @@ struct FileDeleteConfirmation: ViewModifier {
     func body(content: Content) -> some View {
         content
             .alert(
-                path.map { "Delete \(($0 as NSString).lastPathComponent)?" } ?? "",
+                path.map { String(localized: "Delete \(($0 as NSString).lastPathComponent)?") } ?? "",
                 isPresented: Binding(get: { path != nil }, set: { if !$0 { path = nil } }),
                 presenting: path
             ) { pending in
@@ -166,7 +169,7 @@ struct FileDeleteConfirmation: ViewModifier {
                         } catch {
                             problem =
                                 gitRefusalCode(error) == "unknown-request"
-                                ? "Update Ruimte on this machine to delete files on the phone."
+                                ? String(localized: "Update Ruimte on this machine to delete files on the phone.")
                                 : error.localizedDescription
                         }
                     }

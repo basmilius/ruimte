@@ -118,10 +118,10 @@ struct TaskMark: View {
 
     static func word(_ status: TaskStatus) -> String {
         switch status {
-        case .open: "working on it"
-        case .done: "done"
-        case .failed: "failed"
-        case .cancelled: "cancelled"
+        case .open: String(localized: "working on it", comment: "Status of a task an agent gave")
+        case .done: String(localized: "done", comment: "Status of a task an agent gave")
+        case .failed: String(localized: "failed", comment: "Status of a task an agent gave")
+        case .cancelled: String(localized: "cancelled", comment: "Status of a task an agent gave")
         }
     }
 

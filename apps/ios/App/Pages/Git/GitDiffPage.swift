@@ -81,7 +81,8 @@ struct GitDiffPage: View {
     @ViewBuilder private func patch(_ file: JSONValue) -> some View {
         if let omitted = file["omitted"]?.stringValue {
             ContentUnavailableView(
-                omitted == "binary" ? "Binary file" : "Diff too large", lucideIcon: "file-text")
+                omitted == "binary" ? String(localized: "Binary file") : String(localized: "Diff too large"),
+                lucideIcon: "file-text")
         } else {
             let lines = file.text("diff").components(separatedBy: "\n")
             VStack(alignment: .leading, spacing: 0) {

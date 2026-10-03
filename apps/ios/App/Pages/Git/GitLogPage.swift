@@ -34,7 +34,7 @@ import SwiftUI
             }
         }
         // Only a folder where not one repository answered has nothing to say but the failure.
-        problem = failures > 0 && loaded.isEmpty ? "The history could not be read." : nil
+        problem = failures > 0 && loaded.isEmpty ? String(localized: "The history could not be read.") : nil
         logs = loaded
     }
 
@@ -85,9 +85,9 @@ struct GitHistoryRows: View {
             }.padding(.vertical, 8)
         }
         if history.loading {
-            MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
+            MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
         } else if merged.rows.isEmpty && history.problem == nil {
-            ContentUnavailableView("No commits yet", lucideIcon: "git-commit-horizontal")
+            ContentUnavailableView(String(localized: "No commits yet"), lucideIcon: "git-commit-horizontal")
         }
         ForEach(merged.rows) { row in
             Button {
@@ -108,14 +108,14 @@ struct GitHistoryRows: View {
             }
             .modifier(MobileSidebarRow())
             .contextMenu {
-                Button("Copy hash", lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("hash") }
-                Button("Copy subject", lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("subject") }
+                Button(String(localized: "Copy hash"), lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("hash") }
+                Button(String(localized: "Copy subject"), lucideIcon: "copy") { UIPasteboard.general.string = row.commit.text("subject") }
             }
         }
         if merged.more {
             HStack {
                 if history.paging {
-                    Spinner(size: 14, label: "Loading more commits").foregroundStyle(MobileStyle.muted)
+                    Spinner(size: 14, label: String(localized: "Loading more commits")).foregroundStyle(MobileStyle.muted)
                 } else {
                     Button("Load more") { Task { await history.loadMore(client: client) } }
                 }
@@ -141,7 +141,7 @@ struct GitLogPage: View {
                 reload: { Task { await history.load(client: client, sources: sources) } },
                 onOpen: { diff = $0 })
         }
-        .navigationTitle(repositories.checkout(only)?.label ?? "History")
+        .navigationTitle(repositories.checkout(only)?.label ?? String(localized: "History"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $diff) { target in GitDiffPage(client: client, target: target) }
         .task(id: only) { await history.load(client: client, sources: sources) }

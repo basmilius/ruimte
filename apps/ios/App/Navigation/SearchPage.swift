@@ -133,8 +133,12 @@ struct SearchPage: View {
 
     private func viewDetail(_ entry: ProjectViewEntry) -> String {
         let place = runtime.machines.count > 1 ? "\(entry.projectName) · \(entry.machineName)" : entry.projectName
-        if entry.status == .needsYou && entry.snoozedUntil == nil { return "\(place) · needs you" }
-        if entry.status == .running { return "\(place) · working" }
+        if entry.status == .needsYou && entry.snoozedUntil == nil {
+            return String(localized: "\(place) · needs you", comment: "%@ is the project, maybe with its machine")
+        }
+        if entry.status == .running {
+            return String(localized: "\(place) · working", comment: "%@ is the project, maybe with its machine")
+        }
         return place
     }
 

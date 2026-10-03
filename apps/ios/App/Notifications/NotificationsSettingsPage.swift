@@ -24,13 +24,13 @@ struct NotificationsSettingsPage: View {
             }
             if coordinator.enabled {
                 Section("Notify me when") {
-                    kind(.needsYou, "An agent needs you", icon: "hand")
+                    kind(.needsYou, String(localized: "An agent needs you"), icon: "hand")
                     Toggle(isOn: $coordinator.approvals) {
-                        Label("Approval requests", lucideIcon: "shield-check")
+                        Label(String(localized: "Approval requests"), lucideIcon: "shield-check")
                     }
                     .disabled(!coordinator.preferences.notify.contains(.needsYou))
-                    kind(.turn, "A turn finishes", icon: "check")
-                    kind(.process, "A process misbehaves", icon: "triangle-alert")
+                    kind(.turn, String(localized: "A turn finishes"), icon: "check")
+                    kind(.process, String(localized: "A process misbehaves"), icon: "triangle-alert")
                 }
                 if !outdated.isEmpty {
                     Section {
@@ -41,7 +41,7 @@ struct NotificationsSettingsPage: View {
             if coordinator.supportsActivities {
                 Section {
                     Toggle(isOn: $coordinator.activities) {
-                        Label("While agents work", lucideIcon: "loader")
+                        Label(String(localized: "While agents work"), lucideIcon: "loader")
                     }
                 } header: {
                     Text("Live Activity")
@@ -92,9 +92,16 @@ struct NotificationsSettingsPage: View {
 
     private var outdatedNotice: String {
         let names = ListFormatter.localizedString(byJoining: outdated.map(\.name))
-        let verb = outdated.count == 1 ? "needs" : "need"
-        return "\(names) \(verb) an update before these choices apply there. "
-            + "Until then you hear only when an agent needs you."
+        if outdated.count == 1 {
+            return String(
+                localized:
+                    "\(names) needs an update before these choices apply there. Until then you hear only when an agent needs you.",
+                comment: "%@ is the name of one machine")
+        }
+        return String(
+            localized:
+                "\(names) need an update before these choices apply there. Until then you hear only when an agent needs you.",
+            comment: "%@ is a list of machine names")
     }
 
     private func kind(_ kind: PushNotifyKind, _ title: String, icon: String) -> some View {
@@ -127,7 +134,7 @@ struct NotificationsSettingsPage: View {
         } label: {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(row.summary.text("name", fallback: "Project")).lineLimit(1)
+                    Text(row.summary.text("name", fallback: String(localized: "Project"))).lineLimit(1)
                     if coordinator.machines.count > 1 {
                         Text(row.machine.name).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
                     }

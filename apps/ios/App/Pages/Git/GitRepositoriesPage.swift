@@ -20,7 +20,7 @@ struct GitRepositoriesPage: View {
                 "This project holds \(checkouts.count) repositories. Changes, fetch, pull and push cover all of them; branches, stashes and pull requests belong to one."
             ).font(.callout).foregroundStyle(MobileStyle.muted)
             if repositories.busy {
-                GitBusyRow(text: repositories.step ?? repositories.progress ?? "Working")
+                GitBusyRow(text: repositories.step ?? repositories.progress ?? String(localized: "Working"))
             }
             if let problem = repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
@@ -46,10 +46,10 @@ struct GitRepositoriesPage: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             GitBottomBar {
-                GitBarButton(title: "Pull all", prominent: false) {
+                GitBarButton(title: String(localized: "Pull all"), prominent: false) {
                     Task { await repositories.actAll(client: client, kind: "pull") }
                 }.disabled(repositories.busy)
-                GitBarButton(title: pushable.count == 1 ? "Push 1 repository" : "Push \(pushable.count) repositories") {
+                GitBarButton(title: String(localized: "Push \(pushable.count) repositories")) {
                     Task { await repositories.pushAll(client: client) }
                 }.disabled(repositories.busy || pushable.isEmpty)
             }

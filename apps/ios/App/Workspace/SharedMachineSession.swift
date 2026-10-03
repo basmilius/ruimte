@@ -40,7 +40,9 @@ final class SharedMachineSession {
     @ObservationIgnored lazy var usageWidget = UsageWidgetRecorder(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var snoozes = MachineSnoozes(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var rpc = MachineClient(send: { [weak self] text in
-        guard let lease = self?.lease else { throw TransportFailure.invalid("This machine is not connected.") }
+        guard let lease = self?.lease else {
+            throw TransportFailure.invalid(String(localized: "This machine is not connected."))
+        }
         try lease.send(text)
     })
 
@@ -54,7 +56,7 @@ final class SharedMachineSession {
         references += 1
         guard lease == nil, let runtime, let key = runtime.key else { return }
         guard let url = machine.brokerUrl.flatMap(URL.init(string:)), url.scheme == "wss" else {
-            problem = "This machine needs a secure broker address."
+            problem = String(localized: "This machine needs a secure broker address.")
             return
         }
         let events = LinkEvents(
@@ -92,7 +94,7 @@ final class SharedMachineSession {
                     identity: identity,
                     requestAccess: {
                         guard let token = try await runtime.vault?.accessToken() else {
-                            throw TransportFailure.invalid("Sign in to connect to this machine.")
+                            throw TransportFailure.invalid(String(localized: "Sign in to connect to this machine."))
                         }
                         let access = try await runtime.client.signalAccess(
                             accessToken: token, machineID: self.machine.id, key: key,

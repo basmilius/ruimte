@@ -41,14 +41,14 @@ struct GitBranchesSegment: View {
                 .pickerStyle(.menu)
             }
             if repositories.busy {
-                GitBusyRow(text: repositories.progress ?? "Working")
+                GitBusyRow(text: repositories.progress ?? String(localized: "Working"))
             }
             if let problem = repositories.problem {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red).textSelection(.enabled)
             }
             Section {
                 if actions.refs.loading && branches.isEmpty {
-                    MobileLoadingRow("Loading").frame(maxWidth: .infinity).padding()
+                    MobileLoadingRow(String(localized: "Loading")).frame(maxWidth: .infinity).padding()
                 }
                 ForEach(branches, id: \.stableID) { ref in
                     GitBranchRow(client: client, actions: actions, ref: ref)
@@ -59,7 +59,7 @@ struct GitBranchesSegment: View {
                     Text("All branches").foregroundStyle(MobileStyle.muted)
                 }
             } header: {
-                header("Branches")
+                header(String(localized: "Branches"))
             }
             Section {
                 GitWorktreeStatusRows(client: client, state: worktrees)
@@ -83,28 +83,30 @@ struct GitBranchesSegment: View {
                 if let workspace, actions.path == workspace.folder,
                     !GitWorktreeBinding.groups(in: workspace.views).isEmpty
                 {
-                    Button("Bind a group to a worktree", lucideIcon: "group") { binding = true }
+                    Button(String(localized: "Bind a group to a worktree"), lucideIcon: "group") { binding = true }
                         .disabled(worktrees.busy)
                 }
             } header: {
-                header("Worktrees")
+                header(String(localized: "Worktrees"))
             }
             Section {
                 ForEach(actions.refs.stashes, id: \.stableID) { stash in
                     stashRow(stash)
                 }
-                Button("Stash changes", lucideIcon: "archive") { actions.prompt = .stash(cwd: actions.path) }
-                    .disabled(repositories.busy || (actions.checkout?.files.isEmpty ?? true))
+                Button(String(localized: "Stash changes"), lucideIcon: "archive") {
+                    actions.prompt = .stash(cwd: actions.path)
+                }
+                .disabled(repositories.busy || (actions.checkout?.files.isEmpty ?? true))
             } header: {
-                header("Stash")
+                header(String(localized: "Stash", comment: "Section of git stashes"))
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             GitBottomBar {
-                GitBarButton(title: "New branch", prominent: false) {
+                GitBarButton(title: String(localized: "New branch"), prominent: false) {
                     actions.prompt = .createBranch(cwd: actions.path)
                 }.disabled(repositories.busy)
-                GitBarButton(title: "New worktree", prominent: false) { worktrees.creating = true }
+                GitBarButton(title: String(localized: "New worktree"), prominent: false) { worktrees.creating = true }
                     .disabled(worktrees.busy || worktrees.unsupported)
             }
         }
@@ -151,10 +153,10 @@ struct GitBranchesSegment: View {
                 .tint(MobileStyle.accent).disabled(repositories.busy)
         }
         .contextMenu {
-            Button("Pop this stash", lucideIcon: "archive-restore") {
+            Button(String(localized: "Pop this stash"), lucideIcon: "archive-restore") {
                 Task { await actions.pop(client: client, stash: ref) }
             }.disabled(repositories.busy)
-            Button("Copy name", lucideIcon: "copy") { UIPasteboard.general.string = ref }
+            Button(String(localized: "Copy name"), lucideIcon: "copy") { UIPasteboard.general.string = ref }
         }
     }
 }

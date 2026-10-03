@@ -36,14 +36,17 @@ final class MachinePairing {
         do {
             let link = try SecurePairingLink(text)
             guard let key = runtime.key else {
-                throw PairingFailure(code: "no-key", message: "The device key is not ready. Try again.")
+                throw PairingFailure(
+                    code: "no-key", message: String(localized: "The device key is not ready. Try again."))
             }
             let result = try await client.pair(link, publicKey: key.publicKey, label: "Ruimte on iOS")
             guard let machine = result.endpoint.pairedMachine() else {
                 throw PairingFailure(
                     code: "unreachable",
-                    message:
-                        "Pairing succeeded, but this machine needs a public key and secure broker before iOS can connect."
+                    message: String(
+                        localized:
+                            "Pairing succeeded, but this machine needs a public key and secure broker before iOS can connect."
+                    )
                 )
             }
             UserDefaultsPairingStore().insert(

@@ -62,21 +62,21 @@ struct MachineDevice: Identifiable, Equatable, Sendable {
 
     var stateText: String {
         switch reason {
-        case "unauthorized": return "Allow USB debugging on the device"
-        case "offline": return "Offline"
+        case "unauthorized": return String(localized: "Allow USB debugging on the device")
+        case "offline": return String(localized: "Offline")
         default: break
         }
         if kind == "physical" {
             switch state {
-            case "booted": return platform == "android" ? "Connected" : "Paired"
-            case "shutdown": return "Unavailable"
-            default: return "Connecting"
+            case "booted": return platform == "android" ? String(localized: "Connected") : String(localized: "Paired")
+            case "shutdown": return String(localized: "Unavailable")
+            default: return String(localized: "Connecting")
             }
         }
         switch state {
-        case "booted": return "Running"
-        case "shutdown": return "Stopped"
-        default: return "Changing state"
+        case "booted": return String(localized: "Running")
+        case "shutdown": return String(localized: "Stopped")
+        default: return String(localized: "Changing state")
         }
     }
 
@@ -110,9 +110,13 @@ struct MachineDeviceGroup: Identifiable, Equatable, Sendable {
 
     private static func title(_ device: MachineDevice) -> String {
         let ios = device.platform == "ios"
-        if device.active { return ios ? "Running iOS simulators" : "Running Android emulators" }
-        if device.kind == "physical" { return ios ? "iOS devices" : "Android devices" }
-        return ios ? "iOS simulators" : "Android emulators"
+        if device.active {
+            return ios ? String(localized: "Running iOS simulators") : String(localized: "Running Android emulators")
+        }
+        if device.kind == "physical" {
+            return ios ? String(localized: "iOS devices") : String(localized: "Android devices")
+        }
+        return ios ? String(localized: "iOS simulators") : String(localized: "Android emulators")
     }
 }
 
@@ -193,8 +197,10 @@ final class MachineDevices {
             }
             problem = nil
         } catch {
-            let verb = action == "boot" ? "start" : "shut down"
-            problem = "Could not \(verb) \(device.name). \(error.localizedDescription)"
+            problem =
+                action == "boot"
+                ? String(localized: "Could not start \(device.name). \(error.localizedDescription)")
+                : String(localized: "Could not shut down \(device.name). \(error.localizedDescription)")
         }
     }
 
@@ -206,14 +212,17 @@ final class MachineDevices {
             let note: String
             switch entry.text("code") {
             case "adb-unavailable":
-                note = "The Android SDK was not found on this machine. Install it to use Android emulators and devices."
+                note = String(
+                    localized:
+                        "The Android SDK was not found on this machine. Install it to use Android emulators and devices."
+                )
             case "simctl-unavailable", "devicectl-unavailable":
-                note = "Install Xcode to use iOS simulators and iPhones."
+                note = String(localized: "Install Xcode to use iOS simulators and iPhones.")
             default: note = entry.text("message", fallback: entry.text("code"))
             }
             if !notes.contains(note) { notes.append(note) }
         }
-        if notMac { notes.append("iOS simulators need a Mac.") }
+        if notMac { notes.append(String(localized: "iOS simulators need a Mac.")) }
         return notes
     }
 }

@@ -44,7 +44,7 @@ struct NowCard: View {
                 case .questions: questionBody(request)
                 }
                 if entry.requests.count > 1 {
-                    Text(entry.requests.count == 2 ? "1 more request waits" : "\(entry.requests.count - 1) more requests wait")
+                    Text("\(entry.requests.count - 1) more requests wait")
                         .font(.caption).foregroundStyle(MobileStyle.muted)
                 }
                 if let problem = now.answers.problems[key] {
@@ -52,10 +52,14 @@ struct NowCard: View {
                         .accessibilityLabel("Could not send. \(problem)")
                 }
                 if !connected {
-                    Label("Not connected", lucideIcon: "wifi-off").font(.caption).foregroundStyle(MobileStyle.muted)
+                    Label(String(localized: "Not connected"), lucideIcon: "wifi-off").font(.caption)
+                        .foregroundStyle(MobileStyle.muted)
                 }
             } else {
-                waiting(entry.kind == "chat" ? "Waiting for your answer" : "Waiting for you in the terminal")
+                waiting(
+                    entry.kind == "chat"
+                        ? String(localized: "Waiting for your answer")
+                        : String(localized: "Waiting for you in the terminal"))
             }
         }
         .padding(.horizontal, 14)
@@ -78,7 +82,7 @@ struct NowCard: View {
             code(command, colored: false, truncated: approval.truncated)
         }
         if draft.wrappedValue.replying {
-            replyField("Tell the agent what to do instead") {
+            replyField(String(localized: "Tell the agent what to do instead")) {
                 send { await now.approve(entry, request, decision: .deny, message: draft.wrappedValue.reply) }
             }
         } else {
@@ -110,7 +114,7 @@ struct NowCard: View {
             }
             waiting(question.text, icon: "message-circle-question-mark")
             if draft.wrappedValue.replying || question.choices.isEmpty {
-                replyField("Your answer") {
+                replyField(String(localized: "Your answer")) {
                     guard let answers = draft.wrappedValue.answer(question) else { return }
                     send { await now.answer(entry, request, with: answers) }
                 }
@@ -257,11 +261,12 @@ struct SnoozeMenu: View {
             }
             if until != nil {
                 Divider()
-                Button("End snooze", lucideIcon: "alarm-clock-off", action: wake)
+                Button(String(localized: "End snooze"), lucideIcon: "alarm-clock-off", action: wake)
             }
         } label: {
             Label(
-                until.map { "Snoozed until \(SnoozeChoice.moment($0, from: .now))" } ?? "Snooze",
+                until.map { String(localized: "Snoozed until \(SnoozeChoice.moment($0, from: .now))") }
+                    ?? String(localized: "Snooze"),
                 lucideIcon: "alarm-clock")
         }
     }

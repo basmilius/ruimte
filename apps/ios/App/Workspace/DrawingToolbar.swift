@@ -26,11 +26,11 @@ enum DrawingSlot: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .pen: "Pen"
-        case .shape: "Shape"
-        case .arrow: "Arrow"
-        case .text: "Text"
-        case .hand: "Hand"
+        case .pen: String(localized: "Pen", comment: "Drawing tool")
+        case .shape: String(localized: "Shape", comment: "Drawing tool")
+        case .arrow: String(localized: "Arrow", comment: "Drawing tool")
+        case .text: String(localized: "Text", comment: "Drawing tool")
+        case .hand: String(localized: "Hand", comment: "Drawing tool")
         }
     }
 
@@ -104,7 +104,7 @@ struct DrawingToolbar: View {
                 .contentShape(.circle)
                 .frame(maxWidth: .infinity)
         }
-        .accessibilityLabel(shown.rawValue)
+        .accessibilityLabel(shown.title)
         .accessibilityHint(active ? "Shows its options" : "")
         .accessibilityAddTraits(active ? .isSelected : [])
     }
@@ -130,7 +130,7 @@ private struct DrawingToolOptions: View {
                                     .background(
                                         model.tool == tool ? Color.primary.opacity(0.14) : Color.primary.opacity(0.05),
                                         in: .rect(cornerRadius: 12))
-                                Text(tool.rawValue).font(.caption2).lineLimit(1)
+                                Text(tool.title).font(.caption2).lineLimit(1)
                                     .foregroundStyle(model.tool == tool ? MobileStyle.text : MobileStyle.muted)
                             }
                             .frame(maxWidth: .infinity)
@@ -155,7 +155,7 @@ private struct DrawingToolOptions: View {
                             }
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .accessibilityLabel(name.capitalized)
+                    .accessibilityLabel(DrawingPalette.title(name))
                     .accessibilityAddTraits(model.style.stroke == name ? .isSelected : [])
                 }
             }

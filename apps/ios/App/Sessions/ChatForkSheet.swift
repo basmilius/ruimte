@@ -62,7 +62,7 @@ struct ChatForkSheet: View {
         NavigationStack {
             MobileForm {
                 Section {
-                    Text(point?.label ?? "This turn is no longer in the conversation.")
+                    Text(point?.label ?? String(localized: "This turn is no longer in the conversation."))
                     TextField("Title", text: $title)
                         .onChange(of: title) { _, value in
                             if value.count > ChatForking.titleMax { title = String(value.prefix(ChatForking.titleMax)) }
@@ -77,7 +77,9 @@ struct ChatForkSheet: View {
                 } footer: {
                     Text(
                         shape == .view
-                            ? "A new chat view goes on from there, right after \(origin == .node ? "its canvas" : "the original"). Nothing is sent until you write the first message."
+                            ? origin == .node
+                                ? "A new chat view goes on from there, right after its canvas. Nothing is sent until you write the first message."
+                                : "A new chat view goes on from there, right after the original. Nothing is sent until you write the first message."
                             : "A new chat node goes on from there, beside the original. Nothing is sent until you write the first message."
                     )
                 }
@@ -98,7 +100,7 @@ struct ChatForkSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     if busy {
-                        MobileLoadingRow("Forking")
+                        MobileLoadingRow(String(localized: "Forking"))
                     } else {
                         Button("Fork") { Task { await submit() } }
                             .disabled(!ready)
@@ -110,7 +112,9 @@ struct ChatForkSheet: View {
         }
         .onAppear {
             guard title.isEmpty else { return }
-            title = String("\(originalTitle) (fork)".prefix(ChatForking.titleMax))
+            title = String(
+                String(localized: "\(originalTitle) (fork)", comment: "The title a fork starts with").prefix(
+                    ChatForking.titleMax))
             shape = shapes.first ?? .node
         }
         .task { await askFolder() }
@@ -161,8 +165,9 @@ struct ChatForkSheet: View {
         } else if !repository {
             Section {
                 Text(
-                    "This folder is not in a git repository, so the fork works in the same folder."
-                        + (point?.last == false ? " " + sharedFolderNote : "")
+                    point?.last == false
+                        ? "This folder is not in a git repository, so the fork works in the same folder. The files stay as they are now; the agent is told the folder is newer than this turn."
+                        : "This folder is not in a git repository, so the fork works in the same folder."
                 ).foregroundStyle(MobileStyle.muted)
             }
         } else {
@@ -197,7 +202,7 @@ struct ChatForkSheet: View {
     }
 
     private var sharedFolderNote: String {
-        "The files stay as they are now; the agent is told the folder is newer than this turn."
+        String(localized: "The files stay as they are now; the agent is told the folder is newer than this turn.")
     }
 
     /// The newest pick for a CLI when that model is still offered, else what the machine calls its default.
@@ -252,7 +257,8 @@ struct ChatForkSheet: View {
             dismiss()
             forked(result.text("nodeId"))
         } catch {
-            failure = ChatForking.message(for: error, action: "fork conversations")
+            failure = ChatForking.message(
+                for: error, update: String(localized: "Update Ruimte on this machine to fork conversations."))
         }
     }
 }

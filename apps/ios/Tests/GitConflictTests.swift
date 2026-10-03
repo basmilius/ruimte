@@ -156,9 +156,9 @@ final class GitConflictTests: XCTestCase {
     func testAnOlderMachineIsAskedToUpdate() {
         let error = MachineClientError.server(code: "unknown-request", message: "Unknown request git.conflicts")
         XCTAssertEqual(
-            gitMessage(error, action: "resolve conflicts on the phone"),
+            gitMessage(error, outdated: "Update Ruimte on this machine to resolve conflicts on the phone."),
             "Update Ruimte on this machine to resolve conflicts on the phone.")
-        XCTAssertEqual(gitMessage(MachineClientError.server(code: "git-failed", message: "No."), action: "x"), "No.")
+        XCTAssertEqual(gitMessage(MachineClientError.server(code: "git-failed", message: "No."), outdated: "x"), "No.")
     }
 
     @MainActor func testAResolutionIsWrittenOverTheDigestItWasReadAt() async {

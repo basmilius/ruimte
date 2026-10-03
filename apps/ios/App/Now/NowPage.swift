@@ -15,14 +15,15 @@ struct NowPage: View {
         MobileList {
             if runtime.machines.isEmpty {
                 ContentUnavailableView {
-                    Label("No machines yet", lucideIcon: "monitor", iconSize: 48)
+                    Label(String(localized: "No machines yet"), lucideIcon: "monitor", iconSize: 48)
                 } description: {
                     Text("Connect your computer to see what your agents are doing.")
                 } actions: {
                     Button("Use a pairing link", action: pair)
                 }
             } else if !now.loaded && board.isEmpty {
-                MobileLoadingRow("Connecting to your machines").frame(maxWidth: .infinity, minHeight: 120)
+                MobileLoadingRow(String(localized: "Connecting to your machines"))
+                    .frame(maxWidth: .infinity, minHeight: 120)
             } else {
                 if board.needsYou.isEmpty {
                     nothingWaits(board)
@@ -38,7 +39,7 @@ struct NowPage: View {
                                 Button {
                                     snooze(entry, until: SnoozeChoice.hour.until(from: .now))
                                 } label: {
-                                    Label("1 hour", lucideIcon: "alarm-clock")
+                                    Label(String(localized: "1 hour"), lucideIcon: "alarm-clock")
                                 }
                                 .tint(MobileStyle.statusIdle)
                             }
@@ -47,8 +48,8 @@ struct NowPage: View {
                         }
                     } header: {
                         NowHeader(
-                            title: "Needs you", count: board.needsYou.count, color: MobileStyle.statusNeedsYou,
-                            first: true)
+                            title: String(localized: "Needs you"), count: board.needsYou.count,
+                            color: MobileStyle.statusNeedsYou, first: true)
                     }
                 }
                 if !board.working.isEmpty {
@@ -59,7 +60,9 @@ struct NowPage: View {
                             }
                         }
                     } header: {
-                        NowHeader(title: "Working", count: board.working.count, color: MobileStyle.statusRunning)
+                        NowHeader(
+                            title: String(localized: "Working"), count: board.working.count,
+                            color: MobileStyle.statusRunning)
                     }
                 }
                 if !board.finished.isEmpty {
@@ -70,7 +73,9 @@ struct NowPage: View {
                             }
                         }
                     } header: {
-                        NowHeader(title: "Finished", count: board.finished.count, color: MobileStyle.positive)
+                        NowHeader(
+                            title: String(localized: "Finished"), count: board.finished.count,
+                            color: MobileStyle.positive)
                     }
                 }
                 if let first = board.snoozed.first?.snoozedUntil {
@@ -151,8 +156,10 @@ struct NowEntryMenu: View {
     let openProject: () -> Void
 
     var body: some View {
-        Button(entry.kind == "chat" ? "Open chat" : "Open", lucideIcon: entry.iconName, action: open)
-        Button("Open project", lucideIcon: "folder-open", action: openProject)
+        Button(
+            entry.kind == "chat" ? String(localized: "Open chat") : String(localized: "Open", comment: "Opens a view"),
+            lucideIcon: entry.iconName, action: open)
+        Button(String(localized: "Open project"), lucideIcon: "folder-open", action: openProject)
         if entry.status == .needsYou {
             Divider()
             SnoozeMenu(until: entry.snoozedUntil) {
@@ -169,7 +176,7 @@ struct NowEntryMenu: View {
                 }
             }
             if entry.repliesWithMessage {
-                Button("Deny with a message", lucideIcon: "message-square-x") {
+                Button(String(localized: "Deny with a message"), lucideIcon: "message-square-x") {
                     let key = NowAnswers.key(machineID: entry.target.machineID, requestID: request.requestID)
                     now.answers.drafts[key, default: NowRequestDraft()].replying = true
                 }
@@ -184,10 +191,6 @@ struct NowNothingWaits: View {
     let notifies: Bool
 
     var body: some View {
-        let still =
-            working == 0
-            ? "No agent is working right now."
-            : working == 1 ? "One agent is still working." : "\(working) agents are still working."
         VStack(spacing: 6) {
             LucideIcon(name: "check", size: 22)
                 .foregroundStyle(MobileStyle.positive)
@@ -195,7 +198,7 @@ struct NowNothingWaits: View {
                 .background(MobileStyle.positive.opacity(0.12), in: Circle())
                 .padding(.bottom, 6)
             Text("Nothing needs you").font(.callout.weight(.semibold)).foregroundStyle(MobileStyle.text)
-            Text(working > 0 && notifies ? still + " You get a notification when one asks for you." : still)
+            Text(still)
                 .font(.footnote).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
         }
         .padding(EdgeInsets(top: 26, leading: 20, bottom: 30, trailing: 20))
@@ -203,6 +206,17 @@ struct NowNothingWaits: View {
         .background(MobileStyle.panel, in: .rect(cornerRadius: 22))
         .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(MobileStyle.border))
         .accessibilityElement(children: .combine)
+    }
+
+    private var still: String {
+        if working == 0 {
+            return String(localized: "No agent is working right now.")
+        }
+        if notifies {
+            return String(
+                localized: "\(working) agents are still working. You get a notification when one asks for you.")
+        }
+        return String(localized: "\(working) agents are still working.")
     }
 }
 
@@ -247,9 +261,10 @@ struct NowRow: View {
                 Text(SnoozeChoice.moment(until, from: .now)).font(.caption).foregroundStyle(MobileStyle.muted)
                     .monospacedDigit().accessibilityLabel("Snoozed until \(SnoozeChoice.moment(until, from: .now))")
             } else if entry.status == .running {
-                Spinner(size: 14, label: "Working").foregroundStyle(MobileStyle.statusRunning)
+                Spinner(size: 14, label: String(localized: "Working")).foregroundStyle(MobileStyle.statusRunning)
             } else if entry.delegating {
-                Spinner(size: 14, label: "Its sub-agents are working").foregroundStyle(MobileStyle.muted)
+                Spinner(size: 14, label: String(localized: "Its sub-agents are working"))
+                    .foregroundStyle(MobileStyle.muted)
             } else if entry.unseen {
                 Circle().fill(MobileStyle.accent).frame(width: 8, height: 8).accessibilityLabel("New activity")
             }

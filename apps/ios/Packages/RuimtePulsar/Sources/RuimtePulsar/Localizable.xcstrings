@@ -1,7 +1,99 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Apple returned an incomplete sign-in response. Please try again." : {
 
+    },
+    "Apple sign-in is not available right now. Try again later or sign in with GitHub." : {
+
+    },
+    "Apple's response does not belong to this sign-in. Please try again." : {
+
+    },
+    "Converted to euros at the ECB rate of %@." : {
+
+    },
+    "Notifications could not be registered." : {
+
+    },
+    "Paste an HTTPS pairing link ending in /pair#token." : {
+
+    },
+    "Showing US dollars until a euro exchange rate is available." : {
+
+    },
+    "Signing in did not work (%@)." : {
+
+    },
+    "Signing in was canceled." : {
+
+    },
+    "The address book answered %lld." : {
+
+    },
+    "The address book answered with something this client cannot read." : {
+
+    },
+    "The address book could not be reached." : {
+
+    },
+    "The address book needs an HTTPS address." : {
+
+    },
+    "The address book returned no HTTP response." : {
+
+    },
+    "The answer from the browser does not belong to this sign-in. Try again." : {
+
+    },
+    "The browser came back without a valid sign-in code. Try again." : {
+
+    },
+    "The browser returned to an unexpected address. Try signing in again." : {
+
+    },
+    "The machine answered with something this app cannot read." : {
+
+    },
+    "The machine could not be reached." : {
+
+    },
+    "The machine refused this link. It may be used or expired." : {
+
+    },
+    "The machine returned no HTTP response." : {
+
+    },
+    "The notification could not be verified." : {
+
+    },
+    "The sign-in browser could not open. Try again." : {
+
+    },
+    "This Apple sign-in expired. Please try again." : {
+
+    },
+    "This device has no key to bind a session to." : {
+
+    },
+    "This notification belongs to another device." : {
+
+    },
+    "This notification has expired. Open the session to see its current state." : {
+
+    },
+    "This notification is from a machine that is no longer trusted." : {
+
+    },
+    "This notification was already delivered." : {
+
+    },
+    "This pairing address is invalid." : {
+
+    },
+    "Your account answered with a statement for something else." : {
+
+    }
   },
   "version" : "1.0"
 }

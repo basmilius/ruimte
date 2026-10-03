@@ -30,7 +30,7 @@ struct DrawingEditorPage: View {
                 .overlay {
                     if model.elements.isEmpty {
                         ContentUnavailableView(
-                            "Nothing drawn yet", lucideIcon: "pen-tool",
+                            String(localized: "Nothing drawn yet"), lucideIcon: "pen-tool",
                             description: Text(
                                 "Pick a pen or a shape below and draw with a finger or Apple Pencil. Tap the tool again for its options."
                             )
@@ -41,9 +41,10 @@ struct DrawingEditorPage: View {
                     }
                 }
             } else if let problem = model.problem {
-                ContentUnavailableView("Could not open drawing", lucideIcon: "pen-tool", description: Text(problem))
+                ContentUnavailableView(
+                    String(localized: "Could not open drawing"), lucideIcon: "pen-tool", description: Text(problem))
             } else {
-                MobileLoadingRow("Loading drawing").frame(maxWidth: .infinity, maxHeight: .infinity)
+                MobileLoadingRow(String(localized: "Loading drawing")).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -80,10 +81,10 @@ struct DrawingEditorPage: View {
     private var actionsMenu: some View {
         Menu {
             ControlGroup {
-                Button("Undo", lucideIcon: "undo-2") { model.undo() }.disabled(model.history.isEmpty)
-                Button("Redo", lucideIcon: "redo-2") { model.redo() }.disabled(model.future.isEmpty)
+                Button(String(localized: "Undo"), lucideIcon: "undo-2") { model.undo() }.disabled(model.history.isEmpty)
+                Button(String(localized: "Redo"), lucideIcon: "redo-2") { model.redo() }.disabled(model.future.isEmpty)
             }
-            Button("Drawing style", lucideIcon: "palette") { showStyle = true }
+            Button(String(localized: "Drawing style"), lucideIcon: "palette") { showStyle = true }
             actions
         } label: {
             if model.saving || exporting {
@@ -97,34 +98,40 @@ struct DrawingEditorPage: View {
     @ViewBuilder private var actions: some View {
         Section("Selection") {
             Toggle("Add to selection", isOn: $model.additiveSelection)
-            Button("Select all", lucideIcon: "square-dashed") {
+            Button(String(localized: "Select all"), lucideIcon: "square-dashed") {
                 model.tool = .select
                 model.select(Set(model.elements.filter { $0["locked"] != .bool(true) }.map(\.stableID)))
             }
             if !model.selection.isEmpty {
-                Button("Deselect", lucideIcon: "square-dashed") { model.selection = [] }
+                Button(String(localized: "Deselect"), lucideIcon: "square-dashed") { model.selection = [] }
                 if model.selected.count == 1, let item = model.selected.first,
                     ["text", "note"].contains(item.text("kind"))
                 {
-                    Button("Edit text", lucideIcon: "type") { edit = DrawingTextEdit(element: item, isNew: false) }
+                    Button(String(localized: "Edit text"), lucideIcon: "type") {
+                        edit = DrawingTextEdit(element: item, isNew: false)
+                    }
                 }
-                Button("Duplicate", lucideIcon: "copy-plus") { model.duplicate() }
-                Button("Copy", lucideIcon: "copy") { model.copySelection() }
-                Button("Cut", lucideIcon: "scissors") { model.copySelection(cut: true) }
-                Button("Bring to front", lucideIcon: "bring-to-front") { model.reorder(front: true) }
-                Button("Send to back", lucideIcon: "send-to-back") { model.reorder(front: false) }
-                Button("Lock", lucideIcon: "lock") { model.lockSelection() }
-                Button("Delete", lucideIcon: "trash", role: .destructive) { model.deleteSelected() }
+                Button(String(localized: "Duplicate"), lucideIcon: "copy-plus") { model.duplicate() }
+                Button(String(localized: "Copy"), lucideIcon: "copy") { model.copySelection() }
+                Button(String(localized: "Cut"), lucideIcon: "scissors") { model.copySelection(cut: true) }
+                Button(String(localized: "Bring to front"), lucideIcon: "bring-to-front") { model.reorder(front: true) }
+                Button(String(localized: "Send to back"), lucideIcon: "send-to-back") { model.reorder(front: false) }
+                Button(String(localized: "Lock"), lucideIcon: "lock") { model.lockSelection() }
+                Button(String(localized: "Delete"), lucideIcon: "trash", role: .destructive) { model.deleteSelected() }
             }
-            Button("Paste", lucideIcon: "clipboard-paste") { model.paste() }
+            Button(String(localized: "Paste"), lucideIcon: "clipboard-paste") { model.paste() }
             if model.elements.contains(where: { $0["locked"] == .bool(true) }) {
-                Button("Unlock all", lucideIcon: "lock-open") { model.unlockAll() }
+                Button(String(localized: "Unlock all"), lucideIcon: "lock-open") { model.unlockAll() }
             }
         }
         Section("Zoom") {
-            Button("Fit drawing", lucideIcon: "maximize") { viewport = DrawingViewportRequest(action: .fitAll) }
-            Button("Fit selection", lucideIcon: "scan") { viewport = DrawingViewportRequest(action: .fitSelection) }
-                .disabled(model.selection.isEmpty)
+            Button(String(localized: "Fit drawing"), lucideIcon: "maximize") {
+                viewport = DrawingViewportRequest(action: .fitAll)
+            }
+            Button(String(localized: "Fit selection"), lucideIcon: "scan") {
+                viewport = DrawingViewportRequest(action: .fitSelection)
+            }
+            .disabled(model.selection.isEmpty)
             Menu("Zoom level") {
                 ForEach([25, 50, 75, 100, 150, 200, 400], id: \.self) { percentage in
                     Button("\(percentage)%") {
@@ -132,17 +139,21 @@ struct DrawingEditorPage: View {
                     }
                 }
             }
-            Button("Zoom in", lucideIcon: "zoom-in") { viewport = DrawingViewportRequest(action: .step(0.1)) }
-            Button("Zoom out", lucideIcon: "zoom-out") { viewport = DrawingViewportRequest(action: .step(-0.1)) }
+            Button(String(localized: "Zoom in"), lucideIcon: "zoom-in") {
+                viewport = DrawingViewportRequest(action: .step(0.1))
+            }
+            Button(String(localized: "Zoom out"), lucideIcon: "zoom-out") {
+                viewport = DrawingViewportRequest(action: .step(-0.1))
+            }
         }
         Section(model.selection.isEmpty ? "Export drawing" : "Export selection") {
-            Button("Copy PNG", lucideIcon: "copy") { export(.png, copy: true) }.disabled(
+            Button(String(localized: "Copy PNG"), lucideIcon: "copy") { export(.png, copy: true) }.disabled(
                 model.exportElements.isEmpty || exporting)
-            Button("Copy SVG", lucideIcon: "copy") { export(.svg, copy: true) }.disabled(
+            Button(String(localized: "Copy SVG"), lucideIcon: "copy") { export(.svg, copy: true) }.disabled(
                 model.exportElements.isEmpty || exporting)
-            Button("Share PNG", lucideIcon: "share") { export(.png, copy: false) }.disabled(
+            Button(String(localized: "Share PNG"), lucideIcon: "share") { export(.png, copy: false) }.disabled(
                 model.exportElements.isEmpty || exporting)
-            Button("Share SVG", lucideIcon: "share") { export(.svg, copy: false) }.disabled(
+            Button(String(localized: "Share SVG"), lucideIcon: "share") { export(.svg, copy: false) }.disabled(
                 model.exportElements.isEmpty || exporting)
             Toggle("Include background", isOn: $model.exportBackground)
         }
@@ -151,9 +162,9 @@ struct DrawingEditorPage: View {
         NavigationStack {
             MobileForm {
                 Section("Color") {
-                    colorPicker("Stroke", selection: binding(\.stroke, "stroke"))
-                    colorPicker("Fill", selection: binding(\.fillColor, "fillColor"))
-                    colorPicker("Sticky note", selection: binding(\.noteColor, "noteColor"))
+                    colorPicker(String(localized: "Stroke"), selection: binding(\.stroke, "stroke"))
+                    colorPicker(String(localized: "Fill"), selection: binding(\.fillColor, "fillColor"))
+                    colorPicker(String(localized: "Sticky note"), selection: binding(\.noteColor, "noteColor"))
                 }
                 Section("Stroke and fill") {
                     Picker("Width", selection: binding(\.strokeWidth, "strokeWidth")) {
@@ -231,7 +242,7 @@ struct DrawingEditorPage: View {
             ForEach(DrawingPalette.names, id: \.self) { name in
                 HStack {
                     Circle().fill(Color(uiColor: DrawingPalette.color(name))).frame(width: 16, height: 16)
-                    Text(name.capitalized)
+                    Text(DrawingPalette.title(name))
                 }.tag(name)
             }
         }

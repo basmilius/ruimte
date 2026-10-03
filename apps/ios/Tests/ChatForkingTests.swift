@@ -124,7 +124,7 @@ final class ChatForkingTests: XCTestCase {
         let old = MachineClientError.server(code: "unknown-request", message: "Unknown request type: chat.fork")
         XCTAssertTrue(ChatForking.isUnknownRequest(old))
         XCTAssertEqual(
-            ChatForking.message(for: old, action: "fork conversations"),
+            ChatForking.message(for: old, update: "Update Ruimte on this machine to fork conversations."),
             "Update Ruimte on this machine to fork conversations.")
         XCTAssertFalse(ChatForking.isUnknownRequest(MachineClientError.server(code: "chat-busy", message: "Busy")))
     }

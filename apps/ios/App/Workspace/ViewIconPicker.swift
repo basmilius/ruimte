@@ -9,12 +9,14 @@ struct ViewIconPicker: View {
 
     var body: some View {
         NavigationStack {
-            IconChoiceGrid(selected: item["icon"]?.text("value"), resetTitle: "Use default icon") { save($0) }
-                .disabled(saving)
-                .navigationTitle("View icon").navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                }
+            IconChoiceGrid(selected: item["icon"]?.text("value"), resetTitle: String(localized: "Use default icon")) {
+                save($0)
+            }
+            .disabled(saving)
+            .navigationTitle("View icon").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
         }.tint(MobileStyle.accent)
     }
 
@@ -45,69 +47,69 @@ struct IconChoiceGrid: View {
     // order and the keywords follow apps/client/src/project/project-icons.ts.
     private static let groups = [
         IconGroup(
-            label: "General",
+            label: String(localized: "General", comment: "Group of icons"),
             names: [
                 "folder", "box", "boxes", "package", "layers", "puzzle", "star", "heart", "flag", "bookmark", "pin",
                 "target", "lightbulb", "archive", "inbox", "house", "briefcase", "sparkles", "zap", "flame", "rocket",
             ]),
         IconGroup(
-            label: "Code",
+            label: String(localized: "Code", comment: "Group of icons"),
             names: [
                 "code", "code-xml", "braces", "terminal", "square-terminal", "file-code", "binary", "regex", "variable",
                 "blocks", "component", "git-branch", "git-merge", "git-pull-request", "git-fork", "bug",
                 "test-tube-diagonal", "flask-conical", "beaker", "wrench", "hammer", "workflow", "webhook",
             ]),
         IconGroup(
-            label: "AI & agents",
+            label: String(localized: "AI & agents", comment: "Group of icons"),
             names: [
                 "bot", "bot-message-square", "brain", "brain-circuit", "wand-sparkles", "messages-square", "scan-eye",
                 "audio-waveform",
             ]),
         IconGroup(
-            label: "Web & apps",
+            label: String(localized: "Web & apps", comment: "Group of icons"),
             names: [
                 "globe", "app-window", "layout-dashboard", "layout-template", "panels-top-left", "mouse-pointer-click",
                 "smartphone", "tablet", "shopping-cart", "store", "mail",
             ]),
         IconGroup(
-            label: "Infrastructure",
+            label: String(localized: "Infrastructure", comment: "Group of icons"),
             names: [
                 "server", "server-cog", "database", "container", "cloud", "cloud-cog", "network", "router", "gauge",
                 "activity", "scroll-text", "bell", "shield", "lock", "key", "fingerprint-pattern",
             ]),
         IconGroup(
-            label: "Data & science",
+            label: String(localized: "Data & science", comment: "Group of icons"),
             names: [
                 "chart-line", "chart-column", "chart-pie", "table", "sheet", "calculator", "sigma", "atom", "dna",
                 "telescope", "orbit",
             ]),
         IconGroup(
-            label: "Hardware",
+            label: String(localized: "Hardware", comment: "Group of icons"),
             names: [
                 "cpu", "microchip", "circuit-board", "memory-stick", "pc-case", "laptop", "monitor", "keyboard",
                 "mouse", "webcam", "printer", "hard-drive", "usb", "headphones", "watch", "battery", "bluetooth",
                 "thermometer", "ethernet-port", "cable", "plug", "wifi", "radio-tower", "satellite-dish",
             ]),
         IconGroup(
-            label: "Design & media",
+            label: String(localized: "Design & media", comment: "Group of icons"),
             names: [
                 "palette", "brush", "pen-tool", "pencil-ruler", "shapes", "frame", "swatch-book", "type", "image",
                 "camera", "film", "clapperboard", "video", "music", "mic", "gamepad-2",
             ]),
         IconGroup(
-            label: "Writing & learning",
+            label: String(localized: "Writing & learning", comment: "Group of icons"),
             names: [
                 "file-text", "book", "notebook", "notebook-pen", "library-big", "newspaper", "graduation-cap",
                 "languages", "quote", "presentation", "megaphone",
             ]),
         IconGroup(
-            label: "Planning",
+            label: String(localized: "Planning", comment: "Group of icons"),
             names: [
                 "list-todo", "square-kanban", "clipboard-list", "calendar", "milestone", "trophy", "hourglass", "timer",
                 "users", "handshake", "wallet", "compass", "map",
             ]),
         IconGroup(
-            label: "Life & world",
+            label: String(localized: "Life & world", comment: "Group of icons"),
             names: [
                 "leaf", "sprout", "trees", "mountain", "sun", "moon", "plane", "ship", "anchor", "life-buoy", "coffee",
                 "pizza", "gift", "dumbbell", "bike", "paw-print",

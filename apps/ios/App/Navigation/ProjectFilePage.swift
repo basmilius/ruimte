@@ -26,7 +26,7 @@ struct ProjectFilePage: View {
                     project: FilesProject(workspace: workspace, openView: { openView(workspace, $0) }))
             } else {
                 ContentUnavailableView(
-                    "Machine unavailable", lucideIcon: "triangle-alert",
+                    String(localized: "Machine unavailable"), lucideIcon: "triangle-alert",
                     description: Text("This machine is no longer connected to this device."))
             }
         }

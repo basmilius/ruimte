@@ -45,9 +45,11 @@ final class DrawingCanvasScrollView: UIScrollView, UIScrollViewDelegate {
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(editAtTap(_:)))
         doubleTap.numberOfTapsRequired = 2
         addGestureRecognizer(doubleTap)
-        accessibilityLabel = "Drawing canvas"
-        accessibilityHint =
-            "Drag to move the canvas. Choose Select to edit objects, or a drawing tool to create them. Pinch to zoom."
+        accessibilityLabel = String(localized: "Drawing canvas")
+        accessibilityHint = String(
+            localized:
+                "Drag to move the canvas. Choose Select to edit objects, or a drawing tool to create them. Pinch to zoom."
+        )
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func configure(
@@ -605,16 +607,29 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
     }
     override var keyCommands: [UIKeyCommand]? {
         var result = DrawingTool.allCases.map {
-            UIKeyCommand(title: $0.rawValue, action: #selector(key(_:)), input: $0.shortcut, modifierFlags: [])
+            UIKeyCommand(title: $0.title, action: #selector(key(_:)), input: $0.shortcut, modifierFlags: [])
         }
-        for (input, modifiers, title) in [
-            ("z", UIKeyModifierFlags.command, "Undo"), ("z", [.command, .shift], "Redo"), ("a", .command, "Select all"),
-            ("d", .command, "Duplicate"), ("c", .command, "Copy"), ("x", .command, "Cut"), ("v", .command, "Paste"),
-            ("]", .command, "Bring to front"), ("[", .command, "Send to back"), ("l", [.command, .shift], "Lock"),
-            ("0", .command, "Actual size"), ("1", .command, "Fit drawing"), ("2", .command, "Fit selection"),
-            ("q", [], "Keep tool"), (UIKeyCommand.inputEscape, [], "Deselect"), ("\u{8}", [], "Delete"),
-            ("+", [], "Zoom in"), ("-", [], "Zoom out"),
-        ] {
+        let commands: [(String, UIKeyModifierFlags, String)] = [
+            ("z", .command, String(localized: "Undo")),
+            ("z", [.command, .shift], String(localized: "Redo")),
+            ("a", .command, String(localized: "Select all")),
+            ("d", .command, String(localized: "Duplicate")),
+            ("c", .command, String(localized: "Copy")),
+            ("x", .command, String(localized: "Cut")),
+            ("v", .command, String(localized: "Paste")),
+            ("]", .command, String(localized: "Bring to front")),
+            ("[", .command, String(localized: "Send to back")),
+            ("l", [.command, .shift], String(localized: "Lock", comment: "Keyboard command, locks the selection")),
+            ("0", .command, String(localized: "Actual size")),
+            ("1", .command, String(localized: "Fit drawing")),
+            ("2", .command, String(localized: "Fit selection")),
+            ("q", [], String(localized: "Keep tool", comment: "Keyboard command, keeps the tool after one use")),
+            (UIKeyCommand.inputEscape, [], String(localized: "Deselect")),
+            ("\u{8}", [], String(localized: "Delete")),
+            ("+", [], String(localized: "Zoom in")),
+            ("-", [], String(localized: "Zoom out")),
+        ]
+        for (input, modifiers, title) in commands {
             result.append(
                 UIKeyCommand(title: title, action: #selector(key(_:)), input: input, modifierFlags: modifiers))
         }
@@ -623,10 +638,13 @@ private final class DrawingInputSurface: SceneSurface, UIPencilInteractionDelega
             UIKeyCommand.inputDownArrow,
         ] {
             result.append(
-                UIKeyCommand(title: "Move selection", action: #selector(key(_:)), input: input, modifierFlags: []))
+                UIKeyCommand(
+                    title: String(localized: "Move selection"), action: #selector(key(_:)), input: input,
+                    modifierFlags: []))
             result.append(
                 UIKeyCommand(
-                    title: "Move selection farther", action: #selector(key(_:)), input: input, modifierFlags: .shift))
+                    title: String(localized: "Move selection farther"), action: #selector(key(_:)), input: input,
+                    modifierFlags: .shift))
         }
         return result
     }

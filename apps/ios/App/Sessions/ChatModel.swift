@@ -379,7 +379,7 @@ final class ChatModel {
                 try uploads.map { upload -> JSONValue in
                     let data = try Data(contentsOf: upload.url, options: .mappedIfSafe)
                     guard data.count == upload.size else {
-                        throw DraftFailure("An attachment changed. Attach it again before sending.")
+                        throw DraftFailure(String(localized: "An attachment changed. Attach it again before sending."))
                     }
                     return .object([
                         "name": .string(upload.name), "mime": .string(upload.mime),
@@ -434,7 +434,10 @@ final class ChatModel {
     }
 
     private static let uncertainSendMessage =
-        "The send was interrupted. Check the conversation before sending again; the machine may already have received it."
+        String(
+            localized:
+                "The send was interrupted. Check the conversation before sending again; the machine may already have received it."
+        )
 
     func addAttachment(data: Data, name: String, mime: String) async {
         guard let id = composition.reserve(name) else { return }
@@ -468,7 +471,8 @@ final class ChatModel {
             skills: message.list("skills").compactMap(\.stringValue),
             chats: message.list("chats").compactMap { value in
                 guard let id = value.stringValue else { return nil }
-                return projectChats.first { $0.id == id } ?? ChatDraftReference(id: id, title: "Conversation")
+                return projectChats.first { $0.id == id }
+                    ?? ChatDraftReference(id: id, title: String(localized: "Conversation"))
             })
         do {
             if edit {
@@ -507,8 +511,10 @@ final class ChatModel {
                     do {
                         try composition.takeBack(incoming, uploads: recovered)
                         sendUncertain = true
-                        sendProblem =
-                            "Taking the message out of the queue was interrupted. A copy is saved in your draft. Check the conversation and queue before sending again."
+                        sendProblem = String(
+                            localized:
+                                "Taking the message out of the queue was interrupted. A copy is saved in your draft. Check the conversation and queue before sending again."
+                        )
                         queueProblem = sendProblem
                         await composition.flush()
                         if connected { attach() }
@@ -539,7 +545,10 @@ final class ChatModel {
                     $0.id != chatID && !composition.chats.contains($0)
                         && (query.isEmpty || $0.title.localizedCaseInsensitiveContains(query))
                 }
-                .prefix(4).map { ChatSuggestion(kind: "chat", value: $0.id, title: $0.title, detail: "Conversation") }
+                .prefix(4).map {
+                    ChatSuggestion(
+                        kind: "chat", value: $0.id, title: $0.title, detail: String(localized: "Conversation"))
+                }
                 if canMention {
                     let result = try await client.request(
                         "fs.search",
@@ -571,7 +580,8 @@ final class ChatModel {
                     .sorted().map {
                         ChatSuggestion(
                             kind: "/", value: $0, title: "/" + $0,
-                            detail: local.contains($0) ? "Conversation action" : "Agent command")
+                            detail: local.contains($0)
+                                ? String(localized: "Conversation action") : String(localized: "Agent command"))
                     }
             }
             guard !Task.isCancelled, current == searchGeneration else { return }

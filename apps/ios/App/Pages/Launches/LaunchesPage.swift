@@ -48,10 +48,10 @@ struct LaunchesPage: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu {
-                    Button("New launch", lucideIcon: "plus") { sheet = .edit(nil) }
-                    Button("Find in this project…", lucideIcon: "search") { sheet = .importing }
+                    Button(String(localized: "New launch"), lucideIcon: "plus") { sheet = .edit(nil) }
+                    Button(String(localized: "Find in this project…"), lucideIcon: "search") { sheet = .importing }
                     if store.anyLive {
-                        Button("Stop all", lucideIcon: "square", role: .destructive) { Task { await store.stopAll() } }
+                        Button(String(localized: "Stop all"), lucideIcon: "square", role: .destructive) { Task { await store.stopAll() } }
                     }
                 } label: {
                     Image(lucide: "plus")
@@ -75,7 +75,7 @@ struct LaunchesPage: View {
         }
         .modifier(LaunchAskModifier(store: store))
         .alert(
-            "Delete \(deleting?.name ?? "this launch")?",
+            "Delete \(deleting?.name ?? String(localized: "this launch"))?",
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
             presenting: deleting
         ) { launch in
@@ -92,11 +92,11 @@ struct LaunchesPage: View {
     @ViewBuilder private var content: some View {
         if store.unsupported {
             ContentUnavailableView(
-                "Needs an update", lucideIcon: "circle-alert", description: Text(LaunchesText.outdated))
+                String(localized: "Needs an update"), lucideIcon: "circle-alert", description: Text(LaunchesText.outdated))
         } else if let document = store.document {
             if document.launches.isEmpty {
                 ContentUnavailableView {
-                    Label("No launches in this project yet.", lucideIcon: "rocket", iconSize: 48)
+                    Label(String(localized: "No launches in this project yet."), lucideIcon: "rocket", iconSize: 48)
                 } actions: {
                     Button("New launch") { sheet = .edit(nil) }
                 }
@@ -121,7 +121,7 @@ struct LaunchesPage: View {
                 foundSection
             }
         } else {
-            MobileLoadingRow("Reading the launches").frame(maxWidth: .infinity).padding()
+            MobileLoadingRow(String(localized: "Reading the launches")).frame(maxWidth: .infinity).padding()
         }
     }
 
@@ -180,9 +180,9 @@ struct LaunchesPage: View {
         }
         .contextMenu {
             LaunchMenuItems(store: store, view: view)
-            Button("Show output", lucideIcon: "square-terminal") { output = launch.id }
-            Button("Edit…", lucideIcon: "pencil") { sheet = .edit(launch.id) }
-            Button("Delete…", lucideIcon: "trash", role: .destructive) { deleting = launch }
+            Button(String(localized: "Show output"), lucideIcon: "square-terminal") { output = launch.id }
+            Button(String(localized: "Edit…"), lucideIcon: "pencil") { sheet = .edit(launch.id) }
+            Button(String(localized: "Delete…"), lucideIcon: "trash", role: .destructive) { deleting = launch }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Delete", role: .destructive) { deleting = launch }
@@ -248,7 +248,7 @@ struct LaunchButtons: View {
         HStack(spacing: 6) {
             let name = view.launch.name
             if view.phase == .stopping {
-                button("octagon-x", label: "Force stop \(name)") { await store.stop(view.launch.id, force: true) }
+                button("octagon-x", label: String(localized: "Force stop \(name)")) { await store.stop(view.launch.id, force: true) }
             } else if view.live {
                 if let showOutput {
                     Button(action: showOutput) {
@@ -258,7 +258,7 @@ struct LaunchButtons: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Output of \(name)")
                 }
-                button("square", label: "Stop \(name)") { await store.stop(view.launch.id) }
+                button("square", label: String(localized: "Stop \(name)")) { await store.stop(view.launch.id) }
             } else if view.phase == .held {
                 Button {
                     Task { await store.press(view.launch) }
@@ -269,7 +269,7 @@ struct LaunchButtons: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Approve and launch \(name)")
             } else {
-                button("play", label: "Launch \(name)") { await store.press(view.launch) }
+                button("play", label: String(localized: "Launch \(name)")) { await store.press(view.launch) }
             }
         }
         .foregroundStyle(MobileStyle.text)
@@ -296,14 +296,14 @@ struct LaunchMenuItems: View {
     var body: some View {
         let id = view.launch.id
         if view.phase == .stopping {
-            Button("Force stop", lucideIcon: "octagon-x", role: .destructive) {
+            Button(String(localized: "Force stop"), lucideIcon: "octagon-x", role: .destructive) {
                 Task { await store.stop(id, force: true) }
             }
         } else if view.live {
-            Button("Restart", lucideIcon: "rotate-cw") { Task { await store.run(id, restart: true) } }
-            Button("Stop", lucideIcon: "square") { Task { await store.stop(id) } }
+            Button(String(localized: "Restart"), lucideIcon: "rotate-cw") { Task { await store.run(id, restart: true) } }
+            Button(String(localized: "Stop"), lucideIcon: "square") { Task { await store.stop(id) } }
         } else {
-            Button("Launch", lucideIcon: "play") { Task { await store.press(view.launch) } }
+            Button(String(localized: "Launch"), lucideIcon: "play") { Task { await store.press(view.launch) } }
         }
     }
 }

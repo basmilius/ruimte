@@ -26,7 +26,7 @@ struct ChatMessageIndex: View {
             ScrollViewReader { reader in
                 List {
                     if let olderCursor, query.isEmpty {
-                        MobileLoadingRow("Loading earlier messages")
+                        MobileLoadingRow(String(localized: "Loading earlier messages"))
                             .frame(maxWidth: .infinity)
                             .listRowSeparator(.hidden)
                             .onAppear {
@@ -82,7 +82,7 @@ struct ChatMessageIndex: View {
                     .frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(mark.text.isEmpty ? "Message" : mark.text)
+                    Text(mark.text.isEmpty ? String(localized: "Message") : mark.text)
                         .lineLimit(3)
                         .foregroundStyle(mark.kind == .wake ? MobileStyle.muted : MobileStyle.text)
                     Text(Date(timeIntervalSince1970: mark.createdAt / 1000), format: .dateTime.hour().minute())
@@ -99,14 +99,16 @@ struct ChatMessageIndex: View {
         .accessibilityHint("Jumps to this message")
         .contextMenu {
             if !mark.text.isEmpty && mark.kind == .person {
-                Button("Copy message", lucideIcon: "copy") { UIPasteboard.general.string = mark.text }
+                Button(String(localized: "Copy message"), lucideIcon: "copy") {
+                    UIPasteboard.general.string = mark.text
+                }
             }
             if presentation.forkable, let turnID = mark.turnID {
                 let refusal = presentation.forkRefusal(turnID: turnID)
                 Button {
                     fork(turnID)
                 } label: {
-                    Label("Fork from here", lucideIcon: "git-fork")
+                    Label(String(localized: "Fork from here"), lucideIcon: "git-fork")
                     if let refusal { Text(refusal) }
                 }
                 .disabled(refusal != nil)
@@ -114,7 +116,7 @@ struct ChatMessageIndex: View {
         }
         .swipeActions(edge: .trailing) {
             if presentation.forkable, let turnID = mark.turnID, presentation.forkRefusal(turnID: turnID) == nil {
-                Button("Fork", lucideIcon: "git-fork") { fork(turnID) }.tint(MobileStyle.accent)
+                Button(String(localized: "Fork"), lucideIcon: "git-fork") { fork(turnID) }.tint(MobileStyle.accent)
             }
         }
     }

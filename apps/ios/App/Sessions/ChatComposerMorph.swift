@@ -140,7 +140,7 @@ struct ChatComposerMorph<Draft: View, Prompt: View>: View {
                     .disabled(!end.enabled)
                     .allowsHitTesting(target == 1 && !transitioning && end.perform != nil)
                     .accessibilityHidden(target != 1 || transitioning || end.perform == nil)
-                    .accessibilityLabel(end.title ?? "Send message")
+                    .accessibilityLabel(end.title ?? String(localized: "Send message"))
                     .modifier(ComposerActionFrame(source: source, destination: destination, progress: progress))
                 }
             }

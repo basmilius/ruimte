@@ -38,7 +38,7 @@ struct ChatUserMessage: View {
                             expanded.toggle()
                         } label: {
                             Label(
-                                expanded ? "Show less" : "Show all",
+                                expanded ? String(localized: "Show less") : String(localized: "Show all"),
                                 lucideIcon: expanded ? "chevron-up" : "chevron-down", iconSize: 12
                             )
                             .font(.caption).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
@@ -66,11 +66,13 @@ struct ChatMessageMenu: ViewModifier {
     func body(content: Content) -> some View {
         content.contextMenu {
             if !text.isEmpty {
-                Button("Copy message", lucideIcon: "copy") {
+                Button(String(localized: "Copy message"), lucideIcon: "copy") {
                     UIPasteboard.general.string =
                         (try? AttributedString(markdown: text)).map { String($0.characters) } ?? text
                 }
-                Button("Copy as Markdown", lucideIcon: "file-text") { UIPasteboard.general.string = text }
+                Button(String(localized: "Copy as Markdown"), lucideIcon: "file-text") {
+                    UIPasteboard.general.string = text
+                }
             }
             if let presentation, presentation.forkable, !turnID.isEmpty {
                 ChatForkButton(presentation: presentation, turnID: turnID)
@@ -91,7 +93,7 @@ struct ChatForkButton: View {
         Button {
             presentation.forkRequest = ChatForkRequest(turnID: turnID)
         } label: {
-            Label("Fork from here", lucideIcon: "git-fork")
+            Label(String(localized: "Fork from here"), lucideIcon: "git-fork")
             if let refusal { Text(refusal) }
         }
         .disabled(refusal != nil)
@@ -130,8 +132,10 @@ struct ChatForksRow: View {
                 Menu {
                     ForEach(forkIDs, id: \.self) { id in
                         let title = presentation.places?.title(id)
-                        Button(title ?? "Fork", lucideIcon: "git-fork") { presentation.openRequest = id }
-                            .disabled(title == nil)
+                        Button(
+                            title ?? String(localized: "Fork", comment: "A forked conversation"), lucideIcon: "git-fork"
+                        ) { presentation.openRequest = id }
+                        .disabled(title == nil)
                     }
                 } label: {
                     label
@@ -159,8 +163,11 @@ struct ChatCompactionRule: View {
     var body: some View {
         HStack(spacing: 12) {
             dash
-            Text(preTokens.map { "Context compacted from \(Int($0).formatted()) tokens" } ?? "Context compacted")
-                .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
+            Text(
+                preTokens.map { String(localized: "Context compacted from \(Int($0).formatted()) tokens") }
+                    ?? String(localized: "Context compacted")
+            )
+            .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
             dash
         }
         .accessibilityElement(children: .combine)
@@ -202,7 +209,7 @@ struct ChatNoteRow: View {
             .font(.callout).foregroundStyle(
                 level == "error" ? Color.red : level == "warning" ? Color.orange : MobileStyle.muted
             )
-            .accessibilityLabel("\(level.capitalized): \(parts.head)")
+            .accessibilityLabel("\(Self.levelName(level)): \(parts.head)")
             if !parts.rest.isEmpty || forkTitle != nil {
                 HStack(spacing: 16) {
                     if !parts.rest.isEmpty {
@@ -210,7 +217,8 @@ struct ChatNoteRow: View {
                             expanded.toggle()
                         } label: {
                             Label(
-                                expanded ? "Hide" : "Show", lucideIcon: expanded ? "chevron-up" : "chevron-down",
+                                expanded ? String(localized: "Hide") : String(localized: "Show"),
+                                lucideIcon: expanded ? "chevron-up" : "chevron-down",
                                 iconSize: 12
                             )
                             .frame(minHeight: 44)
@@ -222,7 +230,8 @@ struct ChatNoteRow: View {
                         Button {
                             presentation?.openRequest = from
                         } label: {
-                            Label("Open fork", lucideIcon: "git-fork", iconSize: 12).frame(minHeight: 44)
+                            Label(String(localized: "Open fork"), lucideIcon: "git-fork", iconSize: 12).frame(
+                                minHeight: 44)
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint(forkTitle ?? "")
@@ -233,6 +242,15 @@ struct ChatNoteRow: View {
             if expanded && !parts.rest.isEmpty {
                 MarkdownMessage(text: parts.rest)
             }
+        }
+    }
+
+    private static func levelName(_ level: String) -> String {
+        switch level {
+        case "error": String(localized: "Error")
+        case "warning": String(localized: "Warning")
+        case "info": String(localized: "Info")
+        default: level.capitalized
         }
     }
 }

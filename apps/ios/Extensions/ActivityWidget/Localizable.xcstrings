@@ -1,7 +1,189 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "·" : {
 
+    },
+    "%@" : {
+
+    },
+    "%lld" : {
+
+    },
+    "%lld agents need you" : {
+
+    },
+    "%lld agents running" : {
+
+    },
+    "%lld projects" : {
+
+    },
+    "%lld running" : {
+
+    },
+    "%lld running · %lld needs you" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld running · %2$lld needs you"
+          }
+        }
+      }
+    },
+    "%lld working" : {
+
+    },
+    "+%lld more · %lld running" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "+%1$lld more · %2$lld running"
+          }
+        }
+      }
+    },
+    "+%lld more · %lld running · %lld needs you" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "+%1$lld more · %2$lld running · %3$lld needs you"
+          }
+        }
+      }
+    },
+    "Account" : {
+
+    },
+    "AI chat" : {
+
+    },
+    "Claude limits and today's cost of one machine." : {
+
+    },
+    "Claude usage" : {
+
+    },
+    "Codex limits and today's cost of one machine." : {
+
+    },
+    "Codex usage" : {
+
+    },
+    "How many agents wait for you, and how many are working." : {
+
+    },
+    "Last known status" : {
+
+    },
+    "Machine" : {
+
+    },
+    "need you" : {
+
+    },
+    "needs you" : {
+
+    },
+    "Needs you" : {
+
+    },
+    "Needs you list" : {
+
+    },
+    "No agents running" : {
+
+    },
+    "No usage limits reported." : {
+
+    },
+    "No weekly limit reported." : {
+
+    },
+    "Nothing needs you." : {
+
+    },
+    "Now" : {
+
+    },
+    "Open Ruimte and choose a machine for this widget." : {
+
+    },
+    "Open Ruimte to see what waits for you." : {
+
+    },
+    "Open Ruimte to see your agents." : {
+
+    },
+    "Open Ruimte to see your projects." : {
+
+    },
+    "Open Ruimte while this machine is online to load its usage." : {
+
+    },
+    "Open this session" : {
+
+    },
+    "Project" : {
+
+    },
+    "Review" : {
+      "comment" : "Button that opens a session waiting for you"
+    },
+    "Review this session" : {
+
+    },
+    "Running" : {
+
+    },
+    "Terminal agent" : {
+
+    },
+    "The agents that wait for you. Tap one to open it." : {
+
+    },
+    "The machine has not sent a recent update." : {
+
+    },
+    "The views of one project and what each is doing." : {
+
+    },
+    "The views of one project and what each is doing. Tap one to open it." : {
+
+    },
+    "This project has no views yet." : {
+
+    },
+    "This project is no longer open." : {
+
+    },
+    "Today" : {
+
+    },
+    "Usage" : {
+
+    },
+    "Usage limits and today's cost of one machine." : {
+
+    },
+    "Waiting for an update" : {
+
+    },
+    "Waiting for your input" : {
+
+    },
+    "Work finished" : {
+
+    },
+    "Working" : {
+
+    },
+    "Your agents have finished their work." : {
+
+    }
   },
   "version" : "1.0"
 }

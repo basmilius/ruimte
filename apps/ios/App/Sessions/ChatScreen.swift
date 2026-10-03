@@ -62,7 +62,9 @@ struct ChatScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             if let error = model.error {
-                SessionErrorBanner(message: error, retryTitle: "Reload conversation") { model.attach() }
+                SessionErrorBanner(message: error, retryTitle: String(localized: "Reload conversation")) {
+                    model.attach()
+                }
             }
             MobileScrollViewport(edges: .top) { insets in
                 ChatTimeline(
@@ -77,7 +79,7 @@ struct ChatScreen: View {
             }
             .overlay(alignment: .top) {
                 if model.loadingHistory {
-                    MobileLoadingRow("Loading earlier messages")
+                    MobileLoadingRow(String(localized: "Loading earlier messages"))
                         .padding(.top, 8)
                         .allowsHitTesting(false)
                 }
@@ -191,7 +193,8 @@ struct ChatScreen: View {
             if let workspace, let item = workspace.item(id) {
                 ProjectItemPage(workspace: workspace, item: item)
             } else {
-                ContentUnavailableView("This chat is no longer in the project", lucideIcon: "square-x")
+                ContentUnavailableView(
+                    String(localized: "This chat is no longer in the project"), lucideIcon: "square-x")
             }
         }
         .mobileSheet(isPresented: compact($composerSheets.settings)) { ChatRunSettings(model: model) }
@@ -277,12 +280,12 @@ struct ChatScreen: View {
 
     private var timelineStatus: AnyView? {
         if !isPrepared || model.loading {
-            return AnyView(MobileLoadingRow("Loading conversation…"))
+            return AnyView(MobileLoadingRow(String(localized: "Loading conversation…")))
         }
         if model.messageCount == 0 {
             return AnyView(
                 ContentUnavailableView(
-                    "Start a conversation", lucideIcon: "messages-square",
+                    String(localized: "Start a conversation"), lucideIcon: "messages-square",
                     description: Text("Messages and agent work appear here.")))
         }
         return nil
@@ -296,7 +299,8 @@ struct ChatScreen: View {
             let items = workspace.views.flatMap { view in [view] + view.list("nodes") }
             model.projectChats = items.filter { $0.text("kind") == "chat" }.map {
                 ChatDraftReference(
-                    id: $0.stableID, title: $0.text("title", fallback: $0.text("name", fallback: "Conversation")))
+                    id: $0.stableID,
+                    title: $0.text("title", fallback: $0.text("name", fallback: String(localized: "Conversation"))))
             }
             model.presentation.places = ChatPlaces(
                 title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
@@ -319,7 +323,8 @@ struct ChatScreen: View {
 
     private var forkSubtitle: String? {
         guard forkOf != nil else { return nil }
-        return originalTitle.map { "Fork of \($0)" } ?? "Fork"
+        return originalTitle.map { String(localized: "Fork of \($0)") }
+            ?? String(localized: "Fork", comment: "A forked conversation")
     }
 
     /// The chat's menu as the desktop sidebar and conversation menu have it. Sub-agents and the queue live in the
@@ -333,7 +338,7 @@ struct ChatScreen: View {
                 Button {
                     showingPlans = true
                 } label: {
-                    Label("Plan", lucideIcon: "list-checks")
+                    Label(String(localized: "Plan"), lucideIcon: "list-checks")
                     Text(
                         plans.unseen.contains(model.chatID)
                             ? "New · \(plan.progress.finished) of \(plan.progress.total)"
@@ -342,7 +347,7 @@ struct ChatScreen: View {
                 .accessibilityIdentifier("chat.plan")
             }
             if messageMarks.count >= 3 {
-                Button("Messages", lucideIcon: "list") {
+                Button(String(localized: "Messages"), lucideIcon: "list") {
                     indexOnScreen = Set(model.presentation.visibleEntryIDs())
                     showingIndex = true
                 }
@@ -352,20 +357,22 @@ struct ChatScreen: View {
                 Button {
                     showingBookmarks = true
                 } label: {
-                    Label("Bookmarks", lucideIcon: "bookmark")
+                    Label(String(localized: "Bookmarks"), lucideIcon: "bookmark")
                     Text("\(model.presentation.bookmarks.count)")
                 }
                 .accessibilityIdentifier("chat.bookmarks")
             }
             if hasSubagents && model.activitySubagents.isEmpty {
-                Button("Sub-agents", lucideIcon: "bot") { subagentList = SubagentListRoute(chatID: model.chatID) }
-                    .accessibilityIdentifier("chat.subagents")
+                Button(String(localized: "Sub-agents"), lucideIcon: "bot") {
+                    subagentList = SubagentListRoute(chatID: model.chatID)
+                }
+                .accessibilityIdentifier("chat.subagents")
             }
         }
         Section {
             forkItem
             if workspace.map({ ChatForking.origin(in: $0.views, chatID: model.chatID) != nil }) == true {
-                Button("Rename", lucideIcon: "pencil") {
+                Button(String(localized: "Rename"), lucideIcon: "pencil") {
                     renameText = title
                     renaming = true
                 }
@@ -377,16 +384,18 @@ struct ChatScreen: View {
             Picker(selection: $streamingMode) {
                 ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
             } label: {
-                Label("Show replies", lucideIcon: "message-square")
+                Label(String(localized: "Show replies"), lucideIcon: "message-square")
                 Text(streamingMode.label)
             }
             .pickerStyle(.menu)
-            Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
+            Button(String(localized: "Reload"), lucideIcon: "refresh-cw") { model.attach() }
                 .disabled(!isPrepared)
         }
         Section {
-            Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
-                .disabled(!isPrepared)
+            Button(String(localized: "Clear conversation"), lucideIcon: "trash", role: .destructive) {
+                showingClear = true
+            }
+            .disabled(!isPrepared)
         }
     }
 
@@ -396,7 +405,7 @@ struct ChatScreen: View {
             Button {
                 Task { await model.unsnooze() }
             } label: {
-                Label("Unsnooze", lucideIcon: "alarm-clock-off")
+                Label(String(localized: "Unsnooze"), lucideIcon: "alarm-clock-off")
                 Text("Snoozed until \(ChatLimits.moment(until))")
             }
         } else {
@@ -410,7 +419,7 @@ struct ChatScreen: View {
                     }
                 }
             } label: {
-                Label("Snooze", lucideIcon: "alarm-clock")
+                Label(String(localized: "Snooze"), lucideIcon: "alarm-clock")
             }
         }
     }
@@ -428,7 +437,7 @@ struct ChatScreen: View {
             Button {
                 model.presentation.forkRequest = ChatForkRequest(turnID: turnID)
             } label: {
-                Label("Fork conversation", lucideIcon: "git-fork")
+                Label(String(localized: "Fork conversation"), lucideIcon: "git-fork")
                 if let refusal { Text(refusal) }
             }
             .disabled(refusal != nil)
@@ -442,12 +451,14 @@ struct ChatScreen: View {
             Button {
                 summarize()
             } label: {
-                Label("Summarize for the original", lucideIcon: "send")
+                Label(String(localized: "Summarize for the original"), lucideIcon: "send")
                 Text(refusal ?? originalTitle ?? "")
             }
             .disabled(refusal != nil)
-            Button("Show original", lucideIcon: "arrow-left") { model.presentation.openRequest = forkOf }
-                .disabled(originalTitle == nil)
+            Button(String(localized: "Show original"), lucideIcon: "arrow-left") {
+                model.presentation.openRequest = forkOf
+            }
+            .disabled(originalTitle == nil)
         }
     }
 
@@ -458,7 +469,8 @@ struct ChatScreen: View {
                 _ = try await model.client.request("chat.summarize", payload: model.target())
                 model.error = nil
             } catch {
-                model.error = ChatForking.message(for: error, action: "ask a fork for a summary")
+                model.error = ChatForking.message(
+                    for: error, update: String(localized: "Update Ruimte on this machine to ask a fork for a summary."))
             }
         }
     }
@@ -588,8 +600,10 @@ struct ChatScreen: View {
 
     private var stopButton: some View {
         Menu {
-            Button("Stop turn", lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
-            Button("Stop with sub-agents", lucideIcon: "square", role: .destructive, action: stopWithSubagents)
+            Button(String(localized: "Stop turn"), lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
+            Button(
+                String(localized: "Stop with sub-agents"), lucideIcon: "square", role: .destructive,
+                action: stopWithSubagents)
         } label: {
             RoundedRectangle(cornerRadius: 4).fill(MobileStyle.text).frame(width: 16, height: 16)
                 .frame(width: 52, height: 52)
@@ -611,7 +625,8 @@ struct ChatScreen: View {
                 await run()
             } else {
                 endingAgents = EndingAgents(
-                    title: "Stop the turn and its sub-agents?", message: ChatSubagents.stopsSubagentsWarning(agents),
+                    title: String(localized: "Stop the turn and its sub-agents?"),
+                    message: ChatSubagents.stopsSubagentsWarning(agents),
                     run: run)
             }
         }
@@ -644,7 +659,7 @@ struct ChatScreen: View {
 
 struct SessionErrorBanner: View {
     let message: String
-    var retryTitle = "Retry"
+    var retryTitle = String(localized: "Retry")
     let retry: () -> Void
     var body: some View {
         HStack(alignment: .top) {

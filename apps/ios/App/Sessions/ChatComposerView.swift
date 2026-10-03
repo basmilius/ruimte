@@ -72,14 +72,14 @@ struct ChatComposerView: View {
             guard !selected.isEmpty else { return }
             photos = []
             let jobs = selected.enumerated().compactMap { index, item -> (UUID, PhotosPickerItem, String)? in
-                let name = "Photo \(model.attachments.count + index + 1)"
+                let name = String(localized: "Photo \(model.attachments.count + index + 1)")
                 return model.composition.reserve(name).map { ($0, item, name) }
             }
             Task {
                 for (id, item, name) in jobs {
                     do {
                         guard let data = try await item.loadTransferable(type: Data.self) else {
-                            throw DraftFailure("Could not read this photo.")
+                            throw DraftFailure(String(localized: "Could not read this photo."))
                         }
                         let type = item.supportedContentTypes.first ?? .jpeg
                         await model.composition.finishImport(
@@ -124,7 +124,8 @@ struct ChatComposerView: View {
             if let text = pastedText {
                 Button("Attach as a text file") {
                     Task {
-                        await model.addAttachment(data: Data(text.utf8), name: "Pasted text.txt", mime: "text/plain")
+                        await model.addAttachment(
+                            data: Data(text.utf8), name: String(localized: "Pasted text") + ".txt", mime: "text/plain")
                     }
                     pastedText = nil
                 }
@@ -145,7 +146,7 @@ struct ChatComposerView: View {
         return RichChatComposer(
             text: $model.draft, selection: selection,
             mentions: model.mentions, skills: model.skills, focused: focus,
-            placeholder: model.working ? "Add to queue…" : "Message the agent…",
+            placeholder: model.working ? String(localized: "Add to queue…") : String(localized: "Message the agent…"),
             maximumHeight: maximumHeight,
             importItems: importAction, pasteLongText: pasteAction
         )
@@ -198,8 +199,10 @@ struct ChatComposerView: View {
                         }
                         VStack(alignment: .leading) {
                             Text(item.name).lineLimit(1)
-                            Text(item.error ?? "Importing…").font(.caption).foregroundStyle(MobileStyle.muted)
-                                .lineLimit(2)
+                            Text(item.error ?? String(localized: "Importing…")).font(.caption).foregroundStyle(
+                                MobileStyle.muted
+                            )
+                            .lineLimit(2)
                         }.frame(maxWidth: 170)
                         Button {
                             model.composition.imports.removeAll { $0.id == item.id }
@@ -223,11 +226,11 @@ struct ChatComposerView: View {
     }
 
     private func importCapture(_ image: UIImage) {
-        let name = "Photo \(model.attachments.count + model.composition.imports.count + 1).jpg"
+        let name = String(localized: "Photo \(model.attachments.count + model.composition.imports.count + 1)") + ".jpg"
         guard let id = model.composition.reserve(name) else { return }
         Task {
             guard let data = await Task.detached(operation: { image.jpegData(compressionQuality: 0.85) }).value else {
-                model.composition.failImport(id, error: DraftFailure("Could not read this photo."))
+                model.composition.failImport(id, error: DraftFailure(String(localized: "Could not read this photo.")))
                 return
             }
             await model.composition.finishImport(id, data: data, name: name, mime: "image/jpeg")
@@ -243,7 +246,9 @@ struct ChatComposerView: View {
                         let access = url.startAccessingSecurityScopedResource()
                         defer { if access { url.stopAccessingSecurityScopedResource() } }
                         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                        guard size <= ChatDraftLimits.bytes else { throw DraftFailure("Files must be at most 10 MiB.") }
+                        guard size <= ChatDraftLimits.bytes else {
+                            throw DraftFailure(String(localized: "Files must be at most 10 MiB."))
+                        }
                         return try Data(contentsOf: url, options: .mappedIfSafe)
                     }.value
                     let type = UTType(filenameExtension: url.pathExtension)
@@ -257,7 +262,7 @@ struct ChatComposerView: View {
 
     private func importProviders(_ providers: [NSItemProvider]) {
         for provider in providers {
-            let name = provider.suggestedName ?? "Pasted image"
+            let name = provider.suggestedName ?? String(localized: "Pasted image")
             guard let id = model.composition.reserve(name) else { continue }
             Task {
                 do {
@@ -265,13 +270,14 @@ struct ChatComposerView: View {
                         provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
                         ? UTType.fileURL.identifier
                         : provider.registeredTypeIdentifiers.first { UTType($0)?.conforms(to: .image) == true }
-                    guard let typeID else { throw DraftFailure("This item cannot be attached.") }
+                    guard let typeID else { throw DraftFailure(String(localized: "This item cannot be attached.")) }
                     let data: Data = try await withCheckedThrowingContinuation { continuation in
                         provider.loadDataRepresentation(forTypeIdentifier: typeID) { data, error in
                             if let data {
                                 continuation.resume(returning: data)
                             } else {
-                                continuation.resume(throwing: error ?? DraftFailure("Could not read this item."))
+                                continuation.resume(
+                                    throwing: error ?? DraftFailure(String(localized: "Could not read this item.")))
                             }
                         }
                     }

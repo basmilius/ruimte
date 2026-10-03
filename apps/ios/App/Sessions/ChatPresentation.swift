@@ -32,7 +32,7 @@ final class ChatPresentation {
     private(set) var info: JSONValue = .null
     private(set) var connected = false
     private(set) var startedAt: Double?
-    private(set) var activityLabel = "Working for"
+    private(set) var activityLabel = String(localized: "Working for", comment: "Followed by a running clock")
     private(set) var isAnimating = false
     @ObservationIgnored private var order: [String] = []
     @ObservationIgnored private var records: [String: ChatItemState] = [:]
@@ -139,7 +139,12 @@ final class ChatPresentation {
                 || (value.text("kind") == "question" && value.text("state") == "pending"
                     && value["async"]?.boolValue != true)
         }
-        activityLabel = !connected ? "Connection lost" : blocked ? "Waiting for you" : "Working for"
+        activityLabel =
+            !connected
+            ? String(localized: "Connection lost")
+            : blocked
+                ? String(localized: "Waiting for you")
+                : String(localized: "Working for", comment: "Followed by a running clock")
         isAnimating = connected && !blocked && nextID != nil
     }
 
@@ -320,10 +325,11 @@ final class ChatPresentation {
         let duration = ChatToolPresentation.elapsed(
             item.number("endedAt", fallback: item.number("createdAt")) - item.number("createdAt"))
         switch item.text("state") {
-        case "error": return "Failed after \(duration)"
+        case "error": return String(localized: "Failed after \(duration)")
         case "aborted":
-            return abortedByMachine(item, items: items) ? "Stopped after \(duration)" : "You stopped after \(duration)"
-        default: return "Worked for \(duration)"
+            return abortedByMachine(item, items: items)
+                ? String(localized: "Stopped after \(duration)") : String(localized: "You stopped after \(duration)")
+        default: return String(localized: "Worked for \(duration)")
         }
     }
 
@@ -345,9 +351,11 @@ final class ChatPresentation {
         let tasks = turn.list("taskIds").count
         if tasks > 0 {
             // A turn the machine opened with the results of tasks this chat gave; the label is their titles.
-            return "Woken by \(tasks == 1 ? "a task" : "\(tasks) tasks")\(label.isEmpty ? "" : ": \(label)")"
+            return label.isEmpty
+                ? String(localized: "Woken by \(tasks) tasks") : String(localized: "Woken by \(tasks) tasks: \(label)")
         }
-        return label.isEmpty ? "Continued on its own" : "Sub-agent finished: \(label)"
+        return label.isEmpty
+            ? String(localized: "Continued on its own") : String(localized: "Sub-agent finished: \(label)")
     }
 
 }
@@ -386,10 +394,12 @@ enum ChatToolPresentation {
     static func elapsed(_ milliseconds: Double) -> String {
         let seconds = max(0, Int(milliseconds / 1000))
         if seconds < 60 {
-            return "\(seconds)s"
+            return String(localized: "\(seconds)s", comment: "Duration in seconds, abbreviated")
         }
         let rest = seconds % 60
-        return rest == 0 ? "\(seconds / 60)m" : "\(seconds / 60)m \(rest)s"
+        return rest == 0
+            ? String(localized: "\(seconds / 60)m", comment: "Duration in minutes, abbreviated")
+            : String(localized: "\(seconds / 60)m \(rest)s", comment: "Duration in minutes and seconds, abbreviated")
     }
 
     static func tail(_ item: JSONValue) -> String {
@@ -411,7 +421,7 @@ enum ChatToolPresentation {
             if fileChanges.contains(name) {
                 edited.insert(tool["input"]?["file_path"]?.stringValue ?? tool.stableID)
                 key = "edited"
-            } else if sentences[name] != nil {
+            } else if sentenceNames.contains(name) {
                 key = name
             } else {
                 other += 1
@@ -421,45 +431,51 @@ enum ChatToolPresentation {
             counts[key, default: 0] += 1
         }
         var parts = order.map { key in
-            key == "edited"
-                ? counted(edited.count, ("Edited", "file", "files")) : counted(counts[key] ?? 0, sentences[key]!)
+            key == "edited" ? String(localized: "Edited \(edited.count) files") : sentence(key, count: counts[key] ?? 0)
         }
         if other > 0 {
-            parts.append(counted(other, parts.isEmpty ? ("", "tool call", "tool calls") : ("", "other tool call", "other tool calls")))
+            parts.append(
+                parts.isEmpty
+                    ? String(localized: "\(other) tool calls") : String(localized: "\(other) other tool calls"))
         }
         return parts
     }
 
     private static let fileChanges: Set<String> = ["Edit", "Write", "MultiEdit", "ApplyPatch"]
 
-    // The sentences of `chat:group.tools` in the client's English locale.
-    private static let sentences: [String: (String, String, String)] = [
-        "Read": ("Read", "file", "files"), "NotebookEdit": ("Edited", "notebook", "notebooks"),
-        "Bash": ("Ran", "command", "commands"), "Grep": ("Searched", "pattern", "patterns"),
-        "Glob": ("Listed", "pattern", "patterns"), "WebFetch": ("Fetched", "page", "pages"),
-        "WebSearch": ("Searched the web", "query", "queries"), "Task": ("Delegated", "task", "tasks"),
-        "Agent": ("Delegated", "task", "tasks"), "Skill": ("Used", "skill", "skills"),
-        "TodoWrite": ("Updated", "plan", "plans"),
+    private static let sentenceNames: Set<String> = [
+        "Read", "NotebookEdit", "Bash", "Grep", "Glob", "WebFetch", "WebSearch", "Task", "Agent", "Skill", "TodoWrite",
     ]
 
-    private static func counted(_ count: Int, _ sentence: (String, String, String)) -> String {
-        let noun = count == 1 ? sentence.1 : sentence.2
-        return sentence.0.isEmpty ? "\(count) \(noun)" : "\(sentence.0) \(count) \(noun)"
+    // The sentences of `chat:group.tools` in the client's English locale.
+    private static func sentence(_ name: String, count: Int) -> String {
+        switch name {
+        case "Read": String(localized: "Read \(count) files")
+        case "NotebookEdit": String(localized: "Edited \(count) notebooks")
+        case "Bash": String(localized: "Ran \(count) commands")
+        case "Grep": String(localized: "Searched \(count) patterns")
+        case "Glob": String(localized: "Listed \(count) patterns")
+        case "WebFetch": String(localized: "Fetched \(count) pages")
+        case "WebSearch": String(localized: "Searched the web \(count) queries")
+        case "Task", "Agent": String(localized: "Delegated \(count) tasks")
+        case "Skill": String(localized: "Used \(count) skills")
+        case "TodoWrite": String(localized: "Updated \(count) plans")
+        default: String(localized: "\(count) tool calls")
+        }
     }
 
     static func groupLabel(_ items: [JSONValue]) -> String {
         let names = Set(items.map { $0.text("name") })
-        guard names.count == 1, let name = names.first else { return "\(items.count) tool calls" }
-        let action: (String, String)
+        let count = items.count
+        guard names.count == 1, let name = names.first else { return String(localized: "\(count) tool calls") }
         switch name {
-        case "Read": action = ("Read", "file")
-        case "Edit", "MultiEdit", "ApplyPatch": action = ("Edited", "file")
-        case "Write": action = ("Wrote", "file")
-        case "Bash": action = ("Ran", "command")
-        case "Grep": action = ("Searched", "pattern")
-        case "Glob": action = ("Listed", "pattern")
-        default: action = (name, "call")
+        case "Read": return String(localized: "Read \(count) files")
+        case "Edit", "MultiEdit", "ApplyPatch": return String(localized: "Edited \(count) files")
+        case "Write": return String(localized: "Wrote \(count) files")
+        case "Bash": return String(localized: "Ran \(count) commands")
+        case "Grep": return String(localized: "Searched \(count) patterns")
+        case "Glob": return String(localized: "Listed \(count) patterns")
+        default: return String(localized: "\(name) \(count) calls", comment: "%@ is the name of a tool")
         }
-        return "\(action.0) \(items.count) \(action.1)\(items.count == 1 ? "" : "s")"
     }
 }

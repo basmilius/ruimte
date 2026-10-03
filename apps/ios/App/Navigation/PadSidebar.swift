@@ -18,15 +18,17 @@ struct PadSidebar: View {
                 showRecent: { router.detail = .recentlyClosed }
             ) {
                 Section {
-                    row("Now", icon: "inbox", detail: .now, id: "sidebar.now") {
+                    row(String(localized: "Now"), icon: "inbox", detail: .now, id: "sidebar.now") {
                         let waiting = now.board.needsYou.count
                         if waiting > 0 {
                             Text("\(waiting)").font(.caption.weight(.semibold)).monospacedDigit()
                                 .foregroundStyle(MobileStyle.statusNeedsYou)
-                                .accessibilityLabel(waiting == 1 ? "1 needs you" : "\(waiting) need you")
+                                .accessibilityLabel("\(waiting) need you")
                         }
                     }
-                    row("Machines", icon: "monitor", detail: .machines, id: "sidebar.machines") { EmptyView() }
+                    row(String(localized: "Machines"), icon: "monitor", detail: .machines, id: "sidebar.machines") {
+                        EmptyView()
+                    }
                 }
                 .listSectionSeparator(.hidden)
             }
