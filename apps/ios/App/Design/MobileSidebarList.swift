@@ -93,11 +93,11 @@ private struct MobileSidebarButtonSurface<Label: View>: View {
 
 struct SidebarBrand: View {
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image("RuimteLogo").renderingMode(.original)
                 .resizable().scaledToFit()
-                .frame(width: 42, height: 42)
-            Text("Ruimte").font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.text)
+                .frame(width: 32, height: 32)
+            Text("Ruimte").font(.headline).foregroundStyle(MobileStyle.text)
         }
         .padding(.leading, 8)
         .fixedSize(horizontal: true, vertical: false)

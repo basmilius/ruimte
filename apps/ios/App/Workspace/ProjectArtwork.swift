@@ -8,6 +8,7 @@ struct ProjectArtwork: View {
     let session: SharedMachineSession
     let project: JSONValue
     var size: CGFloat = 42
+    var inset: CGFloat = 4
     @Environment(\.colorScheme) private var colorScheme
     @State private var image: UIImage?
 
@@ -20,7 +21,7 @@ struct ProjectArtwork: View {
     var body: some View {
         Group {
             if let image {
-                Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().padding(4)
+                Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().padding(inset)
             } else if project["icon"]?.text("kind") == "lucide" {
                 LucideIcon(name: project["icon"]?.text("value") ?? "folder", size: (size * 0.55).rounded())
                     .foregroundStyle(MobileStyle.accent)

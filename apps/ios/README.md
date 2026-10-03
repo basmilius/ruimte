@@ -244,7 +244,8 @@ project under its title.
 The iPad keeps the iPhone's pages and none of its tabs (`PadHome`, `PadRouter`). Its sidebar is a split view
 column with the Ruimte mark and the avatar into Settings at the top, then Now with its count and Machines, then the
 open projects per machine with how the machine is reached, each project's counts and branch, the machine's Chats, New
-chat and Recently closed, as the iPhone's Projects tab lists them (`PadSidebar`, `ProjectsPage`). Search (⌘K, bound
+chat and Recently closed, as the iPhone's Projects tab lists them (`PadSidebar`, `ProjectsPage`). A project's mark
+stands without a tile in the icon column of Now and Machines, at the top of its two lines. Search (⌘K, bound
 once on the window) opens the palette as a sheet. Opening a project, from the sidebar, Now, the palette, a
 notification or the widget, pushes it in the sidebar with its name, its views and the running nodes under a canvas;
 its bar holds the project menu (Processes, Usage, Project settings) and the plus, which adds a view as a popover. Its
@@ -255,11 +256,12 @@ sidebar.
   project's view, Machines or Recently closed. Each has a stack of its own, so a page pushed in one never outlives a
   switch. One view stands in it at a time; a fork opens over its chat, as on an iPhone.
 - Its bar holds New chat (in this project or in Chats, as a popover), the launches as a popover from the play
-  button, Search, and Files and Git, which stand as an inspector beside the content. A folder, a file, a diff, a
-  commit, the branches or a conflict opened there is pushed inside the inspector; only Open as view puts something
-  in the content.
-- A sub-agent opens as an inspector beside its chat, with its conversation and Stop; Open as view shows it in the
-  content, on this iPad only.
+  button, Search, and Files and Git, which stand as an inspector beside the content. The inspector sits on the split
+  view, not in the content column, whose navigation it would otherwise share, and has a stack of its own
+  (`PadInspectorPane`). A folder, a file, a diff, a commit, the branches or a conflict opened there is pushed inside
+  the inspector; only Open as view puts something in the content.
+- A sub-agent opens in that inspector beside its chat, with its conversation and Stop, and leaves it with the chat;
+  Open as view shows it in the content, on this iPad only.
 - Every inspector draws a hairline on its edge against the content, an alpha of the text color (`InspectorEdge`).
 - Machines are the list and the machine picked side by side; its Machine settings is one form sheet with the name,
   the icon and the apps with access. Processes is a table sorted by any column, with the signals in a row's menu

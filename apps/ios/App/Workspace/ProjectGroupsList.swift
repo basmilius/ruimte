@@ -78,8 +78,11 @@ struct ProjectOverviewLabel: View {
     var offline = false
 
     var body: some View {
-        HStack(spacing: 11) {
-            ProjectBadge(summary: overview.row.summary, session: session, chats: overview.isChats)
+        HStack(alignment: .top, spacing: 12) {
+            ProjectBadge(
+                summary: overview.row.summary, session: session, chats: overview.isChats, size: 20, tile: false
+            )
+            .frame(width: 32)
             VStack(alignment: .leading, spacing: 1) {
                 Text(overview.isChats ? "Chats" : overview.row.summary.text("name", fallback: "Untitled project"))
                     .foregroundStyle(overview.unavailable || offline ? MobileStyle.muted : MobileStyle.text)
@@ -114,11 +117,37 @@ struct ProjectBadge: View {
     let session: SharedMachineSession
     var chats = false
     var size: CGFloat = 26
+    /// Without the tile, the mark stands in a list's icon column as the other rows' icons do.
+    var tile = true
 
     var body: some View {
+        if tile { tiled } else { bare }
+    }
+
+    private var bare: some View {
+        let icon = summary["icon"]
+        return Group {
+            if chats {
+                Image(lucide: "messages-square", size: size)
+            } else if icon?.text("kind") == "image" {
+                ProjectArtwork(session: session, project: summary, size: size, inset: 0)
+            } else if icon?.text("kind") == "lucide" {
+                Image(lucide: icon?.text("value") ?? "folder", size: size)
+            } else {
+                Text(initial)
+                    .font(.system(size: (size * 0.8).rounded(), weight: .bold))
+                    .foregroundStyle(Color(projectHex: summary.text("color")) ?? MobileStyle.accent)
+            }
+        }
+        .frame(width: size, height: size)
+        .foregroundStyle(MobileStyle.text)
+        .accessibilityHidden(true)
+    }
+
+    private var tiled: some View {
         let icon = summary["icon"]
         let corner = (size * 0.27).rounded()
-        Group {
+        return Group {
             if chats {
                 LucideIcon(name: "messages-square", size: (size * 0.54).rounded())
                     .frame(width: size, height: size).background(MobileStyle.hover, in: .rect(cornerRadius: corner))
