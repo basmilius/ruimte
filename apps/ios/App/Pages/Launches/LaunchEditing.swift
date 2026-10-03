@@ -265,6 +265,26 @@ enum LaunchEditing {
         places.count == 1 ? places.first ?? "" : "\(places.count) \(many)"
     }
 
+    /// A row under "Found in this project" per file things were found in: "3 scripts in package.json".
+    static func foundRows(_ suggestions: [LaunchSuggestion]) -> [(id: String, text: String)] {
+        let usable = suggestions.filter { $0.unsupported == nil }
+        var order: [String] = []
+        var counts: [String: (runs: Bool, count: Int)] = [:]
+        for suggestion in usable {
+            let runs = suggestion.source == "run-xml"
+            let place = runs ? directory(suggestion.path) : suggestion.path
+            let key = (runs ? "run:" : "script:") + place
+            if counts[key] == nil { order.append(key) }
+            counts[key, default: (runs, 0)].count += 1
+        }
+        return order.compactMap { key in
+            guard let entry = counts[key] else { return nil }
+            let place = String(key.drop { $0 != ":" }.dropFirst())
+            let noun = entry.runs ? "run configuration" : "script"
+            return (key, "\(entry.count) \(noun)\(entry.count == 1 ? "" : "s") in \(place)")
+        }
+    }
+
     /// The line under "Found in this project": how many of each, and where; nil when there is nothing to import.
     static func foundText(_ suggestions: [LaunchSuggestion]) -> String? {
         let usable = suggestions.filter { $0.unsupported == nil }

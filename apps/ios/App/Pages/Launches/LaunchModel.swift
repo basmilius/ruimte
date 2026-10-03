@@ -290,6 +290,27 @@ enum LaunchLogic {
     }
 
     /// What a row says after the name: how long it runs and where, or how it ended. `now` is in milliseconds.
+    /// The line under a launch's command in the list: its state, and the port it holds or when it ended.
+    static func stateLine(_ view: LaunchView, now: Double) -> String {
+        let ago: (Double) -> String = { ended in
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            return now - ended < 60_000
+                ? "just now"
+                : formatter.localizedString(
+                    for: Date(timeIntervalSince1970: ended / 1000), relativeTo: Date(timeIntervalSince1970: now / 1000))
+        }
+        switch view.phase {
+        case .held: return "Needs approval"
+        case .starting: return "Starting…"
+        case .stopping: return "Stopping…"
+        case .running: return (["Running"] + (view.port.map { [":\($0)"] } ?? [])).joined(separator: " · ")
+        case .passed: return view.status?.endedAt.map { "Passed \(ago($0))" } ?? "Passed"
+        case .failed: return "Failed · exit \(view.status?.exitCode.map(String.init) ?? "?")"
+        case .idle: return view.status?.endedAt.map { "Stopped \(ago($0))" } ?? "Not running"
+        }
+    }
+
     static func detail(_ view: LaunchView, now: Double) -> String {
         if view.phase == .held { return LaunchPhase.held.label }
         guard let status = view.status else { return "" }

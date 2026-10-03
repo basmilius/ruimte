@@ -24,9 +24,12 @@ struct LaunchesPage: View {
     @State private var output: String?
     @State private var deleting: LaunchEntry?
     @State private var found: [LaunchSuggestion]?
+    /// Named under the title on an iPhone, whose sheet stands over the project.
+    private let projectName: String?
 
-    init(client: any MachineRequesting, projectID: String, folder: String) {
+    init(client: any MachineRequesting, projectID: String, folder: String, projectName: String? = nil) {
         _store = State(initialValue: ProjectLaunches(client: client, projectID: projectID, folder: folder))
+        self.projectName = projectName
     }
 
     var body: some View {
@@ -37,12 +40,13 @@ struct LaunchesPage: View {
             content
         }
         .navigationTitle("Launches")
+        .navigationSubtitle(projectName ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $output) { launchID in
             LaunchOutputPage(store: store, launchID: launchID)
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarLeading) {
                 Menu {
                     Button("New launch", lucideIcon: "plus") { sheet = .edit(nil) }
                     Button("Find in this project…", lucideIcon: "search") { sheet = .importing }
@@ -59,9 +63,9 @@ struct LaunchesPage: View {
         .onAppear { store.start() }
         .onDisappear { store.stop() }
         .refreshable { await store.load() }
-        .task(id: store.document?.launches.isEmpty) {
-            guard store.document?.launches.isEmpty == true else { return }
-            found = await store.detect().map { LaunchEditing.newSuggestions($0, existing: []) }
+        .task(id: store.document?.launches.map(\.id)) {
+            guard let launches = store.document?.launches else { return }
+            found = await store.detect().map { LaunchEditing.newSuggestions($0, existing: launches) }
         }
         .mobileSheet(item: $sheet) { sheet in
             switch sheet {
@@ -108,18 +112,35 @@ struct LaunchesPage: View {
                         if let label = section.label { Text(label) }
                     }
                 }
+                if let held = document.launches.first(where: { views[$0.id]?.phase == .held }) {
+                    Text(
+                        "\(held.name) comes from .ruimte/launches.json. Nothing from it runs on this machine until you approve it."
+                    )
+                    .font(.caption).foregroundStyle(MobileStyle.muted)
+                }
+                foundSection
             }
         } else {
             MobileLoadingRow("Reading the launches").frame(maxWidth: .infinity).padding()
         }
     }
 
-    /// A project without launches offers what the machine finds in it, so the first ones need no typing.
+    /// What the machine finds in the project that is no launch yet, so the next ones need no typing.
     @ViewBuilder private var foundSection: some View {
-        if let found, let text = LaunchEditing.foundText(found) {
+        if let found, !LaunchEditing.foundRows(found).isEmpty {
             Section("Found in this project") {
-                Text(text).font(.caption).foregroundStyle(MobileStyle.muted)
-                Button("Review and import…", lucideIcon: "search") { sheet = .importing }
+                ForEach(LaunchEditing.foundRows(found), id: \.id) { row in
+                    Button {
+                        sheet = .importing
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(lucide: "file-text", size: 15).foregroundStyle(MobileStyle.muted)
+                            Text(row.text).foregroundStyle(MobileStyle.text)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Add").font(.footnote).foregroundStyle(MobileStyle.muted)
+                        }
+                    }
+                }
             }
         }
     }
@@ -131,29 +152,31 @@ struct LaunchesPage: View {
                 output = launch.id
             } label: {
                 HStack(spacing: 10) {
-                    LaunchStatusIcon(phase: view.phase)
-                    VStack(alignment: .leading, spacing: 2) {
+                    LaunchStateDot(phase: view.phase)
+                    VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 6) {
-                            Text(launch.name).lineLimit(1)
+                            Text(launch.name).fontWeight(.medium).lineLimit(1)
                             Image(lucide: launch.shared ? "users" : "lock", size: 12).foregroundStyle(MobileStyle.faint)
                                 .accessibilityLabel(launch.shared ? "Shared with the team" : "Only on this machine")
                         }
-                        TimelineView(.periodic(from: .now, by: 1)) { context in
-                            let detail = LaunchLogic.detail(view, now: context.date.timeIntervalSince1970 * 1000)
-                            if !detail.isEmpty {
-                                Text(detail).font(.caption).monospacedDigit()
-                                    .foregroundStyle(view.phase == .failed ? MobileStyle.statusError : MobileStyle.muted)
-                                    .lineLimit(1)
-                            }
+                        if let command = launch.command, !command.isEmpty {
+                            Text(command).font(.caption.monospaced()).foregroundStyle(MobileStyle.muted)
+                                .lineLimit(1).truncationMode(.tail)
+                        }
+                        TimelineView(.periodic(from: .now, by: 30)) { context in
+                            Text(LaunchLogic.stateLine(view, now: context.date.timeIntervalSince1970 * 1000))
+                                .font(.caption).monospacedDigit()
+                                .foregroundStyle(LaunchStateDot.color(view.phase, text: true))
+                                .lineLimit(1)
                         }
                     }
                     Spacer(minLength: 8)
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: 54)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            LaunchButtons(store: store, view: view)
+            LaunchButtons(store: store, view: view) { output = launch.id }
         }
         .contextMenu {
             LaunchMenuItems(store: store, view: view)
@@ -190,23 +213,66 @@ struct LaunchStatusIcon: View {
     }
 }
 
-/// Launch, or Restart and Stop while it runs, or Force stop while it stops: the desktop's buttons on a launch.
+/// A launch's state as a dot in its color: green while it runs, amber while it waits for an approval, red once it
+/// failed.
+struct LaunchStateDot: View {
+    let phase: LaunchPhase
+
+    var body: some View {
+        Circle().fill(Self.color(phase, text: false)).frame(width: 8, height: 8)
+            .frame(width: 18)
+            .accessibilityElement()
+            .accessibilityLabel(phase.label)
+    }
+
+    static func color(_ phase: LaunchPhase, text: Bool) -> Color {
+        switch phase {
+        case .running: MobileStyle.positive
+        case .starting, .stopping: MobileStyle.statusRunning
+        case .held: MobileStyle.statusNeedsYou
+        case .failed: MobileStyle.statusError
+        case .idle, .passed: text ? MobileStyle.muted : MobileStyle.faint
+        }
+    }
+}
+
+/// The output and Stop while it runs, Approve while it waits for a person, Force stop while it stops, else Launch:
+/// the desktop's buttons on a launch. Restart is in the row's menu.
 struct LaunchButtons: View {
     let store: ProjectLaunches
     let view: LaunchView
+    /// Nil where the output is on screen already.
+    var showOutput: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 6) {
             let name = view.launch.name
             if view.phase == .stopping {
                 button("octagon-x", label: "Force stop \(name)") { await store.stop(view.launch.id, force: true) }
             } else if view.live {
-                button("rotate-cw", label: "Restart \(name)") { await store.run(view.launch.id, restart: true) }
+                if let showOutput {
+                    Button(action: showOutput) {
+                        Image(lucide: "terminal", size: 13).frame(width: 32, height: 32)
+                            .background(MobileStyle.hover, in: .circle)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Output of \(name)")
+                }
                 button("square", label: "Stop \(name)") { await store.stop(view.launch.id) }
+            } else if view.phase == .held {
+                Button {
+                    Task { await store.press(view.launch) }
+                } label: {
+                    Text("Approve").font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(height: 30)
+                        .background(MobileStyle.text, in: .capsule).foregroundStyle(MobileStyle.surface)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Approve and launch \(name)")
             } else {
                 button("play", label: "Launch \(name)") { await store.press(view.launch) }
             }
         }
+        .foregroundStyle(MobileStyle.text)
         .disabled(!store.connected)
     }
 
@@ -214,10 +280,10 @@ struct LaunchButtons: View {
         Button {
             Task { await action() }
         } label: {
-            Image(lucide: icon, size: 16).frame(width: 40, height: 40)
+            Image(lucide: icon, size: 13).frame(width: 32, height: 32)
+                .background(MobileStyle.hover, in: .circle)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(MobileStyle.text)
         .accessibilityLabel(label)
     }
 }
