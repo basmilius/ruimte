@@ -88,7 +88,7 @@ struct PairMachinePage: View {
                     }
                     .labelStyle(.iconOnly)
                     .buttonBorderShape(.circle)
-                    .tint(MobileStyle.text.opacity(0.12))
+                    .tint(MobileStyle.accent)
                 } else if !model.pairing {
                     Button {
                         model.text = ""
