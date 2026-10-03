@@ -22,7 +22,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   attachments, context selection, approvals and questions. The composer styles Markdown
   while editing and shows selected files and skills as inline badges.
 - Chats outside any project. New chat on the projects page (a menu of the machines when there are
-  several) and on a machine's page picks one of the machine's installed chat agents from `provider.list`,
+  several) and on a machine's Projects page picks one of the machine's installed chat agents from `provider.list`,
   asks the machine for it with `project.newChat` and opens it; the machine hands back the chat of that
   agent nobody wrote in yet instead of making another. Each machine's Chats project (`scratch` on its
   summary) has a row of its own, "Chats", and stays out of the projects and Recently closed. It shows
@@ -58,6 +58,29 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   deletes it to the machine's trash after a question (`fs.delete`). An edit is written over the mtime it was read at
   (`fs.write` with `expectedMtime`), so a file that moved on the machine refuses with the edit kept, to reload or copy.
 - Filesystem updates, usage and machine access management. Destructive actions require confirmation.
+- A machine's page (`App/Pages/Machine`) stands from the first frame of its push: how the machine is reached with
+  the round trip of `server.ping` (every ten seconds while a page shows it) and its version, then the update of its
+  app, the rows Projects, Files, Devices, Processes and Usage with the limits of each CLI under it, and On this
+  machine with keep awake, the connection and Agents. `MachineEndpoint` reads `endpoint.info` on every link and
+  follows `endpoint.changed` and `endpoint.updateChanged`; it also keeps when this phone last reached the machine.
+  Keep awake (Off, While agents work, Always, then Also on battery and, under Always and only with battery, Keep the
+  display on) shows only where the machine can hold it (`keepAwakeAvailable`) and is written with
+  `endpoint.setIdentity`, which sends the name back only when a person chose it. The update banner says what the app
+  on the machine has (available, downloading with its percent, ready, failed); Update or Restart first asks
+  `endpoint.installUpdate` with `confirm: false`, says what a restart ends right now (terminals and agents, or
+  nothing under the service) and installs only after Restart on that question. Without the app on the machine it says
+  to install it there, and `update-no-app` and `update-none` read as such. The menu holds Name and icon (a sheet with
+  the name, empty for the machine's own, and twenty icons from the project set) and Apps with access: every client
+  from `auth.sessions` with how it came in and when it was last there, Revoke after a question that explains what
+  that means for its way in, and revoking this phone forgets the machine here. A paired client cannot mint a pairing
+  link, so the sheet says where to get one on the machine instead.
+- Devices of a machine (`device.list`, read again every three seconds while the page is open), grouped as the
+  desktop's devices panel: running simulators first, then iOS simulators and devices and Android emulators and
+  devices. Start and Shut down where the machine offers them (`device.boot`, `device.shutdown`), Retry for a device
+  that waits on a person. A running device shows a read-only preview from `device.open` with `stream: events` and
+  JPEG only, a few frames a second and never input; a device that streams video says its picture shows in its view.
+  Open as view adds a device view to a chosen project of the machine (or finds the one it has) and opens it there.
+  With streaming off on the machine the page says so, since the machine then answers no device request.
 - Launches of a project, in the project menu (behind More on an iPad): each with its state (at rest, needs approval, starting, running, stopping,
   passed, failed), how long it runs and on which port, grouped by the checkout it runs in. Launch, Restart and Stop,
   and Force stop only while a launch is stopping, as on the desktop; Stop all from the plus menu. A tap shows the
@@ -68,9 +91,10 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   launches and edits save the whole list against the rev they were read at, which approves what they add or
   change, as the sheet says; a conflict offers to start over from the latest. Find in this project imports what the
   machine detects (`launches.detect`). An older machine says it needs an update.
-- Processes, on a machine's page (and behind More in a project on an iPad) (`processes.subscribe` while the page is open): CPU,
-  memory and disk of the machine against the share of Ruimte, over the last ten minutes or the last day, then a
-  group per terminal, chat or launch with its processes, for what Ruimte started or everything. A warning sits under
+- Processes, on a machine's page (and behind More in a project on an iPad) (`processes.subscribe` while the page is open): CPU
+  and memory of the machine against the share of Ruimte as two tiles, over the last ten minutes or the last day, with
+  disk as a line under them, then per project a group per terminal, chat or launch with its processes and what
+  belongs to no project under Machine tasks, for what Ruimte started or everything. A warning sits under
   the group it is about with the button the desktop offers (interrupt, terminate, show, resume) and can be dismissed.
   Long-press a node's group or a process for Interrupt, Terminate or Force quit; Force quit asks first, as on the
   desktop, and the machine refuses a pid that now names another process.
@@ -105,8 +129,11 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   pages or is taken back. When git refuses because the merge would overwrite changes of your own in the
   target checkout, Stash and retry parks them in a stash named "Before merging <branch>" and merges again,
   only when you press it. Removing asks with the work counted again and only forces when it says so.
-  Usage follows the OS region: EUR regions use the supplied exchange rate; other regions use USD.
-  Missing or invalid rates keep dollar amounts and show an explanation.
+- The usage page is the desktop's: Today (per hour), 7, 30 or 90 days, counted in euros, dollars or tokens, a bar
+  per day stacked per CLI where a tap shows that day, the six tiles, and a breakdown per model, project or day with
+  each row's share. The title switches between machines and Scan again reads it all again. It counts in the region's
+  money until a person picks: euros in a EUR region at the ECB rate the machine supplies, dollars elsewhere. Missing or
+  invalid rates keep dollar amounts and say so, and the line at the end names the scan, the prices and the rate.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification
   service extension and Live Activities. APNs delivery requires the service configuration below.
 - Small and medium Home Screen widgets with the usage limits and today's cost of one chosen machine.
@@ -118,7 +145,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - A Needs you widget with the count of what waits on you and what works, and a Needs you list widget (medium and
   large) whose rows open their chat or terminal (`ruimte://node`). Now writes the board into the app group whenever
   it changes (`NeedsYouWidgetRecorder`); the widgets show the last state the app saw.
-- The usage page has a limits section per account, titled with the account once a CLI has several. An account
+- The usage page has a limits card per account, amber once a window comes close, titled with the account once a CLI has several. An account
   that is signed out or not read yet says so instead of drawing empty bars. A signed-out account offers Log in where the machine
   names a login command for its CLI, as the desktop's usage page does: the CLI's own login runs in a terminal of its
   own on the machine (`session.login`, no approval since the machine picks the command), the sheet closes by itself
@@ -167,8 +194,10 @@ once per launch), else the first letter of its name.
   of views. Its bar holds the project's menu beside the avatar: New view (New chat in Chats) in a group of its own,
   then Files, Git and Launches (none of these in Chats) and Usage, each a sheet; Files and Git open large and pull
   down to medium. A view opens over the project.
-- Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
-  projects (which open under Projects), Chats, files, processes, usage, agents and machine settings.
+- Machines lists every machine as a card with how it is reached and how fast, the limits of its CLIs and an update
+  when one is ready; one that is away says when it was last there and offers Retry. Pairing is the plus and the row at
+  the end. A machine's page opens its projects with New chat and Chats (a project opens under Projects), files,
+  devices, processes and usage, and keeps keep awake, name and icon and apps with access.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
   opens over Search in its project; a project opens under Projects.
 
