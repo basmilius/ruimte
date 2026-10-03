@@ -1208,9 +1208,12 @@ handleFromApp('update:check', () => updater.check());
 
 handleFromApp('update:download', () => updater.download());
 
-/* Installing closes every window before it quits, so a quit that ends work is asked about while they are still there. */
-const installUpdate = async (): Promise<void> => {
-    if (!serviceController.survivesQuit(false) && !(await askBeforeQuit())) {
+/*
+ * Installing closes every window before it quits, so a quit that ends work is asked about while they
+ * are still there. Not when `confirmed`: a person asked from another client after being told what ends.
+ */
+const installUpdate = async (confirmed: boolean): Promise<void> => {
+    if (!confirmed && !serviceController.survivesQuit(false) && !(await askBeforeQuit())) {
         return;
     }
     quitConfirmed = true;
@@ -1219,7 +1222,7 @@ const installUpdate = async (): Promise<void> => {
     }
 };
 
-onFromApp('update:install', () => void installUpdate());
+onFromApp('update:install', (_event, confirmed: unknown) => void installUpdate(confirmed === true));
 
 /* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
    only the versions between this one and the next, and a tag whose release is still a draft. */

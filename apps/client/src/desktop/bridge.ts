@@ -195,7 +195,9 @@ export interface DesktopBridge {
     configureUpdates?(autoDownload: boolean): Promise<void>;
     checkForUpdate?(): Promise<void>;
     downloadUpdate?(): Promise<void>;
-    installUpdate?(): void;
+    /* `confirmed` skips the shell's question about what a quit ends, for a person who already answered
+       it on another client. A shell from before ignores it and asks on this computer. */
+    installUpdate?(confirmed?: boolean): void;
     /* The notes of the last releases, from the shell's copy on disk. `refresh` asks GitHub first.
        Optional for the same reason `onBrowserContextMenu` is; without it About offers no notes. */
     releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;

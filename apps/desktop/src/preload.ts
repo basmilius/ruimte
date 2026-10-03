@@ -76,7 +76,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     configureUpdates: (autoDownload: boolean): Promise<void> => ipcRenderer.invoke('update:configure', autoDownload),
     checkForUpdate: (): Promise<void> => ipcRenderer.invoke('update:check'),
     downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
-    installUpdate: (): void => ipcRenderer.send('update:install'),
+    installUpdate: (confirmed?: boolean): void => ipcRenderer.send('update:install', confirmed === true),
     releaseNotes: (refresh?: boolean): Promise<unknown> => ipcRenderer.invoke('releases:list', refresh === true),
     localSecret: (): Promise<string | null> => ipcRenderer.invoke('daemon:local-secret'),
     requestMicrophoneAccess: (): Promise<boolean> => ipcRenderer.invoke('media:request-microphone'),

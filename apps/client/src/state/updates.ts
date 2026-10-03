@@ -3,6 +3,7 @@ import { formatPercent } from '@basmilius/desktop-ui/format';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
 import { compareVersions, isVersion } from '@ruimte/desktop-bridge';
+import { startMachineUpdate } from '@/state/machine-update';
 import { openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
 import { useToasts } from '@/state/toasts';
 
@@ -123,16 +124,30 @@ export const noteVersionChange = (current: string, storage: SeenVersionStorage |
 /*
  * Wires the store to the shell. The state it already has and every change after it. The first check
  * waits until the auto-download preference has landed, so nothing downloads behind the back of
- * someone who turned it off. Returns the unsubscribe, or null where there is no shell to talk to.
+ * someone who turned it off. This computer's machine hears every step, so another client sees the
+ * update and can ask for it. Returns the unsubscribe, or null where there is no shell to talk to.
  */
 export const startUpdates = (autoDownload: boolean): (() => void) | null => {
     const bridge = desktop();
     if (!bridge?.updateState || !bridge.onUpdateState) {
         return null;
     }
-    const stop = bridge.onUpdateState(apply);
-    void bridge.updateState().then(async (state) => {
+    const machine = startMachineUpdate({
+        state: () => useUpdates.getState(),
+        download: () => useUpdates.getState().download(),
+        install: () => bridge.installUpdate?.(true)
+    });
+    const follow = (state: UpdateState): void => {
         apply(state);
+        machine.apply(state);
+    };
+    const stopShell = bridge.onUpdateState(follow);
+    const stop = (): void => {
+        stopShell();
+        machine.stop();
+    };
+    void bridge.updateState().then(async (state) => {
+        follow(state);
         if (state.status === 'unsupported') {
             return;
         }
