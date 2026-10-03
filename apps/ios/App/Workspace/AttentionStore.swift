@@ -232,8 +232,7 @@ struct AttentionMark: View {
         if store.needsYou(id) {
             Image(lucide: "hand").foregroundStyle(MobileStyle.statusNeedsYou).accessibilityLabel("Needs you")
         } else if store.statuses[id] == .running {
-            Circle().frame(width: 8, height: 8).foregroundStyle(MobileStyle.statusRunning).accessibilityLabel(
-                "Running")
+            Spinner(size: 14, label: "Running").foregroundStyle(MobileStyle.statusRunning)
         } else if store.unseen.contains(id) {
             Circle().frame(width: 8, height: 8).foregroundStyle(MobileStyle.accent).accessibilityLabel(
                 "New activity")

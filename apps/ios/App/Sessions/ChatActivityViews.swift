@@ -60,7 +60,11 @@ struct ChatWorkingRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(lucide: presentation.isAnimating ? "circle-dashed" : "circle-pause", size: 14)
+            if presentation.isAnimating {
+                Spinner(size: 14).foregroundStyle(MobileStyle.statusRunning)
+            } else {
+                Image(lucide: "circle-pause", size: 14)
+            }
             ChatLiveLabel(text: presentation.activityLabel, active: presentation.isAnimating)
             if presentation.isAnimating, let startedAt = presentation.startedAt {
                 ChatElapsed(startedAt: startedAt, clock: true).accessibilityHidden(true)

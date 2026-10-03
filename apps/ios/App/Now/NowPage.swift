@@ -244,10 +244,9 @@ private struct NowRow: View {
                 Text(SnoozeChoice.moment(until, from: .now)).font(.caption).foregroundStyle(MobileStyle.muted)
                     .monospacedDigit().accessibilityLabel("Snoozed until \(SnoozeChoice.moment(until, from: .now))")
             } else if entry.status == .running {
-                ProgressView().controlSize(.mini).tint(MobileStyle.statusRunning).accessibilityLabel("Working")
+                Spinner(size: 14, label: "Working").foregroundStyle(MobileStyle.statusRunning)
             } else if entry.delegating {
-                ProgressView().controlSize(.mini).tint(MobileStyle.muted)
-                    .accessibilityLabel("Its sub-agents are working")
+                Spinner(size: 14, label: "Its sub-agents are working").foregroundStyle(MobileStyle.muted)
             } else if entry.unseen {
                 Circle().fill(MobileStyle.accent).frame(width: 8, height: 8).accessibilityLabel("New activity")
             }

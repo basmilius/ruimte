@@ -176,7 +176,7 @@ struct LaunchStatusIcon: View {
         Group {
             switch phase {
             case .starting, .stopping:
-                ProgressView().controlSize(.mini)
+                Spinner(size: 14).foregroundStyle(MobileStyle.statusRunning)
             case .idle: Image(lucide: "circle", size: 15).foregroundStyle(MobileStyle.faint)
             case .held: Image(lucide: "circle-alert", size: 15).foregroundStyle(MobileStyle.faint)
             case .running: Image(lucide: "circle-dot", size: 15).foregroundStyle(MobileStyle.positive)
