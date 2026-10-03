@@ -24,16 +24,23 @@ enum ChatBackground {
     }
 }
 
+/// A stop from a chip's menu that the machine refused.
+struct ChatActivityFailure: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
+
 /// What the chat keeps working on beside the thread, in one small row over the composer: its sub-agents and what runs
-/// in the background. Each chip opens the list it counts as a flyout over the chip.
+/// in the background. Each chip is a menu that grows out of it, with what it counts and a stop for each.
 struct ChatActivityChips: View {
     let model: ChatModel
     let tasks: TaskStore?
     /// The full list of the chat's sub-agents, the done ones included.
     let openList: () -> Void
-    @State private var showingSubagents = false
-    @State private var showingBackground = false
-    @State private var afterFlyout: (() -> Void)?
+    /// Asked by the screen, like the queue: the chips sit in the composer's own hosting controller.
+    @Binding var ending: EndingAgents?
+    @Binding var failure: ChatActivityFailure?
 
     var body: some View {
         let subagents = model.activitySubagents
@@ -42,40 +49,30 @@ struct ChatActivityChips: View {
             HStack(spacing: 6) {
                 if !subagents.isEmpty {
                     let words = subagents.map { ChatSubagents.statusWord($0, task: task(of: $0)) }
-                    let word = ChatSubagents.summaryWord(words)
-                    chip(
-                        ChatBackground.counted(ChatSubagents.badgeCount(words), "sub-agent"),
-                        showing: $showingSubagents
-                    ) {
-                        SubagentStatusIcon(word: word, size: 13)
-                    }
-                    .popover(isPresented: $showingSubagents, arrowEdge: .bottom) {
-                        ChatSubagentActivity(model: model, tasks: tasks, items: subagents) { next in
-                            afterFlyout = next
-                            showingSubagents = false
-                        } openList: {
-                            afterFlyout = openList
-                            showingSubagents = false
+                    Menu {
+                        subagentRows(subagents)
+                    } label: {
+                        chip(ChatBackground.counted(ChatSubagents.badgeCount(words), "sub-agent")) {
+                            SubagentStatusIcon(word: ChatSubagents.summaryWord(words), size: 13)
                         }
                     }
+                    .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
                 }
                 if !background.isEmpty {
                     let shells = ChatBackground.counts(background).shells
-                    chip(ChatBackground.label(background), showing: $showingBackground) {
-                        Image(lucide: shells > 0 ? "square-terminal" : "activity", size: 13)
+                    Menu {
+                        backgroundRows(background)
+                    } label: {
+                        chip(ChatBackground.label(background)) {
+                            Image(lucide: shells > 0 ? "square-terminal" : "activity", size: 13)
+                        }
                     }
-                    .popover(isPresented: $showingBackground, arrowEdge: .bottom) {
-                        ChatBackgroundActivity(model: model, tasks: background)
-                    }
+                    .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
                 }
                 Spacer(minLength: 0)
             }
+            .frame(minHeight: 44)
             .padding(.bottom, 4)
-            .onChange(of: showingSubagents) { _, showing in
-                guard !showing, let action = afterFlyout else { return }
-                afterFlyout = nil
-                action()
-            }
         }
     }
 
@@ -83,20 +80,113 @@ struct ChatActivityChips: View {
         ChatSubagents.taskID(item).flatMap { tasks?.task($0) }
     }
 
-    private func chip(_ label: String, showing: Binding<Bool>, @ViewBuilder icon: () -> some View) -> some View {
-        Button {
-            showing.wrappedValue = true
-        } label: {
-            HStack(spacing: 6) {
-                icon()
-                Text(label).lineLimit(1)
-            }
-            .font(.footnote).foregroundStyle(MobileStyle.muted)
-            .padding(.horizontal, 11).frame(minHeight: 28)
-            .glassEffect(.regular.interactive(), in: .capsule)
-            .frame(minHeight: 44).contentShape(Capsule())
+    private func chip(_ label: String, @ViewBuilder icon: () -> some View) -> some View {
+        HStack(spacing: 6) {
+            icon()
+            Text(label).lineLimit(1)
         }
-        .buttonStyle(.plain)
+        .font(.footnote).foregroundStyle(MobileStyle.muted)
+        .padding(.horizontal, 11).frame(minHeight: 28)
+    }
+
+    @ViewBuilder private func subagentRows(_ items: [JSONValue]) -> some View {
+        Section(ChatBackground.counted(items.count, "sub-agent")) {
+            ForEach(items, id: \.stableID) { item in
+                let task = task(of: item)
+                let word = ChatSubagents.statusWord(item, task: task)
+                let detail = [word?.rawValue.capitalized, ChatSubagents.entryTime(item, task: task, now: .now)]
+                    .compactMap { $0 }.joined(separator: " · ")
+                Button {
+                    model.presentation.conversationRequest = SubagentCrumb(item)
+                } label: {
+                    Label {
+                        Text(ChatSubagents.title(item))
+                        if !detail.isEmpty { Text(detail) }
+                    } icon: {
+                        Image(lucide: Self.icon(word), size: 16)
+                    }
+                }
+                .disabled(!ChatSubagents.canOpen(item, machineRefused: model.presentation.subagentsRefused))
+            }
+        }
+        Section {
+            ForEach(items, id: \.stableID) { item in stopRow(item) }
+        }
+        Section {
+            Button("All sub-agents", lucideIcon: "bot", action: openList)
+        }
+    }
+
+    @ViewBuilder private func stopRow(_ item: JSONValue) -> some View {
+        let title = ChatSubagents.title(item)
+        switch ChatSubagents.stop(item, turnRunning: model.working) {
+        case .task:
+            Button("Stop \(title)", lucideIcon: "square") {
+                Task { ending = await model.stopTaskQuestion(item) { await stop(item) } }
+            }
+        case .mark:
+            // No CLI stops one sub-agent on its own, so it may keep working until the chat's process ends.
+            Button("Mark \(title) as stopped", lucideIcon: "square") { Task { await stop(item) } }
+        case nil:
+            EmptyView()
+        }
+    }
+
+    private func stop(_ item: JSONValue) async {
+        do {
+            try await model.stopSubagent(item)
+        } catch {
+            failure = ChatActivityFailure(
+                title: "The sub-agent could not be stopped", message: error.localizedDescription)
+        }
+    }
+
+    @ViewBuilder private func backgroundRows(_ tasks: [JSONValue]) -> some View {
+        Section(ChatBackground.label(tasks)) {
+            ForEach(tasks, id: \.stableID) { task in
+                let command = task["command"]?.stringValue ?? ""
+                let description = task.text("description")
+                let title = [description, command].first { !$0.isEmpty } ?? task.text("kind").capitalized
+                let startedAt = task.number("startedAt")
+                let elapsed = Date.now.timeIntervalSince1970 * 1000 - startedAt
+                let detail = [
+                    !description.isEmpty && !command.isEmpty ? command : nil,
+                    startedAt > 0 ? ChatToolPresentation.elapsed(elapsed) : nil,
+                ].compactMap { $0 }.joined(separator: " · ")
+                Button {
+                    stop(task)
+                } label: {
+                    Label {
+                        Text("Stop \(title)")
+                        if !detail.isEmpty { Text(detail) }
+                    } icon: {
+                        Image(lucide: "square", size: 16)
+                    }
+                }
+            }
+        }
+    }
+
+    private func stop(_ task: JSONValue) {
+        Task {
+            do {
+                _ = try await model.client.request(
+                    "chat.stopTask", payload: model.target(["taskId": task["id"] ?? .null]))
+            } catch {
+                failure = ChatActivityFailure(
+                    title: "The task could not be stopped", message: error.localizedDescription)
+            }
+        }
+    }
+
+    private static func icon(_ word: SubagentStatusWord?) -> String {
+        switch word {
+        case .running: "loader-circle"
+        case .done: "circle-check"
+        case .failed: "circle-x"
+        case .cancelled: "circle-slash"
+        case nil: "bot"
+        }
     }
 }
 
@@ -111,146 +201,5 @@ struct ChatActivityChips: View {
         key = (revision, count)
         cached = ChatSubagents.activity(items())
         return cached
-    }
-}
-
-private struct ChatSubagentActivity: View {
-    let model: ChatModel
-    let tasks: TaskStore?
-    let items: [JSONValue]
-    /// Closes the flyout and runs what is given once it has gone.
-    let close: (@escaping () -> Void) -> Void
-    let openList: () -> Void
-    @State private var ending: EndingAgents?
-    @State private var failure: String?
-
-    var body: some View {
-        ChatFlyout(heading: ChatBackground.counted(items.count, "sub-agent"), width: 310) {
-            ForEach(items, id: \.stableID) { item in
-                let task = ChatSubagents.taskID(item).flatMap { tasks?.task($0) }
-                let word = ChatSubagents.statusWord(item, task: task)
-                let title = ChatSubagents.title(item)
-                HStack(spacing: 4) {
-                    Button {
-                        close { model.presentation.conversationRequest = SubagentCrumb(item) }
-                    } label: {
-                        HStack(spacing: 10) {
-                            if let word { SubagentStatusIcon(word: word, size: 15) }
-                            Text(title).font(.subheadline).foregroundStyle(MobileStyle.text).lineLimit(1)
-                            Spacer(minLength: 0)
-                            SubagentEntryTime(item: item, task: task)
-                        }
-                        .padding(.leading, 10).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(ChatComposerButtonStyle())
-                    .disabled(!ChatSubagents.canOpen(item, machineRefused: model.presentation.subagentsRefused))
-                    .accessibilityLabel(word.map { "\(title), \($0.rawValue)" } ?? title)
-                    stopButton(item, title: title)
-                }
-            }
-            ChatFlyoutDivider()
-            ChatFlyoutRow(title: "All sub-agents", icon: "bot", action: openList)
-        }
-        .endingAgentsConfirmation($ending)
-        .alert(
-            "The sub-agent could not be stopped",
-            isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
-        ) {
-            Button("OK") { failure = nil }
-        } message: {
-            Text(failure ?? "")
-        }
-    }
-
-    @ViewBuilder private func stopButton(_ item: JSONValue, title: String) -> some View {
-        switch ChatSubagents.stop(item, turnRunning: model.working) {
-        case .task:
-            ChatActivityStop(label: "Stop \(title)") {
-                Task { ending = await model.stopTaskQuestion(item) { await stop(item) } }
-            }
-        case .mark:
-            // No CLI stops one sub-agent on its own, so it may keep working until the chat's process ends.
-            ChatActivityStop(label: "Mark \(title) as stopped") { Task { await stop(item) } }
-        case nil:
-            EmptyView()
-        }
-    }
-
-    private func stop(_ item: JSONValue) async {
-        do {
-            try await model.stopSubagent(item)
-        } catch {
-            failure = error.localizedDescription
-        }
-    }
-}
-
-private struct ChatBackgroundActivity: View {
-    let model: ChatModel
-    let tasks: [JSONValue]
-    @State private var failure: String?
-
-    var body: some View {
-        ChatFlyout(heading: ChatBackground.label(tasks), width: 310) {
-            ForEach(tasks, id: \.stableID) { task in
-                let command = task["command"]?.stringValue ?? ""
-                let description = task.text("description")
-                let title = [description, command].first { !$0.isEmpty } ?? task.text("kind").capitalized
-                HStack(spacing: 4) {
-                    HStack(spacing: 10) {
-                        Image(lucide: task.text("kind") == "shell" ? "square-terminal" : "activity", size: 15)
-                            .foregroundStyle(MobileStyle.faint)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(title).font(.subheadline).foregroundStyle(MobileStyle.text).lineLimit(1)
-                            if !description.isEmpty && !command.isEmpty {
-                                Text(command).font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(MobileStyle.faint).lineLimit(1)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        ChatElapsed(startedAt: task.number("startedAt"))
-                            .font(.footnote).foregroundStyle(MobileStyle.faint)
-                    }
-                    .padding(.leading, 10).padding(.vertical, 4).frame(minHeight: 44)
-                    .accessibilityElement(children: .combine)
-                    ChatActivityStop(label: "Stop \(title)") { stop(task) }
-                }
-            }
-        }
-        .alert(
-            "The task could not be stopped",
-            isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
-        ) {
-            Button("OK") { failure = nil }
-        } message: {
-            Text(failure ?? "")
-        }
-    }
-
-    private func stop(_ task: JSONValue) {
-        Task {
-            do {
-                _ = try await model.client.request(
-                    "chat.stopTask", payload: model.target(["taskId": task["id"] ?? .null]))
-            } catch {
-                failure = error.localizedDescription
-            }
-        }
-    }
-}
-
-private struct ChatActivityStop: View {
-    let label: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(lucide: "square", size: 14).foregroundStyle(MobileStyle.muted)
-                .frame(width: 32, height: 32).background(MobileStyle.inset, in: Circle())
-                .frame(width: 44, height: 44).contentShape(Circle())
-        }
-        .buttonStyle(ChatComposerButtonStyle())
-        .accessibilityLabel(label)
     }
 }

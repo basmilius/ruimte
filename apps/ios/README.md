@@ -196,9 +196,9 @@ with its time, kept current by `snooze.changed`), then Show replies and Reload, 
 without snoozes offers none. Its Messages and Bookmarks lists hang off the screen, not off the toolbar item: a
 presentation inside the item went with the item's host whenever the menu opened, which blanked the screen.
 
-The sub-agents chip over the composer opens a flyout with a row per sub-agent the chip counts: its state, title,
-running time and a Stop. A row opens that conversation; All sub-agents opens the full list, which the chat menu also
-offers while no chip stands for it. The list has Active and Done
+The sub-agents chip over the composer opens a menu with a row per sub-agent the chip counts (its title, state and
+running time), a Stop for each one that can stop, and All sub-agents. A row opens that conversation; All sub-agents
+opens the full list, which the chat menu also offers while no chip stands for it. The list has Active and Done
 sections, most recently updated first, each entry with its state, the latest tool call or
 reply (or the report a sub-agent handed back) and its running time or end time. An entry, or a
 subagent row in the timeline, opens that conversation read-only on its own page; Back returns
@@ -325,14 +325,16 @@ The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
 In writing mode the composer is three rows of glass. Over the field sit chips for what the
 chat keeps working on beside the thread: its sub-agents, with the state of all of them in one
-icon, and the shells and monitors its CLI runs in the background. Each chip opens a flyout
-with a row per entry, its time and a Stop. The field holds the draft and Send; a running turn
+icon, and the shells and monitors its CLI runs in the background. Each chip opens a menu
+with its entries, their time and a Stop for each. The field holds the draft and Send; a running turn
 puts a separate Stop beside it, whose menu can also stop the sub-agents. Under the field a
 scrolling row of pills: Add (photos, camera, files, mentions, skills, commands and the expanded
 editor), the queue while it holds a message, the model, its effort when the model has one, and
-the permission mode. The model, effort and permission pills each open their own flyout, a popover that grows from the
-pill on an iPhone too, with the choices and a check on the current one. The model's flyout ends with Run settings and
-Compare models; a long press on the model pill opens Run settings straight away, which is also what `/model` opens.
+the permission mode. The model, effort and permission pills are native menus with a check on the current choice. Their
+glass comes from the button style on the `Menu` and not from the label, and the row has no `GlassEffectContainer`, so
+each menu grows out of its pill. The model's menu ends with Compare models and Run settings; Run settings is also what
+`/model` opens and a VoiceOver action on the model pill. A menu takes the touch as soon as it lands, so there is no
+long press beside it: holding the pill and sliding to Run settings is the one gesture.
 Run settings holds the account with its session window, the context with its parts (tool output, files read,
 conversation, system) when the machine estimates them, the window's size and Compact now, and the model, its options
 and the permissions. Compare models reads `GET /v1/models/benchmarks` from the address book on every opening and draws

@@ -16,20 +16,11 @@ import UIKit
 }
 
 /// The row under the field: attach and mention, the queue, and how the next turn runs, one pill for each part. Each
-/// setting opens its own flyout over the pill; a long press on the model opens Run settings.
+/// setting is a menu that grows out of its pill.
 struct ChatComposerPills: View {
     @Bindable var model: ChatModel
     let sheets: ChatComposerSheets
     @Binding var focused: Bool
-    @State private var flyout: Flyout?
-    /// A sheet asked for from a flyout, opened once the flyout has gone so the two do not cross.
-    @State private var afterFlyout: (() -> Void)?
-    @State private var showingLegacy = false
-    @State private var settingsPress = 0
-
-    private enum Flyout: Hashable {
-        case model, effort, permissions
-    }
 
     private var effort: JSONValue? {
         model.selectedModel.list("options").first { $0.text("id") == "effort" && $0.text("type") == "select" }
@@ -44,28 +35,22 @@ struct ChatComposerPills: View {
 
     var body: some View {
         ScrollView(.horizontal) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    addMenu
-                    if !model.queue.isEmpty { queuePill }
-                    Group {
-                        modelPill
-                        if let effort { effortPill(effort) }
-                        permissionsPill
-                    }
-                    .disabled(!model.canConfigure)
+            // No GlassEffectContainer: since iOS 26.1 a menu inside one no longer morphs out of its label.
+            HStack(spacing: 8) {
+                addMenu
+                if !model.queue.isEmpty { queuePill }
+                Group {
+                    modelMenu
+                    if let effort { effortMenu(effort) }
+                    permissionsMenu
                 }
+                .disabled(!model.canConfigure)
             }
+            .frame(minHeight: 44)
         }
         .scrollIndicators(.hidden)
         .scrollClipDisabled()
         .disabled(model.queueBusy)
-        .onChange(of: flyout) { _, next in
-            guard next == nil, let action = afterFlyout else { return }
-            afterFlyout = nil
-            action()
-        }
-        .sensoryFeedback(.impact(weight: .medium), trigger: settingsPress)
     }
 
     private var addMenu: some View {
@@ -87,9 +72,8 @@ struct ChatComposerPills: View {
         } label: {
             Image(lucide: "plus", size: 18).foregroundStyle(MobileStyle.text)
                 .frame(width: 38, height: 38)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .frame(minHeight: 44).contentShape(Rectangle())
         }
+        .buttonStyle(ChatComposerGlassStyle(shape: .circle))
         .accessibilityLabel("Add context or expand editor")
     }
 
@@ -106,84 +90,75 @@ struct ChatComposerPills: View {
             }
             .modifier(ChatComposerPill())
         }
-        .buttonStyle(ChatComposerButtonStyle())
+        .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
         .accessibilityLabel(model.queue.count == 1 ? "1 message in queue" : "\(model.queue.count) messages in queue")
     }
 
-    private var modelName: String {
+    private var modelMenu: some View {
         let slug = model.selection.text("model")
-        return slug.isEmpty ? "Choose model" : ModelName.of(slug, in: model.models)
-    }
-
-    /// A tap opens the models, a long press Run settings, so it does not use a button, which would answer both.
-    private var modelPill: some View {
-        HStack(spacing: 6) {
-            Image(lucide: "sparkles", size: 14).foregroundStyle(MobileStyle.muted)
-            Text(ModelName.short(modelName, in: model.models)).lineLimit(1)
-            if let account { AccountDot(color: account.color, size: 6) }
-            Image(lucide: "chevron-down", size: 12).foregroundStyle(MobileStyle.muted)
-        }
-        .modifier(ChatComposerPill())
-        .onTapGesture { show(.model) }
-        .onLongPressGesture(minimumDuration: 0.4) {
-            guard model.canConfigure else { return }
-            settingsPress += 1
-            open { sheets.settings = true }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("Model, \(modelName)")
-        .accessibilityValue(account?.name(provider: usageProviderName(model.info.text("provider"))) ?? "")
-        .accessibilityHint("Touch and hold for run settings")
-        .accessibilityAction { show(.model) }
-        .accessibilityAction(named: "Run settings") { open { sheets.settings = true } }
-        .popover(isPresented: binding(.model), arrowEdge: .bottom) { modelFlyout }
-    }
-
-    private var modelFlyout: some View {
-        let slug = model.selection.text("model")
+        let name = slug.isEmpty ? "Choose model" : ModelName.of(slug, in: model.models)
         let live = model.models.filter { $0["legacy"]?.boolValue != true }
         let legacy = model.models.filter { $0["legacy"]?.boolValue == true }
-        return ChatFlyout(heading: "Model") {
-            ForEach(Array(live.enumerated()), id: \.offset) { _, option in modelRow(option, current: slug) }
+        let choice = Binding(get: { slug }, set: { if $0 != slug { model.chooseModel($0) } })
+        return Menu {
+            Picker("Model", selection: choice) { modelRows(live) }.pickerStyle(.inline)
             if !legacy.isEmpty {
-                ChatFlyoutRow(
-                    title: "Legacy models",
-                    detail: legacy.first { $0.text("slug") == slug }.map { $0.text("name") },
-                    trailing: showingLegacy ? "chevron-up" : "chevron-down"
-                ) {
-                    showingLegacy.toggle()
-                }
-                if showingLegacy || legacy.contains(where: { $0.text("slug") == slug }) {
-                    ForEach(Array(legacy.enumerated()), id: \.offset) { _, option in modelRow(option, current: slug) }
+                Menu {
+                    Picker("Legacy models", selection: choice) { modelRows(legacy) }.pickerStyle(.inline)
+                } label: {
+                    Text("Legacy models")
+                    if let current = legacy.first(where: { $0.text("slug") == slug }) {
+                        Text(current.text("name", fallback: ModelName.fromSlug(slug)))
+                    }
                 }
             }
-            ChatFlyoutDivider()
-            ChatFlyoutRow(title: "Run settings", icon: "sliders-horizontal") {
-                close { open { sheets.settings = true } }
+            Section {
+                Button("Compare models", lucideIcon: "chart-spline") { open { sheets.compare = true } }
+                Button("Run settings", lucideIcon: "sliders-horizontal") { open { sheets.settings = true } }
             }
-            ChatFlyoutRow(title: "Compare models", icon: "chart-spline") {
-                close { open { sheets.compare = true } }
+        } label: {
+            HStack(spacing: 6) {
+                Image(lucide: "sparkles", size: 14).foregroundStyle(MobileStyle.muted)
+                Text(ModelName.short(name, in: model.models)).lineLimit(1)
+                if let account { AccountDot(color: account.color, size: 6) }
+                Image(lucide: "chevron-down", size: 12).foregroundStyle(MobileStyle.muted)
             }
+            .modifier(ChatComposerPill())
+        }
+        .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
+        .accessibilityLabel("Model, \(name)")
+        .accessibilityValue(account?.name(provider: usageProviderName(model.info.text("provider"))) ?? "")
+        .accessibilityAction(named: "Run settings") { open { sheets.settings = true } }
+    }
+
+    private func modelRows(_ models: [JSONValue]) -> some View {
+        ForEach(Array(models.enumerated()), id: \.offset) { _, option in
+            Text(option.text("name", fallback: ModelName.fromSlug(option.text("slug")))).tag(option.text("slug"))
         }
     }
 
-    private func modelRow(_ option: JSONValue, current: String) -> some View {
-        let slug = option.text("slug")
-        return ChatFlyoutRow(
-            title: option.text("name", fallback: ModelName.fromSlug(slug)), checked: slug == current
-        ) {
-            if slug != current { model.chooseModel(slug) }
-            flyout = nil
-        }
-    }
-
-    private func effortPill(_ option: JSONValue) -> some View {
+    private func effortMenu(_ option: JSONValue) -> some View {
         let current = model.selection["options"]?["effort"]?.stringValue ?? option.text("defaultChoice")
         let choices = option.list("choices")
         let label = choices.first { $0.text("id") == current }?.text("label") ?? current
-        return Button {
-            show(.effort)
+        return Menu {
+            Picker(
+                option.text("label", fallback: "Effort"),
+                selection: Binding(
+                    get: { current },
+                    set: { if $0 != current { model.chooseOption("effort", value: .string($0)) } })
+            ) {
+                ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
+                    Label {
+                        Text(choice.text("label", fallback: choice.text("id")))
+                        if !choice.text("description").isEmpty { Text(choice.text("description")) }
+                    } icon: {
+                        EmptyView()
+                    }
+                    .tag(choice.text("id"))
+                }
+            }
+            .pickerStyle(.inline)
         } label: {
             HStack(spacing: 6) {
                 Image(lucide: "sliders-horizontal", size: 14).foregroundStyle(MobileStyle.muted)
@@ -191,30 +166,29 @@ struct ChatComposerPills: View {
             }
             .modifier(ChatComposerPill())
         }
-        .buttonStyle(ChatComposerButtonStyle())
+        .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
         .accessibilityLabel(option.text("label", fallback: "Effort"))
         .accessibilityValue(label)
-        .popover(isPresented: binding(.effort), arrowEdge: .bottom) {
-            ChatFlyout(heading: option.text("label", fallback: "Effort")) {
-                ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
-                    let id = choice.text("id")
-                    ChatFlyoutRow(
-                        title: choice.text("label", fallback: id), detail: choice.text("description"),
-                        checked: id == current
-                    ) {
-                        if id != current { model.chooseOption("effort", value: .string(id)) }
-                        flyout = nil
-                    }
-                }
-            }
-        }
     }
 
-    private var permissionsPill: some View {
+    private var permissionsMenu: some View {
         let mode = model.runtimeMode
         let full = mode == "full-access"
-        return Button {
-            show(.permissions)
+        return Menu {
+            Picker(
+                "Permissions", selection: Binding(get: { mode }, set: { if $0 != mode { model.chooseMode($0) } })
+            ) {
+                ForEach(ChatRuntimeMode.all, id: \.self) { value in
+                    Label {
+                        Text(ChatRuntimeMode.label(value))
+                        Text(ChatRuntimeMode.hint(value))
+                    } icon: {
+                        Image(lucide: ChatRuntimeMode.icon(value), size: 16)
+                    }
+                    .tag(value)
+                }
+            }
+            .pickerStyle(.inline)
         } label: {
             HStack(spacing: 6) {
                 Image(lucide: ChatRuntimeMode.icon(mode), size: 14)
@@ -224,39 +198,9 @@ struct ChatComposerPills: View {
             }
             .modifier(ChatComposerPill())
         }
-        .buttonStyle(ChatComposerButtonStyle())
+        .buttonStyle(ChatComposerGlassStyle(shape: .capsule))
         .accessibilityLabel("Permissions")
         .accessibilityValue(ChatRuntimeMode.label(mode))
-        .popover(isPresented: binding(.permissions), arrowEdge: .bottom) {
-            ChatFlyout(heading: "Permissions", width: 280) {
-                ForEach(ChatRuntimeMode.all, id: \.self) { value in
-                    ChatFlyoutRow(
-                        title: ChatRuntimeMode.label(value), detail: ChatRuntimeMode.hint(value),
-                        detailColor: value == "full-access" ? MobileStyle.statusNeedsYou : MobileStyle.muted,
-                        icon: ChatRuntimeMode.icon(value), checked: value == mode
-                    ) {
-                        if value != mode { model.chooseMode(value) }
-                        flyout = nil
-                    }
-                }
-            }
-        }
-    }
-
-    private func binding(_ kind: Flyout) -> Binding<Bool> {
-        Binding(get: { flyout == kind }, set: { if !$0, flyout == kind { flyout = nil } })
-    }
-
-    private func show(_ kind: Flyout) {
-        guard model.canConfigure, !model.queueBusy else { return }
-        focused = false
-        flyout = kind
-    }
-
-    /// Closes the flyout and runs `action` once it has gone.
-    private func close(then action: @escaping () -> Void) {
-        afterFlyout = action
-        flyout = nil
     }
 
     /// Lets the keyboard go before a picker comes up, so the two do not animate over each other.
@@ -266,12 +210,22 @@ struct ChatComposerPills: View {
     }
 }
 
+/// The composer's glass on a menu's or button's label. Set through the button style and not on the label inside the
+/// `Menu`, so the system takes the glass as the menu's source and grows the menu out of it.
+struct ChatComposerGlassStyle<GlassShape: Shape>: ButtonStyle {
+    let shape: GlassShape
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(shape)
+            .glassEffect(.regular.interactive(), in: shape)
+    }
+}
+
 private struct ChatComposerPill: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(.subheadline.weight(.medium)).foregroundStyle(MobileStyle.text)
             .padding(.horizontal, 13).frame(minHeight: 38)
-            .glassEffect(.regular.interactive(), in: .capsule)
-            .frame(minHeight: 44).contentShape(Rectangle())
     }
 }

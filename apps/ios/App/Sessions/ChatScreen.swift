@@ -14,6 +14,7 @@ struct ChatScreen: View {
     @State private var renaming = false
     @State private var renameText = ""
     @State private var endingAgents: EndingAgents?
+    @State private var activityFailure: ChatActivityFailure?
     @State private var prompts = ChatPromptState()
     @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
@@ -227,6 +228,15 @@ struct ChatScreen: View {
             }
         }
         .endingAgentsConfirmation($endingAgents)
+        .alert(
+            activityFailure?.title ?? "",
+            isPresented: Binding(get: { activityFailure != nil }, set: { if !$0 { activityFailure = nil } }),
+            presenting: activityFailure
+        ) { _ in
+            Button("OK") {}
+        } message: { failure in
+            Text(failure.message)
+        }
         .alert("Clear this conversation?", isPresented: $showingClear) {
             Button("Cancel", role: .cancel) { clearDraft = nil }
             Button("Clear conversation", role: .destructive) {
@@ -494,9 +504,11 @@ struct ChatScreen: View {
                     ChatLimitBanner(
                         model: model, resumeAllowed: machineSession?.icons.resumeAtReset ?? false, openFork: openFork)
                 }
-                ChatActivityChips(model: model, tasks: machineSession?.tasks) {
-                    subagentList = SubagentListRoute(chatID: model.chatID)
-                }
+                ChatActivityChips(
+                    model: model, tasks: machineSession?.tasks,
+                    openList: { subagentList = SubagentListRoute(chatID: model.chatID) },
+                    ending: $endingAgents, failure: $activityFailure
+                )
                 ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 ChatComposerRow(showsStop: model.working) {
                     ChatComposerView(
@@ -540,9 +552,8 @@ struct ChatScreen: View {
         } label: {
             RoundedRectangle(cornerRadius: 4).fill(MobileStyle.text).frame(width: 16, height: 16)
                 .frame(width: 52, height: 52)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .contentShape(Circle())
         }
+        .buttonStyle(ChatComposerGlassStyle(shape: .circle))
         .disabled(!model.connected)
         .accessibilityLabel("Stop")
         .accessibilityIdentifier("chat.stop")

@@ -23,7 +23,6 @@
 		148743B855ACFEF035CEBC99 /* GitConflictsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95314D030AE576A5A1837749 /* GitConflictsPage.swift */; };
 		1629BC6BC76E7910FB6FB442 /* clip.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8DE7FE0547CCCD8397A54AF2 /* clip.mp4 */; };
 		163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */; };
-		191DB4DF09A929004EAF5123 /* ChatFlyouts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90FFF4903802FC8D5C789FCD /* ChatFlyouts.swift */; };
 		1AF6F6A85AF5D021863DCA66 /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F0CACBC269A20D7663C70E5 /* TaskStore.swift */; };
 		1C3CB02C227E64106F86125E /* ChatBookmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23C5CBDE2125C2680DFC11D /* ChatBookmarkTests.swift */; };
 		1D2828131C689B78A675A365 /* TerminalCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */; };
@@ -447,7 +446,6 @@
 		8BC7EEB4644997BC2EAB10D4 /* ChatLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLimits.swift; sourceTree = "<group>"; };
 		8DE7FE0547CCCD8397A54AF2 /* clip.mp4 */ = {isa = PBXFileReference; path = clip.mp4; sourceTree = "<group>"; };
 		8E3C280A49506D171C893DB2 /* SearchPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPage.swift; sourceTree = "<group>"; };
-		90FFF4903802FC8D5C789FCD /* ChatFlyouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFlyouts.swift; sourceTree = "<group>"; };
 		91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttentionStore.swift; sourceTree = "<group>"; };
 		92115E2E20A2788AC95AD41F /* LucideIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LucideIcon.swift; sourceTree = "<group>"; };
 		9274EA8FBA587B9F140CB886 /* AccountLoginTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountLoginTests.swift; sourceTree = "<group>"; };
@@ -1024,7 +1022,6 @@
 				F594843701EEC6FF5CD43209 /* ChatDraft.swift */,
 				50F5AB9F07A9DA47A43714BB /* ChatDraftSyntax.swift */,
 				7B3EDC89A5AF9677DD9A62E7 /* ChatFileChanges.swift */,
-				90FFF4903802FC8D5C789FCD /* ChatFlyouts.swift */,
 				F5DA820F5A230279EC2E2564 /* ChatForking.swift */,
 				E452AF99CE0B23DE4D02CB90 /* ChatForkSheet.swift */,
 				8BC7EEB4644997BC2EAB10D4 /* ChatLimits.swift */,
@@ -1406,7 +1403,6 @@
 				7317C8955340CD628360D97A /* ChatDraft.swift in Sources */,
 				93687A4E25E26ACA4330A642 /* ChatDraftSyntax.swift in Sources */,
 				47F63AED54BDD919F5D130A2 /* ChatFileChanges.swift in Sources */,
-				191DB4DF09A929004EAF5123 /* ChatFlyouts.swift in Sources */,
 				28B6EBDEDD0C41084A5FF53D /* ChatForkSheet.swift in Sources */,
 				88496043F5CA8296C720D8EC /* ChatForking.swift in Sources */,
 				E35458562536C15CF137BA7C /* ChatLimits.swift in Sources */,
