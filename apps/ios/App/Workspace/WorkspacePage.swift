@@ -291,22 +291,10 @@ struct WorkspacePage: View {
         }
     }
 
-    /// Files and Git, then the project's menu, beside the avatar, so Settings is one tap away here too. The Chats
-    /// project's folder is the machine's own, so it has neither and its menu holds New chat and Usage only. The items
-    /// wait for the project, not the other way round, so they stay the same through a push the project opens during.
+    /// The project's menu beside the avatar, so Settings is one tap away here too. The Chats project's folder is the
+    /// machine's own, so its menu holds New chat and Usage only. Its entries wait for the project, not the item, so the
+    /// item stays the same through a push the project opens during.
     @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
-        if !workspace.isScratch {
-            ToolbarItem(id: "project.files", placement: .topBarTrailing) {
-                Button("Files", lucideIcon: "folder") { navigation.showingFiles = true }
-                    .disabled(!workspace.ready)
-                    .accessibilityIdentifier("project.files")
-            }
-            ToolbarItem(id: "project.git", placement: .topBarTrailing) {
-                Button("Git", lucideIcon: "git-branch") { navigation.showingGit = true }
-                    .disabled(!workspace.ready)
-                    .accessibilityIdentifier("project.git")
-            }
-        }
         ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
             Menu {
                 Section {
@@ -319,6 +307,10 @@ struct WorkspacePage: View {
                 .disabled(!workspace.ready)
                 Section {
                     if !workspace.isScratch {
+                        Button("Files", lucideIcon: "folder") { navigation.showingFiles = true }
+                            .accessibilityIdentifier("project.files")
+                        Button("Git", lucideIcon: "git-branch") { navigation.showingGit = true }
+                            .accessibilityIdentifier("project.git")
                         Button("Launches", lucideIcon: "play") { navigation.showingLaunches = true }
                     }
                     Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
