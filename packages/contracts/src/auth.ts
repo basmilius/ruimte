@@ -1,5 +1,6 @@
 import { BrokerSettingSchema, RegisterMachinePayloadSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
+import { MachineUpdateSchema } from './machine-update.ts';
 import { ProjectIconChoiceSchema } from './project.ts';
 import { ProtocolVersionSchema } from './protocol.ts';
 
@@ -10,6 +11,10 @@ export type Reachability = z.infer<typeof ReachabilitySchema>;
 // Whether a person named this machine from a client, or it still answers to the name it started with.
 export const EndpointNameSourceSchema = z.enum(['chosen', 'default']);
 export type EndpointNameSource = z.infer<typeof EndpointNameSourceSchema>;
+
+/* When the machine keeps itself from sleeping: never, while an agent works, or always. */
+export const KeepAwakeModeSchema = z.enum(['off', 'working', 'always']);
+export type KeepAwakeMode = z.infer<typeof KeepAwakeModeSchema>;
 
 export const EndpointInfoSchema = z.object({
     // The daemon's own id, minted once and kept in its home; a client keys a machine on this because an address moves.
@@ -39,6 +44,18 @@ export const EndpointInfoSchema = z.object({
        switch lets it. Absent from an older daemon, which never does. */
     resumeAtReset: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
+    /* Whether the machine keeps itself from sleeping. The daemon holds the block, so it holds without a
+       window open and for a phone. Absent from an older daemon, whose desktop app still holds it per window. */
+    keepAwake: KeepAwakeModeSchema.optional(),
+    // Hold the block on battery as well; off, it holds on the power adapter only.
+    keepAwakeOnBattery: z.boolean().optional(),
+    // Keep the display on too, only under `always`.
+    keepAwakeDisplay: z.boolean().optional(),
+    // Whether this machine can hold the block at all; false where the daemon has no way to (only macOS has one).
+    keepAwakeAvailable: z.boolean().optional(),
+    /* Where the update of the desktop app on this machine stands. Absent from an older daemon. Changes
+       come as `endpoint.updateChanged`, not `endpoint.changed`, which every client answers by asking again. */
+    update: MachineUpdateSchema.optional(),
     platform: z.string(),
     version: z.string(),
     // The wire version (`PROTOCOL_VERSION`). Absent from a daemon from before versions, which a client reads as older.
@@ -99,6 +116,10 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     // Whether a limited chat may be taken up on a clock; left out, the machine stays as it stands.
     resumeAtReset: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
+    // When the machine keeps itself awake, and how; each left out stays as it stands.
+    keepAwake: KeepAwakeModeSchema.optional(),
+    keepAwakeOnBattery: z.boolean().optional(),
+    keepAwakeDisplay: z.boolean().optional(),
     // Which broker the machine announces itself to; left out, the machine stays on the one it has.
     broker: BrokerSettingSchema.optional()
 });
@@ -115,6 +136,9 @@ export const EndpointChangedEventSchema = z.object({
     streamingAllowed: z.boolean().optional(),
     resumeAtReset: z.boolean().optional(),
     appleFoundationEnabled: z.boolean().optional(),
+    keepAwake: KeepAwakeModeSchema.optional(),
+    keepAwakeOnBattery: z.boolean().optional(),
+    keepAwakeDisplay: z.boolean().optional(),
     broker: BrokerSettingSchema.optional(),
     // What the machine hands clients as its broker now, so a client follows a change without asking again.
     brokerUrl: z.string().nullish(),

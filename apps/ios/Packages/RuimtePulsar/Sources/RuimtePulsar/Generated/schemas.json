@@ -5054,6 +5054,72 @@
           "appleFoundationEnabled": {
             "type": "boolean"
           },
+          "keepAwake": {
+            "type": "string",
+            "enum": [
+              "off",
+              "working",
+              "always"
+            ]
+          },
+          "keepAwakeOnBattery": {
+            "type": "boolean"
+          },
+          "keepAwakeDisplay": {
+            "type": "boolean"
+          },
+          "keepAwakeAvailable": {
+            "type": "boolean"
+          },
+          "update": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "unsupported",
+                  "idle",
+                  "checking",
+                  "current",
+                  "available",
+                  "downloading",
+                  "ready",
+                  "error"
+                ]
+              },
+              "currentVersion": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "version": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "percent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "app": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "status",
+              "app"
+            ]
+          },
           "platform": {
             "type": "string"
           },
@@ -38783,6 +38849,72 @@
       "appleFoundationEnabled": {
         "type": "boolean"
       },
+      "keepAwake": {
+        "type": "string",
+        "enum": [
+          "off",
+          "working",
+          "always"
+        ]
+      },
+      "keepAwakeOnBattery": {
+        "type": "boolean"
+      },
+      "keepAwakeDisplay": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
+        "type": "boolean"
+      },
+      "update": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "x-open-enum": [
+              "unsupported",
+              "idle",
+              "checking",
+              "current",
+              "available",
+              "downloading",
+              "ready",
+              "error"
+            ]
+          },
+          "currentVersion": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "app": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "app"
+        ]
+      },
       "platform": {
         "type": "string"
       },
@@ -39106,6 +39238,20 @@
       "appleFoundationEnabled": {
         "type": "boolean"
       },
+      "keepAwake": {
+        "type": "string",
+        "enum": [
+          "off",
+          "working",
+          "always"
+        ]
+      },
+      "keepAwakeOnBattery": {
+        "type": "boolean"
+      },
+      "keepAwakeDisplay": {
+        "type": "boolean"
+      },
       "broker": {
         "oneOf": [
           {
@@ -39386,6 +39532,72 @@
       "appleFoundationEnabled": {
         "type": "boolean"
       },
+      "keepAwake": {
+        "type": "string",
+        "enum": [
+          "off",
+          "working",
+          "always"
+        ]
+      },
+      "keepAwakeOnBattery": {
+        "type": "boolean"
+      },
+      "keepAwakeDisplay": {
+        "type": "boolean"
+      },
+      "keepAwakeAvailable": {
+        "type": "boolean"
+      },
+      "update": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "x-open-enum": [
+              "unsupported",
+              "idle",
+              "checking",
+              "current",
+              "available",
+              "downloading",
+              "ready",
+              "error"
+            ]
+          },
+          "currentVersion": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "app": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "app"
+        ]
+      },
       "platform": {
         "type": "string"
       },
@@ -39597,6 +39809,101 @@
     },
     "required": [
       "revoked"
+    ]
+  },
+  "request.endpoint.reportUpdate.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "x-open-enum": [
+          "unsupported",
+          "idle",
+          "checking",
+          "current",
+          "available",
+          "downloading",
+          "ready",
+          "error"
+        ]
+      },
+      "currentVersion": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "version": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "percent": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "error": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 1000
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
+  "request.endpoint.reportUpdate.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.endpoint.installUpdate.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "confirm": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "confirm"
+    ]
+  },
+  "request.endpoint.installUpdate.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "started": {
+        "type": "boolean"
+      },
+      "ending": {
+        "type": "object",
+        "properties": {
+          "terminals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "agents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "terminals",
+          "agents"
+        ]
+      }
+    },
+    "required": [
+      "started",
+      "ending"
     ]
   },
   "request.auth.sessions.payload": {
@@ -46063,6 +46370,20 @@
       "appleFoundationEnabled": {
         "type": "boolean"
       },
+      "keepAwake": {
+        "type": "string",
+        "enum": [
+          "off",
+          "working",
+          "always"
+        ]
+      },
+      "keepAwakeOnBattery": {
+        "type": "boolean"
+      },
+      "keepAwakeDisplay": {
+        "type": "boolean"
+      },
       "broker": {
         "oneOf": [
           {
@@ -46123,6 +46444,69 @@
       "nameSource",
       "icon"
     ]
+  },
+  "event.endpoint.updateChanged": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "update": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "x-open-enum": [
+              "unsupported",
+              "idle",
+              "checking",
+              "current",
+              "available",
+              "downloading",
+              "ready",
+              "error"
+            ]
+          },
+          "currentVersion": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "app": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "app"
+        ]
+      }
+    },
+    "required": [
+      "update"
+    ]
+  },
+  "event.endpoint.updateInstall": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
   },
   "event.direct.signaled": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -40,6 +40,12 @@ import {
 } from './push.ts';
 import { RenderSceneResultSchema } from './render.ts';
 import { SnoozeClearPayloadSchema, SnoozeListSchema, SnoozeSetPayloadSchema } from './snooze.ts';
+import {
+    EndpointInstallUpdatePayloadSchema,
+    EndpointInstallUpdateResultSchema,
+    EndpointUpdateChangedEventSchema,
+    MachineUpdateReportSchema
+} from './machine-update.ts';
 import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
 import {
     AgentResumePayloadSchema,
@@ -239,6 +245,7 @@ export * from './ids.ts';
 export * from './launches.ts';
 export * from './live-stream.ts';
 export * from './machine-http.ts';
+export * from './machine-update.ts';
 export * from './model.ts';
 export * from './node-defaults.ts';
 export * from './plan.ts';
@@ -433,6 +440,10 @@ export const REQUEST_SCHEMAS = {
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },
     'endpoint.leaveAccount': { payload: EmptySchema, result: EndpointLeaveAccountResultSchema },
+    // The desktop app on this machine saying where its updater stands. Local secret only: it speaks for the machine.
+    'endpoint.reportUpdate': { payload: MachineUpdateReportSchema, result: EmptySchema },
+    // Any client may ask, `update-no-app` without the desktop app and `update-none` with nothing to install.
+    'endpoint.installUpdate': { payload: EndpointInstallUpdatePayloadSchema, result: EndpointInstallUpdateResultSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'auth.pairingToken': { payload: EmptySchema, result: PairingTokenResultSchema },
@@ -483,6 +494,9 @@ export const EVENT_SCHEMAS = {
     'chat.subagentChanged': AGENT_EVENT_SCHEMAS['chat.subagentChanged'],
     'chat.bookmarks': AGENT_EVENT_SCHEMAS['chat.bookmarks'],
     'endpoint.changed': EndpointChangedEventSchema,
+    'endpoint.updateChanged': EndpointUpdateChangedEventSchema,
+    // To the desktop app on this machine only: a person asked another client to install the update.
+    'endpoint.updateInstall': EmptySchema,
     'direct.signaled': DirectSignalPayloadSchema,
     'project.changed': ProjectChangedEventSchema,
     'project.showView': ProjectShowViewEventSchema,

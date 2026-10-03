@@ -3424,6 +3424,11 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `streamingAllowed`: Bool?
     public let `resumeAtReset`: Bool?
     public let `appleFoundationEnabled`: Bool?
+    public let `keepAwake`: PairResultEndpointKeepAwake?
+    public let `keepAwakeOnBattery`: Bool?
+    public let `keepAwakeDisplay`: Bool?
+    public let `keepAwakeAvailable`: Bool?
+    public let `update`: PairResultEndpointUpdate?
     public let `platform`: String
     public let `version`: String
     public let `protocol`: Int64?
@@ -3435,7 +3440,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `brokerFixed`: Bool?
     public let `accountId`: Presence<String>
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<MachineIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `resumeAtReset`: Bool? = nil, `appleFoundationEnabled`: Bool? = nil, `keepAwake`: PairResultEndpointKeepAwake? = nil, `keepAwakeOnBattery`: Bool? = nil, `keepAwakeDisplay`: Bool? = nil, `keepAwakeAvailable`: Bool? = nil, `update`: PairResultEndpointUpdate? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil, `accountId`: Presence<String> = .missing) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
@@ -3445,6 +3450,11 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         self.`streamingAllowed` = `streamingAllowed`
         self.`resumeAtReset` = `resumeAtReset`
         self.`appleFoundationEnabled` = `appleFoundationEnabled`
+        self.`keepAwake` = `keepAwake`
+        self.`keepAwakeOnBattery` = `keepAwakeOnBattery`
+        self.`keepAwakeDisplay` = `keepAwakeDisplay`
+        self.`keepAwakeAvailable` = `keepAwakeAvailable`
+        self.`update` = `update`
         self.`platform` = `platform`
         self.`version` = `version`
         self.`protocol` = `protocol`
@@ -3468,6 +3478,11 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `resumeAtReset` = try container.decodeIfPresent(Bool.self, forKey: .`resumeAtReset`)
         `appleFoundationEnabled` = try container.decodeIfPresent(Bool.self, forKey: .`appleFoundationEnabled`)
+        `keepAwake` = try container.decodeIfPresent(PairResultEndpointKeepAwake.self, forKey: .`keepAwake`)
+        `keepAwakeOnBattery` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeOnBattery`)
+        `keepAwakeDisplay` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeDisplay`)
+        `keepAwakeAvailable` = try container.decodeIfPresent(Bool.self, forKey: .`keepAwakeAvailable`)
+        `update` = try container.decodeIfPresent(PairResultEndpointUpdate.self, forKey: .`update`)
         `platform` = try container.decode(String.self, forKey: .`platform`)
         `version` = try container.decode(String.self, forKey: .`version`)
         `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
@@ -3495,6 +3510,11 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encodeIfPresent(`resumeAtReset`, forKey: .`resumeAtReset`)
         try container.encodeIfPresent(`appleFoundationEnabled`, forKey: .`appleFoundationEnabled`)
+        try container.encodeIfPresent(`keepAwake`, forKey: .`keepAwake`)
+        try container.encodeIfPresent(`keepAwakeOnBattery`, forKey: .`keepAwakeOnBattery`)
+        try container.encodeIfPresent(`keepAwakeDisplay`, forKey: .`keepAwakeDisplay`)
+        try container.encodeIfPresent(`keepAwakeAvailable`, forKey: .`keepAwakeAvailable`)
+        try container.encodeIfPresent(`update`, forKey: .`update`)
         try container.encode(`platform`, forKey: .`platform`)
         try container.encode(`version`, forKey: .`version`)
         try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
@@ -3525,6 +3545,11 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `streamingAllowed` = "streamingAllowed"
         case `resumeAtReset` = "resumeAtReset"
         case `appleFoundationEnabled` = "appleFoundationEnabled"
+        case `keepAwake` = "keepAwake"
+        case `keepAwakeOnBattery` = "keepAwakeOnBattery"
+        case `keepAwakeDisplay` = "keepAwakeDisplay"
+        case `keepAwakeAvailable` = "keepAwakeAvailable"
+        case `update` = "update"
         case `platform` = "platform"
         case `version` = "version"
         case `protocol` = "protocol"
@@ -3541,6 +3566,74 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
 public enum PairResultEndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
     case `chosen` = "chosen"
     case `default` = "default"
+}
+
+public enum PairResultEndpointKeepAwake: String, CaseIterable, Codable, Sendable, Equatable {
+    case `off` = "off"
+    case `working` = "working"
+    case `always` = "always"
+}
+
+public struct PairResultEndpointUpdate: Codable, Sendable, Equatable {
+    public let `status`: PairResultEndpointUpdateStatus
+    public let `currentVersion`: String?
+    public let `version`: String?
+    public let `percent`: Double?
+    public let `error`: Presence<String>
+    public let `app`: Bool
+
+    public init(`status`: PairResultEndpointUpdateStatus, `currentVersion`: String? = nil, `version`: String? = nil, `percent`: Double? = nil, `error`: Presence<String> = .missing, `app`: Bool) {
+        self.`status` = `status`
+        self.`currentVersion` = `currentVersion`
+        self.`version` = `version`
+        self.`percent` = `percent`
+        self.`error` = `error`
+        self.`app` = `app`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `status` = try container.decode(PairResultEndpointUpdateStatus.self, forKey: .`status`)
+        `currentVersion` = try container.decodeIfPresent(String.self, forKey: .`currentVersion`)
+        `version` = try container.decodeIfPresent(String.self, forKey: .`version`)
+        `percent` = try container.decodeIfPresent(Double.self, forKey: .`percent`)
+        `error` = try container.contains(.`error`) ? (container.decodeNil(forKey: .`error`) ? .null : .value(container.decode(String.self, forKey: .`error`))) : .missing
+        `app` = try container.decode(Bool.self, forKey: .`app`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`status`, forKey: .`status`)
+        try container.encodeIfPresent(`currentVersion`, forKey: .`currentVersion`)
+        try container.encodeIfPresent(`version`, forKey: .`version`)
+        try container.encodeIfPresent(`percent`, forKey: .`percent`)
+        switch `error` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`error`)
+        case .value(let value): try container.encode(value, forKey: .`error`)
+        }
+        try container.encode(`app`, forKey: .`app`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `status` = "status"
+        case `currentVersion` = "currentVersion"
+        case `version` = "version"
+        case `percent` = "percent"
+        case `error` = "error"
+        case `app` = "app"
+    }
+}
+
+public enum PairResultEndpointUpdateStatus: String, CaseIterable, Codable, Sendable, Equatable {
+    case `unsupported` = "unsupported"
+    case `idle` = "idle"
+    case `checking` = "checking"
+    case `current` = "current"
+    case `available` = "available"
+    case `downloading` = "downloading"
+    case `ready` = "ready"
+    case `error` = "error"
 }
 
 public enum PairResultEndpointReachability: String, CaseIterable, Codable, Sendable, Equatable {
