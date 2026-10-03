@@ -136,11 +136,14 @@ the tab bar. A view (a chat, terminal, file, canvas, drawing, diagram, browser o
 Search or a notification) goes on the stack around the tabs and covers them, so the whole tabbed page slides away
 with the push and returns with the pop, following the finger on a swipe back. `hidesBottomBarWhenPushed` is not used:
 under the floating tab bar it fades the bar's background and drops its items only at the end. The outer bar is
-hidden while the tabs are on top and shown over a view, toggled as a push or pop starts with the transition's
-animation, so it slides in with the view and away with it; a swipe back the person takes back keeps it. Between a
-project's page and its view the bar's items do not morph, since each stack has a bar of its own. A page SwiftUI
-pushes from inside a view (a chat's sub-agents, a canvas's nodes, a group's members) goes on the stack that holds the
-view, the one around the tabs. A stack lays a page out as soon as it stands on the stack, before the push starts on
+always hidden. A view stands in a `PhoneViewController` with a stack and a bar of its own, laid out before the push,
+so the bar and its back button slide in with the view as one page and away with it, also on a swipe back, instead of
+a hidden bar appearing during the push with its back button against the screen's edge. An empty page under the view
+gives it the system's back button, whose action, like a pop that would uncover that page, pops the outer stack. The
+edge swipe back keeps working on the hidden outer bar through a gesture delegate of its own. Between a project's
+page and its view the bar's items do not morph, since each has a bar of its own. A page SwiftUI pushes from inside a
+view (a chat's sub-agents, a canvas's nodes, a group's members) goes on the view's own stack and morphs in its bar;
+while one stands there, a swipe back goes back within the view. A stack lays a page out as soon as it stands on the stack, before the push starts on
 the next layout pass, since SwiftUI only hands the page's title and items to its navigation item when it lays the
 page out; otherwise the items of a project or a machine pop in at the end of the push instead of morphing out of
 the tab's. Settings opens as a sheet from the avatar, the last item on the right of the bar on every tab, on a

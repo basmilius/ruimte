@@ -1,8 +1,13 @@
 import SwiftUI
 import UIKit
 
+/// A controller on one of the iPhone's stacks that stands for a route.
+protocol PhoneRouted: UIViewController {
+    var route: PhoneRoute? { get }
+}
+
 /// A SwiftUI page on one of the iPhone's stacks.
-final class PhonePageController: UIHostingController<AnyView> {
+final class PhonePageController: UIHostingController<AnyView>, PhoneRouted {
     /// Nil for a tab's root.
     let route: PhoneRoute?
 
@@ -46,7 +51,12 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
 
     /// The routes on the stack. A page SwiftUI pushes from inside a page has none and keeps the route under it.
     var routes: [PhoneRoute] {
-        viewControllers.compactMap { ($0 as? PhonePageController)?.route }
+        viewControllers.compactMap { ($0 as? PhoneRouted)?.route }
+    }
+
+    /// What the stack pushes for a route.
+    func controller(for route: PhoneRoute) -> UIViewController {
+        makePage(route)
     }
 
     func show(_ path: [PhoneRoute], animated: Bool) {
@@ -75,13 +85,13 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
         let stack = viewControllers
         var kept = 1
         var matched = 0
-        while kept < stack.count, matched < path.count, let page = stack[kept] as? PhonePageController,
+        while kept < stack.count, matched < path.count, let page = stack[kept] as? PhoneRouted,
             page.route == path[matched]
         {
             kept += 1
             matched += 1
         }
-        let added = path[matched...].map(makePage)
+        let added = path[matched...].map(controller(for:))
         if added.isEmpty {
             popToViewController(stack[kept - 1], animated: animated)
         } else if kept == stack.count, added.count == 1, let page = added.first {
@@ -101,14 +111,6 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
         guard page.viewIfLoaded?.window == nil else { return }
         page.view.frame = view.bounds
         page.view.layoutIfNeeded()
-    }
-
-    func willShow(_ viewController: UIViewController, animated: Bool) {}
-
-    func navigationController(
-        _ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool
-    ) {
-        willShow(viewController, animated: animated)
     }
 
     func navigationController(
@@ -197,10 +199,11 @@ final class PhoneTabController: UITabBarController {
 
 /// The stack around the tabs, which holds the views. A view covers the tabs and the tab bar, so the whole tabbed
 /// page slides away with its push, since `hidesBottomBarWhenPushed` under the floating tab bar fades the bar's
-/// background and drops its items at the end. Its bar shows only over a view; over the tabs each tab's stack shows
-/// its own.
+/// background and drops its items at the end. Its own bar stays hidden: each tab's stack and each view
+/// (`PhoneViewController`) has a bar of its own that slides with it.
 final class PhoneRootController: PhoneStackController {
     let tabs: PhoneTabController
+    private let popGesture = PhoneViewPopGesture()
 
     init(tabs: PhoneTabController) {
         self.tabs = tabs
@@ -212,6 +215,12 @@ final class PhoneRootController: PhoneStackController {
         nil
     }
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        popGesture.stack = self
+        interactivePopGestureRecognizer?.delegate = popGesture
+    }
+
     /// Shows the router's state. The views move animated unless the tab switches in sight, so a tab the router
     /// switches to arrives with its view already over it.
     func show(tab: PhoneTab, paths: [PhoneTab: [PhoneRoute]], views: [PhoneRoute], needsYou: Int) {
@@ -220,12 +229,146 @@ final class PhoneRootController: PhoneStackController {
         show(views, animated: viewIfLoaded?.window != nil && !switchesInSight)
     }
 
-    override func willShow(_ viewController: UIViewController, animated: Bool) {
-        setNavigationBarHidden(viewController === tabs, animated: animated)
-        transitionCoordinator?.animate(alongsideTransition: nil) { [weak self] context in
-            // A swipe back the person takes back keeps the view, so its bar stays with it.
-            guard context.isCancelled, let self else { return }
-            setNavigationBarHidden(context.viewController(forKey: .from) === tabs, animated: false)
+    override func controller(for route: PhoneRoute) -> UIViewController {
+        let controller = PhoneViewController(page: makePage(route))
+        controller.leave = { [weak self, weak controller] in
+            guard let self, let controller, topViewController === controller else { return }
+            popViewController(animated: true)
         }
+        controller.depthChanged = { [weak self] in self?.updateContentPop() }
+        return controller
+    }
+
+    /// A swipe back pops the view only while no page SwiftUI pushed inside it stands over it; that one goes back
+    /// within the view's own stack.
+    var canPopView: Bool {
+        viewControllers.count > 1 && transitionCoordinator == nil && !holdsPushedPage
+    }
+
+    private var holdsPushedPage: Bool {
+        (topViewController as? PhoneViewController)?.holdsPushedPage ?? false
+    }
+
+    private func updateContentPop() {
+        interactiveContentPopGestureRecognizer?.isEnabled = !holdsPushedPage
+    }
+
+    override func navigationController(
+        _ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool
+    ) {
+        updateContentPop()
+        super.navigationController(navigationController, didShow: viewController, animated: animated)
+    }
+}
+
+/// UIKit turns the edge swipe back off while a stack's bar is hidden, which the stack around the tabs always is.
+private final class PhoneViewPopGesture: NSObject, UIGestureRecognizerDelegate {
+    weak var stack: PhoneRootController?
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        stack?.canPopView ?? false
+    }
+}
+
+/// A view over the tabs, in a stack of its own, so its bar and back button are laid out with the view and slide in
+/// and out with it as one page. A page SwiftUI pushes from inside the view (a chat's sub-agents, a canvas's nodes, a
+/// group's members) goes on that stack and morphs in its bar.
+final class PhoneViewController: UIViewController, PhoneRouted {
+    let route: PhoneRoute?
+    private let stack: PhoneViewStackController
+
+    init(page: PhonePageController) {
+        route = page.route
+        stack = PhoneViewStackController(page: page)
+        super.init(nibName: nil, bundle: nil)
+        addChild(stack)
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        nil
+    }
+
+    /// Leaves the stack around the tabs: the view's back button, and a pop that would uncover the empty page.
+    var leave: () -> Void {
+        get { stack.leave }
+        set { stack.leave = newValue }
+    }
+
+    /// Called once a push or a pop inside the view settled.
+    var depthChanged: () -> Void {
+        get { stack.depthChanged }
+        set { stack.depthChanged = newValue }
+    }
+
+    var holdsPushedPage: Bool {
+        stack.holdsPushedPage
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = MobileStyle.surfaceColor
+        stack.view.frame = view.bounds
+        stack.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(stack.view)
+        stack.didMove(toParent: self)
+    }
+}
+
+/// The stack inside a view. An empty page stands under the view, so the view gets the system's back button, whose
+/// action leaves the stack around the tabs instead of uncovering it.
+private final class PhoneViewStackController: UINavigationController, UINavigationControllerDelegate {
+    var leave: () -> Void = {}
+    var depthChanged: () -> Void = {}
+
+    init(page: PhonePageController) {
+        super.init(nibName: nil, bundle: nil)
+        let under = UIViewController()
+        under.navigationItem.backButtonDisplayMode = .minimal
+        viewControllers = [under, page]
+        page.navigationItem.backAction = UIAction { [weak self] _ in self?.leave() }
+        delegate = self
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        nil
+    }
+
+    var holdsPushedPage: Bool {
+        viewControllers.count > 2
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        enablePopGestures()
+    }
+
+    /// SwiftUI's dismiss of the view lands here too.
+    override func popViewController(animated: Bool) -> UIViewController? {
+        guard holdsPushedPage else {
+            leave()
+            return nil
+        }
+        return super.popViewController(animated: animated)
+    }
+
+    override func popToRootViewController(animated: Bool) -> [UIViewController]? {
+        guard holdsPushedPage else {
+            leave()
+            return nil
+        }
+        return super.popToViewController(viewControllers[1], animated: animated)
+    }
+
+    /// Only a page pushed inside the view swipes back here; the view itself goes back on the stack around the tabs.
+    private func enablePopGestures() {
+        interactivePopGestureRecognizer?.isEnabled = holdsPushedPage
+        interactiveContentPopGestureRecognizer?.isEnabled = holdsPushedPage
+    }
+
+    func navigationController(
+        _ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool
+    ) {
+        enablePopGestures()
+        depthChanged()
     }
 }
