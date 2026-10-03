@@ -89,6 +89,18 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
         } else {
             setViewControllers(Array(stack.prefix(kept)) + added, animated: animated)
         }
+        if let top = added.last {
+            layOutBeforeTransition(top)
+        }
+    }
+
+    /// SwiftUI hands a page's title and toolbar to its navigation item only when it lays the page out, which UIKit
+    /// does after the bar started the push, so the items would pop in at its end instead of morphing. The push
+    /// waits for the next layout pass, so laying the page out now, on the stack, lands before it.
+    private func layOutBeforeTransition(_ page: UIViewController) {
+        guard page.viewIfLoaded?.window == nil else { return }
+        page.view.frame = view.bounds
+        page.view.layoutIfNeeded()
     }
 
     func willShow(_ viewController: UIViewController, animated: Bool) {}

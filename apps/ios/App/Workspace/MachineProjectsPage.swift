@@ -12,6 +12,7 @@ struct MachineProjectsPage: View {
     @State private var projectName = ""
     @State private var folder = ""
     @Environment(\.openMobileWorkspace) private var openWorkspace
+    @Environment(\.settingsLink) private var settingsLink
     @State private var createFolder = false
     @State private var unsubscribe: (() -> Void)?
     @State private var destination: MachineDestination?
@@ -124,8 +125,11 @@ struct MachineProjectsPage: View {
         }
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(id: "machine.openFolder", placement: .topBarTrailing) {
                 Button("Open folder", lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
+            }
+            if let settingsLink {
+                SettingsToolbarItem(link: settingsLink)
             }
         }
         .task {
