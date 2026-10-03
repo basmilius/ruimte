@@ -353,7 +353,16 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
         const to = switching ? nameOf(provider) : `${nameOf(provider)} under the account '${deps.accounts?.label(provider, account) ?? account}'`;
         notes = { note: switchNote(cut, original, files, { to, turns: text.turns, all: text.all }), preamble: text.text };
     }
-    const { queue: _queue, suggestedTitle: _suggestedTitle, skills: _skills, resumeAt: _resumeAt, limit: _limit, account: _account, ...kept } = info;
+    const {
+        queue: _queue,
+        suggestedTitle: _suggestedTitle,
+        skills: _skills,
+        resumeAt: _resumeAt,
+        limit: _limit,
+        account: _account,
+        requests: _requests,
+        ...kept
+    } = info;
     const forkInfo: ChatInfo = {
         ...kept,
         chatId: forkId,

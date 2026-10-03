@@ -185,6 +185,41 @@ describe('ChatManager', () => {
         expect(bystander.statuses.map((info) => info.status)).toEqual(['running', 'needs-you', 'running', 'idle']);
     });
 
+    test('what a chat waits on rides on its status, again whenever a request opens or settles', async () => {
+        const bystander = new ChatRecorder();
+        manager.subscribe('c2', bystander.sink());
+        await manager.create({ chatId: 'chat-2w', cwd: home });
+        manager.attach('chat-2w', 'c1');
+        const waitingOn = () => bystander.statuses.at(-1)?.requests?.map((request) => request.requestId) ?? [];
+
+        await manager.send('chat-2w', 'background approval: ls');
+        await recorder.until(() => recorder.ofKind('turn')[0]?.state === 'done');
+        await bystander.until(() => waitingOn().join() === 'req-bg');
+        expect(bystander.statuses.at(-1)?.requests?.[0]).toMatchObject({
+            itemId: 'approval-req-bg',
+            kind: 'approval',
+            approval: { toolName: 'Bash', subject: 'ls', command: 'ls' }
+        });
+
+        // The chat already reads needs-you, so only the second request says anything changed.
+        await manager.send('chat-2w', 'tool: date');
+        await bystander.until(() => waitingOn().join() === 'req-bg,req-1');
+        expect(
+            manager
+                .list()
+                .find((info) => info.chatId === 'chat-2w')
+                ?.requests?.map((request) => request.requestId)
+        ).toEqual(['req-bg', 'req-1']);
+
+        manager.approve('chat-2w', 'req-1', 'allow');
+        await bystander.until(() => waitingOn().join() === 'req-bg');
+        expect(bystander.statuses.at(-1)?.status).toBe('needs-you');
+
+        manager.approve('chat-2w', 'req-bg', 'allow');
+        await bystander.until(() => bystander.statuses.at(-1)?.status === 'idle');
+        expect(bystander.statuses.at(-1)).not.toHaveProperty('requests');
+    });
+
     test('a running tool carries the progress the CLI reports until its result arrives', async () => {
         await manager.create({ chatId: 'chat-2b', cwd: home });
         manager.attach('chat-2b', 'c1');
