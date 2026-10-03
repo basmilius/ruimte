@@ -171,10 +171,10 @@ struct CanvasPage: View {
                 CanvasGroupSheet(workspace: workspace, viewID: viewID, firstID: groupingID) { self.groupingID = nil }
             }
         }
-        .confirmationDialog(
+        .alert(
             "Remove this node from the canvas?",
             isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }),
-            titleVisibility: .visible, presenting: removal
+            presenting: removal
         ) { pending in
             Button(pending.confirmLabel, role: .destructive) {
                 removal = nil
@@ -183,6 +183,7 @@ struct CanvasPage: View {
                     if workspace.problem == nil { await SessionEnding.end(pending.question, session: workspace.session) }
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { pending in
             Text(
                 pending.question.warning.map { "\($0) Its connections are removed too." }

@@ -70,13 +70,14 @@ struct AccountSettingsPage: View {
         }
         .navigationTitle("Account")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Sign out on this device?", isPresented: $confirmSignOut) {
+        .alert("Sign out on this device?", isPresented: $confirmSignOut) {
             Button("Sign out", role: .destructive) {
                 Task {
                     await runtime.signOut()
                     closeSettings?()
                 }
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

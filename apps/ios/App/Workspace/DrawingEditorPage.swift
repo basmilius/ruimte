@@ -61,9 +61,9 @@ struct DrawingEditorPage: View {
         .toolbar {
             ToolbarItem(id: "drawing.actions", placement: .topBarTrailing) { actionsMenu }
         }
-        .confirmationDialog("Discard unsaved changes on this device?", isPresented: $discard, titleVisibility: .visible)
-        {
+        .alert("Discard unsaved changes on this device?", isPresented: $discard) {
             Button("Discard local changes", role: .destructive) { model.discardDraft() }
+            Button("Cancel", role: .cancel) {}
         }
         .mobileSheet(isPresented: $showStyle) { styleSheet.presentationDetents([.medium, .large]) }
         .mobileSheet(item: $edit) { editing in

@@ -52,10 +52,9 @@ struct GitChangesList: View {
         }
         .refreshable { await repositories.reload(client: client, folder: folder) }
         .safeAreaInset(edge: .bottom, spacing: 0) { bar }
-        .confirmationDialog(
+        .alert(
             discard.map { "Discard changes in \(($0.path as NSString).lastPathComponent)?" } ?? "",
-            isPresented: Binding(get: { discard != nil }, set: { if !$0 { discard = nil } }),
-            titleVisibility: .visible
+            isPresented: Binding(get: { discard != nil }, set: { if !$0 { discard = nil } })
         ) {
             Button("Discard", role: .destructive) {
                 guard let pending = discard else { return }

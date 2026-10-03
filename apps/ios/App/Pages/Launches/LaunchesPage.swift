@@ -74,10 +74,10 @@ struct LaunchesPage: View {
             }
         }
         .modifier(LaunchAskModifier(store: store))
-        .confirmationDialog(
+        .alert(
             "Delete \(deleting?.name ?? "this launch")?",
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-            titleVisibility: .visible, presenting: deleting
+            presenting: deleting
         ) { launch in
             Button("Delete launch", role: .destructive) { Task { await store.delete(launch.id) } }
             Button("Cancel", role: .cancel) {}
@@ -336,12 +336,11 @@ struct LaunchAskModifier: ViewModifier {
                     }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "Port \(busy?.port ?? 0) is in use",
                 isPresented: Binding(
                     get: { busy != nil },
-                    set: { if !$0, busy != nil { store.ask = nil } }),
-                titleVisibility: .visible
+                    set: { if !$0, busy != nil { store.ask = nil } })
             ) {
                 if let busy {
                     Button("Stop and launch", role: .destructive) {

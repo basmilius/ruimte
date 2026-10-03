@@ -183,11 +183,11 @@ struct GitBranchDialogs: ViewModifier {
                     Task { await actions.pop(client: client, stash: ref) }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 actions.confirmation?.title ?? "",
                 isPresented: Binding(
                     get: { actions.confirmation != nil }, set: { if !$0 { actions.confirmation = nil } }),
-                titleVisibility: .visible, presenting: actions.confirmation
+                presenting: actions.confirmation
             ) { pending in
                 Button(pending.confirmLabel, role: .destructive) {
                     Task { await actions.confirm(client: client, pending) }

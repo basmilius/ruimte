@@ -127,10 +127,10 @@ struct MachinePage: View {
         .onChange(of: endpoint.install) { _, step in
             if case .confirming(let work) = step { confirming = work }
         }
-        .confirmationDialog(
+        .alert(
             "Restart Ruimte on \(name)?",
             isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
-            titleVisibility: .visible, presenting: confirming
+            presenting: confirming
         ) { _ in
             Button("Restart", role: .destructive) { Task { await endpoint.confirmInstall() } }
             Button("Cancel", role: .cancel) { endpoint.cancelInstall() }
