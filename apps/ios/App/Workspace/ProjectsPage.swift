@@ -103,9 +103,11 @@ struct ProjectsPage<Notice: View>: View {
         .searchable(text: $search, prompt: "Search projects or machines")
         .toolbar {
             if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
+                // A status, not a control, so it wears no glass and leaves the buttons beside it their own.
+                ToolbarItem(id: "projects.updating", placement: .topBarTrailing) {
                     MobileLoadingRow("Updating projects")
                 }
+                .sharedBackgroundVisibility(.hidden)
             }
         }
         .refreshable {

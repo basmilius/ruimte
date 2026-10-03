@@ -25,7 +25,7 @@ struct PhoneHome: View {
                         },
                         pair: pair
                     )
-                    .toolbar { avatar }
+                    .toolbar { SettingsToolbarItem(link: settingsLink) }
                     .navigationDestination(item: $router.now) { destination($0) }
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
@@ -40,7 +40,7 @@ struct PhoneHome: View {
                         EmptyView()
                     }
                     .navigationTitle("Projects")
-                    .toolbar { avatar }
+                    .toolbar { SettingsToolbarItem(link: settingsLink) }
                     .navigationDestination(item: $router.project) { WorkspacePage(navigation: $0) }
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
@@ -52,7 +52,7 @@ struct PhoneHome: View {
                 NavigationStack {
                     MachinesPage(runtime: runtime, showsPairingRow: false, pair: pair)
                         .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
+                            ToolbarItem(id: "machines.add", placement: .topBarTrailing) {
                                 Menu {
                                     Button("Use a pairing link", lucideIcon: "link", action: pair)
                                     if runtime.account == nil {
@@ -62,7 +62,7 @@ struct PhoneHome: View {
                                     Image(lucide: "plus").accessibilityLabel("Add a machine")
                                 }
                             }
-                            avatar
+                            SettingsToolbarItem(link: settingsLink)
                         }
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
@@ -76,7 +76,7 @@ struct PhoneHome: View {
                         now: now, projects: projects, runtime: runtime,
                         open: { router.show($0, from: .search) }
                     )
-                    .toolbar { avatar }
+                    .toolbar { SettingsToolbarItem(link: settingsLink) }
                     .navigationDestination(item: $router.search) { destination($0) }
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
@@ -94,15 +94,7 @@ struct PhoneHome: View {
         }
     }
 
-    @ToolbarContentBuilder private var avatar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button(action: showSettings) {
-                AccountAvatar(account: runtime.account)
-            }
-            .accessibilityLabel("Settings")
-            .accessibilityIdentifier("home.settings")
-        }
-    }
+    private var settingsLink: SettingsLink { SettingsLink(account: runtime.account, show: showSettings) }
 
     @ViewBuilder private func destination(_ destination: PhoneDestination) -> some View {
         switch destination {
@@ -148,6 +140,29 @@ private struct ProjectAccessory: View {
         .font(.callout.weight(.medium))
         .foregroundStyle(MobileStyle.text)
         .padding(.horizontal, 16)
+    }
+}
+
+/// What the avatar needs to open Settings.
+struct SettingsLink {
+    let account: Account?
+    let show: () -> Void
+}
+
+/// The avatar into Settings, apart from the items before it and under one id on every page that shows it, so the
+/// bar of the next page finds it at the same spot and morphs only what changes around it.
+struct SettingsToolbarItem: ToolbarContent {
+    let link: SettingsLink
+
+    var body: some ToolbarContent {
+        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+        ToolbarItem(id: "settings", placement: .topBarTrailing) {
+            Button(action: link.show) {
+                AccountAvatar(account: link.account)
+            }
+            .accessibilityLabel("Settings")
+            .accessibilityIdentifier("home.settings")
+        }
     }
 }
 
