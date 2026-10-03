@@ -205,8 +205,8 @@ struct WorkspacePage: View {
             }
         }
         .buttonStyle(.glass)
-        .controlSize(.large)
-        .font(.callout.weight(.medium))
+        .controlSize(.regular)
+        .font(.subheadline.weight(.medium))
         .foregroundStyle(MobileStyle.text)
         .accessibilityIdentifier("project.newView")
         .frame(maxWidth: .infinity, alignment: .leading)
