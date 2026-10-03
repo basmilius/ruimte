@@ -151,8 +151,8 @@ extension ChatModel {
     }
 }
 
-/// Over the composer while the last turn stopped on a limit: what stopped it, when it goes on, and another account to
-/// go on under when one has room.
+/// A card over the composer while the last turn stopped on a limit: what stopped it, when it goes on, its own Resume
+/// at reset, and another account to go on under when one has room.
 struct ChatLimitBanner: View {
     let model: ChatModel
     /// The machine's own `resumeAtReset`, which the chat's switch only counts under.
@@ -162,23 +162,27 @@ struct ChatLimitBanner: View {
     var body: some View {
         TimelineView(.everyMinute) { context in
             if let view = ChatLimits.view(info: model.info, moment: { ChatLimits.moment($0, now: context.date) }) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 10) {
-                        Image(lucide: "hourglass", size: 16).foregroundStyle(MobileStyle.faint)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(view.title).font(.subheadline).foregroundStyle(MobileStyle.text)
-                            if let detail = ChatLimits.detail(view, account: model.accountName) {
-                                Text(detail).font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
-                            }
+                VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Image(lucide: "clock", size: 15).foregroundStyle(MobileStyle.statusNeedsYou)
+                                .accessibilityHidden(true)
+                            Text(view.title).font(.subheadline.weight(.semibold)).foregroundStyle(MobileStyle.text)
+                                .accessibilityAddTraits(.isHeader)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        if let target = model.continueTarget { continueButton(target) }
+                        if let detail = ChatLimits.detail(view, account: model.accountName) {
+                            Text(detail).font(.footnote).foregroundStyle(MobileStyle.muted).monospacedDigit()
+                        }
                     }
                     resumeToggle
+                    if let target = model.continueTarget {
+                        Rectangle().fill(MobileStyle.text.opacity(0.08)).frame(height: 1)
+                        continueRow(target, now: context.date)
+                    }
                 }
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .glassEffect(.regular, in: .rect(cornerRadius: 20))
-                .padding(.bottom, 8)
+                .padding(.horizontal, 14).padding(.vertical, 12)
+                .glassEffect(.regular, in: .rect(cornerRadius: 26))
+                .padding(.bottom, 10)
                 .accessibilityElement(children: .contain)
                 .task(id: model.info["limit"]) {
                     if model.info["limit"]?.text("kind") == "usage" && model.accounts?.hasChoice(model.provider) == true
@@ -206,23 +210,37 @@ struct ChatLimitBanner: View {
         }
     }
 
-    private func continueButton(_ target: ProviderAccountEntry) -> some View {
+    /// The account with the most room, its window as the account choice reads it, and the way over to it.
+    private func continueRow(_ target: ProviderAccountEntry, now: Date) -> some View {
         let name = target.name(provider: usageProviderName(model.provider))
-        return Button {
-            Task {
-                if let fork = await model.continueOn(target) { openFork(fork) }
+        let window = ProviderAccountList.sessionWindow(model.limits, account: target.id)
+        return HStack(spacing: 10) {
+            AccountDot(color: target.color, size: 8)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name).font(.subheadline).lineLimit(1)
+                if let window {
+                    Text(ChatLimits.sessionLine(window, now: now))
+                        .font(.caption).monospacedDigit().foregroundStyle(ChatRunSettings.tone(window.used))
+                }
             }
-        } label: {
-            HStack(spacing: 6) {
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                Task {
+                    if let fork = await model.continueOn(target) { openFork(fork) }
+                }
+            } label: {
                 Text("Continue on")
-                AccountDot(color: target.color, size: 7)
-                Text(name).lineLimit(1)
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(MobileStyle.onAccent)
+                    .padding(.horizontal, 16).frame(minHeight: 34)
+                    .background(MobileStyle.accent, in: Capsule())
+                    .frame(minHeight: 44).contentShape(Capsule())
             }
-            .font(.subheadline.weight(.medium))
+            .buttonStyle(ChatComposerButtonStyle())
+            .disabled(model.continuing || !model.connected)
+            .opacity(model.continuing || !model.connected ? 0.5 : 1)
+            .accessibilityLabel("Continue on \(name)")
+            .accessibilityHint(
+                "Goes on under \(name), which has the most room left. The interrupted turn is sent again.")
         }
-        .buttonStyle(.bordered)
-        .disabled(model.continuing || !model.connected)
-        .accessibilityLabel("Continue on \(name)")
-        .accessibilityHint("Goes on under \(name), which has the most room left. The interrupted turn is sent again.")
     }
 }

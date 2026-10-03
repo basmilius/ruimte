@@ -42,8 +42,65 @@ enum ChatRuntimeMode {
     }
 }
 
-/// Everything that decides how the next turn runs, as one form: what `/model` opens, and what the model pill leads to
-/// for the account, the model's own options and the context.
+/// What a chat's context holds, as `context-usage.ts` in `@ruimte/agents-react` reads `info.usage`.
+struct ChatContextUsage: Equatable {
+    enum Part: String, CaseIterable {
+        case toolOutput, filesRead, conversation, system
+
+        var label: String {
+            switch self {
+            case .toolOutput: "Tool output"
+            case .filesRead: "Files read"
+            case .conversation: "Conversation"
+            case .system: "System"
+            }
+        }
+    }
+
+    struct Segment: Equatable {
+        let part: Part
+        let tokens: Double
+        /// Of the window, so the segments together fill the bar as far as the context is full.
+        let fraction: Double
+    }
+
+    let used: Double
+    let window: Double?
+
+    /// The id of the model option that sets the window's size.
+    static let windowOption = "contextWindow"
+
+    init?(_ usage: JSONValue?) {
+        guard let usage, let used = usage["contextTokens"]?.numberValue else { return nil }
+        self.used = used
+        window = usage["contextWindow"]?.numberValue.flatMap { $0 > 0 ? $0 : nil }
+        breakdown = usage["breakdown"]
+    }
+
+    private let breakdown: JSONValue?
+
+    var fraction: Double { window.map { min(1, used / $0) } ?? 0 }
+
+    /// Nil from a machine that does not estimate, which draws the plain bar.
+    var segments: [Segment]? {
+        guard let breakdown, breakdown != .null, used > 0 else { return nil }
+        let whole = max(window ?? 0, used)
+        return Part.allCases.map { part in
+            let tokens = breakdown[part.rawValue]?.numberValue ?? 0
+            return Segment(part: part, tokens: tokens, fraction: tokens / whole)
+        }
+    }
+
+    /// "950", "172K", "1M" or "1.2M".
+    static func tokens(_ value: Double) -> String {
+        if value < 1000 { return "\(Int(value))" }
+        if value < 1_000_000 { return "\(Int((value / 1000).rounded()))K" }
+        return (value / 1_000_000).formatted(.number.precision(.fractionLength(0...1))) + "M"
+    }
+}
+
+/// Everything that decides how the next turn runs: the account the chat runs on, its context with the breakdown and
+/// Compact now, and the model, its options and the permissions. What `/model` and a long press on the model open.
 struct ChatRunSettings: View {
     @Bindable var model: ChatModel
     @Environment(\.dismiss) private var dismiss
@@ -55,6 +112,9 @@ struct ChatRunSettings: View {
         let slug = selection.text("model")
         return slug.isEmpty ? "Choose model" : ModelName.of(slug, in: model.models)
     }
+    private var windowOption: JSONValue? {
+        selected.list("options").first { $0.text("id") == ChatContextUsage.windowOption && $0.text("type") == "select" }
+    }
 
     var body: some View {
         NavigationStack {
@@ -62,7 +122,13 @@ struct ChatRunSettings: View {
                 if let error = model.settingsProblem {
                     Section { Text(error).foregroundStyle(MobileStyle.statusError) }
                 }
-                Section("Model") {
+                if let accounts = model.accounts, accounts.hasChoice(model.info.text("provider")) {
+                    accountSection(accounts)
+                }
+                if let usage = ChatContextUsage(model.info["usage"]) {
+                    contextSection(usage)
+                }
+                Section {
                     Picker(
                         "Model",
                         selection: Binding(
@@ -75,50 +141,11 @@ struct ChatRunSettings: View {
                                 option.text("slug"))
                         }
                     }
-                    ForEach(Array(selected.list("options").enumerated()), id: \.offset) { _, option in optionRow(option)
-                    }
-                }
-                if let accounts = model.accounts, accounts.hasChoice(model.info.text("provider")) {
-                    Section {
-                        let kind = model.info.text("provider")
-                        let current = model.info["account"]?.stringValue ?? kind
-                        let started = ProviderAccountList.chatStarted(model.info)
-                        ForEach(accounts.offered(kind, current: current)) { account in
-                            let locked = started && !accounts.canContinue(kind, from: current, to: account.id)
-                            Button {
-                                model.chooseAccount(account.id)
-                            } label: {
-                                HStack(spacing: 10) {
-                                    AccountDot(color: account.color, size: 8)
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(account.name(provider: usageProviderName(kind)))
-                                        if let window = ProviderAccountList.sessionWindow(
-                                            model.limits, account: account.id)
-                                        {
-                                            Text(ChatLimits.sessionLine(window))
-                                                .font(.caption).monospacedDigit()
-                                                .foregroundStyle(ChatRunSettings.tone(window.used))
-                                        }
-                                        if locked {
-                                            Text("Fork the conversation to use this account.").font(.caption)
-                                                .foregroundStyle(MobileStyle.muted)
-                                        }
-                                    }
-                                    Spacer()
-                                    if account.id == current { Image(lucide: "check", size: 18) }
-                                }
-                            }.disabled(locked || account.id == current)
-                        }
-                    } header: {
-                        Text("Account")
-                    } footer: {
-                        Text(
-                            "A new chat of \(usageProviderName(model.info.text("provider"))) on this machine starts under the account you pick."
-                        )
-                    }
-                    .task(id: model.connected) { await model.readLimits() }
-                }
-                Section {
+                    ForEach(
+                        Array(
+                            selected.list("options").filter { $0.text("id") != ChatContextUsage.windowOption }
+                                .enumerated()), id: \.offset
+                    ) { _, option in optionRow(option) }
                     Picker(
                         "Permissions",
                         selection: Binding(
@@ -129,35 +156,110 @@ struct ChatRunSettings: View {
                         }
                     }
                 } header: {
-                    Text("Permissions")
+                    Text("Model, effort, permissions")
                 } footer: {
                     Text(
                         mode == "full-access"
                             ? "The agent can act without asking for approval."
                             : "These permissions apply to the agent's next actions.")
                 }
-                if let usage = model.info["usage"], let window = usage["contextWindow"]?.numberValue, window > 0 {
-                    Section("Context") {
-                        let used = usage["contextTokens"]?.numberValue ?? 0
-                        LabeledContent("Used", value: "\(Int(used).formatted()) / \(Int(window).formatted()) tokens")
-                        ProgressView(value: min(1, max(0, used / window)))
-                        if model.capabilities.text("compaction") != "none" {
-                            Button("Compact conversation") {
-                                Task {
-                                    do {
-                                        _ = try await model.client.request("chat.compact", payload: model.target())
-                                        model.settingsProblem = nil
-                                    } catch { model.settingsProblem = error.localizedDescription }
-                                }
-                            }.disabled(model.working || used == 0)
-                        }
-                    }
-                }
             }
             .disabled(!model.connected || model.loading || model.configuring || model.sending)
             .navigationTitle("Run settings")
+            .navigationSubtitle("This chat")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+
+    private func accountSection(_ accounts: ProviderAccountList) -> some View {
+        let kind = model.info.text("provider")
+        let current = model.info["account"]?.stringValue ?? kind
+        let started = ProviderAccountList.chatStarted(model.info)
+        return Section {
+            ForEach(accounts.offered(kind, current: current)) { account in
+                let locked = started && !accounts.canContinue(kind, from: current, to: account.id)
+                Button {
+                    model.chooseAccount(account.id)
+                } label: {
+                    HStack(spacing: 10) {
+                        AccountDot(color: account.color, size: 8)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(account.name(provider: usageProviderName(kind))).foregroundStyle(MobileStyle.text)
+                            if locked {
+                                Text("Fork the conversation to use this account.").font(.caption)
+                                    .foregroundStyle(MobileStyle.muted)
+                            }
+                        }
+                        Spacer()
+                        if let window = ProviderAccountList.sessionWindow(model.limits, account: account.id) {
+                            Text(ChatLimits.sessionLine(window))
+                                .font(.caption).monospacedDigit()
+                                .foregroundStyle(ChatRunSettings.tone(window.used))
+                        }
+                        if account.id == current { Image(lucide: "check", size: 16) }
+                    }
+                }
+                .disabled(locked || account.id == current)
+            }
+        } header: {
+            Text("Account")
+        } footer: {
+            Text("A new chat of \(usageProviderName(kind)) on this machine starts under the account you pick.")
+        }
+        .task(id: model.connected) { await model.readLimits() }
+    }
+
+    private func contextSection(_ usage: ChatContextUsage) -> some View {
+        Section("Context") {
+            HStack {
+                HStack(spacing: 0) {
+                    Text(ChatContextUsage.tokens(usage.used)).fontWeight(.semibold)
+                    if let window = usage.window {
+                        Text(" of \(ChatContextUsage.tokens(window))").foregroundStyle(MobileStyle.muted)
+                    }
+                }
+                .monospacedDigit()
+                Spacer()
+                if let windowOption {
+                    Picker(
+                        windowOption.text("label", fallback: "Context window"),
+                        selection: Binding(
+                            get: {
+                                selection["options"]?[ChatContextUsage.windowOption]?.stringValue
+                                    ?? windowOption.text("defaultChoice")
+                            },
+                            set: { updateOption(ChatContextUsage.windowOption, value: .string($0)) })
+                    ) {
+                        ForEach(Array(windowOption.list("choices").enumerated()), id: \.offset) { _, choice in
+                            Text(choice.text("label")).tag(choice.text("id"))
+                        }
+                    }
+                    .pickerStyle(.segmented).fixedSize()
+                }
+            }
+            if usage.window != nil {
+                ChatContextBar(usage: usage)
+                    .accessibilityElement()
+                    .accessibilityLabel("Context used")
+                    .accessibilityValue("\(Int((usage.fraction * 100).rounded())) percent")
+            }
+            if let segments = usage.segments {
+                ChatContextLegend(segments: segments)
+            }
+            if model.capabilities.text("compaction") != "none" {
+                Button {
+                    Task {
+                        do {
+                            _ = try await model.client.request("chat.compact", payload: model.target())
+                            model.settingsProblem = nil
+                        } catch { model.settingsProblem = error.localizedDescription }
+                    }
+                } label: {
+                    Label("Compact now", lucideIcon: "minimize-2", iconSize: 15)
+                }
+                .disabled(model.working || usage.used == 0)
+            }
         }
     }
 
@@ -197,8 +299,57 @@ struct ChatRunSettings: View {
     static func tone(_ used: Double) -> Color {
         used >= 0.9 ? MobileStyle.statusError : used >= 0.7 ? MobileStyle.statusNeedsYou : MobileStyle.muted
     }
+}
 
-    private func updateSelection(_ selection: JSONValue) { model.chooseSelection(selection) }
+private enum ChatContextColors {
+    static func of(_ part: ChatContextUsage.Part) -> Color {
+        switch part {
+        case .toolOutput: MobileStyle.chartContextTools
+        case .filesRead: MobileStyle.chartContextFiles
+        case .conversation: MobileStyle.chartContextConversation
+        case .system: MobileStyle.faint
+        }
+    }
+}
+
+/// How full the context is, in its parts when the machine estimates them.
+private struct ChatContextBar: View {
+    let usage: ChatContextUsage
+
+    var body: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                if let segments = usage.segments {
+                    ForEach(segments, id: \.part) { segment in
+                        ChatContextColors.of(segment.part)
+                            .frame(width: max(0, geometry.size.width * segment.fraction))
+                    }
+                } else {
+                    MobileStyle.accent.frame(width: geometry.size.width * usage.fraction)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(height: 8)
+        .background(MobileStyle.text.opacity(0.1))
+        .clipShape(Capsule())
+    }
+}
+
+private struct ChatContextLegend: View {
+    let segments: [ChatContextUsage.Segment]
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)]) {
+            ForEach(segments, id: \.part) { segment in
+                HStack(spacing: 6) {
+                    Circle().fill(ChatContextColors.of(segment.part)).frame(width: 7, height: 7)
+                    Text("\(segment.part.label) \(ChatContextUsage.tokens(segment.tokens))").monospacedDigit()
+                }
+                .font(.caption).foregroundStyle(MobileStyle.muted)
+            }
+        }
+    }
 }
 
 extension ChatModel {
