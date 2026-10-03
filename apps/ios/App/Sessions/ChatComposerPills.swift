@@ -12,6 +12,7 @@ import UIKit
     var expanded = false
     var settings = false
     var compare = false
+    var queue = false
 }
 
 /// The row under the field: attach and mention, the queue, and how the next turn runs, one pill for each part. Each
@@ -20,7 +21,6 @@ struct ChatComposerPills: View {
     @Bindable var model: ChatModel
     let sheets: ChatComposerSheets
     @Binding var focused: Bool
-    @State private var showingQueue = false
     @State private var flyout: Flyout?
     /// A sheet asked for from a flyout, opened once the flyout has gone so the two do not cross.
     @State private var afterFlyout: (() -> Void)?
@@ -60,9 +60,6 @@ struct ChatComposerPills: View {
         .scrollIndicators(.hidden)
         .scrollClipDisabled()
         .disabled(model.queueBusy)
-        .mobileSheet(isPresented: $showingQueue) {
-            ChatQueueSheet(model: model) { focused = true }
-        }
         .onChange(of: flyout) { _, next in
             guard next == nil, let action = afterFlyout else { return }
             afterFlyout = nil
@@ -99,7 +96,7 @@ struct ChatComposerPills: View {
     private var queuePill: some View {
         Button {
             focused = false
-            showingQueue = true
+            sheets.queue = true
         } label: {
             HStack(spacing: 6) {
                 Text("\(model.queue.count)").font(.caption.weight(.semibold)).monospacedDigit()

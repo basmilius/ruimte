@@ -187,6 +187,14 @@ struct ChatScreen: View {
         }
         .mobileSheet(isPresented: $composerSheets.settings) { ChatRunSettings(model: model) }
         .mobileSheet(isPresented: $composerSheets.compare) { ModelComparisonSheet() }
+        // From the screen, like Run settings: the pill sits in the composer's own hosting controller, inside the
+        // timeline's UIKit container.
+        .mobileSheet(isPresented: $composerSheets.queue) {
+            ChatQueueSheet(model: model) { composerFocused = true }
+        }
+        .onChange(of: composerSheets.queue) { _, showing in
+            chatPresentationLog.notice("queue \(showing ? "opens" : "closed", privacy: .public)")
+        }
         .mobileSheet(isPresented: $showingPlans) {
             if let plans = machineSession?.plans {
                 PlanSheet(store: plans, chatID: model.chatID, chatTitle: title, model: model)
@@ -203,6 +211,7 @@ struct ChatScreen: View {
             SubagentConversationPage(model: model, crumb: crumb, session: machineSession)
         }
         .onAppear {
+            chatPresentationLog.notice("chat appeared \(model.chatID, privacy: .public)")
             visible = true
             if isPrepared { start() }
         }
@@ -210,6 +219,7 @@ struct ChatScreen: View {
             if prepared && visible { start() }
         }
         .onDisappear {
+            chatPresentationLog.notice("chat disappeared \(model.chatID, privacy: .public)")
             visible = false
             if holdingChat {
                 holdingChat = false

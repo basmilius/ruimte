@@ -2,6 +2,12 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 import UIKit
+import os
+
+// TODO(Bas): remove once the blank chat screen behind a menu or a sheet is explained.
+/// What the chat's UIKit container goes through around a presentation. In Console.app: subsystem `app.ruimte.mobile`,
+/// category `chat-presentation`; the layout lines are debug messages.
+let chatPresentationLog = Logger(subsystem: "app.ruimte.mobile", category: "chat-presentation")
 
 struct ChatTimeline: UIViewControllerRepresentable {
     let presentation: ChatPresentation
@@ -21,8 +27,14 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var onNearTop: () -> Void = {}
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
-        ChatTimelineController(client: client, chatID: chatID, presentation: presentation)
+        chatPresentationLog.notice("timeline made for \(chatID, privacy: .public)")
+        return ChatTimelineController(client: client, chatID: chatID, presentation: presentation)
     }
+
+    static func dismantleUIViewController(_ controller: ChatTimelineController, coordinator: ()) {
+        chatPresentationLog.notice("timeline dismantled")
+    }
+
     func updateUIViewController(_ controller: ChatTimelineController, context: Context) {
         controller.bind(presentation)
         controller.dismissKeyboard = dismissKeyboard
@@ -340,6 +352,11 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var reportedViewportHeight: CGFloat = 0
     private var fullHeightConstraint: NSLayoutConstraint!
     private var keyboardHeightConstraint: NSLayoutConstraint!
+    private var loggedLayout = ""
+
+    override func loadView() {
+        view = ChatTimelineRootView()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -492,6 +509,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         } else {
             let host = addHost(content)
             composerHost = host
+            chatPresentationLog.notice("composer host added")
             // One UIKit layout owns both frames, including interactive keyboard movement.
             fullHeightConstraint.isActive = false
             keyboardHeightConstraint.isActive = true
@@ -614,6 +632,37 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                 self.onViewportHeightChanged(self.reportedViewportHeight)
             }
         }
+        logLayout()
+    }
+
+    /// Every frame the screen is made of, logged when it moved; a collapse is an error, so it shows without debug
+    /// messages.
+    private func logLayout() {
+        let keyboard = view.keyboardLayoutGuide.layoutFrame
+        let composer = composerHost?.view.frame ?? .zero
+        let safe = view.safeAreaInsets
+        let line =
+            "view \(Int(view.bounds.width))x\(Int(view.bounds.height)) window \(view.window != nil) "
+            + "safe \(Int(safe.top))/\(Int(safe.bottom)) keyboard \(Int(keyboard.minY))+\(Int(keyboard.height)) "
+            + "timeline \(Int(collection.frame.minY))+\(Int(collection.frame.height)) "
+            + "composer \(Int(composer.minY))+\(Int(composer.height)) inset \(Int(collection.contentInset.bottom))"
+        guard line != loggedLayout else { return }
+        loggedLayout = line
+        let collapsed =
+            view.window == nil || view.bounds.height < 1 || keyboard.minY < safe.top
+            || collection.frame.height < view.bounds.height / 3
+            || (composerHost != nil && (composer.minY < safe.top || composer.height < 1))
+        if collapsed {
+            chatPresentationLog.error("layout collapsed: \(line, privacy: .public)")
+        } else {
+            chatPresentationLog.debug("layout \(line, privacy: .public)")
+        }
+    }
+
+    override func didMove(toParent parent: UIViewController?) {
+        super.didMove(toParent: parent)
+        let name = parent.map { String(describing: type(of: $0)) } ?? "no parent"
+        chatPresentationLog.notice("timeline moved to \(name, privacy: .public)")
     }
 
     func setComposerFadeStart(_ start: CGFloat) {
@@ -772,13 +821,37 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        chatPresentationLog.notice("timeline appeared")
         scheduleUpdate()
     }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        chatPresentationLog.notice("timeline disappeared")
         displayLink?.invalidate()
         displayLink = nil
+    }
+}
+
+/// Logs the tint going dim and back, which is how the chat sees a menu, sheet or alert open over it, with what the
+/// window presents at that moment.
+private final class ChatTimelineRootView: UIView {
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        var presented: [String] = []
+        var next = window?.rootViewController?.presentedViewController
+        while let controller = next {
+            presented.append(String(describing: type(of: controller)))
+            next = controller.presentedViewController
+        }
+        let tint = tintAdjustmentMode == .dimmed ? "dimmed" : "normal"
+        let over = presented.isEmpty ? "nothing" : presented.joined(separator: " > ")
+        chatPresentationLog.notice("tint \(tint, privacy: .public), presented: \(over, privacy: .public)")
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        chatPresentationLog.notice("timeline \(self.window == nil ? "left" : "entered", privacy: .public) the window")
     }
 }
 
