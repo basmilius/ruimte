@@ -13,6 +13,9 @@ struct ProcessesPage: View {
     @State private var model: ProcessesModel
     @State private var projectNames: [String: String] = [:]
     @State private var forcing: ProcessTarget?
+    @State private var order = [KeyPathComparator(\ProcessTableRow.cpu, order: .reverse)]
+    @State private var picked = Set<String>()
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     init(client: any MachineRequesting, titles: [String: String] = [:]) {
         self.titles = titles
@@ -20,6 +23,30 @@ struct ProcessesPage: View {
     }
 
     var body: some View {
+        Group {
+            if wide { table } else { form }
+        }
+        .navigationTitle("Processes")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { model.start() }
+        .onDisappear { model.stop() }
+        .task { await readProjectNames() }
+        .confirmationDialog(
+            forcing.map { ProcessesText.forceQuestion($0).title } ?? "",
+            isPresented: Binding(get: { forcing != nil }, set: { if !$0 { forcing = nil } }),
+            titleVisibility: .visible, presenting: forcing
+        ) { target in
+            Button("Force quit", role: .destructive) { Task { await model.signal(target, .kill) } }
+            Button("Cancel", role: .cancel) {}
+        } message: { target in
+            Text(ProcessesText.forceQuestion(target).detail)
+        }
+    }
+
+    /// An iPad beside its sidebar has the room for the desktop's table.
+    private var wide: Bool { UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular }
+
+    private var form: some View {
         MobileForm {
             Section {
                 Picker("Which processes", selection: $model.scope) {
@@ -36,8 +63,6 @@ struct ProcessesPage: View {
             content
         }
         .listSectionSpacing(12)
-        .navigationTitle("Processes")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -52,19 +77,91 @@ struct ProcessesPage: View {
                 .accessibilityLabel("Sort processes")
             }
         }
-        .onAppear { model.start() }
-        .onDisappear { model.stop() }
-        .task { await readProjectNames() }
-        .confirmationDialog(
-            forcing.map { ProcessesText.forceQuestion($0).title } ?? "",
-            isPresented: Binding(get: { forcing != nil }, set: { if !$0 { forcing = nil } }),
-            titleVisibility: .visible, presenting: forcing
-        ) { target in
-            Button("Force quit", role: .destructive) { Task { await model.signal(target, .kill) } }
-            Button("Cancel", role: .cancel) {}
-        } message: { target in
-            Text(ProcessesText.forceQuestion(target).detail)
+    }
+
+    /// The tiles and warnings over a table of every process, sorted by any column, with the signals in a row's menu.
+    private var table: some View {
+        VStack(spacing: 12) {
+            Picker("Which processes", selection: $model.scope) {
+                Text("Ruimte").tag("ruimte")
+                Text("All processes").tag("all")
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 360)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let problem = model.problem {
+                Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
+            }
+            if let sample = model.sample, model.connected, !model.unsupportedMachine, model.supported != false {
+                let series = ProcessesText.series(
+                    fine: model.fine, coarse: model.coarse, fineInterval: model.fineInterval,
+                    coarseInterval: model.coarseInterval)
+                HStack(spacing: 8) {
+                    ProcessChart(
+                        label: "CPU", headline: ProcessesText.percent(sample.machine.cpu), points: series.points,
+                        window: series.window, end: sample.at, maximum: 100, machine: \.cpu, ruimte: \.cpuRuimte)
+                    ProcessChart(
+                        label: "Memory", headline: ProcessesText.bytes(sample.machine.memoryUsed),
+                        points: series.points, window: series.window, end: sample.at,
+                        maximum: sample.machine.memoryTotal, machine: \.memory, ruimte: \.memoryRuimte)
+                }
+                .frame(maxHeight: 150)
+                ForEach(model.alerts) { alert in
+                    alertRow(alert, now: sample.at)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(MobileStyle.statusNeedsYou.opacity(0.1), in: .rect(cornerRadius: 14))
+                }
+                processTable(sample)
+            } else {
+                content.frame(maxHeight: .infinity)
+            }
         }
+        .padding(.horizontal, 20).padding(.top, 8)
+        .background(MobileStyle.canvas)
+    }
+
+    private func processTable(_ sample: ProcessSample) -> some View {
+        let rows = ProcessTableRow.rows(sample.groups, titles: titles, projectNames: projectNames).sorted(using: order)
+        return Table(rows, selection: $picked, sortOrder: $order) {
+            TableColumn("Process", value: \.name) { row in
+                HStack(spacing: 8) {
+                    Image(lucide: Self.icon(row.kind), size: 13).foregroundStyle(MobileStyle.muted)
+                    Text(row.name).foregroundStyle(row.process.readable ? MobileStyle.text : MobileStyle.faint)
+                        .lineLimit(1)
+                }
+            }
+            .width(min: 140, ideal: 200)
+            TableColumn("Node", value: \.owner) { row in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(row.owner).lineLimit(1)
+                    Text(row.place).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
+                }
+            }
+            .width(min: 140, ideal: 220)
+            TableColumn("PID", value: \.pid) { row in
+                Text(String(row.pid)).monospacedDigit().foregroundStyle(MobileStyle.muted)
+            }
+            .width(70)
+            TableColumn("CPU", value: \.cpu) { row in
+                Text(ProcessesText.percent(row.process.cpu)).monospacedDigit()
+                    .foregroundStyle(row.cpu >= 80 ? MobileStyle.statusNeedsYou : MobileStyle.text)
+            }
+            .width(70)
+            TableColumn("Memory", value: \.memory) { row in
+                Text(ProcessesText.bytes(row.process.memory)).monospacedDigit()
+            }
+            .width(90)
+            TableColumn("Disk", value: \.disk) { row in
+                Text(ProcessesText.rate(row.disk)).monospacedDigit().foregroundStyle(MobileStyle.muted)
+            }
+            .width(90)
+        }
+        .contextMenu(forSelectionType: String.self) { ids in
+            if let id = ids.first, let row = rows.first(where: { $0.id == id }), row.process.signalable {
+                signalMenu(ProcessTarget(row.process))
+            }
+        }
+        .scrollContentBackground(.hidden)
     }
 
     @ViewBuilder private var content: some View {

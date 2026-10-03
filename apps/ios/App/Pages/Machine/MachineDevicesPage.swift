@@ -26,12 +26,21 @@ struct MachineDevicesPage: View {
     @State private var opening: String?
     @State private var problem: String?
     @Environment(\.openMobileWorkspace) private var openWorkspace
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        MobileForm {
-            content
-            if let problem = problem ?? devices.problem {
-                Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red).font(.callout) }
+        Group {
+            if wide && devices.loaded && !devices.devices.isEmpty && session.connected && session.endpoint.streamingAllowed
+                && !devices.streamingOff
+            {
+                grid
+            } else {
+                MobileForm {
+                    content
+                    if let problem = problem ?? devices.problem {
+                        Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red).font(.callout) }
+                    }
+                }
             }
         }
         .navigationTitle("Devices")
@@ -50,6 +59,51 @@ struct MachineDevicesPage: View {
             if session.connected && session.endpoint.streamingAllowed { await devices.watch() }
         }
         .refreshable { await devices.load() }
+    }
+
+    /// An iPad has the room for the devices as a grid, each running one with its live picture.
+    private var wide: Bool { UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular }
+
+    private var grid: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                if let problem = problem ?? devices.problem {
+                    Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red).font(.callout)
+                }
+                ForEach(devices.groups) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.title).font(.footnote.weight(.semibold)).foregroundStyle(MobileStyle.muted)
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 260), spacing: 12, alignment: .top)], spacing: 12
+                        ) {
+                            ForEach(group.devices) { device in
+                                Group {
+                                    if device.booted && device.canStream {
+                                        RunningDeviceCard(
+                                            client: session.rpc, device: device,
+                                            busy: devices.changing[device.id] != nil, opening: opening == device.id,
+                                            projects: projects.listed,
+                                            open: { project in Task { await open(device, in: project) } },
+                                            shutdown: { Task { await devices.shutdown(device) } })
+                                    } else {
+                                        row(device)
+                                    }
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(MobileStyle.panel, in: .rect(cornerRadius: 18))
+                                .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(MobileStyle.border))
+                            }
+                        }
+                    }
+                }
+                if !devices.notes.isEmpty {
+                    Text(devices.notes.joined(separator: "\n")).font(.footnote).foregroundStyle(MobileStyle.muted)
+                }
+            }
+            .padding(20)
+        }
+        .background(MobileStyle.canvas)
     }
 
     @ViewBuilder private var content: some View {

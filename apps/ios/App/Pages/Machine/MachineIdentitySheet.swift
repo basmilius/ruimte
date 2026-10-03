@@ -2,10 +2,13 @@ import RuimtePulsar
 import SwiftUI
 
 /// The name and icon of a machine, which every client that pairs with it sees. Both go out together, since an empty
-/// name hands the machine back to the one it starts with and no icon is a choice of its own.
+/// name hands the machine back to the one it starts with and no icon is a choice of its own. On an iPad the apps with
+/// access stand in the same sheet.
 struct MachineIdentitySheet: View {
     let endpoint: MachineEndpoint
     let fallbackName: String
+    /// The machine whose clients the sheet lists as well; nil leaves them to a sheet of their own.
+    var access: (session: SharedMachineSession, runtime: AppRuntime)?
     @State private var name = ""
     @State private var icon: String?
     @State private var saving = false
@@ -60,9 +63,12 @@ struct MachineIdentitySheet: View {
                 if let problem {
                     Section { Text(problem).foregroundStyle(.red) }
                 }
+                if let access {
+                    MachineAccessSection(session: access.session, runtime: access.runtime, name: fallbackName)
+                }
             }
             .disabled(saving)
-            .navigationTitle("Name and icon")
+            .navigationTitle(access == nil ? "Name and icon" : "Machine settings")
             .navigationSubtitle(fallbackName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

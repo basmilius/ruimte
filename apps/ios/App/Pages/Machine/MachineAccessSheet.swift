@@ -90,6 +90,29 @@ struct MachineAccessSheet: View {
     let session: SharedMachineSession
     let runtime: AppRuntime
     let name: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            MobileForm {
+                MachineAccessSection(session: session, runtime: runtime, name: name)
+            }
+            .navigationTitle("Apps with access")
+            .navigationSubtitle(name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() } }
+            }
+        }
+    }
+}
+
+/// The clients of a machine with Revoke, as a section of whichever form shows them: the iPhone's sheet of its own, or
+/// the iPad's one sheet with the machine's name and icon.
+struct MachineAccessSection: View {
+    let session: SharedMachineSession
+    let runtime: AppRuntime
+    let name: String
     @State private var access: MachineAccess
     @State private var revoking: MachineClientAccess?
     @Environment(\.dismiss) private var dismiss
@@ -102,66 +125,54 @@ struct MachineAccessSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            MobileForm {
-                Section {
-                    if access.state.loading {
-                        MobileLoadingRow("Loading clients").frame(maxWidth: .infinity)
-                    }
-                    ForEach(access.clients) { client in
-                        HStack(spacing: 11) {
-                            Image(lucide: client.icon, size: 17).foregroundStyle(MobileStyle.muted).frame(width: 22)
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text(client.label).lineLimit(1)
-                                    if client.current {
-                                        Text("· this client").font(.caption).foregroundStyle(MobileStyle.muted)
-                                    }
-                                }
-                                Text(client.detail()).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
+        Section {
+            if access.state.loading {
+                MobileLoadingRow("Loading clients").frame(maxWidth: .infinity)
+            }
+            ForEach(access.clients) { client in
+                HStack(spacing: 11) {
+                    Image(lucide: client.icon, size: 17).foregroundStyle(MobileStyle.muted).frame(width: 22)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(client.label).lineLimit(1)
+                            if client.current {
+                                Text("· this client").font(.caption).foregroundStyle(MobileStyle.muted)
                             }
-                            Spacer(minLength: 8)
-                            Button("Revoke", role: .destructive) { revoking = client }
-                                .font(.subheadline)
-                                .buttonStyle(.borderless)
-                                .disabled(access.state.busy)
                         }
-                        .padding(.vertical, 4)
+                        Text(client.detail()).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
                     }
-                    if access.loaded && access.clients.isEmpty {
-                        Text("Nothing else has access to this machine.").foregroundStyle(MobileStyle.muted)
-                    }
-                } header: {
-                    Text("Browsers and apps paired with this machine.")
-                } footer: {
-                    Text(
-                        "A pairing link comes from the machine itself: open Settings in Ruimte on \(name) and choose Show pairing link under Apps with access, or run ruimte pair there."
-                    )
+                    Spacer(minLength: 8)
+                    Button("Revoke", role: .destructive) { revoking = client }
+                        .font(.subheadline)
+                        .buttonStyle(.borderless)
+                        .disabled(access.state.busy)
                 }
-                if let problem = access.state.problem {
-                    Section {
-                        Text(problem).foregroundStyle(.red)
-                        Button("Try again") { Task { await access.load() } }
-                    }
-                }
+                .padding(.vertical, 4)
             }
-            .navigationTitle("Apps with access")
-            .navigationSubtitle(name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button(role: .confirm) { dismiss() } }
+            if access.loaded && access.clients.isEmpty {
+                Text("Nothing else has access to this machine.").foregroundStyle(MobileStyle.muted)
             }
-            .task { await access.load() }
-            .alert(
-                "Revoke \(revoking?.label ?? "this client")?",
-                isPresented: Binding(get: { revoking != nil }, set: { if !$0 { revoking = nil } }),
-                presenting: revoking
-            ) { client in
-                Button("Revoke", role: .destructive) { Task { await revoke(client) } }
-                Button("Cancel", role: .cancel) {}
-            } message: { client in
-                Text(client.revokeMessage)
+            if let problem = access.state.problem {
+                Text(problem).foregroundStyle(.red)
+                Button("Try again") { Task { await access.load() } }
             }
+        } header: {
+            Text("Browsers and apps paired with this machine.")
+        } footer: {
+            Text(
+                "A pairing link comes from the machine itself: open Settings in Ruimte on \(name) and choose Show pairing link under Apps with access, or run ruimte pair there."
+            )
+        }
+        .task { await access.load() }
+        .alert(
+            "Revoke \(revoking?.label ?? "this client")?",
+            isPresented: Binding(get: { revoking != nil }, set: { if !$0 { revoking = nil } }),
+            presenting: revoking
+        ) { client in
+            Button("Revoke", role: .destructive) { Task { await revoke(client) } }
+            Button("Cancel", role: .cancel) {}
+        } message: { client in
+            Text(client.revokeMessage)
         }
     }
 

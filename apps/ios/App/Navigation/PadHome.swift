@@ -29,6 +29,14 @@ struct PadHome: View {
                 runtime: runtime, projects: projects, now: now, router: router, gitLines: gitLines,
                 openPalette: { palette = true }, open: open, pair: pair)
         }
+        // On the window rather than a page's bar, so ⌘K opens the palette whatever the content column shows.
+        .background {
+            Button("Search") { palette = true }
+                .keyboardShortcut("k", modifiers: .command)
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
         .environment(
             \.openMobileWorkspace,
             OpenMobileWorkspaceAction(id: "pad") { workspace, view in

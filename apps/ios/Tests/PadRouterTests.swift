@@ -173,3 +173,34 @@ final class PadRouterTests: XCTestCase {
                 summary: .object(["scratch": .bool(true)]), title: "scratch", machine: "Studio") == ("Chats", "Studio"))
     }
 }
+
+final class PadProcessTableTests: XCTestCase {
+    private func process(_ pid: Int, cpu: Double?) -> JSONValue {
+        .object([
+            "pid": .number(Double(pid)), "startTime": .number(100), "name": .string("bun"), "readable": .bool(true),
+            "cpu": cpu.map(JSONValue.number) ?? .null, "memory": .number(2048), "depth": .number(0),
+        ])
+    }
+
+    func testEveryProcessIsARowNamedAfterItsNodeAndProject() {
+        let groups = [
+            ProcessGroup(
+                json: .object([
+                    "id": .string("g1"), "kind": .string("terminal"), "nodeId": .string("t1"),
+                    "projectId": .string("app"), "processes": .array([process(10, cpu: 3), process(11, cpu: nil)]),
+                ])),
+            ProcessGroup(
+                json: .object([
+                    "id": .string("g2"), "kind": .string("daemon"), "processes": .array([process(20, cpu: 96)]),
+                ])),
+        ]
+        let rows = ProcessTableRow.rows(groups, titles: ["t1": "bun dev"], projectNames: ["app": "Recept Maker"])
+        XCTAssertEqual(rows.map(\.pid), [10, 11, 20])
+        XCTAssertEqual(rows.first?.owner, "bun dev")
+        XCTAssertEqual(rows.first?.place, "Recept Maker")
+        XCTAssertEqual(rows.last?.place, "Machine tasks")
+
+        let byCPU = rows.sorted(using: KeyPathComparator(\ProcessTableRow.cpu, order: .reverse))
+        XCTAssertEqual(byCPU.map(\.pid), [20, 10, 11], "An unreadable reading sorts below every reading")
+    }
+}

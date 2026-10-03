@@ -9,12 +9,16 @@ struct MachinesPage: View {
     let pair: () -> Void
     /// Opens a machine by its id, on whichever stack the page stands.
     let open: (String) -> Void
+    /// The machine the iPad shows beside the list, whose card is marked.
+    var selectedID: String?
 
     var body: some View {
         MobileForm {
             ForEach(runtime.machines, id: \.id) { machine in
                 Section {
                     MachineCard(session: runtime.session(for: machine)) { open(machine.id) }
+                        .listRowBackground(selectedID == machine.id ? MobileStyle.active : MobileStyle.panel)
+                        .accessibilityAddTraits(selectedID == machine.id ? .isSelected : [])
                 }
             }
             Section {
@@ -108,5 +112,39 @@ struct MachineRoutePage: View {
         if let machine = runtime.machines.first(where: { $0.id == machineID }) {
             MachinePage(session: runtime.session(for: machine), runtime: runtime, settingsLink: settingsLink)
         }
+    }
+}
+
+/// The machines on an iPad: the cards and the machine picked among them side by side, while the sidebar stays the
+/// project's.
+struct PadMachinesPage: View {
+    let runtime: AppRuntime
+    let pair: () -> Void
+    @Binding var selectedID: String?
+
+    var body: some View {
+        HStack(spacing: 0) {
+            NavigationStack {
+                MachinesPage(runtime: runtime, pair: pair, open: { selectedID = $0 }, selectedID: shownID)
+            }
+            .frame(width: 340)
+            MobileStyle.border.frame(width: 1).ignoresSafeArea()
+            NavigationStack {
+                if let shownID {
+                    MachineRoutePage(runtime: runtime, machineID: shownID)
+                } else {
+                    ContentUnavailableView(
+                        "No machines yet", lucideIcon: "monitor",
+                        description: Text("Pair a machine to see its projects, devices and processes."))
+                }
+            }
+            .id(shownID)
+        }
+    }
+
+    /// The machine picked, or the first one until a person picks.
+    private var shownID: String? {
+        if let selectedID, runtime.machines.contains(where: { $0.id == selectedID }) { return selectedID }
+        return runtime.machines.first?.id
     }
 }

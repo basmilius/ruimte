@@ -67,11 +67,7 @@ struct PadDetailColumn: View {
                 .toolbar { toolbar }
             }
         case .machines:
-            NavigationStack {
-                MachinesPage(runtime: runtime, pair: pair) { router.machineID = $0 }
-                    .navigationDestination(item: $router.machineID) { MachineRoutePage(runtime: runtime, machineID: $0) }
-                    .toolbar { toolbar }
-            }
+            PadMachinesPage(runtime: runtime, pair: pair, selectedID: $router.machineID)
         case .recentlyClosed:
             NavigationStack {
                 RecentProjectsPage(runtime: runtime, projects: projects)
@@ -145,7 +141,6 @@ struct PadDetailColumn: View {
             Button(action: openPalette) {
                 Image(lucide: "search").accessibilityLabel("Search")
             }
-            .keyboardShortcut("k", modifiers: .command)
             .accessibilityIdentifier("pad.search")
         }
     }

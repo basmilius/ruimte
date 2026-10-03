@@ -31,6 +31,7 @@ struct MachinePage: View {
     }
 
     private var endpoint: MachineEndpoint { session.endpoint }
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var name: String { endpoint.label ?? session.machine.name }
 
     var body: some View {
@@ -89,8 +90,12 @@ struct MachinePage: View {
             }
             ToolbarItem(id: "machine.menu", placement: .topBarTrailing) {
                 Menu {
-                    Button("Name and icon", lucideIcon: "pencil") { naming = true }
-                    Button("Apps with access", lucideIcon: "key-round") { access = true }
+                    if isPad {
+                        Button("Machine settings", lucideIcon: "pencil") { naming = true }
+                    } else {
+                        Button("Name and icon", lucideIcon: "pencil") { naming = true }
+                        Button("Apps with access", lucideIcon: "key-round") { access = true }
+                    }
                     Divider()
                     Button("Reconnect", lucideIcon: "refresh-cw") { session.reconnect() }
                 } label: {
@@ -133,7 +138,10 @@ struct MachinePage: View {
             Text(MachineUpdate.restartQuestion(update: endpoint.update, work: work, machine: name))
         }
         .mobileSheet(isPresented: $openingFolder) { OpenFolderSheet(session: session) }
-        .mobileSheet(isPresented: $naming) { MachineIdentitySheet(endpoint: endpoint, fallbackName: name) }
+        .mobileSheet(isPresented: $naming) {
+            MachineIdentitySheet(
+                endpoint: endpoint, fallbackName: name, access: isPad ? (session: session, runtime: runtime) : nil)
+        }
         .mobileSheet(isPresented: $access) { MachineAccessSheet(session: session, runtime: runtime, name: name) }
     }
 

@@ -160,6 +160,38 @@ struct ProcessAlert: Equatable, Identifiable {
 }
 
 /// The process a signal goes to, by the pid and start time the row showed.
+/// One process as a row of the iPad's table, with the node or task it belongs to and where that stands. Unreadable
+/// numbers sort below every reading.
+struct ProcessTableRow: Equatable, Identifiable {
+    let process: ProcessRow
+    /// The node, launch or task the process runs under.
+    let owner: String
+    /// The project of that owner, or Machine tasks.
+    let place: String
+    let kind: String
+
+    var id: String { process.id }
+    var name: String { process.name }
+    var pid: Int { process.pid }
+    var cpu: Double { process.cpu ?? -1 }
+    var memory: Double { process.memory ?? -1 }
+    var disk: Double { (process.diskRead ?? 0) + (process.diskWrite ?? 0) }
+
+    /// Every process of every group, each named after its group and that group's project, in the sample's order.
+    static func rows(_ groups: [ProcessGroup], titles: [String: String], projectNames: [String: String])
+        -> [ProcessTableRow]
+    {
+        ProcessesText.sections(groups, projectNames: projectNames).flatMap { section in
+            section.groups.flatMap { group in
+                let owner = ProcessesText.groupTitle(group, titles: titles).title
+                return group.processes.map {
+                    ProcessTableRow(process: $0, owner: owner, place: section.title, kind: group.kind)
+                }
+            }
+        }
+    }
+}
+
 struct ProcessTarget: Equatable, Identifiable {
     var pid: Int
     var startTime: Double
