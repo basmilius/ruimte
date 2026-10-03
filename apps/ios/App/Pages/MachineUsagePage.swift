@@ -65,13 +65,7 @@ struct MachineUsagePage: View {
         .navigationTitle("Usage")
         .navigationSubtitle(machineName ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarTitleMenu {
-            if machines.count > 1 {
-                ForEach(machines) { machine in
-                    Button(machine.name) { switchTo(machine) }
-                }
-            }
-        }
+        .modifier(UsageMachineMenu(machines: machines, pick: switchTo))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -445,6 +439,24 @@ struct UsageCard: ViewModifier {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+}
+
+/// The machines in the title, only where there is more than one: an empty title menu would still draw its chevron.
+private struct UsageMachineMenu: ViewModifier {
+    let machines: [UsageMachine]
+    let pick: (UsageMachine) -> Void
+
+    func body(content: Content) -> some View {
+        if machines.count > 1 {
+            content.toolbarTitleMenu {
+                ForEach(machines) { machine in
+                    Button(machine.name) { pick(machine) }
+                }
+            }
+        } else {
+            content
+        }
     }
 }
 
