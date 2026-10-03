@@ -12,6 +12,7 @@ struct PadDetailColumn: View {
     let openPalette: () -> Void
     let open: (ProjectViewTarget) -> Void
     let pair: () -> Void
+    let signIn: () -> Void
     @State private var diagnostics = false
     @State private var newChat = false
     @State private var launches = false
@@ -67,7 +68,7 @@ struct PadDetailColumn: View {
                 .toolbar { toolbar }
             }
         case .machines:
-            PadMachinesPage(runtime: runtime, pair: pair, selectedID: $router.machineID)
+            PadMachinesPage(runtime: runtime, pair: pair, signIn: signIn, selectedID: $router.machineID)
         case .recentlyClosed:
             NavigationStack {
                 RecentProjectsPage(runtime: runtime, projects: projects)

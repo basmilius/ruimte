@@ -27,7 +27,7 @@ struct PadHome: View {
         } detail: {
             PadDetailColumn(
                 runtime: runtime, projects: projects, now: now, router: router, gitLines: gitLines,
-                openPalette: { palette = true }, open: open, pair: pair)
+                openPalette: { palette = true }, open: open, pair: pair, signIn: signIn)
         }
         // On the window rather than a page's bar, so ⌘K opens the palette whatever the content column shows.
         .background {

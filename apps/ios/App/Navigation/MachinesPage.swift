@@ -120,12 +120,25 @@ struct MachineRoutePage: View {
 struct PadMachinesPage: View {
     let runtime: AppRuntime
     let pair: () -> Void
+    let signIn: () -> Void
     @Binding var selectedID: String?
 
     var body: some View {
         HStack(spacing: 0) {
             NavigationStack {
                 MachinesPage(runtime: runtime, pair: pair, open: { selectedID = $0 }, selectedID: shownID)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Menu {
+                                Button("Use a pairing link", lucideIcon: "link", action: pair)
+                                if runtime.account == nil {
+                                    Button("Sign in", lucideIcon: "circle-user-round", action: signIn)
+                                }
+                            } label: {
+                                Image(lucide: "plus").accessibilityLabel("Add a machine")
+                            }
+                        }
+                    }
             }
             .frame(width: 340)
             MobileStyle.border.frame(width: 1).ignoresSafeArea()

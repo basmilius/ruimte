@@ -2,13 +2,12 @@ import RuimtePulsar
 import SwiftUI
 import UIKit
 
-/// Settings, a sheet behind the avatar on an iPhone and a sidebar section on an iPad. It holds the sections of the
+/// Settings, a sheet behind the avatar, a form sheet on an iPad. It holds the sections of the
 /// desktop's settings that mean something on a phone: the account with its machines, appearance, agents with their
 /// notifications, files, the connection and About. The sheet is opaque, since it is content and not a control.
 struct MobileSettings: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
-    var embedded = false
     @Environment(\.dismiss) private var dismiss
     @AppStorage("ruimte.ios.appearance") private var appearance = "system"
     @AppStorage("ruimte.ios.terminalFontSize") private var fontSize = 14.0
@@ -16,14 +15,14 @@ struct MobileSettings: View {
     @AppStorage("ruimte.chat.streaming") private var streaming: ChatStreamingMode = .words
 
     var body: some View {
-        if embedded { content } else { NavigationStack { content } }
+        NavigationStack { content }
     }
 
     private var content: some View {
         MobileForm {
             Section {
                 NavigationLink {
-                    AccountSettingsPage(runtime: runtime, closeSettings: embedded ? nil : { dismiss() })
+                    AccountSettingsPage(runtime: runtime, closeSettings: { dismiss() })
                 } label: {
                     AccountCard(runtime: runtime)
                 }
@@ -79,10 +78,8 @@ struct MobileSettings: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !embedded {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(role: .confirm) { dismiss() }
-                }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(role: .confirm) { dismiss() }
             }
         }
     }

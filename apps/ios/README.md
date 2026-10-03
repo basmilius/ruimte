@@ -15,8 +15,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Separators group the view list into sections; rows show the name and the Lucide mark the desktop gives them.
   Projects use native grouped lists with a separate recently closed page. Custom image icons,
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
-  On an iPad a cold start reopens the project you left open; if that fails, the list says why and offers Try
-  again, and going back to the list forgets it. An iPhone always starts on Now. An empty canvas offers tiles for the installed agents from `provider.list`
+  A cold start opens on Now; an iPad puts the project you left open back in its sidebar. An empty canvas offers tiles for the installed agents from `provider.list`
   and for each kind of node, an empty drawing says so until its first element, and an empty diagram asks an
   agent to draw it.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
@@ -82,7 +81,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   JPEG only, a few frames a second and never input; a device that streams video says its picture shows in its view.
   Open as view adds a device view to a chosen project of the machine (or finds the one it has) and opens it there.
   With streaming off on the machine the page says so, since the machine then answers no device request.
-- Launches of a project, in the project menu (behind More on an iPad): each with a dot in the color of its state, its
+- Launches of a project, in the project menu (the play button in an iPad's bar): each with a dot in the color of its state, its
   command and a line that says what it does (running and on which port, needs approval, passed or stopped how long
   ago, failed with its exit code), grouped by the checkout it runs in. The output and Stop while it runs, Approve
   while it waits for a person, Launch otherwise, Restart in its menu and Force stop only while a launch is stopping,
@@ -95,7 +94,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   launches and edits save the whole list against the rev they were read at, which approves what they add or
   change, as the sheet says; a conflict offers to start over from the latest. Find in this project imports what the
   machine detects (`launches.detect`). An older machine says it needs an update.
-- Processes, on a machine's page (and behind More in a project on an iPad) (`processes.subscribe` while the page is open): CPU
+- Processes, on a machine's page (`processes.subscribe` while the page is open): CPU
   and memory of the machine against the share of Ruimte as two tiles, over the last ten minutes or the last day, with
   disk as a line under them, then per project a group per terminal, chat or launch with its processes and what
   belongs to no project under Machine tasks, for what Ruimte started or everything. A warning sits under
@@ -149,6 +148,9 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - A Needs you widget with the count of what waits on you and what works, and a Needs you list widget (medium and
   large) whose rows open their chat or terminal (`ruimte://node`). Now writes the board into the app group whenever
   it changes (`NeedsYouWidgetRecorder`); the widgets show the last state the app saw.
+- A Project widget (large and extra large) with the views of one chosen project and whether each needs you or
+  works, counting the nodes on a canvas toward it. A row opens its view (`ruimte://node` with `target=view`), found
+  in its project as a notification is. `ProjectWidgetRecorder` writes every open project from what Now reads.
 - The usage page has a limits card per account, amber once a window comes close, titled with the account once a CLI has several. An account
   that is signed out or not read yet says so instead of drawing empty bars. A signed-out account offers Log in where the machine
   names a login command for its CLI, as the desktop's usage page does: the CLI's own login runs in a terminal of its
@@ -235,8 +237,35 @@ project waits until the project opened (`pendingSheet`), since one asked for dur
 stack only shortens the path once a pop
 settles, so a swipe back the person takes back leaves the route standing. A view opened outside its project's list
 (`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
-project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
-project's Views, Files, Git and Search as tabs.
+project under its title.
+
+## The iPad
+
+The iPad keeps the iPhone's pages and none of its tabs (`PadHome`, `PadRouter`). Its sidebar is always the open
+project's, as on the desktop, and floats as glass beside the content. At the top the project switcher names the
+project and its machine; a tap lists every open project per machine with its Chats, then All projects, Machines, Open
+a folder and Recently closed, and the project's own Project settings and Usage. Under it Search (⌘K, bound once on
+the window, opens the palette as a sheet), Now with its count and the first three that need you from any project,
+then the project's views and the running nodes under a canvas, and New view at the foot, as a popover. A cold start
+opens on Now with the last project back in the sidebar (`LastProject`). Opening a view of another project, from Now,
+the palette, a notification or the widget, puts that project in the sidebar.
+
+- The content column shows Now (`PadNowPage`: the cards in two columns, Working and Finished side by side), the
+  project's view, All projects (the project cards per machine with their counts), Machines or Recently closed. Each
+  has a stack of its own, so a page pushed in one never outlives a switch.
+- A view can stand in a second cell beside the first, as in the desktop's split grid: drag its row onto the content
+  or pick Open beside in its menu. Each chat cell has its own composer, and a fork opens in the next cell.
+- Its bar holds New chat (in this project or in Chats, as a popover), the launches as a popover from the play
+  button, Search, and Files and Git, which stand as an inspector beside the content. A file the files inspector
+  opens shows in the content column, its row marked.
+- A sub-agent opens as an inspector beside its chat, with its conversation and Stop; Open as view gives it the first
+  cell, on this iPad only.
+- Machines are the list and the machine picked side by side; its Machine settings is one form sheet with the name,
+  the icon and the apps with access. Processes is a table sorted by any column, with the signals in a row's menu
+  and a warning's actions above it. Devices are a grid, a running one with its live preview.
+- When the project's machine stops answering, its card stands in the content and the sidebar stays usable.
+- Settings, pairing, Project settings and Compare models are form sheets; Run settings is a popover over the
+  composer.
 
 ## Views on an iPhone
 
@@ -299,8 +328,7 @@ Three steps (`App/Onboarding`), centered on an iPad as on an iPhone.
 ## Settings
 
 
-Settings (`App/Settings`) is an opaque sheet behind the avatar on an iPhone and a section of the sidebar on an
-iPad, with the sections of the desktop's settings that mean something on a phone. The account comes first, with
+Settings (`App/Settings`) is an opaque sheet behind the avatar, at the top of the sidebar on an iPad, with the sections of the desktop's settings that mean something on a phone. The account comes first, with
 how it signed in and how many machines the phone reaches; behind it are those machines, Sign out and Delete account.
 Then Appearance (theme, terminal font size), Agents, Files and Git (hidden files), Connection diagnostics and About.
 
@@ -629,7 +657,7 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
 The web authentication callback is exactly `ruimte://pulsar/callback`, checked with the
 pending state before exchange. `/v1/providers` controls the login options; Apple uses
 the native token exchange described above. HTTPS pairing links are accepted from the
-welcome screen, Machines, Search and the iPad's Projects page; redirects are refused to
+welcome screen, Machines and Search; redirects are refused to
 keep a token on its intended origin. This app contains no local daemon.
 
 ## Constraints
@@ -728,8 +756,7 @@ Notification callbacks are installed in the app delegate before launch finishes.
 received before account restoration are queued, and UIKit completion handlers run on the
 main thread. On an iPhone a notification switches to Now and opens its chat or terminal in the project that holds
 it, found with `project.sidebar`, so the prompt waits in the composer; a node no open project holds opens on its own.
-A machine's overview opens Now. On an iPad the notification's page replaces the detail column with the selected
-notification route without competing navigation bindings.
+A machine's overview opens Now. On an iPad it opens in the content column, with its project in the sidebar.
 
 An approval notification offers Allow and Deny, and Always allow as well where the push's choices carry `remember`.
 A push never carries a question's choices, so a question opens its chat.
