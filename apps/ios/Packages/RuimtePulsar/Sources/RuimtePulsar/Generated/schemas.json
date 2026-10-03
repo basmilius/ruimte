@@ -34621,6 +34621,9 @@
           },
           "size": {
             "type": "number"
+          },
+          "mtime": {
+            "type": "number"
           }
         },
         "required": [

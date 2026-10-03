@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { FakeWatch } from '@ruimte/agents/watch-test-helpers';
-import { readMedia } from '../fs/read.ts';
+import { readServedFile } from '../fs/read.ts';
 import { MachineHome } from '../fs/machine-home.ts';
 import { FolderWatcher } from '../fs/watch.ts';
 import { Dispatcher } from '../dispatcher.ts';
@@ -39,7 +39,7 @@ beforeEach(async () => {
         async () => ({ folders: [root], worktreesOf: async () => [], worktreesRoot: join(home, 'worktrees') }),
         machineHome
     );
-    registerBytesHandlers(dispatcher, { attachment: () => null, projectIcon: async () => null, media: readMedia }, machineHome);
+    registerBytesHandlers(dispatcher, { attachment: () => null, projectIcon: async () => null, file: readServedFile }, machineHome);
 });
 
 afterEach(async () => {

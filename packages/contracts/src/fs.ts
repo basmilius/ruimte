@@ -150,7 +150,7 @@ export const FsChangedEventSchema = z.object({
 });
 export type FsChangedEvent = z.infer<typeof FsChangedEventSchema>;
 
-// A text file past this is one no viewer should hold in a string; the client offers the file itself instead.
+// The most text one JSON frame carries. Past it the client fetches the bytes over `GET /fs/file` or `bytes.read`.
 export const FS_READ_MAX_TEXT_BYTES = 2 * 1024 * 1024;
 
 export const FsReadPayloadSchema = z.object({
@@ -180,7 +180,9 @@ export type FsReadBinary = z.infer<typeof FsReadBinarySchema>;
 
 export const FsReadTooLargeSchema = z.object({
     kind: z.literal('too-large'),
-    size: z.number()
+    size: z.number(),
+    // Pins the version the client fetches as bytes; a daemon from before that route leaves it off.
+    mtime: z.number().optional()
 });
 export type FsReadTooLarge = z.infer<typeof FsReadTooLargeSchema>;
 

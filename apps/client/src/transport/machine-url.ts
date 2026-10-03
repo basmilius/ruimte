@@ -72,6 +72,27 @@ const wireResourceOf = (resource: MachineResource): ByteResource => {
     return { kind: 'file', path: resource.path };
 };
 
+/* A file's bytes whole, for something that reads them rather than draws them, over the same way `useMachineUrl` picks. */
+export const readMachineFile = async (endpointId: string, file: { path: string; mtime: number; size: number }, maxBytes: number): Promise<ArrayBuffer> => {
+    if (endpointById(endpointId)?.direct === true) {
+        const transport = transportFor(endpointId);
+        if (!transport) {
+            throw new Error(i18next.t('machines:connection.unknownMachine'));
+        }
+        const blob = await readResource((piece) => readPiece(transport, piece), { kind: 'file', path: file.path }, { maxBytes });
+        return blob.arrayBuffer();
+    }
+    const url = httpUrlFor(endpointId, { kind: 'file', ...file });
+    if (url === null) {
+        throw new Error(i18next.t('machines:connection.unknownMachine'));
+    }
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    return response.arrayBuffer();
+};
+
 export const machineResourceKey = (endpointId: string, resource: MachineResource): string => {
     if (resource.kind === 'attachment') {
         return JSON.stringify([endpointId, resource.kind, resource.chatId, resource.attachmentId]);

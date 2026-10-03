@@ -193,7 +193,7 @@ const decodeWhole = (bytes: Uint8Array): string | null => {
 /*
  * One file for the viewer. Text comes back decoded, an image or another known format comes back as
  * its mime alone (the bytes travel over `GET /fs/file`), and a text file past the cap comes back as
- * its size, so the panel can say so instead of pushing megabytes through the socket.
+ * its size and mtime, so the client fetches the bytes over that route instead of one frame on the socket.
  */
 export const readFile = async (path: string): Promise<FsReadResult> => {
     const { file, mime } = await inspect(path);
@@ -201,7 +201,7 @@ export const readFile = async (path: string): Promise<FsReadResult> => {
         return { kind: 'binary', mime, size: file.size, mtime: file.mtime };
     }
     if (file.size > FS_READ_MAX_TEXT_BYTES) {
-        return { kind: 'too-large', size: file.size };
+        return { kind: 'too-large', size: file.size, mtime: file.mtime };
     }
     const text = decodeWhole(await Bun.file(file.path).bytes());
     if (text === null) {
@@ -217,10 +217,16 @@ export const readFile = async (path: string): Promise<FsReadResult> => {
     };
 };
 
-/* The same file as bytes, for the file route. Null for anything but the images, video, sound and PDFs it serves. */
-export const readMedia = async (path: string): Promise<{ mime: string; size: number; bytes: Blob } | null> => {
+// Whatever its name says, so an HTML file the route serves never runs in the origin of the page that asked.
+export const SERVED_TEXT_MIME = 'text/plain; charset=utf-8';
+
+/* The same file as bytes, for the file route and `bytes.read`: an image, video, sound, a PDF or text. Null for any other binary. */
+export const readServedFile = async (path: string): Promise<{ mime: string; size: number; bytes: Blob } | null> => {
     const { file, mime } = await inspect(path);
-    if (!mime || !(isImageMime(mime) || isVideoMime(mime) || isAudioMime(mime) || isPdfMime(mime))) {
+    if (mime === null) {
+        return { mime: SERVED_TEXT_MIME, size: file.size, bytes: Bun.file(file.path) };
+    }
+    if (!(isImageMime(mime) || isVideoMime(mime) || isAudioMime(mime) || isPdfMime(mime))) {
         return null;
     }
     return { mime, size: file.size, bytes: Bun.file(file.path) };

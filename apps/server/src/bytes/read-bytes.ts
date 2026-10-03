@@ -8,13 +8,13 @@ export class BytesError extends CodedError<BytesErrorCode> {}
 
 /*
  * The lookups the HTTP routes make, and nothing more: an attachment only as a chat's thread names it,
- * a project icon only as the folder declares it, and a file only when it is an image, a video or sound.
+ * a project icon only as the folder declares it, and a file only when it is media or text.
  * Access itself was decided when the connection was let in, as `decideAccess` decides it per route.
  */
 export interface ByteSources {
     attachment(chatId: string, attachmentId: string): ChatAttachment | null;
     projectIcon(projectId: string, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null>;
-    media(path: string): Promise<{ mime: string } | null>;
+    file(path: string): Promise<{ mime: string } | null>;
 }
 
 const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ path: string; mime: string } | null> => {
@@ -25,8 +25,8 @@ const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ p
     if (resource.kind === 'projectIcon') {
         return sources.projectIcon(resource.projectId, resource.theme);
     }
-    const media = await sources.media(resource.path).catch(() => null);
-    return media ? { path: resource.path, mime: media.mime } : null;
+    const served = await sources.file(resource.path).catch(() => null);
+    return served ? { path: resource.path, mime: served.mime } : null;
 };
 
 export interface BytesPieceRead extends BytesReadHeader {

@@ -2,13 +2,13 @@ import type { AccessOptions } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { bytesResponse, guardBytesRequest, parseByteRange } from '../bytes/byte-route.ts';
 import { MachineHomeError, type MachineHome } from './machine-home.ts';
-import { readMedia } from './read.ts';
+import { readServedFile } from './read.ts';
 
 export const FS_FILE_PATH = '/fs/file';
 
 /*
- * Serve only authenticated image, video, sound and PDF bytes; other readable files stay on the socket.
- * Ranges let a media element seek and a PDF reader fetch one page at a time.
+ * Serve only authenticated image, video, sound, PDF and text bytes. Text comes here when it is past
+ * what one frame on the socket carries. Ranges let a media element seek and a PDF reader fetch one page at a time.
  */
 export const handleFsFileRequest = async (
     request: Request,
@@ -38,10 +38,10 @@ export const handleFsFileRequest = async (
     if (refusal) {
         return new Response(refusal.message, { status: 403 });
     }
-    const media = await readMedia(path).catch(() => null);
-    if (!media) {
+    const served = await readServedFile(path).catch(() => null);
+    if (!served) {
         return new Response('Not a file this route serves', { status: 404 });
     }
-    const range = parseByteRange(request.headers.get('range'), media.size);
-    return bytesResponse({ mime: media.mime, size: media.size, body: media.bytes }, { inline: true, range });
+    const range = parseByteRange(request.headers.get('range'), served.size);
+    return bytesResponse({ mime: served.mime, size: served.size, body: served.bytes }, { inline: true, range });
 };

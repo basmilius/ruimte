@@ -95,7 +95,7 @@ import { MachineHome } from './fs/machine-home.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerBytesHandlers } from './handlers/bytes.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
-import { readMedia } from './fs/read.ts';
+import { readServedFile } from './fs/read.ts';
 import { serveClient } from './serve-client.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
@@ -807,7 +807,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         {
             attachment: (chatId, id) => chats.attachment(chatId, id),
             projectIcon: (projectId, theme) => projects.iconFile(projectId, theme),
-            media: readMedia
+            file: readServedFile
         },
         machineHome
     );

@@ -56,12 +56,19 @@ describe('the file route', () => {
         expect((await ask('mark.svg')).headers.get('content-type')).toBe('image/svg+xml');
     });
 
-    test('serves nothing but the images, video, sound and PDFs the viewer shows', async () => {
-        await writeFile(join(root, 'notes.md'), '# hello');
+    test('serves nothing but the media and the text the viewer shows', async () => {
         await writeFile(join(root, 'a.out'), Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01]));
-        expect((await ask('notes.md')).status).toBe(404);
         expect((await ask('a.out')).status).toBe(404);
         expect((await ask('nothing.png')).status).toBe(404);
+    });
+
+    test('serves an HTML file as plain text, so it never runs in the origin that asked', async () => {
+        await writeFile(join(root, 'page.html'), '<script>alert(1)</script>');
+        const response = await ask('page.html');
+        expect(response.status).toBe(200);
+        expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+        expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+        expect(await response.text()).toBe('<script>alert(1)</script>');
     });
 
     test('a PDF comes typed and in ranges, so a reader can fetch a page at a time', async () => {

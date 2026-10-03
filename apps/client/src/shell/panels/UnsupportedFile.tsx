@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileQuestion } from 'lucide-react';
-import { FS_READ_MAX_TEXT_BYTES, type FsReadBinary, type FsReadTooLarge } from '@ruimte/contracts';
+import type { FsReadBinary, FsReadTooLarge } from '@ruimte/contracts';
 import { FileTextMenu, FileToolbar } from '@/shell/panels/FileToolbar';
+import { textLimitFor } from '@/shell/panels/large-text';
+import { useEndpointId } from '@/state/keys';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { Button, EmptyState, Icon } from '@basmilius/desktop-ui';
@@ -12,6 +14,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
     const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const transport = useTransport();
+    const endpointId = useEndpointId();
     const reveal = (): void => {
         void transport.request('fs.reveal', { path }).catch(() => undefined);
     };
@@ -30,7 +33,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
                 }
             >
                 {read.kind === 'too-large'
-                    ? t('file.tooLarge', { name, size: formatBytes(read.size), limit: formatBytes(FS_READ_MAX_TEXT_BYTES) })
+                    ? t('file.tooLarge', { name, size: formatBytes(read.size), limit: formatBytes(textLimitFor(endpointId, read)) })
                     : t('file.cannotShow', { name, mime: read.mime, size: formatBytes(read.size) })}
             </EmptyState>
         </FileTextMenu>

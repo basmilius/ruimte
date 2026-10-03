@@ -149,6 +149,7 @@
             "readOnly": "Alleen lezen",
             "outsideProject": "Alleen bestanden in dit project en zijn worktrees kun je bewerken",
             "ruimteState": "Hier bewaart Ruimte zijn eigen staat, die bewerk je niet met de hand",
+            "large": "Groter dan {{size}}, dus platte tekst die je hier niet bewerkt",
             "plain": "Meer dan {{lines}} regels, dus platte tekst die je hier niet bewerkt",
             "touch": "Bewerken vraagt om een muis of een trackpad",
             "zoom": "Zoom in om te bewerken",

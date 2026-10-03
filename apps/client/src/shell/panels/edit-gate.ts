@@ -10,13 +10,15 @@ import { isUnderFolder } from '@/state/fs-watch';
 export const EDIT_MIN_ZOOM = 0.6;
 
 /* Why a file is read only here. Binary files, files too large to read and diffs never reach an editor at all. */
-export type EditBlock = 'outside-project' | 'ruimte-state' | 'plain' | 'touch' | 'zoom';
+export type EditBlock = 'outside-project' | 'ruimte-state' | 'large' | 'plain' | 'touch' | 'zoom';
 
 export interface EditGateInput {
     /* Absolute on the daemon's machine. */
     path: string;
     /* The open project's folder and the worktrees of its repository, where the machine takes a save from this client. */
     roots: readonly string[];
+    /* Past `FS_READ_MAX_TEXT_BYTES`, which a save cannot carry. */
+    large: boolean;
     /* The file is drawn as plain text for its length. */
     plain: boolean;
     /* The primary pointer is a finger, which Monaco does not take. */
@@ -32,13 +34,16 @@ const isInside = (root: string, path: string): boolean => path === root || isUnd
  * The machine stays the authority: a worktree outside its own worktrees folder is offered here and
  * refused there, which the save says.
  */
-export const editBlockOf = ({ path, roots, plain, coarse, zoomedOut }: EditGateInput): EditBlock | null => {
+export const editBlockOf = ({ path, roots, large, plain, coarse, zoomedOut }: EditGateInput): EditBlock | null => {
     const inside = roots.filter((root) => isInside(root, path));
     if (inside.length === 0) {
         return 'outside-project';
     }
     if (inside.some((root) => isInside(`${root}/.ruimte`, path))) {
         return 'ruimte-state';
+    }
+    if (large) {
+        return 'large';
     }
     if (plain) {
         return 'plain';

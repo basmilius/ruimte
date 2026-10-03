@@ -149,6 +149,7 @@
             "readOnly": "Read only",
             "outsideProject": "Only files in this project and its worktrees can be edited",
             "ruimteState": "Ruimte keeps its own state here, so it is not edited by hand",
+            "large": "Over {{size}}, so it is plain text and not edited here",
             "plain": "Over {{lines}} lines, so it is plain text and not edited here",
             "touch": "Editing needs a mouse or a trackpad",
             "zoom": "Zoom in to edit",

@@ -3,7 +3,7 @@ import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
-import { ReadError, languageOf, looksBinary, readFile, readMedia } from './read.ts';
+import { ReadError, languageOf, looksBinary, readFile, readServedFile } from './read.ts';
 import { looksLikeSvg, sniffMime } from './sniff.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
@@ -165,10 +165,10 @@ describe('fs.read', () => {
             'scan.tiff': Buffer.from('II*\x00\x08\x00\x00\x00', 'latin1'),
             'paper.pdf': Buffer.from('%PDF-1.7\n')
         };
-        const mimes = await Promise.all(Object.entries(served).map(async ([name, bytes]) => (await readMedia(await write(name, bytes)))?.mime));
+        const mimes = await Promise.all(Object.entries(served).map(async ([name, bytes]) => (await readServedFile(await write(name, bytes)))?.mime));
         expect(mimes).toEqual(['image/heic', 'image/heif', 'image/avif', 'image/x-icon', 'image/bmp', 'image/tiff', 'application/pdf']);
-        expect(await readMedia(await write('a.out', Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01])))).toBeNull();
-        expect(await readMedia(await write('notes.md', '# hello'))).toBeNull();
+        expect(await readServedFile(await write('a.out', Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01])))).toBeNull();
+        expect(await readServedFile(await write('notes.md', '# hello'))).toMatchObject({ mime: 'text/plain; charset=utf-8', size: 7 });
     });
 
     test('a byte past the sniff that is not UTF-8 makes the file binary, never lossy text', async () => {
@@ -176,9 +176,9 @@ describe('fs.read', () => {
         expect(await readFile(path)).toMatchObject({ kind: 'binary', mime: 'application/octet-stream', size: 9005 });
     });
 
-    test('answers a text file past the cap with its size alone', async () => {
+    test('answers a text file past the cap with its size and mtime, for the bytes to be fetched', async () => {
         const path = await write('huge.txt', 'x'.repeat(FS_READ_MAX_TEXT_BYTES + 1));
-        expect(await readFile(path)).toEqual({ kind: 'too-large', size: FS_READ_MAX_TEXT_BYTES + 1 });
+        expect(await readFile(path)).toEqual({ kind: 'too-large', size: FS_READ_MAX_TEXT_BYTES + 1, mtime: expect.any(Number) });
     });
 
     test('reads a file that sits exactly on the cap', async () => {

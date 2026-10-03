@@ -4,6 +4,7 @@ import { editBlockOf, type EditGateInput } from '@/shell/panels/edit-gate';
 const gate = (patch: Partial<EditGateInput>): EditGateInput => ({
     path: '/repo/src/a.ts',
     roots: ['/repo', '/home/me/.ruimte/worktrees/repo-feature'],
+    large: false,
     plain: false,
     coarse: false,
     zoomedOut: false,
@@ -28,8 +29,9 @@ describe('editBlockOf', () => {
         expect(editBlockOf(gate({ path: '/repo/.ruimteish/a.ts' }))).toBeNull();
     });
 
-    test('refuses a file drawn as plain text, a finger and a node zoomed out', () => {
+    test('refuses a file too large to save, one drawn as plain text, a finger and a node zoomed out', () => {
         expect(editBlockOf(gate({ plain: true }))).toBe('plain');
+        expect(editBlockOf(gate({ large: true, plain: true }))).toBe('large');
         expect(editBlockOf(gate({ coarse: true }))).toBe('touch');
         expect(editBlockOf(gate({ zoomedOut: true }))).toBe('zoom');
     });

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { BYTES_CHUNK_MAX, decodeBytesReply, type ByteResource } from '@ruimte/contracts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { MachineHome } from '../fs/machine-home.ts';
-import { readMedia } from '../fs/read.ts';
+import { readServedFile } from '../fs/read.ts';
 import { registerBytesHandlers } from '../handlers/bytes.ts';
 import { BytesError, readBytes, type ByteSources } from './read-bytes.ts';
 
@@ -21,13 +21,14 @@ beforeAll(async () => {
     picture.set(new TextEncoder().encode('GIF89a'));
     await writeFile(join(folder, 'picture.gif'), picture);
     await writeFile(join(folder, 'notes.txt'), 'not an image');
+    await writeFile(join(folder, 'a.out'), Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01]));
     sources = {
         attachment: (chatId, id) =>
             chatId === 'chat-1' && id === 'a1'
                 ? { id: 'a1', name: 'picture.gif', mime: 'image/gif', size: picture.length, path: join(folder, 'picture.gif') }
                 : null,
         projectIcon: async (projectId) => (projectId === 'p1' ? { path: join(folder, 'picture.gif'), mime: 'image/gif' } : null),
-        media: readMedia
+        file: readServedFile
     };
 });
 
@@ -69,8 +70,14 @@ describe('readBytes', () => {
         expect(piece).toMatchObject({ mime: 'image/gif', size: picture.length, offset: 10 });
     });
 
-    test('a file that is not an image, a video or sound is refused like the route refuses it', async () => {
-        const refused = readBytes(sources, { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 10 });
+    test('text comes as plain text, whatever its name', async () => {
+        const piece = await readBytes(sources, { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 100 });
+        expect(new TextDecoder().decode(piece.bytes)).toBe('not an image');
+        expect(piece.mime).toBe('text/plain; charset=utf-8');
+    });
+
+    test('a binary that is not media is refused like the route refuses it', async () => {
+        const refused = readBytes(sources, { resource: { kind: 'file', path: join(folder, 'a.out') }, offset: 0, length: 10 });
         await expect(refused).rejects.toBeInstanceOf(BytesError);
         await expect(refused).rejects.toMatchObject({ code: 'not-found' });
     });
@@ -108,7 +115,7 @@ describe('readBytes', () => {
         const client: ClientConnection = { id: 'c1', send: (frame) => frames.push(frame) };
         await dispatcher.handle(
             client,
-            JSON.stringify({ id: '1', type: 'bytes.read', payload: { resource: { kind: 'file', path: join(folder, 'notes.txt') }, offset: 0, length: 10 } })
+            JSON.stringify({ id: '1', type: 'bytes.read', payload: { resource: { kind: 'file', path: join(folder, 'a.out') }, offset: 0, length: 10 } })
         );
         expect(frames[0]).toMatchObject({ id: '1', ok: false, error: { code: 'not-found' } });
     });

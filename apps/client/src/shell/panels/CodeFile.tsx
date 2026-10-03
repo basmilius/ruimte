@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { FsReadText } from '@ruimte/contracts';
+import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/editor';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
-import { formatNumber } from '@basmilius/desktop-ui/format';
+import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
 import { Button, ErrorBoundary, Pill, Tooltip } from '@basmilius/desktop-ui';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
 import type { EditBlock } from '@/shell/panels/edit-gate';
@@ -150,6 +150,7 @@ function CodeChunk({ code, lines, start, language, theme, reveal, revealNonce }:
 const BLOCK_LABELS: Record<EditBlock, string> = {
     'outside-project': 'file.edit.outsideProject',
     'ruimte-state': 'file.edit.ruimteState',
+    large: 'file.edit.large',
     plain: 'file.edit.plain',
     touch: 'file.edit.touch',
     zoom: 'file.edit.zoom'
@@ -189,11 +190,14 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
         }
         return { chunks: blocks, lineCount: lines.length };
     }, [read.text]);
-    const plain = lineCount > HIGHLIGHT_MAX_LINES;
+    // Text past what `fs.read` carries came as bytes, and a save of it would not fit `fs.write`.
+    const large = read.size > FS_READ_MAX_TEXT_BYTES;
+    const plain = large || lineCount > HIGHLIGHT_MAX_LINES;
     const language = plain ? null : (read.language ?? 'text');
-    const editing = useFileEditing(path, read, plain);
+    const editing = useFileEditing(path, read, plain, large);
     const disk = useMemo(() => ({ text: read.text, mtime: read.mtime }), [read]);
-    const readOnlyReason = editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES) });
+    const readOnlyReason =
+        editing.block === null ? null : t(BLOCK_LABELS[editing.block], { lines: formatNumber(HIGHLIGHT_MAX_LINES), size: formatBytes(FS_READ_MAX_TEXT_BYTES) });
     const [editor, setEditor] = useState<Editor | null>(null);
     const surface = useRef<HTMLDivElement>(null);
     // Only the editor can be searched; the viewer that stands in while it loads, and for a finger, cannot.
