@@ -350,6 +350,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var statusBottomConstraint: NSLayoutConstraint?
     private var viewportInsets = UIEdgeInsets.zero
     private var reportedViewportHeight: CGFloat = 0
+    private var fullHeightConstraint: NSLayoutConstraint!
+    private var keyboardHeightConstraint: NSLayoutConstraint!
     private var loggedLayout = ""
 
     override func loadView() {
@@ -390,11 +392,13 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         view.addSubview(collection)
         setContentScrollView(collection, for: .top)
         view.keyboardLayoutGuide.usesBottomSafeArea = false
+        fullHeightConstraint = collection.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        keyboardHeightConstraint = collection.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor)
         NSLayoutConstraint.activate([
             collection.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collection.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collection.topAnchor.constraint(equalTo: view.topAnchor),
-            collection.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            fullHeightConstraint,
         ])
         let registration = UICollectionView.CellRegistration<ChatHostingCell, String> {
             [weak self] cell, _, id in
@@ -495,6 +499,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             composerFade = nil
             composerFadeTop = nil
             composerAboveHome = nil
+            keyboardHeightConstraint.isActive = false
+            fullHeightConstraint.isActive = true
             view.keyboardLayoutGuide.keyboardDismissPadding = 0
             return
         }
@@ -504,15 +510,13 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             let host = addHost(content)
             composerHost = host
             chatPresentationLog.notice("composer host added")
-            // The timeline keeps its full height and the composer's cover becomes its inset: the keyboard guide reports
-            // a zero frame for a layout pass when a menu opens or the content changes (iOS 27), and a timeline bound to
-            // it collapsed to nothing.
+            // One UIKit layout owns both frames, including interactive keyboard movement.
+            fullHeightConstraint.isActive = false
+            keyboardHeightConstraint.isActive = true
             // On the keyboard while it is up, and half the home indicator's area up while it is down, which sits the
             // pills close to the edge without meeting its corners. The timeline keeps running behind the composer.
             let onKeyboard = host.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor)
             onKeyboard.priority = .defaultHigh
-            let belowKeyboard = host.view.bottomAnchor.constraint(lessThanOrEqualTo: view.keyboardLayoutGuide.topAnchor)
-            belowKeyboard.priority = .required - 1
             let aboveHome = host.view.bottomAnchor.constraint(
                 lessThanOrEqualTo: view.bottomAnchor, constant: -view.safeAreaInsets.bottom / 2)
             composerAboveHome = aboveHome
@@ -524,8 +528,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             NSLayoutConstraint.activate([
                 host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                belowKeyboard, aboveHome, onKeyboard,
-                host.view.topAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.topAnchor),
+                host.view.bottomAnchor.constraint(lessThanOrEqualTo: view.keyboardLayoutGuide.topAnchor),
+                aboveHome, onKeyboard,
                 fade.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 fade.trailingAnchor.constraint(equalTo: view.trailingAnchor),
                 fadeTop,
@@ -619,13 +623,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateViewportInsets()
-        if let composerHost {
-            // The composer's own height over the keyboard; a zero guide frame on a passing layout leaves it as it was.
-            let keyboardTop = view.keyboardLayoutGuide.layoutFrame.minY
-            let padding = max(0, keyboardTop - composerHost.view.frame.minY)
-            if keyboardTop >= view.safeAreaInsets.top, view.keyboardLayoutGuide.keyboardDismissPadding != padding {
-                view.keyboardLayoutGuide.keyboardDismissPadding = padding
-            }
+        if let composerCover, view.keyboardLayoutGuide.keyboardDismissPadding != composerCover {
+            view.keyboardLayoutGuide.keyboardDismissPadding = composerCover
         }
         let height = max(0, collection.bounds.height - viewportInsets.top)
         if height != reportedViewportHeight {
