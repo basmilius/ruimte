@@ -19,10 +19,14 @@ struct WorkspacePage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
-            if workspace.ready {
-                if isSidebar { projectTabs } else { viewList(query: "") }
+            if isSidebar {
+                if workspace.ready { projectTabs } else { openingStatus }
             } else {
-                openingStatus
+                // The list stands from the first frame of the push. Swapping it in for the status once the project
+                // opened, as the push settles, made the bar drop its items for a moment and bring them back.
+                viewList(query: "").overlay {
+                    if !workspace.ready { openingStatus }
+                }
             }
         }
         .modifier(MobilePageSurface())
@@ -404,7 +408,7 @@ struct WorkspacePage: View {
         }
         .modifier(MobileSidebarList(minimumRowHeight: 0))
         .overlay {
-            if workspace.isScratch && query.isEmpty && sections.isEmpty {
+            if workspace.ready && workspace.isScratch && query.isEmpty && sections.isEmpty {
                 ContentUnavailableView {
                     Label("No chats yet", lucideIcon: "messages-square", iconSize: 48)
                 } actions: {
