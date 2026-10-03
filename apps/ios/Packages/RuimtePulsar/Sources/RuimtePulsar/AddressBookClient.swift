@@ -20,7 +20,13 @@ public protocol SessionAPI: Sendable {
     func endSession(accessToken: String) async throws
 }
 
-public struct AddressBookClient: SessionAPI, NativeAppleAPI, Sendable {
+/// The account as the address book holds it now, and deleting it.
+public protocol AccountAPI: Sendable {
+    func account(accessToken: String) async throws -> AccountResult
+    func deleteAccount(accessToken: String, payload: AccountDeletePayload) async throws
+}
+
+public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendable {
     public typealias Fetch = @Sendable (URLRequest) async throws -> (Data, HTTPURLResponse)
     public let baseURL: URL
     private let fetch: Fetch
@@ -68,6 +74,15 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, Sendable {
 
     public func endSession(accessToken: String) async throws {
         _ = try await response("DELETE", path: "/v1/session", token: accessToken)
+    }
+
+    public func account(accessToken: String) async throws -> AccountResult {
+        try await call("GET", path: "/v1/account", token: accessToken)
+    }
+
+    /// Answers nothing on success. `confirmation-mismatch` and `apple-revocation-failed` delete nothing.
+    public func deleteAccount(accessToken: String, payload: AccountDeletePayload) async throws {
+        _ = try await response("DELETE", path: "/v1/account", token: accessToken, body: JSONEncoder().encode(payload))
     }
 
     public func providers() async throws -> [String] {

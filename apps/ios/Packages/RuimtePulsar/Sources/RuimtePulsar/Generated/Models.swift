@@ -18,6 +18,7 @@ public enum WireConstants {
     public static let directPingTickMs: Double = 1000
     public static let addressBookURL: String = "https://pulsar.ruimte.app"
     public static let appRedirectURI: String = "ruimte://pulsar/callback"
+    public static let accountDeleteWord: String = "DELETE"
     public static let statementPublicKeys: [String] = ["8Z2XUxof6KwRqMW-QjvpONNclpj_5bn811INsr_Lb9k"]
 }
 

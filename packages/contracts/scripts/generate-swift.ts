@@ -230,6 +230,7 @@ const constants = {
     directPingTickMs: liveness.DIRECT_PING_TICK_MS,
     addressBookURL: address.ADDRESS_BOOK_URL,
     appRedirectURI: address.APP_REDIRECT_SCHEME_URI,
+    accountDeleteWord: address.ACCOUNT_DELETE_WORD,
     statementPublicKeys: PULSAR_STATEMENT_PUBLIC_KEYS
 };
 const constantSource = Object.entries(constants)

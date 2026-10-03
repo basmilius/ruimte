@@ -127,7 +127,28 @@ final class NativeAppleSignIn {
 
         public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor { anchor }
 
+        /// A fresh authorization code of the Apple ID, which the address book trades to revoke Sign in with Apple
+        /// when the account goes. It lives five minutes, so it is asked for right before the deletion.
+        public func authorizationCode() async throws -> String {
+            let credential = try await present { _ in }
+            guard let data = credential.authorizationCode, let code = String(data: data, encoding: .utf8),
+                !code.isEmpty
+            else { throw NativeAppleLoginError.invalidCredential }
+            return code
+        }
+
         private func authorize(_ challenge: NativeAppleStartResult) async throws -> NativeAppleCredential {
+            try await present { request in
+                request.requestedScopes = [.fullName]
+                request.state = challenge.attempt
+                // The server checks this literal nonce against Apple's signed identity token.
+                request.nonce = challenge.nonce
+            }
+        }
+
+        private func present(_ configure: (ASAuthorizationAppleIDRequest) -> Void) async throws
+            -> NativeAppleCredential
+        {
             cancelPresentation()
             let identifier = UUID()
             return try await withTaskCancellationHandler {
@@ -136,10 +157,7 @@ final class NativeAppleSignIn {
                     presentationID = identifier
                     pending = continuation
                     let request = ASAuthorizationAppleIDProvider().createRequest()
-                    request.requestedScopes = [.fullName]
-                    request.state = challenge.attempt
-                    // The server checks this literal nonce against Apple's signed identity token.
-                    request.nonce = challenge.nonce
+                    configure(request)
                     let controller = ASAuthorizationController(authorizationRequests: [request])
                     self.controller = controller
                     controller.delegate = self
