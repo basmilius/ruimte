@@ -15,7 +15,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Separators group the view list into sections; rows show the name and the Lucide mark the desktop gives them.
   Projects use native grouped lists with a separate recently closed page. Custom image icons,
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
-  A cold start opens on Now; an iPad puts the project you left open back in its sidebar. An empty canvas offers tiles for the installed agents from `provider.list`
+  A cold start opens on Now, on an iPad as well. An empty canvas offers tiles for the installed agents from `provider.list`
   and for each kind of node, an empty drawing says so until its first element, and an empty diagram asks an
   agent to draw it.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
@@ -241,29 +241,31 @@ project under its title.
 
 ## The iPad
 
-The iPad keeps the iPhone's pages and none of its tabs (`PadHome`, `PadRouter`). Its sidebar is always the open
-project's, as on the desktop, and floats as glass beside the content. At the top the project switcher names the
-project and its machine; a tap lists every open project per machine with its Chats, then All projects, Machines, Open
-a folder and Recently closed, and the project's own Project settings and Usage. Under it Search (⌘K, bound once on
-the window, opens the palette as a sheet), Now with its count and the first three that need you from any project,
-then the project's views and the running nodes under a canvas, and New view at the foot, as a popover. A cold start
-opens on Now with the last project back in the sidebar (`LastProject`). Opening a view of another project, from Now,
-the palette, a notification or the widget, puts that project in the sidebar.
+The iPad keeps the iPhone's pages and none of its tabs (`PadHome`, `PadRouter`). Its sidebar is a split view
+column with the Ruimte mark and the avatar into Settings at the top, then Now with its count and Machines, then the
+open projects per machine with how the machine is reached, each project's counts and branch, the machine's Chats, New
+chat and Recently closed, as the iPhone's Projects tab lists them (`PadSidebar`, `ProjectsPage`). Search (⌘K, bound
+once on the window) opens the palette as a sheet. Opening a project, from the sidebar, Now, the palette, a
+notification or the widget, pushes it in the sidebar with its name, its views and the running nodes under a canvas;
+its bar holds the project menu (Processes, Usage, Project settings) and the plus, which adds a view as a popover. Its
+back button closes the project and the content returns to Now. A cold start opens on Now with the projects in the
+sidebar.
 
 - The content column shows Now (`PadNowPage`: the cards in two columns, Working and Finished side by side), the
-  project's view, All projects (the project cards per machine with their counts), Machines or Recently closed. Each
-  has a stack of its own, so a page pushed in one never outlives a switch.
-- A view can stand in a second cell beside the first, as in the desktop's split grid: drag its row onto the content
-  or pick Open beside in its menu. Each chat cell has its own composer, and a fork opens in the next cell.
+  project's view, Machines or Recently closed. Each has a stack of its own, so a page pushed in one never outlives a
+  switch. One view stands in it at a time; a fork opens over its chat, as on an iPhone.
 - Its bar holds New chat (in this project or in Chats, as a popover), the launches as a popover from the play
-  button, Search, and Files and Git, which stand as an inspector beside the content. A file the files inspector
-  opens shows in the content column, its row marked.
-- A sub-agent opens as an inspector beside its chat, with its conversation and Stop; Open as view gives it the first
-  cell, on this iPad only.
+  button, Search, and Files and Git, which stand as an inspector beside the content. A folder, a file, a diff, a
+  commit, the branches or a conflict opened there is pushed inside the inspector; only Open as view puts something
+  in the content.
+- A sub-agent opens as an inspector beside its chat, with its conversation and Stop; Open as view shows it in the
+  content, on this iPad only.
+- Every inspector draws a hairline on its edge against the content, an alpha of the text color (`InspectorEdge`).
 - Machines are the list and the machine picked side by side; its Machine settings is one form sheet with the name,
   the icon and the apps with access. Processes is a table sorted by any column, with the signals in a row's menu
   and a warning's actions above it. Devices are a grid, a running one with its live preview.
-- When the project's machine stops answering, its card stands in the content and the sidebar stays usable.
+- When the project's machine stops answering, its card stands in the content and the sidebar stays usable; Other
+  project closes the project, back to the list.
 - Settings, pairing, Project settings and Compare models are form sheets; Run settings is a popover over the
   composer.
 
@@ -759,7 +761,7 @@ Notification callbacks are installed in the app delegate before launch finishes.
 received before account restoration are queued, and UIKit completion handlers run on the
 main thread. On an iPhone a notification switches to Now and opens its chat or terminal in the project that holds
 it, found with `project.sidebar`, so the prompt waits in the composer; a node no open project holds opens on its own.
-A machine's overview opens Now. On an iPad it opens in the content column, with its project in the sidebar.
+A machine's overview opens Now. On an iPad it opens in the content column.
 
 An approval notification offers Allow and Deny, and Always allow as well where the push's choices carry `remember`.
 A push never carries a question's choices, so a question opens its chat.
