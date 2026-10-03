@@ -2,37 +2,36 @@ import RuimtePulsar
 import SwiftUI
 import UIKit
 
+/// The two ways in: an account through one of the providers, or a pairing link straight to a computer.
 struct WelcomePage: View {
     @Bindable var runtime: AppRuntime
     let window: UIWindow?
     let pair: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-    @ScaledMetric(relativeTo: .body) private var buttonHeight = 54
-    // Large Title is the biggest text style, so one step above it (34 pt) scales along with it instead.
-    @ScaledMetric(relativeTo: .largeTitle) private var taglineSize = 40
+    /// Called as a person takes either way in, before it starts.
+    var begin: () -> Void = {}
     @State private var retrying = false
+    @State private var chosen: ProviderId?
+
+    private static let iconSize: CGFloat = 104
+    private static let orbitCenter: CGFloat = 340
 
     private var busy: Bool { runtime.loading || runtime.signingIn || runtime.signingOut || retrying }
 
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 36) {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 72)
                     introduction
-                    VStack(spacing: 24) {
+                    Spacer(minLength: 48)
+                    VStack(spacing: 12) {
                         signInOptions
                         pairingOption
                     }
-                    Text("Projects and sessions stay on your computer.")
-                        .font(.footnote)
-                        .foregroundStyle(MobileStyle.muted)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: 420)
-                .frame(maxWidth: .infinity, minHeight: max(0, geometry.size.height - 64))
-                .padding(.horizontal, 24)
-                .padding(.vertical, 32)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                .padding(.horizontal, 20)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
@@ -51,86 +50,76 @@ struct WelcomePage: View {
     }
 
     private var introduction: some View {
-        VStack(spacing: 28) {
-            VStack(spacing: 12) {
-                Image(uiImage: UIImage(named: "RuimteLogo")?.withRenderingMode(.alwaysOriginal) ?? UIImage())
-                    .renderingMode(.original)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 144, height: 144)
-                    .accessibilityHidden(true)
-                Text("Ruimte")
-                    .font(.title3.weight(.semibold))
-            }
-            VStack(spacing: 14) {
-                Text("Space for AI Engineering.")
-                    .font(.system(size: taglineSize, weight: .bold))
-                    .accessibilityAddTraits(.isHeader)
-                Text("Pick up your projects and check in on your agents.")
-                    .font(.body)
-                    .foregroundStyle(MobileStyle.muted)
-            }
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(spacing: 8) {
+            AppIconImage(size: Self.iconSize)
+            Text("Ruimte")
+                .font(.largeTitle.weight(.bold))
+                .padding(.top, 20)
+                .accessibilityAddTraits(.isHeader)
+            Text("Space for AI Engineering.")
+                .font(.body)
+                .foregroundStyle(MobileStyle.text.opacity(0.8))
+            Text("Pick up your projects and check in on your agents.")
+                .font(.subheadline)
+                .foregroundStyle(MobileStyle.muted)
+                .padding(.top, 20)
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(alignment: .top) {
+            IconOrbit(center: Self.orbitCenter, diameters: [190, 310, 450, 620], glow: 440)
+                .frame(width: 2 * Self.orbitCenter + 100, height: 2 * Self.orbitCenter)
+                .offset(y: Self.iconSize / 2 - Self.orbitCenter)
         }
     }
 
-    private var signInOptions: some View {
-        VStack(spacing: 12) {
-            if runtime.loading || retrying {
-                MobileLoadingRow("Loading sign-in options")
-                    .frame(maxWidth: .infinity, minHeight: buttonHeight)
-            } else {
-                if runtime.providers.contains(.apple) {
-                    ProviderAccountButton(provider: .apple, enabled: !busy && window != nil) {
-                        signIn(.apple)
-                    }
-                }
-                if runtime.providers.contains(.github) {
-                    ProviderAccountButton(provider: .github, enabled: !busy && window != nil) {
-                        signIn(.github)
-                    }
-                }
-                if runtime.providers.isEmpty {
-                    Text("Account sign-in is unavailable right now.")
-                        .font(.subheadline)
-                        .foregroundStyle(MobileStyle.muted)
-                        .multilineTextAlignment(.center)
-                    Button("Try again", action: retry)
-                        .frame(minHeight: 44)
-                        .disabled(busy)
+    @ViewBuilder private var signInOptions: some View {
+        if runtime.loading || retrying {
+            MobileLoadingRow("Loading sign-in options")
+                .frame(maxWidth: .infinity, minHeight: 56)
+        } else if runtime.providers.isEmpty {
+            VStack(spacing: 4) {
+                Text("Account sign-in is unavailable right now.")
+                    .font(.subheadline)
+                    .foregroundStyle(MobileStyle.muted)
+                    .multilineTextAlignment(.center)
+                Button("Try again", action: retry)
+                    .frame(minHeight: 44)
+                    .disabled(busy)
+            }
+        } else {
+            ForEach([ProviderId.apple, .github].filter(runtime.providers.contains), id: \.rawValue) { provider in
+                ProviderAccountButton(
+                    provider: provider, signingIn: runtime.signingIn && chosen == provider,
+                    enabled: !busy && window != nil
+                ) {
+                    signIn(provider)
                 }
             }
         }
     }
 
     private var pairingOption: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 16) {
-                Rectangle().fill(MobileStyle.border).frame(height: 1)
-                Text("or").font(.footnote).foregroundStyle(MobileStyle.muted)
-                Rectangle().fill(MobileStyle.border).frame(height: 1)
-            }
-            .padding(.bottom, 8)
-            Button(action: pair) {
-                Label("Use a pairing link", lucideIcon: "link")
-                    .font(.body.weight(.medium))
-                    .frame(maxWidth: .infinity, minHeight: buttonHeight)
-                    .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 12))
-                    .contentShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(WelcomeActionStyle())
-            .foregroundStyle(MobileStyle.accent)
-            .disabled(runtime.signingIn || runtime.signingOut)
-            Text("Connect directly to your computer.")
-                .font(.footnote)
-                .foregroundStyle(MobileStyle.muted)
-                .multilineTextAlignment(.center)
+        Button {
+            begin()
+            pair()
+        } label: {
+            Label("Connect directly to your computer", lucideIcon: "link", iconSize: 15)
+                .font(.subheadline)
+                .foregroundStyle(MobileStyle.text.opacity(0.8))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(.rect)
         }
+        .buttonStyle(WelcomeActionStyle())
+        .disabled(runtime.signingIn || runtime.signingOut)
+        .padding(.bottom, 8)
+        .accessibilityIdentifier("welcome.pair")
     }
 
     private func signIn(_ provider: ProviderId) {
         guard let window, !busy else { return }
+        begin()
+        chosen = provider
         Task { await runtime.signIn(provider, window: window) }
     }
 
@@ -161,34 +150,44 @@ private struct WelcomeActionStyle: ButtonStyle {
     }
 }
 
+/// Apple's button is solid, as its guidelines ask; GitHub's is glass beside it.
 private struct ProviderAccountButton: View {
     let provider: ProviderId
+    let signingIn: Bool
     let enabled: Bool
     let action: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    @ScaledMetric(relativeTo: .body) private var visualHeight = 44
-    @ScaledMetric(relativeTo: .body) private var logoSpacing = 10
-    @ScaledMetric(relativeTo: .body) private var logoSize = 24
+    @ScaledMetric(relativeTo: .body) private var height = 56
+    @ScaledMetric(relativeTo: .body) private var logoSize = 19
 
-    private var buttonFill: Color { colorScheme == .dark ? .white : .black }
-    private var buttonText: Color { colorScheme == .dark ? .black : .white }
-    private var title: String { provider == .apple ? "Sign in with Apple" : "Sign in with GitHub" }
+    private var apple: Bool { provider == .apple }
+    private var title: String { apple ? "Continue with Apple" : "Continue with GitHub" }
+    private var solidFill: Color { colorScheme == .dark ? .white : .black }
+    private var solidText: Color { colorScheme == .dark ? .black : .white }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: logoSpacing) {
-                // Reuse the provider marks from the desktop sign-in buttons.
-                Image(provider == .apple ? "AppleMark" : "GitHubMark")
-                    .renderingMode(.template).resizable().scaledToFit()
-                    .frame(width: logoSize, height: logoSize)
-                    .accessibilityHidden(true)
-                Text(title).font(.body.weight(.medium))
+            HStack(spacing: 10) {
+                if signingIn {
+                    ProgressView().tint(apple ? solidText : MobileStyle.text)
+                } else {
+                    // The provider marks of the desktop's sign-in buttons.
+                    Image(apple ? "AppleMark" : "GitHubMark")
+                        .renderingMode(.template).resizable().scaledToFit()
+                        .frame(width: logoSize, height: logoSize)
+                        .accessibilityHidden(true)
+                }
+                Text(title).font(.body.weight(.semibold))
             }
-            .foregroundStyle(buttonText)
-            .frame(maxWidth: .infinity, minHeight: visualHeight)
-            .background(buttonFill, in: RoundedRectangle(cornerRadius: 12))
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
+            .foregroundStyle(apple ? solidText : MobileStyle.text)
+            .frame(maxWidth: .infinity, minHeight: height)
+            .background {
+                if apple {
+                    Capsule().fill(solidFill)
+                }
+            }
+            .glassEffect(apple ? .identity : .regular.interactive(), in: .capsule)
+            .contentShape(.capsule)
         }
         .buttonStyle(WelcomeActionStyle())
         .disabled(!enabled)
