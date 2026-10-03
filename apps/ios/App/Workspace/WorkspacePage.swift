@@ -5,18 +5,42 @@ struct WorkspacePage: View {
     @Bindable var navigation: WorkspaceNavigation
     var isSidebar = false
     var settingsLink: SettingsLink?
+    /// The branch line under the title on an iPhone.
+    var gitLines: ProjectGitLines?
+    /// What the iPhone's card for a machine that does not answer opens its diagnostics with.
+    var runtime: AppRuntime?
     private var workspace: MobileWorkspace { navigation.workspace }
+    @State private var showDiagnostics = false
+    @Environment(\.dismiss) private var dismiss
     @State private var iconView: JSONValue?
+    @State private var settingsView: JSONValue?
     @State private var renamed: JSONValue?
     @State private var renameText = ""
     @State private var deleteView: ViewDeletion?
     @State private var search = ""
     @State private var searching = false
     @State private var showProcesses = false
-    @State private var showLaunches = false
-    @State private var showFiles = false
-    @State private var showGit = false
+    @State private var forkProblem: String?
+    @State private var listState: ProjectListState
+    @State private var newView: NewViewResult?
+    /// A view New view made that opens once its settings asked what it shows.
+    @State private var openAfterSettings: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(
+        navigation: WorkspaceNavigation, isSidebar: Bool = false, settingsLink: SettingsLink? = nil,
+        gitLines: ProjectGitLines? = nil, runtime: AppRuntime? = nil
+    ) {
+        _navigation = Bindable(navigation)
+        self.isSidebar = isSidebar
+        self.settingsLink = settingsLink
+        self.gitLines = gitLines
+        self.runtime = runtime
+        _listState = State(
+            initialValue: ProjectListState(
+                machineID: navigation.workspace.session.machine.id, projectID: navigation.workspace.projectID))
+    }
+
     var body: some View {
         Group {
             if isSidebar {
@@ -24,15 +48,34 @@ struct WorkspacePage: View {
             } else {
                 // The list stands from the first frame of the push. Swapping it in for the status once the project
                 // opened, as the push settles, made the bar drop its items for a moment and bring them back.
-                viewList(query: "").overlay {
-                    if !workspace.ready { openingStatus }
+                PhoneProjectList(
+                    workspace: workspace, state: listState, views: listedViews,
+                    selectedID: navigation.selectedViewID, open: openView, act: act
+                )
+                .opacity(machineLost ? 0.3 : 1)
+                .allowsHitTesting(!machineLost)
+                .overlay {
+                    if machineLost {
+                        EmptyView()
+                    } else if !workspace.ready {
+                        openingStatus
+                    } else if workspace.isScratch && listedViews.isEmpty {
+                        noChats
+                    }
                 }
             }
         }
         .modifier(MobilePageSurface())
+        .overlay(alignment: .bottom) {
+            if !isSidebar && machineLost {
+                MachineLostCard(
+                    session: workspace.session, diagnostics: runtime == nil ? nil : { showDiagnostics = true },
+                    otherProject: { dismiss() })
+            }
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                if workspace.ready && !workspace.session.connected {
+                if isSidebar && workspace.ready && !workspace.session.connected {
                     HStack {
                         if workspace.session.failedAttempts >= 3 {
                             Text("Could not reconnect to your machine.").font(.caption)
@@ -65,14 +108,31 @@ struct WorkspacePage: View {
             }
         }
         .navigationTitle(isSidebar ? "" : workspace.title)
-        .modifier(PhoneSubtitle(text: isSidebar ? nil : workspace.session.machine.name))
+        .modifier(PhoneSubtitle(text: isSidebar ? nil : phoneSubtitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isSidebar { tabletToolbar } else { phoneToolbar }
         }
         .navigationDestination(item: $navigation.openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
-        .task(id: workspace.ready) { await openPendingView() }
+        .task(id: workspace.ready) {
+            await openPendingView()
+            await makePendingKind()
+        }
+        .task(id: workspace.ready) {
+            guard !isSidebar, workspace.ready, !workspace.isScratch, let gitLines else { return }
+            await gitLines.refresh(
+                UnifiedProjectRow.ID(machineID: workspace.session.machine.id, projectID: workspace.projectID),
+                folder: workspace.folder, client: workspace.client)
+        }
+        .alert(
+            "Could not fork", isPresented: Binding(get: { forkProblem != nil }, set: { if !$0 { forkProblem = nil } }),
+            presenting: forkProblem
+        ) { _ in
+            Button("OK", role: .cancel) { forkProblem = nil }
+        } message: { problem in
+            Text(problem)
+        }
         .mobileSheet(isPresented: $navigation.newChat) {
             NewChatSheet(session: workspace.session) { place in
                 guard place.projectID == workspace.projectID else { return }
@@ -83,7 +143,41 @@ struct WorkspacePage: View {
         .mobileSheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
             if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
         }
-        .mobileSheet(isPresented: $navigation.adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
+        .mobileSheet(
+            isPresented: Binding(get: { settingsView != nil }, set: { if !$0 { settingsView = nil } }),
+            onDismiss: {
+                if let id = openAfterSettings { openView(id) }
+                openAfterSettings = nil
+            }
+        ) {
+            if let item = settingsView { ViewSettingsSheet(workspace: workspace, item: item) }
+        }
+        .mobileSheet(isPresented: $navigation.adding, onDismiss: afterNewView) {
+            if isSidebar {
+                AddProjectItem(workspace: workspace, canvasID: nil)
+            } else {
+                NewViewSheet(workspace: workspace) { newView = $0 }
+            }
+        }
+        .mobileSheet(isPresented: $navigation.showingSettings) {
+            ProjectSettingsPage(workspace: workspace) {
+                navigation.showingSettings = false
+                navigation.showingLaunches = true
+            } closed: {
+                navigation.showingSettings = false
+                dismiss()
+            }
+        }
+        .mobileSheet(isPresented: $showDiagnostics) {
+            if let runtime {
+                NavigationStack {
+                    ConnectionScreen(runtime: runtime)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) { Button("Done") { showDiagnostics = false } }
+                        }
+                }
+            }
+        }
         .mobileSheet(isPresented: $navigation.showingUsage) {
             NavigationStack {
                 MachineUsagePage(client: workspace.client)
@@ -94,31 +188,38 @@ struct WorkspacePage: View {
                     }
             }
         }
-        .mobileSheet(isPresented: $showFiles) {
+        .mobileSheet(isPresented: $navigation.showingFiles) {
             NavigationStack {
                 ProjectFilesPage(workspace: workspace) { id in
-                    showFiles = false
+                    navigation.showingFiles = false
                     openView(id)
                 }
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showFiles = false } }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { navigation.showingFiles = false }
+                        }
                     }
             }
         }
-        .mobileSheet(isPresented: $showGit) {
+        .mobileSheet(isPresented: $navigation.showingGit) {
             NavigationStack {
                 GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showGit = false } }
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { navigation.showingGit = false } }
                     }
             }
         }
-        .mobileSheet(isPresented: $showLaunches) {
+        .mobileSheet(isPresented: $navigation.showingLaunches) {
             NavigationStack {
-                LaunchesPage(client: workspace.client, projectID: workspace.projectID, folder: workspace.folder)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showLaunches = false } }
+                LaunchesPage(
+                    client: workspace.client, projectID: workspace.projectID, folder: workspace.folder,
+                    projectName: workspace.title
+                )
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(role: .close) { navigation.showingLaunches = false }
                     }
+                }
             }
         }
         .mobileSheet(isPresented: $showProcesses) {
@@ -129,7 +230,10 @@ struct WorkspacePage: View {
                     }
             }
         }
-        .alert("Rename view", isPresented: Binding(get: { renamed != nil }, set: { if !$0 { renamed = nil } })) {
+        .alert(
+            renamed?.text("kind") == "subheader" ? "Name the heading" : "Rename view",
+            isPresented: Binding(get: { renamed != nil }, set: { if !$0 { renamed = nil } })
+        ) {
             TextField("Name", text: $renameText)
             Button("Save") {
                 guard let id = renamed?.stableID, !renameText.isEmpty else { return }
@@ -174,10 +278,22 @@ struct WorkspacePage: View {
         }
     }
 
-    /// The project's menu beside the avatar, so Settings is one tap away here too. The Chats project's folder is the
-    /// machine's own, so its menu holds New chat and Usage only. Its entries wait for the project, not the item, so the
-    /// item stays the same through a push the project opens during.
+    /// Files and Git, then the project's menu, beside the avatar, so Settings is one tap away here too. The Chats
+    /// project's folder is the machine's own, so it has neither and its menu holds New chat and Usage only. The items
+    /// wait for the project, not the other way round, so they stay the same through a push the project opens during.
     @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
+        if !workspace.isScratch {
+            ToolbarItem(id: "project.files", placement: .topBarTrailing) {
+                Button("Files", lucideIcon: "folder") { navigation.showingFiles = true }
+                    .disabled(!workspace.ready)
+                    .accessibilityIdentifier("project.files")
+            }
+            ToolbarItem(id: "project.git", placement: .topBarTrailing) {
+                Button("Git", lucideIcon: "git-branch") { navigation.showingGit = true }
+                    .disabled(!workspace.ready)
+                    .accessibilityIdentifier("project.git")
+            }
+        }
         ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
             Menu {
                 Section {
@@ -190,13 +306,17 @@ struct WorkspacePage: View {
                 .disabled(!workspace.ready)
                 Section {
                     if !workspace.isScratch {
-                        Button("Files", lucideIcon: "folder") { showFiles = true }
-                        Button("Git", lucideIcon: "git-branch") { showGit = true }
-                        Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                        Button("Launches", lucideIcon: "play") { navigation.showingLaunches = true }
                     }
                     Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
                 }
                 .disabled(!workspace.ready)
+                if !workspace.isScratch {
+                    Section {
+                        Button("Project settings", lucideIcon: "settings-2") { navigation.showingSettings = true }
+                    }
+                    .disabled(!workspace.ready)
+                }
             } label: {
                 Image(lucide: "ellipsis")
             }
@@ -213,7 +333,7 @@ struct WorkspacePage: View {
             Menu {
                 // The Chats project's folder is the machine's own, so it has no launches.
                 if !workspace.isScratch {
-                    Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                    Button("Launches", lucideIcon: "rocket") { navigation.showingLaunches = true }
                 }
                 Button("Processes", lucideIcon: "activity") { showProcesses = true }
                 Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
@@ -309,12 +429,110 @@ struct WorkspacePage: View {
             }
     }
 
+    /// A view, or on an iPhone a node its canvas lists, which opens on its own over the list.
     @ViewBuilder private func viewDestination(_ id: String) -> some View {
-        if let item = workspace.views.first(where: { $0.stableID == id }) {
+        if let item = workspace.item(id) {
             ProjectItemPage(workspace: workspace, item: item).id(id)
         } else {
             ContentUnavailableView("This view was removed", lucideIcon: "square-x")
         }
+    }
+
+    private var noChats: some View {
+        ContentUnavailableView {
+            Label("No chats yet", lucideIcon: "messages-square", iconSize: 48)
+        } actions: {
+            Button("New chat") { navigation.newChat = true }.disabled(!workspace.session.connected)
+        }
+    }
+
+    /// The machine and, once git answered, the branch with what changed on it.
+    private var phoneSubtitle: String {
+        let id = UnifiedProjectRow.ID(machineID: workspace.session.machine.id, projectID: workspace.projectID)
+        return [workspace.session.machine.name, gitLines?.line(id)?.text].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private var machineLost: Bool {
+        MachineLost.isLost(
+            connected: workspace.session.connected, failedAttempts: workspace.session.failedAttempts,
+            problem: workspace.session.problem)
+    }
+
+    private func act(_ action: ProjectRowAction, on item: JSONValue) {
+        switch action {
+        case .rename:
+            renameText = item.text("name")
+            renamed = item
+        case .icon: iconView = item
+        case .settings: settingsView = item
+        case .fork: Task { await fork(item) }
+        case .snooze: break
+        case .stopTurn:
+            Task {
+                do {
+                    _ = try await workspace.client.request(
+                        "chat.cancel", payload: .object(["chatId": .string(item.stableID)]))
+                } catch {
+                    workspace.problem = error.localizedDescription
+                }
+            }
+        case .delete:
+            Task {
+                let question = await SessionEnding.question(for: item, client: workspace.client)
+                deleteView = ViewDeletion(item: item, question: question)
+            }
+        }
+    }
+
+    /// Opens the chat with the fork sheet up for its last turn that ended, as the desktop's Fork in a row's menu does.
+    /// The chat's own screen takes the shared model over, sheet and all.
+    private func fork(_ item: JSONValue) async {
+        let id = item.stableID
+        do {
+            try await workspace.ensureSession(item)
+        } catch {
+            forkProblem = error.localizedDescription
+            return
+        }
+        let session = workspace.session
+        let model = session.retainChat(ChatModel(client: workspace.client, chatID: id, machineID: session.machine.id))
+        defer { session.releaseChat(model) }
+        var waited = 0
+        while (model.loading || model.info == .null) && model.error == nil && waited < 50 {
+            try? await Task.sleep(for: .milliseconds(100))
+            waited += 1
+        }
+        guard let turnID = model.presentation.lastSettledTurnID else {
+            forkProblem = model.error ?? "This chat has no turn that ended yet, so there is nothing to fork."
+            return
+        }
+        model.presentation.forkRequest = ChatForkRequest(turnID: turnID)
+        openView(id)
+    }
+
+    /// What New view made, once its sheet is gone: open the view, ask a heading for its words, or pick a file.
+    private func afterNewView() {
+        guard let made = newView else { return }
+        newView = nil
+        switch made {
+        case .view(let id): openView(id)
+        case .ask(let item):
+            openAfterSettings = item.stableID
+            settingsView = item
+        case .heading(let item):
+            renameText = ""
+            renamed = item
+        case .file: navigation.showingFiles = true
+        }
+    }
+
+    /// A kind of view a command from Search asked for, made once the project is there.
+    private func makePendingKind() async {
+        guard workspace.ready, let kind = navigation.pendingKind else { return }
+        navigation.pendingKind = nil
+        let item = NewViewFactory.view(kind: kind, existing: workspace.views)
+        await workspace.edit { $0.setting("views", .array($0.list("views") + [item])) }
+        if workspace.problem == nil { openView(item.stableID) }
     }
 
     private var listedViews: [JSONValue] {
@@ -409,11 +627,7 @@ struct WorkspacePage: View {
         .modifier(MobileSidebarList(minimumRowHeight: 0))
         .overlay {
             if workspace.ready && workspace.isScratch && query.isEmpty && sections.isEmpty {
-                ContentUnavailableView {
-                    Label("No chats yet", lucideIcon: "messages-square", iconSize: 48)
-                } actions: {
-                    Button("New chat") { navigation.newChat = true }.disabled(!workspace.session.connected)
-                }
+                noChats
             }
         }
         .contentMargins(.top, isSidebar ? nil : 0, for: .scrollContent)
@@ -429,6 +643,13 @@ struct WorkspacePage: View {
     }
 
     private func openView(_ id: String) {
+        if !isSidebar, let canvas = workspace.views.first(where: { $0.list("nodes").contains { $0.stableID == id } }) {
+            // A node opens on its own; what the project remembers as open is the canvas it stands on.
+            workspace.select(canvas.stableID)
+            navigation.selectedViewID = canvas.stableID
+            navigation.openedViewID = id
+            return
+        }
         guard workspace.views.contains(where: { $0.stableID == id && !WorkspaceViewSections.isDivider($0) }) else { return }
         workspace.select(id)
         withAnimation(reduceMotion ? nil : .default) {

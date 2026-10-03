@@ -5,8 +5,36 @@ struct ViewIconPicker: View {
     let workspace: MobileWorkspace
     let item: JSONValue
     @Environment(\.dismiss) private var dismiss
-    @State private var query = ""
     @State private var saving = false
+
+    var body: some View {
+        NavigationStack {
+            IconChoiceGrid(selected: item["icon"]?.text("value"), resetTitle: "Use default icon") { save($0) }
+                .disabled(saving)
+                .navigationTitle("View icon").navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                }
+        }.tint(MobileStyle.accent)
+    }
+
+    private func save(_ name: String?) {
+        saving = true
+        let icon = name.map { JSONValue.object(["kind": .string("lucide"), "value": .string($0)]) }
+        Task {
+            await workspace.updateView(item.stableID) { $0.setting("icon", icon) }
+            dismiss()
+        }
+    }
+}
+
+/// The closed set of Lucide marks a view or a project can wear, searchable, with a way back to the default above it.
+struct IconChoiceGrid: View {
+    let selected: String?
+    let resetTitle: String
+    /// Nil is the way back to the default.
+    let pick: (String?) -> Void
+    @State private var query = ""
 
     private struct IconGroup {
         let label: String
@@ -141,45 +169,38 @@ struct ViewIconPicker: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    Button("Use default icon") { save(nil) }
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 52))], spacing: 12, pinnedViews: [.sectionHeaders]
-                    ) {
-                        ForEach(shownGroups, id: \.label) { group in
-                            Section {
-                                ForEach(group.names, id: \.self) { name in iconButton(name) }
-                            } header: {
-                                Text(group.label)
-                                    .font(.footnote.weight(.semibold)).foregroundStyle(MobileStyle.muted)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 6)
-                                    .background(MobileStyle.surface)
-                            }
+        ScrollView {
+            VStack(spacing: 20) {
+                Button(resetTitle) { pick(nil) }
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 52))], spacing: 12, pinnedViews: [.sectionHeaders]
+                ) {
+                    ForEach(shownGroups, id: \.label) { group in
+                        Section {
+                            ForEach(group.names, id: \.self) { name in iconButton(name) }
+                        } header: {
+                            Text(group.label)
+                                .font(.footnote.weight(.semibold)).foregroundStyle(MobileStyle.muted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 6)
+                                .background(MobileStyle.surface)
                         }
                     }
-                }.padding()
-            }
-            .disabled(saving)
-            .searchable(text: $query, prompt: "Find an icon")
-            .navigationTitle("View icon").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            }
-        }.tint(MobileStyle.accent)
+                }
+            }.padding()
+        }
+        .searchable(text: $query, prompt: "Find an icon")
     }
 
     private func iconButton(_ name: String) -> some View {
         Button {
-            save(.object(["kind": .string("lucide"), "value": .string(name)]))
+            pick(name)
         } label: {
             LucideIcon(name: name, size: 24)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(MobileSidebarButtonStyle(selected: item["icon"]?.text("value") == name, cornerRadius: 14))
+        .buttonStyle(MobileSidebarButtonStyle(selected: selected == name, cornerRadius: 14))
         .accessibilityLabel(name.replacingOccurrences(of: "-", with: " "))
     }
 
@@ -187,13 +208,5 @@ struct ViewIconPicker: View {
         name.localizedCaseInsensitiveContains(needle)
             || name.replacingOccurrences(of: "-", with: " ").localizedCaseInsensitiveContains(needle)
             || keywords[name, default: []].contains { $0.localizedCaseInsensitiveContains(needle) }
-    }
-
-    private func save(_ icon: JSONValue?) {
-        saving = true
-        Task {
-            await workspace.updateView(item.stableID) { $0.setting("icon", icon) }
-            dismiss()
-        }
     }
 }

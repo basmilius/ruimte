@@ -12,6 +12,8 @@ final class SharedMachineSession {
     private(set) var failedAttempts = 0
     private(set) var problem: String?
     private(set) var relayed: Bool?
+    /// When the link this phone had last went down; nil while it never had one this launch.
+    private(set) var lastConnectedAt: Date?
     private var lease: MachineLease?
     @ObservationIgnored private var preferenceSubscriptions: [() -> Void] = []
     private var references = 0
@@ -72,6 +74,7 @@ final class SharedMachineSession {
                 guard let self else { return }
                 linkEpoch += 1
                 if error != nil || !connected { failedAttempts += 1 }
+                if connected { lastConnectedAt = .now }
                 connected = false
                 relayed = nil
                 problem = error?.localizedDescription

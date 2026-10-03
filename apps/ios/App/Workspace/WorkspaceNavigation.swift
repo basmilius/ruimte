@@ -14,6 +14,12 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var adding = false
     var newChat = false
     var showingUsage = false
+    var showingFiles = false
+    var showingGit = false
+    var showingLaunches = false
+    var showingSettings = false
+    /// A kind of view to make once the project is there, as a command from Search asks.
+    var pendingKind: String?
 
     init(workspace: MobileWorkspace) { self.workspace = workspace }
 
