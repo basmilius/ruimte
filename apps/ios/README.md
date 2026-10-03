@@ -394,15 +394,20 @@ message into the current draft. A lost send acknowledgement keeps the draft and 
 person to check the conversation before retrying, including after reopening the app. Text
 and attachments added during a send stay in the composer when that earlier send succeeds.
 
-A pending permission or question is a glass card right over the composer, which stays as it is under it: the draft,
-its attachments and the keyboard are left alone. The card stays until the request is handled, and the next one takes
-its place. Questions show choices and free text inline, with "1 of 2" in the header and Previous and Next for a
-sequence. Only optional questions can be dismissed. Failed submissions retain their input, and sending disables
-repeat actions. A long request scrolls inside the card, which takes at most about two fifths of the screen. The card
-comes in from the composer and Reduce Motion shows it at once. Under a sub-agent's conversation the same card stands
-over the switched-off field.
-The field has a 26-point radius, a capsule while the draft is one line, and its glass answers a touch like the
-buttons around it.
+A pending permission or question takes over the field's glass shape, growing upward from the composer, and the
+limit card, the chips, the pills and Stop step aside while it is there. The request stays in place until it is handled, and the next
+one takes its place; answering the last request restores the draft, attachments and selection, and the keyboard if
+the draft had it. Questions show choices and free text inline, with Previous and Next for a sequence. Only optional
+questions can be dismissed. Failed submissions retain their input, and sending disables repeat actions. A long
+request scrolls inside the shape, which takes at most about half the screen.
+The glass container interpolates between measured composer and prompt heights, anchored at
+its bottom edge. The editor stays mounted while its content fades and blurs; a shared action
+shape grows from the send circle into the prompt button. The send button remains mounted and
+disabled for an empty draft. Prompt actions sit in a bottom
+safe-area bar with a soft scroll-edge blur. Reduce Motion switches states directly. Under a sub-agent's
+conversation a request takes over the switched-off field the same way.
+The shape has a 26-point radius, a capsule while the draft is one line. Its glass answers a touch
+like the buttons around it, except while a prompt fills it.
 The composer and timeline share a UIKit container anchored to `UIKeyboardLayoutGuide`; with the
 keyboard down the composer stands half the bottom safe area up while the timeline runs on behind it.
 While a composer is there the timeline ends on the keyboard guide's top, so it never runs under the keyboard.
