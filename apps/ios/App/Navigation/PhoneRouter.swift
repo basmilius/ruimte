@@ -23,7 +23,8 @@ enum PhoneTab: String, CaseIterable, Hashable {
     }
 }
 
-/// A page pushed on a tab's stack.
+/// A page pushed for a route. A project, Recently closed and a machine are list-level pages on their tab's stack,
+/// under the tab bar; a view fills the screen on the stack around the tabs.
 enum PhoneRoute: Hashable {
     case project(WorkspaceNavigation)
     /// A view opened from its project's list, over the project.
@@ -35,28 +36,21 @@ enum PhoneRoute: Hashable {
     case recentProjects
     /// A machine, by its id.
     case machine(String)
-
-    /// A view fills the screen and its composer or keyboard bar stands where the tab bar would, so the bar leaves
-    /// with its push; a list keeps it.
-    var hidesTabBar: Bool {
-        switch self {
-        case .project, .recentProjects, .machine: false
-        case .projectView, .view, .notification: true
-        }
-    }
 }
 
-/// Where the iPhone stands: the selected tab and the routes on each tab's stack. Nothing goes deeper than two
-/// levels, so a route replaces what its tab had pushed, a project opened from a machine goes to Projects and a view
-/// opened from Now stays under Now.
+/// Where the iPhone stands: the selected tab, the list-level pages on each tab's stack and the view over the tabs.
+/// Nothing goes deeper than two levels, so a route replaces what its stack had pushed, a project opened from a
+/// machine goes to Projects and a view opened from Now stays over Now.
 ///
-/// The paths are what the person should see. `PhoneTabController` pushes and pops to match them and hands back what
-/// its stacks hold once a transition settles (`settle`), so a pop by the back button or a swipe shortens a path, and
-/// a swipe the person takes back leaves it as it was.
+/// The paths are what the person should see. `PhoneRootController` pushes and pops to match them and hands back what
+/// its stacks hold once a transition settles (`settle`, `settleViews`), so a pop by the back button or a swipe
+/// shortens a path, and a swipe the person takes back leaves it as it was.
 @MainActor @Observable
 final class PhoneRouter {
     var tab = PhoneTab.now
     private(set) var paths: [PhoneTab: [PhoneRoute]] = [:]
+    /// The view over the tabs, if any.
+    private(set) var views: [PhoneRoute] = []
 
     func path(_ tab: PhoneTab) -> [PhoneRoute] {
         paths[tab] ?? []
@@ -74,36 +68,39 @@ final class PhoneRouter {
         navigation.pendingViewID = view
         tab = .projects
         paths[.projects] = [.project(navigation)]
+        views = []
     }
 
-    /// Opens a view of the project open over Projects on top of it.
+    /// Opens a view of a project over the tabs with the project under it, so its pop lands on the project.
     func openView(_ id: String, in navigation: WorkspaceNavigation) {
         tab = .projects
-        paths[.projects] = [.project(navigation), .projectView(navigation, id)]
+        paths[.projects] = [.project(navigation)]
+        views = [.projectView(navigation, id)]
     }
 
-    /// Shows a view outside its project's list. Search keeps it over its own field; every other tab hands it to Now.
+    /// Shows a view outside its project's list. Search stays under it; every other tab hands it to Now.
     func show(_ target: ProjectViewTarget, from origin: PhoneTab) {
-        let destination: PhoneTab = origin == .search ? .search : .now
-        tab = destination
-        paths[destination] = [.view(target)]
+        tab = origin == .search ? .search : .now
+        views = [.view(target)]
     }
 
-    /// A notification lands on Now: its chat or terminal on top, or for a machine's overview Now itself.
+    /// A notification lands over Now: its chat or terminal on top, or for a machine's overview Now itself.
     func open(_ notification: NotificationDestination) {
         tab = .now
         let overview = notification.target == "machine" || notification.nodeID.isEmpty
-        paths[.now] = overview ? [] : [.notification(notification)]
+        views = overview ? [] : [.notification(notification)]
     }
 
     func showRecentProjects() {
         tab = .projects
         paths[.projects] = [.recentProjects]
+        views = []
     }
 
     func showMachine(_ id: String) {
         tab = .machines
         paths[.machines] = [.machine(id)]
+        views = []
     }
 
     /// Takes what a tab's stack holds once a push or a pop settled.
@@ -111,9 +108,15 @@ final class PhoneRouter {
         if self.path(tab) != path { paths[tab] = path }
     }
 
+    /// Takes what the stack around the tabs holds once a push or a pop settled.
+    func settleViews(_ path: [PhoneRoute]) {
+        if views != path { views = path }
+    }
+
     /// Back to Now with every stack at its root, as after a change of account.
     func reset() {
         tab = .now
         paths = [:]
+        views = []
     }
 }

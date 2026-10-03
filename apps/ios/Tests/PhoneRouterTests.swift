@@ -7,43 +7,43 @@ import XCTest
 final class PhoneRouterTests: XCTestCase {
     private let target = ProjectViewTarget(machineID: "mac", projectID: "app", viewID: "canvas", itemID: "chat")
 
-    @MainActor func testAViewFromAnyTabButSearchOpensUnderNow() {
+    @MainActor func testAViewFromAnyTabButSearchOpensOverNow() {
         let router = PhoneRouter()
         router.tab = .machines
         router.show(target, from: .machines)
         XCTAssertEqual(router.tab, .now)
-        XCTAssertEqual(router.path(.now), [.view(target)])
-        XCTAssertEqual(router.path(.machines), [])
+        XCTAssertEqual(router.views, [.view(target)])
+        XCTAssertTrue(PhoneTab.allCases.allSatisfy { router.path($0).isEmpty })
     }
 
-    @MainActor func testSearchKeepsTheViewItOpened() {
+    @MainActor func testSearchStaysUnderTheViewItOpened() {
         let router = PhoneRouter()
         router.tab = .search
         router.show(target, from: .search)
         XCTAssertEqual(router.tab, .search)
-        XCTAssertEqual(router.path(.search), [.view(target)])
-        XCTAssertEqual(router.path(.now), [])
+        XCTAssertEqual(router.views, [.view(target)])
+        XCTAssertEqual(router.path(.search), [])
     }
 
-    @MainActor func testANotificationLandsOnNowAndAMachineOverviewOnNowItself() {
+    @MainActor func testANotificationLandsOverNowAndAMachineOverviewOnNowItself() {
         let router = PhoneRouter()
         router.tab = .projects
         let chat = NotificationDestination(machineID: "mac", nodeID: "chat", target: "chat")
         router.open(chat)
         XCTAssertEqual(router.tab, .now)
-        XCTAssertEqual(router.path(.now), [.notification(chat)])
+        XCTAssertEqual(router.views, [.notification(chat)])
 
         router.tab = .search
         router.open(NotificationDestination(machineID: "mac", nodeID: "", target: "machine"))
         XCTAssertEqual(router.tab, .now)
-        XCTAssertEqual(router.path(.now), [])
+        XCTAssertEqual(router.views, [])
     }
 
-    @MainActor func testEveryRouteReplacesWhatItsTabPushedSoNothingGoesDeeperThanTwoLevels() {
+    @MainActor func testEveryRouteReplacesWhatItsStackPushedSoNothingGoesDeeperThanTwoLevels() {
         let router = PhoneRouter()
         router.show(target, from: .now)
         router.show(ProjectViewTarget(machineID: "mac", projectID: "app", viewID: "canvas", itemID: "term"), from: .now)
-        XCTAssertEqual(router.path(.now).count, 1)
+        XCTAssertEqual(router.views.count, 1)
         router.showMachine("mac")
         router.showMachine("mini")
         XCTAssertEqual(router.tab, .machines)
@@ -51,7 +51,17 @@ final class PhoneRouterTests: XCTestCase {
         router.showRecentProjects()
         XCTAssertEqual(router.tab, .projects)
         XCTAssertEqual(router.path(.projects), [.recentProjects])
-        XCTAssertEqual(router.path(.now).count, 1)
+        XCTAssertEqual(router.path(.machines), [.machine("mini")])
+    }
+
+    @MainActor func testAListLevelRouteTakesTheViewOffTheTabs() {
+        let router = PhoneRouter()
+        router.show(target, from: .now)
+        router.showMachine("mac")
+        XCTAssertEqual(router.views, [])
+        router.show(target, from: .search)
+        router.showRecentProjects()
+        XCTAssertEqual(router.views, [])
     }
 
     @MainActor func testOpeningAProjectGoesToProjectsWithItsView() {
@@ -67,40 +77,48 @@ final class PhoneRouterTests: XCTestCase {
         XCTAssertEqual(router.project?.pendingViewID, "chat")
     }
 
-    @MainActor func testAViewOfAProjectGoesOverTheProject() throws {
+    @MainActor func testAViewOfAProjectGoesOverTheTabsWithTheProjectUnderIt() throws {
         let (runtime, machine, connections) = Self.runtime()
         defer { connections.shutdown() }
         let router = PhoneRouter()
         router.openProject(MobileWorkspace(session: runtime.session(for: machine), projectID: "app"))
         let navigation = try XCTUnwrap(router.project)
         router.openView("chat", in: navigation)
-        XCTAssertEqual(router.path(.projects), [.project(navigation), .projectView(navigation, "chat")])
+        XCTAssertEqual(router.path(.projects), [.project(navigation)])
+        XCTAssertEqual(router.views, [.projectView(navigation, "chat")])
         router.openView("terminal", in: navigation)
-        XCTAssertEqual(router.path(.projects), [.project(navigation), .projectView(navigation, "terminal")])
+        XCTAssertEqual(router.views, [.projectView(navigation, "terminal")])
+
+        router.settleViews([])
+        XCTAssertEqual(router.tab, .projects)
+        XCTAssertEqual(router.path(.projects), [.project(navigation)])
+        XCTAssertEqual(router.views, [])
     }
 
-    @MainActor func testOnlyAViewHidesTheTabBar() throws {
+    @MainActor func testOpeningAProjectTakesTheViewOffTheTabs() {
         let (runtime, machine, connections) = Self.runtime()
         defer { connections.shutdown() }
-        let navigation = WorkspaceNavigation(
-            workspace: MobileWorkspace(session: runtime.session(for: machine), projectID: "app"))
-        let chat = NotificationDestination(machineID: "mac", nodeID: "chat", target: "chat")
-        XCTAssertFalse(PhoneRoute.project(navigation).hidesTabBar)
-        XCTAssertFalse(PhoneRoute.machine("mac").hidesTabBar)
-        XCTAssertFalse(PhoneRoute.recentProjects.hidesTabBar)
-        XCTAssertTrue(PhoneRoute.projectView(navigation, "chat").hidesTabBar)
-        XCTAssertTrue(PhoneRoute.view(target).hidesTabBar)
-        XCTAssertTrue(PhoneRoute.notification(chat).hidesTabBar)
+        let router = PhoneRouter()
+        router.show(target, from: .now)
+        router.openProject(MobileWorkspace(session: runtime.session(for: machine), projectID: "app"))
+        XCTAssertEqual(router.views, [])
+        XCTAssertEqual(router.path(.projects).count, 1)
     }
 
     @MainActor func testAPopThatSettledShortensThePathAndATakenBackSwipeLeavesIt() {
         let router = PhoneRouter()
         router.show(target, from: .now)
-        router.settle(.now, path: [.view(target)])
-        XCTAssertEqual(router.path(.now), [.view(target)])
-        router.settle(.now, path: [])
-        XCTAssertEqual(router.path(.now), [])
+        router.settleViews([.view(target)])
+        XCTAssertEqual(router.views, [.view(target)])
+        router.settleViews([])
+        XCTAssertEqual(router.views, [])
         XCTAssertEqual(router.tab, .now)
+
+        router.showMachine("mac")
+        router.settle(.machines, path: [.machine("mac")])
+        XCTAssertEqual(router.path(.machines), [.machine("mac")])
+        router.settle(.machines, path: [])
+        XCTAssertEqual(router.path(.machines), [])
     }
 
     @MainActor func testResetGoesBackToNowWithEveryStackAtItsRoot() {
@@ -110,6 +128,7 @@ final class PhoneRouterTests: XCTestCase {
         router.reset()
         XCTAssertEqual(router.tab, .now)
         XCTAssertTrue(PhoneTab.allCases.allSatisfy { router.path($0).isEmpty })
+        XCTAssertEqual(router.views, [])
     }
 
     @MainActor private static func runtime() -> (AppRuntime, Machine, MachineConnections) {

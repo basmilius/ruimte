@@ -2,9 +2,10 @@ import RuimtePulsar
 import SwiftUI
 import UIKit
 
-/// The iPhone: four tabs, each a stack of its own (`PhoneTabController`), with Settings behind the avatar on each.
-/// Every page is SwiftUI in a hosting controller of its own, so its title, `.toolbar` and `.searchable` go to that
-/// controller's navigation item. The iPad keeps its split view in `AppHome`.
+/// The iPhone: four tabs, each a stack of its own (`PhoneTabController`), with Settings behind the avatar on each,
+/// inside one stack that holds the views over them (`PhoneRootController`). Every page is SwiftUI in a hosting
+/// controller of its own, so its title, `.toolbar` and `.searchable` go to that controller's navigation item. The
+/// iPad keeps its split view in `AppHome`.
 struct PhoneHome: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
@@ -16,13 +17,14 @@ struct PhoneHome: View {
     @Environment(\.openMobileWorkspace) private var openWorkspace
 
     var body: some View {
-        PhoneTabs(
-            tab: router.tab, paths: router.paths, needsYou: now.board.needsYou.count,
+        PhoneStacks(
+            tab: router.tab, paths: router.paths, views: router.views, needsYou: now.board.needsYou.count,
             root: { hosted(root($0)) }, page: { hosted(page(for: $0)) },
             selected: { tab in
                 if router.tab != tab { router.tab = tab }
             },
-            settled: { router.settle($0, path: $1) }
+            settled: { router.settle($0, path: $1) },
+            settledViews: { router.settleViews($0) }
         )
         .ignoresSafeArea()
         .onChange(of: now.board) { _, board in
@@ -94,36 +96,41 @@ struct PhoneHome: View {
     }
 }
 
-/// Bridges `PhoneTabController` into SwiftUI and keeps it on the router's state.
-private struct PhoneTabs: UIViewControllerRepresentable {
+/// Bridges `PhoneRootController` into SwiftUI and keeps it on the router's state.
+private struct PhoneStacks: UIViewControllerRepresentable {
     let tab: PhoneTab
     let paths: [PhoneTab: [PhoneRoute]]
+    let views: [PhoneRoute]
     let needsYou: Int
     let root: (PhoneTab) -> AnyView
     let page: (PhoneRoute) -> AnyView
     let selected: (PhoneTab) -> Void
     let settled: (PhoneTab, [PhoneRoute]) -> Void
+    let settledViews: ([PhoneRoute]) -> Void
 
-    func makeUIViewController(context: Context) -> PhoneTabController {
+    func makeUIViewController(context: Context) -> PhoneRootController {
         let roots = Dictionary(
             uniqueKeysWithValues: PhoneTab.allCases.map { ($0, PhonePageController(route: nil, page: root($0))) })
-        let controller = PhoneTabController(roots: roots)
+        let controller = PhoneRootController(tabs: PhoneTabController(roots: roots))
         connect(controller)
-        controller.show(tab: tab, paths: paths, needsYou: needsYou)
+        controller.show(tab: tab, paths: paths, views: views, needsYou: needsYou)
         return controller
     }
 
-    func updateUIViewController(_ controller: PhoneTabController, context: Context) {
+    func updateUIViewController(_ controller: PhoneRootController, context: Context) {
         connect(controller)
-        controller.show(tab: tab, paths: paths, needsYou: needsYou)
+        controller.show(tab: tab, paths: paths, views: views, needsYou: needsYou)
     }
 
-    private func connect(_ controller: PhoneTabController) {
-        for stack in controller.stacks.values {
+    private func connect(_ controller: PhoneRootController) {
+        let makePage = { [page] (route: PhoneRoute) in PhonePageController(route: route, page: page(route)) }
+        for (phoneTab, stack) in controller.tabs.stacks {
             stack.appeared = selected
-            stack.makePage = { [page] route in PhonePageController(route: route, page: page(route)) }
-            stack.settled = settled
+            stack.makePage = makePage
+            stack.settled = { [settled] in settled(phoneTab, $0) }
         }
+        controller.makePage = makePage
+        controller.settled = settledViews
     }
 }
 

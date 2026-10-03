@@ -1,8 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// A SwiftUI page on a tab's stack. A route's page carries `hidesBottomBarWhenPushed` from its creation, since UIKit
-/// reads the flag when the push starts and only then moves the tab bar with the transition and the finger.
+/// A SwiftUI page on one of the iPhone's stacks.
 final class PhonePageController: UIHostingController<AnyView> {
     /// Nil for a tab's root.
     let route: PhoneRoute?
@@ -10,7 +9,6 @@ final class PhonePageController: UIHostingController<AnyView> {
     init(route: PhoneRoute?, page: AnyView) {
         self.route = route
         super.init(rootView: page)
-        hidesBottomBarWhenPushed = route?.hidesTabBar ?? false
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -23,23 +21,20 @@ final class PhonePageController: UIHostingController<AnyView> {
     }
 }
 
-/// One tab's stack, which pushes and pops to match the tab's path in `PhoneRouter`.
-final class PhoneStackController: UINavigationController, UINavigationControllerDelegate {
-    let phoneTab: PhoneTab
+/// A stack that pushes and pops to match a path in `PhoneRouter`: a tab's list-level pages, or the views over the
+/// tabs.
+class PhoneStackController: UINavigationController, UINavigationControllerDelegate {
     /// Builds the page of a route.
     var makePage: (PhoneRoute) -> PhonePageController = { PhonePageController(route: $0, page: AnyView(EmptyView())) }
-    /// Tells the router this tab is the one on screen, however it got selected.
-    var appeared: (PhoneTab) -> Void = { _ in }
     /// Hands the routes this stack holds to the router once a push or a pop settled.
-    var settled: (PhoneTab, [PhoneRoute]) -> Void = { _, _ in }
+    var settled: ([PhoneRoute]) -> Void = { _ in }
     /// The last path the router asked for. The router repeats it on every update, and repeating it while a swipe
     /// back runs must not push the page back once the swipe lands.
     private var requested: [PhoneRoute] = []
     /// A path asked for during a transition, shown once the transition ends.
     private var pending: [PhoneRoute]?
 
-    init(tab: PhoneTab, root: PhonePageController) {
-        self.phoneTab = tab
+    init(root: UIViewController) {
         super.init(rootViewController: root)
         delegate = self
         navigationBar.prefersLargeTitles = true
@@ -96,9 +91,12 @@ final class PhoneStackController: UINavigationController, UINavigationController
         }
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        appeared(phoneTab)
+    func willShow(_ viewController: UIViewController, animated: Bool) {}
+
+    func navigationController(
+        _ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool
+    ) {
+        willShow(viewController, animated: animated)
     }
 
     func navigationController(
@@ -107,22 +105,42 @@ final class PhoneStackController: UINavigationController, UINavigationController
         if pending != nil {
             showPending(animated: viewIfLoaded?.window != nil)
         } else {
-            settled(phoneTab, routes)
+            settled(routes)
         }
     }
 }
 
-/// The iPhone's tabs. Each tab is a stack of its own, so a list-level page keeps the tab bar and a view hides it
-/// with the push, and UIKit owns the transition and the swipe back.
+/// One tab's stack: its root and the list-level pages over it, under the tab bar.
+final class PhoneTabStackController: PhoneStackController {
+    let phoneTab: PhoneTab
+    /// Tells the router this tab is the one on screen, however it got selected.
+    var appeared: (PhoneTab) -> Void = { _ in }
+
+    init(tab: PhoneTab, root: PhonePageController) {
+        phoneTab = tab
+        super.init(root: root)
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        nil
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        appeared(phoneTab)
+    }
+}
+
+/// The iPhone's tabs, each a stack of its own, so a list-level page keeps the tab bar.
 final class PhoneTabController: UITabBarController {
-    let stacks: [PhoneTab: PhoneStackController]
+    let stacks: [PhoneTab: PhoneTabStackController]
     private let tabsByPhoneTab: [PhoneTab: UITab]
 
     init(roots: [PhoneTab: PhonePageController]) {
-        var stacks: [PhoneTab: PhoneStackController] = [:]
+        var stacks: [PhoneTab: PhoneTabStackController] = [:]
         var tabs: [PhoneTab: UITab] = [:]
         for tab in PhoneTab.allCases {
-            let stack = PhoneStackController(
+            let stack = PhoneTabStackController(
                 tab: tab, root: roots[tab] ?? PhonePageController(route: nil, page: AnyView(EmptyView())))
             stacks[tab] = stack
             if tab == .search {
@@ -160,7 +178,42 @@ final class PhoneTabController: UITabBarController {
         tabsByPhoneTab[.now]?.badgeValue = needsYou > 0 ? String(needsYou) : nil
     }
 
-    private var selectedPhoneTab: PhoneTab? {
+    var selectedPhoneTab: PhoneTab? {
         tabsByPhoneTab.first { $0.value === selectedTab }?.key
+    }
+}
+
+/// The stack around the tabs, which holds the views. A view covers the tabs and the tab bar, so the whole tabbed
+/// page slides away with its push, since `hidesBottomBarWhenPushed` under the floating tab bar fades the bar's
+/// background and drops its items at the end. Its bar shows only over a view; over the tabs each tab's stack shows
+/// its own.
+final class PhoneRootController: PhoneStackController {
+    let tabs: PhoneTabController
+
+    init(tabs: PhoneTabController) {
+        self.tabs = tabs
+        super.init(root: tabs)
+        setNavigationBarHidden(true, animated: false)
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        nil
+    }
+
+    /// Shows the router's state. The views move animated unless the tab switches in sight, so a tab the router
+    /// switches to arrives with its view already over it.
+    func show(tab: PhoneTab, paths: [PhoneTab: [PhoneRoute]], views: [PhoneRoute], needsYou: Int) {
+        let switchesInSight = tabs.selectedPhoneTab != tab && topViewController === tabs
+        tabs.show(tab: tab, paths: paths, needsYou: needsYou)
+        show(views, animated: viewIfLoaded?.window != nil && !switchesInSight)
+    }
+
+    override func willShow(_ viewController: UIViewController, animated: Bool) {
+        setNavigationBarHidden(viewController === tabs, animated: animated)
+        transitionCoordinator?.animate(alongsideTransition: nil) { [weak self] context in
+            // A swipe back the person takes back keeps the view, so its bar stays with it.
+            guard context.isCancelled, let self else { return }
+            setNavigationBarHidden(context.viewController(forKey: .from) === tabs, animated: false)
+        }
     }
 }
