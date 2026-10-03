@@ -258,8 +258,9 @@ sidebar.
 - Its bar holds New chat (in this project or in Chats, as a popover), the launches as a popover from the play
   button, Search, and Files and Git, which stand as an inspector beside the content. The inspector sits on the split
   view, not in the content column, whose navigation it would otherwise share, and has a stack of its own
-  (`PadInspectorPane`). A folder, a file, a diff, a commit, the branches or a conflict opened there is pushed inside
-  the inspector; only Open as view puts something in the content.
+  (`PadInspectorPane`). A folder, Find in files, a diff, a commit, the branches or a conflict opened there is pushed
+  inside the inspector. A file opens in the content, a match of Find in files at its line, and its row in the
+  inspector is marked; Open as view makes it a view of the project.
 - A sub-agent opens in that inspector beside its chat, with its conversation and Stop, and leaves it with the chat;
   Open as view shows it in the content, on this iPad only.
 - Every inspector draws a hairline on its edge against the content, an alpha of the text color (`InspectorEdge`).

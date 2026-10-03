@@ -9,6 +9,10 @@ import RuimteTransport
     let workspace: MobileWorkspace
     /// Opens a view of the project, closing whatever the files were shown in; nil where nothing can open one.
     var openView: ((String) -> Void)?
+    /// Opens a file, at a line when one is given, outside the pages the files are browsed in; nil pushes it there.
+    var openFile: ((String, Int?) -> Void)?
+    /// The file `openFile` shows, whose row is marked.
+    var shownFile: String?
 
     var folder: String { workspace.folder }
     var client: any MachineRequesting { workspace.client }

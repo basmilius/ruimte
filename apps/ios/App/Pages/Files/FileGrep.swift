@@ -146,7 +146,12 @@ struct FileGrepPage: View {
                 Section {
                     ForEach(group.hits) { hit in
                         Button {
-                            opened = FileGrepTarget(path: absolute(group.path), line: hit.line)
+                            let target = FileGrepTarget(path: absolute(group.path), line: hit.line)
+                            if let openFile = project?.openFile {
+                                openFile(target.path, target.line)
+                            } else {
+                                opened = target
+                            }
                         } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 10) {
                                 Text("\(hit.line)").font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.faint)

@@ -48,7 +48,11 @@ struct MachineFilesPage: View {
                 let directory = entry.text("kind") == "directory"
                 let mark = fileMarks.mark(path: entry.text("path"), directory: directory)
                 Button {
-                    selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
+                    if !directory, let openFile = project?.openFile {
+                        openFile(entry.text("path"), nil)
+                    } else {
+                        selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
+                    }
                 } label: {
                     HStack(spacing: 10) {
                         Image(lucide: FileKinds.icon(name: entry.text("name"), kind: entry.text("kind")), size: 20)
@@ -68,7 +72,7 @@ struct MachineFilesPage: View {
                     }
                     .modifier(MobileSidebarLabel(disclosure: true))
                 }
-                .modifier(MobileSidebarRow())
+                .modifier(MobileSidebarRow(selected: !directory && entry.text("path") == project?.shownFile))
                 .contextMenu { if let project { entryMenu(entry, directory: directory, project: project) } }
             }
             if state.value != nil && entries.isEmpty {

@@ -28,8 +28,10 @@ final class PadRouter {
     var inspector: PadInspector?
     /// The machine shown beside the list of machines.
     var machineID: String?
-    /// A file the palette opened in the content column, by its absolute path.
+    /// A file the palette or the Files inspector opened in the content column, by its absolute path.
     private(set) var file: String?
+    /// The line `file` opened at, for a match of Find in files.
+    private(set) var fileLine: Int?
     /// A sub-agent of a chat opened as a view of its own, which lives on this iPad only, as on the desktop.
     private(set) var subagent: PadSubagent?
 
@@ -108,9 +110,10 @@ final class PadRouter {
         if let id = project?.selectedViewID, !exists(id) { project?.selectedViewID = nil }
     }
 
-    func show(file path: String) {
+    func show(file path: String, line: Int? = nil) {
         closeSubagentPane()
         file = path
+        fileLine = line
         subagent = nil
         detail = .project
     }

@@ -101,6 +101,24 @@ final class PadRouterTests: XCTestCase {
         XCTAssertEqual(navigation.selectedViewID, "chat")
     }
 
+    @MainActor func testAFileFromTheFilesInspectorOpensInTheContentAtItsLineAndLeavesTheInspectorStanding() {
+        let (runtime, machine, connections) = fixture()
+        defer { connections.shutdown() }
+        let router = PadRouter()
+        router.openProject(MobileWorkspace(session: runtime.session(for: machine), projectID: "app"))
+        router.toggle(.files)
+        router.show(file: "/repo/pool.ts", line: 42)
+        XCTAssertEqual(router.file, "/repo/pool.ts")
+        XCTAssertEqual(router.fileLine, 42)
+        XCTAssertEqual(router.detail, .project)
+        XCTAssertEqual(router.inspector, .files, "Browsing goes on beside the file")
+        XCTAssertTrue(router.showsInspector)
+
+        router.show(file: "/repo/main.ts")
+        XCTAssertEqual(router.file, "/repo/main.ts")
+        XCTAssertNil(router.fileLine, "A file opened from a folder starts at the top")
+    }
+
     @MainActor func testFilesAndGitBelongToAProjectFolder() {
         let router = PadRouter()
         router.toggle(.files)

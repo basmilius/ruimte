@@ -165,7 +165,9 @@ struct PadInspectorPane: View {
             NavigationStack {
                 switch router.inspector {
                 case .files:
-                    ProjectFilesPage(workspace: workspace) { router.show(view: $0) }
+                    ProjectFilesPage(
+                        workspace: workspace, openView: { router.show(view: $0) },
+                        openFile: { router.show(file: $0, line: $1) }, shownFile: router.file)
                 case .git:
                     GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                 case .subagent, nil:
@@ -215,13 +217,14 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
     }
 
     private var shownKey: String {
-        router.file ?? router.subagent?.toolUseID ?? navigation.selectedViewID ?? ""
+        router.file.map { "\($0):\(router.fileLine ?? 0)" } ?? router.subagent?.toolUseID
+            ?? navigation.selectedViewID ?? ""
     }
 
     @ViewBuilder private var shown: some View {
         if let path = router.file {
             FileContentPage(
-                client: workspace.client, path: path,
+                client: workspace.client, path: path, initialLine: router.fileLine,
                 project: FilesProject(workspace: workspace, openView: { router.show(view: $0) }))
         } else if !workspace.ready {
             opening
