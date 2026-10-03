@@ -30,6 +30,7 @@ struct GitPage: View {
     @State private var committing = false
     @State private var showRepositories = false
     @State private var pullRequest: String?
+    @State private var repositoryPage: String?
     @State private var canPullRequest = false
     @State private var diff: GitDiffTarget?
     @State private var conflictFile: GitConflictTarget?
@@ -100,6 +101,9 @@ struct GitPage: View {
             GitRepositoriesPage(
                 client: client, repositories: repositories, workspace: workspace,
                 title: workspace?.title ?? (current as NSString).lastPathComponent)
+        }
+        .navigationDestination(item: $repositoryPage) { path in
+            GitRepositoryPage(client: client, repositories: repositories, path: path, workspace: workspace)
         }
         .navigationDestination(item: $pullRequest) { path in
             GitPullRequestPage(client: client, repositories: repositories, path: path, subject: "") { note = $0 }
@@ -194,11 +198,7 @@ struct GitPage: View {
                     Button("Create pull request", lucideIcon: "git-pull-request") { pullRequest = only.path }
                 }
                 Divider()
-                NavigationLink {
-                    GitRepositoryPage(client: client, repositories: repositories, path: only.path, workspace: workspace)
-                } label: {
-                    Label("Repository", lucideIcon: "folder-git-2")
-                }
+                Button("Repository", lucideIcon: "folder-git-2") { repositoryPage = only.path }
             }
         } label: {
             Label("More git actions", lucideIcon: "ellipsis")
