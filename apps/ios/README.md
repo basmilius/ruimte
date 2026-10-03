@@ -136,9 +136,9 @@ Caches and asked again once per launch), else the first letter of its name.
 - The write button on Now starts a chat with one of a machine's installed agents in the machine's Chats
   (`project.newChat`) or as a new chat view at the end of one of its open projects, and opens it.
 - Projects lists the open projects, New chat, each machine's Chats and Recently closed. A project page is its list
-  of views. Its bar holds the project's menu beside the avatar: Files, Git and Launches (none of these in Chats) and
-  Usage, each a sheet. New view (New chat in Chats) is a glass pill of its own width over the tab bar. A view opens
-  over the project and hides the tab bar.
+  of views. Its bar holds the project's menu beside the avatar: New view (New chat in Chats) in a group of its own,
+  then Files, Git and Launches (none of these in Chats) and Usage, each a sheet. A view opens over the project and
+  hides the tab bar.
 - Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
   projects (which open under Projects), Chats, files, processes, usage and machine settings.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
