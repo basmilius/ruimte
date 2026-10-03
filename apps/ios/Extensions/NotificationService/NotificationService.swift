@@ -42,7 +42,8 @@ final class NotificationService: UNNotificationServiceExtension {
             if alert.kind == .approval, alert.choices?.contains(where: { $0.kind == .allow }) == true,
                 alert.choices?.contains(where: { $0.kind == .deny }) == true
             {
-                content.categoryIdentifier = "ruimte.approval"
+                let remembers = alert.choices?.contains(where: { $0.kind == .remember }) == true
+                content.categoryIdentifier = remembers ? "ruimte.approval.remember" : "ruimte.approval"
             }
             finish(content)
         } catch {

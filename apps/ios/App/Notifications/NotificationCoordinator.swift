@@ -189,10 +189,17 @@ struct NotificationDestination: Identifiable, Hashable {
         guard !restored else { return }
         restored = true
         await NotificationAppDelegate.attach(self)
-        let allow = UNNotificationAction(identifier: "ruimte.allow", title: "Allow", options: [.authenticationRequired])
-        let deny = UNNotificationAction(identifier: "ruimte.deny", title: "Deny", options: [.authenticationRequired])
+        let action = { (decision: NotificationDecision, title: String) in
+            UNNotificationAction(
+                identifier: decision.actionIdentifier, title: title, options: [.authenticationRequired])
+        }
+        let allow = action(.allow, "Allow")
+        let deny = action(.deny, "Deny")
         UNUserNotificationCenter.current().setNotificationCategories([
-            UNNotificationCategory(identifier: "ruimte.approval", actions: [allow, deny], intentIdentifiers: [])
+            UNNotificationCategory(identifier: "ruimte.approval", actions: [allow, deny], intentIdentifiers: []),
+            UNNotificationCategory(
+                identifier: "ruimte.approval.remember", actions: [allow, action(.allowAlways, "Always allow"), deny],
+                intentIdentifiers: []),
         ])
         tokenObservers.append(
             NotificationCenter.default.addObserver(
@@ -616,11 +623,11 @@ struct NotificationDestination: Identifiable, Hashable {
             let route = NotificationDestination(
                 machineID: machineID, nodeID: alert.nodeId, target: alert.target.rawValue)
             await markSeen(machineID: machineID, nodeID: alert.nodeId)
-            guard action == "ruimte.allow" || action == "ruimte.deny" else {
+            guard let decision = NotificationDecision(actionIdentifier: action) else {
                 if action == UNNotificationDefaultActionIdentifier { destination = route }
                 return
             }
-            // Allow or Deny leaves the open project where it was; only an answer that did not land opens the node.
+            // A decision leaves the open project where it was; only an answer that did not land opens the node.
             do {
                 guard Double(alert.expiresAt) > Date().timeIntervalSince1970 * 1000 else {
                     throw PushCryptoError.expired
@@ -633,20 +640,22 @@ struct NotificationDestination: Identifiable, Hashable {
                         ]).encoded(), as: UTF8.self))
                 _ = try store.claim(
                     id: actionKey, expiresAt: Double(alert.expiresAt), now: Date().timeIntervalSince1970 * 1000)
-                try await answerInBackground(alert, machineID: machineID, allow: action == "ruimte.allow")
+                try await answerInBackground(alert, machineID: machineID, decision: decision)
             } catch {
                 destination = route
                 throw error
             }
         } catch { problem = error.localizedDescription }
     }
-    private func answerInBackground(_ alert: PushAlertContent, machineID: String, allow: Bool) async throws {
+    private func answerInBackground(
+        _ alert: PushAlertContent, machineID: String, decision: NotificationDecision
+    ) async throws {
         guard let runtime else { throw MachineClientError.disconnected }
         let sceneID = "push-action-" + UUID().uuidString
         runtime.connections.setScene(sceneID, foreground: true)
         let work = Task { @MainActor in
             try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask { try await self.answer(alert, machineID: machineID, allow: allow) }
+                group.addTask { try await self.answer(alert, machineID: machineID, decision: decision) }
                 group.addTask {
                     try await Task.sleep(for: .seconds(25))
                     throw MachineClientError.timeout("approval")
@@ -664,7 +673,7 @@ struct NotificationDestination: Identifiable, Hashable {
         try await work.value
     }
 
-    private func answer(_ alert: PushAlertContent, machineID: String, allow: Bool) async throws {
+    private func answer(_ alert: PushAlertContent, machineID: String, decision: NotificationDecision) async throws {
         // Only a chat's request is answered from a notification; a terminal's stays in its TUI.
         guard let runtime, let machine = runtime.machines.first(where: { $0.id == machineID }), alert.requestId != nil,
             alert.kind == .approval, alert.target == .chat
@@ -683,7 +692,7 @@ struct NotificationDestination: Identifiable, Hashable {
         let snapshot = try await lease.snapshot(
             payload: .object(["chatId": .string(alert.nodeId), "historyLimit": .number(1)]))
         try Task.checkCancellation()
-        let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, allow: allow)
+        let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, decision: decision)
         _ = try await session.rpc.request("chat.approve", payload: payload)
     }
     private static let machineActivityNode = "__ruimte_machine_activity__"
