@@ -26,7 +26,7 @@ struct NotificationsSettingsPage: View {
                 Section("Notify me when") {
                     kind(.needsYou, "An agent needs you", icon: "hand")
                     Toggle(isOn: $coordinator.approvals) {
-                        Label("Answer approvals from the notification", lucideIcon: "shield-check")
+                        Label("Approval requests", lucideIcon: "shield-check")
                     }
                     .disabled(!coordinator.preferences.notify.contains(.needsYou))
                     kind(.turn, "A turn finishes", icon: "check")
