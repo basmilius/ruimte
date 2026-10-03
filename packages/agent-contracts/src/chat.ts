@@ -132,6 +132,69 @@ export const ChatTurnLimitSchema = z.object({
 });
 export type ChatTurnLimit = z.infer<typeof ChatTurnLimitSchema>;
 
+export const ChatQuestionSchema = z.object({
+    id: z.string(),
+    header: z.string(),
+    question: z.string(),
+    choices: z.array(z.object({ label: z.string(), description: z.string() })),
+    multiSelect: z.boolean()
+});
+export type ChatQuestion = z.infer<typeof ChatQuestionSchema>;
+
+export const ChatRequestKindSchema = z.enum(['approval', 'question']);
+export type ChatRequestKind = z.infer<typeof ChatRequestKindSchema>;
+
+/*
+ * Where a request summary stops, in UTF-16 code units and lines. The schema holds no `max` on purpose: one
+ * cut a daemon got wrong would refuse every `chat.list` that carried it. Choice labels and question ids stay
+ * whole, since an answer is the label itself.
+ */
+export const CHAT_REQUEST_LIMITS = {
+    perChat: 8,
+    subject: 200,
+    description: 300,
+    command: 1000,
+    commandLines: 12,
+    diff: 1500,
+    diffLines: 12,
+    question: 500,
+    header: 100,
+    choiceDescription: 200
+} as const;
+
+export const ChatRequestApprovalSchema = z.object({
+    toolName: z.string(),
+    // One line on what the call is about: the file, the command, the address or the pattern; empty when the input names none.
+    subject: z.string(),
+    description: z.string().nullable(),
+    // The file the diff is of, and how many files the change touches when that is more than one.
+    path: z.string().optional(),
+    files: z.number().int().optional(),
+    // The lines the change takes out and puts in, each with its `-` or `+`, without the context around them.
+    diff: z.string().optional(),
+    command: z.string().optional(),
+    // Set when the diff or the command was cut short; the whole call is in the thread.
+    truncated: z.boolean().optional(),
+    canAllowAlways: z.boolean(),
+    allowAlways: z.object({ label: z.string(), description: z.string() }).optional()
+});
+export type ChatRequestApproval = z.infer<typeof ChatRequestApprovalSchema>;
+
+/*
+ * An approval or a question a chat waits on, cut down to what a card needs to show and answer it with
+ * `chat.approve`, `chat.answer` or `chat.dismiss`, so a client need not attach the chat to read it.
+ */
+export const ChatRequestSummarySchema = z.object({
+    requestId: z.string(),
+    // The thread item, which `chat.dismiss` takes.
+    itemId: z.string(),
+    kind: ChatRequestKindSchema,
+    createdAt: z.number(),
+    approval: ChatRequestApprovalSchema.optional(),
+    question: z.object({ questions: z.array(ChatQuestionSchema), async: z.boolean().optional() }).optional()
+});
+export type ChatRequestSummary = z.infer<typeof ChatRequestSummarySchema>;
+
 export const ChatInfoSchema = z.object({
     chatId: ChatIdSchema,
     provider: AgentKindSchema,
@@ -172,6 +235,8 @@ export const ChatInfoSchema = z.object({
     limit: ChatTurnLimitSchema.optional(),
     // When the daemon takes the chat up again on its own, after the limit its last turn stopped on; absent while nothing is owed.
     resumeAt: z.number().optional(),
+    // What the chat waits on a person for, oldest first and at most `CHAT_REQUEST_LIMITS.perChat`; absent while nothing waits.
+    requests: z.array(ChatRequestSummarySchema).optional(),
     createdAt: z.number()
 });
 export type ChatInfo = z.infer<typeof ChatInfoSchema>;
@@ -377,15 +442,6 @@ export const ChatApprovalItemSchema = z.object({
     allowAlways: z.object({ label: z.string(), description: z.string() }).optional(),
     decision: ChatApprovalDecisionSchema
 });
-
-export const ChatQuestionSchema = z.object({
-    id: z.string(),
-    header: z.string(),
-    question: z.string(),
-    choices: z.array(z.object({ label: z.string(), description: z.string() })),
-    multiSelect: z.boolean()
-});
-export type ChatQuestion = z.infer<typeof ChatQuestionSchema>;
 
 export const ChatQuestionItemSchema = z.object({
     ...base,

@@ -3325,6 +3325,11 @@ public enum ChatApprovalDecision: String, CaseIterable, Codable, Sendable, Equat
     case `cancelled` = "cancelled"
 }
 
+public enum ChatRequestKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `approval` = "approval"
+    case `question` = "question"
+}
+
 public enum ChatSkillSource: String, CaseIterable, Codable, Sendable, Equatable {
     case `user` = "user"
     case `project` = "project"

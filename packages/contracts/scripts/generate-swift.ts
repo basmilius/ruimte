@@ -245,6 +245,7 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [agent.AgentKindSchema, agent.AgentKindSchema.options],
     [agent.AgentStatusSchema, agent.AgentStatusSchema.options],
     [RuntimeModeSchema, RuntimeModeSchema.options],
+    [chat.ChatRequestKindSchema, chat.ChatRequestKindSchema.options],
     [ProjectIconNameSchema, PROJECT_ICON_NAMES]
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.

@@ -4924,6 +4924,14 @@
       "cancelled"
     ]
   },
+  "ChatRequestKindSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "approval",
+      "question"
+    ]
+  },
   "ChatSkillSourceSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "string",
@@ -9398,6 +9406,150 @@
       "resumeAt": {
         "type": "number"
       },
+      "requests": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "string"
+            },
+            "itemId": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "x-open-enum": [
+                "approval",
+                "question"
+              ]
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "approval": {
+              "type": "object",
+              "properties": {
+                "toolName": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "diff": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "truncated": {
+                  "type": "boolean"
+                },
+                "canAllowAlways": {
+                  "type": "boolean"
+                },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                }
+              },
+              "required": [
+                "toolName",
+                "subject",
+                "description",
+                "canAllowAlways"
+              ]
+            },
+            "question": {
+              "type": "object",
+              "properties": {
+                "questions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "header": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "choices": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "description"
+                          ]
+                        }
+                      },
+                      "multiSelect": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "header",
+                      "question",
+                      "choices",
+                      "multiSelect"
+                    ]
+                  }
+                },
+                "async": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "questions"
+              ]
+            }
+          },
+          "required": [
+            "requestId",
+            "itemId",
+            "kind",
+            "createdAt"
+          ]
+        }
+      },
       "createdAt": {
         "type": "number"
       }
@@ -10887,6 +11039,150 @@
           },
           "resumeAt": {
             "type": "number"
+          },
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "x-open-enum": [
+                    "approval",
+                    "question"
+                  ]
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "approval": {
+                  "type": "object",
+                  "properties": {
+                    "toolName": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "files": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "diff": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "canAllowAlways": {
+                      "type": "boolean"
+                    },
+                    "allowAlways": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "description"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "toolName",
+                    "subject",
+                    "description",
+                    "canAllowAlways"
+                  ]
+                },
+                "question": {
+                  "type": "object",
+                  "properties": {
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "header": {
+                            "type": "string"
+                          },
+                          "question": {
+                            "type": "string"
+                          },
+                          "choices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ]
+                            }
+                          },
+                          "multiSelect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "header",
+                          "question",
+                          "choices",
+                          "multiSelect"
+                        ]
+                      }
+                    },
+                    "async": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "questions"
+                  ]
+                }
+              },
+              "required": [
+                "requestId",
+                "itemId",
+                "kind",
+                "createdAt"
+              ]
+            }
           },
           "createdAt": {
             "type": "number"
@@ -14438,6 +14734,150 @@
                     "resumeAt": {
                       "type": "number"
                     },
+                    "requests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "x-open-enum": [
+                              "approval",
+                              "question"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "approval": {
+                            "type": "object",
+                            "properties": {
+                              "toolName": {
+                                "type": "string"
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "path": {
+                                "type": "string"
+                              },
+                              "files": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "diff": {
+                                "type": "string"
+                              },
+                              "command": {
+                                "type": "string"
+                              },
+                              "truncated": {
+                                "type": "boolean"
+                              },
+                              "canAllowAlways": {
+                                "type": "boolean"
+                              },
+                              "allowAlways": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "description"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "toolName",
+                              "subject",
+                              "description",
+                              "canAllowAlways"
+                            ]
+                          },
+                          "question": {
+                            "type": "object",
+                            "properties": {
+                              "questions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "header": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string"
+                                    },
+                                    "choices": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "description": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "label",
+                                          "description"
+                                        ]
+                                      }
+                                    },
+                                    "multiSelect": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "header",
+                                    "question",
+                                    "choices",
+                                    "multiSelect"
+                                  ]
+                                }
+                              },
+                              "async": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "questions"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "requestId",
+                          "itemId",
+                          "kind",
+                          "createdAt"
+                        ]
+                      }
+                    },
                     "createdAt": {
                       "type": "number"
                     }
@@ -14824,6 +15264,150 @@
                     },
                     "resumeAt": {
                       "type": "number"
+                    },
+                    "requests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "x-open-enum": [
+                              "approval",
+                              "question"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "approval": {
+                            "type": "object",
+                            "properties": {
+                              "toolName": {
+                                "type": "string"
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "path": {
+                                "type": "string"
+                              },
+                              "files": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "diff": {
+                                "type": "string"
+                              },
+                              "command": {
+                                "type": "string"
+                              },
+                              "truncated": {
+                                "type": "boolean"
+                              },
+                              "canAllowAlways": {
+                                "type": "boolean"
+                              },
+                              "allowAlways": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "description"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "toolName",
+                              "subject",
+                              "description",
+                              "canAllowAlways"
+                            ]
+                          },
+                          "question": {
+                            "type": "object",
+                            "properties": {
+                              "questions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "header": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string"
+                                    },
+                                    "choices": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "description": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "label",
+                                          "description"
+                                        ]
+                                      }
+                                    },
+                                    "multiSelect": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "header",
+                                    "question",
+                                    "choices",
+                                    "multiSelect"
+                                  ]
+                                }
+                              },
+                              "async": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "questions"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "requestId",
+                          "itemId",
+                          "kind",
+                          "createdAt"
+                        ]
+                      }
                     },
                     "createdAt": {
                       "type": "number"
@@ -16673,6 +17257,150 @@
       "resumeAt": {
         "type": "number"
       },
+      "requests": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requestId": {
+              "type": "string"
+            },
+            "itemId": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "x-open-enum": [
+                "approval",
+                "question"
+              ]
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "approval": {
+              "type": "object",
+              "properties": {
+                "toolName": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "files": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "diff": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "truncated": {
+                  "type": "boolean"
+                },
+                "canAllowAlways": {
+                  "type": "boolean"
+                },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                }
+              },
+              "required": [
+                "toolName",
+                "subject",
+                "description",
+                "canAllowAlways"
+              ]
+            },
+            "question": {
+              "type": "object",
+              "properties": {
+                "questions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "header": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "choices": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "description"
+                          ]
+                        }
+                      },
+                      "multiSelect": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "header",
+                      "question",
+                      "choices",
+                      "multiSelect"
+                    ]
+                  }
+                },
+                "async": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "questions"
+              ]
+            }
+          },
+          "required": [
+            "requestId",
+            "itemId",
+            "kind",
+            "createdAt"
+          ]
+        }
+      },
       "createdAt": {
         "type": "number"
       }
@@ -17352,6 +18080,150 @@
           "resumeAt": {
             "type": "number"
           },
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "x-open-enum": [
+                    "approval",
+                    "question"
+                  ]
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "approval": {
+                  "type": "object",
+                  "properties": {
+                    "toolName": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "files": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "diff": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "canAllowAlways": {
+                      "type": "boolean"
+                    },
+                    "allowAlways": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "description"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "toolName",
+                    "subject",
+                    "description",
+                    "canAllowAlways"
+                  ]
+                },
+                "question": {
+                  "type": "object",
+                  "properties": {
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "header": {
+                            "type": "string"
+                          },
+                          "question": {
+                            "type": "string"
+                          },
+                          "choices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ]
+                            }
+                          },
+                          "multiSelect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "header",
+                          "question",
+                          "choices",
+                          "multiSelect"
+                        ]
+                      }
+                    },
+                    "async": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "questions"
+                  ]
+                }
+              },
+              "required": [
+                "requestId",
+                "itemId",
+                "kind",
+                "createdAt"
+              ]
+            }
+          },
           "createdAt": {
             "type": "number"
           }
@@ -17851,6 +18723,150 @@
               },
               "resumeAt": {
                 "type": "number"
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "itemId": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "x-open-enum": [
+                        "approval",
+                        "question"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "approval": {
+                      "type": "object",
+                      "properties": {
+                        "toolName": {
+                          "type": "string"
+                        },
+                        "subject": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "path": {
+                          "type": "string"
+                        },
+                        "files": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "diff": {
+                          "type": "string"
+                        },
+                        "command": {
+                          "type": "string"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        },
+                        "canAllowAlways": {
+                          "type": "boolean"
+                        },
+                        "allowAlways": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "description"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "toolName",
+                        "subject",
+                        "description",
+                        "canAllowAlways"
+                      ]
+                    },
+                    "question": {
+                      "type": "object",
+                      "properties": {
+                        "questions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "header": {
+                                "type": "string"
+                              },
+                              "question": {
+                                "type": "string"
+                              },
+                              "choices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "label",
+                                    "description"
+                                  ]
+                                }
+                              },
+                              "multiSelect": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "header",
+                              "question",
+                              "choices",
+                              "multiSelect"
+                            ]
+                          }
+                        },
+                        "async": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "questions"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "requestId",
+                    "itemId",
+                    "kind",
+                    "createdAt"
+                  ]
+                }
               },
               "createdAt": {
                 "type": "number"
@@ -39280,6 +40296,150 @@
             "resumeAt": {
               "type": "number"
             },
+            "requests": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "requestId": {
+                    "type": "string"
+                  },
+                  "itemId": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "x-open-enum": [
+                      "approval",
+                      "question"
+                    ]
+                  },
+                  "createdAt": {
+                    "type": "number"
+                  },
+                  "approval": {
+                    "type": "object",
+                    "properties": {
+                      "toolName": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "files": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "diff": {
+                        "type": "string"
+                      },
+                      "command": {
+                        "type": "string"
+                      },
+                      "truncated": {
+                        "type": "boolean"
+                      },
+                      "canAllowAlways": {
+                        "type": "boolean"
+                      },
+                      "allowAlways": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "description"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "toolName",
+                      "subject",
+                      "description",
+                      "canAllowAlways"
+                    ]
+                  },
+                  "question": {
+                    "type": "object",
+                    "properties": {
+                      "questions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "header": {
+                              "type": "string"
+                            },
+                            "question": {
+                              "type": "string"
+                            },
+                            "choices": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "description"
+                                ]
+                              }
+                            },
+                            "multiSelect": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "header",
+                            "question",
+                            "choices",
+                            "multiSelect"
+                          ]
+                        }
+                      },
+                      "async": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "questions"
+                    ]
+                  }
+                },
+                "required": [
+                  "requestId",
+                  "itemId",
+                  "kind",
+                  "createdAt"
+                ]
+              }
+            },
             "createdAt": {
               "type": "number"
             }
@@ -42332,6 +43492,150 @@
                   "resumeAt": {
                     "type": "number"
                   },
+                  "requests": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "itemId": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "x-open-enum": [
+                            "approval",
+                            "question"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "approval": {
+                          "type": "object",
+                          "properties": {
+                            "toolName": {
+                              "type": "string"
+                            },
+                            "subject": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "path": {
+                              "type": "string"
+                            },
+                            "files": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "diff": {
+                              "type": "string"
+                            },
+                            "command": {
+                              "type": "string"
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            },
+                            "canAllowAlways": {
+                              "type": "boolean"
+                            },
+                            "allowAlways": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "toolName",
+                            "subject",
+                            "description",
+                            "canAllowAlways"
+                          ]
+                        },
+                        "question": {
+                          "type": "object",
+                          "properties": {
+                            "questions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "header": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "choices": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "description": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "label",
+                                        "description"
+                                      ]
+                                    }
+                                  },
+                                  "multiSelect": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "header",
+                                  "question",
+                                  "choices",
+                                  "multiSelect"
+                                ]
+                              }
+                            },
+                            "async": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "questions"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "itemId",
+                        "kind",
+                        "createdAt"
+                      ]
+                    }
+                  },
                   "createdAt": {
                     "type": "number"
                   }
@@ -42718,6 +44022,150 @@
                   },
                   "resumeAt": {
                     "type": "number"
+                  },
+                  "requests": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "itemId": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "x-open-enum": [
+                            "approval",
+                            "question"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "approval": {
+                          "type": "object",
+                          "properties": {
+                            "toolName": {
+                              "type": "string"
+                            },
+                            "subject": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "path": {
+                              "type": "string"
+                            },
+                            "files": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "diff": {
+                              "type": "string"
+                            },
+                            "command": {
+                              "type": "string"
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            },
+                            "canAllowAlways": {
+                              "type": "boolean"
+                            },
+                            "allowAlways": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "toolName",
+                            "subject",
+                            "description",
+                            "canAllowAlways"
+                          ]
+                        },
+                        "question": {
+                          "type": "object",
+                          "properties": {
+                            "questions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "header": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "choices": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "label": {
+                                          "type": "string"
+                                        },
+                                        "description": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "label",
+                                        "description"
+                                      ]
+                                    }
+                                  },
+                                  "multiSelect": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "header",
+                                  "question",
+                                  "choices",
+                                  "multiSelect"
+                                ]
+                              }
+                            },
+                            "async": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "questions"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "itemId",
+                        "kind",
+                        "createdAt"
+                      ]
+                    }
                   },
                   "createdAt": {
                     "type": "number"
@@ -44155,6 +45603,150 @@
           },
           "resumeAt": {
             "type": "number"
+          },
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "x-open-enum": [
+                    "approval",
+                    "question"
+                  ]
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "approval": {
+                  "type": "object",
+                  "properties": {
+                    "toolName": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "files": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "diff": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "canAllowAlways": {
+                      "type": "boolean"
+                    },
+                    "allowAlways": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "description"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "toolName",
+                    "subject",
+                    "description",
+                    "canAllowAlways"
+                  ]
+                },
+                "question": {
+                  "type": "object",
+                  "properties": {
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "header": {
+                            "type": "string"
+                          },
+                          "question": {
+                            "type": "string"
+                          },
+                          "choices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "description"
+                              ]
+                            }
+                          },
+                          "multiSelect": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "header",
+                          "question",
+                          "choices",
+                          "multiSelect"
+                        ]
+                      }
+                    },
+                    "async": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "questions"
+                  ]
+                }
+              },
+              "required": [
+                "requestId",
+                "itemId",
+                "kind",
+                "createdAt"
+              ]
+            }
           },
           "createdAt": {
             "type": "number"

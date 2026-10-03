@@ -17,6 +17,7 @@ exports[`no vocabulary a daemon sends gains or loses a value 1`] = `
   "answered, cancelled, dismissed, pending",
   "app, chat, daemon, other, terminal",
   "apple, claude, codex, copilot, gemini",
+  "approval, question",
   "auto, auto-accept-edits, full-access, supervised",
   "auto, user",
   "base, commit, worktree",
