@@ -10,6 +10,7 @@ struct NowPage: View {
     let pair: () -> Void
     @State private var newChat = false
     @State private var showingSnoozed = false
+    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         let board = now.board
@@ -118,6 +119,9 @@ struct NowPage: View {
                     }
                     .accessibilityIdentifier("now.newChat")
                 }
+            }
+            if let settingsLink {
+                SettingsToolbarItem(link: settingsLink)
             }
         }
         .mobileSheet(isPresented: $newChat) {

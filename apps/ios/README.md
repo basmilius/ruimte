@@ -106,7 +106,8 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 ## Navigation on an iPhone
 
 Four tabs, each at most two levels deep: Now, Projects, Machines and Search. Settings opens as a sheet from the
-avatar at the top right of every tab, and the tab bar folds in while a list scrolls down.
+avatar, the last item on the right of the bar on every tab and on a project's page, and the tab bar folds in while a
+list scrolls down.
 
 - Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
   machines that are not connected. `NowModel` reads each machine's open projects with `project.sidebar`, again on

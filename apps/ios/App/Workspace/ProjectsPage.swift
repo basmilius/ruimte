@@ -10,6 +10,7 @@ struct ProjectsPage<Notice: View>: View {
     @State private var search = ""
     @State private var newChat: NewChatTarget?
     @Environment(\.openMobileWorkspace) private var openWorkspace
+    @Environment(\.settingsLink) private var settingsLink
 
     var body: some View {
         MobileList {
@@ -108,6 +109,9 @@ struct ProjectsPage<Notice: View>: View {
                     MobileLoadingRow("Updating projects")
                 }
                 .sharedBackgroundVisibility(.hidden)
+            }
+            if let settingsLink {
+                SettingsToolbarItem(link: settingsLink)
             }
         }
         .refreshable {

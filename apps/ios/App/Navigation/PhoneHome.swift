@@ -25,7 +25,6 @@ struct PhoneHome: View {
                         },
                         pair: pair
                     )
-                    .toolbar { SettingsToolbarItem(link: settingsLink) }
                     .navigationDestination(item: $router.now) { destination($0) }
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
@@ -40,7 +39,6 @@ struct PhoneHome: View {
                         EmptyView()
                     }
                     .navigationTitle("Projects")
-                    .toolbar { SettingsToolbarItem(link: settingsLink) }
                     .navigationDestination(item: $router.project) { WorkspacePage(navigation: $0) }
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
@@ -120,7 +118,8 @@ extension EnvironmentValues {
 }
 
 /// The avatar into Settings, under one id on every page that shows it, so the bar of the next page finds it at the
-/// same spot and morphs only what changes around it.
+/// same spot and morphs only what changes around it. It goes last in the page's own `.toolbar`: the bar puts the
+/// items of a `.toolbar` outside the page before the page's own, which left it on the left of Now's write button.
 struct SettingsToolbarItem: ToolbarContent {
     let link: SettingsLink
 
