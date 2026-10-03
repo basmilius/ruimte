@@ -278,6 +278,24 @@ terminal or canvas that still waits for its project or session shows a spinner o
   the computer only. A device the machine does not have says so, as does one whose screen it cannot capture. When
   the link to the machine drops, the last screen stays dimmed until it is back.
 
+## First run
+
+Three steps (`App/Onboarding`), centered on an iPad as on an iPhone.
+
+- The welcome (`WelcomePage`) shows the light app icon in the desktop's orbit, with the two ways in: Continue with
+  Apple or GitHub, as `/v1/providers` offers them, or Connect directly to your computer with a pairing link. When the
+  providers do not load it says so and offers Try again; a failed sign-in is an alert.
+- Add a machine (`PairMachinePage`, the same sheet as the plus on Machines) takes a pairing link only, with the steps
+  that find one: Settings, Account, Show pairing link in Ruimte on the computer, or `ruimte pair` there. When the
+  sheet opens and the clipboard looks like a web address (`detectPatterns`, which asks nothing), it reads the
+  clipboard, which is what raises the system's paste prompt, and fills in a pairing link it finds there
+  (`PairingClipboard`). The paste button pastes without a prompt. Connect appears once the field holds a link.
+- Once a machine is there, the notification step (`NotificationStepPage`) says which machines connected, shows an
+  example notification and, on an iPhone, the Live Activity, and asks. Turn on notifications is the same as the
+  switch in Settings; Not now skips it. Either answer opens the app on Now. The step follows only a way in taken
+  from the welcome (`Onboarding`, kept as `ruimte.ios.onboarding.notifications` until it is answered), so a phone
+  set up before it existed is never asked, and an account without machines waits for its first one.
+
 ## Settings
 
 
@@ -611,8 +629,8 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
 The web authentication callback is exactly `ruimte://pulsar/callback`, checked with the
 pending state before exchange. `/v1/providers` controls the login options; Apple uses
 the native token exchange described above. HTTPS pairing links are accepted from the
-welcome screen and Projects page; redirects are refused to keep a token on its intended
-origin. This app contains no local daemon.
+welcome screen, Machines, Search and the iPad's Projects page; redirects are refused to
+keep a token on its intended origin. This app contains no local daemon.
 
 ## Constraints
 
@@ -683,8 +701,8 @@ wait between phases, but these criteria are not established by simulator success
 
 ## Notifications and Live Activities
 
-Notifications are opt-in in Settings and automatically cover agents on every connected
-machine; approvals can be enabled independently. The phone chooses the kinds (an agent needs you, a turn finishes,
+Notifications are opt-in, in the last step of the first run or in Settings, and automatically cover agents on every
+connected machine; approvals can be enabled independently. The phone chooses the kinds (an agent needs you, a turn finishes,
 a process misbehaves) and, per project, All, Needs you only or Off (`NotificationPreferences`). Every machine gets
 them with `push.subscribe` as `notify` and `projects`: All is no entry, Needs you only is `['needs-you']` and Off is
 an empty list, for that machine's own projects. The settings page asks each connected machine `push.preferences`; a

@@ -18,7 +18,7 @@ struct AboutPage: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 24)
                 .padding(.bottom, 20)
-                .background(AboutOrbit())
+                .background(IconOrbit())
                 .listRowBackground(Color.clear)
                 .accessibilityElement(children: .combine)
             }
@@ -55,32 +55,6 @@ struct AboutPage: View {
         Link(destination: URL(string: url)!) {
             Label(title, lucideIcon: icon).foregroundStyle(MobileStyle.text)
         }
-    }
-}
-
-/// The orbit of the desktop's About around the icon: a soft glow and three rings that fade out downward.
-private struct AboutOrbit: View {
-    var body: some View {
-        GeometryReader { geometry in
-            let center = CGPoint(x: geometry.size.width / 2, y: 62)
-            ZStack {
-                RadialGradient(
-                    colors: [MobileStyle.accent.opacity(0.16), .clear], center: .center, startRadius: 0,
-                    endRadius: 150
-                )
-                .frame(width: 300, height: 300)
-                .position(center)
-                ForEach([140.0, 230.0, 340.0], id: \.self) { diameter in
-                    Circle()
-                        .stroke(MobileStyle.text.opacity(0.07 - diameter / 10_000), lineWidth: 1)
-                        .frame(width: diameter, height: diameter)
-                        .position(center)
-                }
-            }
-            .mask(LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom))
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 

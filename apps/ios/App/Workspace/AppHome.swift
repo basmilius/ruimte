@@ -12,6 +12,7 @@ struct AppHome: View {
     @State private var signIn = false
     @State private var pairAfterDismiss = false
     @State private var now = NowModel()
+    @State private var onboarding = Onboarding()
     @State private var router = PhoneRouter()
     @State private var padRouter = PadRouter()
     @State private var sceneID = UUID().uuidString
@@ -24,6 +25,11 @@ struct AppHome: View {
     }
 
     private var hasWorkspace: Bool { runtime.account != nil || !runtime.machines.isEmpty }
+    private var onboardingStep: OnboardingStep {
+        onboarding.step(
+            signedIn: runtime.account != nil, machines: runtime.machines.count,
+            notificationsEnabled: runtime.notifications.enabled)
+    }
     private var machineRevision: String {
         ([runtime.key?.publicKey ?? "", String(runtime.connectionRevision)]
             + runtime.machines.map {
@@ -33,7 +39,9 @@ struct AppHome: View {
 
     var body: some View {
         Group {
-            if usesSidebar {
+            if onboardingStep == .notifications {
+                notificationStep
+            } else if usesSidebar {
                 PadHome(
                     runtime: runtime, projects: projects, now: now, router: padRouter,
                     showSettings: { settings = true }, pair: { pairing = true }, signIn: { signIn = true })
@@ -43,7 +51,7 @@ struct AppHome: View {
                     showSettings: { settings = true }, pair: { pairing = true }, signIn: { signIn = true })
             } else {
                 NavigationStack {
-                    WelcomePage(runtime: runtime, window: window) { pairing = true }
+                    WelcomePage(runtime: runtime, window: window, pair: { pairing = true }, begin: onboarding.begin)
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
             }
@@ -85,6 +93,9 @@ struct AppHome: View {
             // The account restored on launch may land after the last project reopened.
             if usesSidebar { restoreLastProject() }
         }
+        .onChange(of: runtime.notifications.enabled) { _, enabled in
+            if enabled { onboarding.finish() }
+        }
         .onChange(of: runtime.notifications.destination) { _, destination in
             guard let destination else { return }
             settings = false
@@ -112,6 +123,11 @@ struct AppHome: View {
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private var usesSidebar: Bool { isPad && hasWorkspace }
+
+    private var notificationStep: some View {
+        NotificationStepPage(
+            coordinator: runtime.notifications, onboarding: onboarding, machines: runtime.machines.map(\.name))
+    }
 
     /// A cold start puts the project left open back in the sidebar, while the content opens on Now as the iPhone
     /// does. A project that no longer opens says so in the sidebar, whose switcher leads elsewhere; one whose machine
