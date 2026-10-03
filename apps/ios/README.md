@@ -94,6 +94,9 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   and the time they came in. A widget shows the default account of each CLI unless its Account setting picks
   another; a CLI with several accounts names the account in its rows, and one CLI's widget then shows that
   account's cost of today.
+- A Needs you widget with the count of what waits on you and what works, and a Needs you list widget (medium and
+  large) whose rows open their chat or terminal (`ruimte://node`). Now writes the board into the app group whenever
+  it changes (`NeedsYouWidgetRecorder`); the widgets show the last state the app saw.
 - The usage page has a limits section per account, titled with the account once a CLI has several. An account
   that is signed out or not read yet says so instead of drawing empty bars. A signed-out account offers Log in where the machine
   names a login command for its CLI, as the desktop's usage page does: the CLI's own login runs in a terminal of its
@@ -112,6 +115,24 @@ avatar at the top right of every tab, and the tab bar folds in while a list scro
   `chat.status`, `session.status`), and Finished holds what ended while nobody looked until it is opened. `NowBoard`
   is the pure grouping. Rows wear the task mark from `task.list`. A tap opens the chat or terminal over Now, inside
   its project; a long press also offers Open project. The tab's badge counts what needs you.
+  A chat between turns whose sub-agents or workflow still run (`delegating` on its info), or that gave another agent
+  a task that is still open, stays under Working with a gray mark, as the desktop draws it.
+- A needs-you card answers the chat's oldest request in place (`NowRequest`, `NowCard`), from the summary the machine
+  keeps on the chat's info (`requests` on `chat.list` and `chat.status`), without attaching the chat: Deny, Allow and
+  Reply for an approval, where Reply is a denial with a message and only shows for a CLI that passes one on
+  (`denyReason` in `provider.list`), and for a single question its choices and a reply field. A request with several
+  questions is answered in the chat. The card goes once the machine drops the request, whoever answered it; an answer
+  that finds it settled (`request-not-found`) counts as given. A machine from before request summaries shows the card
+  as before, and its header opens the chat.
+- Snooze (`Snoozes.swift`) puts a needs-you card or a chat or terminal in a project's list aside for 10 minutes,
+  an hour or until the next 09:00 on the phone, by swiping a card to the left (an hour) or from the context menu.
+  `MachineSnoozes` reads the machine's own with `snooze.list` and `snooze.changed` and sends `snooze.set` and
+  `snooze.clear` with an absolute `until`. A snoozed card leaves Needs you, the tab's badge and the app icon's badge
+  and waits folded under "Snoozed until …" until it runs out. A snooze set without a connection waits on the phone,
+  also across a restart, and goes out once the link is back unless it ran out; a machine that answers
+  `unknown-request` keeps its snoozes on this phone, for that machine only, until an update makes it list them.
+- The write button on Now starts a chat with one of a machine's installed agents in the machine's Chats
+  (`project.newChat`) or as a new chat view at the end of one of its open projects, and opens it.
 - Projects lists the open projects, New chat, each machine's Chats and Recently closed. A project page is its list
   of views. Files and Git open as sheets from its toolbar, Launches from its menu, and New view (New chat in Chats)
   with Usage ride in the tab bar's accessory. A view opens over the project and hides the tab bar.
@@ -493,6 +514,9 @@ main thread. On an iPhone a notification switches to Now and opens its chat or t
 it, found with `project.sidebar`, so the prompt waits in the composer; a node no open project holds opens on its own.
 A machine's overview opens Now. On an iPad the notification's page replaces the detail column with the selected
 notification route without competing navigation bindings.
+
+An approval notification offers Allow and Deny, and Always allow as well where the push's choices carry `remember`.
+A push never carries a question's choices, so a question opens its chat.
 
 Background approval actions are claimed once, then checked against fresh machine state.
 An expired or already answered request opens its conversation without sending a decision.
