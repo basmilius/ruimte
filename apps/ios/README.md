@@ -182,7 +182,7 @@ once per launch), else the first letter of its name.
   then Files, Git and Launches (none of these in Chats) and Usage, each a sheet; Files and Git open large and pull
   down to medium. A view opens over the project.
 - Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
-  projects (which open under Projects), Chats, files, processes, usage and machine settings.
+  projects (which open under Projects), Chats, files, processes, usage, agents and machine settings.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
   opens over Search in its project; a project opens under Projects.
 
@@ -199,6 +199,40 @@ or a chat's sub-agents, has no route and stays out of the path. A view opened ou
 (`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
 project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
 project's Views, Files, Git and Search as tabs.
+
+## Settings
+
+Settings (`App/Settings`) is an opaque sheet behind the avatar on an iPhone and a section of the sidebar on an
+iPad, with the sections of the desktop's settings that mean something on a phone. The account comes first, with
+how it signed in and how many machines the phone reaches; behind it are those machines, Sign out and Delete account.
+Then Appearance (theme, terminal font size), Agents, Files and Git (hidden files), Connection diagnostics and About.
+
+- Show replies (word by word, per paragraph or when complete) is one setting for every chat, stored as
+  `ruimte.chat.streaming`; the chat's own menu reads and writes the same value.
+- Agents on a machine (`MachineAgents.swift`, also under a machine's page) lists its installed CLIs from
+  `provider.list` with their accounts from `accounts.list`: version, plan and email, or why an account cannot run. A
+  signed-out account offers Sign in again where the machine names a login command, which runs the CLI's own login
+  in a terminal there, as on the usage page. Defaults hold this phone's permission mode and a model per chat CLI,
+  the picks it already sends with `chat.setPreferences`, and the machine's own switches for resuming after a limit
+  and for agents deleting any view (`endpoint.setIdentity`, sending a name nobody chose as null so it stays unchosen).
+  Computer Use shows only its state (`computer.status`): turning it on and letting an agent into an app happens on
+  the machine itself. Installing a CLI or adding an account does too.
+- Notifications and Live Activities: see below.
+- About shows the light app icon in the desktop's orbit, the version and build, the desktop's links, the licenses
+  of what the app ships (`App/Design/Lucide-LICENSE.txt`, `App/Resources/package-licenses.txt` for Highlightr,
+  highlight.js, SwiftTerm and WebRTC, and `App/Resources/document-renderer-licenses.txt`) and What's new.
+- Release notes come from `App/Resources/release-notes.json` in the bundle, never the network. The file names the
+  version it was written for; write it anew for a release whose notes change. They show once by themselves, at the
+  first launch after an update from a version older than the notes (`ReleaseNotesGate`, which records the version
+  each launch). A fresh install shows nothing, and a Debug build (version 0.1.0) is older than any notes, so there
+  they only open from About.
+- Delete account (App Store guideline 5.1.1(v)) says what goes and asks for the account's name as the address book
+  holds it now (`GET /v1/account`), or `DELETE` for an account without one, compared as `confirmsAccountDeletion` in
+  `packages/pulsar` does. An account with an Apple identity gets a fresh Sign in with Apple authorization (no scope,
+  no nonce) right before `DELETE /v1/account`, and its code goes along as `appleAuthorizationCode`, so the address
+  book revokes Sign in with Apple first. A refused name (`confirmation-mismatch`) or a failed revocation
+  (`apple-revocation-failed`) deletes nothing and says so; cancelling Apple's sheet sends nothing. After a deletion
+  the phone signs out as Sign out does, without trying to revoke push devices the deletion already removed.
 
 ## AI conversations
 
@@ -345,7 +379,7 @@ App icons use [LucideSwift](https://github.com/ajaxjiang96/lucide-swift), pinned
 menu and status icons use template images generated from the same paths. These images
 are cached in the app. Live Activities also use Lucide. System-provided controls keep
 their native icons, and provider logos and custom project SVGs remain separate.
-The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
+The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`; About shows them with the other licenses.
 
 In writing mode the composer is three rows of glass. Over the field sit chips for what the
 chat keeps working on beside the thread: its sub-agents, with the state of all of them in one
@@ -566,7 +600,13 @@ wait between phases, but these criteria are not established by simulator success
 ## Notifications and Live Activities
 
 Notifications are opt-in in Settings and automatically cover agents on every connected
-machine; approvals can be enabled independently. The phone registers its APNs token
+machine; approvals can be enabled independently. The phone chooses the kinds (an agent needs you, a turn finishes,
+a process misbehaves) and, per project, All, Needs you only or Off (`NotificationPreferences`). Every machine gets
+them with `push.subscribe` as `notify` and `projects`: All is no entry, Needs you only is `['needs-you']` and Off is
+an empty list, for that machine's own projects. The settings page asks each connected machine `push.preferences`; a
+phone that never chose takes the first answer, and a machine that answers `unknown-request` is named as needing an
+update, since it ignores both and notifies only when an agent needs you. A snooze already keeps a view quiet on
+every device. The phone registers its APNs token
 with the address book and sends its opaque handle, push public key and preferences to
 each authenticated machine. Alerts are sent only while the paired key has no connected
 client. Older daemons receive a snapshot of known sessions as a compatibility follow list.
