@@ -577,6 +577,7 @@ struct ProjectItemPage: View {
                     }
                 })
         case "browser": BrowserPage(url: current.text("url"))
+        case "device": DeviceViewPage(client: workspace.client, reference: current["device"])
         case "file":
             FileContentPage(
                 client: workspace.client, path: absolutePath(current.text("path")),
