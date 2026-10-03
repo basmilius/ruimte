@@ -72,6 +72,7 @@ struct ChatForkSheet: View {
                         Picker("Fork into", selection: $shape) {
                             ForEach(shapes) { Text($0.label).tag($0) }
                         }
+                        .pickerStyle(.segmented)
                     }
                 } footer: {
                     Text(
@@ -91,7 +92,7 @@ struct ChatForkSheet: View {
                     Section { Text(failure).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("Fork conversation")
+            .navigationTitle("Fork this conversation")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

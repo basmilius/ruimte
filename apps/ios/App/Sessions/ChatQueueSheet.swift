@@ -11,8 +11,6 @@ struct ChatQueueSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Sent as soon as the current turn finishes.")
-                        .font(.subheadline).foregroundStyle(MobileStyle.muted)
                     if let error = model.queueProblem {
                         Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError)
                     }
@@ -30,9 +28,11 @@ struct ChatQueueSheet: View {
                 }
             }
             .navigationTitle("Queue (\(model.queue.count))")
+            .navigationSubtitle("Sent as soon as the current turn finishes.")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+        .presentationDetents([.medium, .large])
     }
 
     private func card(_ message: JSONValue) -> some View {

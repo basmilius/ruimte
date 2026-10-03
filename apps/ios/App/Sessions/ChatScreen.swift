@@ -91,7 +91,7 @@ struct ChatScreen: View {
         .background(MobileStyle.surface.ignoresSafeArea())
         .tint(MobileStyle.accent)
         .navigationTitle(title)
-        .modifier(ChatForkTitle(subtitle: forkSubtitle) { forkBackItems })
+        .modifier(ChatForkTitle(subtitle: forkSubtitle) { Section(forkLine ?? "") { forkBackItems } })
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
@@ -269,6 +269,13 @@ struct ChatScreen: View {
     private var forkOf: String? { model.info["forkOf"]?["chatId"]?.stringValue }
     private var originalTitle: String? { forkOf.flatMap { model.presentation.places?.title($0) } }
 
+    private var forkLine: String? {
+        ChatForking.forkLine(
+            forkOf: model.info["forkOf"],
+            turnIDs: model.presentation.values.filter { $0.text("kind") == "turn" }.map(\.stableID),
+            complete: model.history.cursor == nil, moment: { ChatLimits.moment($0) })
+    }
+
     private var forkSubtitle: String? {
         guard forkOf != nil else { return nil }
         return originalTitle.map { "Fork of \($0)" } ?? "Fork"
@@ -278,7 +285,7 @@ struct ChatScreen: View {
     /// composer's chips and pills, so the full sub-agent list only shows here while no chip stands for it.
     @ViewBuilder private var chatMenu: some View {
         if forkOf != nil {
-            Section { forkBackItems }
+            Section(forkLine ?? "") { forkBackItems }
         }
         Section {
             if let plans = machineSession?.plans, let plan = plans.plans(for: model.chatID).first {
@@ -467,7 +474,7 @@ struct ChatScreen: View {
         .accessibilityIdentifier("chat.scroll-to-bottom")
     }
 
-    private static let composerDockSpace = "chat.composer.dock"
+    private nonisolated static let composerDockSpace = "chat.composer.dock"
 
     private var composerDock: some View {
         HStack(alignment: .bottom, spacing: 16) {

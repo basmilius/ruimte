@@ -101,6 +101,17 @@ enum ChatForking {
         }
     }
 
+    /// Where and when a fork began: "Forked after turn 3, 09:24". The turn is counted only over a thread read from its
+    /// start, since a later page would count from wherever the reader is; `moment` writes the time.
+    static func forkLine(forkOf: JSONValue?, turnIDs: [String], complete: Bool, moment: (Double) -> String) -> String? {
+        guard let forkOf, let at = forkOf["at"]?.numberValue else { return nil }
+        let time = moment(at)
+        if complete, let index = turnIDs.firstIndex(of: forkOf.text("turnId")) {
+            return "Forked after turn \(index + 1), \(time)"
+        }
+        return "Forked at \(time)"
+    }
+
     /// Whether a chat is a view of its own or a node on a canvas, and the name it goes by; nil when it is not in
     /// the project.
     static func origin(in views: [JSONValue], chatID: String) -> (shape: ChatForkShape, title: String)? {

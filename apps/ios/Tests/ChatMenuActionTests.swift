@@ -64,6 +64,18 @@ import XCTest
         XCTAssertEqual(node[1].text("name"), "Main")
     }
 
+    func testAForkSaysAfterWhichTurnItBeganOnlyOverTheWholeThread() {
+        let forkOf = JSONValue.object(["chatId": .string("original"), "turnId": .string("t2"), "at": .number(5)])
+        let moment: (Double) -> String = { "at\(Int($0))" }
+        XCTAssertEqual(
+            ChatForking.forkLine(forkOf: forkOf, turnIDs: ["t1", "t2", "t3"], complete: true, moment: moment),
+            "Forked after turn 2, at5")
+        XCTAssertEqual(
+            ChatForking.forkLine(forkOf: forkOf, turnIDs: ["t2", "t3"], complete: false, moment: moment),
+            "Forked at at5")
+        XCTAssertNil(ChatForking.forkLine(forkOf: nil, turnIDs: [], complete: true, moment: moment))
+    }
+
     func testRenamingNeedsANameAndAChatTheProjectHolds() {
         let views: [JSONValue] = [.object(["id": .string("chat"), "kind": .string("chat"), "name": .string("A")])]
         XCTAssertNil(ChatRename.renamed(views, chatID: "chat", to: "   "))
