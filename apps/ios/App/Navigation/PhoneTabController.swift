@@ -54,6 +54,8 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
     /// A path asked for during a transition, shown once the transition ends.
     private var pending: [PhoneRoute]?
     private var popGestures: [PhonePopGesture] = []
+    /// Drives a pop the system's recognizers cannot, on the stack around the tabs.
+    var swipeBack: PhoneSwipeBack?
 
     init(root: UIViewController) {
         super.init(rootViewController: root)
@@ -73,10 +75,15 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
     /// A swipe from anywhere on a page pops it, as in the system's apps.
     func installPopGestures() -> [PhonePopGesture] {
         [
-            PhonePopGesture.install(on: interactiveContentPopGestureRecognizer, in: view, guardsContent: true) {
+            PhonePopGesture.install(on: interactiveContentPopGestureRecognizer, in: view, stackName: stackName) {
                 [weak self] in self?.canSwipeBack ?? false
             }
         ].compactMap { $0 }
+    }
+
+    /// Names the stack in the `navigation-gesture` log.
+    var stackName: String {
+        "stack"
     }
 
     var canSwipeBack: Bool {
@@ -149,6 +156,21 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
     }
 
     func navigationController(
+        _ navigationController: UINavigationController,
+        animationControllerFor operation: UINavigationController.Operation,
+        from fromVC: UIViewController, to toVC: UIViewController
+    ) -> (any UIViewControllerAnimatedTransitioning)? {
+        swipeBack?.animator(for: operation)
+    }
+
+    func navigationController(
+        _ navigationController: UINavigationController,
+        interactionControllerFor animationController: any UIViewControllerAnimatedTransitioning
+    ) -> (any UIViewControllerInteractiveTransitioning)? {
+        swipeBack?.interactionController(for: animationController)
+    }
+
+    func navigationController(
         _ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool
     ) {
         if pending != nil {
@@ -172,6 +194,10 @@ final class PhoneTabStackController: PhoneStackController {
 
     required init?(coder aDecoder: NSCoder) {
         nil
+    }
+
+    override var stackName: String {
+        "the \(phoneTab.rawValue) tab"
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -249,14 +275,16 @@ final class PhoneRootController: PhoneStackController {
         nil
     }
 
-    /// UIKit turns the edge swipe back off as well while a stack's bar is hidden, which this one always is.
+    override var stackName: String {
+        "the stack around the tabs"
+    }
+
+    /// UIKit's own swipes do nothing on a stack whose bar is hidden, which this one always is.
     override func installPopGestures() -> [PhonePopGesture] {
-        super.installPopGestures()
-            + [
-                PhonePopGesture.install(on: interactivePopGestureRecognizer, in: view, guardsContent: false) {
-                    [weak self] in self?.canSwipeBack ?? false
-                }
-            ].compactMap { $0 }
+        interactivePopGestureRecognizer?.isEnabled = false
+        interactiveContentPopGestureRecognizer?.isEnabled = false
+        swipeBack = PhoneSwipeBack(stack: self, stackName: stackName) { [weak self] in self?.canSwipeBack ?? false }
+        return []
     }
 
     /// Shows the router's state. The views move animated unless the tab switches in sight, so a tab the router
@@ -346,7 +374,9 @@ private final class PhoneViewStackController: UINavigationController, UINavigati
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        contentPop = PhonePopGesture.install(on: interactiveContentPopGestureRecognizer, in: view, guardsContent: true) {
+        contentPop = PhonePopGesture.install(
+            on: interactiveContentPopGestureRecognizer, in: view, stackName: "a view's own stack"
+        ) {
             [weak self] in
             guard let self else { return false }
             return holdsPushedPage && transitionCoordinator == nil

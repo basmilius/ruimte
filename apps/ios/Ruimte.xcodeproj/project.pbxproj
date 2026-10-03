@@ -152,6 +152,7 @@
 		88C1D0B0A0BAC420A397836A /* TaskPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B552D197FAB780A005F5985B /* TaskPresentationTests.swift */; };
 		893A5CF47B1492D565F72875 /* ChatMenuActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67F6B6A322AFD73FF85C3BE /* ChatMenuActions.swift */; };
 		8B2254D79E8EC2C6114D483C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
+		8B421D8D4F8977B0F37A5857 /* PhoneSwipeBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15695CDF4434AFECD4766239 /* PhoneSwipeBack.swift */; };
 		8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9B459492C2AF8E3631D88 /* ProjectSVGRasterizer.swift */; };
 		8C9FF1DDE620F87C9C84679C /* AppHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22EEF67D1BFFD71DFA7FA021 /* AppHome.swift */; };
 		8EFCC45B72659B70390CA954 /* CanvasStartGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945C01FE70408377BA62088E /* CanvasStartGrid.swift */; };
@@ -347,6 +348,7 @@
 		111FDB97EC13D539638EFBEC /* ChatScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScreen.swift; sourceTree = "<group>"; };
 		13C495C7F630954ED25CCCA0 /* GitPrompts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPrompts.swift; sourceTree = "<group>"; };
 		14DAA27C094FD2E2C1196975 /* image.heif */ = {isa = PBXFileReference; path = image.heif; sourceTree = "<group>"; };
+		15695CDF4434AFECD4766239 /* PhoneSwipeBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSwipeBack.swift; sourceTree = "<group>"; };
 		167C6DBAC07CC45025817B07 /* FileGrep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileGrep.swift; sourceTree = "<group>"; };
 		17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalScreen.swift; sourceTree = "<group>"; };
 		17A37FD46C9D7AF5C8D62B5B /* NowNewChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowNewChat.swift; sourceTree = "<group>"; };
@@ -986,6 +988,7 @@
 				CE48345F04BA4B8E778C12FD /* PhoneHome.swift */,
 				298438BCC7AE8C2A9356DCC1 /* PhonePopGesture.swift */,
 				0E342A07018739FE303A2EAF /* PhoneRouter.swift */,
+				15695CDF4434AFECD4766239 /* PhoneSwipeBack.swift */,
 				098AC0C98F2FF0237758C194 /* PhoneTabController.swift */,
 				9A5221AF91DEE568E2DF38A4 /* ProjectViewPage.swift */,
 				8E3C280A49506D171C893DB2 /* SearchPage.swift */,
@@ -1558,6 +1561,7 @@
 				AE7A98A4109235647F3EA5AD /* PhoneHome.swift in Sources */,
 				39D8055DCC664871E8C9B660 /* PhonePopGesture.swift in Sources */,
 				EF468123D0DBEDC10D883F36 /* PhoneRouter.swift in Sources */,
+				8B421D8D4F8977B0F37A5857 /* PhoneSwipeBack.swift in Sources */,
 				CC84D3E8A11C29CB051D1CCE /* PhoneTabController.swift in Sources */,
 				67C3C7D5685AB8294FBE2666 /* PlanOutline.swift in Sources */,
 				DF70EC4BAFF7F692F3C49854 /* PlanSheet.swift in Sources */,

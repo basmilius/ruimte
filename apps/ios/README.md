@@ -146,14 +146,20 @@ morphs in its bar; while one stands there, a swipe back goes back within the vie
 
 A swipe back works from anywhere on a page, as in the system's apps, on all three kinds of stack: a view goes back to
 what is under it, a project or a machine to its list, and a page pushed inside a view back within the view first.
-Each stack uses UIKit's own `interactiveContentPopGestureRecognizer` (and the outer stack its edge swipe too, which
-UIKit turns off with a hidden bar) with `PhonePopGesture` as its delegate. It lets a swipe begin only when that stack
-has something to pop and the pan heads for the trailing edge, and asks every other question of the delegate UIKit
-gave the recognizer, so the swipe still yields to the scroll views under it. Content that takes a sideways pan for
-itself keeps it, and there only the edge swipe goes back: a scroll view that scrolls sideways or zooms (a canvas, a
-drawing, a document scene, a code or diff line wider than the screen, a web page, an image), a pan the app added (a
-terminal's selection) and text with a selection. A list row's swipe actions open with a swipe toward the leading
-edge, which never goes back.
+A tab's stack and a view's own use UIKit's `interactiveContentPopGestureRecognizer` with `PhonePopGesture` as its
+delegate, beside UIKit's edge swipe. It lets a swipe begin only when that stack has something to pop and the pan
+heads for the trailing edge, and asks every other question of the delegate UIKit gave the recognizer, so the swipe
+still yields to the scroll views under it. On the stack around the tabs UIKit's swipes do nothing, since its bar is
+hidden, so both are off there and `PhoneSwipeBack` takes their place: a pan of its own on the stack's view with the
+same rules, which drives the pop through a `UIPercentDrivenInteractiveTransition` and an animator that slides the view
+away as UIKit's pop does; every other push and pop keeps UIKit's animation. Content that takes a sideways pan for
+itself keeps it, and there only a swipe from the edge goes back: a scroll view that scrolls sideways or zooms (a
+canvas, a drawing, a document scene, a code or diff line wider than the screen, a web page, an image), a pan the app
+added (a terminal's selection) and text with a selection. A list row's swipe actions go first: the swipe back waits
+until UIKit's swipe-action pan of that list fails, so opening a row's actions either way and closing an open row win,
+and a row without actions lets the swipe back through. Over a row with actions only a swipe from the edge goes back.
+The `navigation-gesture` log category (subsystem `app.ruimte.mobile`) says which recognizer was asked, on which stack,
+and why it began, refused or waited.
 
 A stack lays a page out as soon as it stands on the stack, before the push starts on the next layout pass, since
 SwiftUI only hands a page's title and items to its navigation item when it lays the page out. For a `.toolbar` that
