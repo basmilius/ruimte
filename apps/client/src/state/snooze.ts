@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Snooze } from '@ruimte/contracts';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey } from '@/state/keys';
-import type { Transport } from '@/transport/transport';
+import { isConnectionError, type Transport } from '@/transport/transport';
 
 /*
  * A node that needs you, put aside for a while. It leaves every count and every notification until
@@ -106,10 +106,13 @@ const readStored = (storage: SnoozeStorage | null, now: number): Snoozes => {
     }
 };
 
+/* Snoozes set for a machine while the link to it was down, by key, until the machine has them. */
+const unsent = new Set<string>();
+
 /* Only what this client keeps itself; a machine's own snoozes come back from the machine. */
 const write = (byKey: Snoozes, onMachine: OnMachine): void => {
     try {
-        const kept = Object.entries(byKey).filter(([key]) => onMachine[splitKey(key).endpointId] !== true);
+        const kept = Object.entries(byKey).filter(([key]) => onMachine[splitKey(key).endpointId] !== true || unsent.has(key));
         browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(kept)));
     } catch {
         // Storage that refuses keeps the snoozes for this session only.
@@ -191,7 +194,7 @@ export const useSnoozes = create<SnoozeStore>((set, get) => {
 /*
  * One machine's side of the snoozes: the list it holds on every fresh link, and every change after.
  * What this client kept itself for a machine that turns out to keep them goes over once and leaves
- * the storage.
+ * the storage, and so does a snooze set or ended while the link was down, once it is back.
  */
 export class SnoozeSync {
     private readonly endpointId: string;
@@ -200,6 +203,8 @@ export class SnoozeSync {
     private generation = 0;
     /* A change heard before the first list would take the machine over before what this client kept went across. */
     private listed = false;
+    /* Nodes whose snooze a person ended while the link was down. */
+    private readonly unsentClears = new Set<string>();
 
     constructor(endpointId: string, transport: Transport) {
         this.endpointId = endpointId;
@@ -223,16 +228,45 @@ export class SnoozeSync {
     }
 
     set(nodeId: string, until: number): void {
-        void this.transport.request('snooze.set', { nodeId, until }).catch(() => this.refresh());
+        const key = endpointKey(this.endpointId, nodeId);
+        this.unsentClears.delete(nodeId);
+        if (this.transport.status !== 'open') {
+            this.hold(key);
+            return;
+        }
+        void this.transport
+            .request('snooze.set', { nodeId, until })
+            .then(() => {
+                unsent.delete(key);
+            })
+            .catch((e: unknown) => (isConnectionError(e) ? this.hold(key) : this.refresh()));
     }
 
     clear(nodeId: string): void {
-        void this.transport.request('snooze.clear', { nodeId }).catch(() => this.refresh());
+        unsent.delete(endpointKey(this.endpointId, nodeId));
+        if (this.transport.status !== 'open') {
+            this.unsentClears.add(nodeId);
+            return;
+        }
+        void this.transport.request('snooze.clear', { nodeId }).catch((e: unknown) => {
+            if (isConnectionError(e)) {
+                this.unsentClears.add(nodeId);
+            } else {
+                void this.refresh();
+            }
+        });
     }
 
     dispose(): void {
         this.generation++;
         this.off.forEach((off) => off());
+    }
+
+    /* Kept in this client's storage too, so a reload before the link is back does not lose it. */
+    private hold(key: string): void {
+        unsent.add(key);
+        const { byKey, onMachine } = useSnoozes.getState();
+        write(byKey, onMachine);
     }
 
     private async refresh(): Promise<void> {
@@ -244,15 +278,26 @@ export class SnoozeSync {
             }
             this.listed = true;
             const state = useSnoozes.getState();
-            const local = state.onMachine[this.endpointId] === true ? [] : Object.entries(state.byKey).filter(([key]) => isOfEndpoint(key, this.endpointId));
+            const onMachine = state.onMachine[this.endpointId] === true;
+            const mine = Object.entries(state.byKey).filter(([key]) => isOfEndpoint(key, this.endpointId) && (!onMachine || unsent.has(key)));
+            for (const key of [...unsent].filter((entry) => isOfEndpoint(entry, this.endpointId))) {
+                unsent.delete(key);
+            }
             state.receive(this.endpointId, snoozes);
-            const held = new Set(snoozes.map((snooze) => snooze.nodeId));
-            for (const [key, until] of local) {
+            const held = new Map(snoozes.map((snooze) => [snooze.nodeId, snooze.until]));
+            const now = Date.now();
+            for (const [key, until] of mine) {
                 const { id } = splitKey(key);
-                if (!held.has(id)) {
+                if (until > now && held.get(id) !== until) {
                     useSnoozes.getState().snooze(this.endpointId, id, until);
                 }
             }
+            for (const nodeId of this.unsentClears) {
+                if (held.has(nodeId)) {
+                    useSnoozes.getState().unsnooze(this.endpointId, nodeId);
+                }
+            }
+            this.unsentClears.clear();
         } catch {
             // A machine from before answers `unknown-request`, so this client goes on keeping its snoozes; a link that went asks again once it is back.
         }

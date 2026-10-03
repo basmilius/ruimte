@@ -4,6 +4,7 @@ import { startAttentionWatch, useAttention } from '@/state/attention';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
+import { useSnoozes } from '@/state/snooze';
 import { notifyRequested, startAgentNotifications } from './notifications';
 
 test('completed turns only leave an unread mark; needs-you and requested alerts notify', () => {
@@ -54,6 +55,62 @@ test('completed turns only leave an unread mark; needs-you and requested alerts 
         stopAttention();
         useSessions.getState().forget(key);
         useAttention.getState().setUnseen(new Set());
+        useDocument.getState().load(null, null);
+        for (const [key, descriptor] of originals) {
+            if (descriptor) {
+                Object.defineProperty(globalThis, key, descriptor);
+            } else {
+                Reflect.deleteProperty(globalThis, key);
+            }
+        }
+    }
+});
+
+test('a snooze that runs out announces the wait again, one a person ended does not', () => {
+    const originals = new Map(['window', 'document', 'Notification'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+    const shown: string[] = [];
+    class FakeNotification {
+        static permission = 'granted';
+        onclick: (() => void) | null = null;
+        constructor(title: string) {
+            shown.push(title);
+        }
+        close(): void {}
+    }
+    Object.defineProperty(globalThis, 'window', {
+        configurable: true,
+        value: { Notification: FakeNotification, addEventListener() {}, removeEventListener() {} }
+    });
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: { hasFocus: () => false } });
+    Object.defineProperty(globalThis, 'Notification', { configurable: true, value: FakeNotification });
+    const endpointId = currentEndpointId();
+    const key = endpointKey(endpointId, 'agent');
+    let now = 1_000_000;
+    let stopNotifications = () => {};
+    try {
+        useSnoozes.setState({ byKey: {}, onMachine: {} });
+        useDocument
+            .getState()
+            .load(
+                { version: 3, rev: 1, name: 'Project', color: '#000', views: [{ kind: 'terminal', id: 'agent', name: 'Build', node: { provider: 'codex' } }] },
+                null
+            );
+        stopNotifications = startAgentNotifications(() => now);
+        useSessions.getState().setAgent(key, { kind: 'codex', status: 'needs-you', live: true, agentSessionId: 'cli', transcriptPath: null, updatedAt: 1 });
+        expect(shown).toHaveLength(1);
+
+        useSnoozes.getState().snooze(endpointId, 'agent', now + 60_000);
+        useSnoozes.getState().unsnooze(endpointId, 'agent');
+        expect(shown).toHaveLength(1);
+
+        useSnoozes.getState().snooze(endpointId, 'agent', now + 60_000);
+        now += 60_000;
+        useSnoozes.getState().prune(now);
+        expect(shown).toHaveLength(2);
+    } finally {
+        stopNotifications();
+        useSessions.getState().forget(key);
+        useSnoozes.setState({ byKey: {}, onMachine: {} });
         useDocument.getState().load(null, null);
         for (const [key, descriptor] of originals) {
             if (descriptor) {

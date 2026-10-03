@@ -45,10 +45,19 @@ export const notifyRequested = (endpointId: string, alert: EventMap['push.notifi
     });
 };
 
-/* Notify once while a hidden node needs input, then withdraw when it resumes. */
-export const startAgentNotifications = (): (() => void) => {
+/* A machine that keeps the snoozes may end one by its own clock a little before this one gets there. */
+const CLOCK_SLACK_MS = 5_000;
+
+/*
+ * Notify once while a hidden node needs input, then withdraw when it resumes. A snoozed wait reads as no
+ * wait, so a snooze that runs out is a new one and announces itself; one that ended before its time was
+ * a person's own doing (here or on another client), and stays quiet.
+ */
+export const startAgentNotifications = (now: () => number = Date.now): (() => void) => {
     const shown = new Map<string, Notification>();
     let previous = new Map<string, string | undefined>();
+    /* When the snooze on each node that was snoozed at the last pass runs out. */
+    let asleep = new Map<string, number>();
 
     const askOnce = (): void => {
         if ('Notification' in window && Notification.permission === 'default') {
@@ -66,23 +75,28 @@ export const startAgentNotifications = (): (() => void) => {
         const chats = useChats.getState().byKey;
         const { agentsTurnSound } = useSettings.getState();
         const snoozes = useSnoozes.getState().byKey;
-        const snoozed = (nodeId: string): boolean => snoozeOf(snoozes, endpointId, nodeId) !== null;
         const current = new Map<string, string | undefined>();
+        const sleeping = new Map<string, number>();
         for (const node of nodes) {
-            // A snoozed wait reads as no wait, so the end of the snooze is a new one and announces itself.
-            const status = snoozed(node.id) ? undefined : nodeStatus(node, sessions, chats, endpointId);
+            const until = snoozeOf(snoozes, endpointId, node.id);
+            if (until !== null) {
+                sleeping.set(node.id, until);
+            }
+            const status = until === null ? nodeStatus(node, sessions, chats, endpointId) : undefined;
+            const endedEarly = status === 'needs-you' && (asleep.get(node.id) ?? 0) - now() > CLOCK_SLACK_MS;
             current.set(node.id, status);
             if (status !== 'needs-you') {
                 shown.get(node.id)?.close();
                 shown.delete(node.id);
                 continue;
             }
-            if (previous.get(node.id) === 'needs-you' || !canNotify(node.id, seen)) {
+            if (previous.get(node.id) === 'needs-you' || endedEarly || !canNotify(node.id, seen)) {
                 continue;
             }
             shown.set(node.id, notify(node.id, node.title, i18next.t('shell:notifications.needsYou'), `ruimte-${node.id}`, !agentsTurnSound));
         }
         previous = current;
+        asleep = sleeping;
     };
 
     const offSessions = useSessions.subscribe(check);

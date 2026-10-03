@@ -236,6 +236,27 @@ describe('snoozes a machine keeps', () => {
         expect(transport.sent.filter((request) => request.type === 'snooze.set')).toHaveLength(1);
     });
 
+    test('a snooze set while the link is down is kept here and goes over once it is back', async () => {
+        transport.held = [{ projectId: 'p1', nodeId: 't3', until: later }];
+        stop = watchSnoozes('Xk3p', transport);
+        transport.open();
+        await settle();
+        transport.status = 'closed';
+        useSnoozes.getState().snooze('Xk3p', 't1', later);
+        // One that ran out before the link came back goes nowhere.
+        useSnoozes.getState().snooze('Xk3p', 't2', Date.now() - 1);
+        useSnoozes.getState().unsnooze('Xk3p', 't3');
+        expect(transport.sent.filter((request) => request.type !== 'snooze.list')).toEqual([]);
+        expect(storedSnoozes()).toEqual({ 'Xk3p:t1': later, 'Xk3p:t2': expect.any(Number) });
+        transport.open();
+        await settle();
+        expect(transport.sent.filter((request) => request.type !== 'snooze.list')).toEqual([
+            { type: 'snooze.set', payload: { nodeId: 't1', until: later } },
+            { type: 'snooze.clear', payload: { nodeId: 't3' } }
+        ]);
+        expect(storedSnoozes()).toEqual({});
+    });
+
     test('a machine from before keeps them in this client, as always', async () => {
         transport.older = true;
         stop = watchSnoozes('Xk3p', transport);
