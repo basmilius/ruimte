@@ -150,7 +150,7 @@ project's Views, Files, Git and Search as tabs.
 
 The timeline shows a Working timer, live Thinking text and individual running tools
 with summaries, elapsed time and the last output lines. Active labels shimmer; new
-words fade in. The conversation menu offers Words, Blocks and Whole streaming modes.
+words fade in. Show replies in the chat menu picks Word by word, Paragraph by paragraph or When complete.
 Reduce Motion shows text directly and keeps static activity labels.
 
 Completed turns fold their work behind a duration label while keeping the answer and
@@ -159,7 +159,16 @@ links from automatic follow-up turns. Changed files use checkpoint diffs when av
 then provider patches or replacement fragments. Tool output initially shows 4,000
 characters; large diffs initially show 400 lines, with explicit expansion controls.
 
-A chat with sub-agents offers Sub-agents in the conversation menu. It opens a list with Active and Done
+The chat's menu grows from the button at the top right: Plan with its progress, Messages, Bookmarks, then Fork
+conversation, Rename (a view by its name, a node by its title, as `titleSource: user`) and Snooze for 10 minutes, an
+hour or Tomorrow (the next 09:00 here, sent as an absolute `until` with `snooze.set`; a snoozed chat offers Unsnooze
+with its time, kept current by `snooze.changed`), then Show replies and Reload, and Clear conversation last. A machine
+without snoozes offers none. Its Messages and Bookmarks lists hang off the screen, not off the toolbar item: a
+presentation inside the item went with the item's host whenever the menu opened, which blanked the screen.
+
+The sub-agents chip over the composer opens a flyout with a row per sub-agent the chip counts: its state, title,
+running time and a Stop. A row opens that conversation; All sub-agents opens the full list, which the chat menu also
+offers while no chip stands for it. The list has Active and Done
 sections, most recently updated first, each entry with its state, the latest tool call or
 reply (or the report a sub-agent handed back) and its running time or end time. An entry, or a
 subagent row in the timeline, opens that conversation read-only on its own page; Back returns
@@ -178,23 +187,24 @@ connected machine is told it (`accounts` in `chat.setPreferences`) for the chats
 machine turned the account off or removed it.
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
-A chat whose last turn stopped on a usage limit or an overload says so over the composer, with when the limit
-resets or when the machine takes the chat up again, and names the account that ran into it. After a usage limit,
-another account of the same CLI that is on, signed in and has room (the least of its session spent) is offered as
-Continue on; `chat.continueOn` goes on in the chat itself or in a fork, which then opens. Accounts the machine has
+A chat whose last turn stopped on a usage limit or an overload says so in a glass card over the composer, with when
+the limit resets or when the machine takes the chat up again, and names the account that ran into it. After a usage limit,
+another account of the same CLI that is on, signed in and has room (the least of its session spent) is offered in the
+card with its window and a Continue on button; `chat.continueOn` goes on in the chat itself or in a fork, which then opens. Accounts the machine has
 not read yet are asked for with `usage.refreshLimits`, at most every five minutes per machine. The bar holds the
 chat's own Resume at reset switch (`resumeAtReset` in `chat.configure`), which follows the machine's setting from
 `endpoint.info` while the chat has none of its own. It only counts while the machine allows it, so with the
 machine's setting off it stands off and says where to turn it on.
 
-A chat whose agent keeps a plan shows its progress beside Sub-agents as the desktop pill: "6/11" with a double check
-on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last opened; the
-phone never opens a plan on its own. While the agent works on a step the check turns into a spinning ring. The sheet
+A chat whose agent keeps a plan offers Plan at the top of the chat menu with its progress ("3 of 5", and New for a
+plan made since the chat was last opened); the phone never opens a plan on its own. While the agent works on a step the check turns into a spinning ring. The sheet
 is drawn after the desktop plan panel: the chat as its title, a header with the plan's title, kind, counters, status
 line and a progress bar, which never move with the agent's progress. While a step is active the toolbar holds its
 spinning ring (or the pause once the agent stopped), kept for 1.5 seconds after the step ends so it does not flicker
 between steps; a tap scrolls to that step, unfolding or clearing whatever hides it, and cycles through several. The overflow menu holds the filter (All, Open or Issues: failed,
-blocked or warning), Collapse done, Expand all and Collapse all, kept on the phone, and Copy as Markdown. Sections,
+blocked or warning), Collapse done, Expand all and Collapse all, kept on the phone, and Copy as Markdown and Send results to chat. Under the list Show chat goes back and Send results puts the failed,
+blocked, warning and info steps with their notes in the chat's draft, as the desktop's plan panel words them, for the
+person to send. Sections,
 text blocks and steps follow as custom rows with the same Lucide circles, one column per row: a step under a section
 lines up with the section's caret and a child sits under its parent's title. A parent shows "2/3" instead of a circle,
 and a tap anywhere on a section or parent folds it. Warning (amber) and info (blue) are outcomes like passed. The step the
@@ -209,20 +219,21 @@ One `plan.list` per connection fills the pills, and `plan.changed` and `plan.rem
 Long-press a message you sent, an answer or a turn's duration label for Fork from here. A sheet
 asks what the desktop dialog asks: the title, the CLI and model to continue with, a node beside the
 original or a view of its own (a chat view always forks into a view), and in a repository a git
-worktree on a free branch with the work after the turn undone. The conversation menu forks after the
+worktree on a free branch with the work after the turn undone. The chat menu forks after the
 last turn that ended. Once the machine has written the fork into the project, the app opens it. A
-fork shows "Fork of <original>" under its title; the title menu and the conversation menu offer
-Summarize for <original> and Show original. In the original, the summary note shows its first line,
+fork shows "Fork of <original>" under its title; the title menu and the chat menu say where it began ("Forked after
+turn 3, 09:24", the turn counted only once the whole thread is read) and offer Summarize for the original and Show
+original. In the original, the summary note shows its first line,
 folds the rest open and offers Open fork, and a turn that was forked says so beside its duration.
 A machine without these requests says it needs an update and nothing else changes.
 
-With three or more messages, Messages in the conversation menu lists what you sent and the turns tasks woke: a
+With three or more messages, Messages in the chat menu lists what you sent and the turns tasks woke: a
 popover on iPad, a sheet on iPhone. It opens scrolled to what is on screen, marks those messages,
 searches, jumps on a tap and offers Copy and Fork from here on a long press or a swipe.
 
 Long-press a message you sent or an answer for Bookmark message, which asks for an optional name; a bookmarked
 message offers Rename bookmark and Remove bookmark instead. A bookmark stands as a line over its message with its
-name or the start of the message. Bookmarks in the conversation menu lists them in thread order, the same way as
+name or the start of the message. Bookmarks in the chat menu lists them in thread order, the same way as
 Messages; a tap jumps there, unfolding the turn or reading earlier pages when needed, and a long press or a swipe
 renames or removes. Every client of the chat sees the same bookmarks (`chat.bookmarks`). A machine without
 bookmarks says it needs an update.
@@ -284,15 +295,22 @@ The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
 In writing mode the composer is three rows of glass. Over the field sit chips for what the
 chat keeps working on beside the thread: its sub-agents, with the state of all of them in one
-icon, and the shells and monitors its CLI runs in the background. Each chip opens a popover
+icon, and the shells and monitors its CLI runs in the background. Each chip opens a flyout
 with a row per entry, its time and a Stop. The field holds the draft and Send; a running turn
 puts a separate Stop beside it, whose menu can also stop the sub-agents. Under the field a
 scrolling row of pills: Add (photos, camera, files, mentions, skills, commands and the expanded
 editor), the queue while it holds a message, the model, its effort when the model has one, and
-the permission mode. The model's menu leads to Run settings for the account, the model's other
-options and context usage, which is also what `/model` opens. The editor grows with the available
-height and can open in a sheet for longer messages. Typing `@`, `$` or `/` offers files and
-project conversations, skills or usable commands at the cursor.
+the permission mode. The model, effort and permission pills each open their own flyout, a popover that grows from the
+pill on an iPhone too, with the choices and a check on the current one. The model's flyout ends with Run settings and
+Compare models; a long press on the model pill opens Run settings straight away, which is also what `/model` opens.
+Run settings holds the account with its session window, the context with its parts (tool output, files read,
+conversation, system) when the machine estimates them, the window's size and Compact now, and the model, its options
+and the permissions. Compare models reads `GET /v1/models/benchmarks` from the address book on every opening and draws
+the Intelligence Index against the cost per task, a line per model with a point per effort and a dashed line through
+the points no other beats; a tap on a point gives its values, a tap on a model in the list hides it, and legacy models
+come in with a switch. The terms of the numbers allow a chart and not the data, so there is no table and no copy. The
+editor grows with the available height and can open in a sheet for longer messages. Typing `@`, `$` or `/` offers
+files and project conversations, skills or usable commands at the cursor. There is no microphone in 1.0.
 
 Each machine and chat has a local draft containing text, references, attachments and selection.
 Metadata saves after a short debounce; attachment bytes live in separate files. Legacy text
@@ -307,19 +325,15 @@ message into the current draft. A lost send acknowledgement keeps the draft and 
 person to check the conversation before retrying, including after reopening the app. Text
 and attachments added during a send stay in the composer when that earlier send succeeds.
 
-A pending
-permission or question takes over the same glass shape, growing upward from the composer.
-The request stays in place until it is handled; answering the last request restores the draft,
-attachments and selection. Questions show
-choices and free text inline, with Previous and Next for a sequence. Only optional questions
-can be dismissed. Failed submissions retain their input, and sending disables repeat actions.
-The glass container interpolates between measured composer and prompt heights, anchored at
-its bottom edge. The editor stays mounted while its content fades and blurs; a shared action
-shape grows from the send circle into the prompt button. The send button remains mounted and
-disabled for an empty draft. Prompt actions sit in a bottom
-safe-area bar with a soft scroll-edge blur. Reduce Motion switches states directly.
-The shape has a 26-point radius, a capsule while the draft is one line. Its glass answers a touch
-like the buttons around it, except while a prompt card fills it.
+A pending permission or question is a glass card right over the composer, which stays as it is under it: the draft,
+its attachments and the keyboard are left alone. The card stays until the request is handled, and the next one takes
+its place. Questions show choices and free text inline, with "1 of 2" in the header and Previous and Next for a
+sequence. Only optional questions can be dismissed. Failed submissions retain their input, and sending disables
+repeat actions. A long request scrolls inside the card, which takes at most about two fifths of the screen. The card
+comes in from the composer and Reduce Motion shows it at once. Under a sub-agent's conversation the same card stands
+over the switched-off field.
+The field has a 26-point radius, a capsule while the draft is one line, and its glass answers a touch like the
+buttons around it.
 The composer and timeline share a UIKit container anchored to `UIKeyboardLayoutGuide`; with the
 keyboard down the composer stands half the bottom safe area up while the timeline runs on behind it.
 SwiftUI keyboard avoidance is disabled on that screen so it cannot resize the timeline
