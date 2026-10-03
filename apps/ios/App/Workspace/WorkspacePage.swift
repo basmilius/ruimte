@@ -209,6 +209,8 @@ struct WorkspacePage: View {
         .font(.callout.weight(.medium))
         .foregroundStyle(MobileStyle.text)
         .accessibilityIdentifier("project.newView")
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
 
