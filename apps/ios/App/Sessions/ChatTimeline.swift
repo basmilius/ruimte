@@ -850,8 +850,6 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     }
 }
 
-/// Logs the tint going dim and back, which is how the chat sees a menu, sheet or alert open over it, with what the
-/// window presents at that moment.
 /// The composer's host, which tells the timeline each time it laid itself out: the composer can settle its height
 /// after the timeline's own pass, and the latest message would then sit under the field until the next one.
 private final class ChatComposerHost: UIHostingController<AnyView> {
@@ -863,6 +861,8 @@ private final class ChatComposerHost: UIHostingController<AnyView> {
     }
 }
 
+/// Logs the tint going dim and back, which is how the chat sees a menu, sheet or alert open over it, with what the
+/// window presents at that moment.
 private final class ChatTimelineRootView: UIView {
     override func tintColorDidChange() {
         super.tintColorDidChange()
