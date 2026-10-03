@@ -17,6 +17,7 @@ struct PhoneHome: View {
     let pair: () -> Void
     let signIn: () -> Void
     @State private var newChat = false
+    @State private var gitLines = ProjectGitLines()
 
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -38,7 +39,8 @@ struct PhoneHome: View {
 
                 Tab(value: PhoneTab.projects) {
                     ProjectsPage(
-                        runtime: runtime, projects: projects, inTabs: true, showRecent: router.showRecentProjects
+                        runtime: runtime, projects: projects, inTabs: true, now: now, gitLines: gitLines,
+                        showRecent: router.showRecentProjects
                     ) {
                         EmptyView()
                     }

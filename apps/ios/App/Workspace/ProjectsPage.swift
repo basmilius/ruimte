@@ -1,12 +1,16 @@
 import RuimtePulsar
 import SwiftUI
 
-/// The open projects of every machine, with New chat, each machine's Chats and Recently closed under them.
+/// The open projects of every machine, with New chat, each machine's Chats and Recently closed under them. On the
+/// iPhone they stand under the machine each is on, with the counts Now reads beside them.
 struct ProjectsPage<Notice: View>: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
     /// On the iPhone's Projects tab, whose bar and search belong to the tabs around it.
     var inTabs = false
+    /// What groups the list per machine and counts what each project holds; the iPad lists without them.
+    var now: NowModel? = nil
+    var gitLines: ProjectGitLines? = nil
     let showRecent: () -> Void
     @ViewBuilder let notice: () -> Notice
     @State private var search = ""
@@ -16,7 +20,9 @@ struct ProjectsPage<Notice: View>: View {
     var body: some View {
         MobileList {
             notice()
-            if !visibleProjects.isEmpty {
+            if grouped {
+                ProjectGroupsList(runtime: runtime, groups: groups)
+            } else if !visibleProjects.isEmpty {
                 Section {
                     ProjectLinks(runtime: runtime, rows: visibleProjects)
                 }
@@ -47,7 +53,7 @@ struct ProjectsPage<Notice: View>: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
                     .accessibilityHidden(true)
                 NewChatRow(machines: runtime.machines) { newChat = NewChatTarget(machineID: $0.id) }
-                ForEach(projects.chats) { row in
+                ForEach(grouped ? [] : projects.chats) { row in
                     Button {
                         openWorkspace(
                             MobileWorkspace(
@@ -105,11 +111,41 @@ struct ProjectsPage<Notice: View>: View {
                 ProjectsUpdatingItem()
             }
         }
+        .task(id: gitRequestKey) { await refreshGitLines() }
         .refreshable {
             await runtime.refreshMachines()
             projects.reconcile(runtime: runtime)
             await projects.refresh()
+            await now?.refresh()
+            await refreshGitLines()
         }
+    }
+
+    /// Only once a project is open, so the empty and loading states keep their place; Chats then stands in its group.
+    private var grouped: Bool { !visibleProjects.isEmpty && !groups.isEmpty }
+
+    private var groups: [ProjectMachineGroup] {
+        guard let now, let gitLines else { return [] }
+        let activity = now.activity
+        return ProjectOverview.groups(
+            open: visibleProjects, chats: projects.chats,
+            reach: { machine in
+                let session = runtime.session(for: machine)
+                return MachineReach(
+                    connected: session.connected, relayed: session.relayed, failedAttempts: session.failedAttempts,
+                    problem: session.problem)
+            },
+            activity: { activity[$0] }, git: { gitLines.line($0) })
+    }
+
+    /// Asks again for the branches whenever a project opens or closes, or a machine comes back.
+    private var gitRequestKey: String {
+        projects.open.filter(\.connected).map { "\($0.id.machineID)/\($0.id.projectID)" }.joined(separator: "|")
+    }
+
+    private func refreshGitLines() async {
+        guard let gitLines else { return }
+        await gitLines.refresh(projects.open, session: runtime.session(for:))
     }
 
     private var visibleProjects: [UnifiedProjectRow] { projects.open.filter { $0.matches(search) } }

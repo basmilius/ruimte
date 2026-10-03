@@ -96,6 +96,20 @@ final class NowModel {
 
     var board: NowBoard { NowBoard.build(inputs) }
 
+    /// What each open project holds and how much of it waits on a person, from the same answers Now reads.
+    var activity: [UnifiedProjectRow.ID: ProjectActivity] {
+        var result: [UnifiedProjectRow.ID: ProjectActivity] = [:]
+        for input in inputs {
+            let snoozed = Set(input.snoozes.keys)
+            for project in input.projects {
+                guard let summary = project["summary"], let views = project["views"]?.arrayValue else { continue }
+                result[UnifiedProjectRow.ID(machineID: input.machineID, projectID: summary.text("projectId"))] =
+                    ProjectOverview.activity(views: views, attention: input.attention, snoozed: snoozed)
+            }
+        }
+        return result
+    }
+
     /// The task another agent opened a node with, if any.
     func task(for target: ProjectViewTarget) -> JSONValue? {
         feeds[target.machineID]?.session.tasks.childTask(target.itemID)
