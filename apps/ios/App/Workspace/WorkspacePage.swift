@@ -538,72 +538,18 @@ struct ProjectItemPage: View {
                 } actions: {
                     Button("Retry") { Task { await prepare() } }
                 }
-            } else if !ready {
-                MobileLoadingRow("Opening").toolbar { OpeningViewToolbar(kind: current.text("kind")) }
             } else {
-                switch current.text("kind") {
-                case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
-                case "terminal":
-                    VStack(spacing: 0) {
-                        if let command = workspace.heldCommands[current.stableID] {
-                            HStack {
-                                Text("Run \(command)?").font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
-                                Spacer()
-                                Button("Run") { Task { await workspace.runHeldCommand(current.stableID) } }
-                                    .buttonStyle(.borderedProminent)
-                            }
-                            .padding().background(.regularMaterial)
-                            .disabled(!workspace.session.connected)
-                        }
-                        TerminalScreen(client: workspace.client, sessionID: current.stableID, title: title)
-                    }
-                case "browser": BrowserPage(url: current.text("url"))
-                case "file":
-                    FileContentPage(
-                        client: workspace.client, path: absolutePath(current.text("path")),
-                        project: FilesProject(workspace: workspace),
-                        isView: workspace.views.contains { $0.stableID == current.stableID })
-                case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))
-                case "drawing":
-                    DrawingEditorPage(
-                        client: workspace.client, machineID: workspace.session.machine.id,
-                        projectID: workspace.projectID, viewID: current.text("viewId", fallback: current.stableID))
-                case "diagram":
-                    RenderDocumentPage(
-                        client: workspace.client, projectID: workspace.projectID,
-                        viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"))
-                case "group":
-                    MobileList {
-                        ForEach(current.list("memberIds").compactMap(\.stringValue), id: \.self) { id in
-                            if let node = workspace.views.flatMap({ $0.list("nodes") }).first(where: {
-                                $0.stableID == id
-                            }) {
-                                Button {
-                                    selectedMember = id
-                                } label: {
-                                    Label {
-                                        Text(node.text("title")).lineLimit(1).truncationMode(.tail)
-                                    } icon: {
-                                        WorkspaceViewIcon(item: node)
-                                    }
-                                    .modifier(MobileSidebarLabel(disclosure: true))
-                                }
-                                .modifier(MobileSidebarRow())
-                            }
-                        }
-                    }
-                default:
-                    ContentUnavailableView(
-                        "A newer view", lucideIcon: "circle-question-mark",
-                        description: Text(
-                            "Open this view in a newer Ruimte. Its content is preserved when you edit this project."))
+                // The page stands with its content, and so its bar, from the first frame of the push. Swapping a
+                // spinner for it once the session is there made the bar drop its items as the push settled.
+                content.overlay {
+                    if !ready && ProjectItemPage.waitsForSession(current.text("kind")) { MobileLoadingRow("Opening") }
                 }
             }
         }
         .modifier(MobilePageSurface())
         .accessibilityIdentifier("workspace.destination.\(item.stableID)")
         .navigationDestination(item: $selectedMember) { id in
-            if let node = workspace.views.flatMap({ $0.list("nodes") }).first(where: { $0.stableID == id }) {
+            if let node = workspace.item(id) {
                 ProjectItemPage(workspace: workspace, item: node)
             }
         }
@@ -616,6 +562,71 @@ struct ProjectItemPage: View {
         .onDisappear { workspace.session.attention.blur(item.stableID) }
         .task(id: "\(workspace.session.generation):\(workspace.ready)") { await prepare() }
     }
+    /// The kinds whose page has nothing to show until the project opened and their session exists.
+    static func waitsForSession(_ kind: String) -> Bool { ["terminal", "canvas", "group"].contains(kind) }
+
+    @ViewBuilder private var content: some View {
+        switch current.text("kind") {
+        case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
+        case "terminal":
+            TerminalScreen(
+                client: workspace.client, sessionID: current.stableID, title: title, isPrepared: ready,
+                held: workspace.heldCommands[current.stableID].map { command in
+                    TerminalHeldCommand(command: command, enabled: workspace.session.connected) {
+                        Task { await workspace.runHeldCommand(current.stableID) }
+                    }
+                })
+        case "browser": BrowserPage(url: current.text("url"))
+        case "file":
+            FileContentPage(
+                client: workspace.client, path: absolutePath(current.text("path")),
+                project: FilesProject(workspace: workspace),
+                isView: workspace.views.contains { $0.stableID == current.stableID })
+        case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))
+        case "drawing":
+            DrawingEditorPage(
+                client: workspace.client, machineID: workspace.session.machine.id,
+                projectID: workspace.projectID, viewID: current.text("viewId", fallback: current.stableID))
+        case "diagram":
+            RenderDocumentPage(
+                client: workspace.client, projectID: workspace.projectID,
+                viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"))
+        case "group":
+            MobileList {
+                ForEach(CanvasEditing.members(of: current, in: canvasHolding), id: \.stableID) { node in
+                    Button {
+                        selectedMember = node.stableID
+                    } label: {
+                        Label {
+                            Text(node.text("title")).lineLimit(1).truncationMode(.tail)
+                        } icon: {
+                            WorkspaceViewIcon(item: node)
+                        }
+                        .modifier(MobileSidebarLabel(disclosure: true))
+                    }
+                    .modifier(MobileSidebarRow())
+                }
+            }
+            .overlay {
+                if ready && CanvasEditing.members(of: current, in: canvasHolding).isEmpty {
+                    ContentUnavailableView(
+                        "Nothing in this group", lucideIcon: "layout-grid",
+                        description: Text("Nodes inside its frame on the canvas are listed here."))
+                }
+            }
+        default:
+            ContentUnavailableView(
+                "A newer view", lucideIcon: "circle-question-mark",
+                description: Text(
+                    "Open this view in a newer Ruimte. Its content is preserved when you edit this project."))
+        }
+    }
+
+    /// The canvas a node stands on, for a group that holds what lies inside its frame.
+    private var canvasHolding: JSONValue {
+        workspace.views.first { $0.list("nodes").contains { $0.stableID == item.stableID } } ?? .object([:])
+    }
+
     private var subtitle: String { workspace.ready ? workspace.title : projectName ?? workspace.title }
     private var title: String { current.text("name", fallback: current.text("title", fallback: current.text("kind"))) }
     private func absolutePath(_ path: String) -> String {
@@ -631,28 +642,6 @@ struct ProjectItemPage: View {
             ready = true
             problem = nil
         } catch { if !Task.isCancelled { problem = error.localizedDescription } }
-    }
-}
-
-/// The trailing item a view's page will have, under the same id, while the page waits for its session: a push only
-/// morphs into items that are there when it starts.
-private struct OpeningViewToolbar: ToolbarContent {
-    let kind: String
-
-    var body: some ToolbarContent {
-        if let glyph = OpeningViewToolbar.glyph(for: kind) {
-            ToolbarItem(id: "\(kind).actions", placement: .topBarTrailing) {
-                Button {} label: { Image(lucide: glyph) }.disabled(true)
-            }
-        }
-    }
-
-    static func glyph(for kind: String) -> String? {
-        switch kind {
-        case "terminal": "type"
-        case "diagram": "refresh-cw"
-        default: nil
-        }
     }
 }
 

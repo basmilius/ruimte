@@ -213,8 +213,16 @@ final class MobileWorkspace {
 
     func camera(for id: String) -> JSONValue? { local["views"]?[id]?["camera"] }
     func setCamera(_ camera: JSONValue, viewID: String) {
+        updateLocalView(viewID) { $0.setting("camera", camera) }
+    }
+    func locks(for id: String) -> CanvasLocks { CanvasLocks(local["views"]?[id]?["locks"]) }
+    func setLocks(_ locks: CanvasLocks, viewID: String) {
+        updateLocalView(viewID) { $0.setting("locks", locks.json) }
+    }
+    private func updateLocalView(_ id: String, change: (JSONValue) -> JSONValue) {
         var views = local["views"]?.objectValue ?? [:]
-        views[viewID] = .object(["camera": camera, "focusedNodeId": .null])
+        let current = views[id] ?? .object(["camera": .null, "focusedNodeId": .null])
+        views[id] = change(current.setting("focusedNodeId", current["focusedNodeId"] ?? .null))
         local = local.setting("views", .object(views))
         persistLocal()
     }

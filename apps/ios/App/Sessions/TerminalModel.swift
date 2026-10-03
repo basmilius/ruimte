@@ -13,8 +13,12 @@ final class TerminalModel {
     var cols = 80
     var rows = 24
     var error: String?
+    /// Ctrl from the key bar, waiting for the next key typed.
+    var controlArmed = false
     @ObservationIgnored var render: ((String, Bool) -> Void)?
     @ObservationIgnored var resizeDisplay: ((Int, Int) -> Void)?
+    @ObservationIgnored var applicationCursor: (() -> Bool)?
+    @ObservationIgnored var toggleKeyboard: (() -> Void)?
     private var unsubscribe: [() -> Void] = []
     private var attachTask: Task<Void, Never>?
     private var writeTask: Task<Void, Never>?
@@ -71,6 +75,8 @@ final class TerminalModel {
         unsubscribe.removeAll()
         render = nil
         resizeDisplay = nil
+        applicationCursor = nil
+        toggleKeyboard = nil
         let held = attachment
         attachment = nil
         Task { await held?.release() }
@@ -164,6 +170,20 @@ final class TerminalModel {
                 }
             }
         }
+    }
+
+    /// What the keyboard typed, with the Ctrl the key bar holds applied to its first key.
+    func type(_ text: String) {
+        guard controlArmed else {
+            write(text)
+            return
+        }
+        controlArmed = false
+        write(TerminalKeys.control(text) ?? text)
+    }
+
+    func arrow(up: Bool) {
+        write(TerminalKeys.arrow(up: up, applicationCursor: applicationCursor?() ?? false))
     }
 
     func clear() async {
