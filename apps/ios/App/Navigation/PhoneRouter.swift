@@ -53,10 +53,4 @@ final class PhoneRouter {
         tab = .now
         now = notification.target == "machine" || notification.nodeID.isEmpty ? nil : .notification(notification)
     }
-
-    /// New view and Usage sit in the tab bar only while the project's own list is on screen.
-    var showsProjectAccessory: Bool {
-        guard tab == .projects, let project else { return false }
-        return project.workspace.ready && project.openedViewID == nil
-    }
 }

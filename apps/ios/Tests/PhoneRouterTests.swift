@@ -54,9 +54,5 @@ final class PhoneRouterTests: XCTestCase {
         XCTAssertFalse(router.showingRecent)
         XCTAssertEqual(router.project?.workspace.projectID, "app")
         XCTAssertEqual(router.project?.pendingViewID, "chat")
-        // The accessory waits for the project to open, and stands down while one of its views is on screen.
-        XCTAssertFalse(router.showsProjectAccessory)
-        router.tab = .now
-        XCTAssertFalse(router.showsProjectAccessory)
     }
 }

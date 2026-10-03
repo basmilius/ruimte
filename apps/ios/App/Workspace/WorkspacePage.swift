@@ -60,6 +60,9 @@ struct WorkspacePage: View {
                 }
             }
         }
+        .safeAreaBar(edge: .bottom) {
+            if !isSidebar && workspace.ready { newViewPill }
+        }
         .navigationTitle(isSidebar ? "" : workspace.title)
         .modifier(PhoneSubtitle(text: isSidebar ? nil : workspace.session.machine.name))
         .navigationBarTitleDisplayMode(.inline)
@@ -167,30 +170,46 @@ struct WorkspacePage: View {
         }
     }
 
-    /// Files and Git open as sheets, and launches sit in the project's menu; New view and Usage are the tab bar's
-    /// accessory. The Chats project's folder is the machine's own, so it has none of these. The avatar stays, so
-    /// Settings is one tap away here too.
+    /// The project's menu beside the avatar, so Settings is one tap away here too. The Chats project's folder is the
+    /// machine's own, so its menu holds Usage only.
     @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
-        if !workspace.isScratch {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Files", lucideIcon: "folder") { showFiles = true }
-                    .disabled(!workspace.ready)
-                Button("Git", lucideIcon: "git-branch") { showGit = true }
-                    .disabled(!workspace.ready)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
+        ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
+            Menu {
+                if !workspace.isScratch {
+                    Button("Files", lucideIcon: "folder") { showFiles = true }
+                    Button("Git", lucideIcon: "git-branch") { showGit = true }
                     Button("Launches", lucideIcon: "rocket") { showLaunches = true }
-                } label: {
-                    Image(lucide: "ellipsis")
                 }
-                .accessibilityLabel("Project menu")
-                .disabled(!workspace.ready)
+                Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
+            } label: {
+                Image(lucide: "ellipsis")
             }
+            .accessibilityLabel("Project menu")
+            .accessibilityIdentifier("project.menu")
+            .disabled(!workspace.ready)
         }
         if let settingsLink {
             SettingsToolbarItem(link: settingsLink)
         }
+    }
+
+    /// New view, or New chat in the Chats project, as a pill of its own width over the tab bar.
+    private var newViewPill: some View {
+        Button {
+            if workspace.isScratch { navigation.newChat = true } else { navigation.adding = true }
+        } label: {
+            if workspace.isScratch {
+                Label("New chat", lucideIcon: "message-square-plus")
+            } else {
+                Label("New view", lucideIcon: "plus")
+            }
+        }
+        .buttonStyle(.glass)
+        .controlSize(.large)
+        .font(.callout.weight(.medium))
+        .foregroundStyle(MobileStyle.text)
+        .accessibilityIdentifier("project.newView")
+        .padding(.bottom, 8)
     }
 
     @ToolbarContentBuilder private var tabletToolbar: some ToolbarContent {

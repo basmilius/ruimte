@@ -2,8 +2,7 @@ import RuimtePulsar
 import SwiftUI
 import UIKit
 
-/// The iPhone: four tabs, Settings behind the avatar on each, and the project's New view and Usage as the tab bar's
-/// accessory. The iPad keeps its split view in `AppHome`.
+/// The iPhone: four tabs, with Settings behind the avatar on each. The iPad keeps its split view in `AppHome`.
 struct PhoneHome: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
@@ -90,9 +89,6 @@ struct PhoneHome: View {
         }
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewSearchActivation(.searchTabSelection)
-        .tabViewBottomAccessory(isEnabled: router.showsProjectAccessory) {
-            if let project = router.project { ProjectAccessory(navigation: project) }
-        }
         .environment(\.settingsLink, settingsLink)
     }
 
@@ -113,38 +109,6 @@ struct PhoneHome: View {
     }
 }
 
-/// New view, or New chat in the Chats project, beside the machine's usage. It rides in the tab bar and shrinks to
-/// its icons once the tab bar folds in.
-private struct ProjectAccessory: View {
-    let navigation: WorkspaceNavigation
-    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-
-    var body: some View {
-        let scratch = navigation.workspace.isScratch
-        HStack(spacing: 12) {
-            Button {
-                if scratch { navigation.newChat = true } else { navigation.adding = true }
-            } label: {
-                let label = Label(
-                    scratch ? "New chat" : "New view", lucideIcon: scratch ? "message-square-plus" : "plus")
-                if placement == .inline { label.labelStyle(.iconOnly) } else { label.labelStyle(.titleAndIcon) }
-            }
-            .accessibilityIdentifier("project.newView")
-            Spacer(minLength: 0)
-            Button {
-                navigation.showingUsage = true
-            } label: {
-                Label("Usage", lucideIcon: "chart-no-axes-column")
-            }
-            .labelStyle(.iconOnly)
-            .accessibilityIdentifier("project.usage")
-        }
-        .font(.callout.weight(.medium))
-        .foregroundStyle(MobileStyle.text)
-        .padding(.horizontal, 16)
-    }
-}
-
 /// What the avatar needs to open Settings. Only the iPhone sets it; the iPad keeps Settings in its sidebar.
 struct SettingsLink {
     let account: Account?
@@ -155,13 +119,12 @@ extension EnvironmentValues {
     @Entry var settingsLink: SettingsLink?
 }
 
-/// The avatar into Settings, apart from the items before it and under one id on every page that shows it, so the
-/// bar of the next page finds it at the same spot and morphs only what changes around it.
+/// The avatar into Settings, under one id on every page that shows it, so the bar of the next page finds it at the
+/// same spot and morphs only what changes around it.
 struct SettingsToolbarItem: ToolbarContent {
     let link: SettingsLink
 
     var body: some ToolbarContent {
-        ToolbarSpacer(.fixed, placement: .topBarTrailing)
         ToolbarItem(id: "settings", placement: .topBarTrailing) {
             Button(action: link.show) {
                 AccountAvatar.image(for: link.account)

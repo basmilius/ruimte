@@ -134,8 +134,9 @@ avatar at the top right of every tab, and the tab bar folds in while a list scro
 - The write button on Now starts a chat with one of a machine's installed agents in the machine's Chats
   (`project.newChat`) or as a new chat view at the end of one of its open projects, and opens it.
 - Projects lists the open projects, New chat, each machine's Chats and Recently closed. A project page is its list
-  of views. Files and Git open as sheets from its toolbar, Launches from its menu, and New view (New chat in Chats)
-  with Usage ride in the tab bar's accessory. A view opens over the project and hides the tab bar.
+  of views. Its bar holds the project's menu beside the avatar: Files, Git and Launches (none of these in Chats) and
+  Usage, each a sheet. New view (New chat in Chats) is a glass pill of its own width over the tab bar. A view opens
+  over the project and hides the tab bar.
 - Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
   projects (which open under Projects), Chats, files, processes, usage and machine settings.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
