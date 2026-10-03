@@ -75,6 +75,12 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, Sendable {
         return result.providers
     }
 
+    /// The Intelligence Index against the cost per task, per model and effort. Public: the numbers belong to no
+    /// account, and `no-benchmarks` says there are none yet rather than that the address book is unreachable.
+    public func modelBenchmarks() async throws -> ModelBenchmarksResult {
+        try await call("GET", path: "/v1/models/benchmarks")
+    }
+
     public func listMachines(accessToken: String) async throws -> MachineListResult {
         try await call("GET", path: "/v1/machines", token: accessToken)
     }
