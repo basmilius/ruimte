@@ -282,6 +282,16 @@ export const signOutOfPulsar = async (): Promise<void> => {
     signedOut(null);
 };
 
+/*
+ * Deletes the account on the address book with the name the person typed, then signs out the way signing
+ * out does, so the shell forgets the refresh token of a session that is gone.
+ */
+export const deletePulsarAccount = async (confirmation: string): Promise<void> => {
+    await withAccessToken((client, token) => client.deleteAccount(token, { confirmation }));
+    await signOutOfPulsar();
+    confirmAccount(i18next.t('machines:account.confirmation.deleted'));
+};
+
 const addressBookClient = (): Promise<AddressBookClient> => {
     if (!platform) {
         return Promise.reject(new Error(i18next.t('machines:account.signInUnavailable')));

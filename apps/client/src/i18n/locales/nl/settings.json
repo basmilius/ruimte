@@ -768,7 +768,23 @@
             "onlyIdentity": "{{detail}}. De enige manier om op dit account in te loggen, dus die blijft tot je er een toevoegt.",
             "finishWith": "Rond het inloggen met {{provider}} af en kom dan hier terug.",
             "notAdded": "Niet toegevoegd. Voeg hem toe om dit account ook met {{provider}} te openen.",
-            "row": "Ruimte-account"
+            "row": "Ruimte-account",
+            "delete": {
+                "label": "Account verwijderen",
+                "description": "Verwijdert dit account en elke inlog erop. Je machines en hun projecten blijven.",
+                "action": "Account verwijderen",
+                "title": "Je Ruimte-account verwijderen?",
+                "intro": "Dit kun je niet ongedaan maken. Dit verdwijnt:",
+                "goes": {
+                    "account": "Het account en de manieren om erop in te loggen.",
+                    "sessions": "Elke inlog op het account, op elk apparaat.",
+                    "push": "Meldingen op je telefoons en tablets.",
+                    "machines": "Je machines van het account. Elke machine houdt haar projecten; wil je er een op een ander account zetten, haal hem dan eerst op de machine zelf van dit account af."
+                },
+                "field": "Typ {{name}} om te bevestigen",
+                "confirm": "Account verwijderen",
+                "busy": "Bezig met verwijderen"
+            }
         },
         "add": {
             "title": "Een machine toevoegen",

@@ -212,7 +212,8 @@
         "confirmation": {
             "signedIn": "Ingelogd met {{provider}}",
             "signedInAs": "Ingelogd met {{provider}} als {{login}}",
-            "linked": "{{provider}} is aan je account toegevoegd"
+            "linked": "{{provider}} is aan je account toegevoegd",
+            "deleted": "Je Ruimte-account is verwijderd en deze app is uitgelogd"
         },
         "sessionEndedOnDevice": "Je sessie op dit apparaat is afgelopen. Log opnieuw in om je machines te openen.",
         "sessionEnded": "Je sessie is afgelopen. Log opnieuw in.",

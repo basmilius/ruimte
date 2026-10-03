@@ -4,6 +4,7 @@ import { Check, CircleAlert, KeyRound, Link2, LogOut, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
+import { DeleteAccountDialog } from '@/shell/settings/DeleteAccountDialog';
 import { cancelPulsarSignIn, linkPulsarProvider, refreshPulsarIdentities, signOutOfPulsar, unlinkPulsarProvider, usePulsarAccount } from '@/pulsar/account';
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
@@ -103,6 +104,7 @@ function SignInSection() {
     const account = usePulsarAccount((s) => s.account);
     const identities = usePulsarAccount((s) => s.identities);
     const notice = usePulsarAccount((s) => s.notice);
+    const [deleting, setDeleting] = useState(false);
 
     // An open pane asks which identities the account has, since another client may have added or removed one.
     useEffect(() => {
@@ -152,6 +154,16 @@ function SignInSection() {
                         }
                     />
                     {identities !== null && PROVIDER_ORDER.map((provider) => <IdentityRow key={provider} provider={provider} />)}
+                    <SettingsRow
+                        label={t('machines.account.delete.label')}
+                        description={t('machines.account.delete.description')}
+                        control={
+                            <Button variant="danger-outline" onClick={() => setDeleting(true)}>
+                                {t('machines.account.delete.action')}
+                            </Button>
+                        }
+                    />
+                    <DeleteAccountDialog account={account} open={deleting} onOpenChange={setDeleting} />
                 </>
             )}
         </SettingsSection>

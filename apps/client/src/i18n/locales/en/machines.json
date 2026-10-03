@@ -212,7 +212,8 @@
         "confirmation": {
             "signedIn": "Signed in with {{provider}}",
             "signedInAs": "Signed in with {{provider}} as {{login}}",
-            "linked": "{{provider}} added to your account"
+            "linked": "{{provider}} added to your account",
+            "deleted": "Your Ruimte account is deleted, and this app signed out"
         },
         "sessionEndedOnDevice": "Your session on this device ended. Sign in again to open your machines.",
         "sessionEnded": "Your session ended. Sign in again.",

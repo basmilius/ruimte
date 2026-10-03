@@ -768,7 +768,23 @@
             "onlyIdentity": "{{detail}}. The only way to sign in to this account, so it stays until you add another.",
             "finishWith": "Finish signing in with {{provider}}, then come back here.",
             "notAdded": "Not added. Add it to open this account with {{provider}} as well.",
-            "row": "Ruimte account"
+            "row": "Ruimte account",
+            "delete": {
+                "label": "Delete account",
+                "description": "Deletes this account and every sign-in to it. Your machines and their projects stay.",
+                "action": "Delete account",
+                "title": "Delete your Ruimte account?",
+                "intro": "This cannot be undone. Deleting it removes:",
+                "goes": {
+                    "account": "The account and the ways to sign in to it.",
+                    "sessions": "Every sign-in to it, on every device.",
+                    "push": "Notifications to your phones and tablets.",
+                    "machines": "Your machines from the account. Each keeps its projects; to put one on another account, take it off this one on the machine itself first."
+                },
+                "field": "Type {{name}} to confirm",
+                "confirm": "Delete account",
+                "busy": "Deleting"
+            }
         },
         "add": {
             "title": "Add a machine",
