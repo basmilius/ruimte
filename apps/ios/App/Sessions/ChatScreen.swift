@@ -11,6 +11,8 @@ struct ChatScreen: View {
     @State private var clearDraft: String?
     @State private var subagentList: SubagentListRoute?
     @State private var showingPlans = false
+    @State private var renaming = false
+    @State private var renameText = ""
     @State private var endingAgents: EndingAgents?
     @State private var prompts = ChatPromptState()
     @State private var viewportHeight: CGFloat = 700
@@ -103,79 +105,46 @@ struct ChatScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
-            if let plans = machineSession?.plans, let plan = plans.plans(for: model.chatID).first {
-                ToolbarItem(placement: .topBarTrailing) {
-                    PlanButton(
-                        plan: plan, unseen: plans.unseen.contains(model.chatID),
-                        working: model.info["activeTurnId"]?.stringValue != nil
-                    ) { showingPlans = true }
-                }
-                .sharedBackgroundVisibility(.hidden)
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    if messageMarks.count >= 3 || hasSubagents || hasBookmarks {
-                        Section {
-                            if messageMarks.count >= 3 {
-                                Button("Messages", lucideIcon: "list") {
-                                    indexOnScreen = Set(model.presentation.visibleEntryIDs())
-                                    showingIndex = true
-                                }
-                                .accessibilityIdentifier("chat.messages")
-                            }
-                            if hasBookmarks {
-                                Button("Bookmarks", lucideIcon: "bookmark") { showingBookmarks = true }
-                                    .accessibilityIdentifier("chat.bookmarks")
-                            }
-                            if hasSubagents {
-                                Button("Sub-agents", lucideIcon: "bot") {
-                                    subagentList = SubagentListRoute(chatID: model.chatID)
-                                }
-                                .accessibilityIdentifier("chat.subagents")
-                            }
-                        }
-                    }
-                    Group {
-                        Picker("Streaming", selection: $streamingMode) {
-                            ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
-                        }
-                        Section { forkItems }
-                        Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
-                        Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
-                    }
-                    .disabled(!isPrepared)
+                    chatMenu
                 } label: {
                     Image(lucide: "ellipsis")
                 }
                 .accessibilityLabel("Conversation actions")
-                .disabled(!isPrepared && messageMarks.count < 3 && !hasSubagents && !hasBookmarks)
-                // Anchored on the menu now that Messages lives inside it; a popover on iPad, a sheet on iPhone.
-                .popover(isPresented: $showingIndex) {
-                    ChatMessageIndex(
-                        marks: messageMarks, onScreen: indexOnScreen, olderCursor: model.history.cursor,
-                        presentation: model.presentation,
-                        loadOlder: { model.loadOlderIfIdle() },
-                        jump: { model.presentation.reveal(entryID: $0) },
-                        fork: { turnID in
-                            forkAfterIndex = turnID
-                            showingIndex = false
-                        }
-                    )
-                    .modifier(MobileSheetSurface())
-                }
-                .popover(isPresented: $showingBookmarks) {
-                    ChatBookmarkList(
-                        presentation: model.presentation,
-                        jump: { id in Task { await model.revealBookmark(id) } },
-                        rename: { id in
-                            renameAfterList = id
-                            showingBookmarks = false
-                        },
-                        remove: { id in Task { await model.removeBookmark(id) } }
-                    )
-                    .modifier(MobileSheetSurface())
-                }
+                .accessibilityIdentifier("chat.menu")
             }
+        }
+        // Kept off the toolbar item: presentations inside it went with the item's host whenever the menu opened.
+        .popover(isPresented: $showingIndex, attachmentAnchor: .point(.topTrailing), arrowEdge: .top) {
+            ChatMessageIndex(
+                marks: messageMarks, onScreen: indexOnScreen, olderCursor: model.history.cursor,
+                presentation: model.presentation,
+                loadOlder: { model.loadOlderIfIdle() },
+                jump: { model.presentation.reveal(entryID: $0) },
+                fork: { turnID in
+                    forkAfterIndex = turnID
+                    showingIndex = false
+                }
+            )
+            .modifier(MobileSheetSurface())
+        }
+        .popover(isPresented: $showingBookmarks, attachmentAnchor: .point(.topTrailing), arrowEdge: .top) {
+            ChatBookmarkList(
+                presentation: model.presentation,
+                jump: { id in Task { await model.revealBookmark(id) } },
+                rename: { id in
+                    renameAfterList = id
+                    showingBookmarks = false
+                },
+                remove: { id in Task { await model.removeBookmark(id) } }
+            )
+            .modifier(MobileSheetSurface())
+        }
+        .alert("Rename chat", isPresented: $renaming) {
+            TextField("Name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Save", action: rename)
         }
         .onChange(of: showingIndex) { _, showing in
             guard !showing, let turnID = forkAfterIndex else { return }
@@ -314,8 +283,107 @@ struct ChatScreen: View {
         return originalTitle.map { "Fork of \($0)" } ?? "Fork"
     }
 
-    /// "Fork conversation" after the last turn that ended, and for a fork the ways back to its original.
-    @ViewBuilder private var forkItems: some View {
+    /// The chat's menu as the desktop sidebar and conversation menu have it. Sub-agents and the queue live in the
+    /// composer's chips and pills, so the full sub-agent list only shows here while no chip stands for it.
+    @ViewBuilder private var chatMenu: some View {
+        if forkOf != nil {
+            Section { forkBackItems }
+        }
+        Section {
+            if let plans = machineSession?.plans, let plan = plans.plans(for: model.chatID).first {
+                Button {
+                    showingPlans = true
+                } label: {
+                    Label("Plan", lucideIcon: "list-checks")
+                    Text(
+                        plans.unseen.contains(model.chatID)
+                            ? "New · \(plan.progress.finished) of \(plan.progress.total)"
+                            : "\(plan.progress.finished) of \(plan.progress.total)")
+                }
+                .accessibilityIdentifier("chat.plan")
+            }
+            if messageMarks.count >= 3 {
+                Button("Messages", lucideIcon: "list") {
+                    indexOnScreen = Set(model.presentation.visibleEntryIDs())
+                    showingIndex = true
+                }
+                .accessibilityIdentifier("chat.messages")
+            }
+            if hasBookmarks {
+                Button {
+                    showingBookmarks = true
+                } label: {
+                    Label("Bookmarks", lucideIcon: "bookmark")
+                    Text("\(model.presentation.bookmarks.count)")
+                }
+                .accessibilityIdentifier("chat.bookmarks")
+            }
+            if hasSubagents && model.activitySubagents.isEmpty {
+                Button("Sub-agents", lucideIcon: "bot") { subagentList = SubagentListRoute(chatID: model.chatID) }
+                    .accessibilityIdentifier("chat.subagents")
+            }
+        }
+        Section {
+            forkItem
+            if workspace.map({ ChatForking.origin(in: $0.views, chatID: model.chatID) != nil }) == true {
+                Button("Rename", lucideIcon: "pencil") {
+                    renameText = title
+                    renaming = true
+                }
+            }
+            if model.snoozeAvailable { snoozeItems }
+        }
+        .disabled(!isPrepared)
+        Section {
+            Picker(selection: $streamingMode) {
+                ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
+            } label: {
+                Label("Show replies", lucideIcon: "message-square")
+                Text(streamingMode.label)
+            }
+            .pickerStyle(.menu)
+            Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
+                .disabled(!isPrepared)
+        }
+        Section {
+            Button("Clear conversation", lucideIcon: "trash-2", role: .destructive) { showingClear = true }
+                .disabled(!isPrepared)
+        }
+    }
+
+    /// Snooze while the chat has none, and Unsnooze with its time once it has, as the desktop sidebar offers them.
+    @ViewBuilder private var snoozeItems: some View {
+        if let until = model.snoozedUntil, model.isSnoozed() {
+            Button {
+                Task { await model.unsnooze() }
+            } label: {
+                Label("Unsnooze", lucideIcon: "alarm-clock-off")
+                Text("Snoozed until \(ChatLimits.moment(until))")
+            }
+        } else {
+            Menu {
+                ForEach(ChatSnoozeChoice.allCases, id: \.self) { choice in
+                    Button {
+                        Task { await model.snooze(choice) }
+                    } label: {
+                        Text(choice.label)
+                        Text(ChatLimits.moment(ChatSnooze.until(choice, now: .now).timeIntervalSince1970 * 1000))
+                    }
+                }
+            } label: {
+                Label("Snooze", lucideIcon: "alarm-clock")
+            }
+        }
+    }
+
+    private func rename() {
+        guard let workspace, let views = ChatRename.renamed(workspace.views, chatID: model.chatID, to: renameText)
+        else { return }
+        Task { await workspace.edit { $0.setting("views", .array(views)) } }
+    }
+
+    /// "Fork conversation" after the last turn that ended.
+    @ViewBuilder private var forkItem: some View {
         if let turnID = model.presentation.lastSettledTurnID {
             let refusal = model.presentation.forkRefusal(turnID: turnID)
             Button {
@@ -326,7 +394,6 @@ struct ChatScreen: View {
             }
             .disabled(refusal != nil)
         }
-        forkBackItems
     }
 
     @ViewBuilder private var forkBackItems: some View {
@@ -336,13 +403,11 @@ struct ChatScreen: View {
             Button {
                 summarize()
             } label: {
-                Label(
-                    originalTitle.map { "Summarize for \($0)" } ?? "Summarize for the original",
-                    lucideIcon: "message-square-share")
-                if let refusal { Text(refusal) }
+                Label("Summarize for the original", lucideIcon: "send")
+                Text(refusal ?? originalTitle ?? "")
             }
             .disabled(refusal != nil)
-            Button("Show original", lucideIcon: "undo-2") { model.presentation.openRequest = forkOf }
+            Button("Show original", lucideIcon: "arrow-left") { model.presentation.openRequest = forkOf }
                 .disabled(originalTitle == nil)
         }
     }

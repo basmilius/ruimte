@@ -29,7 +29,14 @@ enum ChatReveal {
 
 enum ChatStreamingMode: String, CaseIterable {
     case words, blocks, whole
-    var label: String { rawValue.capitalized }
+    /// The desktop's words under Settings, Chats, Show replies.
+    var label: String {
+        switch self {
+        case .words: "Word by word"
+        case .blocks: "Paragraph by paragraph"
+        case .whole: "When complete"
+        }
+    }
 }
 
 struct ChatStreamingMessage: View {

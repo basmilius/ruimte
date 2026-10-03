@@ -43,6 +43,16 @@ final class ChatModel {
     /// The machine's plan windows per account, `usage.limits`; nil until something on screen asked for them.
     var limits: JSONValue?
     var continuing = false
+    /// When the chat's snooze runs out, epoch ms; nil while it has none.
+    var snoozedUntil: Double?
+    /// False for a machine from before snoozes, which then offers none.
+    var snoozeAvailable = false
+    @ObservationIgnored private let activity = ChatActivityDerivation()
+    /// The sub-agents the composer's chip speaks for, derived again only when a subagent row or the thread's length
+    /// moves, so a reader does not observe every streamed word.
+    var activitySubagents: [JSONValue] {
+        activity.subagents(revision: subagentRevision, count: messageCount) { items }
+    }
     var suggestions: [ChatSuggestion] = []
     var suggestionKind = ""
     var searching = false
@@ -124,6 +134,11 @@ final class ChatModel {
                 self.presentation.setBookmarks(ChatBookmarks.parse(payload["bookmarks"]?.arrayValue ?? []))
             })
         unsubscribe.append(
+            client.subscribe(WireEvent.snoozeChanged.rawValue) { [weak self] payload in
+                guard let self else { return }
+                self.snoozedUntil = ChatSnooze.until(of: self.chatID, in: payload)
+            })
+        unsubscribe.append(
             client.subscribe(WireEvent.usageLimitsChanged.rawValue) { [weak self] payload in
                 guard let self, self.limits != nil else { return }
                 self.limits = payload
@@ -189,6 +204,7 @@ final class ChatModel {
                 providers = result["providers"]?.arrayValue ?? []
                 accounts = await accountResult.map(ProviderAccountList.init)
                 await refreshForks()
+                await readSnoozes()
             } catch is CancellationError {} catch {
                 guard generation == current else { return }
                 loading = false

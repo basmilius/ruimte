@@ -31,12 +31,9 @@ struct ChatActivityChips: View {
     let tasks: TaskStore?
     @State private var showingSubagents = false
     @State private var showingBackground = false
-    @State private var derived = ChatActivityDerivation()
 
     var body: some View {
-        let subagents = derived.subagents(revision: model.subagentRevision, count: model.messageCount) {
-            model.items
-        }
+        let subagents = model.activitySubagents
         let background = model.info.list("background")
         if !subagents.isEmpty || !background.isEmpty {
             HStack(spacing: 6) {
