@@ -5,23 +5,21 @@ struct WorkspacePage: View {
     @Bindable var navigation: WorkspaceNavigation
     var isSidebar = false
     private var workspace: MobileWorkspace { navigation.workspace }
-    @State private var adding = false
     @State private var iconView: JSONValue?
     @State private var renamed: JSONValue?
     @State private var renameText = ""
     @State private var deleteView: ViewDeletion?
     @State private var search = ""
     @State private var searching = false
-    @State private var showUsage = false
     @State private var showProcesses = false
     @State private var showLaunches = false
-    @State private var openedViewID: String?
-    @State private var newChat = false
+    @State private var showFiles = false
+    @State private var showGit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
             if workspace.ready {
-                projectTabs
+                if isSidebar { projectTabs } else { viewList(query: "") }
             } else {
                 openingStatus
             }
@@ -62,37 +60,15 @@ struct WorkspacePage: View {
             }
         }
         .navigationTitle(isSidebar ? "" : workspace.title)
+        .modifier(PhoneSubtitle(text: isSidebar ? nil : workspace.session.machine.name))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    // The Chats project's folder is the machine's own, so it has no launches.
-                    if !workspace.isScratch {
-                        Button("Launches", lucideIcon: "rocket") { showLaunches = true }
-                    }
-                    Button("Processes", lucideIcon: "activity") { showProcesses = true }
-                    Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
-                } label: {
-                    Image(lucide: "ellipsis")
-                }
-                .accessibilityLabel("More")
-                .disabled(!workspace.ready)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                // The views of the Chats project are its chats, so its plus makes one.
-                if workspace.isScratch {
-                    Button("New chat", lucideIcon: "message-square-plus") { newChat = true }
-                        .disabled(!workspace.ready)
-                } else {
-                    Button("Add view", lucideIcon: "plus") { adding = true }
-                        .disabled(!workspace.ready)
-                }
-            }
+            if isSidebar { tabletToolbar } else { phoneToolbar }
         }
-        .navigationDestination(item: $openedViewID) { id in viewDestination(id) }
+        .navigationDestination(item: $navigation.openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
         .task(id: workspace.ready) { await openPendingView() }
-        .mobileSheet(isPresented: $newChat) {
+        .mobileSheet(isPresented: $navigation.newChat) {
             NewChatSheet(session: workspace.session) { place in
                 guard place.projectID == workspace.projectID else { return }
                 navigation.pendingViewID = place.viewID
@@ -102,12 +78,30 @@ struct WorkspacePage: View {
         .mobileSheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
             if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
         }
-        .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
-        .mobileSheet(isPresented: $showUsage) {
+        .mobileSheet(isPresented: $navigation.adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
+        .mobileSheet(isPresented: $navigation.showingUsage) {
             NavigationStack {
                 MachineUsagePage(client: workspace.client)
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showUsage = false } }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { navigation.showingUsage = false }
+                        }
+                    }
+            }
+        }
+        .mobileSheet(isPresented: $showFiles) {
+            NavigationStack {
+                MachineFilesPage(client: workspace.client, path: workspace.folder)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showFiles = false } }
+                    }
+            }
+        }
+        .mobileSheet(isPresented: $showGit) {
+            NavigationStack {
+                GitPage(client: workspace.client, folder: workspace.folder)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showGit = false } }
                     }
             }
         }
@@ -169,6 +163,55 @@ struct WorkspacePage: View {
             Text(
                 "Your edits are kept until you choose. Saving your version replaces conflicting changes on the machine."
             )
+        }
+    }
+
+    /// Files and Git open as sheets, and launches sit in the project's menu; New view and Usage are the tab bar's
+    /// accessory. The Chats project's folder is the machine's own, so it has none of these.
+    @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
+        if !workspace.isScratch {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Files", lucideIcon: "folder") { showFiles = true }
+                    .disabled(!workspace.ready)
+                Button("Git", lucideIcon: "git-branch") { showGit = true }
+                    .disabled(!workspace.ready)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                } label: {
+                    Image(lucide: "ellipsis")
+                }
+                .accessibilityLabel("Project menu")
+                .disabled(!workspace.ready)
+            }
+        }
+    }
+
+    @ToolbarContentBuilder private var tabletToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                // The Chats project's folder is the machine's own, so it has no launches.
+                if !workspace.isScratch {
+                    Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                }
+                Button("Processes", lucideIcon: "activity") { showProcesses = true }
+                Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
+            } label: {
+                Image(lucide: "ellipsis")
+            }
+            .accessibilityLabel("More")
+            .disabled(!workspace.ready)
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            // The views of the Chats project are its chats, so its plus makes one.
+            if workspace.isScratch {
+                Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
+                    .disabled(!workspace.ready)
+            } else {
+                Button("Add view", lucideIcon: "plus") { navigation.adding = true }
+                    .disabled(!workspace.ready)
+            }
         }
     }
 
@@ -341,7 +384,7 @@ struct WorkspacePage: View {
                 ContentUnavailableView {
                     Label("No chats yet", lucideIcon: "messages-square", iconSize: 48)
                 } actions: {
-                    Button("New chat") { newChat = true }.disabled(!workspace.session.connected)
+                    Button("New chat") { navigation.newChat = true }.disabled(!workspace.session.connected)
                 }
             }
         }
@@ -364,7 +407,7 @@ struct WorkspacePage: View {
             navigation.section = .views
             navigation.selectedViewID = id
             searching = false
-            if !isSidebar { openedViewID = id }
+            if !isSidebar { navigation.openedViewID = id }
         }
     }
 
@@ -383,6 +426,15 @@ struct WorkspacePage: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A second line under an iPhone page's title: the machine of a project, or the project of a view opened elsewhere.
+private struct PhoneSubtitle: ViewModifier {
+    let text: String?
+
+    func body(content: Content) -> some View {
+        if let text { content.navigationSubtitle(text) } else { content }
     }
 }
 
@@ -414,6 +466,8 @@ func newCanvasNode(kind: String, title: String, after nodes: [JSONValue], extra:
 struct ProjectItemPage: View {
     let workspace: MobileWorkspace
     let item: JSONValue
+    /// Opened outside the project's list, from Now, Search or a notification, so the title names the project.
+    var showsProject = false
     @State private var ready = false
     @State private var problem: String?
     @State private var selectedMember: String?
@@ -515,6 +569,9 @@ struct ProjectItemPage: View {
             }
         }
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        .modifier(PhoneSubtitle(text: showsProject ? workspace.title : nil))
+        // A view fills the screen; its composer or keyboard bar stands where the tab bar would.
+        .toolbar(.hidden, for: .tabBar)
         .onAppear {
             workspace.session.attention.focus(item.stableID)
             Task { await workspace.session.markSeen(item.stableID) }

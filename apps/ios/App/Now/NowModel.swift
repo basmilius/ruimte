@@ -1,0 +1,167 @@
+import Foundation
+import Observation
+import RuimtePulsar
+import RuimteTransport
+
+/// The open projects of every machine, read with `project.sidebar` the way the desktop's sidebar watch reads them, so
+/// Now and Search know where each session stands. What a session is doing comes from each machine's attention store.
+@MainActor @Observable
+final class NowModel {
+    private(set) var feeds: [String: NowFeed] = [:]
+    @ObservationIgnored private var contextID = ""
+
+    func reconcile(runtime: AppRuntime) {
+        let context = "\(runtime.key?.publicKey ?? ""):\(runtime.connectionRevision)"
+        let restart = context != contextID
+        contextID = context
+        let machines = runtime.machines
+        for (id, feed) in feeds {
+            let current = machines.first { $0.id == id }.map { runtime.session(for: $0) }
+            if restart || current !== feed.session {
+                feed.stop()
+                feeds.removeValue(forKey: id)
+            }
+        }
+        guard runtime.key != nil else { return }
+        for machine in machines where feeds[machine.id] == nil {
+            let feed = NowFeed(session: runtime.session(for: machine))
+            feeds[machine.id] = feed
+            feed.start()
+        }
+    }
+
+    func stop() {
+        for feed in feeds.values { feed.stop() }
+        feeds.removeAll()
+    }
+
+    func refresh() async {
+        await withTaskGroup(of: Void.self) { group in
+            for feed in feeds.values { group.addTask { await feed.refresh() } }
+        }
+    }
+
+    var inputs: [NowMachineInput] {
+        feeds.values.map { feed in
+            let attention = feed.session.attention
+            return NowMachineInput(
+                machineID: feed.session.machine.id, machineName: feed.session.machine.name, projects: feed.projects,
+                attention: NowAttention(statuses: attention.statuses, unseen: attention.unseen))
+        }
+    }
+
+    var board: NowBoard { NowBoard.build(inputs) }
+
+    /// The task another agent opened a node with, if any.
+    func task(for target: ProjectViewTarget) -> JSONValue? {
+        feeds[target.machineID]?.session.tasks.childTask(target.itemID)
+    }
+    var entries: [ProjectViewEntry] { NowBoard.entries(inputs) }
+    /// Whether any machine answered yet, which tells an empty Now from one still connecting.
+    var loaded: Bool { feeds.values.contains(where: \.loaded) }
+    var offline: [SharedMachineSession] {
+        feeds.values.map(\.session).filter { !$0.connected }.sorted { $0.machine.name < $1.machine.name }
+    }
+
+    /// Where a node stands, reading the machine again when the last answer does not hold it yet: a notification can
+    /// arrive before Now ever asked, or name a chat made a moment ago.
+    func locate(machineID: String, itemID: String) async -> ProjectViewTarget? {
+        guard let feed = feeds[machineID] else { return nil }
+        if let target = NowBoard.locate(itemID, machineID: machineID, in: feed.projects) { return target }
+        try? await feed.session.waitForConnection()
+        await feed.refresh()
+        return NowBoard.locate(itemID, machineID: machineID, in: feed.projects)
+    }
+}
+
+@MainActor @Observable
+final class NowFeed {
+    let session: SharedMachineSession
+    private(set) var projects: [JSONValue] = []
+    private(set) var loaded = false
+    private(set) var problem: String?
+    @ObservationIgnored private var stops: [() -> Void] = []
+    @ObservationIgnored private var pending: Task<Void, Never>?
+    @ObservationIgnored private var loading: Task<Void, Never>?
+    @ObservationIgnored private var watched = Set<String>()
+
+    init(session: SharedMachineSession) { self.session = session }
+
+    func start() {
+        guard stops.isEmpty else { return }
+        session.retain()
+        let client = session.rpc
+        stops = ["project.changed", "project.summary", "session.list-changed"].map { event in
+            client.subscribe(event) { [weak self] _ in self?.schedule() }
+        }
+        stops.append(
+            client.observeConnection { [weak self] connected in
+                guard let self else { return }
+                if connected {
+                    schedule()
+                } else {
+                    pending?.cancel()
+                    pending = nil
+                }
+            })
+        if session.connected { schedule() }
+    }
+
+    func stop() {
+        guard !stops.isEmpty else { return }
+        stops.forEach { $0() }
+        stops.removeAll()
+        pending?.cancel()
+        pending = nil
+        loading?.cancel()
+        for id in watched { session.tasks.unwatch(id) }
+        watched.removeAll()
+        session.release()
+    }
+
+    func refresh() async {
+        if let loading {
+            await loading.value
+            return
+        }
+        let task = Task { await load() }
+        loading = task
+        await task.value
+        loading = nil
+    }
+
+    /// Folds a burst of events into one read, as the desktop's sidebar watch does.
+    private func schedule() {
+        guard pending == nil else { return }
+        pending = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard let self, !Task.isCancelled else { return }
+            pending = nil
+            await refresh()
+        }
+    }
+
+    private func load() async {
+        guard session.connected else { return }
+        let generation = session.generation
+        do {
+            let result = try await session.rpc.request("project.sidebar", payload: .object([:]))
+            guard !Task.isCancelled, generation == session.generation, !stops.isEmpty else { return }
+            projects = result.list("projects")
+            loaded = true
+            problem = nil
+            watchTasks()
+        } catch {
+            guard !Task.isCancelled, generation == session.generation else { return }
+            problem = error.localizedDescription
+        }
+    }
+
+    /// Asks for the tasks of every open project, so a row of a node another agent opened wears its task mark.
+    private func watchTasks() {
+        let open = Set(projects.compactMap { $0["summary"]?.text("projectId") }.filter { !$0.isEmpty })
+        for id in open.subtracting(watched) { session.tasks.watch(id) }
+        for id in watched.subtracting(open) { session.tasks.unwatch(id) }
+        watched = open
+    }
+}

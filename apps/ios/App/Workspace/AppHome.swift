@@ -13,15 +13,14 @@ struct AppHome: View {
     @State private var window: UIWindow?
     @State private var settings = false
     @State private var pairing = false
-    @State private var machines = false
     @State private var recentProjects = false
-    @State private var newChat: NewChatTarget?
     @State private var signIn = false
     @State private var pairAfterDismiss = false
-    @State private var search = ""
+    @State private var now = NowModel()
+    @State private var router = PhoneRouter()
     @State private var sceneID = UUID().uuidString
     @State private var restoreAttempted = false
-    /// The project a cold start reopened, until it opens or fails.
+    /// The project a cold start reopened on an iPad, until it opens or fails. An iPhone opens on Now instead.
     @State private var restoring: WorkspaceNavigation?
     @State private var restoreProblem: String?
     @Environment(\.scenePhase) private var phase
@@ -42,14 +41,22 @@ struct AppHome: View {
 
     var body: some View {
         Group {
-            if usesSidebar { tabletNavigation } else { projectNavigation }
+            if usesSidebar {
+                tabletNavigation
+            } else if hasWorkspace {
+                PhoneHome(
+                    runtime: runtime, projects: projects, now: now, router: router,
+                    showSettings: { settings = true }, pair: { pairing = true }, signIn: { signIn = true })
+            } else {
+                NavigationStack {
+                    WelcomePage(runtime: runtime, window: window) { pairing = true }
+                }
+                .containerBackground(MobileStyle.surface, for: .navigation)
+            }
         }
         .environment(\.openMobileWorkspace, OpenMobileWorkspaceAction(id: sceneID, action: openWorkspace))
         .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
         .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
-        .mobileSheet(isPresented: $machines, onDismiss: presentPendingPairing) {
-            MachinesSheet(runtime: runtime) { pairAfterDismiss = true }
-        }
         .mobileSheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
             NavigationStack {
                 WelcomePage(runtime: runtime, window: window) {
@@ -64,9 +71,12 @@ struct AppHome: View {
         .task {
             await runtime.start()
             await runtime.notifications.restore()
-            restoreLastProject()
+            if usesSidebar { restoreLastProject() }
         }
-        .task(id: machineRevision) { projects.reconcile(runtime: runtime) }
+        .task(id: machineRevision) {
+            projects.reconcile(runtime: runtime)
+            if !isPad { now.reconcile(runtime: runtime) }
+        }
         .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
         .onOpenURL { runtime.notifications.openActivityURL($0) }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
@@ -83,16 +93,20 @@ struct AppHome: View {
         .onChange(of: runtime.account?.id) { _, account in
             // The account restored on launch may land after the last project reopened.
             if restoring == nil || activeProject !== restoring { activeProject = nil }
+            router = PhoneRouter()
             if account != nil { signIn = false }
         }
         .onChange(of: runtime.notifications.destination) { _, destination in
-            if destination != nil {
+            guard let destination else { return }
+            settings = false
+            pairing = false
+            recentProjects = false
+            signIn = false
+            if isPad {
                 activeProject = nil
-                settings = false
-                pairing = false
-                machines = false
-                recentProjects = false
-                signIn = false
+            } else {
+                router.open(destination)
+                runtime.notifications.destination = nil
             }
         }
         .onChange(of: phase, initial: true) { _, current in
@@ -102,51 +116,13 @@ struct AppHome: View {
         }
         .onDisappear {
             projects.stop()
+            now.stop()
             runtime.connections.setScene(sceneID, foreground: false)
         }
     }
 
-    private var usesSidebar: Bool { UIDevice.current.userInterfaceIdiom == .pad && hasWorkspace }
-
-    private enum PhoneDestination: Hashable {
-        case workspace(WorkspaceNavigation)
-        case notification(NotificationDestination)
-    }
-
-    private var phoneDestination: Binding<PhoneDestination?> {
-        Binding(
-            get: {
-                if let destination = runtime.notifications.destination { return .notification(destination) }
-                return activeProject.map(PhoneDestination.workspace)
-            },
-            set: { destination in
-                switch destination {
-                case .workspace(let project):
-                    runtime.notifications.destination = nil
-                    activeProject = project
-                case .notification(let notification):
-                    activeProject = nil
-                    runtime.notifications.destination = notification
-                case nil:
-                    if activeProject != nil { closeProject() }
-                    runtime.notifications.destination = nil
-                }
-            })
-    }
-
-    private var projectNavigation: some View {
-        NavigationStack {
-            homeContent
-                .navigationDestination(item: phoneDestination) { destination in
-                    switch destination {
-                    case .workspace(let project): WorkspacePage(navigation: project)
-                    case .notification(let notification):
-                        NotificationSessionPage(runtime: runtime, destination: notification).id(notification.id)
-                    }
-                }
-        }
-        .containerBackground(MobileStyle.surface, for: .navigation)
-    }
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+    private var usesSidebar: Bool { isPad && hasWorkspace }
 
     private var tabletNavigation: some View {
         NavigationSplitView(columnVisibility: $sidebarVisibility) {
@@ -222,39 +198,50 @@ struct AppHome: View {
         } else {
             switch homeSection ?? .projects {
             case .projects: homeContent
-            case .machines: MachinesSheet(runtime: runtime, embedded: true) { pairing = true }
+            case .machines: MachinesPage(runtime: runtime, pair: { pairing = true })
             case .settings: MobileSettings(runtime: runtime, embedded: true)
             }
         }
     }
 
+    /// The Projects section of the iPad, which keeps its plus menu for pairing, machines and signing in.
     private var homeContent: some View {
-        Group {
-            if hasWorkspace {
-                projectList
-            } else {
-                WelcomePage(runtime: runtime, window: window) { pairing = true }
+        ProjectsPage(runtime: runtime, projects: projects, showingRecent: $recentProjects) {
+            if let restoreProblem {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(restoreProblem).font(.subheadline).foregroundStyle(MobileStyle.text)
+                        HStack(spacing: 16) {
+                            if LastProject.read() != nil {
+                                Button("Try again") { retryRestore() }
+                            }
+                            Button("Dismiss") {
+                                self.restoreProblem = nil
+                                LastProject.forget()
+                            }
+                        }
+                        .buttonStyle(.borderless).font(.subheadline)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(MobileStyle.panel, in: .rect(cornerRadius: 16))
+                    .accessibilityIdentifier("projects.restoreProblem")
+                }
+                .listSectionSeparator(.hidden, edges: .top)
             }
         }
-        .navigationTitle(hasWorkspace ? "Projects" : "")
+        .navigationTitle("Projects")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if hasWorkspace {
-                if !usesSidebar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Settings", lucideIcon: "circle-user-round") { settings = true }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Use a pairing link", lucideIcon: "link") { pairing = true }
+                    Button("Machines", lucideIcon: "monitor") { homeSection = .machines }
+                    if runtime.account == nil {
+                        Button("Sign in", lucideIcon: "circle-user-round") { signIn = true }
                     }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("Use a pairing link", lucideIcon: "link") { pairing = true }
-                        Button("Machines", lucideIcon: "monitor") { showMachines() }
-                        if runtime.account == nil {
-                            Button("Sign in", lucideIcon: "circle-user-round") { signIn = true }
-                        }
-                    } label: {
-                        Image(lucide: "plus").accessibilityLabel("Add or connect")
-                    }
+                } label: {
+                    Image(lucide: "plus").accessibilityLabel("Add or connect")
                 }
             }
         }
@@ -311,7 +298,10 @@ struct AppHome: View {
     }
 
     private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {
-        machines = false
+        guard isPad else {
+            withAnimation(reduceMotion ? nil : .default) { router.openProject(workspace, view: view) }
+            return
+        }
         restoreProblem = nil
         restoring = nil
         LastProject.remember(machineID: workspace.session.machine.id, projectID: workspace.projectID)
@@ -323,10 +313,6 @@ struct AppHome: View {
         }
     }
 
-    private func showMachines() {
-        if usesSidebar { homeSection = .machines } else { machines = true }
-    }
-
     private func presentPendingPairing() {
         if pairAfterDismiss {
             pairAfterDismiss = false
@@ -334,138 +320,6 @@ struct AppHome: View {
         }
     }
 
-    private var projectList: some View {
-        MobileList {
-            if let restoreProblem {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(restoreProblem).font(.subheadline).foregroundStyle(MobileStyle.text)
-                        HStack(spacing: 16) {
-                            if LastProject.read() != nil {
-                                Button("Try again") { retryRestore() }
-                            }
-                            Button("Dismiss") {
-                                self.restoreProblem = nil
-                                LastProject.forget()
-                            }
-                        }
-                        .buttonStyle(.borderless).font(.subheadline)
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MobileStyle.panel, in: .rect(cornerRadius: 16))
-                    .accessibilityIdentifier("projects.restoreProblem")
-                }
-                .listSectionSeparator(.hidden, edges: .top)
-            }
-            if !visibleProjects.isEmpty {
-                Section {
-                    ProjectLinks(runtime: runtime, rows: visibleProjects)
-                }
-                .listSectionSeparator(.hidden, edges: .top)
-            } else if loadingProjects {
-                Section {
-                    MobileLoadingRow("Loading projects")
-                        .frame(maxWidth: .infinity, minHeight: 120)
-                        .accessibilityIdentifier("projects.loading")
-                }.listRowBackground(Color.clear).listRowSeparator(.hidden)
-            } else if !search.isEmpty {
-                ContentUnavailableView.search(text: search)
-                    .listRowBackground(Color.clear).listRowSeparator(.hidden)
-            } else {
-                Section {
-                    ContentUnavailableView {
-                        Label("No open projects", lucideIcon: "folder", iconSize: 48)
-                    } description: {
-                        Text(
-                            runtime.machines.isEmpty
-                                ? "Connect your computer to pick up your projects and conversations."
-                                : "Open a project on your computer or choose one from Recently closed.")
-                    }
-                }.listRowBackground(Color.clear).listRowSeparator(.hidden)
-            }
-            Section {
-                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
-                    .accessibilityHidden(true)
-                NewChatRow(machines: runtime.machines) { newChat = NewChatTarget(machineID: $0.id) }
-                ForEach(projects.chats) { row in
-                    Button {
-                        openWorkspace(
-                            MobileWorkspace(session: runtime.session(for: row.machine), projectID: row.id.projectID),
-                            view: nil)
-                    } label: {
-                        ChatsRowLabel(
-                            title: "Chats",
-                            detail: [
-                                projects.chats.count > 1 ? row.machine.name : "Your earlier chats",
-                                row.connected ? nil : "Offline",
-                            ].compactMap { $0 }.joined(separator: " · "),
-                            icon: "messages-square")
-                    }
-                    .modifier(MobileSidebarRow())
-                    .accessibilityIdentifier("projects.chats.\(row.machine.id)")
-                }
-                Button {
-                    recentProjects = true
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(lucide: "clock-arrow-left").frame(width: 20, height: 20).frame(width: 32)
-                        Text("Recently closed")
-                    }
-                    .modifier(MobileSidebarLabel(disclosure: true))
-                }
-                .modifier(MobileSidebarRow())
-                .accessibilityIdentifier("projects.recent")
-            }
-            if !projects.problems.isEmpty {
-                Section("Connections") {
-                    ForEach(runtime.machines.filter { projects.problems[$0.id] != nil }, id: \.id) { machine in
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(machine.name).font(.subheadline.weight(.medium))
-                            Text(projects.problems[machine.id] ?? "").font(.caption).foregroundStyle(MobileStyle.muted)
-                            Button("Reconnect") { runtime.session(for: machine).reconnect() }.font(.subheadline)
-                        }
-                    }
-                }
-            }
-            if let problem = runtime.problem {
-                Section { Text(problem).font(.callout).foregroundStyle(.red) }
-            }
-        }
-        .modifier(ProjectListWidth())
-        .navigationDestination(isPresented: $recentProjects) {
-            RecentProjectsPage(runtime: runtime, projects: projects)
-        }
-        .mobileSheet(item: $newChat) { target in
-            if let machine = runtime.machines.first(where: { $0.id == target.machineID }) {
-                let session = runtime.session(for: machine)
-                NewChatSheet(session: session) { place in
-                    openWorkspace(MobileWorkspace(session: session, projectID: place.projectID), view: place.viewID)
-                }
-            }
-        }
-        .searchable(text: $search, prompt: "Search projects or machines")
-        .toolbar {
-            if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    MobileLoadingRow("Updating projects")
-                }
-            }
-        }
-        .refreshable {
-            await runtime.refreshMachines()
-            projects.reconcile(runtime: runtime)
-            await projects.refresh()
-        }
-    }
-
-    private var visibleProjects: [UnifiedProjectRow] { projects.open.filter { $0.matches(search) } }
-    private var loadingProjects: Bool {
-        runtime.loading || projects.loading
-            || (projects.open.isEmpty && projects.recent.isEmpty && !runtime.machines.isEmpty
-                && !projects.hasConnectedMachine && runtime.problem == nil && projects.problems.isEmpty)
-    }
 }
 
 struct RecentProjectsPage: View {
@@ -498,7 +352,7 @@ struct RecentProjectsPage: View {
     }
 }
 
-private struct ProjectListWidth: ViewModifier {
+struct ProjectListWidth: ViewModifier {
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
@@ -513,7 +367,7 @@ private struct ProjectListWidth: ViewModifier {
     }
 }
 
-private struct ProjectLinks: View {
+struct ProjectLinks: View {
     let runtime: AppRuntime
     let rows: [UnifiedProjectRow]
     @Environment(\.openMobileWorkspace) private var openWorkspace
@@ -592,16 +446,15 @@ private struct ProjectHomeGlyph: View {
     }
 }
 
-private struct MachinesSheet: View {
+/// Every machine with how it is reached; a machine opens its projects, files, processes, usage and settings. The
+/// iPhone's Machines tab pairs from its plus, the iPad's section from a row of its own.
+struct MachinesPage: View {
     let runtime: AppRuntime
-    var embedded = false
+    var showsPairingRow = true
     let pair: () -> Void
     @State private var selectedMachine: String?
-    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        if embedded { content } else { NavigationStack { content } }
-    }
-    private var content: some View {
         MobileList {
             Section("Your machines") {
                 ForEach(runtime.machines, id: \.id) { machine in
@@ -609,20 +462,21 @@ private struct MachinesSheet: View {
                         selectedMachine = machine.id
                     } label: {
                         MobileRow(
-                            title: machine.name, subtitle: "Projects, files and settings", symbol: "monitor"
+                            title: machine.name, subtitle: reach(runtime.session(for: machine)),
+                            symbol: machine.icon?.value ?? "monitor"
                         )
                         .modifier(MobileSidebarLabel(disclosure: true))
                     }
                     .modifier(MobileSidebarRow())
+                    .accessibilityIdentifier("machines.\(machine.id)")
                 }
             }
-            Button {
-                if !embedded { dismiss() }
-                pair()
-            } label: {
-                Label("Use a pairing link", lucideIcon: "link").modifier(MobileSidebarLabel())
+            if showsPairingRow {
+                Button(action: pair) {
+                    Label("Use a pairing link", lucideIcon: "link").modifier(MobileSidebarLabel())
+                }
+                .modifier(MobileSidebarRow())
             }
-            .modifier(MobileSidebarRow())
         }
         .navigationDestination(item: $selectedMachine) { id in
             if let machine = runtime.machines.first(where: { $0.id == id }) {
@@ -631,7 +485,11 @@ private struct MachinesSheet: View {
         }
         .navigationTitle("Machines")
         .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
-        .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
+    }
+
+    private func reach(_ session: SharedMachineSession) -> String {
+        if session.connected { return session.relayed == true ? "Connected via relay" : "Connected" }
+        return session.problem ?? "Not connected"
     }
 }
 

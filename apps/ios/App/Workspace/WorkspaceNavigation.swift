@@ -9,6 +9,12 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var selectedViewID: String?
     /// A view to open once the project is there, such as a chat a machine just made.
     var pendingViewID: String?
+    /// The view pushed over the project's list on an iPhone.
+    var openedViewID: String?
+    /// The sheets the tab bar's accessory opens on an iPhone, kept here since the accessory sits outside the page.
+    var adding = false
+    var newChat = false
+    var showingUsage = false
 
     init(workspace: MobileWorkspace) { self.workspace = workspace }
 
