@@ -1,11 +1,11 @@
 import RuimtePulsar
 import SwiftUI
 
+/// A question or an approval as a glass card over the composer, which stays as it was under it.
 struct ChatPromptCard: View {
     @Bindable var prompts: ChatPromptState
     let item: JSONValue
     let connected: Bool
-    let hasDraft: Bool
     let denyReason: Bool
     let availableHeight: CGFloat
     let perform: @MainActor (String, [String: JSONValue]) async throws -> Void
@@ -15,7 +15,6 @@ struct ChatPromptCard: View {
     @AccessibilityFocusState private var headingFocused: Bool
     @State private var showingFullDiff = false
     @State private var contentHeight: CGFloat = 0
-    @State private var actionsHeight: CGFloat = 44
 
     private var isApproval: Bool { item.text("kind") == "approval" }
     private var questions: [JSONValue] { item.list("questions") }
@@ -45,44 +44,34 @@ struct ChatPromptCard: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                header
-                if isApproval { approvalContent } else { questionContent }
-                if let error = prompts.error {
-                    Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError)
-                        .accessibilityLabel("Could not send. \(error)")
+        VStack(alignment: .leading, spacing: 10) {
+            header.padding(.horizontal, 2)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    if isApproval { approvalContent } else { questionContent }
+                    if let error = prompts.error {
+                        Text(error).font(.subheadline).foregroundStyle(MobileStyle.statusError)
+                            .accessibilityLabel("Could not send. \(error)")
+                    }
+                    if !connected {
+                        Label("Not connected", lucideIcon: "wifi-off", iconSize: 14)
+                            .font(.caption).foregroundStyle(MobileStyle.muted)
+                    }
                 }
-                if !connected {
-                    Label("Not connected", lucideIcon: "wifi-off").font(.caption).foregroundStyle(MobileStyle.muted)
-                }
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGFloat.self) {
-                $0.size.height
-            } action: {
-                contentHeight = $0
-            }
-            .padding(.horizontal, 16).padding(.top, 16)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .safeAreaBar(edge: .bottom, spacing: 0) {
-            actions
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height
                 } action: {
-                    actionsHeight = $0
+                    contentHeight = $0
                 }
-                .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 16)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .frame(height: bodyHeight)
+            actions
         }
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .frame(minHeight: 0, idealHeight: bodyHeight + actionsHeight + 44, maxHeight: bodyHeight + actionsHeight + 44)
-        .preference(
-            key: ChatPromptHeightKey.self,
-            value: contentHeight > 0
-                ? ChatPromptHeight(requestID: item.text("requestId"), height: bodyHeight + actionsHeight + 44) : nil
-        )
+        .padding(.horizontal, 12).padding(.top, 14).padding(.bottom, 8)
+        .glassEffect(.regular, in: .rect(cornerRadius: 26))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("chat.prompt")
         .task(id: item.text("requestId")) { headingFocused = true }
@@ -97,27 +86,29 @@ struct ChatPromptCard: View {
         }
     }
 
+    /// The composer stays under the card, so the card leaves it and some of the thread the room.
     private var bodyHeight: CGFloat {
-        min(contentHeight, max(120, availableHeight * (dynamicTypeSize.isAccessibilitySize ? 0.68 : 0.5)))
+        min(contentHeight, max(120, availableHeight * (dynamicTypeSize.isAccessibilitySize ? 0.55 : 0.38)))
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(lucide: isApproval ? "hand" : "message-circle-question-mark")
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(lucide: isApproval ? "hand" : "message-circle-question-mark", size: 16)
                     .foregroundStyle(MobileStyle.statusNeedsYou).accessibilityHidden(true)
                 Text(title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityAddTraits(.isHeader).accessibilityFocused($headingFocused)
-                Spacer(minLength: 0)
-            }
-            HStack(spacing: 8) {
-                if prompts.pending.count > 1 { Text("\(prompts.pending.count) requests waiting").monospacedDigit() }
                 if questions.count > 1 {
-                    Text("Question \(prompts.draft.index + 1) of \(questions.count)").monospacedDigit()
+                    Text("\(prompts.draft.index + 1) of \(questions.count)")
+                        .font(.caption).monospacedDigit().foregroundStyle(MobileStyle.muted)
+                        .accessibilityLabel("Question \(prompts.draft.index + 1) of \(questions.count)")
                 }
-                if hasDraft { Text("Draft saved") }
             }
-            .font(.caption).foregroundStyle(MobileStyle.muted)
+            if prompts.pending.count > 1 {
+                Text("\(prompts.pending.count) requests waiting").monospacedDigit()
+                    .font(.caption).foregroundStyle(MobileStyle.muted)
+            }
         }
     }
 
@@ -224,11 +215,8 @@ struct ChatPromptCard: View {
                 }
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .background(
-                    answer.custom ? MobileStyle.active : MobileStyle.hover, in: RoundedRectangle(cornerRadius: 12)
-                )
-                .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(answer.custom ? MobileStyle.muted : .clear) }
-                .contentShape(RoundedRectangle(cornerRadius: 12))
+                .background(answer.custom ? MobileStyle.text.opacity(0.1) : .clear, in: Self.option)
+                .contentShape(Self.option)
                 .onTapGesture {
                     answer.custom = true
                     answerFocused = true
@@ -254,10 +242,11 @@ struct ChatPromptCard: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 12).padding(.vertical, 10).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(selected ? MobileStyle.active : MobileStyle.hover, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(selected ? MobileStyle.muted : .clear) }
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .background(selected ? MobileStyle.text.opacity(0.1) : .clear, in: Self.option)
+        .contentShape(Self.option)
     }
+
+    private static let option = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
     private var actions: some View {
         let layout =
@@ -265,24 +254,25 @@ struct ChatPromptCard: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
         return layout {
             if isApproval {
-                Button("Deny") { approve("deny") }.frame(minHeight: 44).disabled(sending || !connected)
+                Button("Deny") { approve("deny") }.modifier(ChatPromptQuiet()).disabled(sending || !connected)
                 if item["canAllowAlways"]?.boolValue == true, let rule = item["allowAlways"] {
                     Button(rule.text("label")) { approve("allow-always") }
-                        .frame(minHeight: 44).disabled(sending || !connected)
+                        .modifier(ChatPromptQuiet()).disabled(sending || !connected)
                         .accessibilityHint(rule.text("description"))
                 }
                 if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 primary("Allow", icon: "check") { approve("allow") }
             } else {
                 if prompts.draft.index > 0 {
-                    Button("Previous") { prompts.draft.index -= 1 }.frame(minHeight: 44).disabled(sending)
+                    Button("Previous") { prompts.draft.index -= 1 }.modifier(ChatPromptQuiet()).disabled(sending)
                 } else if item["async"]?.boolValue == true {
                     Button("Dismiss") { submit("chat.dismiss", ["itemId": item["id"] ?? .null]) }
-                        .frame(minHeight: 44).disabled(sending || !connected)
+                        .modifier(ChatPromptQuiet()).disabled(sending || !connected)
                 }
                 if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
+                let last = prompts.draft.index == questions.count - 1
                 primary(
-                    prompts.draft.index == questions.count - 1 ? "Answer" : "Next", icon: "arrow-up",
+                    last ? "Answer" : "Next", icon: last ? "arrow-up" : "arrow-right",
                     enabled: !answer.value.isEmpty
                 ) {
                     answerFocused = false
@@ -305,18 +295,23 @@ struct ChatPromptCard: View {
 
     private func primary(_ label: String, icon: String, enabled: Bool = true, action: @escaping () -> Void) -> some View
     {
-        HStack(spacing: 6) {
-            if sending { ProgressView().tint(MobileStyle.onAccent) } else { Image(lucide: icon, size: 16) }
-            Text(sending ? "Sending…" : label)
+        let available = !sending && connected && enabled
+        return Button(action: action) {
+            HStack(spacing: 6) {
+                Text(sending ? "Sending…" : label)
+                if sending {
+                    ProgressView().controlSize(.small).tint(MobileStyle.onAccent)
+                } else {
+                    Image(lucide: icon, size: 14)
+                }
+            }
+            .font(.subheadline.weight(.semibold)).foregroundStyle(MobileStyle.onAccent)
+            .padding(.horizontal, 18).frame(minHeight: 36)
+            .background(MobileStyle.accent.opacity(available ? 1 : 0.5), in: Capsule())
+            .frame(minHeight: 44).contentShape(Capsule())
         }
-        .font(.subheadline.weight(.semibold)).padding(.horizontal, 16).frame(minHeight: 44)
-        .modifier(
-            ChatComposerAction(
-                prompt: true, icon: icon, title: sending ? "Sending…" : label, loading: sending,
-                opacity: sending || !connected || !enabled ? 0.5 : 1,
-                enabled: !sending && connected && enabled, perform: action)
-        )
-        .allowsHitTesting(false).accessibilityHidden(true)
+        .buttonStyle(ChatComposerButtonStyle())
+        .disabled(!available)
     }
 
     private var diffContent: some View {
@@ -355,15 +350,61 @@ struct ChatPromptCard: View {
 
 extension ChatPromptCard {
     /// A card that answers through the chat's own model, the same under the chat and under one of its sub-agents.
-    init(prompts: ChatPromptState, item: JSONValue, model: ChatModel, hasDraft: Bool, availableHeight: CGFloat) {
+    init(prompts: ChatPromptState, item: JSONValue, model: ChatModel, availableHeight: CGFloat) {
         self.init(
-            prompts: prompts, item: item, connected: model.connected && !model.loading, hasDraft: hasDraft,
+            prompts: prompts, item: item, connected: model.connected && !model.loading,
             denyReason: model.providers.first(where: {
                 $0["kind"] == model.info["provider"]
             })?["capabilities"]?["denyReason"]?.boolValue == true,
             availableHeight: availableHeight
         ) { action, values in
             _ = try await model.client.request(action, payload: model.target(values))
+        }
+    }
+}
+
+/// The card's secondary actions: plain words in the muted color, as wide as they read.
+private struct ChatPromptQuiet: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .buttonStyle(ChatComposerButtonStyle())
+            .foregroundStyle(MobileStyle.muted)
+            .padding(.horizontal, 10).frame(minHeight: 44)
+            .contentShape(Rectangle())
+    }
+}
+
+/// The active request's card over the composer. The dock reaches its host as a new root view, which drops the
+/// transaction that changed it, so the card comes and goes from state of its own.
+struct ChatPromptSlot: View {
+    let prompts: ChatPromptState
+    let model: ChatModel
+    let availableHeight: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown: JSONValue?
+
+    init(prompts: ChatPromptState, model: ChatModel, availableHeight: CGFloat) {
+        self.prompts = prompts
+        self.model = model
+        self.availableHeight = availableHeight
+        _shown = State(initialValue: prompts.active)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let shown {
+                ChatPromptCard(prompts: prompts, item: shown, model: model, availableHeight: availableHeight)
+                    .id(shown.text("requestId"))
+                    .transition(
+                        reduceMotion
+                            ? .identity
+                            : .opacity.combined(with: .scale(scale: 0.96, anchor: .bottom))
+                                .combined(with: .offset(y: 12)))
+                    .padding(.bottom, 10)
+            }
+        }
+        .onChange(of: prompts.active) { _, next in
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { shown = next }
         }
     }
 }

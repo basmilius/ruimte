@@ -18,7 +18,6 @@ struct ChatScreen: View {
     @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
     @State private var composerFade = ChatComposerFadeLink()
-    @State private var resumeDraftFocus = false
     @State private var composerSheets = ChatComposerSheets()
     @State private var messagesBelow = false
     @State private var scrollToLatest = 0
@@ -87,15 +86,6 @@ struct ChatScreen: View {
         }
         .onChange(of: model.pending, initial: true) { _, requests in
             prompts.update(requests)
-        }
-        .onChange(of: prompts.activeID) { previous, next in
-            if next != nil && previous == nil {
-                resumeDraftFocus = composerFocused
-                composerFocused = false
-            } else if next == nil && resumeDraftFocus && visible {
-                composerFocused = true
-                resumeDraftFocus = false
-            }
         }
         .ignoresSafeArea(edges: .bottom)
         .background(MobileStyle.surface.ignoresSafeArea())
@@ -457,10 +447,6 @@ struct ChatScreen: View {
         model.presentation.subagentsRefused ? model.subagentRows.native : model.subagentRows.any
     }
 
-    private var hasDraft: Bool {
-        !model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !model.attachments.isEmpty
-    }
-
     private var showScrollButton: Bool { messagesBelow && !model.loading }
     private var scrollButtonBesideComposer: Bool { sizeClass == .regular && viewportWidth >= 640 }
 
@@ -485,14 +471,19 @@ struct ChatScreen: View {
     private var composerDock: some View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(spacing: 0) {
+                ChatPromptSlot(prompts: prompts, model: model, availableHeight: viewportHeight)
                 if prompts.active == nil {
                     ChatLimitBanner(
                         model: model, resumeAllowed: machineSession?.icons.resumeAtReset ?? false, openFork: openFork)
-                    ChatActivityChips(model: model, tasks: machineSession?.tasks)
-                    ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
                 }
-                ChatComposerRow(showsStop: model.working && prompts.active == nil) {
-                    promptComposer
+                ChatActivityChips(model: model, tasks: machineSession?.tasks)
+                ChatComposerAccessory(model: model, focused: $composerFocused, availableHeight: viewportHeight)
+                ChatComposerRow(showsStop: model.working) {
+                    ChatComposerView(
+                        model: model, sheets: composerSheets, focused: $composerFocused,
+                        availableHeight: viewportHeight, send: send
+                    )
+                    .modifier(ChatComposerGlass())
                 } stop: {
                     stopButton
                 }
@@ -502,10 +493,8 @@ struct ChatScreen: View {
                     // From the dock's own top padding on, so chips and messages above the field stay out of the fade.
                     composerFade.update(max(0, top - 12))
                 }
-                if prompts.active == nil {
-                    ChatComposerPills(model: model, sheets: composerSheets, focused: $composerFocused)
-                        .padding(.top, 4)
-                }
+                ChatComposerPills(model: model, sheets: composerSheets, focused: $composerFocused)
+                    .padding(.top, 4)
             }
             .frame(maxWidth: 760)
             if scrollButtonBesideComposer {
@@ -522,17 +511,6 @@ struct ChatScreen: View {
         .frame(maxWidth: .infinity)
         .fixedSize(horizontal: false, vertical: true)
         .coordinateSpace(.named(Self.composerDockSpace))
-    }
-
-    private var promptComposer: some View {
-        ChatComposerMorph(request: prompts.active) {
-            ChatComposerView(
-                model: model, sheets: composerSheets, focused: $composerFocused, availableHeight: viewportHeight,
-                send: send)
-        } prompt: { pending in
-            ChatPromptCard(
-                prompts: prompts, item: pending, model: model, hasDraft: hasDraft, availableHeight: viewportHeight)
-        }
     }
 
     private var stopButton: some View {
@@ -605,7 +583,6 @@ struct SessionErrorBanner: View {
     }
 }
 
-/// "Fork of <original>" under a fork's title, and the title opens the ways back to the original.
 /// The composer with the stop button beside it. The dock reaches its host as a new root view, which drops the
 /// transaction that changed it, so the stop button animates from state of its own.
 private struct ChatComposerRow<Composer: View, Stop: View>: View {
@@ -630,12 +607,12 @@ private struct ChatComposerRow<Composer: View, Stop: View>: View {
             }
         }
         .onChange(of: showsStop) { _, next in
-            // The composer's own morph runs this long, so the width settles with the height.
             withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { stopShown = next }
         }
     }
 }
 
+/// "Fork of <original>" under a fork's title, and the title opens the ways back to the original.
 private struct ChatForkTitle<Items: View>: ViewModifier {
     let subtitle: String?
     @ViewBuilder let items: () -> Items

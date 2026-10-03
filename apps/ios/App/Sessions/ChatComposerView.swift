@@ -11,6 +11,39 @@ struct ChatComposerButtonStyle: ButtonStyle {
     }
 }
 
+/// The field's glass: half the single-line height as its radius, so an empty field is a capsule and a longer draft
+/// a rounded card. Only the field answers a touch.
+struct ChatComposerGlass: ViewModifier {
+    private let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+
+    func body(content: Content) -> some View {
+        content
+            .clipShape(shape)
+            .glassEffect(.regular.interactive(), in: shape)
+    }
+}
+
+/// The send circle inside the field: filled once there is something to send.
+struct ChatSendMark: View {
+    let icon: String
+    var loading = false
+    var emphasized = false
+
+    var body: some View {
+        ZStack {
+            Circle().fill(emphasized ? MobileStyle.accent : MobileStyle.text.opacity(0.1))
+            if loading {
+                ProgressView().tint(emphasized ? MobileStyle.onAccent : MobileStyle.muted)
+            } else {
+                Image(lucide: icon, size: 19)
+                    .foregroundStyle(emphasized ? MobileStyle.onAccent : MobileStyle.faint)
+            }
+        }
+        .frame(width: 40, height: 40)
+        .contentShape(Circle())
+    }
+}
+
 struct ChatComposerView: View {
     @Bindable var model: ChatModel
     @Bindable var sheets: ChatComposerSheets
@@ -154,14 +187,9 @@ struct ChatComposerView: View {
 
     private var sendButton: some View {
         Button(action: send) {
-            Image(lucide: model.working ? "list-plus" : "arrow-up", size: 19)
-                .frame(width: 40, height: 40)
-                .modifier(
-                    ChatComposerAction(
-                        prompt: false, icon: model.working ? "list-plus" : "arrow-up",
-                        loading: model.sending, enabled: model.canSend, emphasized: model.composition.hasContent)
-                )
-                .contentShape(Circle())
+            ChatSendMark(
+                icon: model.working ? "list-plus" : "arrow-up", loading: model.sending,
+                emphasized: model.composition.hasContent)
         }
         .buttonStyle(ChatComposerButtonStyle())
         .disabled(!model.canSend)

@@ -192,7 +192,6 @@
 		C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */; };
 		C245FE68B77F65BA226290AA /* document-renderer-licenses.txt in Resources */ = {isa = PBXBuildFile; fileRef = D5D4B5EDC969E1EDFF6BF202 /* document-renderer-licenses.txt */; };
 		C2AC2BD4033C5764494105B5 /* FilePreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6321857DC856275AF3D6F68 /* FilePreviewTests.swift */; };
-		C35D8DC07DB34F01AB96DE63 /* ChatComposerMorph.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEBA4D8875D163CC1E085C98 /* ChatComposerMorph.swift */; };
 		C4E36B847635300A645681AE /* image.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5EEF2A1565431D8E3D196AC0 /* image.gif */; };
 		C753D5E02FBD111AD87DB0EC /* ChatDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9AC34FA6BB3E2D39E24D463 /* ChatDraftTests.swift */; };
 		C7B1C89782EBA8CF74012E0C /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
@@ -497,7 +496,6 @@
 		D9AC34FA6BB3E2D39E24D463 /* ChatDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDraftTests.swift; sourceTree = "<group>"; };
 		DD1AADEED69848ED7D305964 /* TerminalSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSnapshot.swift; sourceTree = "<group>"; };
 		DD5A9E15DAA4E2C5B3A17AC1 /* LastProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastProject.swift; sourceTree = "<group>"; };
-		DEBA4D8875D163CC1E085C98 /* ChatComposerMorph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerMorph.swift; sourceTree = "<group>"; };
 		E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionScreenTests.swift; sourceTree = "<group>"; };
 		E452AF99CE0B23DE4D02CB90 /* ChatForkSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatForkSheet.swift; sourceTree = "<group>"; };
 		E4DF3856CE6E52165FC2B919 /* DrawingEditorPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingEditorPage.swift; sourceTree = "<group>"; };
@@ -975,7 +973,6 @@
 				FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */,
 				54509CE405A6CFB959B26BD6 /* ChatBookmarks.swift */,
 				BA99A22023E8D96C7CD68450 /* ChatComposerAccessory.swift */,
-				DEBA4D8875D163CC1E085C98 /* ChatComposerMorph.swift */,
 				1965DC041D9346101045BABC /* ChatComposerPills.swift */,
 				C36BAD1B8EA7FCBB11B30288 /* ChatComposerView.swift */,
 				207A88BAF2E56E0957CB1944 /* ChatContent.swift */,
@@ -1350,7 +1347,6 @@
 				163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */,
 				B3B56421D3E44ED00A10D2D9 /* ChatBookmarks.swift in Sources */,
 				EC97369753594B0054AAB8E8 /* ChatComposerAccessory.swift in Sources */,
-				C35D8DC07DB34F01AB96DE63 /* ChatComposerMorph.swift in Sources */,
 				716590354E81DE5DFBF62F14 /* ChatComposerPills.swift in Sources */,
 				FFD5BDF13AD80E52E91CB7D3 /* ChatComposerView.swift in Sources */,
 				3A580D1A13AD08B9E927CEA4 /* ChatContent.swift in Sources */,

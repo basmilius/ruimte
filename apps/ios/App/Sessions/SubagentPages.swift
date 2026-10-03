@@ -453,22 +453,19 @@ private struct SubagentComposerDock: View {
     let availableHeight: CGFloat
 
     var body: some View {
-        ChatComposerMorph(request: prompts.active) {
+        VStack(spacing: 0) {
+            ChatPromptSlot(prompts: prompts, model: model, availableHeight: availableHeight)
             HStack(alignment: .bottom, spacing: 6) {
                 Text("Go back to the main agent to write")
                     .foregroundStyle(MobileStyle.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 15)
-                Image(lucide: "arrow-up", size: 19)
-                    .frame(width: 40, height: 40)
-                    .modifier(ChatComposerAction(prompt: false, enabled: false, emphasized: false))
+                ChatSendMark(icon: "arrow-up")
                     .padding(.vertical, 6)
                     .accessibilityHidden(true)
             }
             .padding(.leading, 20).padding(.trailing, 6)
-        } prompt: { pending in
-            ChatPromptCard(
-                prompts: prompts, item: pending, model: model, hasDraft: false, availableHeight: availableHeight)
+            .modifier(ChatComposerGlass())
         }
         .frame(maxWidth: 760)
         .padding(.horizontal, 14).padding(.vertical, 12)
