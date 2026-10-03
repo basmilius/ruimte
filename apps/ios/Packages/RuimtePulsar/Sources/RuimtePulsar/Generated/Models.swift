@@ -122,6 +122,29 @@ public struct AccessStatement: Codable, Sendable, Equatable {
     }
 }
 
+public struct AccountDeletePayload: Codable, Sendable, Equatable {
+    public let `confirmation`: String
+
+    public init(`confirmation`: String) {
+        self.`confirmation` = `confirmation`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("AccountDeletePayloadSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `confirmation` = try container.decode(String.self, forKey: .`confirmation`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`confirmation`, forKey: .`confirmation`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `confirmation` = "confirmation"
+    }
+}
+
 public struct AccountResult: Codable, Sendable, Equatable {
     public let `account`: Account
     public let `identities`: [Identity]
@@ -249,6 +272,7 @@ public enum AddressBookErrorCode: String, CaseIterable, Codable, Sendable, Equat
     case `identityTaken` = "identity-taken"
     case `providerLinked` = "provider-linked"
     case `lastIdentity` = "last-identity"
+    case `confirmationMismatch` = "confirmation-mismatch"
     case `rateLimited` = "rate-limited"
     case `clockSkew` = "clock-skew"
     case `notConfigured` = "not-configured"

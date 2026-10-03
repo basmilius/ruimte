@@ -6,6 +6,7 @@ import { statementKeyOf } from './crypto.ts';
 import type { Env } from './env.ts';
 import { allowedOrigin, corsHeaders, failure, json } from './http.ts';
 import { endSession, exchangeLoginCode, finishLogin, refreshSession, startLogin } from './login.ts';
+import { deleteAccount } from './account-deletion.ts';
 import { approveDeviceLink, cancelDeviceLink, completeDeviceLink, denyDeviceLink, lookupDeviceLink, pollDeviceLink, startDeviceLink } from './device.ts';
 import { completeIdentityLink, getAccount, listProviders, startIdentityLink, unlinkIdentity } from './identities.ts';
 import { deleteMachine, listMachines, registerMachine } from './machines.ts';
@@ -67,8 +68,13 @@ const api = async (request: Request, env: Env, path: string): Promise<Response> 
     if (path === '/v1/models/catalog' && method === 'GET') {
         return readCatalogs();
     }
-    if (path === '/v1/account' && method === 'GET') {
-        return getAccount(request, env);
+    if (path === '/v1/account') {
+        if (method === 'GET') {
+            return getAccount(request, env);
+        }
+        if (method === 'DELETE') {
+            return deleteAccount(request, env);
+        }
     }
     if (path === '/v1/account/link' && method === 'POST') {
         return startIdentityLink(request, env);

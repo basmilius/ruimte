@@ -12,6 +12,8 @@ export const LIMITS = {
     sessionIp: 30,
     // A person adds a provider once; a few tries cover a cancelled browser.
     linkAccount: 10,
+    // A person deletes an account once; a few tries cover a name typed wrong.
+    deleteAccount: 5,
     registerAccount: 20,
     registerIp: 30,
     statementAccount: 30,

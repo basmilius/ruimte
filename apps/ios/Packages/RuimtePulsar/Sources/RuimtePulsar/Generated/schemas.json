@@ -83,6 +83,19 @@
     ],
     "x-statement-lifetime-ms": 120000
   },
+  "AccountDeletePayloadSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "confirmation": {
+        "type": "string",
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "confirmation"
+    ]
+  },
   "AccountResultSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -212,6 +225,7 @@
       "identity-taken",
       "provider-linked",
       "last-identity",
+      "confirmation-mismatch",
       "rate-limited",
       "clock-skew",
       "not-configured",
@@ -238,6 +252,7 @@
               "identity-taken",
               "provider-linked",
               "last-identity",
+              "confirmation-mismatch",
               "rate-limited",
               "clock-skew",
               "not-configured",

@@ -11,7 +11,10 @@ import {
     MachineListResultSchema,
     RegisterMachinePayloadSchema,
     SignalEnvelopeSchema,
+    accountConfirmationName,
+    confirmsAccountDeletion,
     type AccessStatement,
+    type Account,
     type BrokerPeerFrame,
     type BrokerServerFrame
 } from './index.ts';
@@ -179,6 +182,18 @@ describe('address book', () => {
         const offer = { connectionId: 'attempt-1', signal: { kind: 'offer', sdp: 'v=0', access: { statement: v2, label: 'Laptop' } } };
         expect(roundTrip(SignalEnvelopeSchema, offer as never)).toEqual(offer as never);
         expect(AccessStatementSchema.safeParse({ ...v2, machinePublicKey: 'not-a-key' }).success).toBe(false);
+    });
+
+    test('deleting an account takes its name, else its login, else its provider, typed in any case', () => {
+        const named: Account = { id: 'account-1', provider: 'github', login: 'ada', displayName: 'Ada  Lovelace' };
+        const apple: Account = { id: 'account-2', provider: 'apple', login: null, displayName: null };
+        expect(accountConfirmationName(named)).toBe('Ada  Lovelace');
+        expect(confirmsAccountDeletion(named, ' ada lovelace ')).toBe(true);
+        expect(confirmsAccountDeletion(named, 'ada')).toBe(false);
+        expect(accountConfirmationName({ ...named, displayName: null })).toBe('ada');
+        expect(accountConfirmationName(apple)).toBe('Apple');
+        expect(confirmsAccountDeletion(apple, 'apple')).toBe(true);
+        expect(confirmsAccountDeletion({ ...named, displayName: ' ' }, ' ')).toBe(false);
     });
 
     test('refuses a statement that is valid for longer than two minutes, or expires before it is issued', () => {

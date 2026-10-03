@@ -15,6 +15,7 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     'identity-taken': 409,
     'provider-linked': 409,
     'last-identity': 409,
+    'confirmation-mismatch': 400,
     'rate-limited': 429,
     'clock-skew': 400,
     'not-configured': 503,

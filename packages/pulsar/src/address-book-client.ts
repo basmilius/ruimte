@@ -13,6 +13,7 @@ import {
     SessionResultSchema,
     type AccessRequestPayload,
     type AccessStatement,
+    type AccountDeletePayload,
     type AccountResult,
     type AddressBookErrorCode,
     type IdentityLinkCompletePayload,
@@ -135,6 +136,10 @@ export class AddressBookClient {
 
     unlinkIdentity(accessToken: string, provider: ProviderId): Promise<AccountResult> {
         return this.call({ method: 'DELETE', path: `/v1/account/identities/${provider}`, token: accessToken, schema: AccountResultSchema });
+    }
+
+    async deleteAccount(accessToken: string, payload: AccountDeletePayload): Promise<void> {
+        await this.call({ method: 'DELETE', path: '/v1/account', token: accessToken, body: payload, schema: null });
     }
 
     requestStatement(accessToken: string, payload: AccessRequestPayload): Promise<AccessStatement> {

@@ -1573,6 +1573,170 @@ describe('identities', () => {
     });
 });
 
+describe('deleting an account', () => {
+    const remove = (session: SessionResult, confirmation: unknown, ip?: string): Promise<Response> =>
+        dispatch('/v1/account', { method: 'DELETE', headers: bearer(session), body: { confirmation }, ip });
+
+    const ACCOUNT_TABLES = [
+        'identity',
+        'session',
+        'machine',
+        'removed_machine',
+        'device',
+        'statement_log',
+        'push_device',
+        'login_code',
+        'identity_link_request',
+        'identity_link_code',
+        'device_link'
+    ];
+
+    const rowsLeft = async (accountId: string, handle: string): Promise<Record<string, number>> => {
+        const db = database(mf);
+        const counts: Record<string, number> = {};
+        for (const table of ACCOUNT_TABLES) {
+            counts[table] = (await db.first<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table} WHERE account_id = ?1`, accountId))?.count ?? -1;
+        }
+        for (const table of ['push_activity', 'push_activity_start', 'push_receipt']) {
+            counts[table] = (await db.first<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table} WHERE handle = ?1`, handle))?.count ?? -1;
+        }
+        counts.login_attempt =
+            (await db.first<{ count: number }>('SELECT COUNT(*) AS count FROM login_attempt WHERE link_account_id = ?1', accountId))?.count ?? -1;
+        counts.account = (await db.first<{ count: number }>('SELECT COUNT(*) AS count FROM account WHERE id = ?1', accountId))?.count ?? -1;
+        return counts;
+    };
+
+    test('nothing without a session, and nothing for a name that is not the account', async () => {
+        expect((await dispatch('/v1/account', { method: 'DELETE', body: { confirmation: 'user-9301' } })).status).toBe(401);
+        const session = await signIn(9301);
+        const wrong = await remove(session, 'user-9300');
+        expect(wrong.status).toBe(400);
+        expect(await errorCode(wrong)).toBe('confirmation-mismatch');
+        expect(await errorCode(await remove(session, ''))).toBe('confirmation-mismatch');
+        expect(await errorCode(await dispatch('/v1/account', { method: 'DELETE', headers: bearer(session) }))).toBe('bad-request');
+        expect((await accountOf(session)).account.id).toBe(session.account.id);
+    });
+
+    test('the account goes with its sign-ins, identities, devices, push registrations and machines, and nobody else loses a thing', async () => {
+        const session = await signIn(9302);
+        const other = await signIn(9312);
+        const second = await signIn(9302);
+        expect(second.account.id).toBe(session.account.id);
+        expect((await completeLink(session, await linkLogin(session, 'apple', 'apple-9302'))).status).toBe(200);
+
+        const machine = newKeyPair();
+        const otherMachine = newKeyPair();
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, machine, 'studio') })).status).toBe(200);
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(other), body: registration(other, otherMachine, 'studio') })).status).toBe(
+            200
+        );
+        // Remembered as removed although it was never listed, which is the row `removed_machine` needs.
+        expect((await dispatch('/v1/machines/attic', { method: 'DELETE', headers: bearer(session) })).status).toBe(404);
+        expect((await dispatch('/v1/statements', { method: 'POST', headers: bearer(session), body: accessRequest('studio', newKeyPair()) })).status).toBe(200);
+
+        const db = database(mf);
+        const sessionId = (await db.first<{ id: string }>('SELECT id FROM session WHERE account_id = ?1 LIMIT 1', session.account.id))?.id;
+        const handle = `push-${session.account.id}`;
+        const now = Date.now();
+        await db.batch([
+            [
+                "INSERT INTO push_device (handle, account_id, session_id, token, environment, updated_at) VALUES (?1, ?2, ?3, 'apns-token', 'sandbox', ?4)",
+                handle,
+                session.account.id,
+                sessionId,
+                now
+            ],
+            [
+                "INSERT INTO push_activity (handle, machine_id, collapse_id, token, updated_at) VALUES (?1, 'studio', 'collapse', 'activity-token', ?2)",
+                handle,
+                now
+            ],
+            ["INSERT INTO push_activity_start (handle, machine_id, collapse_id, expires_at) VALUES (?1, 'studio', 'collapse', ?2)", handle, now + 60_000],
+            ["INSERT INTO push_receipt (handle, id, expires_at) VALUES (?1, 'receipt', ?2)", handle, now + 60_000],
+            [
+                "INSERT INTO login_code (code_hash, account_id, app_redirect_uri, app_code_challenge, expires_at) VALUES ('deleted-code', ?1, ?2, 'challenge', ?3)",
+                session.account.id,
+                REDIRECT_URI,
+                now + 60_000
+            ],
+            [
+                `INSERT INTO device_link (device_code_hash, user_code, machine_id, name, public_key, status, account_id, created_at, expires_at)
+                 VALUES ('deleted-link', 'BCDFGHJK', 'attic', 'Attic', ?1, 'approved', ?2, ?3, ?4)`,
+                machine.publicKey,
+                session.account.id,
+                now,
+                now + 60_000
+            ]
+        ]);
+        // What a link started from this session leaves on its way, before anyone finished it.
+        await db.batch([
+            [
+                "INSERT INTO identity_link_request (token_hash, account_id, session_id, provider, expires_at) VALUES ('deleted-request', ?1, ?2, 'apple', ?3)",
+                session.account.id,
+                sessionId,
+                now + 60_000
+            ],
+            [
+                `INSERT INTO identity_link_code (code_hash, account_id, session_id, provider, subject, app_redirect_uri, app_code_challenge, expires_at)
+                 VALUES ('deleted-link-code', ?1, ?2, 'apple', 'apple-9302-next', ?3, 'challenge', ?4)`,
+                session.account.id,
+                sessionId,
+                REDIRECT_URI,
+                now + 60_000
+            ]
+        ]);
+        await db.run(
+            `INSERT INTO login_attempt (state_hash, provider, browser_hash, provider_verifier, app_redirect_uri, app_state, app_code_challenge, created_at, expires_at, link_account_id, link_session_id)
+             VALUES ('deleted-attempt', 'apple', 'browser', 'verifier', ?1, 'state', 'challenge', ?2, ?3, ?4, ?5)`,
+            REDIRECT_URI,
+            now,
+            now + 60_000,
+            session.account.id,
+            sessionId
+        );
+        const before = await rowsLeft(session.account.id, handle);
+        expect(Object.entries(before).filter(([, count]) => count === 0)).toEqual([]);
+
+        expect((await remove(session, ' USER-9302 ')).status).toBe(204);
+
+        expect(Object.values(await rowsLeft(session.account.id, handle)).every((count) => count === 0)).toBe(true);
+        for (const signedIn of [session, second]) {
+            expect((await dispatch('/v1/account', { headers: bearer(signedIn) })).status).toBe(401);
+            expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(signedIn.refreshToken, signedIn.key) })).status).toBe(401);
+        }
+        const others = (await (await dispatch('/v1/machines', { headers: bearer(other) })).json()) as MachineListResult;
+        expect(others.machines.map((entry) => entry.publicKey)).toEqual([otherMachine.publicKey]);
+
+        // Either identity opens an account of its own now, and the machine may go on another account.
+        const fresh = await signIn(9302);
+        expect(fresh.account.id).not.toBe(session.account.id);
+        expect((await accountOf(fresh)).identities.map((identity) => identity.provider)).toEqual(['github']);
+        expect((await signInWithApple('apple-9302')).account.id).not.toBe(fresh.account.id);
+        const empty = (await (await dispatch('/v1/machines', { headers: bearer(fresh) })).json()) as MachineListResult;
+        expect(empty).toEqual({ machines: [], removedMachineIds: [] });
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(fresh), body: registration(fresh, machine, 'studio') })).status).toBe(200);
+    });
+
+    test('the name the account is shown with is what to type, else its login', async () => {
+        githubNames.set(9303, 'Ada Lovelace');
+        const named = await signIn(9303);
+        expect(await errorCode(await remove(named, 'user-9303'))).toBe('confirmation-mismatch');
+        expect((await remove(named, 'ada  lovelace')).status).toBe(204);
+
+        const apple = await signInWithApple('apple-9304');
+        expect(await errorCode(await remove(apple, 'apple-9304'))).toBe('confirmation-mismatch');
+        expect((await remove(apple, 'Apple')).status).toBe(204);
+    });
+
+    test('an account that tries too often is told to wait', async () => {
+        const session = await signIn(9305);
+        await spendLimit(`account:${session.account.id}:delete`, LIMITS.deleteAccount);
+        const limited = await remove(session, 'user-9305');
+        expect(limited.status).toBe(429);
+        expect((await accountOf(session)).account.id).toBe(session.account.id);
+    });
+});
+
 describe('display names', () => {
     const appleUser = (firstName: string, lastName: string): string => JSON.stringify({ name: { firstName, lastName }, email: 'person@example.com' });
 

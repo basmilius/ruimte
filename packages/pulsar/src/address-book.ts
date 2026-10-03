@@ -175,6 +175,27 @@ export const AccountResultSchema = z.object({
 export type AccountResult = z.infer<typeof AccountResultSchema>;
 
 /*
+ * `DELETE /v1/account`, answered with 204. The account goes with everything bound to it, and the machines
+ * on it leave it. `confirmation` is what the person typed, compared on the address book with the account
+ * as it stands then, so a request only a token proves deletes nothing.
+ */
+export const AccountDeletePayloadSchema = z.object({
+    confirmation: z.string().max(256)
+});
+export type AccountDeletePayload = z.infer<typeof AccountDeletePayloadSchema>;
+
+/* What a person types to delete the account. Apple hands out no login and the iOS app asks for no name, so the provider stands in last. */
+export const accountConfirmationName = (account: Account): string => account.displayName ?? account.login ?? PROVIDER_NAMES[account.provider];
+
+const foldName = (text: string): string => text.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
+
+/* Case and runs of whitespace aside, so a person who read the name right is never refused over how it was typed. */
+export const confirmsAccountDeletion = (account: Account, typed: string): boolean => {
+    const expected = foldName(accountConfirmationName(account));
+    return expected !== '' && foldName(typed) === expected;
+};
+
+/*
  * `GET /v1/providers`: the providers this address book can sign in with right now. Strings rather than
  * `ProviderIdSchema`, so a client older than a new provider still reads the list and skips that entry.
  */
@@ -364,6 +385,8 @@ export const AddressBookErrorCodeSchema = z.enum([
     'provider-linked',
     // Removing this identity would leave the account without a way in.
     'last-identity',
+    // What was typed to delete the account does not name it.
+    'confirmation-mismatch',
     'rate-limited',
     // A signed time too far from the address book's: the device's clock is off, and the session is still good.
     'clock-skew',
