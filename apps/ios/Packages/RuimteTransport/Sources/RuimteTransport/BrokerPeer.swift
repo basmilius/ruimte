@@ -36,7 +36,7 @@ public struct BrokerPeer {
         case "challenge":
             guard state == .announced else { return [] }
             guard try string(frame, "broker") == host else {
-                throw TransportFailure.invalid("The broker challenge names a different host.")
+                throw TransportFailure.invalid(String(localized: "The broker challenge names a different host.", bundle: .module))
             }
             let message = "pulsar-broker-hello-v1\n" + (try wireText(.array([
                 .string(host), .string("client"), .string(signer.publicKey), try field(frame, "nonce")

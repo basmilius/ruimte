@@ -120,8 +120,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .disconnected: "The machine is reconnecting. Try again when it is connected."
-        case .timeout(let request): "The machine did not answer \(request) in time."
+        case .disconnected: String(localized: "The machine is reconnecting. Try again when it is connected.", bundle: .module)
+        case .timeout(let request): String(localized: "The machine did not answer \(request) in time.", bundle: .module)
         case .server(_, let message), .invalid(let message): message
         }
     }
@@ -430,7 +430,7 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
         let count = replied.count
         Self.log.error("Dropped a frame that does not decode, which answered \(count, privacy: .public) requests")
         for id in replied {
-            finish(id, result: .failure(MachineClientError.invalid("The machine sent a reply this app cannot read.")))
+            finish(id, result: .failure(MachineClientError.invalid(String(localized: "The machine sent a reply this app cannot read.", bundle: .module))))
         }
     }
 
@@ -540,7 +540,7 @@ public struct MachineResource: Sendable, Equatable {
                         "resource": resource, "offset": .number(Double(data.count)), "length": .number(Double(length)),
                     ]))
                 guard piece.size <= limit else {
-                    throw MachineClientError.invalid("This resource exceeds the direct connection size limit.")
+                    throw MachineClientError.invalid(String(localized: "This resource exceeds the direct connection size limit.", bundle: .module))
                 }
                 if first == nil { first = piece }
                 if piece.version != first?.version || piece.size != first?.size || piece.mime != first?.mime
@@ -551,19 +551,19 @@ public struct MachineResource: Sendable, Equatable {
                 }
                 let bytes = piece.data
                 guard bytes.count <= length, data.count + bytes.count <= piece.size else {
-                    throw MachineClientError.invalid("The machine sent an invalid resource piece.")
+                    throw MachineClientError.invalid(String(localized: "The machine sent an invalid resource piece.", bundle: .module))
                 }
                 data.append(bytes)
                 if data.count == piece.size {
                     return MachineResource(data: data, mime: piece.mime)
                 }
                 if bytes.isEmpty {
-                    throw MachineClientError.invalid("The machine sent an empty piece before the end of the resource.")
+                    throw MachineClientError.invalid(String(localized: "The machine sent an empty piece before the end of the resource.", bundle: .module))
                 }
             } while true
             if changed && attempt < min(restarts, 3) { continue }
-            throw MachineClientError.invalid("The resource changed while it was loading.")
+            throw MachineClientError.invalid(String(localized: "The resource changed while it was loading.", bundle: .module))
         }
-        throw MachineClientError.invalid("The resource could not be loaded.")
+        throw MachineClientError.invalid(String(localized: "The resource could not be loaded.", bundle: .module))
     }
 }

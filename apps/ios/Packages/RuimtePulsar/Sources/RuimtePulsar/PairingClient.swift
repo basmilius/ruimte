@@ -24,13 +24,13 @@ public struct SecurePairingLink: Equatable, Sendable {
             url.scheme == "https", url.host?.isEmpty == false, url.user == nil, url.password == nil,
             url.path == "/pair", url.query == nil, let token = url.fragment, !token.isEmpty
         else {
-            throw PairingFailure(code: "bad-link", message: "Paste an HTTPS pairing link ending in /pair#token.")
+            throw PairingFailure(code: "bad-link", message: String(localized: "Paste an HTTPS pairing link ending in /pair#token.", bundle: .module))
         }
         self.token = token
         url.path = "/auth/pair"
         url.fragment = nil
         guard let endpoint = url.url else {
-            throw PairingFailure(code: "bad-link", message: "This pairing address is invalid.")
+            throw PairingFailure(code: "bad-link", message: String(localized: "This pairing address is invalid.", bundle: .module))
         }
         self.endpoint = endpoint
     }
@@ -64,7 +64,7 @@ public struct PairingClient: Sendable {
         defer { session.invalidateAndCancel() }
         let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse else {
-            throw PairingFailure(code: "bad-answer", message: "The machine returned no HTTP response.")
+            throw PairingFailure(code: "bad-answer", message: String(localized: "The machine returned no HTTP response.", bundle: .module))
         }
         return (data, response)
     }
@@ -89,18 +89,18 @@ public struct PairingClient: Sendable {
         } catch let error as PairingFailure {
             throw error
         } catch {
-            throw PairingFailure(code: "network", message: "The machine could not be reached.")
+            throw PairingFailure(code: "network", message: String(localized: "The machine could not be reached.", bundle: .module))
         }
         guard (200..<300).contains(response.statusCode) else {
             throw PairingFailure(
-                code: "refused", message: "The machine refused this link. It may be used or expired.")
+                code: "refused", message: String(localized: "The machine refused this link. It may be used or expired.", bundle: .module))
         }
         do {
             // The generated decoder validates the whole answer against `PairResultSchema` on its way in.
             return try JSONDecoder().decode(PairResult.self, from: data)
         } catch {
             throw PairingFailure(
-                code: "bad-answer", message: "The machine answered with something this app cannot read.")
+                code: "bad-answer", message: String(localized: "The machine answered with something this app cannot read.", bundle: .module))
         }
     }
 }

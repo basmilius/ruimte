@@ -46,7 +46,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
                 let (data, response) = try await Self.networkSession.data(for: request)
                 guard let response = response as? HTTPURLResponse else {
                     throw AddressBookRequestError(
-                        code: "bad-answer", status: 0, message: "The address book returned no HTTP response.")
+                        code: "bad-answer", status: 0, message: String(localized: "The address book returned no HTTP response.", bundle: .module))
                 }
                 return (data, response)
             }
@@ -118,7 +118,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
         guard statement.machineId == machineID, statement.clientPublicKey == key.publicKey, statement.nonce == nonce
         else {
             throw AddressBookRequestError(
-                code: "bad-answer", status: 200, message: "Your account answered with a statement for something else.")
+                code: "bad-answer", status: 200, message: String(localized: "Your account answered with a statement for something else.", bundle: .module))
         }
         return SignalAccess(statement: statement, label: boundedDeviceLabel(label))
     }
@@ -132,7 +132,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
         } catch {
             throw AddressBookRequestError(
                 code: "bad-answer", status: response.statusCode,
-                message: "The address book answered with something this client cannot read.")
+                message: String(localized: "The address book answered with something this client cannot read.", bundle: .module))
         }
     }
 
@@ -143,7 +143,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
             url.password == nil
         else {
             throw AddressBookRequestError(
-                code: "bad-request", status: 0, message: "The address book needs an HTTPS address.")
+                code: "bad-request", status: 0, message: String(localized: "The address book needs an HTTPS address.", bundle: .module))
         }
         var request = URLRequest(url: url)
         request.httpMethod = method
@@ -168,7 +168,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
         } catch let error as AddressBookRequestError {
             throw error
         } catch {
-            throw AddressBookRequestError(code: "network", status: 0, message: "The address book could not be reached.")
+            throw AddressBookRequestError(code: "network", status: 0, message: String(localized: "The address book could not be reached.", bundle: .module))
         }
         guard (200..<300).contains(response.statusCode) else {
             if let failure = try? JSONDecoder().decode(AddressBookError.self, from: data) {
@@ -177,7 +177,7 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, AccountAPI, Sendabl
             }
             throw AddressBookRequestError(
                 code: "bad-answer", status: response.statusCode,
-                message: "The address book answered \(response.statusCode).")
+                message: String(localized: "The address book answered \(response.statusCode).", bundle: .module))
         }
         return (data, response)
     }

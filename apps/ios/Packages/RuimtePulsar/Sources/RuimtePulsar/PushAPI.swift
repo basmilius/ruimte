@@ -81,7 +81,7 @@ public struct PushAPI: Sendable {
             let json = try? JSONValue.decode(data)
             throw AddressBookRequestError(
                 code: json?["error"]?["code"]?.stringValue ?? "push", status: response.statusCode,
-                message: json?["error"]?["message"]?.stringValue ?? "Notifications could not be registered.")
+                message: json?["error"]?["message"]?.stringValue ?? String(localized: "Notifications could not be registered.", bundle: .module))
         }
         return data
     }

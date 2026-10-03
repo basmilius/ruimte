@@ -32,7 +32,7 @@ import RuimtePulsar
                     case .string(let text): received?(text)
                     case .data(let data):
                         guard let text = String(data: data, encoding: .utf8) else {
-                            throw TransportFailure.invalid("The broker sent invalid UTF-8.")
+                            throw TransportFailure.invalid(String(localized: "The broker sent invalid UTF-8.", bundle: .module))
                         }
                         received?(text)
                     @unknown default: throw TransportFailure.invalid("Unknown broker message")
@@ -122,7 +122,7 @@ import RuimtePulsar
 
     public func join(url: URL, signer: any SessionSigner, member: Member) throws -> BrokerMembership {
         guard url.scheme == "wss", let host = url.host, url.user == nil, url.password == nil else {
-            throw TransportFailure.invalid("The broker needs a secure WebSocket URL.")
+            throw TransportFailure.invalid(String(localized: "The broker needs a secure WebSocket URL.", bundle: .module))
         }
         let hostPort = host + (url.port.flatMap { $0 == 443 ? nil : ":\($0)" } ?? "")
         let id = url.absoluteString + " " + signer.publicKey
@@ -189,7 +189,7 @@ import RuimtePulsar
         case .ice(let frame):
             guard frame["id"]?.stringValue == shared.iceID else { return }
             if let expiry = frame["expiresAt"]?.numberValue, expiry <= now() {
-                throw TransportFailure.invalid("The broker returned expired ICE credentials.")
+                throw TransportFailure.invalid(String(localized: "The broker returned expired ICE credentials.", bundle: .module))
             }
             settleIce(shared, frame: frame)
         case .relayed(let frame):
@@ -201,7 +201,7 @@ import RuimtePulsar
             } else if frameID != nil {
                 for member in Array(shared.members.values) { member.refused(frame) }
             } else {
-                throw TransportFailure.invalid(frame["message"]?.stringValue ?? "The broker is limiting this client. Try again later.")
+                throw TransportFailure.invalid(frame["message"]?.stringValue ?? String(localized: "The broker is limiting this client. Try again later.", bundle: .module))
             }
         case .delivered: break
         }

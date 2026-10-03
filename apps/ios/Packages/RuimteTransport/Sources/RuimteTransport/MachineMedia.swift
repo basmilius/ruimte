@@ -66,7 +66,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
         let info = try pin(current)
         onInfo(info)
         guard offset <= info.size else {
-            throw MachineClientError.invalid("The player asked past the end of the file.")
+            throw MachineClientError.invalid(String(localized: "The player asked past the end of the file.", bundle: .module))
         }
         let last = offset + min(info.size - offset, wanted) - 1
         guard offset <= last else { return }
@@ -76,7 +76,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
         while true {
             let base = index * chunkBytes
             let end = min(current.data.count, last + 1 - base)
-            guard position - base < end else { throw MachineClientError.invalid("The machine sent an empty piece.") }
+            guard position - base < end else { throw MachineClientError.invalid(String(localized: "The machine sent an empty piece.", bundle: .module)) }
             let start = current.data.startIndex
             deliver(Data(current.data[(start + position - base)..<(start + end)]))
             position = base + end
@@ -89,7 +89,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
             try Task.checkCancellation()
             current = try await value(of: index)
             guard current.version == info.version, current.size == info.size else {
-                throw MachineClientError.invalid("The file changed while it played.")
+                throw MachineClientError.invalid(String(localized: "The file changed while it played.", bundle: .module))
             }
         }
     }
@@ -162,7 +162,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
             return BytesPiece(mime: info.mime, size: info.size, version: info.version, offset: offset, data: data)
         }
         guard !cancelled else { throw CancellationError() }
-        guard let task = fetch(index) else { throw MachineClientError.invalid("The spool lost a piece of the file.") }
+        guard let task = fetch(index) else { throw MachineClientError.invalid(String(localized: "The spool lost a piece of the file.", bundle: .module)) }
         return try await task.value
     }
 
@@ -177,7 +177,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
                         "offset": .number(Double(offset)), "length": .number(Double(length)),
                     ]))
                 guard piece.offset == offset, piece.data.count <= chunkBytes else {
-                    throw MachineClientError.invalid("The machine sent an invalid piece of the file.")
+                    throw MachineClientError.invalid(String(localized: "The machine sent an invalid piece of the file.", bundle: .module))
                 }
                 return piece
             } catch {
@@ -202,7 +202,7 @@ public struct MachineMediaInfo: Sendable, Equatable {
     private func pin(_ first: BytesPiece) throws -> MachineMediaInfo {
         let info = MachineMediaInfo(mime: first.mime, size: first.size, version: first.version)
         if let pinned = self.info, pinned.version != info.version || pinned.size != info.size {
-            throw MachineClientError.invalid("The file changed while it played.")
+            throw MachineClientError.invalid(String(localized: "The file changed while it played.", bundle: .module))
         }
         self.info = info
         return info

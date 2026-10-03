@@ -1,0 +1,28 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSCameraUsageDescription" : {
+      "comment" : "Shown when the app asks for the camera.",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruimte gebruikt de camera als je een foto maakt om bij een bericht te voegen."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "comment" : "Shown when the app asks for the local network.",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maak direct verbinding met je machines op hetzelfde wifinetwerk."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

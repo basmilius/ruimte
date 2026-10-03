@@ -57,8 +57,8 @@ public enum DirectIdentity {
         guard challenge["protocol"]?.numberValue == Double(WireConstants.protocolVersion) else {
             let olderMachine = (challenge["protocol"]?.numberValue ?? -1) < Double(WireConstants.protocolVersion)
             throw TransportFailure.invalid(olderMachine
-                ? "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update."
-                : "This machine runs a newer Ruimte than this app. Update this app.")
+                ? String(localized: "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.", bundle: .module)
+                : String(localized: "This machine runs a newer Ruimte than this app. Update this app.", bundle: .module))
         }
         let daemon = try field(challenge, "daemon")
         let nonce = try string(challenge, "challenge")
@@ -66,7 +66,7 @@ public enum DirectIdentity {
         guard try string(daemon, "id") == machineID,
               try string(daemon, "publicKey") == machineKey,
               verify(publicKey: machineKey, message: message, signature: try string(daemon, "signature")) else {
-            throw TransportFailure.invalid("The machine did not prove its identity over this connection.")
+            throw TransportFailure.invalid(String(localized: "The machine did not prove its identity over this connection.", bundle: .module))
         }
         let signature = try signer.sign("ruimte-client-channel-v1\n\(machineID)\n\(nonce)\n\(signer.publicKey)\n\(binding)")
         return try WireSchema.validate("DirectProofFrameSchema", .object([

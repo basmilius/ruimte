@@ -58,7 +58,7 @@ public actor SessionVault {
         refreshing = nil
         guard let key = try await signer() else {
             throw AddressBookRequestError(
-                code: "unauthorized", status: 0, message: "This device has no key to bind a session to.")
+                code: "unauthorized", status: 0, message: String(localized: "This device has no key to bind a session to.", bundle: .module))
         }
         try Task.checkCancellation()
         guard operation == revision else { throw CancellationError() }

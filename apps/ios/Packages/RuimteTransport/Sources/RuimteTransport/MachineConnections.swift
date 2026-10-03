@@ -53,7 +53,7 @@ import RuimtePulsar
         releaseAction = release
     }
     public func send(_ text: String) throws {
-        guard releaseAction != nil else { throw TransportFailure.invalid("This machine connection was released.") }
+        guard releaseAction != nil else { throw TransportFailure.invalid(String(localized: "This machine connection was released.", bundle: .module)) }
         try sendAction(text)
     }
     public func release() {
@@ -152,7 +152,7 @@ import RuimtePulsar
         return MachineLease(
             send: { [weak entry] text in
                 guard let entry, entry.connected, let link = entry.link else {
-                    throw TransportFailure.invalid("The machine is reconnecting.")
+                    throw TransportFailure.invalid(String(localized: "The machine is reconnecting.", bundle: .module))
                 }
                 try link.send(text)
             },

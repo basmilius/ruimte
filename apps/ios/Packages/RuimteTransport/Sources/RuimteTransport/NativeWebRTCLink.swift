@@ -58,7 +58,7 @@ import RuimtePulsar
         connectionID = try Base64URL.randomToken(bytes: 16)
         super.init()
         cancelTimeout = scheduler.after(milliseconds: 20_000) { [weak self] in
-            self?.end(TransportFailure.invalid("The direct connection did not come up within 20 seconds."))
+            self?.end(TransportFailure.invalid(String(localized: "The direct connection did not come up within 20 seconds.", bundle: .module)))
         }
         do {
             membership = try sockets.join(url: brokerURL, signer: signer, member: .init(ready: { [weak self] servers in
@@ -67,7 +67,7 @@ import RuimtePulsar
                 self?.receiveSignal(frame)
             }, refused: { [weak self] frame in
                 guard let self, let id = frame["id"]?.stringValue, self.relayIDs.contains(id) else { return }
-                self.end(TransportFailure.invalid(frame["message"]?.stringValue ?? "The broker refused this connection attempt."))
+                self.end(TransportFailure.invalid(frame["message"]?.stringValue ?? String(localized: "The broker refused this connection attempt.", bundle: .module)))
             }, lost: { [weak self] error in self?.end(error) }))
         } catch {
             cancelTimeout?()
@@ -76,7 +76,7 @@ import RuimtePulsar
     }
 
     public func send(_ text: String) throws {
-        guard authenticated, !ended else { throw TransportFailure.invalid("The machine connection is not authenticated.") }
+        guard authenticated, !ended else { throw TransportFailure.invalid(String(localized: "The machine connection is not authenticated.", bundle: .module)) }
         do { try sendFrame(text) }
         catch { end(error); throw error }
     }
@@ -105,13 +105,13 @@ import RuimtePulsar
             }
             let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
             guard let created = Self.factory.peerConnection(with: configuration, constraints: constraints, delegate: self) else {
-                throw TransportFailure.invalid("WebRTC could not create a connection.")
+                throw TransportFailure.invalid(String(localized: "WebRTC could not create a connection.", bundle: .module))
             }
             peer = created
             let channelConfiguration = RTCDataChannelConfiguration()
             channelConfiguration.isOrdered = true
             guard let channel = created.dataChannel(forLabel: WireConstants.directChannelLabel, configuration: channelConfiguration) else {
-                throw TransportFailure.invalid("WebRTC could not create a data channel.")
+                throw TransportFailure.invalid(String(localized: "WebRTC could not create a data channel.", bundle: .module))
             }
             self.channel = channel
             channel.delegate = self
@@ -187,7 +187,7 @@ import RuimtePulsar
             guard frame["from"]?.stringValue == machineKey, envelope["connectionId"]?.stringValue == connectionID else { return }
             let message = try DirectIdentity.signalMessage(from: machineKey, to: signer.publicKey, envelope: envelope)
             guard DirectIdentity.verify(publicKey: machineKey, message: message, signature: try string(frame, "signature")) else {
-                throw TransportFailure.invalid("A broker signal names the machine but is not signed by it.")
+                throw TransportFailure.invalid(String(localized: "A broker signal names the machine but is not signed by it.", bundle: .module))
             }
             let signal = try field(envelope, "signal")
             switch try string(signal, "kind") {
@@ -215,7 +215,9 @@ import RuimtePulsar
                     let ice = RTCIceCandidate(sdp: candidate, sdpMLineIndex: Int32(signal["sdpMLineIndex"]?.numberValue ?? 0), sdpMid: signal["sdpMid"]?.stringValue)
                     peer?.add(ice) { _ in }
                 }
-            case "close": throw TransportFailure.invalid("The machine ended this connection: \(try string(signal, "reason")).")
+            case "close":
+                let reason = try string(signal, "reason")
+                throw TransportFailure.invalid(String(localized: "The machine ended this connection: \(reason).", bundle: .module))
             default: break
             }
         } catch { end(error) }
@@ -253,9 +255,9 @@ import RuimtePulsar
         case .invalid:
             let message: String
             if case .tooLarge = assembler.failure {
-                message = "The machine response is too large to load on this device."
+                message = String(localized: "The machine response is too large to load on this device.", bundle: .module)
             } else {
-                message = "The machine sent an invalid message fragment."
+                message = String(localized: "The machine sent an invalid message fragment.", bundle: .module)
             }
             trace(message)
             end(TransportFailure.invalid(message))
@@ -272,14 +274,14 @@ import RuimtePulsar
         guard !ended else { return }
         liveness?.heard(now: now)
         guard authenticated else {
-            end(TransportFailure.invalid("The machine sent a binary message before the handshake."))
+            end(TransportFailure.invalid(String(localized: "The machine sent a binary message before the handshake.", bundle: .module)))
             return
         }
         events.progress()
         switch binaryAssembler.push(piece, maxBytes: WireConstants.bytesReplyMaxBytes) {
         case .invalid:
             trace("invalid binary piece")
-            end(TransportFailure.invalid("The machine sent an invalid message fragment."))
+            end(TransportFailure.invalid(String(localized: "The machine sent an invalid message fragment.", bundle: .module)))
         case .partial: break
         case .frame(let frame): events.binary(frame)
         }
@@ -288,7 +290,7 @@ import RuimtePulsar
     private func handshake(_ frame: JSONValue) throws {
         trace("handshake frame")
         if !proofSent {
-            guard let binding else { throw TransportFailure.invalid("The channel opened before its answer was applied.") }
+            guard let binding else { throw TransportFailure.invalid(String(localized: "The channel opened before its answer was applied.", bundle: .module)) }
             let proof = try DirectIdentity.proof(challenge: frame, binding: binding, machineID: machineID, machineKey: machineKey, signer: signer)
             proofSent = true
             try sendFrame(wireText(proof))
@@ -296,7 +298,7 @@ import RuimtePulsar
         }
         let verdict = try WireSchema.validate("DirectVerdictFrameSchema", frame)
         guard verdict["type"]?.stringValue == "direct.accepted" else {
-            throw TransportFailure.invalid(verdict["reason"]?.stringValue ?? "The machine refused this connection.")
+            throw TransportFailure.invalid(verdict["reason"]?.stringValue ?? String(localized: "The machine refused this connection.", bundle: .module))
         }
         authenticated = true
         trace("authenticated")
@@ -375,16 +377,16 @@ import RuimtePulsar
                 let request = try WireSchema.validate("RequestSchema", .object(["id": .string(id), "type": .string("server.ping"), "payload": .object([:])]))
                 try sendFrame(wireText(request))
             } catch { end(error) }
-        case .dead: end(TransportFailure.invalid("The machine stopped answering over the direct connection."))
+        case .dead: end(TransportFailure.invalid(String(localized: "The machine stopped answering over the direct connection.", bundle: .module)))
         default: break
         }
     }
 
     private func sendFrame(_ frame: String) throws {
-        guard let channel, channel.readyState == .open else { throw TransportFailure.invalid("The data channel is not open.") }
+        guard let channel, channel.readyState == .open else { throw TransportFailure.invalid(String(localized: "The data channel is not open.", bundle: .module)) }
         for piece in DirectFraming.split(frame) {
             guard channel.sendData(RTCDataBuffer(data: Data(piece.utf8), isBinary: false)) else {
-                throw TransportFailure.invalid("The data channel refused a frame.")
+                throw TransportFailure.invalid(String(localized: "The data channel refused a frame.", bundle: .module))
             }
         }
     }
@@ -427,7 +429,7 @@ import RuimtePulsar
 extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
     nonisolated public func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
         Task { @MainActor [weak self] in
-            if dataChannel.readyState == .closed { self?.end(TransportFailure.invalid("The direct connection closed.")) }
+            if dataChannel.readyState == .closed { self?.end(TransportFailure.invalid(String(localized: "The direct connection closed.", bundle: .module))) }
         }
     }
     nonisolated public func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
@@ -437,7 +439,7 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
                 return
             }
             guard let text = String(data: buffer.data, encoding: .utf8) else {
-                self?.end(TransportFailure.invalid("The data channel sent invalid UTF-8.")); return
+                self?.end(TransportFailure.invalid(String(localized: "The data channel sent invalid UTF-8.", bundle: .module))); return
             }
             self?.receivePiece(text)
         }
@@ -449,7 +451,7 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
         Task { @MainActor [weak self] in
             self?.trace("ICE state \(newState.rawValue)")
-            if newState == .failed { self?.end(TransportFailure.invalid("No network path to the machine: ICE failed.")) }
+            if newState == .failed { self?.end(TransportFailure.invalid(String(localized: "No network path to the machine: ICE failed.", bundle: .module))) }
         }
     }
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {

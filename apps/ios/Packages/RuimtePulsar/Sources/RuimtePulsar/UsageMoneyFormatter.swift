@@ -27,9 +27,9 @@ public struct UsageMoneyFormatter: Sendable {
 
     public var explanation: String? {
         if preferredCurrency == "EUR", currencyCode == "USD" {
-            return "Showing US dollars until a euro exchange rate is available."
+            return String(localized: "Showing US dollars until a euro exchange rate is available.", bundle: .module)
         }
-        if let rateDate { return "Converted to euros at the ECB rate of \(rateDate)." }
+        if let rateDate { return String(localized: "Converted to euros at the ECB rate of \(rateDate).", bundle: .module) }
         return nil
     }
 

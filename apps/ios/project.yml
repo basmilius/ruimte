@@ -2,6 +2,7 @@ name: Ruimte
 fileGroups: [Configuration]
 options:
   minimumXcodeGenVersion: 2.44.0
+  developmentLanguage: en
   deploymentTarget:
     iOS: '27.0'
   createIntermediateGroups: true
@@ -31,6 +32,8 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: '27.0'
     TARGETED_DEVICE_FAMILY: '1,2'
     CODE_SIGN_STYLE: Automatic
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
 targets:
   Ruimte:
     type: application
