@@ -93,6 +93,7 @@ struct PhoneHome: View {
         .tabViewBottomAccessory(isEnabled: router.showsProjectAccessory) {
             if let project = router.project { ProjectAccessory(navigation: project) }
         }
+        .environment(\.settingsLink, settingsLink)
     }
 
     private var settingsLink: SettingsLink { SettingsLink(account: runtime.account, show: showSettings) }
@@ -144,10 +145,14 @@ private struct ProjectAccessory: View {
     }
 }
 
-/// What the avatar needs to open Settings.
+/// What the avatar needs to open Settings. Only the iPhone sets it; the iPad keeps Settings in its sidebar.
 struct SettingsLink {
     let account: Account?
     let show: () -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var settingsLink: SettingsLink?
 }
 
 /// The avatar into Settings, apart from the items before it and under one id on every page that shows it, so the

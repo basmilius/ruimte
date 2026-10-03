@@ -16,6 +16,7 @@ struct WorkspacePage: View {
     @State private var showFiles = false
     @State private var showGit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.settingsLink) private var settingsLink
     var body: some View {
         Group {
             if workspace.ready {
@@ -167,7 +168,8 @@ struct WorkspacePage: View {
     }
 
     /// Files and Git open as sheets, and launches sit in the project's menu; New view and Usage are the tab bar's
-    /// accessory. The Chats project's folder is the machine's own, so it has none of these.
+    /// accessory. The Chats project's folder is the machine's own, so it has none of these. The avatar stays, so
+    /// Settings is one tap away here too.
     @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
         if !workspace.isScratch {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -185,6 +187,9 @@ struct WorkspacePage: View {
                 .accessibilityLabel("Project menu")
                 .disabled(!workspace.ready)
             }
+        }
+        if let settingsLink {
+            SettingsToolbarItem(link: settingsLink)
         }
     }
 
