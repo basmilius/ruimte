@@ -366,9 +366,13 @@ The field has a 26-point radius, a capsule while the draft is one line, and its 
 buttons around it.
 The composer and timeline share a UIKit container anchored to `UIKeyboardLayoutGuide`; with the
 keyboard down the composer stands half the bottom safe area up while the timeline runs on behind it.
+While a composer is there the timeline ends on the keyboard guide's top, so it never runs under the keyboard.
 SwiftUI keyboard avoidance is disabled on that screen so it cannot resize the timeline
 ahead of the native keyboard animation. The container measures the composer's inset in
-the same layout pass; dragging the keyboard remains interactive.
+the same layout pass, and again each time the composer's host lays itself out; dragging the keyboard remains
+interactive. Following the latest message holds on every idle layout of the timeline, so a field that grows or a
+keyboard that moves while you type keeps the last message above the composer. A layout during a drag, a programmatic
+scroll or an offset correction leaves the restore to the first idle one.
 
 Current iteration agreement: build and install only on Bas's physical iPhone,
 `00008160-000C312926A0000A`. No simulator, UI tests or iPad installation. Targeted

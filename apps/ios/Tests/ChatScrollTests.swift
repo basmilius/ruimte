@@ -194,16 +194,31 @@ final class ChatScrollTests: XCTestCase {
         XCTAssertEqual(list.contentOffset.y, 1080, accuracy: 1)
     }
 
-    @MainActor func testNativeOffsetChangesAreNotPinnedWhenContentAndViewportHaveNotChanged() {
+    @MainActor func testNativeOffsetChangesAreNotPinnedForAReaderWhenContentAndViewportHaveNotChanged() {
         let fixture = ChatLayoutFixture()
         fixture.list.contentInset.top = 80
         fixture.list.contentInset.bottom = 120
         fixture.relayout()
+        fixture.list.beginUserScroll()
+        fixture.list.contentOffset.y = 700
+        fixture.list.finishUserScroll()
+        XCTAssertFalse(fixture.list.viewport.followsLatest)
         for offset in [700.0, 420, 180, -40] {
             fixture.list.setContentOffset(CGPoint(x: 0, y: offset), animated: false)
             fixture.relayout()
             XCTAssertEqual(fixture.list.contentOffset.y, offset, accuracy: 1)
         }
+    }
+
+    @MainActor func testEveryIdleLayoutReturnsToLatestWhileFollowing() {
+        let fixture = ChatLayoutFixture()
+        fixture.list.contentInset.bottom = 120
+        fixture.relayout()
+        XCTAssertTrue(fixture.list.viewport.followsLatest)
+        XCTAssertEqual(fixture.list.contentOffset.y, 1020, accuracy: 1)
+        fixture.list.setContentOffset(CGPoint(x: 0, y: 420), animated: false)
+        fixture.relayout()
+        XCTAssertEqual(fixture.list.contentOffset.y, 1020, accuracy: 1)
     }
 
     @MainActor func testCollectionPreservesReaderAcrossPrependAndFurtherDelayedHeightChanges() {

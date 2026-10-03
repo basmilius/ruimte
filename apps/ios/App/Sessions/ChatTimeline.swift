@@ -282,13 +282,18 @@ final class ChatTimelineCollection: UICollectionView {
             UIView.performWithoutAnimation { super.layoutSubviews() }
         }
         defer { viewportChanged?() }
+        // A blocked pass leaves what it saw for the first idle one, so a change during a drag is not forgotten.
+        guard !adjustingOffset, !userIsScrolling, !scrollingToTarget, bounds.height > 0 else {
+            contentChangePending = true
+            return
+        }
         let currentGeometry = geometry
-        let needsRestoration = contentChangePending || measuredGeometry != currentGeometry
+        // Following holds on every idle pass, so a native offset change while typing returns to the latest message.
+        let needsRestoration = viewport.followsLatest || contentChangePending || measuredGeometry != currentGeometry
         measuredGeometry = currentGeometry
         contentChangePending = false
-        if !adjustingOffset, !userIsScrolling, !scrollingToTarget, revealExpansion() { return }
+        if revealExpansion() { return }
         guard needsRestoration else { return }
-        guard !adjustingOffset, !userIsScrolling, !scrollingToTarget, bounds.height > 0 else { return }
         let anchorOffset = readingAnchor.flatMap { anchor in
             itemTop?(anchor.id).map { anchor.offset(itemTop: $0, inset: adjustedContentInset.top) }
         }
@@ -507,7 +512,9 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         if let composerHost {
             composerHost.rootView = content
         } else {
-            let host = addHost(content)
+            let host = ChatComposerHost(rootView: content)
+            host.laidOut = { [weak self] in self?.updateComposerCover() }
+            install(host)
             composerHost = host
             chatPresentationLog.notice("composer host added")
             // One UIKit layout owns both frames, including interactive keyboard movement.
@@ -596,6 +603,11 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     private func addHost(_ content: AnyView, in container: UIView? = nil) -> UIHostingController<AnyView> {
         let host = UIHostingController(rootView: content)
+        install(host, in: container)
+        return host
+    }
+
+    private func install(_ host: UIHostingController<AnyView>, in container: UIView? = nil) {
         host.safeAreaRegions = []
         host.sizingOptions = [.intrinsicContentSize]
         host.view.backgroundColor = .clear
@@ -604,7 +616,6 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         addChild(host)
         (container ?? view).addSubview(host.view)
         host.didMove(toParent: self)
-        return host
     }
 
     private func removeHost(_ host: inout UIHostingController<AnyView>?) {
@@ -622,10 +633,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        updateViewportInsets()
-        if let composerCover, view.keyboardLayoutGuide.keyboardDismissPadding != composerCover {
-            view.keyboardLayoutGuide.keyboardDismissPadding = composerCover
-        }
+        updateComposerCover()
         let height = max(0, collection.bounds.height - viewportInsets.top)
         if height != reportedViewportHeight {
             reportedViewportHeight = height
@@ -635,6 +643,13 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             }
         }
         logLayout()
+    }
+
+    private func updateComposerCover() {
+        updateViewportInsets()
+        if let composerCover, view.keyboardLayoutGuide.keyboardDismissPadding != composerCover {
+            view.keyboardLayoutGuide.keyboardDismissPadding = composerCover
+        }
     }
 
     /// Every frame the screen is made of, logged when it moved; a collapse is an error, so it shows without debug
@@ -837,6 +852,17 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
 /// Logs the tint going dim and back, which is how the chat sees a menu, sheet or alert open over it, with what the
 /// window presents at that moment.
+/// The composer's host, which tells the timeline each time it laid itself out: the composer can settle its height
+/// after the timeline's own pass, and the latest message would then sit under the field until the next one.
+private final class ChatComposerHost: UIHostingController<AnyView> {
+    var laidOut: (() -> Void)?
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        laidOut?()
+    }
+}
+
 private final class ChatTimelineRootView: UIView {
     override func tintColorDidChange() {
         super.tintColorDidChange()
