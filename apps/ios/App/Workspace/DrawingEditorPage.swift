@@ -32,8 +32,10 @@ struct DrawingEditorPage: View {
                         ContentUnavailableView(
                             "Nothing drawn yet", lucideIcon: "pen-tool",
                             description: Text(
-                                "Pick a pen or a shape from the tools below and draw with a finger or Apple Pencil.")
+                                "Pick a pen or a shape below and draw with a finger or Apple Pencil. Tap the tool again for its options."
+                            )
                         )
+
                         .allowsHitTesting(false)
                         .accessibilityIdentifier("drawing.empty")
                     }
@@ -53,8 +55,11 @@ struct DrawingEditorPage: View {
                         if model.dirty { Button("Discard", role: .destructive) { discard = true } }
                     }.padding(12).background(.regularMaterial, in: .rect(cornerRadius: 16))
                 }
-                toolbar
+                DrawingToolbar(model: model)
             }.padding(.horizontal, 12).padding(.vertical, 8)
+        }
+        .toolbar {
+            ToolbarItem(id: "drawing.actions", placement: .topBarTrailing) { actionsMenu }
         }
         .confirmationDialog("Discard unsaved changes on this device?", isPresented: $discard, titleVisibility: .visible)
         {
@@ -72,71 +77,22 @@ struct DrawingEditorPage: View {
         .onDisappear { model.stop() }
     }
 
-    private var toolbar: some View {
-        GlassEffectContainer(spacing: 4) {
-            HStack(spacing: 4) {
-                toolButton(.pan)
-                toolButton(.select)
-                Menu {
-                    ForEach(DrawingTool.allCases.filter { ![.pan, .select].contains($0) }) { option in
-                        Button {
-                            model.tool = option
-                        } label: {
-                            Label(option.rawValue, lucideIcon: option.symbol)
-                        }
-                    }
-                    Divider()
-                    Toggle("Keep the tool", isOn: $model.toolLocked)
-                } label: {
-                    controlIcon([.pan, .select].contains(model.tool) ? "pen-tool" : model.tool.symbol)
-                }.accessibilityLabel("Drawing tools, " + model.tool.rawValue)
-                    .glassEffect(.regular.interactive(), in: .circle).hoverEffect(.highlight)
-                Button {
-                    showStyle = true
-                } label: {
-                    controlIcon("palette")
-                }
-                .accessibilityLabel("Style").glassEffect(.regular.interactive(), in: .circle).hoverEffect(.highlight)
-                Button {
-                    model.undo()
-                } label: {
-                    controlIcon("undo-2")
-                }
-                .accessibilityLabel("Undo").disabled(model.history.isEmpty)
-                .glassEffect(.regular.interactive(), in: .circle).hoverEffect(.highlight)
-                Button {
-                    model.redo()
-                } label: {
-                    controlIcon("redo-2")
-                }
-                .accessibilityLabel("Redo").disabled(model.future.isEmpty)
-                .glassEffect(.regular.interactive(), in: .circle).hoverEffect(.highlight)
-                Menu {
-                    actions
-                } label: {
-                    if model.saving || exporting {
-                        ProgressView().frame(width: 44, height: 44)
-                    } else {
-                        controlIcon("ellipsis")
-                    }
-                }.accessibilityLabel("Drawing actions").hoverEffect(.highlight)
-            }.buttonStyle(.plain)
-        }
-    }
-    private func controlIcon(_ name: String) -> some View {
-        Image(lucide: name, size: 18).frame(width: 44, height: 44).contentShape(.rect)
-    }
-    private func toolButton(_ tool: DrawingTool) -> some View {
-        Button {
-            model.tool = tool
+    private var actionsMenu: some View {
+        Menu {
+            ControlGroup {
+                Button("Undo", lucideIcon: "undo-2") { model.undo() }.disabled(model.history.isEmpty)
+                Button("Redo", lucideIcon: "redo-2") { model.redo() }.disabled(model.future.isEmpty)
+            }
+            Button("Drawing style", lucideIcon: "palette") { showStyle = true }
+            actions
         } label: {
-            controlIcon(tool.symbol)
+            if model.saving || exporting {
+                ProgressView()
+            } else {
+                Image(lucide: "ellipsis")
+            }
         }
-        .accessibilityLabel(tool.rawValue).accessibilityAddTraits(model.tool == tool ? .isSelected : [])
-        .glassEffect(
-            .regular.tint(model.tool == tool ? Color.primary.opacity(0.12) : .clear).interactive(), in: .circle
-        )
-        .hoverEffect(.highlight)
+        .accessibilityLabel("Drawing actions")
     }
     @ViewBuilder private var actions: some View {
         Section("Selection") {

@@ -590,7 +590,9 @@ struct ProjectItemPage: View {
         case "diagram":
             RenderDocumentPage(
                 client: workspace.client, projectID: workspace.projectID,
-                viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"))
+                viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"),
+                agent: workspace.isScratch ? nil : DiagramAgentTarget(workspace: workspace, item: current, title: title),
+                openChat: { selectedMember = $0 })
         case "group":
             MobileList {
                 ForEach(CanvasEditing.members(of: current, in: canvasHolding), id: \.stableID) { node in
