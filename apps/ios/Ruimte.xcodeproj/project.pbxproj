@@ -64,6 +64,7 @@
 		438099B9E0FC7A723C6A0E0A /* RuimteWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64C8B5258669EC5003FA9AB /* RuimteWidgets.swift */; };
 		4438A2B4A36F68A2F9BF3268 /* GitRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDD0B866219FA2F1AA2DEED9 /* GitRepositories.swift */; };
 		451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8954363C79663F275CDF04A /* MobileStyle.swift */; };
+		456466B1A045012618C2BC90 /* NeedsYouWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADB19BC0057C18E3665C69E /* NeedsYouWidget.swift */; };
 		46BDAEFA32FAF3B0D0A7A896 /* tone.m4a in Resources */ = {isa = PBXBuildFile; fileRef = F88143232F57172C105B62F4 /* tone.m4a */; };
 		47F63AED54BDD919F5D130A2 /* ChatFileChanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3EDC89A5AF9677DD9A62E7 /* ChatFileChanges.swift */; };
 		48437C2B5BE9581B5612DF61 /* ChatActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F3F8DD20F1E6829F55FE104 /* ChatActivityViews.swift */; };
@@ -150,6 +151,7 @@
 		A4018BFBF14D0FA6CDCECEA2 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 10DFA2EA63182CCBE1B7810F /* LucideSwift */; };
 		A508FCED9BF9DABFA8F4D919 /* FileKinds.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B20289635C51CC4B96248C /* FileKinds.swift */; };
 		A51340876D161A20D1C26476 /* AccountLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B9C853C47C055639372B39 /* AccountLogin.swift */; };
+		A6D5A44E0C8E26938242A8AC /* NeedsYouWidgetRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F409ECC89C3D52AFB7A4B6 /* NeedsYouWidgetRecorder.swift */; };
 		A8F527996FC4B270E0FD0B15 /* GitBranchesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5C5B8FA281ABAF8B540B16 /* GitBranchesPage.swift */; };
 		ACC53B6D9E0252A9ADD4DF97 /* NewChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BBB52BE588812020D2C144C /* NewChatTests.swift */; };
 		ADD473C7EF8E917AF9548FF9 /* ChatSubagents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ECCA308AC7FA0259C8AB6F6 /* ChatSubagents.swift */; };
@@ -392,6 +394,7 @@
 		78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasPage.swift; sourceTree = "<group>"; };
 		78E4415FA265BC3864D12E58 /* MobileSidebarList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSidebarList.swift; sourceTree = "<group>"; };
 		7972284E09464A057A24B05F /* document.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = document.pdf; sourceTree = "<group>"; };
+		7ADB19BC0057C18E3665C69E /* NeedsYouWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsYouWidget.swift; sourceTree = "<group>"; };
 		7B02D669F665402B085C9E9C /* MachineIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIconTests.swift; sourceTree = "<group>"; };
 		7B1DE29305B2BAF4D255B60D /* Snoozes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snoozes.swift; sourceTree = "<group>"; };
 		7B3EDC89A5AF9677DD9A62E7 /* ChatFileChanges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFileChanges.swift; sourceTree = "<group>"; };
@@ -406,6 +409,7 @@
 		86350DF4914846B3127196EC /* NowPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPage.swift; sourceTree = "<group>"; };
 		868B09445FC666B30675BD85 /* image.webp */ = {isa = PBXFileReference; path = image.webp; sourceTree = "<group>"; };
 		8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsPage.swift; sourceTree = "<group>"; };
+		86F409ECC89C3D52AFB7A4B6 /* NeedsYouWidgetRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsYouWidgetRecorder.swift; sourceTree = "<group>"; };
 		8985CD8B39EF1BFEE9E9241F /* GitMerge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitMerge.swift; sourceTree = "<group>"; };
 		8ABABCDEEE659AD8B4D227A8 /* ProjectArtworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectArtworkTests.swift; sourceTree = "<group>"; };
 		8B642891456066D415114B58 /* FileAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAudioPlayer.swift; sourceTree = "<group>"; };
@@ -652,6 +656,7 @@
 				38A7F14B293EF63B0B66EAFC /* ActivityWidget.entitlements */,
 				826308F387A7269E62AF6C7C /* Assets.xcassets */,
 				7FABC4BE334FDFA06C4FC1B6 /* Info.plist */,
+				7ADB19BC0057C18E3665C69E /* NeedsYouWidget.swift */,
 				9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */,
 				A64C8B5258669EC5003FA9AB /* RuimteWidgets.swift */,
 				2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */,
@@ -862,6 +867,7 @@
 		B907E355622C0DF9B2A72A8B /* Now */ = {
 			isa = PBXGroup;
 			children = (
+				86F409ECC89C3D52AFB7A4B6 /* NeedsYouWidgetRecorder.swift */,
 				D1B4F8B71A7CEC7F5A3E054F /* NowBoard.swift */,
 				3C313F3BEFC69407AE4E76C7 /* NowCard.swift */,
 				0EC0A126483A8203A7FE246D /* NowModel.swift */,
@@ -1228,6 +1234,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				456466B1A045012618C2BC90 /* NeedsYouWidget.swift in Sources */,
 				9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */,
 				438099B9E0FC7A723C6A0E0A /* RuimteWidgets.swift in Sources */,
 				43331CB8A5C3827AFBBB9861 /* UsageBackdrop.swift in Sources */,
@@ -1399,6 +1406,7 @@
 				451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */,
 				62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */,
 				FADD5421D0533E71A2170DA6 /* ModelName.swift in Sources */,
+				A6D5A44E0C8E26938242A8AC /* NeedsYouWidgetRecorder.swift in Sources */,
 				25DE2FEC1B3755BAE90715FD /* NewChat.swift in Sources */,
 				D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */,
 				EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */,

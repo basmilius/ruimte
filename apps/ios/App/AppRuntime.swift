@@ -266,6 +266,7 @@ final class AppRuntime {
 
     private func publishWidgetMachines() {
         UsageWidgetStore.setMachines(machines.map { UsageWidgetMachine(id: $0.id, name: $0.name) })
+        NeedsYouWidgetStore.keep(machineIDs: Set(machines.map(\.id)))
         WidgetCenter.shared.reloadAllTimelines()
     }
 

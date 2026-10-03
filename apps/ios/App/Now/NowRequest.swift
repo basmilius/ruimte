@@ -114,7 +114,8 @@ struct NowRequest: Hashable, Identifiable {
     /// What a row says of the request where only one line fits, such as a widget.
     var summary: String {
         switch kind {
-        case .approval: headline
+        case .approval(let approval):
+            if let path = approval.path, approval.files <= 1 { "Edit \((path as NSString).lastPathComponent)" } else { headline }
         case .questions: "Asks a question"
         }
     }

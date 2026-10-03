@@ -186,4 +186,39 @@ final class NowBoardTests: XCTestCase {
         XCTAssertEqual(board.needsYou.map(\.requests), [[request], []])
         XCTAssertEqual(board.needsYou.map(\.repliesWithMessage), [true, false])
     }
+
+    func testTheWidgetsGetWhatNeedsYouWithWhatEachWaitsOnAndHowManyWork() throws {
+        let edit = try XCTUnwrap(
+            NowRequest(
+                .object([
+                    "requestId": .string("r"), "itemId": .string("i"), "kind": .string("approval"),
+                    "createdAt": .number(1),
+                    "approval": .object([
+                        "toolName": .string("Edit"), "subject": .string("src/transport/pool.ts"),
+                        "path": .string("src/transport/pool.ts"), "canAllowAlways": .bool(false),
+                    ]),
+                ])))
+        let projects = [
+            project(
+                "app", name: "Recept Maker", opened: 1,
+                views: [
+                    view("a", kind: "chat", name: "Refactor"), view("b", kind: "chat", name: "Old"),
+                    view("c", kind: "terminal", name: "Shell"), view("d", kind: "chat", name: "Busy"),
+                ])
+        ]
+        let board = NowBoard.build([
+            NowMachineInput(
+                machineID: "mac", machineName: "MacBook Pro", projects: projects,
+                attention: NowAttention(
+                    statuses: ["a": .needsYou, "b": .needsYou, "c": .needsYou, "d": .running],
+                    requests: ["a": [edit]]))
+        ])
+        let snapshot = NeedsYouWidgetRecorder.snapshot(board, at: Date(timeIntervalSince1970: 1))
+        XCTAssertEqual(snapshot.items.map(\.detail), ["Edit pool.ts", "Waiting for your answer", "Waiting in the terminal"])
+        XCTAssertEqual(snapshot.items.map(\.target), ["chat", "chat", "terminal"])
+        XCTAssertEqual(snapshot.working, 1)
+        XCTAssertEqual(snapshot.projects, 1)
+        XCTAssertEqual(snapshot.items[0].url?.absoluteString, "ruimte://node?machine=mac&node=a&target=chat")
+        XCTAssertTrue(snapshot.says(NeedsYouWidgetRecorder.snapshot(board, at: Date(timeIntervalSince1970: 2))))
+    }
 }

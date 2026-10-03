@@ -84,6 +84,9 @@ struct PhoneHome: View {
                 Label("Search", lucideIcon: "search")
             }
         }
+        .onChange(of: now.board) { _, board in
+            if now.loaded { NeedsYouWidgetRecorder.record(board) }
+        }
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewSearchActivation(.searchTabSelection)
         .tabViewBottomAccessory(isEnabled: router.showsProjectAccessory) {

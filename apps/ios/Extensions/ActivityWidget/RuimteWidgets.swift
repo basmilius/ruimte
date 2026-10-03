@@ -7,5 +7,7 @@ import WidgetKit
         UsageWidget()
         ClaudeUsageWidget()
         CodexUsageWidget()
+        NeedsYouCountWidget()
+        NeedsYouListWidget()
     }
 }

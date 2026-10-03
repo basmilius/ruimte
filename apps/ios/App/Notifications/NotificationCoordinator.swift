@@ -556,6 +556,14 @@ struct NotificationDestination: Identifiable, Hashable {
         await updateBadge()
     }
     func openActivityURL(_ url: URL) {
+        if url.scheme == "ruimte", url.host == "now" {
+            destination = NotificationDestination(machineID: "", nodeID: "", target: "machine")
+            return
+        }
+        if url.scheme == "ruimte", url.host == "node" {
+            openWidgetURL(url)
+            return
+        }
         guard url.scheme == "ruimte", url.host == "activity",
             let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
             let machine = parts.queryItems?.first(where: { $0.name == "machine" })?.value,
@@ -578,6 +586,19 @@ struct NotificationDestination: Identifiable, Hashable {
             destination = NotificationDestination(machineID: machine, nodeID: node, target: "unknown")
         }
     }
+    /// A needs-you widget's row: the node it names, on a machine this phone still knows.
+    private func openWidgetURL(_ url: URL) {
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let value = { (name: String) in items.first { $0.name == name }?.value ?? "" }
+        let machine = value("machine")
+        let node = value("node")
+        let target = value("target")
+        guard !node.isEmpty, node.count <= 256, target == "chat" || target == "terminal",
+            runtime?.machines.contains(where: { $0.id == machine }) == true
+        else { return }
+        destination = NotificationDestination(machineID: machine, nodeID: node, target: target)
+    }
+
     fileprivate func respond(data: Data, action: String) async {
         do {
             let envelope = try JSONValue.decode(data)
