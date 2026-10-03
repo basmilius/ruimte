@@ -10,11 +10,12 @@ struct GitDiffTarget: Hashable, Identifiable {
     let path: String?
     let staged: Bool
     let commit: String?
-    /// What a whole checkout is measured from; nil measures from the repository's base branch.
+    /// What a whole checkout is measured from; nil measures from the repository's base branch. With a path, one
+    /// file against that ref, staged and unstaged together.
     var base: String? = nil
 
     var id: String { "\(cwd)\u{0}\(path ?? "")\u{0}\(commit ?? "")\u{0}\(staged)\u{0}\(base ?? "")" }
-    var scope: String { commit != nil ? "commit" : path == nil ? "base" : "worktree" }
+    var scope: String { commit != nil ? "commit" : path == nil || base != nil ? "base" : "worktree" }
     var title: String {
         if let path { return (path as NSString).lastPathComponent }
         if let commit { return String(commit.prefix(7)) }

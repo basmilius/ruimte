@@ -140,6 +140,39 @@ struct DraftFailure: LocalizedError, Sendable {
     var errorDescription: String? { message }
 }
 
+/// The drafts of the chats open now, so a file mentioned from the files lands in the composer on screen instead of
+/// under it on disk, where that composer would write over it.
+@MainActor enum ChatDraftInbox {
+    private final class Entry {
+        weak var composition: ChatComposition?
+
+        init(_ composition: ChatComposition) {
+            self.composition = composition
+        }
+    }
+
+    private static var open: [String: Entry] = [:]
+
+    private static func key(machineID: String, chatID: String) -> String { machineID + "\u{0}" + chatID }
+
+    static func register(_ composition: ChatComposition, machineID: String, chatID: String) {
+        open = open.filter { $0.value.composition != nil }
+        open[key(machineID: machineID, chatID: chatID)] = Entry(composition)
+    }
+
+    /// Adds `@path` to the chat's draft: the one on screen, or the saved one when the chat is not open.
+    static func mention(_ path: String, machineID: String, chatID: String, root: URL? = nil) async {
+        if let composition = open[key(machineID: machineID, chatID: chatID)]?.composition {
+            composition.addMention(path)
+            await composition.flush()
+            return
+        }
+        let composition = ChatComposition(machineID: machineID, chatID: chatID, root: root)
+        composition.addMention(path)
+        await composition.flush()
+    }
+}
+
 struct ChatDraftImport: Identifiable {
     let id: UUID
     let name: String
@@ -188,6 +221,21 @@ final class ChatComposition {
         if uploads.contains(where: { !FileManager.default.fileExists(atPath: $0.url.path) }) {
             problem = "A saved attachment is missing. Remove it and attach it again before sending."
         }
+        ChatDraftInbox.register(self, machineID: machineID, chatID: chatID)
+    }
+
+    /// A file mentioned from outside the composer, at the end of what is written so far.
+    func addMention(_ path: String) {
+        let token = "@\(path) "
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            text = token
+        } else if text.hasSuffix(" ") || text.hasSuffix("\n") {
+            text += token
+        } else {
+            text += " " + token
+        }
+        if !mentions.contains(path) { mentions = (mentions + [path]).sorted() }
+        selection = NSRange(location: (text as NSString).length, length: 0)
     }
 
     var record: ChatDraftRecord {

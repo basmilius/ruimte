@@ -9,10 +9,17 @@ import WebKit
 struct MachineFilesPage: View {
     let client: any MachineRequesting
     let path: String
+    /// The project these files are in, which adds mentions, views of their own and deleting; nil on a machine's files.
+    var project: FilesProject?
+    /// The project's repositories, for the git status each row carries.
+    var marks: GitRepositories?
     @State private var state = RemotePageState()
     @AppStorage("ruimte.ios.showHiddenFiles") private var hidden = false
     @State private var search = ""
     @State private var selectedEntry: FileDestination?
+    @State private var finding = false
+    @State private var deleting: String?
+    @State private var note: String?
     private struct FileDestination: Hashable {
         let path: String
         let directory: Bool
@@ -24,12 +31,25 @@ struct MachineFilesPage: View {
         } ?? []
     }
     var body: some View {
+        let fileMarks = GitFileMarks(marks?.checkouts ?? [])
         MobileList {
             RemotePageStatus(state: state) { Task { await load() } }
-            ForEach(entries, id: \.stableID) { entry in
+            if let note {
+                Text(note).font(.caption).foregroundStyle(MobileStyle.muted)
+            }
+            if project != nil {
                 Button {
-                    selectedEntry = FileDestination(
-                        path: entry.text("path"), directory: entry.text("kind") == "directory")
+                    finding = true
+                } label: {
+                    Label("Find in files", lucideIcon: "text-search").modifier(MobileSidebarLabel(disclosure: true))
+                }
+                .modifier(MobileSidebarRow())
+            }
+            ForEach(entries, id: \.stableID) { entry in
+                let directory = entry.text("kind") == "directory"
+                let mark = fileMarks.mark(path: entry.text("path"), directory: directory)
+                Button {
+                    selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
                 } label: {
                     HStack(spacing: 10) {
                         Image(lucide: FileKinds.icon(name: entry.text("name"), kind: entry.text("kind")), size: 20)
@@ -40,10 +60,17 @@ struct MachineFilesPage: View {
                                 Text(mobileByteCount(size)).font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                         }
+                        if let mark {
+                            Spacer(minLength: 8)
+                            Text(mark).font(.caption.monospaced().weight(.semibold))
+                                .foregroundStyle(mark == "!" ? MobileStyle.statusNeedsYou : gitStatusColor(mark))
+                                .accessibilityLabel(GitFileMarks.spoken(mark))
+                        }
                     }
                     .modifier(MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
+                .contextMenu { if let project { entryMenu(entry, directory: directory, project: project) } }
             }
             if state.value != nil && entries.isEmpty {
                 ContentUnavailableView(search.isEmpty ? "Empty folder" : "No matching files", lucideIcon: "folder")
@@ -56,11 +83,15 @@ struct MachineFilesPage: View {
         .navigationTitle(path == "~" ? "Files" : URL(fileURLWithPath: path).lastPathComponent)
         .navigationDestination(item: $selectedEntry) { entry in
             if entry.directory {
-                MachineFilesPage(client: client, path: entry.path)
+                MachineFilesPage(client: client, path: entry.path, project: project, marks: marks)
             } else {
-                FileContentPage(client: client, path: entry.path)
+                FileContentPage(client: client, path: entry.path, project: project)
             }
         }
+        .navigationDestination(isPresented: $finding) {
+            FileGrepPage(client: client, cwd: state.value?.text("path") ?? path, project: project)
+        }
+        .modifier(FileDeleteConfirmation(client: client, path: $deleting) { Task { await load() } })
         .modifier(FolderSearch(text: $search, inSidebar: inProjectSidebar))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -87,6 +118,19 @@ struct MachineFilesPage: View {
         }
         .refreshable { await load() }
     }
+    @ViewBuilder private func entryMenu(_ entry: JSONValue, directory: Bool, project: FilesProject) -> some View {
+        let entryPath = entry.text("path")
+        if !directory {
+            Button("Open as view", lucideIcon: "columns-2") { Task { await project.openAsView(entryPath) } }
+        }
+        FileMentionMenu(project: project, path: entryPath, onMentioned: { note = $0 }) {
+            Label("Mention in chat", lucideIcon: "at-sign")
+        }
+        Button("Copy path", lucideIcon: "copy") { UIPasteboard.general.string = entryPath }
+        Divider()
+        Button("Delete", lucideIcon: "trash", role: .destructive) { deleting = entryPath }
+    }
+
     private func load() async {
         await state.load {
             let resolved = path == "~" ? try await client.request("server.hello").text("home") : path
@@ -100,7 +144,17 @@ struct FileContentPage: View {
     let client: any MachineRequesting
     let path: String
     var initialLine: Int? = nil
+    /// The project the file is in, which adds the bar under it and editing; nil for a file of the machine's own.
+    var project: FilesProject? = nil
+    /// Whether this page is the file's own view, which then does not offer to open one.
+    var isView = false
     @State private var state = RemotePageState()
+    @State private var edit = FileEditModel()
+    @State private var changes = FileChangeMarksModel()
+    @State private var deleting: String?
+    @State private var note: String?
+    @State private var diff: GitDiffTarget?
+    @Environment(\.dismiss) private var dismiss
     @State private var shown = FileShown()
     @State private var pdfPage = 1
     // The player's asset holds its loader weakly, so the page keeps it.
@@ -115,7 +169,9 @@ struct FileContentPage: View {
     var body: some View {
         ScrollViewReader { reader in
             Group {
-                if isHTML, !showSource, initialLine == nil, let value = state.value,
+                if edit.editing {
+                    editor
+                } else if isHTML, !showSource, initialLine == nil, let value = state.value,
                     value.text("kind") == "text"
                 {
                     VStack(spacing: 0) {
@@ -161,12 +217,49 @@ struct FileContentPage: View {
             }
             .modifier(MobilePageSurface())
             .navigationTitle(name)
+            .navigationBarBackButtonHidden(edit.editing)
+            .interactiveDismissDisabled(edit.editing && edit.changed)
             .toolbar {
-                if initialLine == nil,
-                    isHTML || ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
-                {
-                    Button(showSource ? "Preview" : "Source") { showSource.toggle() }
+                if edit.editing {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { edit.cancel() }.disabled(edit.saving)
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { Task { await save() } }.disabled(edit.saving || !edit.changed)
+                    }
+                } else {
+                    if initialLine == nil,
+                        isHTML || ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
+                    {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(showSource ? "Preview" : "Source") { showSource.toggle() }
+                        }
+                    }
+                    if let project {
+                        ToolbarItem(placement: .topBarTrailing) { fileMenu(project) }
+                    }
                 }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let project, !edit.editing, state.value != nil {
+                    actionBar(project)
+                }
+            }
+            .navigationDestination(item: $diff) { target in GitDiffPage(client: client, target: target) }
+            .modifier(FileDeleteConfirmation(client: client, path: $deleting) { dismiss() })
+            .alert("This file changed on the machine", isPresented: $edit.stale) {
+                Button("Reload and drop my edits", role: .destructive) {
+                    edit.cancel()
+                    Task { await load() }
+                }
+                Button("Copy my edits") { UIPasteboard.general.string = edit.text }
+                Button("Keep editing", role: .cancel) {}
+            } message: {
+                Text("Your edits are still here. Saving over a file that moved would lose what changed it.")
+            }
+            .task(id: state.value.map(versionKey)) {
+                guard project != nil, state.value != nil else { return }
+                await changes.load(client: client, path: path)
             }
             .task(id: path) {
                 let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
@@ -203,22 +296,10 @@ struct FileContentPage: View {
                         {
                             MarkdownMessage(text: value.text("text")).frame(
                                 maxWidth: .infinity, alignment: .leading)
-                        } else if let initialLine {
-                            LazyVStack(alignment: .leading, spacing: 3) {
-                                ForEach(
-                                    Array(value.text("text").components(separatedBy: "\n").enumerated()),
-                                    id: \.offset
-                                ) { index, line in
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Text("\(index + 1)").foregroundStyle(MobileStyle.muted).frame(
-                                            width: 44, alignment: .trailing)
-                                        Text(line.isEmpty ? " " : line).textSelection(.enabled).frame(
-                                            maxWidth: .infinity, alignment: .leading)
-                                    }.font(.system(.caption, design: .monospaced)).monospacedDigit()
-                                        .background(index + 1 == initialLine ? MobileStyle.active : .clear).id(
-                                            index + 1)
-                                }
-                            }
+                        } else if initialLine != nil || !changes.isEmpty {
+                            FileLinesView(
+                                text: value.text("text"), language: value["language"]?.stringValue,
+                                changes: changes, highlight: initialLine)
                         } else {
                             CodeMessage(
                                 text: value.text("text"),
@@ -235,6 +316,83 @@ struct FileContentPage: View {
                     }
                 }
             }.padding()
+        }
+    }
+
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let problem = edit.problem, !edit.stale {
+                Label(problem, lucideIcon: "triangle-alert").font(.caption).foregroundStyle(.red).padding()
+            }
+            if edit.saving {
+                HStack(spacing: 10) {
+                    Spinner(size: 14, label: "Saving").foregroundStyle(MobileStyle.statusRunning)
+                    Text("Saving").font(.caption).foregroundStyle(MobileStyle.muted)
+                }.padding(.horizontal).padding(.top, 8)
+            }
+            TextEditor(text: $edit.text)
+                .font(.system(.footnote, design: .monospaced))
+                .autocorrectionDisabled().textInputAutocapitalization(.never)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 12)
+        }
+    }
+
+    private var canEdit: Bool {
+        state.value?.text("kind") == "text" && !(isHTML && !showSource && initialLine == nil)
+    }
+
+    /// The file's own menu: edit it, give it a view, mention it, and delete it.
+    private func fileMenu(_ project: FilesProject) -> some View {
+        Menu {
+            if canEdit, let value = state.value {
+                Button("Edit", lucideIcon: "square-pen") {
+                    edit.begin(text: value.text("text"), mtime: value.number("mtime"))
+                }
+            }
+            if !isView {
+                Button("Open as view", lucideIcon: "columns-2") { Task { await project.openAsView(path) } }
+            }
+            FileMentionMenu(project: project, path: path, onMentioned: { note = $0 }) {
+                Label("Mention in chat", lucideIcon: "at-sign")
+            }
+            if let target = changes.diff {
+                Button("Show changes", lucideIcon: "file-diff") { diff = target }
+            }
+            Button("Copy path", lucideIcon: "copy") { UIPasteboard.general.string = path }
+            Divider()
+            Button("Delete", lucideIcon: "trash", role: .destructive) { deleting = path }
+        } label: {
+            Label("File actions", lucideIcon: "ellipsis")
+        }
+    }
+
+    /// The bar under a file: mention it in a chat, its diff against the last commit, and copying it.
+    private func actionBar(_ project: FilesProject) -> some View {
+        VStack(spacing: 6) {
+            if let note {
+                Text(note).font(.caption).foregroundStyle(MobileStyle.muted).frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+            }
+            GitBottomBar {
+                FileMentionMenu(project: project, path: path, onMentioned: { note = $0 }) {
+                    Text("Mention").font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 36)
+                }
+                .buttonStyle(.glass)
+                GitBarButton(title: "Diff", prominent: false) { diff = changes.diff }
+                    .disabled(changes.diff == nil)
+                GitBarButton(title: "Copy", prominent: false) {
+                    UIPasteboard.general.string =
+                        state.value?.text("kind") == "text" ? state.value?.text("text") : path
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        if await edit.save(client: client, path: path) {
+            note = "Saved."
+            await load()
         }
     }
 

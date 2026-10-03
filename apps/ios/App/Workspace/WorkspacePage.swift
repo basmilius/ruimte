@@ -92,7 +92,10 @@ struct WorkspacePage: View {
         }
         .mobileSheet(isPresented: $showFiles) {
             NavigationStack {
-                MachineFilesPage(client: workspace.client, path: workspace.folder)
+                ProjectFilesPage(workspace: workspace) { id in
+                    showFiles = false
+                    openView(id)
+                }
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) { Button("Done") { showFiles = false } }
                     }
@@ -262,7 +265,7 @@ struct WorkspacePage: View {
                     if isSidebar {
                         viewList(query: "")
                     } else {
-                        MachineFilesPage(client: workspace.client, path: workspace.folder)
+                        ProjectFilesPage(workspace: workspace) { openView($0) }
                     }
                 } label: {
                     Label("Files", lucideIcon: "folder")
@@ -549,7 +552,11 @@ struct ProjectItemPage: View {
                         TerminalScreen(client: workspace.client, sessionID: current.stableID, title: title)
                     }
                 case "browser": BrowserPage(url: current.text("url"))
-                case "file": FileContentPage(client: workspace.client, path: absolutePath(current.text("path")))
+                case "file":
+                    FileContentPage(
+                        client: workspace.client, path: absolutePath(current.text("path")),
+                        project: FilesProject(workspace: workspace),
+                        isView: workspace.views.contains { $0.stableID == current.stableID })
                 case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))
                 case "drawing":
                     DrawingEditorPage(

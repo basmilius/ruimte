@@ -50,7 +50,12 @@ struct WorkspaceDetail: View {
     var body: some View {
         Group {
             switch navigation.section {
-            case .files: MachineFilesPage(client: workspace.client, path: workspace.folder)
+            case .files:
+                ProjectFilesPage(workspace: workspace) { id in
+                    workspace.select(id)
+                    navigation.selectedViewID = id
+                    navigation.section = .views
+                }
             case .git: GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
             case .views, .search:
                 if let id = navigation.selectedViewID,
