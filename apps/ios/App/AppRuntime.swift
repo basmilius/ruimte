@@ -49,7 +49,9 @@ final class AppRuntime {
         Set(
             sessions.values.flatMap { session in
                 let attention = session.attention
-                let ids = attention.unseen.union(attention.statuses.keys.filter { attention.needsYou($0) })
+                let snoozed = session.snoozes.standing
+                let ids = attention.unseen.union(
+                    attention.statuses.keys.filter { attention.needsYou($0) && snoozed[$0] == nil })
                 return ids.compactMap { try? PushReplayLedger.nodeKey(machineID: session.machine.id, nodeID: $0) }
             })
     }

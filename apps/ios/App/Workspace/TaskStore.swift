@@ -68,6 +68,11 @@ final class TaskStore {
         tasks.values.filter { $0.text("childId") == childID }.max { $0.number("createdAt") < $1.number("createdAt") }
     }
 
+    /// The nodes that gave another agent a task that has not settled yet.
+    var parentsWithOpenTasks: Set<String> {
+        Set(tasks.values.filter { $0.text("status") == TaskStatus.open.rawValue }.map { $0.text("parentId") })
+    }
+
     private func ask(_ projectID: String) {
         Task { [weak self, client] in
             // A machine from before tasks does not know the request; it simply has none.

@@ -173,7 +173,7 @@ struct NewChatSheet: View {
 }
 
 extension JSONValue {
-    fileprivate var agentKind: String { self["kind"]?.stringValue ?? "" }
+    var agentKind: String { self["kind"]?.stringValue ?? "" }
 }
 
 /// "New chat" in a list of projects: one button for one machine, a menu of the machines for several.

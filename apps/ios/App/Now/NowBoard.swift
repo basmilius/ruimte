@@ -17,6 +17,13 @@ struct ProjectViewTarget: Hashable, Identifiable {
 struct NowAttention: Equatable {
     var statuses: [String: AgentStatus] = [:]
     var unseen: Set<String> = []
+    /// What each chat waits on, oldest first.
+    var requests: [String: [NowRequest]] = [:]
+    /// The CLI each waiting chat runs.
+    var providers: [String: String] = [:]
+    /// Nodes between turns that still have work out: sub-agents or a workflow of their CLI, or a task they gave
+    /// another agent that is still open.
+    var delegating: Set<String> = []
 }
 
 /// One machine as Now reads it: the open projects `project.sidebar` lists, and what its sessions are doing.
@@ -27,6 +34,10 @@ struct NowMachineInput {
     /// be read.
     let projects: [JSONValue]
     var attention = NowAttention()
+    /// The snoozes that stand, by node id.
+    var snoozes: [String: Date] = [:]
+    /// The CLIs whose denial carries a message to the agent (`denyReason` in `provider.list`).
+    var denyReason: Set<String> = []
 }
 
 /// A view or node of an open project, with what Now and Search show of it.
@@ -39,31 +50,45 @@ struct ProjectViewEntry: Identifiable, Hashable {
     let iconName: String
     var status: AgentStatus?
     var unseen = false
+    var requests: [NowRequest] = []
+    /// Its own turn ended, but work it started still runs; the desktop draws such a node working, in gray.
+    var delegating = false
+    var snoozedUntil: Date?
+    /// Whether a denial of this chat's approval can tell the agent why.
+    var repliesWithMessage = false
     var id: String { target.id }
 }
 
-/// The sections of Now, in the order the design fixes: what waits on a person, what works, what ended unseen.
+/// The sections of Now, in the order the design fixes: what waits on a person, what works, what ended unseen, and what
+/// waits but was put aside.
 struct NowBoard: Equatable {
     var needsYou: [ProjectViewEntry] = []
     var working: [ProjectViewEntry] = []
     var finished: [ProjectViewEntry] = []
+    /// Waiting nodes snoozed until a moment, the first to wake first.
+    var snoozed: [ProjectViewEntry] = []
     /// Rows name their machine only once the work spans more than one.
     var namesMachines = false
 
-    var isEmpty: Bool { needsYou.isEmpty && working.isEmpty && finished.isEmpty }
+    var isEmpty: Bool { needsYou.isEmpty && working.isEmpty && finished.isEmpty && snoozed.isEmpty }
 
     static func build(_ machines: [NowMachineInput]) -> NowBoard {
         var board = NowBoard()
         for entry in entries(machines) {
             if entry.status == .needsYou {
-                board.needsYou.append(entry)
-            } else if entry.status == .running {
+                if entry.snoozedUntil == nil {
+                    board.needsYou.append(entry)
+                } else {
+                    board.snoozed.append(entry)
+                }
+            } else if entry.status == .running || entry.delegating {
                 board.working.append(entry)
             } else if entry.unseen {
                 board.finished.append(entry)
             }
         }
-        let listed = board.needsYou + board.working + board.finished
+        board.snoozed.sort { ($0.snoozedUntil ?? .distantPast) < ($1.snoozedUntil ?? .distantPast) }
+        let listed = board.needsYou + board.working + board.finished + board.snoozed
         board.namesMachines = Set(listed.map(\.target.machineID)).count > 1
         return board
     }
@@ -100,11 +125,23 @@ struct NowBoard: Equatable {
                             title: title.isEmpty ? defaultTitle(kind) : title, kind: kind,
                             iconName: WorkspaceViewIcon.name(for: row),
                             status: machine.attention.statuses[itemID],
-                            unseen: machine.attention.unseen.contains(itemID)))
+                            unseen: machine.attention.unseen.contains(itemID),
+                            requests: machine.attention.requests[itemID] ?? [],
+                            delegating: Self.delegates(machine.attention, itemID),
+                            snoozedUntil: machine.snoozes[itemID],
+                            repliesWithMessage: machine.attention.providers[itemID].map {
+                                machine.denyReason.contains($0)
+                            } ?? false))
                 }
             }
         }
         return result
+    }
+
+    /// Waiting on a person outranks the work a node left running, as on the desktop, and so does an error.
+    private static func delegates(_ attention: NowAttention, _ id: String) -> Bool {
+        let status = attention.statuses[id]
+        return (status == nil || status == .idle) && attention.delegating.contains(id)
     }
 
     /// The project and list row that hold a node, from a machine's `project.sidebar` entries.

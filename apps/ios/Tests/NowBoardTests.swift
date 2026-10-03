@@ -117,4 +117,73 @@ final class NowBoardTests: XCTestCase {
         XCTAssertEqual(ViewSearch.views(entries, query: "recept").count, 2)
         XCTAssertTrue(ViewSearch.views(entries, query: "  ").isEmpty)
     }
+    func testAChatWithWorkStillOutIsWorkingNotFinished() {
+        let projects = [
+            project(
+                "app", name: "App", opened: 1,
+                views: [
+                    view("subagents", kind: "chat"), view("parent", kind: "chat"), view("asks", kind: "chat"),
+                    view("done", kind: "chat"),
+                ])
+        ]
+        let board = NowBoard.build([
+            NowMachineInput(
+                machineID: "mac", machineName: "MacBook Pro", projects: projects,
+                attention: NowAttention(
+                    statuses: ["subagents": .idle, "asks": .needsYou, "done": .idle],
+                    unseen: ["subagents", "parent", "done"], delegating: ["subagents", "parent", "asks"]))
+        ])
+        XCTAssertEqual(board.working.map(\.target.itemID), ["subagents", "parent"])
+        XCTAssertTrue(board.working.allSatisfy(\.delegating))
+        XCTAssertEqual(board.needsYou.map(\.target.itemID), ["asks"])
+        XCTAssertFalse(board.needsYou[0].delegating)
+        XCTAssertEqual(board.finished.map(\.target.itemID), ["done"])
+    }
+
+    func testASnoozedWaitLeavesNeedsYouAndTheFirstToWakeComesFirst() {
+        let later = Date(timeIntervalSince1970: 2000)
+        let sooner = Date(timeIntervalSince1970: 1000)
+        let projects = [
+            project(
+                "app", name: "App", opened: 1,
+                views: [view("a", kind: "chat"), view("b", kind: "chat"), view("c", kind: "terminal")])
+        ]
+        let board = NowBoard.build([
+            NowMachineInput(
+                machineID: "mac", machineName: "MacBook Pro", projects: projects,
+                attention: NowAttention(statuses: ["a": .needsYou, "b": .needsYou, "c": .needsYou]),
+                snoozes: ["a": later, "b": sooner])
+        ])
+        XCTAssertEqual(board.needsYou.map(\.target.itemID), ["c"])
+        XCTAssertEqual(board.snoozed.map(\.target.itemID), ["b", "a"])
+        XCTAssertEqual(board.snoozed.first?.snoozedUntil, sooner)
+    }
+
+    func testACardCarriesItsChatsRequestsAndWhetherADenialTakesAMessage() throws {
+        let request = try XCTUnwrap(
+            NowRequest(
+                .object([
+                    "requestId": .string("r1"), "itemId": .string("i1"), "kind": .string("question"),
+                    "createdAt": .number(1),
+                    "question": .object([
+                        "questions": .array([
+                            .object([
+                                "id": .string("q"), "header": .string(""), "question": .string("Which?"),
+                                "choices": .array([]), "multiSelect": .bool(false),
+                            ])
+                        ])
+                    ]),
+                ])))
+        let projects = [project("app", name: "App", opened: 1, views: [view("a", kind: "chat"), view("b", kind: "chat")])]
+        let board = NowBoard.build([
+            NowMachineInput(
+                machineID: "mac", machineName: "MacBook Pro", projects: projects,
+                attention: NowAttention(
+                    statuses: ["a": .needsYou, "b": .needsYou], requests: ["a": [request]],
+                    providers: ["a": "claude", "b": "codex"]),
+                denyReason: ["claude"])
+        ])
+        XCTAssertEqual(board.needsYou.map(\.requests), [[request], []])
+        XCTAssertEqual(board.needsYou.map(\.repliesWithMessage), [true, false])
+    }
 }

@@ -8,6 +8,8 @@ struct NowPage: View {
     let open: (ProjectViewTarget) -> Void
     let openProject: (ProjectViewTarget) -> Void
     let pair: () -> Void
+    @State private var newChat = false
+    @State private var showingSnoozed = false
 
     var body: some View {
         let board = now.board
@@ -23,17 +25,26 @@ struct NowPage: View {
             } else if !now.loaded && board.isEmpty {
                 MobileLoadingRow("Connecting to your machines").frame(maxWidth: .infinity, minHeight: 120)
             } else {
-                // TODO(Bas): answer a prompt on its card once the daemon sends a chat's pending prompt, and snooze one
-                // once it keeps snoozes; until then a card opens the chat with the prompt in its composer.
                 if board.needsYou.isEmpty {
                     nothingWaits(board)
                 } else {
                     Section {
                         ForEach(board.needsYou) { entry in
-                            row(entry, board: board) {
-                                NowCard(entry: entry, namesMachine: board.namesMachines, task: now.task(for: entry.target))
+                            NowCard(
+                                now: now, entry: entry, namesMachine: board.namesMachines,
+                                task: now.task(for: entry.target)
+                            ) { open(entry.target) }
+                            .contextMenu { menu(entry) }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button {
+                                    snooze(entry, until: SnoozeChoice.hour.until(from: .now))
+                                } label: {
+                                    Label("1 hour", lucideIcon: "alarm-clock")
+                                }
+                                .tint(MobileStyle.statusIdle)
                             }
-                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .accessibilityIdentifier("now.\(entry.target.itemID)")
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         }
                     } header: {
                         NowHeader(title: "Needs you", count: board.needsYou.count, color: MobileStyle.statusNeedsYou)
@@ -61,6 +72,35 @@ struct NowPage: View {
                         NowHeader(title: "Finished", count: board.finished.count, color: MobileStyle.positive)
                     }
                 }
+                if let first = board.snoozed.first?.snoozedUntil {
+                    Section {
+                        Button {
+                            withAnimation { showingSnoozed.toggle() }
+                        } label: {
+                            HStack(spacing: 7) {
+                                Image(lucide: "alarm-clock", size: 14)
+                                Text("Snoozed until \(SnoozeChoice.moment(first, from: .now))")
+                                Spacer()
+                                Text("\(board.snoozed.count)").monospacedDigit()
+                                Image(lucide: showingSnoozed ? "chevron-up" : "chevron-down", size: 12)
+                            }
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(MobileStyle.muted)
+                        }
+                        .accessibilityLabel("Snoozed, \(board.snoozed.count)")
+                        .accessibilityValue(showingSnoozed ? "Shown" : "Hidden")
+                        .accessibilityIdentifier("now.snoozed")
+                        if showingSnoozed {
+                            ForEach(board.snoozed) { entry in
+                                row(entry, board: board) {
+                                    NowRow(
+                                        entry: entry, namesMachine: board.namesMachines,
+                                        task: now.task(for: entry.target))
+                                }
+                            }
+                        }
+                    }
+                }
             }
             if !now.offline.isEmpty && !runtime.machines.isEmpty {
                 Section("Not connected") {
@@ -82,6 +122,22 @@ struct NowPage: View {
         }
         .navigationTitle("Now")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if !runtime.machines.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        newChat = true
+                    } label: {
+                        Image(lucide: "square-pen").accessibilityLabel("New chat")
+                    }
+                    .accessibilityIdentifier("now.newChat")
+                }
+            }
+        }
+        .mobileSheet(isPresented: $newChat) {
+            NowNewChatSheet(runtime: runtime, now: now) { target in open(target) }
+        }
+        .onChange(of: now.liveRequests) { _, live in now.answers.keep(live) }
         .refreshable { await now.refresh() }
         .task {
             // Released projects have no watcher on the machine, so new chats there only show on a read.
@@ -101,11 +157,37 @@ struct NowPage: View {
             label()
         }
         .buttonStyle(.plain)
-        .contextMenu {
-            Button(entry.kind == "chat" ? "Open chat" : "Open", lucideIcon: entry.iconName) { open(entry.target) }
-            Button("Open project", lucideIcon: "folder-open") { openProject(entry.target) }
-        }
+        .contextMenu { menu(entry) }
         .accessibilityIdentifier("now.\(entry.target.itemID)")
+    }
+
+    @ViewBuilder private func menu(_ entry: ProjectViewEntry) -> some View {
+        Button(entry.kind == "chat" ? "Open chat" : "Open", lucideIcon: entry.iconName) { open(entry.target) }
+        Button("Open project", lucideIcon: "folder-open") { openProject(entry.target) }
+        if entry.status == .needsYou {
+            Divider()
+            SnoozeMenu(until: entry.snoozedUntil) { snooze(entry, until: $0) } wake: {
+                now.snoozes(for: entry.target.machineID)?.clear(entry.target.itemID)
+            }
+        }
+        if entry.kind == "chat", let request = entry.requests.first, let approval = request.approval {
+            Divider()
+            if let rule = approval.allowAlways {
+                Button(rule.label, lucideIcon: "check-check") {
+                    Task { await now.approve(entry, request, decision: .allowAlways) }
+                }
+            }
+            if entry.repliesWithMessage {
+                Button("Deny with a message", lucideIcon: "message-square-x") {
+                    let key = NowAnswers.key(machineID: entry.target.machineID, requestID: request.requestID)
+                    now.answers.drafts[key, default: NowRequestDraft()].replying = true
+                }
+            }
+        }
+    }
+
+    private func snooze(_ entry: ProjectViewEntry, until: Date) {
+        now.snoozes(for: entry.target.machineID)?.snooze(entry.target.itemID, until: until)
     }
 
     @ViewBuilder private func nothingWaits(_ board: NowBoard) -> some View {
@@ -145,45 +227,6 @@ private struct NowHeader: View {
     }
 }
 
-/// Where a row stands: its project, and its machine once the work spans several.
-private func place(_ entry: ProjectViewEntry, namesMachine: Bool) -> String {
-    namesMachine ? "\(entry.projectName) · \(entry.machineName)" : entry.projectName
-}
-
-/// A session waiting on a person, as a card of its own. It opens the chat, whose composer holds the prompt.
-private struct NowCard: View {
-    let entry: ProjectViewEntry
-    let namesMachine: Bool
-    let task: JSONValue?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                LucideIcon(name: entry.iconName, size: 15).foregroundStyle(MobileStyle.muted)
-                Text(entry.title).font(.callout.weight(.semibold)).foregroundStyle(MobileStyle.text)
-                    .lineLimit(1).truncationMode(.tail)
-                if let task { TaskMark(task: task) }
-                Spacer(minLength: 8)
-                Text(place(entry, namesMachine: namesMachine)).font(.caption).foregroundStyle(MobileStyle.muted)
-                    .lineLimit(1)
-            }
-            HStack(spacing: 6) {
-                Image(lucide: "hand", size: 14).foregroundStyle(MobileStyle.statusNeedsYou)
-                Text(entry.kind == "chat" ? "Waiting for your answer" : "Waiting for you in the terminal")
-                    .font(.subheadline).foregroundStyle(MobileStyle.text)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MobileStyle.panel, in: .rect(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(MobileStyle.border))
-        .contentShape(.rect(cornerRadius: 22))
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-    }
-}
-
 private struct NowRow: View {
     let entry: ProjectViewEntry
     let namesMachine: Bool
@@ -195,10 +238,16 @@ private struct NowRow: View {
             Text(entry.title).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
             if let task { TaskMark(task: task) }
             Spacer(minLength: 8)
-            Text(place(entry, namesMachine: namesMachine)).font(.caption).foregroundStyle(MobileStyle.faint)
+            Text(nowPlace(entry, namesMachine: namesMachine)).font(.caption).foregroundStyle(MobileStyle.faint)
                 .lineLimit(1)
-            if entry.status == .running {
+            if let until = entry.snoozedUntil {
+                Text(SnoozeChoice.moment(until, from: .now)).font(.caption).foregroundStyle(MobileStyle.muted)
+                    .monospacedDigit().accessibilityLabel("Snoozed until \(SnoozeChoice.moment(until, from: .now))")
+            } else if entry.status == .running {
                 ProgressView().controlSize(.mini).tint(MobileStyle.statusRunning).accessibilityLabel("Working")
+            } else if entry.delegating {
+                ProgressView().controlSize(.mini).tint(MobileStyle.muted)
+                    .accessibilityLabel("Its sub-agents are working")
             } else if entry.unseen {
                 Circle().fill(MobileStyle.accent).frame(width: 8, height: 8).accessibilityLabel("New activity")
             }

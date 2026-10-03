@@ -347,6 +347,14 @@ struct WorkspacePage: View {
                             }.disabled(item.text("kind") == "unknown")
                             Button("Change icon", lucideIcon: "palette") { iconView = item }
                                 .disabled(item.text("kind") == "unknown")
+                            if ["chat", "terminal"].contains(item.text("kind")) {
+                                let snoozes = workspace.session.snoozes
+                                SnoozeMenu(until: snoozes.until(item.stableID)) {
+                                    snoozes.snooze(item.stableID, until: $0)
+                                } wake: {
+                                    snoozes.clear(item.stableID)
+                                }
+                            }
                             Button("Delete", lucideIcon: "trash", role: .destructive) {
                                 Task {
                                     let question = await SessionEnding.question(for: item, client: workspace.client)
@@ -418,7 +426,12 @@ struct WorkspacePage: View {
                 .font(.callout).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let task = workspace.session.tasks.childTask(item.stableID) { TaskMark(task: task) }
-            AttentionMark(store: workspace.session.attention, id: item.stableID)
+            if let until = workspace.session.snoozes.until(item.stableID) {
+                Image(lucide: "alarm-clock", size: 14).foregroundStyle(MobileStyle.muted)
+                    .accessibilityLabel("Snoozed until \(SnoozeChoice.moment(until, from: .now))")
+            } else {
+                AttentionMark(store: workspace.session.attention, id: item.stableID)
+            }
             if !isSidebar {
                 Image(lucide: "chevron-right", size: 12)
                     .foregroundStyle(MobileStyle.faint).accessibilityHidden(true)

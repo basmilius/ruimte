@@ -36,10 +36,20 @@ extension AgentStatus {
     static func of(_ record: JSONValue?) -> AgentStatus { AgentStatus(rawValue: record?.text("status") ?? "") ?? .idle }
 }
 
+/// The requests a chat waits on, with the CLI it runs, which decides whether a denial can carry a message.
+struct ChatWait: Equatable {
+    let provider: String
+    let requests: [JSONValue]
+}
+
 @MainActor @Observable
 final class AttentionStore {
     private(set) var statuses: [String: AgentStatus] = [:]
     private(set) var unseen = Set<String>()
+    /// What each chat waits on a person for, from `ChatInfo.requests`, by chat id; absent while nothing waits.
+    private(set) var waits: [String: ChatWait] = [:]
+    /// Chats between turns whose CLI still runs sub-agents or a workflow in the background (`ChatInfo.delegating`).
+    private(set) var delegating = Set<String>()
     private var pushEntries: [String: JSONValue] = [:]
     private var readings: [String: SessionReading] = [:]
     /// When the machine began keeping entries a client may mark nodes from; nil for a machine that never says, whose
@@ -47,6 +57,7 @@ final class AttentionStore {
     private var marksFrom: Double?
     private var pendingReads = Set<String>()
     var onRead: ((String, Double) async -> Void)?
+    var onStatus: ((String, AgentStatus) -> Void)?
     private var focused: [String: Int] = [:]
     private var subscriptions: [() -> Void] = []
     private var refreshTask: Task<Void, Never>?
@@ -69,12 +80,12 @@ final class AttentionStore {
         subscriptions.append(
             client.subscribe("chat.status") { [weak self] payload in
                 guard let info = payload["info"] else { return }
-                self?.update(payload.text("chatId"), status: AgentStatus.of(info))
+                self?.receive(chat: payload.text("chatId"), info: info)
             })
         subscriptions.append(
             client.subscribe("chat.event") { [weak self] payload in
                 guard let event = payload["event"], let info = event["info"] else { return }
-                self?.update(payload.text("chatId"), status: AgentStatus.of(info))
+                self?.receive(chat: payload.text("chatId"), info: info)
             })
         subscriptions.append(
             client.observeConnection { [weak self] connected in
@@ -117,6 +128,20 @@ final class AttentionStore {
         let previous = statuses[id]
         statuses[id] = status
         if previous == .running, status != .running, focused[id, default: 0] == 0 { unseen.insert(id) }
+        onStatus?(id, status)
+    }
+
+    /// A chat's info, from `chat.list`, `chat.status` or the chat's own events, which all carry what it waits on.
+    func receive(chat id: String, info: JSONValue) {
+        guard !id.isEmpty else { return }
+        update(id, status: AgentStatus.of(info))
+        let requests = info.list("requests")
+        let wait = requests.isEmpty ? nil : ChatWait(provider: info.text("provider"), requests: requests)
+        if waits[id] != wait { waits[id] = wait }
+        let delegates = info.text("status") == AgentStatus.idle.rawValue && info["delegating"]?.boolValue == true
+        if delegates != delegating.contains(id) {
+            if delegates { delegating.insert(id) } else { delegating.remove(id) }
+        }
     }
 
     func markSeen(_ id: String) {
@@ -189,9 +214,11 @@ final class AttentionStore {
             let ids = Set(
                 sessions.list("sessions").map { $0.text("sessionId") } + chats.list("chats").map { $0.text("chatId") })
             for chat in chats.list("chats") {
-                update(chat.text("chatId"), status: AgentStatus.of(chat))
+                receive(chat: chat.text("chatId"), info: chat)
             }
             statuses = statuses.filter { ids.contains($0.key) }
+            waits = waits.filter { ids.contains($0.key) }
+            delegating.formIntersection(ids)
             readings = readings.filter { ids.contains($0.key) }
             unseen.formIntersection(ids.union(unreadPushIDs))
         } catch {}
