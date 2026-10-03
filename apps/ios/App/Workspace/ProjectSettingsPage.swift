@@ -176,11 +176,12 @@ struct ProjectSettingsPage: View {
                     }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "Close \(workspace.title)?", isPresented: Binding(get: { closing != nil }, set: { if !$0 { closing = nil } }),
-                titleVisibility: .visible, presenting: closing
+                presenting: closing
             ) { _ in
                 Button("Close project", role: .destructive) { Task { await close() } }
+                Button("Cancel", role: .cancel) {}
             } message: { consequence in
                 Text(consequence)
             }

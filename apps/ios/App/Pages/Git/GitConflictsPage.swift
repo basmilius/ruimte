@@ -157,8 +157,8 @@ struct GitAbortConfirmation: ViewModifier {
     let onAbort: () -> Void
 
     func body(content: Content) -> some View {
-        content.confirmationDialog(
-            "Abort the \(operation)?", isPresented: $isPresented, titleVisibility: .visible
+        content.alert(
+            "Abort the \(operation)?", isPresented: $isPresented
         ) {
             Button(GitConflictModel.abortLabel(operation), role: .destructive, action: onAbort)
             Button("Cancel", role: .cancel) {}
@@ -266,7 +266,7 @@ struct GitConflictFilePage: View {
                 editing = nil
             }
         }
-        .confirmationDialog("Drop \((path as NSString).lastPathComponent)?", isPresented: $confirmDrop, titleVisibility: .visible) {
+        .alert("Drop \((path as NSString).lastPathComponent)?", isPresented: $confirmDrop) {
             Button("Drop the file", role: .destructive) { Task { await take("delete") } }
             Button("Cancel", role: .cancel) {}
         } message: {

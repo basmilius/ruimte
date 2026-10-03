@@ -259,10 +259,10 @@ struct WorkspacePage: View {
             }
             Button("Cancel", role: .cancel) { renamed = nil }
         }
-        .confirmationDialog(
+        .alert(
             deleteView?.item.text("kind") == "chat" ? "Delete this chat?" : "Delete this view?",
             isPresented: Binding(get: { deleteView != nil }, set: { if !$0 { deleteView = nil } }),
-            titleVisibility: .visible, presenting: deleteView
+            presenting: deleteView
         ) { pending in
             Button(pending.item.text("kind") == "chat" ? "Delete chat" : "Delete view", role: .destructive) {
                 deleteView = nil
@@ -275,12 +275,12 @@ struct WorkspacePage: View {
                     if workspace.problem == nil { await SessionEnding.end(pending.question, session: workspace.session) }
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { pending in
             if let warning = pending.question.warning { Text(warning) }
         }
-        .confirmationDialog(
-            "This project changed elsewhere", isPresented: Binding(get: { workspace.conflict != nil }, set: { _ in }),
-            titleVisibility: .visible
+        .alert(
+            "This project changed elsewhere", isPresented: Binding(get: { workspace.conflict != nil }, set: { _ in })
         ) {
             Button("Use machine version") { workspace.acceptRemote() }
             Button("Save my version", role: .destructive) { Task { await workspace.keepLocal() } }

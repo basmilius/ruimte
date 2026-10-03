@@ -117,7 +117,7 @@ struct ChatComposerView: View {
                     .onAppear { expandedFocus = true }
             }
         }
-        .confirmationDialog(
+        .alert(
             "Paste this long text",
             isPresented: Binding(get: { pastedText != nil }, set: { if !$0 { pastedText = nil } })
         ) {

@@ -238,10 +238,10 @@ struct GitWorktreeDialogs: ViewModifier {
                     state.merging = nil
                 }
             }
-            .confirmationDialog(
+            .alert(
                 state.removal?.title ?? "",
                 isPresented: Binding(get: { state.removal != nil }, set: { if !$0 { state.removal = nil } }),
-                titleVisibility: .visible, presenting: state.removal
+                presenting: state.removal
             ) { pending in
                 Button(pending.confirmLabel, role: .destructive) {
                     Task { state.removal = await state.remove(client: client, removal: pending) }
@@ -253,10 +253,10 @@ struct GitWorktreeDialogs: ViewModifier {
             } message: { pending in
                 Text(pending.detail)
             }
-            .confirmationDialog(
+            .alert(
                 "Abort the merge?",
                 isPresented: Binding(get: { state.confirmAbort != nil }, set: { if !$0 { state.confirmAbort = nil } }),
-                titleVisibility: .visible, presenting: state.confirmAbort
+                presenting: state.confirmAbort
             ) { cwd in
                 Button("Abort merge", role: .destructive) { Task { await state.abortMerge(client: client, cwd: cwd) } }
                 Button("Cancel", role: .cancel) {}

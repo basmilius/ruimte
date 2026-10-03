@@ -55,10 +55,10 @@ struct ProcessesPage: View {
         .onAppear { model.start() }
         .onDisappear { model.stop() }
         .task { await readProjectNames() }
-        .confirmationDialog(
+        .alert(
             forcing.map { ProcessesText.forceQuestion($0).title } ?? "",
             isPresented: Binding(get: { forcing != nil }, set: { if !$0 { forcing = nil } }),
-            titleVisibility: .visible, presenting: forcing
+            presenting: forcing
         ) { target in
             Button("Force quit", role: .destructive) { Task { await model.signal(target, .kill) } }
             Button("Cancel", role: .cancel) {}

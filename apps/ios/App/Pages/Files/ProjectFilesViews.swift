@@ -150,10 +150,10 @@ struct FileDeleteConfirmation: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .confirmationDialog(
+            .alert(
                 path.map { "Delete \(($0 as NSString).lastPathComponent)?" } ?? "",
                 isPresented: Binding(get: { path != nil }, set: { if !$0 { path = nil } }),
-                titleVisibility: .visible, presenting: path
+                presenting: path
             ) { pending in
                 Button("Move to Trash", role: .destructive) {
                     Task {

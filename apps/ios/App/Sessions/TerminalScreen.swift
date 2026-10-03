@@ -98,8 +98,9 @@ struct TerminalScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardShown = false
         }
-        .confirmationDialog("Clear terminal scrollback?", isPresented: $clearing, titleVisibility: .visible) {
+        .alert("Clear terminal scrollback?", isPresented: $clearing) {
             Button("Clear scrollback", role: .destructive) { Task { await model.clear() } }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This clears the shared terminal scrollback on every client.")
         }
