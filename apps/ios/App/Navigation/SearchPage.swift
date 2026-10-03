@@ -40,7 +40,9 @@ struct SearchPage: View {
                         ForEach(found) { row in
                             Button {
                                 openWorkspace(
-                                    MobileWorkspace(session: runtime.session(for: row.machine), projectID: row.id.projectID))
+                                    MobileWorkspace(
+                                        session: runtime.session(for: row.machine), projectID: row.id.projectID,
+                                        summary: row.summary))
                             } label: {
                                 ProjectHomeRow(
                                     summary: row.summary, machine: row.machine.name, connected: row.connected,

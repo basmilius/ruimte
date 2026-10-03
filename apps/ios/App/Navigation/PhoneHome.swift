@@ -76,7 +76,6 @@ struct PhoneHome: View {
             if now.loaded { NeedsYouWidgetRecorder.record(board) }
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
-        .environment(\.settingsLink, settingsLink)
     }
 
     private var settingsLink: SettingsLink {
@@ -117,7 +116,7 @@ struct PhoneHome: View {
     @ViewBuilder private func page(for route: PhoneRoute) -> some View {
         switch route {
         case .project(let navigation):
-            WorkspacePage(navigation: navigation)
+            WorkspacePage(navigation: navigation, settingsLink: settingsLink)
         case .view(let target):
             ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target)).id(target.id)
         case .notification(let notification):
@@ -125,26 +124,26 @@ struct PhoneHome: View {
         case .recentProjects:
             RecentProjectsPage(runtime: runtime, projects: projects)
         case .machine(let id):
-            MachineRoutePage(runtime: runtime, machineID: id)
+            MachineRoutePage(runtime: runtime, machineID: id, settingsLink: settingsLink)
         }
     }
 
     private func workspace(for target: ProjectViewTarget) -> MobileWorkspace? {
         guard let machine = runtime.machines.first(where: { $0.id == target.machineID }) else { return nil }
-        return MobileWorkspace(session: runtime.session(for: machine), projectID: target.projectID)
+        let id = UnifiedProjectRow.ID(machineID: target.machineID, projectID: target.projectID)
+        let row = (projects.open + projects.chats).first { $0.id == id }
+        return MobileWorkspace(
+            session: runtime.session(for: machine), projectID: target.projectID, summary: row?.summary ?? .object([:]))
     }
 }
 
-/// What the avatar needs to open Settings. Only the iPhone sets it; the iPad keeps Settings in its sidebar.
+/// What the avatar needs to open Settings. Only the iPhone hands it to a page, through the page's route, so the bar
+/// has the avatar from the first pass of the push; the iPad keeps Settings in its sidebar.
 struct SettingsLink {
     let account: Account?
     /// Nil while it loads, and for an account no provider hands a picture out for.
     let picture: UIImage?
     let show: () -> Void
-}
-
-extension EnvironmentValues {
-    @Entry var settingsLink: SettingsLink?
 }
 
 /// The avatar into Settings, under one id on every page that shows it, so the bar of the next page finds it at the

@@ -4,6 +4,7 @@ import SwiftUI
 struct WorkspacePage: View {
     @Bindable var navigation: WorkspaceNavigation
     var isSidebar = false
+    var settingsLink: SettingsLink?
     private var workspace: MobileWorkspace { navigation.workspace }
     @State private var iconView: JSONValue?
     @State private var renamed: JSONValue?
@@ -16,7 +17,6 @@ struct WorkspacePage: View {
     @State private var showFiles = false
     @State private var showGit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.settingsLink) private var settingsLink
     var body: some View {
         Group {
             if workspace.ready {
@@ -171,7 +171,8 @@ struct WorkspacePage: View {
     }
 
     /// The project's menu beside the avatar, so Settings is one tap away here too. The Chats project's folder is the
-    /// machine's own, so its menu holds New chat and Usage only.
+    /// machine's own, so its menu holds New chat and Usage only. Its entries wait for the project, not the item, so the
+    /// item stays the same through a push the project opens during.
     @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
         ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
             Menu {
@@ -182,6 +183,7 @@ struct WorkspacePage: View {
                         Button("New view", lucideIcon: "plus") { navigation.adding = true }
                     }
                 }
+                .disabled(!workspace.ready)
                 Section {
                     if !workspace.isScratch {
                         Button("Files", lucideIcon: "folder") { showFiles = true }
@@ -190,12 +192,12 @@ struct WorkspacePage: View {
                     }
                     Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
                 }
+                .disabled(!workspace.ready)
             } label: {
                 Image(lucide: "ellipsis")
             }
             .accessibilityLabel("Project menu")
             .accessibilityIdentifier("project.menu")
-            .disabled(!workspace.ready)
         }
         if let settingsLink {
             SettingsToolbarItem(link: settingsLink)

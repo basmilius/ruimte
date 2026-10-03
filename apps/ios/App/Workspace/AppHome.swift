@@ -313,7 +313,9 @@ struct AppHome: View {
 
     private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {
         guard isPad else {
-            withAnimation(reduceMotion ? nil : .default) { router.openProject(workspace, view: view) }
+            // The stack animates its push itself. Inside an animation of ours the page's bar items would animate in
+            // after it starts instead of being there for the bar to morph into.
+            router.openProject(workspace, view: view)
             return
         }
         restoreProblem = nil
@@ -388,7 +390,9 @@ struct ProjectLinks: View {
     var body: some View {
         ForEach(rows) { row in
             Button {
-                openWorkspace(MobileWorkspace(session: runtime.session(for: row.machine), projectID: row.id.projectID))
+                openWorkspace(
+                    MobileWorkspace(
+                        session: runtime.session(for: row.machine), projectID: row.id.projectID, summary: row.summary))
             } label: {
                 ProjectHomeRow(
                     summary: row.summary, machine: row.machine.name, connected: row.connected,
@@ -506,10 +510,11 @@ struct MachinesPage: View {
 struct MachineRoutePage: View {
     let runtime: AppRuntime
     let machineID: String
+    var settingsLink: SettingsLink?
 
     var body: some View {
         if let machine = runtime.machines.first(where: { $0.id == machineID }) {
-            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
+            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime, settingsLink: settingsLink)
         }
     }
 }

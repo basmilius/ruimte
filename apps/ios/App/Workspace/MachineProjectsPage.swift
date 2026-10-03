@@ -4,6 +4,7 @@ import SwiftUI
 struct MachineProjectsPage: View {
     @Bindable var session: SharedMachineSession
     let runtime: AppRuntime
+    var settingsLink: SettingsLink?
     @State private var lease: MachineNavigationLease?
     @State private var projects: [JSONValue] = []
     @State private var search = ""
@@ -42,7 +43,8 @@ struct MachineProjectsPage: View {
                     }
                     if let chats {
                         Button {
-                            openWorkspace(MobileWorkspace(session: session, projectID: chats.text("projectId")))
+                            openWorkspace(
+                                MobileWorkspace(session: session, projectID: chats.text("projectId"), summary: chats))
                         } label: {
                             ChatsRowLabel(title: "Chats", detail: "Your earlier chats", icon: "messages-square")
                         }
@@ -56,7 +58,8 @@ struct MachineProjectsPage: View {
                     id: \.stableID
                 ) { project in
                     Button {
-                        openWorkspace(MobileWorkspace(session: session, projectID: project.text("projectId")))
+                        openWorkspace(
+                            MobileWorkspace(session: session, projectID: project.text("projectId"), summary: project))
                     } label: {
                         ProjectHomeRow(
                             summary: project, machine: session.machine.name, connected: session.connected,
@@ -132,8 +135,11 @@ struct MachineProjectsPage: View {
         }
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(id: "machine.openFolder", placement: .topBarTrailing) {
                 Button("Open folder", lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
+            }
+            if let settingsLink {
+                SettingsToolbarItem(link: settingsLink)
             }
         }
         .task {

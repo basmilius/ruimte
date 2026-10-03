@@ -105,6 +105,21 @@ final class SessionWorkspaceTests: XCTestCase {
         XCTAssertEqual(wire.saves.last?["content"]?["color"], .string("#e7000b"))
         XCTAssertNil(workspace.problem)
     }
+
+    @MainActor func testAProjectHasTheTitleAndKindOfItsRowBeforeItOpens() {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        let machine = Machine(
+            id: "row-\(UUID().uuidString)", name: "Mac", icon: nil, publicKey: DeviceKey().publicKey,
+            brokerUrl: nil, lastSeenAt: nil)
+        defer { runtime.connections.shutdown() }
+        let workspace = MobileWorkspace(
+            session: runtime.session(for: machine), projectID: "chats",
+            summary: .object(["name": .string("Chats"), "scratch": .bool(true)]))
+
+        XCTAssertFalse(workspace.ready)
+        XCTAssertEqual(workspace.title, "Chats")
+        XCTAssertTrue(workspace.isScratch)
+    }
 }
 
 /// A machine whose project changed elsewhere: the next `conflicts` saves are refused until the phone reopens it.

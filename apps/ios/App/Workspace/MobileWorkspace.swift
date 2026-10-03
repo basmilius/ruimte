@@ -42,9 +42,11 @@ final class MobileWorkspace {
     }
     var storageKey: String { "ruimte.ios.workspace.\(session.machine.id).\(projectID)" }
 
-    init(session: SharedMachineSession, projectID: String) {
+    /// `summary` is the project's row where it was picked, so its page has its title and kind before it opens.
+    init(session: SharedMachineSession, projectID: String, summary: JSONValue = .object([:])) {
         self.session = session
         self.projectID = projectID
+        self.summary = summary
     }
 
     isolated deinit { stop() }

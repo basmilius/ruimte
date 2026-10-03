@@ -130,9 +130,12 @@ Four tabs, each at most two levels deep: Now, Projects, Machines and Search. The
 navigation stack (`PhoneHome`), and every page opens on that stack over the whole tab view, so the tab bar leaves
 with a push and comes back with the pop, following the finger on a swipe back. A tab's page is hosted apart from the
 stack's bar, so the title and the bar's items of each tab sit on the tab view, chosen by the selected tab. Settings
-opens as a sheet from the avatar, the last item on the right of the bar on every tab and on a project's page, and the
-tab bar folds in while a list scrolls down. The avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in
-Caches and asked again once per launch), else the first letter of its name.
+opens as a sheet from the avatar, the last item on the right of the bar on every tab, on a project's page and on a
+machine's, and the tab bar folds in while a list scrolls down. A push only morphs the bar into the title and items a
+page has when it starts, so a pushed page gets them from its route (the avatar's `SettingsLink`, the project's row as
+its summary), keeps them the same while it opens, and the push runs without an animation of ours around it. The
+avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in Caches and asked again
+once per launch), else the first letter of its name.
 
 - Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
   machines that are not connected. `NowModel` reads each machine's open projects with `project.sidebar`, again on

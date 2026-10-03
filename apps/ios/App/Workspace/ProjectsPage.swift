@@ -50,7 +50,9 @@ struct ProjectsPage<Notice: View>: View {
                 ForEach(projects.chats) { row in
                     Button {
                         openWorkspace(
-                            MobileWorkspace(session: runtime.session(for: row.machine), projectID: row.id.projectID))
+                            MobileWorkspace(
+                                session: runtime.session(for: row.machine), projectID: row.id.projectID,
+                                summary: row.summary))
                     } label: {
                         ChatsRowLabel(
                             title: "Chats",
