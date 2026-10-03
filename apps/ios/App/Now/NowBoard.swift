@@ -195,20 +195,3 @@ struct NowBoard: Equatable {
         }
     }
 }
-
-/// The placeholder for the command palette: views and projects whose name holds the query.
-enum ViewSearch {
-    static func views(_ entries: [ProjectViewEntry], query: String) -> [ProjectViewEntry] {
-        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return [] }
-        return entries.filter {
-            $0.title.localizedCaseInsensitiveContains(query) || $0.projectName.localizedCaseInsensitiveContains(query)
-        }
-    }
-
-    static func projects(_ rows: [UnifiedProjectRow], query: String) -> [UnifiedProjectRow] {
-        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return [] }
-        return rows.filter { $0.matches(query) }
-    }
-}

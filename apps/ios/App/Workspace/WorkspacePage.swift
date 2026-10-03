@@ -118,6 +118,10 @@ struct WorkspacePage: View {
         .task(id: workspace.ready) {
             await openPendingView()
             await makePendingKind()
+            if workspace.ready, let sheet = navigation.pendingSheet {
+                navigation.pendingSheet = nil
+                navigation.show(sheet)
+            }
         }
         .task(id: workspace.ready) {
             guard !isSidebar, workspace.ready, !workspace.isScratch, let gitLines else { return }

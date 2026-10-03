@@ -23,6 +23,15 @@ enum PhoneRoute: Hashable {
     case recentProjects
     /// A machine, by its id.
     case machine(String)
+    case file(ProjectFileTarget)
+}
+
+/// A file of a project, by where it is on its machine.
+struct ProjectFileTarget: Hashable {
+    let machineID: String
+    let projectID: String
+    /// Absolute on the machine.
+    let path: String
 }
 
 /// Where the iPhone stands: the tab under the stack and the pages pushed over it. Nothing goes deeper than two
@@ -42,11 +51,18 @@ final class PhoneRouter {
     }
 
     /// Opens a project over Projects, and with `view` that view once the project holds it.
-    func openProject(_ workspace: MobileWorkspace, view: String? = nil) {
+    @discardableResult func openProject(_ workspace: MobileWorkspace, view: String? = nil) -> WorkspaceNavigation {
         let navigation = WorkspaceNavigation(workspace: workspace)
         navigation.pendingViewID = view
         tab = .projects
         path = [.project(navigation)]
+        return navigation
+    }
+
+    /// Shows a file of a project that Search found, over Search.
+    func show(file: ProjectFileTarget) {
+        tab = .search
+        path = [.file(file)]
     }
 
     /// Shows a view outside its project's list. Search keeps it over its own field; every other tab hands it to Now.

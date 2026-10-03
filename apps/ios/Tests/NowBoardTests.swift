@@ -124,7 +124,7 @@ final class NowBoardTests: XCTestCase {
                 ProjectViewTarget(machineID: "mac", projectID: "a", viewID: "canvas", itemID: "term"), in: projects))
     }
 
-    func testViewSearchMatchesTitleOrProject() {
+    func testThePaletteFindsAViewByItsTitleOrProject() {
         let input = NowMachineInput(
             machineID: "mac", machineName: "MacBook Pro",
             projects: [
@@ -133,9 +133,12 @@ final class NowBoardTests: XCTestCase {
                     views: [view("chat", kind: "chat", name: "Refactor pool"), view("doc", kind: "file", name: "README")])
             ])
         let entries = NowBoard.entries([input])
-        XCTAssertEqual(ViewSearch.views(entries, query: "pool").map(\.target.itemID), ["chat"])
-        XCTAssertEqual(ViewSearch.views(entries, query: "recept").count, 2)
-        XCTAssertTrue(ViewSearch.views(entries, query: "  ").isEmpty)
+        let rank = { (query: String) in
+            PaletteRanking.rank(entries, query: query, text: \.title, extra: \.projectName)
+        }
+        XCTAssertEqual(rank("pool").map(\.target.itemID), ["chat"])
+        XCTAssertEqual(rank("recept").count, 2)
+        XCTAssertTrue(rank("  ").isEmpty)
     }
     func testAChatWithWorkStillOutIsWorkingNotFinished() {
         let projects = [

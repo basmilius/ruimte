@@ -56,9 +56,8 @@ struct PhoneHome: View {
 
                 Tab(value: PhoneTab.search, role: .search) {
                     SearchPage(
-                        now: now, projects: projects, runtime: runtime,
-                        open: { router.show($0, from: .search) }
-                    )
+                        now: now, projects: projects, runtime: runtime, router: router, showSettings: showSettings,
+                        pair: pair)
                 } label: {
                     Label("Search", lucideIcon: "search")
                 }
@@ -127,6 +126,8 @@ struct PhoneHome: View {
             RecentProjectsPage(runtime: runtime, projects: projects)
         case .machine(let id):
             MachineRoutePage(runtime: runtime, machineID: id, settingsLink: settingsLink)
+        case .file(let target):
+            ProjectFilePage(runtime: runtime, target: target) { router.openProject($0, view: $1) }.id(target)
         }
     }
 

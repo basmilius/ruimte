@@ -20,11 +20,28 @@ final class WorkspaceNavigation: Hashable, Identifiable {
     var showingSettings = false
     /// A kind of view to make once the project is there, as a command from Search asks.
     var pendingKind: String?
+    /// A sheet to put up once the project is there, which a sheet asked for during the push would not survive.
+    var pendingSheet: ProjectSheet?
 
     init(workspace: MobileWorkspace) { self.workspace = workspace }
 
+    /// Puts a sheet up at once.
+    func show(_ sheet: ProjectSheet) {
+        switch sheet {
+        case .newView: adding = true
+        case .files: showingFiles = true
+        case .git: showingGit = true
+        case .launches: showingLaunches = true
+        case .settings: showingSettings = true
+        }
+    }
+
     nonisolated static func == (lhs: WorkspaceNavigation, rhs: WorkspaceNavigation) -> Bool { lhs.id == rhs.id }
     nonisolated func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+enum ProjectSheet: Hashable {
+    case newView, files, git, launches, settings
 }
 
 enum ProjectSection: String, CaseIterable, Identifiable {
