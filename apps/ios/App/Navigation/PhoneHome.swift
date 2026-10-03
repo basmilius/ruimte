@@ -87,10 +87,15 @@ struct PhoneHome: View {
         }
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewSearchActivation(.searchTabSelection)
+        .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
         .environment(\.settingsLink, settingsLink)
     }
 
-    private var settingsLink: SettingsLink { SettingsLink(account: runtime.account, show: showSettings) }
+    private var settingsLink: SettingsLink {
+        SettingsLink(
+            account: runtime.account, picture: AccountPictures.shared.picture(for: runtime.account),
+            show: showSettings)
+    }
 
     @ViewBuilder private func destination(_ destination: PhoneDestination) -> some View {
         switch destination {
@@ -110,6 +115,8 @@ struct PhoneHome: View {
 /// What the avatar needs to open Settings. Only the iPhone sets it; the iPad keeps Settings in its sidebar.
 struct SettingsLink {
     let account: Account?
+    /// Nil while it loads, and for an account no provider hands a picture out for.
+    let picture: UIImage?
     let show: () -> Void
 }
 
@@ -126,43 +133,10 @@ struct SettingsToolbarItem: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem(id: "settings", placement: .topBarTrailing) {
             Button(action: link.show) {
-                AccountAvatar.image(for: link.account)
+                AccountAvatar.image(for: link.account, picture: link.picture)
             }
             .accessibilityLabel("Settings")
             .accessibilityIdentifier("home.settings")
         }
-    }
-}
-
-/// The account's initial, or the person mark while nobody is signed in, as the way into Settings. Both are a bare
-/// image the size of an icon: the bar gives an image a glass circle of the system's size, which no Dynamic Type size
-/// stretches, and anything else a capsule around whatever it draws.
-enum AccountAvatar {
-    static let glyphSize = CGSize(width: 20, height: 20)
-    @MainActor private static var glyphs: [String: Image] = [:]
-
-    static func initial(of login: String?) -> String? {
-        login?.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() }
-    }
-
-    @MainActor static func image(for account: Account?) -> Image {
-        guard let initial = initial(of: account?.login) else { return Image(lucide: "circle-user-round") }
-        if let image = glyphs[initial] { return image }
-        let image = Image(uiImage: glyph(initial))
-        glyphs[initial] = image
-        return image
-    }
-
-    /// The letter in the weight and size of a bar button's title, centered on its capitals so a letter without a
-    /// descender sits in the middle of the circle.
-    static func glyph(_ initial: String) -> UIImage {
-        let font = UIFont.systemFont(ofSize: 17, weight: .semibold)
-        let text = NSAttributedString(string: initial, attributes: [.font: font, .foregroundColor: UIColor.black])
-        let width = text.size().width
-        let baseline = (glyphSize.height + font.capHeight) / 2
-        return UIGraphicsImageRenderer(size: glyphSize).image { _ in
-            text.draw(at: CGPoint(x: (glyphSize.width - width) / 2, y: baseline - font.ascender))
-        }
-        .withRenderingMode(.alwaysTemplate)
     }
 }

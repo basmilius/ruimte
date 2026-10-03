@@ -107,7 +107,8 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 Four tabs, each at most two levels deep: Now, Projects, Machines and Search. Settings opens as a sheet from the
 avatar, the last item on the right of the bar on every tab and on a project's page, and the tab bar folds in while a
-list scrolls down.
+list scrolls down. The avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in
+Caches and asked again once per launch), else the first letter of its name.
 
 - Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
   machines that are not connected. `NowModel` reads each machine's open projects with `project.sidebar`, again on
