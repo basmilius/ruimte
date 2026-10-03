@@ -1,10 +1,11 @@
-import { PROTOCOL_VERSION } from '@ruimte/contracts';
+import { PROTOCOL_VERSION, type MachineUpdate, type MachineUpdateReport, type MachineWork } from '@ruimte/contracts';
 import { RequestError, translate, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import { mayInvite } from '../auth/access.ts';
 import { signForAccount } from '../auth/registration.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
+import type { InstallVerdict } from '../power/machine-update.ts';
 
 interface EndpointHost {
     identity: EndpointIdentity;
@@ -20,6 +21,15 @@ interface EndpointHost {
     // Chats take up a limited turn on a clock only while this is on; turning it off drops what was owed.
     resumeChanged?(on: boolean): void;
     appleFoundationChanged?(on: boolean): Promise<void>;
+    // Whether this machine can hold a block on sleep, and the call that follows a changed setting.
+    keepAwake?: { available: boolean; changed(): void };
+    // The update of the desktop app on this machine, and what installing it would end right now.
+    updates?: {
+        state(): MachineUpdate;
+        report(clientId: string, report: MachineUpdateReport): void;
+        requestInstall(): InstallVerdict;
+        ending(): MachineWork;
+    };
 }
 
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
@@ -36,6 +46,9 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
         appleFoundationEnabled: identity.appleFoundationEnabled,
+        ...identity.keepAwakeFields(),
+        keepAwakeAvailable: host.keepAwake?.available === true,
+        ...(host.updates ? { update: host.updates.state() } : {}),
         platform: process.platform,
         version: host.version,
         protocol: PROTOCOL_VERSION,
@@ -61,8 +74,14 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
             streamingAllowed: payload.streamingAllowed,
             resumeAtReset: payload.resumeAtReset,
             appleFoundationEnabled: payload.appleFoundationEnabled,
+            keepAwake: payload.keepAwake,
+            keepAwakeOnBattery: payload.keepAwakeOnBattery,
+            keepAwakeDisplay: payload.keepAwakeDisplay,
             broker: payload.broker
         });
+        if (payload.keepAwake !== undefined || payload.keepAwakeOnBattery !== undefined || payload.keepAwakeDisplay !== undefined) {
+            host.keepAwake?.changed();
+        }
         if (payload.streamingAllowed !== undefined) {
             host.streamingChanged(identity.streamingAllowed);
         }
@@ -73,6 +92,39 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
             await host.appleFoundationChanged?.(identity.appleFoundationEnabled);
         }
         return info(client.access);
+    });
+
+    /* Only the app on this machine holds the updater, so only the local secret may say where it stands. */
+    dispatcher.register('endpoint.reportUpdate', (payload, client) => {
+        if (!mayInvite(client.access)) {
+            throw new RequestError('forbidden', 'Only the app on this machine can say where its update stands');
+        }
+        host.updates?.report(client.id, payload);
+        return {};
+    });
+
+    /*
+     * Any client may ask, a paired one included: it installs only a signed release of the app, and a
+     * paired client can already stop every terminal and chat one by one. What it cannot do is end that
+     * work unawares, so the first ask says what ends and only a second one with `confirm` installs.
+     */
+    dispatcher.register('endpoint.installUpdate', (payload) => {
+        const updates = host.updates;
+        if (!updates) {
+            throw new RequestError('update-no-app', 'This machine cannot install an update from here');
+        }
+        const ending = updates.ending();
+        if (!payload.confirm) {
+            return { started: false, ending };
+        }
+        const verdict = updates.requestInstall();
+        if (verdict === 'no-app') {
+            throw new RequestError('update-no-app', 'The Ruimte app is not open on this machine; install the update there');
+        }
+        if (verdict === 'nothing') {
+            throw new RequestError('update-none', 'There is no update to install on this machine');
+        }
+        return { started: true, ending };
     });
 
     /*

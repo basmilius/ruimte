@@ -138,6 +138,9 @@ describe('readOrCreateEndpointIdentity', () => {
                     streamingAllowed: true,
                     resumeAtReset: false,
                     appleFoundationEnabled: false,
+                    keepAwake: 'off',
+                    keepAwakeOnBattery: false,
+                    keepAwakeDisplay: false,
                     broker: { mode: 'default' }
                 }
             }
@@ -191,6 +194,19 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity(null, null, { resumeAtReset: false });
         const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
         expect(written.resumeAtReset).toBeUndefined();
+    });
+
+    test('keep awake is off by default, each part set on its own survives a restart, and off writes nothing', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.keepAwake).toEqual({ mode: 'off', onBattery: false, display: false });
+
+        await identity.setIdentity(null, null, { keepAwake: 'always', keepAwakeDisplay: true });
+        await identity.setIdentity(null, null, { keepAwakeOnBattery: true });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).keepAwake).toEqual({ mode: 'always', onBattery: true, display: true });
+
+        await identity.setIdentity(null, null, { keepAwake: 'off', keepAwakeOnBattery: false, keepAwakeDisplay: false });
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect([written.keepAwake, written.keepAwakeOnBattery, written.keepAwakeDisplay]).toEqual([undefined, undefined, undefined]);
     });
 
     test('Apple Foundation Models is off by default, persists and broadcasts changes to every client', async () => {

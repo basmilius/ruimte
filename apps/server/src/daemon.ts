@@ -80,6 +80,8 @@ import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
 import { SelfUpdater, buildFileOf, readBuildFile } from './service/self-update.ts';
 import { childCounter, workOf } from './service/work.ts';
+import { KeepAwake } from './power/keep-awake.ts';
+import { MachineUpdates, workEndedByInstall } from './power/machine-update.ts';
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
@@ -685,6 +687,26 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.observe((event) => push.consume(event));
     manager.observe((event) => taskWiring.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));
+    // Held by the daemon, so the machine stays awake with no window open and for a daemon from npm.
+    const keepAwake = new KeepAwake({
+        platform: process.platform,
+        pid: process.pid,
+        setting: () => identity.keepAwake,
+        work: () => ({ sessions: manager.list(), chats: chats.list() }),
+        spawn: (command) => Bun.spawn(command, { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' }),
+        log: (line) => console.log(line)
+    });
+    manager.observe((event) => {
+        if (event.event === 'session.status' || event.event === 'session.exit' || event.event === 'session.list-changed') {
+            keepAwake.check();
+        }
+    });
+    chats.observe((event) => {
+        if (event.event === 'chat.event' && (event.payload.event.type === 'info' || event.payload.event.type === 'reset')) {
+            keepAwake.check();
+        }
+    });
+    const updates = new MachineUpdates();
     manager.observe((event) => computer.observe(event));
     chats.observe((event) => computer.observe(event));
     chats.observe((event) => {
@@ -749,6 +771,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 );
             }
             await providerAccounts.refresh();
+        },
+        keepAwake: { available: keepAwake.available, changed: () => keepAwake.check() },
+        updates: {
+            state: () => updates.state(),
+            report: (clientId, report) => updates.report(clientId, report),
+            requestInstall: () => updates.requestInstall(),
+            ending: () => workEndedByInstall(config.underService, machineWork())
         },
         resumeChanged: (on) => {
             chats.resumeSettingChanged();
@@ -880,6 +909,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         devices,
         deviceControl,
         identity,
+        updates,
         projects,
         drawings,
         diagrams,
@@ -907,6 +937,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         streamingAllowed: identity.streamingAllowed,
         resumeAtReset: identity.resumeAtReset,
         appleFoundationEnabled: identity.appleFoundationEnabled,
+        ...identity.keepAwakeFields(),
+        keepAwakeAvailable: keepAwake.available,
+        update: updates.state(),
         platform: process.platform,
         version: VERSION,
         protocol: PROTOCOL_VERSION,
@@ -1190,6 +1223,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         shuttingDown = true;
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         selfUpdate.stop();
+        keepAwake.stop();
         snoozes.stop();
         outboxWorker.stop();
         taskWiring.coordinator.stop();
@@ -1234,6 +1268,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     process.on('SIGINT', () => void shutdown('SIGINT'));
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
     selfUpdate.start();
+    // `always` holds from the start, before any agent has moved.
+    keepAwake.check();
 
     const greeting = greetingLines({
         version: VERSION,

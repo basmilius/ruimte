@@ -9,6 +9,7 @@ import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair } from '../auth/keys.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
+import { MachineUpdates } from '../power/machine-update.ts';
 import { registerAuthHandlers } from './auth.ts';
 
 let home: string;
@@ -19,6 +20,8 @@ let minted: number;
 let disconnected: string[];
 let streamingChanges: boolean[];
 let appleChanges: boolean[];
+let keepAwakeChanges: number;
+let updates: MachineUpdates;
 
 const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
     const frames: ServerFrame[] = [];
@@ -59,6 +62,8 @@ beforeEach(async () => {
     disconnected = [];
     streamingChanges = [];
     appleChanges = [];
+    keepAwakeChanges = 0;
+    updates = new MachineUpdates();
     registerAuthHandlers(dispatcher, store, {
         identity,
         version: '0.0.0',
@@ -67,6 +72,18 @@ beforeEach(async () => {
         streamingChanged: (allowed) => streamingChanges.push(allowed),
         appleFoundationChanged: async (on) => {
             appleChanges.push(on);
+        },
+        keepAwake: {
+            available: true,
+            changed: () => {
+                keepAwakeChanges += 1;
+            }
+        },
+        updates: {
+            state: () => updates.state(),
+            report: (clientId, report) => updates.report(clientId, report),
+            requestInstall: () => updates.requestInstall(),
+            ending: () => ({ terminals: 1, agents: 2 })
         },
         disconnect: (sessionId) => disconnected.push(sessionId)
     });
@@ -113,6 +130,49 @@ describe('auth handlers', () => {
         expect(appleChanges).toEqual([true, false]);
     });
 
+    test('keep awake is set from any paired client, and only a change of it reaches the holder', async () => {
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info')).toMatchObject({
+            result: { keepAwake: 'off', keepAwakeOnBattery: false, keepAwakeDisplay: false, keepAwakeAvailable: true }
+        });
+        const set = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: null, icon: null, keepAwake: 'working' });
+        expect(set).toMatchObject({ ok: true, result: { keepAwake: 'working' } });
+        await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Box', icon: null });
+        expect(keepAwakeChanges).toBe(1);
+    });
+
+    test('only the app on this machine says where its update stands', async () => {
+        const report = { status: 'ready', currentVersion: '1.0.0', version: '1.1.0' };
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.reportUpdate', report)).toMatchObject({
+            ok: false,
+            error: { code: 'forbidden' }
+        });
+        expect(await ask(LOCAL, 'endpoint.reportUpdate', report)).toMatchObject({ ok: true });
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info')).toMatchObject({
+            result: { update: { app: true, status: 'ready', version: '1.1.0' } }
+        });
+    });
+
+    test('an install says what ends first, and starts only when confirmed with an app to do it', async () => {
+        const phone: ClientAccess = { reachability: 'lan', sessionId: 's1' };
+        expect(await ask(phone, 'endpoint.installUpdate', { confirm: false })).toMatchObject({
+            ok: true,
+            result: { started: false, ending: { terminals: 1, agents: 2 } }
+        });
+        expect(await ask(phone, 'endpoint.installUpdate', { confirm: true })).toMatchObject({ ok: false, error: { code: 'update-no-app' } });
+
+        const heard: unknown[] = [];
+        updates.subscribe('c1', (event) => heard.push(event));
+        await ask(LOCAL, 'endpoint.reportUpdate', { status: 'current' });
+        expect(await ask(phone, 'endpoint.installUpdate', { confirm: true })).toMatchObject({ ok: false, error: { code: 'update-none' } });
+
+        await ask(LOCAL, 'endpoint.reportUpdate', { status: 'available', version: '1.1.0' });
+        expect(await ask(phone, 'endpoint.installUpdate', { confirm: true })).toMatchObject({
+            ok: true,
+            result: { started: true, ending: { terminals: 1, agents: 2 } }
+        });
+        expect(heard.at(-1)).toEqual({ event: 'endpoint.updateInstall', payload: {} });
+    });
+
     test('endpoint.info carries the key a client pins the machine on', async () => {
         const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
         expect(info).toMatchObject({ ok: true, result: { id: identity.id, publicKey: identity.publicKey, authenticated: true } });
@@ -150,6 +210,9 @@ describe('auth handlers', () => {
                     streamingAllowed: true,
                     resumeAtReset: false,
                     appleFoundationEnabled: false,
+                    keepAwake: 'off',
+                    keepAwakeOnBattery: false,
+                    keepAwakeDisplay: false,
                     broker: { mode: 'default' }
                 }
             }

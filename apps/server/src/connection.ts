@@ -50,6 +50,8 @@ export interface ConnectionServices {
     /* Who has each device an agent operates, which every client hears. */
     deviceControl?: Subscribable;
     identity: Subscribable;
+    /* The update of the desktop app on this machine; the install request goes to one client only. */
+    updates?: Subscribable;
     projects: Subscribable;
     drawings: Subscribable;
     diagrams: Subscribable;
@@ -122,6 +124,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.devices?.subscribe(clientId, sink) ?? (() => undefined),
             services.deviceControl?.subscribe(clientId, sink) ?? (() => undefined),
             services.identity.subscribe(clientId, sink),
+            services.updates?.subscribe(clientId, sink) ?? (() => undefined),
             services.projects.subscribe(clientId, sink),
             services.drawings.subscribe(clientId, sink),
             services.diagrams.subscribe(clientId, sink),

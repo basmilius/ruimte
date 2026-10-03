@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
-import { ProjectIconChoiceSchema, type EndpointNameSource, type ProjectIconChoice } from '@ruimte/contracts';
+import { KeepAwakeModeSchema, ProjectIconChoiceSchema, type EndpointNameSource, type KeepAwakeMode, type ProjectIconChoice } from '@ruimte/contracts';
 import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
@@ -43,6 +43,11 @@ const FileSchema = z.object({
        Absent is off. */
     resumeAtReset: z.boolean().optional().catch(undefined),
     appleFoundationEnabled: z.boolean().optional().catch(undefined),
+    /* When the machine keeps itself from sleeping. The daemon holds the block, so the setting is the
+       machine's and a phone can set it. Absent is off, on the adapter only and without the display. */
+    keepAwake: KeepAwakeModeSchema.optional().catch(undefined),
+    keepAwakeOnBattery: z.boolean().optional().catch(undefined),
+    keepAwakeDisplay: z.boolean().optional().catch(undefined),
     /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
        one that will not read falls back to it too, since a machine on the default broker is findable. */
     broker: BrokerSettingSchema.optional().catch(undefined)
@@ -62,8 +67,17 @@ interface IdentityOptions {
     streamingAllowed: boolean;
     resumeAtReset: boolean;
     appleFoundationEnabled: boolean;
+    keepAwake: KeepAwakeSetting;
     broker: BrokerSetting;
 }
+
+export interface KeepAwakeSetting {
+    mode: KeepAwakeMode;
+    onBattery: boolean;
+    display: boolean;
+}
+
+const KEEP_AWAKE_OFF: KeepAwakeSetting = { mode: 'off', onBattery: false, display: false };
 
 /* What the daemon's broker switch lends the identity: a way to follow a new setting and to say where it ended up. */
 export interface IdentityBroker {
@@ -78,6 +92,9 @@ export interface IdentityFlags {
     streamingAllowed?: boolean;
     resumeAtReset?: boolean;
     appleFoundationEnabled?: boolean;
+    keepAwake?: KeepAwakeMode;
+    keepAwakeOnBattery?: boolean;
+    keepAwakeDisplay?: boolean;
     broker?: BrokerSetting;
 }
 
@@ -102,6 +119,7 @@ export class EndpointIdentity {
     private allowStreaming: boolean;
     private resumeLimited: boolean;
     private appleEnabled: boolean;
+    private awake: KeepAwakeSetting;
     private brokerSetting: BrokerSetting;
     private brokerSwitch: IdentityBroker | null = null;
 
@@ -118,6 +136,7 @@ export class EndpointIdentity {
         this.allowStreaming = options.streamingAllowed;
         this.resumeLimited = options.resumeAtReset;
         this.appleEnabled = options.appleFoundationEnabled;
+        this.awake = options.keepAwake;
         this.brokerSetting = options.broker;
     }
 
@@ -159,6 +178,15 @@ export class EndpointIdentity {
         return this.appleEnabled;
     }
 
+    get keepAwake(): KeepAwakeSetting {
+        return this.awake;
+    }
+
+    /* The setting as `endpoint.info` and `endpoint.changed` spell it. */
+    keepAwakeFields(): { keepAwake: KeepAwakeMode; keepAwakeOnBattery: boolean; keepAwakeDisplay: boolean } {
+        return { keepAwake: this.awake.mode, keepAwakeOnBattery: this.awake.onBattery, keepAwakeDisplay: this.awake.display };
+    }
+
     /* The broker a person picked for this machine, which a flag or the environment may still override. */
     get broker(): BrokerSetting {
         return this.brokerSetting;
@@ -191,6 +219,11 @@ export class EndpointIdentity {
         this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.resumeLimited = flags.resumeAtReset ?? this.resumeLimited;
         this.appleEnabled = flags.appleFoundationEnabled ?? this.appleEnabled;
+        this.awake = {
+            mode: flags.keepAwake ?? this.awake.mode,
+            onBattery: flags.keepAwakeOnBattery ?? this.awake.onBattery,
+            display: flags.keepAwakeDisplay ?? this.awake.display
+        };
         this.brokerSetting = flags.broker ?? this.brokerSetting;
         await this.persist();
         if (flags.broker !== undefined) {
@@ -208,6 +241,7 @@ export class EndpointIdentity {
                 streamingAllowed: this.allowStreaming,
                 resumeAtReset: this.resumeLimited,
                 appleFoundationEnabled: this.appleEnabled,
+                ...this.keepAwakeFields(),
                 broker: this.brokerSetting,
                 ...this.brokerSwitch?.describe()
             }
@@ -229,6 +263,9 @@ export class EndpointIdentity {
             ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.resumeLimited ? { resumeAtReset: true } : {}),
             ...(this.appleEnabled ? { appleFoundationEnabled: true } : {}),
+            ...(this.awake.mode === 'off' ? {} : { keepAwake: this.awake.mode }),
+            ...(this.awake.onBattery ? { keepAwakeOnBattery: true } : {}),
+            ...(this.awake.display ? { keepAwakeDisplay: true } : {}),
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
@@ -287,6 +324,11 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         streamingAllowed: file?.streamingAllowed ?? true,
         resumeAtReset: file?.resumeAtReset ?? false,
         appleFoundationEnabled: file?.appleFoundationEnabled ?? false,
+        keepAwake: {
+            mode: file?.keepAwake ?? KEEP_AWAKE_OFF.mode,
+            onBattery: file?.keepAwakeOnBattery ?? KEEP_AWAKE_OFF.onBattery,
+            display: file?.keepAwakeDisplay ?? KEEP_AWAKE_OFF.display
+        },
         broker: file?.broker ?? { mode: 'default' }
     });
     if (!keys) {
