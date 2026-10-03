@@ -108,6 +108,7 @@
     "./chat/ui/rows/MessageRows": "./src/chat/ui/rows/MessageRows.tsx",
     "./chat/ui/rows/Rows": "./src/chat/ui/rows/Rows.tsx",
     "./chat/ui/rows/SubagentRow": "./src/chat/ui/rows/SubagentRow.tsx",
+    "./chat/ui/rows/TaskRow": "./src/chat/ui/rows/TaskRow.tsx",
     "./chat/ui/rows/WorkRows": "./src/chat/ui/rows/WorkRows.tsx",
     "./chat/ui/rows/WorkflowRow": "./src/chat/ui/rows/WorkflowRow.tsx",
     "./chat/ui/rows/row-rhythm": "./src/chat/ui/rows/row-rhythm.ts",

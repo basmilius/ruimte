@@ -135,6 +135,16 @@
       "showResult": "Resultaat tonen",
       "hideResult": "Resultaat verbergen"
     },
+    "task": {
+      "named": "{{model}}: {{title}}",
+      "running": "Bezig",
+      "waiting": "Wacht op jou",
+      "paused": "Gepauzeerd",
+      "pausedUntil": "Gepauzeerd tot {{time}}",
+      "done": "Klaar",
+      "failed": "Mislukt",
+      "cancelled": "Geannuleerd"
+    },
     "workflow": {
       "notStarted": "nog niet begonnen",
       "waiting": "wacht",

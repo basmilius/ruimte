@@ -8,6 +8,7 @@ import { formatElapsedShort } from '@basmilius/desktop-ui/format';
 import { Icon, useNow } from '@basmilius/desktop-ui';
 import { useOpenForFind } from '../find-reveal';
 import { Markdown } from '../Markdown';
+import { TaskRow } from './TaskRow';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from './WorkRows';
 import { entryTimeOf, statusWordOf, taskIdOf } from '../../subagent-list';
 import { useSubagentSupport } from '../../subagent-support';
@@ -141,23 +142,26 @@ export function SubagentRow({
     const press = onOpenConversation !== undefined && canOpenSubagent(item, refused) ? onOpenConversation : onToggle;
     return (
         <div data-find-item={item.id}>
-            <ToggleLine
-                icon={<Icon icon={Bot} size={12} />}
-                // A node another agent opened with `--task` reads as the task it is, not as a helper of the CLI's own.
-                label={item.origin === 'ruimte' ? t('rows.subagent.task') : t('rows.subagent.label')}
-                detail={detail}
-                open={expanded}
-                onToggle={press}
-                failed={item.status === 'failed'}
-                live={running}
-                trailing={
-                    <>
-                        {item.background && <span className="shrink-0 text-xs text-text-faint">{t('rows.subagent.background')}</span>}
-                        {running && item.lastTool && <span className="shrink-0 text-xs text-text-faint">{item.lastTool}</span>}
-                        <StatusPill item={item} task={task} />
-                    </>
-                }
-            />
+            {item.origin === 'ruimte' ? (
+                <TaskRow item={item} task={task} open={expanded} onPress={press} />
+            ) : (
+                <ToggleLine
+                    icon={<Icon icon={Bot} size={12} />}
+                    label={t('rows.subagent.label')}
+                    detail={detail}
+                    open={expanded}
+                    onToggle={press}
+                    failed={item.status === 'failed'}
+                    live={running}
+                    trailing={
+                        <>
+                            {item.background && <span className="shrink-0 text-xs text-text-faint">{t('rows.subagent.background')}</span>}
+                            {running && item.lastTool && <span className="shrink-0 text-xs text-text-faint">{item.lastTool}</span>}
+                            <StatusPill item={item} task={task} />
+                        </>
+                    }
+                />
+            )}
             {expanded && (
                 <div className="mb-1">
                     <SubagentWork chatId={chatId} item={item} work={work} />

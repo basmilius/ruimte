@@ -135,6 +135,16 @@
       "showResult": "Show result",
       "hideResult": "Hide result"
     },
+    "task": {
+      "named": "{{model}}: {{title}}",
+      "running": "Running",
+      "waiting": "Waiting for you",
+      "paused": "Paused",
+      "pausedUntil": "Paused until {{time}}",
+      "done": "Done",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
     "workflow": {
       "notStarted": "not started",
       "waiting": "waiting",

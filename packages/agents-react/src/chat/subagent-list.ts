@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import type { ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
+import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
 import { formatMoment, formatElapsedShort, formatTokens } from '@basmilius/desktop-ui/format';
 import type { StatusWord } from '../agents/status-look';
 import type { SubagentTask } from '../host';
@@ -31,6 +31,17 @@ export const statusWordOf = (item: ChatSubagentItem, task: SubagentTask | null):
         return 'paused';
     }
     return item.status;
+};
+
+/* What a task's row says its agent is doing: the task's own state, or that the agent waits on a person while the task runs. */
+export type TaskRowState = StatusWord | 'waiting';
+
+export const taskRowStateOf = (item: ChatSubagentItem, task: SubagentTask | null, child: ChatInfo | undefined): TaskRowState => {
+    const word = statusWordOf(item, task);
+    if (word === 'running' && (child?.status === 'needs-you' || (child?.requests?.length ?? 0) > 0)) {
+        return 'waiting';
+    }
+    return word;
 };
 
 /*

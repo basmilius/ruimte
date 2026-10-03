@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
+import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/agent-contracts';
 import type { SubagentTask } from '../host';
 import {
     badgeCountOf,
@@ -12,7 +12,8 @@ import {
     subagentFacts,
     subagentTitle,
     summaryWordOf,
-    taskIdOf
+    taskIdOf,
+    taskRowStateOf
 } from './subagent-list';
 import { formatMoment, formatTokens } from '@basmilius/desktop-ui/format';
 
@@ -188,5 +189,20 @@ describe('the bar over a conversation', () => {
         expect(subagentFacts(row, 'Haiku 4.5')).toEqual(['Haiku 4.5', 'Explore', 'background', `${formatTokens(12_300)} tokens`, '8 tool calls']);
         expect(subagentFacts(subagent('b'), null)).toEqual([]);
         expect(subagentFacts(subagent('c', { usage: { totalTokens: 0, toolUses: 1, durationMs: 0 } }), '')).toEqual(['1 tool call']);
+    });
+});
+
+describe('the row of a task', () => {
+    test('a running task whose agent waits on a person reads as waiting, and a settled one keeps its own state', () => {
+        const row = subagent('task-t', { origin: 'ruimte', childId: 'node-1' });
+        const waiting = { status: 'needs-you' } as ChatInfo;
+        const asking = { status: 'running', requests: [{}] } as unknown as ChatInfo;
+        expect(taskRowStateOf(row, null, undefined)).toBe('running');
+        expect(taskRowStateOf(row, null, { status: 'running' } as ChatInfo)).toBe('running');
+        expect(taskRowStateOf(row, null, waiting)).toBe('waiting');
+        expect(taskRowStateOf(row, null, asking)).toBe('waiting');
+        expect(taskRowStateOf({ ...row, status: 'done' }, null, waiting)).toBe('done');
+        const paused: SubagentTask = { status: 'open', createdAt: 0, settledAt: null, paused: {} };
+        expect(taskRowStateOf(row, paused, waiting)).toBe('paused');
     });
 });
