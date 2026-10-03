@@ -78,7 +78,7 @@ struct WorkspaceViewIcon: View {
         LucideIcon(name: Self.name(for: item), size: size).accessibilityHidden(true)
     }
 
-    static func name(for item: JSONValue) -> String {
+    nonisolated static func name(for item: JSONValue) -> String {
         if item.text("kind") != "unknown", let icon = item["icon"], icon.text("kind") == "lucide" {
             return icon.text("value")
         }

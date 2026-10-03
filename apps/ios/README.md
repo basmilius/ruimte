@@ -15,8 +15,8 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Separators group the view list into sections; rows show the name and the Lucide mark the desktop gives them.
   Projects use native grouped lists with a separate recently closed page. Custom image icons,
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
-  A cold start reopens the project you left open; if that fails, the list says why and offers Try again.
-  Going back to the list forgets it. An empty canvas offers tiles for the installed agents from `provider.list`
+  On an iPad a cold start reopens the project you left open; if that fails, the list says why and offers Try
+  again, and going back to the list forgets it. An iPhone always starts on Now. An empty canvas offers tiles for the installed agents from `provider.list`
   and for each kind of node, and an empty drawing or diagram says so until its first element.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions. The composer styles Markdown
@@ -47,7 +47,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   file with the icon of its type. A file without a view of its own opens in Quick Look and can be
   shared to another app, once the machine serves it (images, video, sound and PDFs) and it fits in 32 MB.
 - Filesystem updates, usage and machine access management. Destructive actions require confirmation.
-- Launches of a project, behind More: each with its state (at rest, needs approval, starting, running, stopping,
+- Launches of a project, in the project menu (behind More on an iPad): each with its state (at rest, needs approval, starting, running, stopping,
   passed, failed), how long it runs and on which port, grouped by the checkout it runs in. Launch, Restart and Stop,
   and Force stop only while a launch is stopping, as on the desktop; Stop all from the plus menu. A tap shows the
   launch's output, the machine's own terminal for it, followed and never resized; a group shows the member that runs
@@ -57,7 +57,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   launches and edits save the whole list against the rev they were read at, which approves what they add or
   change, as the sheet says; a conflict offers to start over from the latest. Find in this project imports what the
   machine detects (`launches.detect`). An older machine says it needs an update.
-- Processes, on a machine's page and behind More in a project (`processes.subscribe` while the page is open): CPU,
+- Processes, on a machine's page (and behind More in a project on an iPad) (`processes.subscribe` while the page is open): CPU,
   memory and disk of the machine against the share of Ruimte, over the last ten minutes or the last day, then a
   group per terminal, chat or launch with its processes, for what Ruimte started or everything. A warning sits under
   the group it is about with the button the desktop offers (interrupt, terminate, show, resume) and can be dismissed.
@@ -99,6 +99,31 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   names a login command for its CLI, as the desktop's usage page does: the CLI's own login runs in a terminal of its
   own on the machine (`session.login`, no approval since the machine picks the command), the sheet closes by itself
   once the account reads logged in, and closing it ends that session.
+
+## Navigation on an iPhone
+
+Four tabs, each at most two levels deep: Now, Projects, Machines and Search. Settings opens as a sheet from the
+avatar at the top right of every tab, and the tab bar folds in while a list scrolls down.
+
+- Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
+  machines that are not connected. `NowModel` reads each machine's open projects with `project.sidebar`, again on
+  `project.changed`, `project.summary` and `session.list-changed` and every 15 seconds while Now is on screen, as the
+  desktop's sidebar watch does. What each session is doing comes from the machine's `AttentionStore` (`chat.list`,
+  `chat.status`, `session.status`), and Finished holds what ended while nobody looked until it is opened. `NowBoard`
+  is the pure grouping. Rows wear the task mark from `task.list`. A tap opens the chat or terminal over Now, inside
+  its project; a long press also offers Open project. The tab's badge counts what needs you.
+- Projects lists the open projects, New chat, each machine's Chats and Recently closed. A project page is its list
+  of views. Files and Git open as sheets from its toolbar, Launches from its menu, and New view (New chat in Chats)
+  with Usage ride in the tab bar's accessory. A view opens over the project and hides the tab bar.
+- Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
+  projects (which open under Projects), Chats, files, processes, usage and machine settings.
+- Search finds views and projects by name over every machine from what Now and Projects already read. A view
+  opens over Search in its project; a project opens under Projects.
+
+`PhoneRouter` holds the tab and the page each tab pushes. A view opened outside its project's list
+(`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
+project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
+project's Views, Files, Git and Search as tabs.
 
 ## AI conversations
 
@@ -464,7 +489,9 @@ handle for retry after local keys are erased.
 
 Notification callbacks are installed in the app delegate before launch finishes. Responses
 received before account restoration are queued, and UIKit completion handlers run on the
-main thread. A single phone navigation destination replaces a workspace with the selected
+main thread. On an iPhone a notification switches to Now and opens its chat or terminal in the project that holds
+it, found with `project.sidebar`, so the prompt waits in the composer; a node no open project holds opens on its own.
+A machine's overview opens Now. On an iPad the notification's page replaces the detail column with the selected
 notification route without competing navigation bindings.
 
 Background approval actions are claimed once, then checked against fresh machine state.
