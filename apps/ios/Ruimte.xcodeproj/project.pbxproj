@@ -58,6 +58,7 @@
 		3707A14399CA29EFABEE41BA /* AboutPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1024E7E46E63BA81DAFAD5 /* AboutPage.swift */; };
 		3760C5DDD3133E07A429B593 /* document-scenes.json in Resources */ = {isa = PBXBuildFile; fileRef = 75DA6517FBC9FBF6C79776E2 /* document-scenes.json */; };
 		397C943D1175F19383822284 /* ChatPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29EB1C15C9B520845CD3BB82 /* ChatPresentationTests.swift */; };
+		39D8055DCC664871E8C9B660 /* PhonePopGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298438BCC7AE8C2A9356DCC1 /* PhonePopGesture.swift */; };
 		3A14706A245BD3CAEF68250C /* GitChanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8F739B280E46A7FADF011B9 /* GitChanges.swift */; };
 		3A580D1A13AD08B9E927CEA4 /* ChatContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207A88BAF2E56E0957CB1944 /* ChatContent.swift */; };
 		3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */; };
@@ -120,6 +121,7 @@
 		6BAB625D21EB2AECB1D6579C /* tone.wav in Resources */ = {isa = PBXBuildFile; fileRef = BDC7F1DC56F0B5F307881B99 /* tone.wav */; };
 		6DB0A1C6FE1BF1BEB67EFF37 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = D356DC5C4DF0605AD7A64646 /* RuimtePulsar */; };
 		6E1E9DBFECB1FDABD1209FFE /* DocumentSceneLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1872DE55827E2897B8AFB130 /* DocumentSceneLoader.swift */; };
+		6EFDF4B229208DA928E78AB7 /* PhonePopGestureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 790A276F3F897F846F138C09 /* PhonePopGestureTests.swift */; };
 		716590354E81DE5DFBF62F14 /* ChatComposerPills.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1965DC041D9346101045BABC /* ChatComposerPills.swift */; };
 		71F165040D575E124BBD716E /* MachineDetailsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E81862798892622B5D43D1 /* MachineDetailsPage.swift */; };
 		7317C8955340CD628360D97A /* ChatDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = F594843701EEC6FF5CD43209 /* ChatDraft.swift */; };
@@ -369,6 +371,7 @@
 		277C90606C3586426EE8CE7F /* RuimtePulsar */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimtePulsar; path = Packages/RuimtePulsar; sourceTree = SOURCE_ROOT; };
 		27E68DFC13E24C17BCE2204B /* NowRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowRequestTests.swift; sourceTree = "<group>"; };
 		28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseZeroTests.swift; sourceTree = "<group>"; };
+		298438BCC7AE8C2A9356DCC1 /* PhonePopGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhonePopGesture.swift; sourceTree = "<group>"; };
 		29EB1C15C9B520845CD3BB82 /* ChatPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPresentationTests.swift; sourceTree = "<group>"; };
 		2AB8990ABCF1414440995DE4 /* ProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsPage.swift; sourceTree = "<group>"; };
 		2BE20C3032455CE771452578 /* ChatSendTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSendTests.swift; sourceTree = "<group>"; };
@@ -441,6 +444,7 @@
 		76C42CE1B94D201D3793B3D4 /* SnoozeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnoozeTests.swift; sourceTree = "<group>"; };
 		78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasPage.swift; sourceTree = "<group>"; };
 		78E4415FA265BC3864D12E58 /* MobileSidebarList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSidebarList.swift; sourceTree = "<group>"; };
+		790A276F3F897F846F138C09 /* PhonePopGestureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhonePopGestureTests.swift; sourceTree = "<group>"; };
 		7972284E09464A057A24B05F /* document.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = document.pdf; sourceTree = "<group>"; };
 		7ADB19BC0057C18E3665C69E /* NeedsYouWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsYouWidget.swift; sourceTree = "<group>"; };
 		7B02D669F665402B085C9E9C /* MachineIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIconTests.swift; sourceTree = "<group>"; };
@@ -901,6 +905,7 @@
 				FA3AB193736D4225923AF7F5 /* NowBoardTests.swift */,
 				27E68DFC13E24C17BCE2204B /* NowRequestTests.swift */,
 				28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */,
+				790A276F3F897F846F138C09 /* PhonePopGestureTests.swift */,
 				5DAC3BBE10240D8F0B9E349A /* PhoneRouterTests.swift */,
 				710B2DB25A631005B674A223 /* PlanOutlineTests.swift */,
 				5C7EB90664392C5D8194C594 /* ProcessesTests.swift */,
@@ -973,6 +978,7 @@
 			children = (
 				B7E49234CBDC57F0121F7139 /* AccountAvatar.swift */,
 				CE48345F04BA4B8E778C12FD /* PhoneHome.swift */,
+				298438BCC7AE8C2A9356DCC1 /* PhonePopGesture.swift */,
 				0E342A07018739FE303A2EAF /* PhoneRouter.swift */,
 				098AC0C98F2FF0237758C194 /* PhoneTabController.swift */,
 				9A5221AF91DEE568E2DF38A4 /* ProjectViewPage.swift */,
@@ -1384,6 +1390,7 @@
 				B89F5945C273D24E097E2568 /* NowBoardTests.swift in Sources */,
 				99A0D3D88CC159C1EEAB2DF5 /* NowRequestTests.swift in Sources */,
 				CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */,
+				6EFDF4B229208DA928E78AB7 /* PhonePopGestureTests.swift in Sources */,
 				F38A8826258A06EF947C6676 /* PhoneRouterTests.swift in Sources */,
 				C0EAB79CF03B546D88E005CC /* PlanOutlineTests.swift in Sources */,
 				B834A0A08E4903FFB42E0C4A /* ProcessesTests.swift in Sources */,
@@ -1541,6 +1548,7 @@
 				5CEB79B66FAAA86099A7C200 /* NowRequest.swift in Sources */,
 				2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */,
 				AE7A98A4109235647F3EA5AD /* PhoneHome.swift in Sources */,
+				39D8055DCC664871E8C9B660 /* PhonePopGesture.swift in Sources */,
 				EF468123D0DBEDC10D883F36 /* PhoneRouter.swift in Sources */,
 				CC84D3E8A11C29CB051D1CCE /* PhoneTabController.swift in Sources */,
 				67C3C7D5685AB8294FBE2666 /* PlanOutline.swift in Sources */,

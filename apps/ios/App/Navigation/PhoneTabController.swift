@@ -38,6 +38,7 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
     private var requested: [PhoneRoute] = []
     /// A path asked for during a transition, shown once the transition ends.
     private var pending: [PhoneRoute]?
+    private var popGestures: [PhonePopGesture] = []
 
     init(root: UIViewController) {
         super.init(rootViewController: root)
@@ -47,6 +48,24 @@ class PhoneStackController: UINavigationController, UINavigationControllerDelega
 
     required init?(coder aDecoder: NSCoder) {
         nil
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        popGestures = installPopGestures()
+    }
+
+    /// A swipe from anywhere on a page pops it, as in the system's apps.
+    func installPopGestures() -> [PhonePopGesture] {
+        [
+            PhonePopGesture.install(on: interactiveContentPopGestureRecognizer, in: view, guardsContent: true) {
+                [weak self] in self?.canSwipeBack ?? false
+            }
+        ].compactMap { $0 }
+    }
+
+    var canSwipeBack: Bool {
+        viewControllers.count > 1 && transitionCoordinator == nil
     }
 
     /// The routes on the stack. A page SwiftUI pushes from inside a page has none and keeps the route under it.
@@ -203,7 +222,6 @@ final class PhoneTabController: UITabBarController {
 /// (`PhoneViewController`) has a bar of its own that slides with it.
 final class PhoneRootController: PhoneStackController {
     let tabs: PhoneTabController
-    private let popGesture = PhoneViewPopGesture()
 
     init(tabs: PhoneTabController) {
         self.tabs = tabs
@@ -215,10 +233,14 @@ final class PhoneRootController: PhoneStackController {
         nil
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        popGesture.stack = self
-        interactivePopGestureRecognizer?.delegate = popGesture
+    /// UIKit turns the edge swipe back off as well while a stack's bar is hidden, which this one always is.
+    override func installPopGestures() -> [PhonePopGesture] {
+        super.installPopGestures()
+            + [
+                PhonePopGesture.install(on: interactivePopGestureRecognizer, in: view, guardsContent: false) {
+                    [weak self] in self?.canSwipeBack ?? false
+                }
+            ].compactMap { $0 }
     }
 
     /// Shows the router's state. The views move animated unless the tab switches in sight, so a tab the router
@@ -235,38 +257,13 @@ final class PhoneRootController: PhoneStackController {
             guard let self, let controller, topViewController === controller else { return }
             popViewController(animated: true)
         }
-        controller.depthChanged = { [weak self] in self?.updateContentPop() }
         return controller
     }
 
     /// A swipe back pops the view only while no page SwiftUI pushed inside it stands over it; that one goes back
     /// within the view's own stack.
-    var canPopView: Bool {
-        viewControllers.count > 1 && transitionCoordinator == nil && !holdsPushedPage
-    }
-
-    private var holdsPushedPage: Bool {
-        (topViewController as? PhoneViewController)?.holdsPushedPage ?? false
-    }
-
-    private func updateContentPop() {
-        interactiveContentPopGestureRecognizer?.isEnabled = !holdsPushedPage
-    }
-
-    override func navigationController(
-        _ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool
-    ) {
-        updateContentPop()
-        super.navigationController(navigationController, didShow: viewController, animated: animated)
-    }
-}
-
-/// UIKit turns the edge swipe back off while a stack's bar is hidden, which the stack around the tabs always is.
-private final class PhoneViewPopGesture: NSObject, UIGestureRecognizerDelegate {
-    weak var stack: PhoneRootController?
-
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        stack?.canPopView ?? false
+    override var canSwipeBack: Bool {
+        super.canSwipeBack && !((topViewController as? PhoneViewController)?.holdsPushedPage ?? false)
     }
 }
 
@@ -294,12 +291,6 @@ final class PhoneViewController: UIViewController, PhoneRouted {
         set { stack.leave = newValue }
     }
 
-    /// Called once a push or a pop inside the view settled.
-    var depthChanged: () -> Void {
-        get { stack.depthChanged }
-        set { stack.depthChanged = newValue }
-    }
-
     var holdsPushedPage: Bool {
         stack.holdsPushedPage
     }
@@ -318,7 +309,7 @@ final class PhoneViewController: UIViewController, PhoneRouted {
 /// action leaves the stack around the tabs instead of uncovering it.
 private final class PhoneViewStackController: UINavigationController, UINavigationControllerDelegate {
     var leave: () -> Void = {}
-    var depthChanged: () -> Void = {}
+    private var contentPop: PhonePopGesture?
 
     init(page: PhonePageController) {
         super.init(nibName: nil, bundle: nil)
@@ -339,6 +330,11 @@ private final class PhoneViewStackController: UINavigationController, UINavigati
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        contentPop = PhonePopGesture.install(on: interactiveContentPopGestureRecognizer, in: view, guardsContent: true) {
+            [weak self] in
+            guard let self else { return false }
+            return holdsPushedPage && transitionCoordinator == nil
+        }
         enablePopGestures()
     }
 
@@ -369,6 +365,5 @@ private final class PhoneViewStackController: UINavigationController, UINavigati
         _ navigationController: UINavigationController, didShow viewController: UIViewController, animated: Bool
     ) {
         enablePopGestures()
-        depthChanged()
     }
 }

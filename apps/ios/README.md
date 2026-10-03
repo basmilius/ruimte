@@ -139,11 +139,21 @@ under the floating tab bar it fades the bar's background and drops its items onl
 always hidden. A view stands in a `PhoneViewController` with a stack and a bar of its own, laid out before the push,
 so the bar and its back button slide in with the view as one page and away with it, also on a swipe back, instead of
 a hidden bar appearing during the push with its back button against the screen's edge. An empty page under the view
-gives it the system's back button, whose action, like a pop that would uncover that page, pops the outer stack. The
-edge swipe back keeps working on the hidden outer bar through a gesture delegate of its own. Between a project's
-page and its view the bar's items do not morph, since each has a bar of its own. A page SwiftUI pushes from inside a
-view (a chat's sub-agents, a canvas's nodes, a group's members) goes on the view's own stack and morphs in its bar;
-while one stands there, a swipe back goes back within the view. A stack lays a page out as soon as it stands on the stack, before the push starts on
+gives it the system's back button, whose action, like a pop that would uncover that page, pops the outer stack.
+Between a project's page and its view the bar's items do not morph, since each has a bar of its own. A page SwiftUI
+pushes from inside a view (a chat's sub-agents, a canvas's nodes, a group's members) goes on the view's own stack and
+morphs in its bar; while one stands there, a swipe back goes back within the view.
+
+A swipe back works from anywhere on a page, as in the system's apps, on all three kinds of stack: a view goes back to
+what is under it, a project or a machine to its list, and a page pushed inside a view back within the view first.
+Each stack uses UIKit's own `interactiveContentPopGestureRecognizer` (and the outer stack its edge swipe too, which
+UIKit turns off with a hidden bar) with `PhonePopGesture` as its delegate. It lets a swipe begin only when that stack
+has something to pop and the pan heads for the trailing edge, and asks every other question of the delegate UIKit
+gave the recognizer, so the swipe still yields to the scroll views under it. Content that takes a sideways pan for
+itself keeps it, and there only the edge swipe goes back: a scroll view that scrolls sideways or zooms (a canvas, a
+drawing, a document scene, a code or diff line wider than the screen, a web page, an image), a pan the app added (a
+terminal's selection) and text with a selection. A list row's swipe actions open with a swipe toward the leading
+edge, which never goes back. A stack lays a page out as soon as it stands on the stack, before the push starts on
 the next layout pass, since SwiftUI only hands the page's title and items to its navigation item when it lays the
 page out; otherwise the items of a project or a machine pop in at the end of the push instead of morphing out of
 the tab's. Settings opens as a sheet from the avatar, the last item on the right of the bar on every tab, on a
