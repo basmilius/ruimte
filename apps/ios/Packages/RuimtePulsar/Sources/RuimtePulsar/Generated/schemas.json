@@ -5727,15 +5727,12 @@
         ]
       },
       "notify": {
-        "maxItems": 8,
+        "maxItems": 32,
         "type": "array",
         "items": {
           "type": "string",
-          "x-open-enum": [
-            "needs-you",
-            "turn",
-            "process"
-          ]
+          "minLength": 1,
+          "maxLength": 64
         }
       },
       "projects": {
@@ -5750,15 +5747,12 @@
               "maxLength": 256
             },
             "notify": {
-              "maxItems": 8,
+              "maxItems": 32,
               "type": "array",
               "items": {
                 "type": "string",
-                "x-open-enum": [
-                  "needs-you",
-                  "turn",
-                  "process"
-                ]
+                "minLength": 1,
+                "maxLength": 64
               }
             }
           },

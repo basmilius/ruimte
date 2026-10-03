@@ -82,7 +82,9 @@ an alert push is sent for attention and approval requests only. A device can cho
 more in its `push.subscribe` (`notify`, with a list of its own per project in
 `projects`): a finished turn, sent as kind `turn`, and a process warning about a node,
 sent as kind `attention` with the warning as its body, so no alert kind is added that
-an installed app would not decode. Neither creates a notification-read entry. A
+an installed app would not decode. Each has a collapse id of its own per node, so
+it never replaces an open attention or approval alert. Neither creates a
+notification-read entry. A
 finished turn always updates the Live Activity, whatever a device chose.
 
 ## Live Activities

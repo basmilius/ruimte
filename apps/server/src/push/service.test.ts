@@ -810,6 +810,50 @@ describe('what a device chose to hear of', () => {
         expect(alerts()).toEqual([]);
     });
 
+    test('a kind this machine does not know is dropped, and the rest of the subscription stands', async () => {
+        const dispatcher = new Dispatcher();
+        registerPushHandlers(dispatcher, auth);
+        const replies: ServerFrame[] = [];
+        const payload = {
+            ...subscription,
+            notify: ['turn', 'someday'],
+            projects: [{ projectId: 'project', notify: ['someday', 'process'], later: true }]
+        };
+        await dispatcher.handle(
+            { id: 'client', access: { reachability: 'loopback', sessionId }, send: (frame) => replies.push(frame) },
+            JSON.stringify({ id: 'subscribe', type: 'push.subscribe', payload })
+        );
+        expect(replies[0]).toMatchObject({ ok: true });
+        const [stored] = await new AuthStore(home).pushSubscriptions();
+        expect(stored?.subscription.notify).toEqual(['turn']);
+        expect(stored?.subscription.projects).toEqual([{ projectId: 'project', notify: ['process'] }]);
+    });
+
+    test('a finished turn and a process warning collapse apart from a wait, and a read still clears the wait', async () => {
+        await auth.setPush(sessionId, { ...subscription, readSync: true, notify: ['needs-you', 'turn', 'process'] });
+        status('running', 'node', chosen);
+        status('needs-you', 'node', chosen);
+        await chosen.settled();
+        const wait = pushes.at(-1)!;
+        status('running', 'node', chosen);
+        await chosen.settled();
+        const read = pushes.at(-1)!;
+        status('idle', 'node', chosen);
+        chosen.processAlerts([warning('memory:node', 'node')]);
+        await chosen.settled();
+        const [turn, process] = pushes.slice(-2);
+        expect(decrypt(wait)).toMatchObject({ kind: 'attention' });
+        expect(read.pushType).toBe('background');
+        expect(read.collapseId).toBe(wait.collapseId);
+        expect(decrypt(turn!)).toMatchObject({ kind: 'turn' });
+        expect(decrypt(process!)).toMatchObject({ kind: 'attention', body: 'node uses a lot of memory.' });
+        expect(new Set([wait.collapseId, turn!.collapseId, process!.collapseId]).size).toBe(3);
+        status('running', 'node', chosen);
+        status('idle', 'node', chosen);
+        await chosen.settled();
+        expect(pushes.at(-1)!.collapseId).toBe(turn!.collapseId);
+    });
+
     test('push.preferences reads back what the asking device chose, defaults filled in', async () => {
         const dispatcher = new Dispatcher();
         registerPushHandlers(dispatcher, auth);

@@ -16,6 +16,12 @@ export const PushProjectPreferenceSchema = z.object({
 });
 export type PushProjectPreference = z.infer<typeof PushProjectPreferenceSchema>;
 
+/* A newer app may name a kind this machine does not know; it is dropped instead of refusing the whole subscription. */
+const PushNotifyWordsSchema = z
+    .array(z.string().min(1).max(64))
+    .max(32)
+    .transform((words) => words.filter((word): word is PushNotifyKind => PushNotifyKindSchema.safeParse(word).success));
+
 export const PushSubscribePayloadSchema = z.object({
     handle: PushHandleSchema,
     publicKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
@@ -26,8 +32,11 @@ export const PushSubscribePayloadSchema = z.object({
     activityScope: z.literal('machine').optional(),
     activities: z.boolean().optional(),
     activityNodeId: z.string().min(1).max(256).nullable().optional(),
-    notify: z.array(PushNotifyKindSchema).max(8).optional(),
-    projects: z.array(PushProjectPreferenceSchema).max(500).optional()
+    notify: PushNotifyWordsSchema.optional(),
+    projects: z
+        .array(PushProjectPreferenceSchema.extend({ notify: PushNotifyWordsSchema }))
+        .max(500)
+        .optional()
 });
 export type PushSubscribePayload = z.infer<typeof PushSubscribePayloadSchema>;
 export const PushUnsubscribePayloadSchema = z.object({ handle: PushHandleSchema });

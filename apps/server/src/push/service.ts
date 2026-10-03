@@ -453,7 +453,7 @@ export class PushService {
         void caught.then(() => this.pending.delete(caught));
     }
 
-    private routing(subscription: PushSubscribePayload, nodeId: string, expiresAt: number): PushRouting {
+    private routing(subscription: PushSubscribePayload, nodeId: string, expiresAt: number, lane?: PushNotifyKind): PushRouting {
         const issuedAt = this.now();
         return {
             machineId: this.options.identity.id,
@@ -461,7 +461,9 @@ export class PushService {
             id: randomBytes(32).toString('base64url'),
             issuedAt,
             expiresAt: Math.min(expiresAt, issuedAt + PUSH_MAX_AGE_MS),
-            collapseId: createHash('sha256').update(pushCollapseIdMessage(this.options.identity.id, nodeId)).digest('base64url')
+            collapseId: createHash('sha256')
+                .update(pushCollapseIdMessage(this.options.identity.id, nodeId, lane))
+                .digest('base64url')
         };
     }
 
@@ -476,7 +478,9 @@ export class PushService {
             ) {
                 continue;
             }
-            const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt), issuedAt };
+            // A finished turn or a process warning must never replace a wait or an approval still open on the phone.
+            const lane = preference === 'needs-you' ? undefined : preference;
+            const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt, lane), issuedAt };
             if (routing.expiresAt <= this.now()) {
                 continue;
             }

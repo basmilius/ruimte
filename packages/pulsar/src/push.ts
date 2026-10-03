@@ -110,7 +110,9 @@ export const MACHINE_ACTIVITY_NODE = '__ruimte_machine_activity__';
 export const PUSH_MAX_AGE_MS = 120_000;
 export const PUSH_MAX_CLOCK_SKEW_MS = 30_000;
 export const PUSH_HKDF_SALT = 'pulsar-push-encryption-v1';
-export const pushCollapseIdMessage = (machineId: string, nodeId: string): string => JSON.stringify([machineId, nodeId]);
+/* A lane keeps a node's alerts of one kind from replacing those of another on the device. */
+export const pushCollapseIdMessage = (machineId: string, nodeId: string, lane?: string): string =>
+    JSON.stringify(lane === undefined ? [machineId, nodeId] : [machineId, nodeId, lane]);
 export const pushEncryptionInfo = (machineId: string, handle: string): string => JSON.stringify([machineId, handle]);
 export const pushRoutingMessage = (push: PushRouting): string =>
     `pulsar-push-routing-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId])}`;
