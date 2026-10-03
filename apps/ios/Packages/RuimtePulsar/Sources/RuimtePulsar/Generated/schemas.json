@@ -5725,6 +5725,48 @@
             "type": "null"
           }
         ]
+      },
+      "notify": {
+        "maxItems": 8,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "x-open-enum": [
+            "needs-you",
+            "turn",
+            "process"
+          ]
+        }
+      },
+      "projects": {
+        "maxItems": 500,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "notify": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "x-open-enum": [
+                  "needs-you",
+                  "turn",
+                  "process"
+                ]
+              }
+            }
+          },
+          "required": [
+            "projectId",
+            "notify"
+          ]
+        }
       }
     },
     "required": [
@@ -5756,6 +5798,69 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.push.preferences.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.push.preferences.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "subscribed": {
+        "type": "boolean"
+      },
+      "approvals": {
+        "type": "boolean"
+      },
+      "notify": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "x-open-enum": [
+            "needs-you",
+            "turn",
+            "process"
+          ]
+        }
+      },
+      "projects": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "notify": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "x-open-enum": [
+                  "needs-you",
+                  "turn",
+                  "process"
+                ]
+              }
+            }
+          },
+          "required": [
+            "projectId",
+            "notify"
+          ]
+        }
+      }
+    },
+    "required": [
+      "subscribed",
+      "approvals",
+      "notify",
+      "projects"
+    ]
   },
   "request.snooze.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

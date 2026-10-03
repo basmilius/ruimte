@@ -34,6 +34,7 @@ import {
 import {
     PushSubscribePayloadSchema,
     PushUnsubscribePayloadSchema,
+    PushPreferencesResultSchema,
     PushAttentionResultSchema,
     PushReadPayloadSchema,
     PushAttentionEntrySchema
@@ -279,6 +280,7 @@ export const REQUEST_SCHEMAS = {
     'push.read': { payload: PushReadPayloadSchema, result: EmptySchema },
     'push.subscribe': { payload: PushSubscribePayloadSchema, result: EmptySchema },
     'push.unsubscribe': { payload: PushUnsubscribePayloadSchema, result: EmptySchema },
+    'push.preferences': { payload: EmptySchema, result: PushPreferencesResultSchema },
     'snooze.list': { payload: EmptySchema, result: SnoozeListSchema },
     // Setting a moment already past ends the snooze, as clearing it does.
     'snooze.set': { payload: SnoozeSetPayloadSchema, result: EmptySchema },

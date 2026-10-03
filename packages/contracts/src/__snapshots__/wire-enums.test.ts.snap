@@ -78,6 +78,7 @@ exports[`no vocabulary a daemon sends gains or loses a value 1`] = `
   "monthly, other, session, weekly",
   "native, none, prompt",
   "native, ruimte",
+  "needs-you, process, turn",
   "nested, root, submodule",
   "none, pending, sent",
   "overload, usage",

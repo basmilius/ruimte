@@ -7,6 +7,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `pushRead` = "push.read"
     case `pushSubscribe` = "push.subscribe"
     case `pushUnsubscribe` = "push.unsubscribe"
+    case `pushPreferences` = "push.preferences"
     case `snoozeList` = "snooze.list"
     case `snoozeSet` = "snooze.set"
     case `snoozeClear` = "snooze.clear"

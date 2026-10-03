@@ -12,6 +12,7 @@ import {
 import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
 import { RuntimeModeSchema } from '../src/model.ts';
 import { MachineUpdateStatusSchema } from '../src/machine-update.ts';
+import { PushNotifyKindSchema } from '../src/push.ts';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, BYTES_REPLY_KIND, BYTES_REPLY_MAX_BYTES } from '../src/bytes.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -248,6 +249,7 @@ const openVocabularies: ReadonlyMap<unknown, readonly string[]> = new Map<unknow
     [RuntimeModeSchema, RuntimeModeSchema.options],
     [chat.ChatRequestKindSchema, chat.ChatRequestKindSchema.options],
     [MachineUpdateStatusSchema, MachineUpdateStatusSchema.options],
+    [PushNotifyKindSchema, PushNotifyKindSchema.options],
     [ProjectIconNameSchema, PROJECT_ICON_NAMES]
 ]);
 // Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.

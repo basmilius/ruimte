@@ -99,6 +99,7 @@
     "push.read",
     "push.subscribe",
     "push.unsubscribe",
+    "push.preferences",
     "snooze.list",
     "snooze.set",
     "snooze.clear",
