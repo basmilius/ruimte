@@ -47,7 +47,9 @@ struct NowPage: View {
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         }
                     } header: {
-                        NowHeader(title: "Needs you", count: board.needsYou.count, color: MobileStyle.statusNeedsYou)
+                        NowHeader(
+                            title: "Needs you", count: board.needsYou.count, color: MobileStyle.statusNeedsYou,
+                            first: true)
                     }
                 }
                 if !board.working.isEmpty {
@@ -90,6 +92,7 @@ struct NowPage: View {
                         .accessibilityLabel("Snoozed, \(board.snoozed.count)")
                         .accessibilityValue(showingSnoozed ? "Shown" : "Hidden")
                         .accessibilityIdentifier("now.snoozed")
+                        .listRowInsets(EdgeInsets(top: 8 + NowHeader.spacing, leading: 28, bottom: 8, trailing: 28))
                         if showingSnoozed {
                             ForEach(board.snoozed) { entry in
                                 row(entry, board: board) {
@@ -97,23 +100,6 @@ struct NowPage: View {
                                         entry: entry, namesMachine: board.namesMachines,
                                         task: now.task(for: entry.target))
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-            if !now.offline.isEmpty && !runtime.machines.isEmpty {
-                Section("Not connected") {
-                    ForEach(now.offline, id: \.machine.id) { session in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(session.machine.name).font(.subheadline.weight(.medium))
-                                Text(session.problem ?? "Connecting").font(.caption).foregroundStyle(MobileStyle.muted)
-                                    .lineLimit(2)
-                            }
-                            Spacer()
-                            if session.failedAttempts > 0 {
-                                Button("Reconnect") { session.reconnect() }.font(.subheadline).fixedSize()
                             }
                         }
                     }
@@ -198,20 +184,32 @@ struct NowPage: View {
             : working == 1 ? "One agent is still working." : "\(working) agents are still working."
         let notified = working > 0 && runtime.notifications.enabled
         VStack(spacing: 6) {
-            Text("Nothing needs you").font(.headline).foregroundStyle(MobileStyle.text)
+            LucideIcon(name: "check", size: 22)
+                .foregroundStyle(MobileStyle.positive)
+                .frame(width: 44, height: 44)
+                .background(MobileStyle.positive.opacity(0.12), in: Circle())
+                .padding(.bottom, 6)
+            Text("Nothing needs you").font(.callout.weight(.semibold)).foregroundStyle(MobileStyle.text)
             Text(notified ? still + " You get a notification when one asks for you." : still)
-                .font(.subheadline).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
+                .font(.footnote).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
         }
+        .padding(EdgeInsets(top: 26, leading: 20, bottom: 30, trailing: 20))
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
+        .background(MobileStyle.panel, in: .rect(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(MobileStyle.border))
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .accessibilityElement(children: .combine)
     }
 }
 
 private struct NowHeader: View {
+    /// What the design puts above every group but the first.
+    static let spacing: CGFloat = 10
+
     let title: String
     let count: Int
     let color: Color
+    var first = false
 
     var body: some View {
         HStack(spacing: 7) {
@@ -223,6 +221,7 @@ private struct NowHeader: View {
         .font(.footnote.weight(.semibold))
         .foregroundStyle(MobileStyle.muted)
         .textCase(nil)
+        .padding(.top, first ? 0 : Self.spacing)
         .accessibilityElement(children: .combine)
     }
 }

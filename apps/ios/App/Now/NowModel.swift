@@ -103,9 +103,6 @@ final class NowModel {
     var entries: [ProjectViewEntry] { NowBoard.entries(inputs) }
     /// Whether any machine answered yet, which tells an empty Now from one still connecting.
     var loaded: Bool { feeds.values.contains(where: \.loaded) }
-    var offline: [SharedMachineSession] {
-        feeds.values.map(\.session).filter { !$0.connected }.sorted { $0.machine.name < $1.machine.name }
-    }
 
     /// Where a node stands, reading the machine again when the last answer does not hold it yet: a notification can
     /// arrive before Now ever asked, or name a chat made a moment ago.
