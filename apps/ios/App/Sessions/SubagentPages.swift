@@ -476,8 +476,9 @@ private struct SubagentComposerDock: View {
     }
 }
 
-/// A sub-agent beside its chat on an iPad, as an inspector: its conversation with Stop, and Open as view, which gives
-/// it a cell of its own on this iPad only, as the desktop does. The chat stays usable beside it.
+/// A sub-agent beside its chat on an iPad, as an inspector: its conversation with Stop, and Open as view, which shows
+/// it in the content on this iPad only, as the desktop does. The chat stays usable beside it, and what the
+/// conversation opens is pushed in the inspector's own stack.
 struct SubagentInspector: View {
     let model: ChatModel
     let crumb: SubagentCrumb
@@ -507,6 +508,7 @@ struct SubagentInspector: View {
                     }
                 }
         }
+        .modifier(InspectorEdge())
         .endingAgentsConfirmation($ending)
         .alert(
             "The sub-agent could not be stopped",

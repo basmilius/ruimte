@@ -36,7 +36,7 @@ struct ChatScreen: View {
     @State private var bookmarkName = ""
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    /// Set in a cell beside the iPad's sidebar, where a sub-agent opens in an inspector and a fork in the next cell.
+    /// Set in the content beside the iPad's sidebar, where a sub-agent opens in an inspector.
     @Environment(\.padCells) private var padCells
     let title: String
     let isPrepared: Bool
@@ -483,11 +483,7 @@ struct ChatScreen: View {
         Task {
             await model.refreshForks()
             guard !id.isEmpty, let places = model.presentation.places, await places.arrival(id) else { return }
-            if let padCells {
-                padCells.openBeside(id)
-            } else {
-                model.presentation.openRequest = id
-            }
+            model.presentation.openRequest = id
         }
     }
 

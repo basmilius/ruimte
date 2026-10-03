@@ -3,8 +3,9 @@ import SwiftUI
 
 struct WorkspacePage: View {
     @Bindable var navigation: WorkspaceNavigation
-    /// The iPad's sidebar, which this page is when it is set: the list opens views beside it instead of over it.
-    var sidebar: PadSidebarContext?
+    /// The iPad's router, set when this page is pushed in its sidebar: the list opens views beside it instead of over
+    /// it.
+    var sidebar: PadRouter?
     var settingsLink: SettingsLink?
     /// The branch line under the title on an iPhone.
     var gitLines: ProjectGitLines?
@@ -18,6 +19,7 @@ struct WorkspacePage: View {
     @State private var renamed: JSONValue?
     @State private var renameText = ""
     @State private var deleteView: ViewDeletion?
+    @State private var showProcesses = false
     @State private var forkProblem: String?
     @State private var listState: ProjectListState
     @State private var newView: NewViewResult?
@@ -27,7 +29,7 @@ struct WorkspacePage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
-        navigation: WorkspaceNavigation, sidebar: PadSidebarContext? = nil, settingsLink: SettingsLink? = nil,
+        navigation: WorkspaceNavigation, sidebar: PadRouter? = nil, settingsLink: SettingsLink? = nil,
         gitLines: ProjectGitLines? = nil, runtime: AppRuntime? = nil
     ) {
         _navigation = Bindable(navigation)
@@ -45,14 +47,12 @@ struct WorkspacePage: View {
     var body: some View {
         Group {
             if let sidebar {
-                // The machine-lost card stands in the content column, so the sidebar stays usable to switch.
+                // The machine-lost card stands in the content column, so the sidebar stays usable to go back.
                 PhoneProjectList(
                     workspace: workspace, state: listState, views: listedViews,
-                    selectedID: navigation.selectedViewID, open: openView, act: act, header: sidebar.header,
-                    highlightedID: sidebar.router.detail == .project ? sidebar.router.shownID : nil,
-                    openBeside: { sidebar.router.showBeside(view: $0) }
+                    selectedID: navigation.selectedViewID, open: openView, act: act, header: AnyView(sidebarTitle),
+                    highlightedID: sidebar.detail == .project ? sidebar.shownID : nil
                 )
-                .safeAreaInset(edge: .bottom, spacing: 0) { newViewFooter }
                 .overlay {
                     if !workspace.ready {
                         openingStatus
@@ -126,7 +126,7 @@ struct WorkspacePage: View {
         .modifier(PhoneSubtitle(text: isSidebar ? nil : phoneSubtitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !isSidebar { phoneToolbar }
+            if isSidebar { sidebarToolbar } else { phoneToolbar }
         }
         .navigationDestination(item: $navigation.openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
@@ -179,7 +179,7 @@ struct WorkspacePage: View {
                 // The next sheet or the way back waits for this one to be gone.
                 if afterSettings == .launches { navigation.showingLaunches = true }
                 if afterSettings == .leave {
-                    if let sidebar { sidebar.router.closeProject() } else { dismiss() }
+                    if let sidebar { sidebar.closeProject() } else { dismiss() }
                 }
                 afterSettings = nil
             }
@@ -222,6 +222,14 @@ struct WorkspacePage: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { navigation.showingFiles = false }
                         }
+                    }
+            }
+        }
+        .mobileSheet(isPresented: $showProcesses) {
+            NavigationStack {
+                ProcessesPage(client: workspace.client, titles: workspace.nodeTitles)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showProcesses = false } }
                     }
             }
         }
@@ -479,7 +487,7 @@ struct WorkspacePage: View {
     private func openView(_ id: String) {
         if let sidebar {
             guard workspace.item(id) != nil, !WorkspaceViewSections.isDivider(workspace.item(id) ?? .null) else { return }
-            sidebar.router.show(view: id)
+            sidebar.show(view: id)
             return
         }
         if let canvas = workspace.views.first(where: { $0.list("nodes").contains { $0.stableID == id } }) {
@@ -504,7 +512,7 @@ struct WorkspacePage: View {
 
     /// Puts a sheet up, where an iPad keeps the files and git in the inspector beside the content instead.
     private func present(_ sheet: ProjectSheet) {
-        guard let router = sidebar?.router else {
+        guard let router = sidebar else {
             navigation.show(sheet)
             return
         }
@@ -522,28 +530,56 @@ struct WorkspacePage: View {
         present(sheet)
     }
 
-    /// New view at the foot of the iPad's sidebar, as the desktop's sidebar has it, growing out of its button.
-    private var newViewFooter: some View {
-        Button {
-            if workspace.isScratch { navigation.newChat = true } else { navigation.adding = true }
-        } label: {
-            Label(workspace.isScratch ? "New chat" : "New view", lucideIcon: "plus")
-                .font(.callout.weight(.medium))
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.horizontal, 14)
-                .contentShape(.capsule)
+    /// The project's name over its views in the iPad's sidebar, where the bar holds the way back and its buttons.
+    private var sidebarTitle: some View {
+        Section {
+            Text(workspace.isScratch ? "Chats" : workspace.title).font(.title3.weight(.semibold))
+                .foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
+                .padding(.vertical, 8)
+                .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .accessibilityAddTraits(.isHeader)
         }
-        .buttonStyle(.glass)
-        .disabled(!workspace.ready)
-        .padding(.horizontal, 14).padding(.bottom, 10)
-        .accessibilityIdentifier("sidebar.newView")
-        .popover(isPresented: $navigation.adding, arrowEdge: .top) {
-            NewViewSheet(workspace: workspace) { newView = $0 }
-                .frame(minWidth: 380, minHeight: 460)
-                .modifier(MobileSheetSurface())
+        .listSectionSeparator(.hidden)
+    }
+
+    /// The bar of the project in the iPad's sidebar: its menu, and a new view (a new chat in the Chats project) as a
+    /// popover from the plus.
+    @ToolbarContentBuilder private var sidebarToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button("Processes", lucideIcon: "activity") { showProcesses = true }
+                Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
+                if !workspace.isScratch {
+                    Section {
+                        Button("Project settings", lucideIcon: "settings-2") { navigation.showingSettings = true }
+                    }
+                }
+            } label: {
+                Image(lucide: "ellipsis")
+            }
+            .accessibilityLabel("Project menu")
+            .accessibilityIdentifier("project.menu")
+            .disabled(!workspace.ready)
         }
-        .onChange(of: navigation.adding) { _, adding in
-            if !adding { afterNewView() }
+        ToolbarItem(placement: .topBarTrailing) {
+            if workspace.isScratch {
+                Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
+                    .disabled(!workspace.ready)
+            } else {
+                Button("Add view", lucideIcon: "plus") { navigation.adding = true }
+                    .disabled(!workspace.ready)
+                    .accessibilityIdentifier("sidebar.newView")
+                    .popover(isPresented: $navigation.adding, arrowEdge: .top) {
+                        NewViewSheet(workspace: workspace) { newView = $0 }
+                            .frame(minWidth: 380, minHeight: 460)
+                            .modifier(MobileSheetSurface())
+                    }
+                    .onChange(of: navigation.adding) { _, adding in
+                        if !adding { afterNewView() }
+                    }
+            }
         }
     }
 }

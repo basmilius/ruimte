@@ -240,9 +240,7 @@ private struct WorkspaceNavigationFixture: View {
     var body: some View {
         if sidebar {
             NavigationSplitView {
-                WorkspacePage(
-                    navigation: navigation,
-                    sidebar: PadSidebarContext(router: PadRouter(), header: AnyView(EmptyView())))
+                NavigationStack { WorkspacePage(navigation: navigation, sidebar: PadRouter()) }
             } detail: {
                 NavigationStack { Text("Select a view") }
             }

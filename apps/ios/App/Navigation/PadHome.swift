@@ -1,9 +1,9 @@
 import RuimtePulsar
 import SwiftUI
 
-/// The iPad: the open project's sidebar, floating as glass beside the content, and in the content Now, a project's
-/// views, all projects or the machines. Files and Git stand in an inspector beside the content, the palette opens
-/// with ⌘K, and settings and pairing are form sheets.
+/// The iPad: a sidebar with Now, the machines and the open projects, which pushes a project's views when one opens,
+/// and beside it Now, the machines or the project's view. Files and Git stand in an inspector beside the content, the
+/// palette opens with ⌘K, and settings and pairing are form sheets.
 struct PadHome: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
@@ -14,20 +14,35 @@ struct PadHome: View {
     let signIn: () -> Void
     @State private var gitLines = ProjectGitLines()
     @State private var palette = false
+    @State private var sidebarVisibility = NavigationSplitViewVisibility.automatic
     /// What the palette asked for that is a sheet of its own, put up once the palette is gone.
     @State private var afterPalette: (() -> Void)?
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $sidebarVisibility) {
             PadSidebar(
-                runtime: runtime, projects: projects, now: now, router: router, settingsLink: settingsLink,
-                openPalette: { palette = true }, openTarget: open
+                runtime: runtime, projects: projects, now: now, router: router, gitLines: gitLines,
+                settingsLink: settingsLink
             )
-            .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
+            .anchorPreference(key: SidebarBounds.self, value: .bounds) { $0 }
+            .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 420)
         } detail: {
             PadDetailColumn(
-                runtime: runtime, projects: projects, now: now, router: router, gitLines: gitLines,
+                runtime: runtime, projects: projects, now: now, router: router,
                 openPalette: { palette = true }, open: open, pair: pair, signIn: signIn)
+        }
+        .navigationSplitViewStyle(.balanced)
+        .overlayPreferenceValue(SidebarBounds.self) { anchor in
+            GeometryReader { geometry in
+                if let anchor, sidebarVisibility != .detailOnly {
+                    let bounds = geometry[anchor]
+                    if bounds.minX >= 0 && bounds.maxX > 1 && bounds.maxX < geometry.size.width {
+                        SidebarDivider().offset(x: bounds.maxX - 1)
+                    }
+                }
+            }
+            .ignoresSafeArea(.container, edges: .vertical)
+            .allowsHitTesting(false)
         }
         // On the window rather than a page's bar, so ⌘K opens the palette whatever the content column shows.
         .background {
@@ -72,7 +87,7 @@ struct PadHome: View {
         PadPaletteNavigator(runtime: runtime, router: router) { palette = false }
     }
 
-    /// Opens a view of any project, which puts that project in the sidebar.
+    /// Opens a view of any project, which pushes that project in the sidebar.
     private func open(_ target: ProjectViewTarget) {
         PadPaletteNavigator(runtime: runtime, router: router) {}.show(view: target)
     }

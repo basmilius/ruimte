@@ -2,13 +2,14 @@ import RuimtePulsar
 import SwiftUI
 
 /// The open projects of every machine, with New chat, each machine's Chats and Recently closed under them. On the
-/// iPhone they stand under the machine each is on, with the counts Now reads beside them.
+/// iPhone and in the iPad's sidebar they stand under the machine each is on, with the counts Now reads beside them.
 struct ProjectsPage<Notice: View>: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
-    /// On the iPhone's Projects tab, whose bar and search belong to the tabs around it.
-    var inTabs = false
-    /// What groups the list per machine and counts what each project holds; the iPad lists without them.
+    /// Without a search field or an updating mark of its own: on the iPhone's Projects tab the tabs around it hold
+    /// those, in the iPad's sidebar the palette searches.
+    var embedded = false
+    /// What groups the list per machine and counts what each project holds.
     var now: NowModel? = nil
     var gitLines: ProjectGitLines? = nil
     let showRecent: () -> Void
@@ -105,9 +106,9 @@ struct ProjectsPage<Notice: View>: View {
                 }
             }
         }
-        .modifier(ProjectsSearch(enabled: !inTabs, text: $search))
+        .modifier(ProjectsSearch(enabled: !embedded, text: $search))
         .toolbar {
-            if !inTabs && (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
+            if !embedded && (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
                 ProjectsUpdatingItem()
             }
         }

@@ -76,12 +76,10 @@ struct AppHome: View {
             if ReleaseNotesGate.check(notes: notes, app: AppVersion.marketing) { releaseNotes = notes }
             await runtime.start()
             await runtime.notifications.restore()
-            if usesSidebar { restoreLastProject() }
         }
         .task(id: machineRevision) {
             projects.reconcile(runtime: runtime)
             now.reconcile(runtime: runtime)
-            if usesSidebar { restoreLastProject() }
         }
         .onChange(of: now.entries) { _, entries in
             if now.loaded { ProjectWidgetRecorder.record(entries) }
@@ -93,8 +91,6 @@ struct AppHome: View {
             router = PhoneRouter()
             padRouter = PadRouter()
             if account != nil { signIn = false }
-            // The account restored on launch may land after the last project reopened.
-            if usesSidebar { restoreLastProject() }
         }
         .onChange(of: runtime.notifications.enabled) { _, enabled in
             if enabled { onboarding.finish() }
@@ -130,16 +126,6 @@ struct AppHome: View {
     private var notificationStep: some View {
         NotificationStepPage(
             coordinator: runtime.notifications, onboarding: onboarding, machines: runtime.machines.map(\.name))
-    }
-
-    /// A cold start puts the project left open back in the sidebar, while the content opens on Now as the iPhone
-    /// does. A project that no longer opens says so in the sidebar, whose switcher leads elsewhere; one whose machine
-    /// is not listed yet waits for the machines to load.
-    private func restoreLastProject() {
-        guard padRouter.project == nil, let last = LastProject.read(),
-            let machine = runtime.machines.first(where: { $0.id == last.machineID })
-        else { return }
-        padRouter.restore(MobileWorkspace(session: runtime.session(for: machine), projectID: last.projectID))
     }
 
     private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {

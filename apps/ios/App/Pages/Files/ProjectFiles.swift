@@ -9,10 +9,6 @@ import RuimteTransport
     let workspace: MobileWorkspace
     /// Opens a view of the project, closing whatever the files were shown in; nil where nothing can open one.
     var openView: ((String) -> Void)?
-    /// Shows a file beside the list instead of over it, as the iPad's files inspector does with the content column.
-    var showFile: ((String) -> Void)?
-    /// The file shown beside the list, which its row marks.
-    var shownFile: String?
 
     var folder: String { workspace.folder }
     var client: any MachineRequesting { workspace.client }

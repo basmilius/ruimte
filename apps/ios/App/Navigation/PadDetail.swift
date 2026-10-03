@@ -8,7 +8,6 @@ struct PadDetailColumn: View {
     let projects: UnifiedProjects
     let now: NowModel
     @Bindable var router: PadRouter
-    let gitLines: ProjectGitLines
     let openPalette: () -> Void
     let open: (ProjectViewTarget) -> Void
     let pair: () -> Void
@@ -20,7 +19,9 @@ struct PadDetailColumn: View {
     var body: some View {
         content
             .inspector(isPresented: inspectorShown) {
-                inspector.inspectorColumnWidth(min: 300, ideal: 360, max: 520)
+                inspector
+                    .modifier(InspectorEdge())
+                    .inspectorColumnWidth(min: 300, ideal: 360, max: 520)
             }
             .mobileSheet(isPresented: $diagnostics) {
                 NavigationStack {
@@ -50,22 +51,10 @@ struct PadDetailColumn: View {
                 NavigationStack {
                     ContentUnavailableView(
                         "No project open", lucideIcon: "folder",
-                        description: Text("Choose a project at the top of the sidebar."))
+                        description: Text("Choose a project in the sidebar."))
                         .modifier(MobilePageSurface())
                         .toolbar { toolbar }
                 }
-            }
-        case .projects:
-            NavigationStack {
-                ProjectsPage(
-                    runtime: runtime, projects: projects, now: now, gitLines: gitLines,
-                    showRecent: { router.detail = .recentlyClosed }
-                ) {
-                    EmptyView()
-                }
-                .navigationTitle("All projects")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar { toolbar }
             }
         case .machines:
             PadMachinesPage(runtime: runtime, pair: pair, signIn: signIn, selectedID: $router.machineID)
@@ -158,9 +147,7 @@ struct PadDetailColumn: View {
             NavigationStack {
                 switch router.inspector {
                 case .files:
-                    ProjectFilesPage(
-                        workspace: workspace, openView: { router.show(view: $0) }, showFile: { router.show(file: $0) },
-                        shownFile: router.file)
+                    ProjectFilesPage(workspace: workspace) { router.show(view: $0) }
                 case .git:
                     GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                 case nil:
@@ -184,8 +171,8 @@ struct PadDetailColumn: View {
     }
 }
 
-/// What the sidebar's project shows beside it: its selected view, a file the files inspector opened, or the card
-/// that says its machine stopped answering.
+/// What the sidebar's project shows beside it: its selected view, a file the palette opened, or the card that says
+/// its machine stopped answering.
 private struct PadProjectCell<Bar: ToolbarContent>: View {
     let navigation: WorkspaceNavigation
     let router: PadRouter
@@ -195,53 +182,18 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
     private var workspace: MobileWorkspace { navigation.workspace }
 
     var body: some View {
-        HStack(spacing: 0) {
-            if let second = secondItem {
-                NavigationStack {
-                    first.modifier(MobilePageSurface())
-                }
-                .id(firstKey)
-                MobileStyle.border.frame(width: 1).ignoresSafeArea()
-                NavigationStack {
-                    ProjectItemPage(workspace: workspace, item: second)
-                        .modifier(MobilePageSurface())
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button {
-                                    router.closeSecondCell()
-                                } label: {
-                                    Image(lucide: "x").accessibilityLabel("Close this cell")
-                                }
-                                .accessibilityIdentifier("pad.closeCell")
-                            }
-                        }
-                        .toolbar(content: toolbar)
-                }
-                .id(second.stableID)
-            } else {
-                NavigationStack {
-                    first
-                        .modifier(MobilePageSurface())
-                        .toolbar(content: toolbar)
-                }
-                .id(firstKey)
-            }
+        NavigationStack {
+            shown
+                .modifier(MobilePageSurface())
+                .toolbar(content: toolbar)
         }
-        .environment(
-            \.padCells,
-            PadCellActions(
-                openBeside: { router.showBeside(view: $0) }, openSubagent: { router.show(subagent: $0) }))
-        // A view dragged out of the sidebar opens in the cell beside the one shown, as in the desktop's split grid.
-        .dropDestination(for: String.self) { ids, _ in
-            guard let id = ids.first, workspace.item(id) != nil else { return false }
-            router.showBeside(view: id)
-            return true
-        }
+        .id(shownKey)
+        .environment(\.padCells, PadCellActions(openSubagent: { router.show(subagent: $0) }))
         .opacity(machineLost ? 0.3 : 1)
         .allowsHitTesting(!machineLost)
         .overlay {
             if machineLost {
-                MachineLostCard(session: workspace.session, diagnostics: diagnostics) { router.detail = .projects }
+                MachineLostCard(session: workspace.session, diagnostics: diagnostics) { router.closeProject() }
             }
         }
         .task(id: workspace.ready) { router.adoptActiveView() }
@@ -251,16 +203,11 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
         }
     }
 
-    private var firstKey: String {
+    private var shownKey: String {
         router.file ?? router.subagent?.toolUseID ?? navigation.selectedViewID ?? ""
     }
 
-    private var secondItem: JSONValue? {
-        guard workspace.ready, let id = router.secondViewID else { return nil }
-        return workspace.item(id)
-    }
-
-    @ViewBuilder private var first: some View {
+    @ViewBuilder private var shown: some View {
         if let path = router.file {
             FileContentPage(
                 client: workspace.client, path: path,
@@ -274,7 +221,7 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
         } else {
             ContentUnavailableView(
                 "Select a view", lucideIcon: "panel-left",
-                description: Text("Choose a view in the sidebar, or make one with New view."))
+                description: Text("Choose a view in the sidebar to get started."))
                 .navigationTitle(workspace.title)
                 .navigationBarTitleDisplayMode(.inline)
         }
@@ -310,7 +257,7 @@ private struct PadProjectCell<Bar: ToolbarContent>: View {
     }
 }
 
-/// A notification's chat or terminal, opened in its project once Now says which one holds it, which puts that
+/// A notification's chat or terminal, opened in its project once Now says which one holds it, which pushes that
 /// project in the sidebar. A node no open project holds opens on its own, as it always did.
 private struct PadNotificationPage: View {
     let runtime: AppRuntime
@@ -338,9 +285,8 @@ private struct PadNotificationPage: View {
     }
 }
 
-/// What a cell beside the iPad's sidebar offers the page in it: the cell next to it, and a sub-agent as a view.
+/// What the iPad's content offers the page in it: a sub-agent as a view of its own.
 struct PadCellActions {
-    let openBeside: (String) -> Void
     let openSubagent: (PadSubagent) -> Void
 }
 

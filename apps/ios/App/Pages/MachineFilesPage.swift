@@ -48,11 +48,7 @@ struct MachineFilesPage: View {
                 let directory = entry.text("kind") == "directory"
                 let mark = fileMarks.mark(path: entry.text("path"), directory: directory)
                 Button {
-                    if !directory, let showFile = project?.showFile {
-                        showFile(entry.text("path"))
-                    } else {
-                        selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
-                    }
+                    selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
                 } label: {
                     HStack(spacing: 10) {
                         Image(lucide: FileKinds.icon(name: entry.text("name"), kind: entry.text("kind")), size: 20)
@@ -70,9 +66,9 @@ struct MachineFilesPage: View {
                                 .accessibilityLabel(GitFileMarks.spoken(mark))
                         }
                     }
-                    .modifier(MobileSidebarLabel(disclosure: directory || project?.showFile == nil))
+                    .modifier(MobileSidebarLabel(disclosure: true))
                 }
-                .modifier(MobileSidebarRow(selected: !directory && project?.shownFile == entry.text("path")))
+                .modifier(MobileSidebarRow())
                 .contextMenu { if let project { entryMenu(entry, directory: directory, project: project) } }
             }
             if state.value != nil && entries.isEmpty {

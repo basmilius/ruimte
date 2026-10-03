@@ -4,10 +4,8 @@ import Observation
 /// What the iPad's content column shows beside the sidebar.
 enum PadDetail: Hashable {
     case now
-    /// The cells of the project in the sidebar.
+    /// The view of the project pushed in the sidebar.
     case project
-    /// The project cards per machine, from All projects in the switcher.
-    case projects
     case machines
     case recentlyClosed
     /// A notification still finding the project that holds its node.
@@ -19,9 +17,8 @@ enum PadInspector: Hashable {
     case files, git
 }
 
-/// Where the iPad stands. The sidebar always belongs to one project, as on the desktop, and everything else (Now, the
-/// project cards, machines) opens beside it in the content column, so another project is a switch of the sidebar and
-/// never a page pushed over it.
+/// Where the iPad stands. The sidebar lists Now, the machines and the open projects; a project opened from anywhere is
+/// pushed in it with its views, and its back button closes it again.
 @MainActor @Observable
 final class PadRouter {
     private(set) var project: WorkspaceNavigation?
@@ -29,17 +26,15 @@ final class PadRouter {
     var inspector: PadInspector?
     /// The machine shown beside the list of machines.
     var machineID: String?
-    /// The view in the second cell, beside the project's selected view.
-    private(set) var secondViewID: String?
-    /// A file the files inspector opened in the content column, by its absolute path.
+    /// A file the palette opened in the content column, by its absolute path.
     private(set) var file: String?
     /// A sub-agent of a chat opened as a view of its own, which lives on this iPad only, as on the desktop.
     private(set) var subagent: PadSubagent?
 
-    /// The view or node in the first cell, which its row in the sidebar marks.
+    /// The view or node in the content, which its row in the sidebar marks.
     var shownID: String? { file == nil && subagent == nil ? project?.selectedViewID : nil }
 
-    /// Puts a project in the sidebar, and with `view` opens that view once the project holds it. The project already
+    /// Pushes a project in the sidebar, and with `view` opens that view once the project holds it. The project already
     /// there keeps its state, so opening one of its views from Now or a notification does not open it again.
     @discardableResult func openProject(_ workspace: MobileWorkspace, view: String? = nil) -> WorkspaceNavigation {
         let navigation: WorkspaceNavigation
@@ -51,10 +46,8 @@ final class PadRouter {
             navigation = WorkspaceNavigation(workspace: workspace)
             project = navigation
             inspector = nil
-            secondViewID = nil
             file = nil
             subagent = nil
-            LastProject.remember(machineID: workspace.session.machine.id, projectID: workspace.projectID)
         }
         if let view {
             if navigation.workspace.ready, navigation.workspace.item(view) != nil {
@@ -69,31 +62,22 @@ final class PadRouter {
         return navigation
     }
 
-    /// Reopens the project of the last session in the sidebar, while the content column stays on Now.
-    func restore(_ workspace: MobileWorkspace) {
-        guard project == nil else { return }
-        project = WorkspaceNavigation(workspace: workspace)
-    }
-
-    /// Leaves the project, for one that was closed or a machine that went.
+    /// Leaves the project, for the sidebar's back button, one that was closed or a machine that went.
     func closeProject() {
         project = nil
         inspector = nil
-        secondViewID = nil
         file = nil
         subagent = nil
         if detail == .project { detail = .now }
-        LastProject.forget()
     }
 
-    /// Shows a view of the project in the sidebar in the first cell.
+    /// Shows a view of the project in the sidebar in the content.
     func show(view id: String) {
         guard let project else { return }
         // A node opens on its own; what the project remembers as open is the canvas it stands on.
         let canvas = project.workspace.views.first { $0.list("nodes").contains { $0.stableID == id } }
         project.workspace.select(canvas?.stableID ?? id)
         project.selectedViewID = id
-        if secondViewID == id { secondViewID = nil }
         file = nil
         subagent = nil
         detail = .project
@@ -107,28 +91,9 @@ final class PadRouter {
         project.selectedViewID = id
     }
 
-    /// Opens a view in the cell beside the one shown, as the desktop's split grid does.
-    func showBeside(view id: String) {
-        guard let project else { return }
-        guard project.selectedViewID != nil, project.selectedViewID != id || file != nil || subagent != nil else {
-            show(view: id)
-            return
-        }
-        secondViewID = id
-        detail = .project
-    }
-
-    func closeSecondCell() {
-        secondViewID = nil
-    }
-
-    /// A view the project lost leaves its cell; the second cell takes the first one's place when that one went.
+    /// A view the project lost leaves the content.
     func forget(missing exists: (String) -> Bool) {
-        if let id = secondViewID, !exists(id) { secondViewID = nil }
-        if let id = project?.selectedViewID, !exists(id) {
-            project?.selectedViewID = secondViewID
-            secondViewID = nil
-        }
+        if let id = project?.selectedViewID, !exists(id) { project?.selectedViewID = nil }
     }
 
     func show(file path: String) {
@@ -141,10 +106,6 @@ final class PadRouter {
         self.subagent = subagent
         file = nil
         detail = .project
-    }
-
-    func showNow() {
-        detail = .now
     }
 
     /// Files and Git belong to a project folder, so the Chats project and no project have neither.
