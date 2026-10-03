@@ -57,7 +57,7 @@ struct ProjectViewPage: View {
             }
         }
         .modifier(MobilePageSurface())
-        .toolbar(.hidden, for: .tabBar)
+        .hidesTabBarWhenPushed()
         .task { workspace?.start() }
         .task(id: workspace?.ready) {
             guard let workspace, workspace.ready, arrived == nil else { return }
@@ -87,12 +87,11 @@ struct NotificationRoutePage: View {
                 ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target))
             } else if searched {
                 NotificationSessionPage(runtime: runtime, destination: destination)
-                    .toolbar(.hidden, for: .tabBar)
             } else {
                 MobileLoadingRow("Finding the conversation").modifier(MobilePageSurface())
-                    .toolbar(.hidden, for: .tabBar)
             }
         }
+        .hidesTabBarWhenPushed()
         .task {
             guard !searched, target == nil else { return }
             target = await now.locate(machineID: destination.machineID, itemID: destination.nodeID)

@@ -597,7 +597,7 @@ struct ProjectItemPage: View {
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
         .modifier(PhoneSubtitle(text: showsProject ? subtitle : nil))
         // A view fills the screen; its composer or keyboard bar stands where the tab bar would.
-        .toolbar(.hidden, for: .tabBar)
+        .hidesTabBarWhenPushed()
         .onAppear {
             workspace.session.attention.focus(item.stableID)
             Task { await workspace.session.markSeen(item.stableID) }
