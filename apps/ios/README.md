@@ -1,8 +1,8 @@
 # Ruimte for iPhone and iPad
 
 A native remote client for your Ruimte machines, requiring iOS or iPadOS 26. It opens
-projects, chats, terminals, files, drawings and diagrams without running a local daemon.
-The canvas supports navigation, nodes and context links; existing nodes keep their position
+projects, chats, terminals, files, drawings, diagrams and devices without running a local daemon.
+The canvas supports navigation, nodes, groups and context links; existing nodes keep their position
 and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 ## Included
@@ -17,7 +17,8 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
   On an iPad a cold start reopens the project you left open; if that fails, the list says why and offers Try
   again, and going back to the list forgets it. An iPhone always starts on Now. An empty canvas offers tiles for the installed agents from `provider.list`
-  and for each kind of node, and an empty drawing or diagram says so until its first element.
+  and for each kind of node, an empty drawing says so until its first element, and an empty diagram asks an
+  agent to draw it.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions. The composer styles Markdown
   while editing and shows selected files and skills as inline badges.
@@ -39,7 +40,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
   A command from the project file that nobody on the machine has approved yet waits above the
-  terminal as "Run bun dev?" until someone taps Run (`heldCommand`, `session.runHeld`).
+  keys as a prompt with Run until someone taps it (`heldCommand`, `session.runHeld`).
 - File previews. Pictures open in every format ImageIO reads, HEIC, HEIF, AVIF, TIFF, BMP and ICO
   included, with pinch-zoom and a line with their dimensions, size and type. PDFs open in PDFKit. Sound
   plays in a player of its own with a scrubber and video in AVKit's player, both read in pieces without
@@ -208,7 +209,48 @@ settles, so a swipe back the person takes back leaves the route standing. A view
 project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
 project's Views, Files, Git and Search as tabs.
 
+## Views on an iPhone
+
+Every view fills the screen with the same chrome. Back, its title and one menu sit at the top, and at the bottom
+the glass that belongs to its kind. A view stands with its content and bar from the first frame of the push; a
+terminal or canvas that still waits for its project or session shows a spinner over itself instead of in its place.
+
+- A terminal has a capsule of keys under it with esc, tab, ctrl (held for the next key typed), up, down and the
+  keyboard. Up and down follow the cursor mode the program asked for (`TerminalKeys`). A held command waits as a
+  prompt of glass above the keys. Font size, theme, reloading and clearing the scrollback are in the menu.
+- A canvas has the desktop's dock as two capsules (`CanvasDock`). The first counts what needs you and what works,
+  and a tap on the amber count opens the next node that needs you. The second adds a node, fits, and holds the
+  locks and the saved layouts. The locks are this phone's, the `locks` of the view in the project's local state. A
+  phone only pans and zooms, so it shows those two and keeps move and resize as it read them. Layouts are the
+  canvas's own (`layouts`), to apply, delete, or save where every node stands now. The list button in the bar
+  shows the nodes as rows. Groups are frames with their title, notes take their color, and a line an agent reads
+  along is amber with its label. A group's page lists what lies inside its frame, as the desktop decides it
+  (`CanvasEditing.members`).
+- A long press on a node opens its menu (`CanvasNodeAction`). Open as view takes a chat, terminal, browser or
+  device off the canvas and keeps its session. Link as context draws a line from it into the node that reads it,
+  both ways between two agents, and lists the links it has. Group selection puts a frame around the nodes picked,
+  on the grid as `groupFrame` draws it. Rename, Snooze (`snooze.set`, chats and terminals) and Delete follow.
+- A browser's page runs under the bars, with back, the address and a menu at the bottom as Safari has them. A tap
+  on the address edits it.
+- A drawing has a tool bar of glass with pen, shape, arrow, text and hand, and the pen color beside it. A second
+  tap on the active tool opens its options, with the tools of its sort, the color, the width and snap to the grid
+  (stored per phone, as the desktop keeps it per client). Once a Pencil drew on the page, or with Only Draw with
+  Apple Pencil on, a finger pans and only the Pencil draws. Undo, selection, zoom and export are in the menu.
+- A diagram has zoom beside it and Change with an agent under it. That sends a question with `chat.send` to a new
+  chat with one of the machine's agents, placed after the diagram, or to a chat the project has, and names
+  `ruimte-context view diagram` and the diagram's file (`DiagramAgentPrompt`). An empty diagram asks what it should
+  show, with the same choice of chat and Draw. The chat opens once the question went out.
+- A device view, or a device node, finds its device by platform, kind, name and runtime in `device.list`, every
+  two seconds while it waits and every five while it shows. A stopped simulator offers Start (`device.boot`). A
+  booted one opens with `device.open` as `device.frame` events in JPEG, which is what simulators send. Taps and
+  swipes go back as pointer input (`device.input`, with the bottom edge for a swipe home); Home, Back and the app
+  switcher sit in a capsule, the other buttons and rotating in the menu. Without input it is a read-only preview.
+  A phone or an Android emulator streams video, so the machine refuses the format and the page says it shows on
+  the computer only. A device the machine does not have says so, as does one whose screen it cannot capture. When
+  the link to the machine drops, the last screen stays dimmed until it is back.
+
 ## Settings
+
 
 Settings (`App/Settings`) is an opaque sheet behind the avatar on an iPhone and a section of the sidebar on an
 iPad, with the sections of the desktop's settings that mean something on a phone. The account comes first, with

@@ -562,7 +562,7 @@ struct ProjectItemPage: View {
         .onDisappear { workspace.session.attention.blur(item.stableID) }
         .task(id: "\(workspace.session.generation):\(workspace.ready)") { await prepare() }
     }
-    /// The kinds whose page has nothing to show until the project opened and their session exists.
+    /// The kinds whose page has nothing to show until the project opened, and for a terminal its session exists.
     static func waitsForSession(_ kind: String) -> Bool { ["terminal", "canvas", "group"].contains(kind) }
 
     @ViewBuilder private var content: some View {
@@ -592,7 +592,8 @@ struct ProjectItemPage: View {
             RenderDocumentPage(
                 client: workspace.client, projectID: workspace.projectID,
                 viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"),
-                agent: workspace.isScratch ? nil : DiagramAgentTarget(workspace: workspace, item: current, title: title),
+                agent: workspace.isScratch
+                    ? nil : DiagramAgentTarget(workspace: workspace, item: current, title: title),
                 openChat: { selectedMember = $0 })
         case "group":
             MobileList {

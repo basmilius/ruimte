@@ -25,7 +25,9 @@ struct CanvasLocks: Equatable {
         resize = value?["resize"]?.boolValue ?? false
     }
 
-    var json: JSONValue { .object(["pan": .bool(pan), "zoom": .bool(zoom), "move": .bool(move), "resize": .bool(resize)]) }
+    var json: JSONValue {
+        .object(["pan": .bool(pan), "zoom": .bool(zoom), "move": .bool(move), "resize": .bool(resize)])
+    }
     var any: Bool { pan || zoom || move || resize }
     var all: Bool { pan && zoom && move && resize }
 

@@ -83,9 +83,10 @@ struct TerminalKeyBar: View {
             .accessibilityAddTraits(model.controlArmed ? .isSelected : [])
             key(lucide: "arrow-up", label: "Up") { model.arrow(up: true) }
             key(lucide: "arrow-down", label: "Down") { model.arrow(up: false) }
-            key(lucide: keyboardShown ? "keyboard-off" : "keyboard", label: keyboardShown ? "Hide keyboard" : "Keyboard") {
-                model.toggleKeyboard?()
-            }
+            key(
+                lucide: keyboardShown ? "keyboard-off" : "keyboard",
+                label: keyboardShown ? "Hide keyboard" : "Keyboard"
+            ) { model.toggleKeyboard?() }
         }
         .padding(.horizontal, 6).padding(.vertical, 4)
         .glassEffect(.regular.interactive(), in: .capsule)

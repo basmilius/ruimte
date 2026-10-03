@@ -284,8 +284,8 @@ private struct CanvasLinkSheet: View {
                     Text("Who reads \(source?.text("title") ?? "this node")")
                 } footer: {
                     Text(
-                        "An agent reads what a line runs into it from, with ruimte-context. Between two agents the line runs both ways."
-                    )
+                        "An agent reads what a line runs into it from, with ruimte-context. "
+                            + "Between two agents the line runs both ways.")
                 }
                 if !links.isEmpty {
                     Section("Links") {

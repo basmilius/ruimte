@@ -204,7 +204,9 @@ final class DeviceViewModel {
     }
 
     func press(_ button: String) { send(.object(["kind": .string("button"), "button": .string(button)])) }
-    func rotate(left: Bool) { send(.object(["kind": .string("rotate"), "direction": .string(left ? "left" : "right")])) }
+    func rotate(left: Bool) {
+        send(.object(["kind": .string("rotate"), "direction": .string(left ? "left" : "right")]))
+    }
 
     /// A touch on the screen, as down, moves and up. Moves go out at most every 16 ms; the last one always does.
     func touch(_ phase: String, at position: CGPoint) {
@@ -441,7 +443,8 @@ struct DeviceViewPage: View {
             ContentUnavailableView(
                 "Not on this machine", lucideIcon: "smartphone",
                 description: Text(
-                    "\(name) with \(model.reference?.text("runtime") ?? "this runtime") is not installed on this machine."))
+                    "\(name) with \(model.reference?.text("runtime") ?? "this runtime") "
+                        + "is not installed on this machine."))
         case .listFailed(let problem), .failed(let problem):
             ContentUnavailableView {
                 Label("Could not show \(name)", lucideIcon: "triangle-alert", iconSize: 48)
