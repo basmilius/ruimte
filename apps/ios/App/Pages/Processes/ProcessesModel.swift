@@ -71,6 +71,14 @@ struct ProcessGroup: Equatable, Identifiable {
 }
 
 /// One point of the three charts: the machine as a line, the share of Ruimte as the area under it.
+/// The groups of one project, or of none.
+struct ProcessSection: Equatable, Identifiable {
+    /// The project's id; empty for the groups of no project.
+    let id: String
+    let title: String
+    var groups: [ProcessGroup]
+}
+
 struct ProcessPoint: Equatable {
     var at: Double
     var cpu: Double?
@@ -288,6 +296,22 @@ enum ProcessesText {
 
     /// The fine series once it has a line to draw, the coarse day until then. The window is what the x axis spans,
     /// so a fine series that only just started fills from the right.
+    /// The groups per project in the order they come, then whatever belongs to no project under Machine tasks. A
+    /// project this phone has no name for reads as Another project.
+    static func sections(_ groups: [ProcessGroup], projectNames: [String: String]) -> [ProcessSection] {
+        var sections: [ProcessSection] = []
+        for group in groups {
+            let id = group.projectID ?? ""
+            if let index = sections.firstIndex(where: { $0.id == id }) {
+                sections[index].groups.append(group)
+            } else {
+                let title = group.projectID.map { projectNames[$0] ?? "Another project" } ?? "Machine tasks"
+                sections.append(ProcessSection(id: id, title: title, groups: [group]))
+            }
+        }
+        return sections.filter { !$0.id.isEmpty } + sections.filter { $0.id.isEmpty }
+    }
+
     static func series(fine: [ProcessPoint], coarse: [ProcessPoint], fineInterval: Double, coarseInterval: Double)
         -> (points: [ProcessPoint], window: Double, fine: Bool)
     {

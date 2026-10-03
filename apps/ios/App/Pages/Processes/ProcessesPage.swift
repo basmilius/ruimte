@@ -3,8 +3,9 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// What runs on a machine: three charts of the machine against the share of Ruimte, then a group per node with the
-/// processes under it. A warning sits under the group it is about, with the button that fits. Long-press a node's
+/// What runs on a machine: CPU and memory of the machine against the share of Ruimte, then per project a group per
+/// node with the processes under it, and what belongs to no project under Machine tasks. A warning sits under the
+/// group it is about, with the button that fits. Long-press a node's
 /// group or a process to signal it; Force quit asks first, as on the desktop.
 struct ProcessesPage: View {
     /// Node titles by id, for the project this page was opened from; a machine's own page knows none.
@@ -19,19 +20,22 @@ struct ProcessesPage: View {
     }
 
     var body: some View {
-        MobileList {
+        MobileForm {
             Section {
                 Picker("Which processes", selection: $model.scope) {
                     Text("Ruimte").tag("ruimte")
-                    Text("All").tag("all")
+                    Text("All processes").tag("all")
                 }
                 .pickerStyle(.segmented)
             }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
             if let problem = model.problem {
-                Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
+                Section { Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red) }
             }
             content
         }
+        .listSectionSpacing(12)
         .navigationTitle("Processes")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -88,42 +92,67 @@ struct ProcessesPage: View {
             coarseInterval: model.coarseInterval)
         let machine = sample.machine
         Section {
-            ProcessChart(
-                label: "CPU", headline: ProcessesText.percent(machine.cpu), points: series.points,
-                window: series.window, end: sample.at, maximum: 100, machine: \.cpu, ruimte: \.cpuRuimte)
-            ProcessChart(
-                label: "Memory",
-                headline: "\(ProcessesText.bytes(machine.memoryUsed)) of \(ProcessesText.bytes(machine.memoryTotal))",
-                points: series.points, window: series.window, end: sample.at, maximum: machine.memoryTotal,
-                machine: \.memory, ruimte: \.memoryRuimte)
-            ProcessChart(
-                label: "Disk",
-                headline: "Read \(ProcessesText.rate(machine.diskRead)), write \(ProcessesText.rate(machine.diskWrite))",
-                points: series.points, window: series.window, end: sample.at,
-                maximum: max(1, series.points.compactMap(\.disk).max() ?? 1), machine: \.disk, ruimte: \.diskRuimte)
-            if let free = machine.diskFree {
-                Text("Disk is the total for the processes Ruimte can read. \(ProcessesText.bytes(free)) free.")
-                    .font(.caption).foregroundStyle(MobileStyle.muted)
+            HStack(spacing: 8) {
+                ProcessChart(
+                    label: "CPU", headline: ProcessesText.percent(machine.cpu), points: series.points,
+                    window: series.window, end: sample.at, maximum: 100, machine: \.cpu, ruimte: \.cpuRuimte)
+                ProcessChart(
+                    label: "Memory", headline: ProcessesText.bytes(machine.memoryUsed), points: series.points,
+                    window: series.window, end: sample.at, maximum: machine.memoryTotal, machine: \.memory,
+                    ruimte: \.memoryRuimte)
             }
-        } header: {
-            HStack {
-                Text("This machine, and Ruimte's share")
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 2).fill(MobileStyle.muted).frame(width: 8, height: 8)
+                Text("Machine")
+                RoundedRectangle(cornerRadius: 2).fill(MobileStyle.accent).frame(width: 8, height: 8)
+                    .padding(.leading, 8)
+                Text("Ruimte")
                 Spacer()
                 Text(series.fine ? "Last 10 minutes" : "Last 24 hours")
             }
+            .font(.caption2).foregroundStyle(MobileStyle.muted)
+            .padding(.horizontal, 4)
+            .accessibilityElement(children: .combine)
+            Text(diskLine(machine)).font(.caption2).foregroundStyle(MobileStyle.muted).padding(.horizontal, 4)
         }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+    }
+
+    /// Disk is the total for the processes Ruimte can read, so it is a line under the two charts and not one of them.
+    private func diskLine(_ machine: ProcessMachine) -> String {
+        let rates =
+            "Disk reads \(ProcessesText.rate(machine.diskRead)) and writes \(ProcessesText.rate(machine.diskWrite))"
+        return machine.diskFree.map { "\(rates), \(ProcessesText.bytes($0)) free." } ?? "\(rates)."
     }
 
     @ViewBuilder private func list(_ sample: ProcessSample) -> some View {
         let groups = sample.groups
         let placed = Dictionary(grouping: model.alerts) { ProcessesText.placement($0, groups: groups) ?? "" }
-        Section("Nodes") {
-            ForEach(placed[""] ?? []) { alert in alertRow(alert, now: sample.at) }
-            ForEach(groups) { group in
-                groupRow(group, alerting: !(placed[group.id] ?? []).isEmpty)
-                ForEach(placed[group.id] ?? []) { alert in alertRow(alert, now: sample.at) }
-                if model.isOpen(group) {
-                    ForEach(group.processes) { process in processRow(process) }
+        let sections = ProcessesText.sections(groups, projectNames: projectNames)
+        if let loose = placed[""], !loose.isEmpty {
+            Section {
+                ForEach(loose) { alert in alertRow(alert, now: sample.at) }
+            }
+        }
+        ForEach(sections) { section in
+            Section {
+                ForEach(section.groups) { group in
+                    groupRow(group, alerting: !(placed[group.id] ?? []).isEmpty)
+                    ForEach(placed[group.id] ?? []) { alert in alertRow(alert, now: sample.at) }
+                    if model.isOpen(group) {
+                        ForEach(group.processes) { process in processRow(process) }
+                    }
+                }
+            } header: {
+                HStack {
+                    Label(section.title, lucideIcon: section.id.isEmpty ? "server" : "folder")
+                    Spacer()
+                    if section.id == sections.first?.id {
+                        Text("CPU").frame(width: 44, alignment: .trailing)
+                        Text("Memory").frame(width: 60, alignment: .trailing)
+                        Color.clear.frame(width: 11, height: 1)
+                    }
                 }
             }
         }
@@ -135,10 +164,8 @@ struct ProcessesPage: View {
         return Button {
             model.toggle(group)
         } label: {
-            HStack(spacing: 8) {
-                Image(lucide: "chevron-right", size: 13).foregroundStyle(MobileStyle.muted)
-                    .rotationEffect(.degrees(open ? 90 : 0))
-                Image(lucide: Self.icon(group.kind), size: 15).foregroundStyle(MobileStyle.muted)
+            HStack(spacing: 9) {
+                Image(lucide: Self.icon(group.kind), size: 14).foregroundStyle(MobileStyle.muted).frame(width: 18)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(named.title).lineLimit(1)
@@ -156,9 +183,12 @@ struct ProcessesPage: View {
                     }
                 }
                 Spacer(minLength: 8)
-                numbers(cpu: group.cpu, memory: group.memory, read: group.diskRead, write: group.diskWrite)
+                numbers(cpu: group.cpu, memory: group.memory)
+                Image(lucide: "chevron-right", size: 11).foregroundStyle(MobileStyle.faint)
+                    .rotationEffect(.degrees(open ? 90 : 0))
             }
-            .frame(minHeight: 44)
+            .font(.callout)
+            .frame(minHeight: 36)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -171,18 +201,20 @@ struct ProcessesPage: View {
     private func processRow(_ process: ProcessRow) -> some View {
         let highlighted = model.highlight?.pid == process.pid && model.highlight?.startTime == process.startTime
         return HStack(spacing: 6) {
-            Text(process.name).font(.caption).foregroundStyle(process.readable ? MobileStyle.text : MobileStyle.faint)
+            Text(process.name).foregroundStyle(process.readable ? MobileStyle.text : MobileStyle.faint)
                 .lineLimit(1)
             Text(String(process.pid)).font(.caption2).foregroundStyle(MobileStyle.faint).monospacedDigit()
             if let family = process.family {
                 Text(family).font(.caption2).foregroundStyle(MobileStyle.faint)
             }
             Spacer(minLength: 8)
-            numbers(cpu: process.cpu, memory: process.memory, read: process.diskRead, write: process.diskWrite)
+            numbers(cpu: process.cpu, memory: process.memory)
+            Color.clear.frame(width: 11, height: 1)
         }
-        .padding(.leading, 28 + CGFloat(process.depth) * 12)
-        .padding(.vertical, 4)
-        .background(highlighted ? MobileStyle.active : .clear, in: RoundedRectangle(cornerRadius: 6))
+        .font(.caption)
+        .padding(.leading, 27 + CGFloat(process.depth) * 12)
+        .padding(.vertical, 2)
+        .listRowBackground(highlighted ? MobileStyle.active : MobileStyle.panel)
         .contextMenu {
             if process.signalable { signalMenu(ProcessTarget(process)) }
         }
@@ -198,33 +230,40 @@ struct ProcessesPage: View {
 
     private func alertRow(_ alert: ProcessAlert, now: Double) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 6) {
-                Image(lucide: "triangle-alert", size: 13).foregroundStyle(MobileStyle.statusNeedsYou)
-                Text(ProcessesText.alert(alert, now: now)).font(.caption)
+            HStack(alignment: .top, spacing: 8) {
+                Image(lucide: "triangle-alert", size: 14).foregroundStyle(MobileStyle.statusNeedsYou)
+                Text(ProcessesText.alert(alert, now: now)).font(.footnote)
                 Spacer(minLength: 4)
                 Button("Dismiss", lucideIcon: "x") { Task { await model.dismiss(alert) } }
-                    .labelStyle(.iconOnly).frame(minWidth: 32, minHeight: 32)
+                    .labelStyle(.iconOnly).frame(minWidth: 28, minHeight: 28)
+                    .buttonStyle(.borderless)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(ProcessesText.actions(alert), id: \.rawValue) { action in
                     Button(action.label) { Task { await model.act(alert, action) } }
-                        .buttonStyle(.bordered).controlSize(.small)
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.small)
                 }
             }
-            .padding(.leading, 19)
+            .padding(.leading, 22)
         }
-        .padding(10)
-        .background(MobileStyle.inset, in: RoundedRectangle(cornerRadius: 10))
+        .padding(.vertical, 4)
+        .listRowBackground(MobileStyle.statusNeedsYou.opacity(0.1))
     }
 
-    private func numbers(cpu: Double?, memory: Double?, read: Double?, write: Double?) -> some View {
-        let disk = ProcessesText.disk(read: read, write: write)
-        let text = [
-            ProcessesText.percent(cpu), ProcessesText.bytes(memory), ProcessesText.rate(disk),
-        ]
-        return Text(text.joined(separator: " · ")).font(.caption2).monospacedDigit().foregroundStyle(MobileStyle.muted)
-            .lineLimit(1)
-            .accessibilityLabel("CPU \(text[0]), memory \(text[1]), disk \(text[2])")
+    /// The two columns of a row; a process that keeps a core busy reads amber.
+    private func numbers(cpu: Double?, memory: Double?) -> some View {
+        HStack(spacing: 0) {
+            Text(ProcessesText.percent(cpu)).frame(width: 44, alignment: .trailing)
+                .foregroundStyle((cpu ?? 0) >= 80 ? MobileStyle.statusNeedsYou : MobileStyle.text)
+            Text(ProcessesText.bytes(memory)).frame(width: 60, alignment: .trailing)
+                .foregroundStyle(MobileStyle.muted)
+        }
+        .font(.caption).monospacedDigit().lineLimit(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("CPU \(ProcessesText.percent(cpu)), memory \(ProcessesText.bytes(memory))")
     }
 
     private static func icon(_ kind: String) -> String {
@@ -245,7 +284,7 @@ struct ProcessesPage: View {
     }
 }
 
-/// One of the three charts: the machine as a line and the share of Ruimte as the area under it.
+/// A tile of the machine as a line and the share of Ruimte as the area under it.
 private struct ProcessChart: View {
     let label: String
     let headline: String
@@ -258,10 +297,10 @@ private struct ProcessChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(label).font(.caption.weight(.medium))
+            HStack(alignment: .firstTextBaseline) {
+                Text(label).font(.caption2).foregroundStyle(MobileStyle.muted)
                 Spacer()
-                Text(headline).font(.caption).monospacedDigit().foregroundStyle(MobileStyle.muted)
+                Text(headline).font(.footnote.weight(.semibold)).monospacedDigit().lineLimit(1)
             }
             Chart {
                 ForEach(Array(points.enumerated()), id: \.offset) { item in
@@ -287,9 +326,11 @@ private struct ProcessChart: View {
             .chartYScale(domain: 0...max(maximum, 1))
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
-            .frame(height: 56)
+            .frame(height: 40)
             .accessibilityLabel("\(label), \(headline)")
         }
-        .padding(.vertical, 4)
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
