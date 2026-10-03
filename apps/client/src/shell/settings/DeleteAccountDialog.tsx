@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { accountConfirmationName, confirmsAccountDeletion, type Account } from '@ruimte/pulsar';
-import { deletePulsarAccount } from '@/pulsar/account';
+import { ACCOUNT_DELETE_WORD, accountConfirmationName, confirmsAccountDeletion, type Account } from '@ruimte/pulsar';
+import { deleteAccountHere } from '@/pulsar/account-deletion';
 import { Button, Dialog, Field, FormError, Icon, Input, useAsyncAction } from '@basmilius/desktop-ui';
 
 const WHAT_GOES = ['account', 'sessions', 'push', 'machines'] as const;
@@ -39,7 +39,7 @@ export function DeleteAccountDialog({ account, open, onOpenChange }: DeleteAccou
             return;
         }
         void run(async () => {
-            await deletePulsarAccount(typed);
+            await deleteAccountHere(typed);
             onOpenChange(false);
         });
     };
@@ -56,7 +56,14 @@ export function DeleteAccountDialog({ account, open, onOpenChange }: DeleteAccou
                         </li>
                     ))}
                 </ul>
-                <Field label={t('machines.account.delete.field', { name })} className="mt-4">
+                <Field
+                    label={
+                        (account.displayName ?? account.login ?? null) === null
+                            ? t('machines.account.delete.fieldWord', { word: ACCOUNT_DELETE_WORD })
+                            : t('machines.account.delete.field', { name })
+                    }
+                    className="mt-4"
+                >
                     <Input
                         autoFocus
                         placeholder={name}

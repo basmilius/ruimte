@@ -779,9 +779,10 @@
                     "account": "The account and the ways to sign in to it.",
                     "sessions": "Every sign-in to it, on every device.",
                     "push": "Notifications to your phones and tablets.",
-                    "machines": "Your machines from the account. Each keeps its projects; to put one on another account, take it off this one on the machine itself first."
+                    "machines": "Your machines from the account. This computer's machine leaves it now; take any other off on that machine itself before it joins another account. Each keeps its projects."
                 },
                 "field": "Type {{name}} to confirm",
+                "fieldWord": "This account has no name. Type {{word}} to confirm",
                 "confirm": "Delete account",
                 "busy": "Deleting"
             }

@@ -213,7 +213,9 @@
             "signedIn": "Signed in with {{provider}}",
             "signedInAs": "Signed in with {{provider}} as {{login}}",
             "linked": "{{provider}} added to your account",
-            "deleted": "Your Ruimte account is deleted, and this app signed out"
+            "deleted": "Your Ruimte account is deleted, and this app signed out",
+            "deletedAndLeft": "Your Ruimte account is deleted, this app signed out and this computer's machine left the account",
+            "deletedLeaveFailed": "Your Ruimte account is deleted and this app signed out, but this computer's machine is still on it. Take it off in its settings under Machines before you sign in again."
         },
         "sessionEndedOnDevice": "Your session on this device ended. Sign in again to open your machines.",
         "sessionEnded": "Your session ended. Sign in again.",

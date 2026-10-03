@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { deletePulsarAccount, startPulsarAccount, usePulsarAccount } from './account';
+import { startPulsarAccount, usePulsarAccount } from './account';
+import { deleteAccountHere, type LocalLeave } from './account-deletion';
 import { useAccountConfirmation } from './confirmation';
 import type { PulsarPlatform } from './desktop';
 
@@ -52,18 +53,36 @@ describe('deleting the account', () => {
         globalThis.fetch = realFetch;
     });
 
-    test('sends the typed name, then signs out through the keeper and says so', async () => {
+    test('sends the typed name, signs out through the keeper and takes this computer off the account', async () => {
         const sent = answerDeleteWith(() => new Response(null, { status: 204 }));
         const { platform, calls } = platformWith();
         await startPulsarAccount(platform);
         expect(usePulsarAccount.getState().status).toBe('signed-in');
+        const left: string[] = [];
 
-        await deletePulsarAccount('someone');
+        await deleteAccountHere('someone', async (accountId) => {
+            left.push(accountId);
+            return 'left';
+        });
 
         expect(sent).toEqual([{ method: 'DELETE', path: '/v1/account', body: { confirmation: 'someone' } }]);
         expect(calls.signOuts).toBe(1);
+        expect(left).toEqual(['account-1']);
         expect(usePulsarAccount.getState()).toMatchObject({ status: 'signed-out', account: null });
-        expect(useAccountConfirmation.getState().text).toBe('Your Ruimte account is deleted, and this app signed out');
+        expect(useAccountConfirmation.getState().text).toBe("Your Ruimte account is deleted, this app signed out and this computer's machine left the account");
+    });
+
+    test('says when this computer was on no account, and when it could not leave', async () => {
+        const said = async (outcome: LocalLeave): Promise<string | null> => {
+            answerDeleteWith(() => new Response(null, { status: 204 }));
+            await startPulsarAccount(platformWith().platform);
+            await deleteAccountHere('someone', async () => outcome);
+            return useAccountConfirmation.getState().text;
+        };
+        expect(await said('not-on-it')).toBe('Your Ruimte account is deleted, and this app signed out');
+        expect(await said('failed')).toBe(
+            "Your Ruimte account is deleted and this app signed out, but this computer's machine is still on it. Take it off in its settings under Machines before you sign in again."
+        );
     });
 
     test('a name the address book refuses keeps the person signed in', async () => {
@@ -71,7 +90,15 @@ describe('deleting the account', () => {
         const { platform, calls } = platformWith();
         await startPulsarAccount(platform);
 
-        await expect(deletePulsarAccount('somebody')).rejects.toThrow('Type someone to delete this account');
+        const left: string[] = [];
+        await expect(
+            deleteAccountHere('somebody', async (accountId) => {
+                left.push(accountId);
+                return 'left';
+            })
+        ).rejects.toThrow('Type someone to delete this account');
+
+        expect(left).toEqual([]);
 
         expect(calls.signOuts).toBe(0);
         expect(usePulsarAccount.getState().status).toBe('signed-in');

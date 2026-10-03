@@ -779,9 +779,10 @@
                     "account": "Het account en de manieren om erop in te loggen.",
                     "sessions": "Elke inlog op het account, op elk apparaat.",
                     "push": "Meldingen op je telefoons en tablets.",
-                    "machines": "Je machines van het account. Elke machine houdt haar projecten; wil je er een op een ander account zetten, haal hem dan eerst op de machine zelf van dit account af."
+                    "machines": "Je machines van het account. De machine van deze computer verlaat het meteen; haal elke andere eerst op die machine zelf eraf voordat hij op een ander account komt. Elke machine houdt zijn projecten."
                 },
                 "field": "Typ {{name}} om te bevestigen",
+                "fieldWord": "Dit account heeft geen naam. Typ {{word}} om te bevestigen",
                 "confirm": "Account verwijderen",
                 "busy": "Bezig met verwijderen"
             }

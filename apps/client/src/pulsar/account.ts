@@ -289,7 +289,6 @@ export const signOutOfPulsar = async (): Promise<void> => {
 export const deletePulsarAccount = async (confirmation: string): Promise<void> => {
     await withAccessToken((client, token) => client.deleteAccount(token, { confirmation }));
     await signOutOfPulsar();
-    confirmAccount(i18next.t('machines:account.confirmation.deleted'));
 };
 
 const addressBookClient = (): Promise<AddressBookClient> => {

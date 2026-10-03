@@ -213,7 +213,9 @@
             "signedIn": "Ingelogd met {{provider}}",
             "signedInAs": "Ingelogd met {{provider}} als {{login}}",
             "linked": "{{provider}} is aan je account toegevoegd",
-            "deleted": "Je Ruimte-account is verwijderd en deze app is uitgelogd"
+            "deleted": "Je Ruimte-account is verwijderd en deze app is uitgelogd",
+            "deletedAndLeft": "Je Ruimte-account is verwijderd, deze app is uitgelogd en de machine van deze computer heeft het account verlaten",
+            "deletedLeaveFailed": "Je Ruimte-account is verwijderd en deze app is uitgelogd, maar de machine van deze computer staat er nog op. Haal hem eraf in zijn instellingen onder Machines voordat je opnieuw inlogt."
         },
         "sessionEndedOnDevice": "Je sessie op dit apparaat is afgelopen. Log opnieuw in om je machines te openen.",
         "sessionEnded": "Je sessie is afgelopen. Log opnieuw in.",
