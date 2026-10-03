@@ -24,7 +24,6 @@ struct MachineFilesPage: View {
         let path: String
         let directory: Bool
     }
-    @Environment(\.inProjectSidebar) private var inProjectSidebar
     private var entries: [JSONValue] {
         state.value?.list("entries").filter {
             search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search)
@@ -49,7 +48,11 @@ struct MachineFilesPage: View {
                 let directory = entry.text("kind") == "directory"
                 let mark = fileMarks.mark(path: entry.text("path"), directory: directory)
                 Button {
-                    selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
+                    if !directory, let showFile = project?.showFile {
+                        showFile(entry.text("path"))
+                    } else {
+                        selectedEntry = FileDestination(path: entry.text("path"), directory: directory)
+                    }
                 } label: {
                     HStack(spacing: 10) {
                         Image(lucide: FileKinds.icon(name: entry.text("name"), kind: entry.text("kind")), size: 20)
@@ -67,9 +70,9 @@ struct MachineFilesPage: View {
                                 .accessibilityLabel(GitFileMarks.spoken(mark))
                         }
                     }
-                    .modifier(MobileSidebarLabel(disclosure: true))
+                    .modifier(MobileSidebarLabel(disclosure: directory || project?.showFile == nil))
                 }
-                .modifier(MobileSidebarRow())
+                .modifier(MobileSidebarRow(selected: !directory && project?.shownFile == entry.text("path")))
                 .contextMenu { if let project { entryMenu(entry, directory: directory, project: project) } }
             }
             if state.value != nil && entries.isEmpty {
@@ -92,7 +95,7 @@ struct MachineFilesPage: View {
             FileGrepPage(client: client, cwd: state.value?.text("path") ?? path, project: project)
         }
         .modifier(FileDeleteConfirmation(client: client, path: $deleting) { Task { await load() } })
-        .modifier(FolderSearch(text: $search, inSidebar: inProjectSidebar))
+        .searchable(text: $search, prompt: "Filter this folder")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -629,10 +632,3 @@ private struct SafeSVGPreview: UIViewRepresentable {
     }
 }
 
-private struct FolderSearch: ViewModifier {
-    @Binding var text: String
-    let inSidebar: Bool
-    func body(content: Content) -> some View {
-        if inSidebar { content } else { content.searchable(text: $text, prompt: "Filter this folder") }
-    }
-}

@@ -56,7 +56,7 @@ struct PhoneHome: View {
 
                 Tab(value: PhoneTab.search, role: .search) {
                     SearchPage(
-                        now: now, projects: projects, runtime: runtime, router: router, showSettings: showSettings,
+                        now: now, projects: projects, runtime: runtime, navigator: router, showSettings: showSettings,
                         pair: pair)
                 } label: {
                     Label("Search", lucideIcon: "search")

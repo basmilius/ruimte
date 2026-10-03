@@ -3,7 +3,8 @@ import SwiftUI
 
 struct WorkspacePage: View {
     @Bindable var navigation: WorkspaceNavigation
-    var isSidebar = false
+    /// The iPad's sidebar, which this page is when it is set: the list opens views beside it instead of over it.
+    var sidebar: PadSidebarContext?
     var settingsLink: SettingsLink?
     /// The branch line under the title on an iPhone.
     var gitLines: ProjectGitLines?
@@ -17,9 +18,6 @@ struct WorkspacePage: View {
     @State private var renamed: JSONValue?
     @State private var renameText = ""
     @State private var deleteView: ViewDeletion?
-    @State private var search = ""
-    @State private var searching = false
-    @State private var showProcesses = false
     @State private var forkProblem: String?
     @State private var listState: ProjectListState
     @State private var newView: NewViewResult?
@@ -29,11 +27,11 @@ struct WorkspacePage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
-        navigation: WorkspaceNavigation, isSidebar: Bool = false, settingsLink: SettingsLink? = nil,
+        navigation: WorkspaceNavigation, sidebar: PadSidebarContext? = nil, settingsLink: SettingsLink? = nil,
         gitLines: ProjectGitLines? = nil, runtime: AppRuntime? = nil
     ) {
         _navigation = Bindable(navigation)
-        self.isSidebar = isSidebar
+        self.sidebar = sidebar
         self.settingsLink = settingsLink
         self.gitLines = gitLines
         self.runtime = runtime
@@ -42,10 +40,25 @@ struct WorkspacePage: View {
                 machineID: navigation.workspace.session.machine.id, projectID: navigation.workspace.projectID))
     }
 
+    private var isSidebar: Bool { sidebar != nil }
+
     var body: some View {
         Group {
-            if isSidebar {
-                if workspace.ready { projectTabs } else { openingStatus }
+            if let sidebar {
+                // The machine-lost card stands in the content column, so the sidebar stays usable to switch.
+                PhoneProjectList(
+                    workspace: workspace, state: listState, views: listedViews,
+                    selectedID: navigation.selectedViewID, open: openView, act: act, header: sidebar.header,
+                    highlightedID: sidebar.router.detail == .project ? sidebar.router.shownID : nil
+                )
+                .safeAreaInset(edge: .bottom, spacing: 0) { newViewFooter }
+                .overlay {
+                    if !workspace.ready {
+                        openingStatus
+                    } else if workspace.isScratch && listedViews.isEmpty {
+                        noChats
+                    }
+                }
             } else {
                 // The list stands from the first frame of the push. Swapping it in for the status once the project
                 // opened, as the push settles, made the bar drop its items for a moment and bring them back.
@@ -64,9 +77,9 @@ struct WorkspacePage: View {
                         noChats
                     }
                 }
+                .modifier(MobilePageSurface())
             }
         }
-        .modifier(MobilePageSurface())
         .overlay(alignment: .bottom) {
             if !isSidebar && machineLost {
                 MachineLostCard(
@@ -112,18 +125,17 @@ struct WorkspacePage: View {
         .modifier(PhoneSubtitle(text: isSidebar ? nil : phoneSubtitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if isSidebar { tabletToolbar } else { phoneToolbar }
+            if !isSidebar { phoneToolbar }
         }
         .navigationDestination(item: $navigation.openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
         .task(id: workspace.ready) {
             await openPendingView()
             await makePendingKind()
-            if workspace.ready, let sheet = navigation.pendingSheet {
-                navigation.pendingSheet = nil
-                navigation.show(sheet)
-            }
+            showPendingSheet()
         }
+        .onChange(of: navigation.pendingSheet) { _, _ in showPendingSheet() }
+        .onChange(of: navigation.pendingKind) { _, _ in Task { await makePendingKind() } }
         .task(id: workspace.ready) {
             guard !isSidebar, workspace.ready, !workspace.isScratch, let gitLines else { return }
             await gitLines.refresh(
@@ -157,19 +169,17 @@ struct WorkspacePage: View {
         ) {
             if let item = settingsView { ViewSettingsSheet(workspace: workspace, item: item) }
         }
-        .mobileSheet(isPresented: $navigation.adding, onDismiss: afterNewView) {
-            if isSidebar {
-                AddProjectItem(workspace: workspace, canvasID: nil)
-            } else {
-                NewViewSheet(workspace: workspace) { newView = $0 }
-            }
+        .mobileSheet(isPresented: phoneSheet($navigation.adding), onDismiss: afterNewView) {
+            NewViewSheet(workspace: workspace) { newView = $0 }
         }
         .mobileSheet(
             isPresented: $navigation.showingSettings,
             onDismiss: {
                 // The next sheet or the way back waits for this one to be gone.
                 if afterSettings == .launches { navigation.showingLaunches = true }
-                if afterSettings == .leave { dismiss() }
+                if afterSettings == .leave {
+                    if let sidebar { sidebar.router.closeProject() } else { dismiss() }
+                }
                 afterSettings = nil
             }
         ) {
@@ -201,7 +211,7 @@ struct WorkspacePage: View {
                     }
             }
         }
-        .mobileSheet(isPresented: $navigation.showingFiles) {
+        .mobileSheet(isPresented: phoneSheet($navigation.showingFiles)) {
             NavigationStack {
                 ProjectFilesPage(workspace: workspace) { id in
                     navigation.showingFiles = false
@@ -214,7 +224,7 @@ struct WorkspacePage: View {
                     }
             }
         }
-        .mobileSheet(isPresented: $navigation.showingGit) {
+        .mobileSheet(isPresented: phoneSheet($navigation.showingGit)) {
             NavigationStack {
                 GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                     .toolbar {
@@ -233,14 +243,6 @@ struct WorkspacePage: View {
                         Button(role: .close) { navigation.showingLaunches = false }
                     }
                 }
-            }
-        }
-        .mobileSheet(isPresented: $showProcesses) {
-            NavigationStack {
-                ProcessesPage(client: workspace.client, titles: workspace.nodeTitles)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showProcesses = false } }
-                    }
             }
         }
         .alert(
@@ -333,33 +335,6 @@ struct WorkspacePage: View {
         }
     }
 
-    @ToolbarContentBuilder private var tabletToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                // The Chats project's folder is the machine's own, so it has no launches.
-                if !workspace.isScratch {
-                    Button("Launches", lucideIcon: "rocket") { navigation.showingLaunches = true }
-                }
-                Button("Processes", lucideIcon: "activity") { showProcesses = true }
-                Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
-            } label: {
-                Image(lucide: "ellipsis")
-            }
-            .accessibilityLabel("More")
-            .disabled(!workspace.ready)
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            // The views of the Chats project are its chats, so its plus makes one.
-            if workspace.isScratch {
-                Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
-                    .disabled(!workspace.ready)
-            } else {
-                Button("Add view", lucideIcon: "plus") { navigation.adding = true }
-                    .disabled(!workspace.ready)
-            }
-        }
-    }
-
     @ViewBuilder private var openingStatus: some View {
         if let problem = workspace.problem
             ?? (workspace.session.failedAttempts >= 3 ? "Could not connect to your machine." : nil)
@@ -381,57 +356,6 @@ struct WorkspacePage: View {
         } else {
             MobileLoadingRow("Opening project")
         }
-    }
-
-    private var projectTabs: some View {
-        TabView(selection: $navigation.section) {
-            Tab(value: ProjectSection.views) {
-                viewList(query: "")
-            } label: {
-                Label("Views", lucideIcon: "layout-grid")
-            }
-            // The Chats project's folder is the machine's own, so it shows neither files nor git.
-            if !workspace.isScratch {
-                Tab(value: ProjectSection.files) {
-                    if isSidebar {
-                        viewList(query: "")
-                    } else {
-                        ProjectFilesPage(workspace: workspace) { openView($0) }
-                    }
-                } label: {
-                    Label("Files", lucideIcon: "folder")
-                }
-                Tab(value: ProjectSection.git) {
-                    if isSidebar {
-                        viewList(query: "")
-                    } else {
-                        GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
-                    }
-                } label: {
-                    Label("Git", lucideIcon: "git-branch")
-                }
-            }
-            Tab(value: ProjectSection.search, role: .search) {
-                searchResults.searchable(text: $search, isPresented: $searching, prompt: "Find a view")
-            } label: {
-                Label("Search", lucideIcon: "search")
-            }
-        }
-        .tabViewStyle(.tabBarOnly)
-        .tabViewSearchActivation(.searchTabSelection)
-        // The sidebar is a narrow navigator; the separate detail column keeps its regular iPad traits.
-        .environment(\.horizontalSizeClass, .compact)
-        .environment(\.inProjectSidebar, isSidebar)
-        .onChange(of: navigation.section) { _, selected in searching = selected == .search }
-    }
-
-    private var searchResults: some View {
-        viewList(query: search)
-            .overlay {
-                if !search.isEmpty && WorkspaceViewSections.split(listedViews, search: search).isEmpty {
-                    ContentUnavailableView("No matching views", lucideIcon: "search")
-                }
-            }
     }
 
     /// A view, or on an iPhone a node its canvas lists, which opens on its own over the list.
@@ -527,7 +451,7 @@ struct WorkspacePage: View {
         case .heading(let item):
             renameText = ""
             renamed = item
-        case .file: navigation.showingFiles = true
+        case .file: present(.files)
         }
     }
 
@@ -544,102 +468,6 @@ struct WorkspacePage: View {
         workspace.views.filter { WorkspaceViewSections.isListed($0, selectedID: navigation.selectedViewID) }
     }
 
-    private func viewList(query: String) -> some View {
-        let sections = WorkspaceViewSections.split(listedViews, search: query)
-        return List {
-            ForEach(sections) { section in
-                Section {
-                    if section.id != sections.first?.id || section.title != nil || isSidebar {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if isSidebar && section.id == sections.first?.id {
-                                Text(workspace.title).font(.title3.weight(.semibold))
-                                    .foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
-                                    .textCase(nil).padding(.vertical, 8)
-                                    .accessibilityAddTraits(.isHeader)
-                            }
-                            if section.id != sections.first?.id {
-                                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
-                            }
-                            if let title = section.title {
-                                Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
-                            }
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
-                        .listRowSeparator(.hidden)
-                        .moveDisabled(true)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(section.title == nil && !(isSidebar && section.id == sections.first?.id))
-                    }
-                    ForEach(section.items, id: \.stableID) { item in
-                        let selected =
-                            navigation.selectedViewID == item.stableID
-                            && (navigation.section == .views || navigation.section == .search)
-                        Button {
-                            openView(item.stableID)
-                        } label: {
-                            viewRow(item)
-                                .modifier(MobileSidebarLabel())
-                        }
-                        .foregroundStyle(MobileStyle.text)
-                        .modifier(MobileSidebarRow(selected: isSidebar && selected))
-                        .accessibilityIdentifier("workspace.view.\(item.stableID)")
-                        .contextMenu {
-                            Button("Rename", lucideIcon: "pencil") {
-                                renameText = item.text("name")
-                                renamed = item
-                            }.disabled(item.text("kind") == "unknown")
-                            Button("Change icon", lucideIcon: "palette") { iconView = item }
-                                .disabled(item.text("kind") == "unknown")
-                            if ["chat", "terminal"].contains(item.text("kind")) {
-                                let snoozes = workspace.session.snoozes
-                                SnoozeMenu(until: snoozes.until(item.stableID)) {
-                                    snoozes.snooze(item.stableID, until: $0)
-                                } wake: {
-                                    snoozes.clear(item.stableID)
-                                }
-                            }
-                            Button("Delete", lucideIcon: "trash", role: .destructive) {
-                                Task {
-                                    let question = await SessionEnding.question(for: item, client: workspace.client)
-                                    deleteView = ViewDeletion(item: item, question: question)
-                                }
-                            }
-                        }
-                        .moveDisabled(!query.isEmpty)
-                    }
-                    .onMove { indices, destination in
-                        guard query.isEmpty else { return }
-                        let expectedIDs = section.items.map(\.stableID)
-                        let selectedID = navigation.selectedViewID
-                        Task {
-                            await workspace.edit { document in
-                                guard
-                                    let reordered = WorkspaceViewSections.moving(
-                                        document.list("views"), sectionID: section.id,
-                                        expectedIDs: expectedIDs,
-                                        from: indices, to: destination,
-                                        listed: { WorkspaceViewSections.isListed($0, selectedID: selectedID) })
-                                else { return document }
-                                return document.setting("views", .array(reordered))
-                            }
-                        }
-                    }
-                }
-                .listSectionSeparator(.hidden)
-                .listRowBackground(Color.clear)
-            }
-        }
-        .modifier(MobileSidebarList(minimumRowHeight: 0))
-        .overlay {
-            if workspace.ready && workspace.isScratch && query.isEmpty && sections.isEmpty {
-                noChats
-            }
-        }
-        .contentMargins(.top, isSidebar ? nil : 0, for: .scrollContent)
-        .contentMargins(.bottom, isSidebar ? nil : 24, for: .scrollContent)
-        .accessibilityIdentifier("workspace.views")
-    }
-
     /// Opens the view a project was opened for, once the machine's copy of the project holds it.
     private func openPendingView() async {
         guard workspace.ready, let id = navigation.pendingViewID else { return }
@@ -648,7 +476,12 @@ struct WorkspacePage: View {
     }
 
     private func openView(_ id: String) {
-        if !isSidebar, let canvas = workspace.views.first(where: { $0.list("nodes").contains { $0.stableID == id } }) {
+        if let sidebar {
+            guard workspace.item(id) != nil, !WorkspaceViewSections.isDivider(workspace.item(id) ?? .null) else { return }
+            sidebar.router.show(view: id)
+            return
+        }
+        if let canvas = workspace.views.first(where: { $0.list("nodes").contains { $0.stableID == id } }) {
             // A node opens on its own; what the project remembers as open is the canvas it stands on.
             workspace.select(canvas.stableID)
             navigation.selectedViewID = canvas.stableID
@@ -658,33 +491,59 @@ struct WorkspacePage: View {
         guard workspace.views.contains(where: { $0.stableID == id && !WorkspaceViewSections.isDivider($0) }) else { return }
         workspace.select(id)
         withAnimation(reduceMotion ? nil : .default) {
-            navigation.section = .views
             navigation.selectedViewID = id
-            searching = false
-            if !isSidebar { navigation.openedViewID = id }
+            navigation.openedViewID = id
         }
     }
 
-    private func viewRow(_ item: JSONValue) -> some View {
-        HStack(spacing: 10) {
-            WorkspaceViewIcon(item: item).foregroundStyle(MobileStyle.muted)
-            Text(item.text("name", fallback: item.text("kind")))
-                .font(.callout).lineLimit(1).truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let task = workspace.session.tasks.childTask(item.stableID) { TaskMark(task: task) }
-            if let until = workspace.session.snoozes.until(item.stableID) {
-                Image(lucide: "alarm-clock", size: 14).foregroundStyle(MobileStyle.muted)
-                    .accessibilityLabel("Snoozed until \(SnoozeChoice.moment(until, from: .now))")
-            } else {
-                AttentionMark(store: workspace.session.attention, id: item.stableID)
-            }
-            if !isSidebar {
-                Image(lucide: "chevron-right", size: 12)
-                    .foregroundStyle(MobileStyle.faint).accessibilityHidden(true)
-            }
+    /// A sheet of the iPhone's project page; on an iPad its content has a place of its own and it never stands.
+    private func phoneSheet(_ binding: Binding<Bool>) -> Binding<Bool> {
+        isSidebar ? .constant(false) : binding
+    }
+
+    /// Puts a sheet up, where an iPad keeps the files and git in the inspector beside the content instead.
+    private func present(_ sheet: ProjectSheet) {
+        guard let router = sidebar?.router else {
+            navigation.show(sheet)
+            return
         }
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
+        switch sheet {
+        case .files: router.inspector = .files
+        case .git: router.inspector = .git
+        default: navigation.show(sheet)
+        }
+    }
+
+    /// A sheet a command asked for before the project was there, or while it already was.
+    private func showPendingSheet() {
+        guard workspace.ready, let sheet = navigation.pendingSheet else { return }
+        navigation.pendingSheet = nil
+        present(sheet)
+    }
+
+    /// New view at the foot of the iPad's sidebar, as the desktop's sidebar has it, growing out of its button.
+    private var newViewFooter: some View {
+        Button {
+            if workspace.isScratch { navigation.newChat = true } else { navigation.adding = true }
+        } label: {
+            Label(workspace.isScratch ? "New chat" : "New view", lucideIcon: "plus")
+                .font(.callout.weight(.medium))
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .padding(.horizontal, 14)
+                .contentShape(.capsule)
+        }
+        .buttonStyle(.glass)
+        .disabled(!workspace.ready)
+        .padding(.horizontal, 14).padding(.bottom, 10)
+        .accessibilityIdentifier("sidebar.newView")
+        .popover(isPresented: $navigation.adding, arrowEdge: .top) {
+            NewViewSheet(workspace: workspace) { newView = $0 }
+                .frame(minWidth: 380, minHeight: 460)
+                .modifier(MobileSheetSurface())
+        }
+        .onChange(of: navigation.adding) { _, adding in
+            if !adding { afterNewView() }
+        }
     }
 }
 
@@ -1024,7 +883,6 @@ struct NotePage: View {
 }
 
 extension EnvironmentValues {
-    @Entry var inProjectSidebar = false
     @Entry var openMobileWorkspace = OpenMobileWorkspaceAction()
 }
 

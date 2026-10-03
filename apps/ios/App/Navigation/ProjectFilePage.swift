@@ -23,7 +23,7 @@ struct ProjectFilePage: View {
             if let workspace {
                 FileContentPage(
                     client: workspace.client, path: target.path,
-                    project: FilesProject(workspace: workspace) { openView(workspace, $0) })
+                    project: FilesProject(workspace: workspace, openView: { openView(workspace, $0) }))
             } else {
                 ContentUnavailableView(
                     "Machine unavailable", lucideIcon: "triangle-alert",

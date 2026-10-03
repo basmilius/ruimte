@@ -11,11 +11,16 @@ struct PhoneProjectList: View {
     let selectedID: String?
     let open: (String) -> Void
     let act: (ProjectRowAction, JSONValue) -> Void
+    /// The iPad sidebar's rows above the views: the project switcher, Search and Now.
+    var header: AnyView?
+    /// The row whose view the iPad shows beside the sidebar.
+    var highlightedID: String?
 
     var body: some View {
         let sections = WorkspaceViewSections.split(views)
         let sources = markSources
         List {
+            if let header { header }
             ForEach(sections) { section in
                 Section {
                     if section.id != sections.first?.id || section.title != nil {
@@ -36,7 +41,8 @@ struct PhoneProjectList: View {
                     }
                     ForEach(section.items, id: \.stableID) { item in
                         ProjectListCell(
-                            workspace: workspace, item: item, state: state, sources: sources, open: open, act: act)
+                            workspace: workspace, item: item, state: state, sources: sources,
+                            highlightedID: highlightedID, open: open, act: act)
                     }
                     .onMove { indices, destination in move(section: section, from: indices, to: destination) }
                 }
@@ -44,8 +50,8 @@ struct PhoneProjectList: View {
                 .listRowBackground(Color.clear)
             }
         }
-        .modifier(MobileSidebarList(minimumRowHeight: 0))
-        .contentMargins(.top, 0, for: .scrollContent)
+        .modifier(MobileSidebarList(minimumRowHeight: 0, opaque: header == nil))
+        .contentMargins(.top, header == nil ? 0 : nil, for: .scrollContent)
         .contentMargins(.bottom, 24, for: .scrollContent)
         .accessibilityIdentifier("workspace.views")
         .task(id: ProjectListLogic.chatIDs(views)) {
@@ -92,6 +98,7 @@ private struct ProjectListCell: View {
     let item: JSONValue
     let state: ProjectListState
     let sources: ProjectMarkSources
+    let highlightedID: String?
     let open: (String) -> Void
     let act: (ProjectRowAction, JSONValue) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -128,6 +135,8 @@ private struct ProjectListCell: View {
                     .modifier(MobileSidebarLabel())
                     .accessibilityElement(children: .combine)
                 }
+                .buttonStyle(MobileSidebarButtonStyle(selected: highlightedID == item.stableID))
+                .accessibilityAddTraits(highlightedID == item.stableID ? .isSelected : [])
                 .accessibilityIdentifier("workspace.view.\(item.stableID)")
                 .contextMenu {
                     ProjectRowMenu(item: item, isView: true, status: marks.status, workspace: workspace, act: act)
@@ -153,6 +162,8 @@ private struct ProjectListCell: View {
                         .modifier(MobileSidebarLabel())
                         .accessibilityElement(children: .combine)
                     }
+                    .buttonStyle(MobileSidebarButtonStyle(selected: highlightedID == node.stableID))
+                    .accessibilityAddTraits(highlightedID == node.stableID ? .isSelected : [])
                     .accessibilityIdentifier("workspace.node.\(node.stableID)")
                     .contextMenu {
                         ProjectRowMenu(

@@ -129,12 +129,35 @@ struct NowPage: View {
         .accessibilityIdentifier("now.\(entry.target.itemID)")
     }
 
-    @ViewBuilder private func menu(_ entry: ProjectViewEntry) -> some View {
-        Button(entry.kind == "chat" ? "Open chat" : "Open", lucideIcon: entry.iconName) { open(entry.target) }
-        Button("Open project", lucideIcon: "folder-open") { openProject(entry.target) }
+    private func menu(_ entry: ProjectViewEntry) -> some View {
+        NowEntryMenu(now: now, entry: entry) { open(entry.target) } openProject: { openProject(entry.target) }
+    }
+
+    private func snooze(_ entry: ProjectViewEntry, until: Date) {
+        now.snoozes(for: entry.target.machineID)?.snooze(entry.target.itemID, until: until)
+    }
+
+    private func nothingWaits(_ board: NowBoard) -> some View {
+        NowNothingWaits(working: board.working.count, notifies: runtime.notifications.enabled)
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+    }
+}
+
+/// What a long press on an entry of Now offers: open it or its project, snooze it, and answer its approval.
+struct NowEntryMenu: View {
+    let now: NowModel
+    let entry: ProjectViewEntry
+    let open: () -> Void
+    let openProject: () -> Void
+
+    var body: some View {
+        Button(entry.kind == "chat" ? "Open chat" : "Open", lucideIcon: entry.iconName, action: open)
+        Button("Open project", lucideIcon: "folder-open", action: openProject)
         if entry.status == .needsYou {
             Divider()
-            SnoozeMenu(until: entry.snoozedUntil) { snooze(entry, until: $0) } wake: {
+            SnoozeMenu(until: entry.snoozedUntil) {
+                now.snoozes(for: entry.target.machineID)?.snooze(entry.target.itemID, until: $0)
+            } wake: {
                 now.snoozes(for: entry.target.machineID)?.clear(entry.target.itemID)
             }
         }
@@ -153,18 +176,18 @@ struct NowPage: View {
             }
         }
     }
+}
 
-    private func snooze(_ entry: ProjectViewEntry, until: Date) {
-        now.snoozes(for: entry.target.machineID)?.snooze(entry.target.itemID, until: until)
-    }
+/// The card Now shows while nothing waits on you, saying what still works.
+struct NowNothingWaits: View {
+    let working: Int
+    let notifies: Bool
 
-    @ViewBuilder private func nothingWaits(_ board: NowBoard) -> some View {
-        let working = board.working.count
+    var body: some View {
         let still =
             working == 0
             ? "No agent is working right now."
             : working == 1 ? "One agent is still working." : "\(working) agents are still working."
-        let notified = working > 0 && runtime.notifications.enabled
         VStack(spacing: 6) {
             LucideIcon(name: "check", size: 22)
                 .foregroundStyle(MobileStyle.positive)
@@ -172,19 +195,18 @@ struct NowPage: View {
                 .background(MobileStyle.positive.opacity(0.12), in: Circle())
                 .padding(.bottom, 6)
             Text("Nothing needs you").font(.callout.weight(.semibold)).foregroundStyle(MobileStyle.text)
-            Text(notified ? still + " You get a notification when one asks for you." : still)
+            Text(working > 0 && notifies ? still + " You get a notification when one asks for you." : still)
                 .font(.footnote).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
         }
         .padding(EdgeInsets(top: 26, leading: 20, bottom: 30, trailing: 20))
         .frame(maxWidth: .infinity)
         .background(MobileStyle.panel, in: .rect(cornerRadius: 22))
         .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(MobileStyle.border))
-        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .accessibilityElement(children: .combine)
     }
 }
 
-private struct NowHeader: View {
+struct NowHeader: View {
     /// What the design puts above every group but the first.
     static let spacing: CGFloat = 10
 
@@ -208,7 +230,7 @@ private struct NowHeader: View {
     }
 }
 
-private struct NowRow: View {
+struct NowRow: View {
     let entry: ProjectViewEntry
     let namesMachine: Bool
     let task: JSONValue?

@@ -9,6 +9,8 @@ struct MobileSheetSurface: ViewModifier {
             .toggleStyle(SystemToggleStyle())
             // Sheets have their own surface instead of borrowing color from the view underneath.
             .presentationBackground(MobileStyle.surface)
+            // A form sheet over the iPad's sidebar and content; an iPhone's sheet is the width of the screen anyway.
+            .presentationSizing(.form)
     }
 }
 

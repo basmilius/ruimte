@@ -7,13 +7,16 @@ import SwiftUI
 struct ProjectFilesPage: View {
     let workspace: MobileWorkspace
     var openView: ((String) -> Void)?
+    var showFile: ((String) -> Void)?
+    var shownFile: String?
     @State private var repositories = GitRepositories()
     @State private var detent = PresentationDetent.large
 
     var body: some View {
         MachineFilesPage(
             client: workspace.client, path: workspace.folder,
-            project: FilesProject(workspace: workspace, openView: openView), marks: repositories
+            project: FilesProject(workspace: workspace, openView: openView, showFile: showFile, shownFile: shownFile),
+            marks: repositories
         )
         .task(id: workspace.folder) { await repositories.run(client: workspace.client, folder: workspace.folder) }
         .presentationDetents([.medium, .large], selection: $detent)

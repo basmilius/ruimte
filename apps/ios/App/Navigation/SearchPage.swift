@@ -7,7 +7,7 @@ struct SearchPage: View {
     let now: NowModel
     let projects: UnifiedProjects
     let runtime: AppRuntime
-    let router: PhoneRouter
+    let navigator: any PaletteNavigator
     let showSettings: () -> Void
     let pair: () -> Void
     @State private var query = ""
@@ -92,7 +92,7 @@ struct SearchPage: View {
 
     private func viewRow(_ entry: ProjectViewEntry, query: String) -> some View {
         Button {
-            router.show(entry.target, from: .search)
+            navigator.show(view: entry.target)
         } label: {
             PaletteRow(
                 title: entry.title, query: query, detail: viewDetail(entry), icon: entry.iconName)
@@ -114,7 +114,7 @@ struct SearchPage: View {
 
     private func fileRow(_ file: PaletteFile, query: String) -> some View {
         Button {
-            router.show(
+            navigator.show(
                 file: ProjectFileTarget(
                     machineID: file.project.machineID, projectID: file.project.projectID, path: file.absolutePath))
         } label: {
@@ -142,14 +142,14 @@ struct SearchPage: View {
         switch action {
         case .newChat(let machineID): newChat = NewChatTarget(machineID: machineID)
         case .usage(let machineID): usage = NewChatTarget(machineID: machineID)
-        case .openFolder(let machineID): router.showMachine(machineID)
-        case .recentlyClosed: router.showRecentProjects()
+        case .openFolder(let machineID): navigator.showMachine(machineID)
+        case .recentlyClosed: navigator.showRecentProjects()
         case .pair: pair()
         case .settings: showSettings()
         case .appearance(let value): appearance = value
         case .project(let id, let projectAction):
             guard let row = projects.open.first(where: { $0.id == id }) else { return }
-            let navigation = router.openProject(
+            let navigation = navigator.openProject(
                 MobileWorkspace(session: runtime.session(for: row.machine), projectID: id.projectID, summary: row.summary))
             switch projectAction {
             case .newView: navigation.pendingSheet = .newView

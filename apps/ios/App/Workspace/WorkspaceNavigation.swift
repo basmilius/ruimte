@@ -5,7 +5,6 @@ import SwiftUI
 final class WorkspaceNavigation: Hashable, Identifiable {
     nonisolated let id = UUID()
     let workspace: MobileWorkspace
-    var section = ProjectSection.views
     var selectedViewID: String?
     /// A view to open once the project is there, such as a chat a machine just made.
     var pendingViewID: String?
@@ -42,56 +41,4 @@ final class WorkspaceNavigation: Hashable, Identifiable {
 
 enum ProjectSheet: Hashable {
     case newView, files, git, launches, settings
-}
-
-enum ProjectSection: String, CaseIterable, Identifiable {
-    case views, files, git, search
-    var id: Self { self }
-    var title: String {
-        switch self {
-        case .views: "Views"
-        case .files: "Files"
-        case .git: "Git"
-        case .search: "Search"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .views: "layout-grid"
-        case .files: "folder"
-        case .git: "git-branch"
-        case .search: "search"
-        }
-    }
-}
-
-struct WorkspaceDetail: View {
-    @Bindable var navigation: WorkspaceNavigation
-    private var workspace: MobileWorkspace { navigation.workspace }
-
-    var body: some View {
-        Group {
-            switch navigation.section {
-            case .files:
-                ProjectFilesPage(workspace: workspace) { id in
-                    workspace.select(id)
-                    navigation.selectedViewID = id
-                    navigation.section = .views
-                }
-            case .git: GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
-            case .views, .search:
-                if let id = navigation.selectedViewID,
-                    let item = workspace.views.first(where: { $0.stableID == id })
-                {
-                    ProjectItemPage(workspace: workspace, item: item).id(id)
-                } else {
-                    ContentUnavailableView(
-                        "Select a view", lucideIcon: "panel-left",
-                        description: Text("Choose a view in the sidebar to get started.")
-                    )
-                }
-            }
-        }
-        .modifier(MobilePageSurface())
-    }
 }

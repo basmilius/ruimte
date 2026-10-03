@@ -85,3 +85,20 @@ final class PhoneRouter {
         path = [.machine(id)]
     }
 }
+
+/// Where the palette's results go: on an iPhone the stack over the Search tab, on an iPad the sidebar's project and
+/// the content beside it.
+@MainActor protocol PaletteNavigator {
+    func show(view target: ProjectViewTarget)
+    func show(file: ProjectFileTarget)
+    func showMachine(_ id: String)
+    func showRecentProjects()
+    /// Opens a project, for a command that then asks one of its sheets or makes a view in it.
+    func openProject(_ workspace: MobileWorkspace) -> WorkspaceNavigation
+}
+
+extension PhoneRouter: PaletteNavigator {
+    func show(view target: ProjectViewTarget) { show(target, from: .search) }
+
+    func openProject(_ workspace: MobileWorkspace) -> WorkspaceNavigation { openProject(workspace, view: nil) }
+}

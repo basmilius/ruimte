@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MobileSidebarList: ViewModifier {
     var minimumRowHeight: CGFloat = 44
+    /// Off for the iPad's sidebar, which floats as glass over the content.
+    var opaque = true
 
     func body(content: Content) -> some View {
         content
@@ -9,7 +11,7 @@ struct MobileSidebarList: ViewModifier {
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, minimumRowHeight)
             .scrollContentBackground(.hidden)
-            .background(MobileStyle.surface)
+            .background(opaque ? MobileStyle.surface : .clear)
     }
 }
 
@@ -88,40 +90,5 @@ private struct MobileSidebarButtonSurface<Label: View>: View {
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }
-    }
-}
-
-struct SidebarBrand: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            Image("RuimteLogo").renderingMode(.original)
-                .resizable().scaledToFit()
-                .frame(width: 42, height: 42)
-            Text("Ruimte").font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.text)
-        }
-        .padding(.leading, 8)
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Ruimte")
-    }
-}
-
-struct SidebarBounds: PreferenceKey {
-    static let defaultValue: Anchor<CGRect>? = nil
-
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-        value = nextValue() ?? value
-    }
-}
-
-struct SidebarDivider: View {
-    @Environment(\.displayScale) private var displayScale
-
-    var body: some View {
-        // Cover the native split divider before drawing one web-colored physical pixel.
-        MobileStyle.surface.frame(width: 2)
-            .overlay(alignment: .leading) {
-                MobileStyle.border.frame(width: 1 / displayScale).offset(x: 1)
-            }
     }
 }
