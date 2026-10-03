@@ -56,7 +56,8 @@ struct NotificationSessionPage: View {
             let shared = runtime.session(for: machine)
             session = shared
             lease = MachineNavigationLease(shared)
-            target = destination.target
+            // A view from the project widget that no open project holds can only still be a session, so it is looked up.
+            target = destination.target == "view" ? "unknown" : destination.target
             if target != "machine" { await shared.markSeen(destination.nodeID) }
         }
         .task(id: session?.generation) {

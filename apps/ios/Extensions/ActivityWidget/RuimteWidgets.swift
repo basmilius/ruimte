@@ -9,5 +9,6 @@ import WidgetKit
         CodexUsageWidget()
         NeedsYouCountWidget()
         NeedsYouListWidget()
+        ProjectWidget()
     }
 }

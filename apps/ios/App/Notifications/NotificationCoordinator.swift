@@ -637,7 +637,8 @@ struct NotificationDestination: Identifiable, Hashable {
         let machine = value("machine")
         let node = value("node")
         let target = value("target")
-        guard !node.isEmpty, node.count <= 256, target == "chat" || target == "terminal",
+        // A view comes from the project widget, which lists every kind; the needs-you widgets name a session.
+        guard !node.isEmpty, node.count <= 256, ["chat", "terminal", "view"].contains(target),
             runtime?.machines.contains(where: { $0.id == machine }) == true
         else { return }
         destination = NotificationDestination(machineID: machine, nodeID: node, target: target)

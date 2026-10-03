@@ -83,6 +83,9 @@ struct AppHome: View {
             now.reconcile(runtime: runtime)
             if usesSidebar { restoreLastProject() }
         }
+        .onChange(of: now.entries) { _, entries in
+            if now.loaded { ProjectWidgetRecorder.record(entries) }
+        }
         .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
         .onOpenURL { runtime.notifications.openActivityURL($0) }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)

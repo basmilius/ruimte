@@ -174,6 +174,40 @@ final class PadRouterTests: XCTestCase {
     }
 }
 
+final class ProjectWidgetRecorderTests: XCTestCase {
+    private func entry(
+        _ project: String, view: String, item: String? = nil, status: AgentStatus? = nil, snoozed: Bool = false
+    ) -> ProjectViewEntry {
+        ProjectViewEntry(
+            target: ProjectViewTarget(machineID: "mac", projectID: project, viewID: view, itemID: item ?? view),
+            machineName: "MacBook Pro", projectName: project.capitalized, title: item ?? view, kind: "chat",
+            iconName: "message-square", status: status, snoozedUntil: snoozed ? .now.addingTimeInterval(600) : nil)
+    }
+
+    func testAViewTakesTheStateOfTheNodesOnIt() {
+        let snapshot = ProjectWidgetRecorder.snapshot([
+            entry("app", view: "canvas"),
+            entry("app", view: "canvas", item: "logs", status: .running),
+            entry("app", view: "chat", status: .needsYou),
+            entry("app", view: "quiet", status: .needsYou, snoozed: true),
+            entry("site", view: "notes"),
+        ])
+        XCTAssertEqual(snapshot.projects.map(\.projectID), ["app", "site"])
+        let views = snapshot.projects[0].views
+        XCTAssertEqual(views.map(\.id), ["canvas", "chat", "quiet"], "A node is no row of its own")
+        XCTAssertEqual(views.map(\.state), [.working, .needsYou, .idle])
+        XCTAssertEqual(snapshot.projects[1].views.map(\.state), [.idle])
+    }
+
+    func testAViewOpensThroughTheWidgetDoor() throws {
+        let project = ProjectWidgetProject(
+            machineID: "mac", projectID: "app", name: "App", machineName: "MacBook Pro",
+            views: [ProjectWidgetView(id: "canvas", title: "Canvas", icon: "layout-grid", state: .idle)])
+        let url = try XCTUnwrap(project.url(for: project.views[0]))
+        XCTAssertEqual(url.absoluteString, "ruimte://node?machine=mac&node=canvas&target=view")
+    }
+}
+
 final class PadProcessTableTests: XCTestCase {
     private func process(_ pid: Int, cpu: Double?) -> JSONValue {
         .object([

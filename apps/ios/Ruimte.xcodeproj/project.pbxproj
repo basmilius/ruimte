@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		008FD13D8AE76883BA6E4C0A /* WorkspacePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9447D15E48181E5F166E22A6 /* WorkspacePage.swift */; };
 		01A24DD7477F2A95C9EF42E0 /* document-renderer.js in Resources */ = {isa = PBXBuildFile; fileRef = A8C83388F2EE72EDED082639 /* document-renderer.js */; };
+		01D98A53201A53AD7A85935B /* ProjectWidgetRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566C1E19358915198CF965D3 /* ProjectWidgetRecorder.swift */; };
 		06196DC3AE8B98374122DB81 /* LaunchEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559A0134244BAC994E62AA74 /* LaunchEditorSheet.swift */; };
 		0A14CC9ED096B72837DF02F5 /* IceCandidateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F29B9E631BA0053CAC8D2A6 /* IceCandidateTests.swift */; };
 		0A6BB4CD8EA6C170D22262FB /* ProjectViewList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7806958A715171F299C2B24 /* ProjectViewList.swift */; };
@@ -280,6 +281,7 @@
 		DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A531355B6DBA1AEA2747E700 /* TerminalModel.swift */; };
 		DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */; };
 		DEBEAF340DCE410AB89AF227 /* AccountDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FC200AD66C0ACA562FAF1D4 /* AccountDot.swift */; };
+		DF04E586A8C7F46D99DA7F49 /* ProjectWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E062F6296A96BEBE3A3546 /* ProjectWidget.swift */; };
 		DF70EC4BAFF7F692F3C49854 /* PlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03DC65E136B10CDF5015742E /* PlanSheet.swift */; };
 		DFBFAC346057302CFDEBE392 /* tone.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 98A346F51CD334D5B9DBA28F /* tone.mp3 */; };
 		DFF7EA05554B39FA0B032ACA /* GitWorktreesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66CA32B82645DF4ABA9E601 /* GitWorktreesPage.swift */; };
@@ -469,6 +471,7 @@
 		5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTimeline.swift; sourceTree = "<group>"; };
 		558C2BB9A27B8D9E1948E00E /* GitBranchesSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBranchesSegment.swift; sourceTree = "<group>"; };
 		559A0134244BAC994E62AA74 /* LaunchEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchEditorSheet.swift; sourceTree = "<group>"; };
+		566C1E19358915198CF965D3 /* ProjectWidgetRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectWidgetRecorder.swift; sourceTree = "<group>"; };
 		5748DC9D2A5D211B6913A122 /* RuimteTransport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteTransport; path = Packages/RuimteTransport; sourceTree = SOURCE_ROOT; };
 		58D66111716096D21434ACBD /* SettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTests.swift; sourceTree = "<group>"; };
 		58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionVisualTests.swift; sourceTree = "<group>"; };
@@ -499,6 +502,7 @@
 		710B2DB25A631005B674A223 /* PlanOutlineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanOutlineTests.swift; sourceTree = "<group>"; };
 		71402BC859AD644FF90306C2 /* MachineDevicesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineDevicesPage.swift; sourceTree = "<group>"; };
 		7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		72E062F6296A96BEBE3A3546 /* ProjectWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectWidget.swift; sourceTree = "<group>"; };
 		732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingCanvas.swift; sourceTree = "<group>"; };
 		734608DCCFF78D2EC3AA1A53 /* ChatStreaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStreaming.swift; sourceTree = "<group>"; };
 		73A903FD92446808968DF451 /* SpinnerMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpinnerMotionTests.swift; sourceTree = "<group>"; };
@@ -841,6 +845,7 @@
 				826308F387A7269E62AF6C7C /* Assets.xcassets */,
 				7FABC4BE334FDFA06C4FC1B6 /* Info.plist */,
 				7ADB19BC0057C18E3665C69E /* NeedsYouWidget.swift */,
+				72E062F6296A96BEBE3A3546 /* ProjectWidget.swift */,
 				9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */,
 				A64C8B5258669EC5003FA9AB /* RuimteWidgets.swift */,
 				2DB727CEBF3E354FC9409B25 /* UsageBackdrop.swift */,
@@ -1100,6 +1105,7 @@
 				86350DF4914846B3127196EC /* NowPage.swift */,
 				D20613F31A87DDAC065BA022 /* NowRequest.swift */,
 				1CCC8558F490A8E4F9031C90 /* PadNowPage.swift */,
+				566C1E19358915198CF965D3 /* ProjectWidgetRecorder.swift */,
 				7B1DE29305B2BAF4D255B60D /* Snoozes.swift */,
 			);
 			path = Now;
@@ -1489,6 +1495,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				456466B1A045012618C2BC90 /* NeedsYouWidget.swift in Sources */,
+				DF04E586A8C7F46D99DA7F49 /* ProjectWidget.swift in Sources */,
 				9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */,
 				438099B9E0FC7A723C6A0E0A /* RuimteWidgets.swift in Sources */,
 				43331CB8A5C3827AFBBB9861 /* UsageBackdrop.swift in Sources */,
@@ -1751,6 +1758,7 @@
 				650E1E5F4442B7F8716BD81C /* ProjectSettingsPage.swift in Sources */,
 				0A6BB4CD8EA6C170D22262FB /* ProjectViewList.swift in Sources */,
 				29A814716172F5B8F668D625 /* ProjectViewPage.swift in Sources */,
+				01D98A53201A53AD7A85935B /* ProjectWidgetRecorder.swift in Sources */,
 				653194255B85E3B0D1DB48D6 /* ProjectsPage.swift in Sources */,
 				262132159E5219F1DF87483A /* ReleaseNotes.swift in Sources */,
 				FBCC63860740FE29DB14145A /* RemotePageState.swift in Sources */,
