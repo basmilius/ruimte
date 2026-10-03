@@ -17,7 +17,7 @@ struct MachineProjectsPage: View {
     @State private var unsubscribe: (() -> Void)?
     @State private var destination: MachineDestination?
     @State private var newChat = false
-    private enum MachineDestination: Hashable { case files, processes, usage, settings }
+    private enum MachineDestination: Hashable { case files, processes, usage, agents, settings }
     var body: some View {
         MobileList {
             Section {
@@ -105,6 +105,13 @@ struct MachineProjectsPage: View {
                     }
                     .modifier(MobileSidebarRow())
                     Button {
+                        destination = .agents
+                    } label: {
+                        Label("Agents", lucideIcon: "bot")
+                            .modifier(MobileSidebarLabel(disclosure: true))
+                    }
+                    .modifier(MobileSidebarRow())
+                    Button {
                         destination = .settings
                     } label: {
                         Label("Machine settings", lucideIcon: "settings")
@@ -120,6 +127,7 @@ struct MachineProjectsPage: View {
             case .files: MachineFilesPage(client: session.rpc, path: "~")
             case .processes: ProcessesPage(client: session.rpc)
             case .usage: MachineUsagePage(client: session.rpc)
+            case .agents: MachineAgentsPage(session: session)
             case .settings: MachineDetailsPage(session: session)
             }
         }

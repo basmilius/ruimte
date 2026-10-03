@@ -311,7 +311,8 @@ final class AppRuntime {
         publishWidgetMachines()
     }
 
-    func signOut() async {
+    /// After a deletion the account's sessions and push devices are gone already; signing out forgets them here.
+    func signOut(accountDeleted: Bool = false) async {
         guard !signingOut else { return }
         signingOut = true
         defer { signingOut = false }
@@ -321,7 +322,7 @@ final class AppRuntime {
         let operation = sessionRevision
         notificationSyncTask?.cancel()
         notificationSyncTask = nil
-        await notifications.disable()
+        await notifications.disable(accountDeleted: accountDeleted)
         for id in Set(machines.map(\.id)).union(sessions.keys) { invalidateMachine(id, forgetPairing: true) }
         sessions.removeAll()
         connections.disconnectAll()

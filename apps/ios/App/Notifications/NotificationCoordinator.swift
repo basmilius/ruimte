@@ -139,6 +139,10 @@ struct NotificationDestination: Identifiable, Hashable {
     private(set) var enabled = UserDefaults.standard.bool(forKey: "ruimte.push.enabled")
     var approvals = UserDefaults.standard.object(forKey: "ruimte.push.approvals") as? Bool ?? true
     var activities = UserDefaults.standard.object(forKey: "ruimte.push.activities") as? Bool ?? true
+    var preferences = NotificationPreferences.load() ?? NotificationPreferences()
+    /// Machines that answered `push.preferences` with `unknown-request`: they hear of what needs you only, whatever
+    /// the kinds and projects say, until they are updated.
+    private(set) var outdatedMachines: Set<String> = []
     var supportsActivities: Bool { UIDevice.current.userInterfaceIdiom == .phone }
     var problem: String?
     var busy = false
@@ -175,6 +179,7 @@ struct NotificationDestination: Identifiable, Hashable {
             guard let self else { return }
             _ = self.approvals
             _ = self.activities
+            _ = self.preferences
             guard event.kind == .didSet else { return }
             self.preferenceSaveTask?.cancel()
             self.preferenceSaveTask = Task { [weak self] in
@@ -320,22 +325,48 @@ struct NotificationDestination: Identifiable, Hashable {
         try await session.waitForConnection()
         guard enabled, revision == current, try SharedPushStore().context()?.handle == context.handle else { return }
         let key = try SharedPushStore().key()
-        // Older daemons ignore followAll, so keep their known sessions subscribed during an upgrade.
+        // Older daemons ignore followAll, notify and projects, so keep their known sessions subscribed while upgrading.
         let terminals = try await session.rpc.request("session.list").list("sessions")
         let chats = try await session.rpc.request("chat.list").list("chats")
         let known = Set(terminals.map { $0.text("sessionId") } + chats.map { $0.text("chatId", fallback: $0.stableID) })
             .filter { !$0.isEmpty }.sorted().prefix(500)
+        let payload: [String: JSONValue] = [
+            "handle": .string(context.handle), "publicKey": .string(key.publicKey),
+            "follow": .array(known.map(JSONValue.string)), "followAll": .bool(true), "approvals": .bool(approvals),
+            "readSync": .bool(true),
+            "activities": .bool(activities && supportsActivities),
+            "activityScope": .string("machine"),
+        ]
         _ = try await session.rpc.request(
             "push.subscribe",
-            payload: .object([
-                "handle": .string(context.handle), "publicKey": .string(key.publicKey),
-                "follow": .array(known.map(JSONValue.string)), "followAll": .bool(true), "approvals": .bool(approvals),
-                "readSync": .bool(true),
-                "activities": .bool(activities && supportsActivities),
-                "activityScope": .string("machine"),
-            ]))
+            payload: .object(payload.merging(preferences.subscription(machineID: machine.id)) { kept, _ in kept }))
     }
-    func disable() async {
+
+    /// Asks every connected machine what it applies, to name the machines that predate kinds and projects. A phone
+    /// that never chose its own takes the first answer, so a reinstall shows what the machines still do.
+    func readPreferences() async {
+        guard let runtime else { return }
+        let chosen = NotificationPreferences.load() != nil
+        var adoptKinds = !chosen
+        var next = preferences
+        for machine in runtime.machines {
+            let session = runtime.session(for: machine)
+            guard session.connected else { continue }
+            do {
+                let result = try await session.rpc.request("push.preferences")
+                outdatedMachines.remove(machine.id)
+                guard !chosen else { continue }
+                next.adopt(result, machineID: machine.id, kinds: adoptKinds)
+                if result["subscribed"] == .bool(true) { adoptKinds = false }
+            } catch MachineClientError.server(code: "unknown-request", message: _) {
+                outdatedMachines.insert(machine.id)
+            } catch {
+                continue
+            }
+        }
+        if next != preferences { preferences = next }
+    }
+    func disable(accountDeleted: Bool = false) async {
         revision += 1
         UserDefaults.standard.removeObject(forKey: "ruimte.push.activity-target")
         enabled = false
@@ -365,7 +396,12 @@ struct NotificationDestination: Identifiable, Hashable {
                     }
                 }
             }
-            if let context { retiredHandles = Array(Set(retiredHandles + [context.handle])) }
+            if accountDeleted {
+                // The address book deleted every push device of the account with it, so nothing is left to revoke.
+                retiredHandles = []
+            } else if let context {
+                retiredHandles = Array(Set(retiredHandles + [context.handle]))
+            }
             // Keep the opaque revocation handle while discarding decryption secrets immediately.
             try store.clear()
             try await removeRetiredDevices()
@@ -376,6 +412,7 @@ struct NotificationDestination: Identifiable, Hashable {
     private func savePreferences() async {
         UserDefaults.standard.set(approvals, forKey: "ruimte.push.approvals")
         UserDefaults.standard.set(activities, forKey: "ruimte.push.activities")
+        preferences.save()
         if activities && supportsActivities {
             startActivityObservers()
         } else {

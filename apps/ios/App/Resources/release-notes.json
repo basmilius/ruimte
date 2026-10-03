@@ -1,0 +1,30 @@
+{
+  "version": "0.14.0",
+  "items": [
+    {
+      "icon": "inbox",
+      "title": "Now",
+      "detail": "Everything that waits for you, across projects."
+    },
+    {
+      "icon": "alarm-clock",
+      "title": "Snooze",
+      "detail": "Hide a request for 10 minutes, an hour or until tomorrow."
+    },
+    {
+      "icon": "play",
+      "title": "Launches",
+      "detail": "Start and approve the launches of a project."
+    },
+    {
+      "icon": "chart-no-axes-column",
+      "title": "Usage",
+      "detail": "Charts per day and a breakdown per model."
+    },
+    {
+      "icon": "bell",
+      "title": "Notifications",
+      "detail": "Choose what you hear of, and keep a project quiet."
+    }
+  ]
+}

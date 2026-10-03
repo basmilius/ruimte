@@ -12,6 +12,7 @@ struct AppHome: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var window: UIWindow?
     @State private var settings = false
+    @State private var releaseNotes: ReleaseNotes?
     @State private var pairing = false
     @State private var recentProjects = false
     @State private var selectedMachine: String?
@@ -57,7 +58,8 @@ struct AppHome: View {
         }
         .environment(\.openMobileWorkspace, OpenMobileWorkspaceAction(id: sceneID, action: openWorkspace))
         .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
-        .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
+        .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime, projects: projects) }
+        .mobileSheet(item: $releaseNotes) { ReleaseNotesSheet(notes: $0) }
         .mobileSheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
             NavigationStack {
                 WelcomePage(runtime: runtime, window: window) {
@@ -70,6 +72,8 @@ struct AppHome: View {
         .id(runtime.account?.id ?? "signed-out")
         .background(PresentationWindow { window = $0 }.frame(width: 0, height: 0))
         .task {
+            let notes = ReleaseNotes.bundled()
+            if ReleaseNotesGate.check(notes: notes, app: AppVersion.marketing) { releaseNotes = notes }
             await runtime.start()
             await runtime.notifications.restore()
             if usesSidebar { restoreLastProject() }
@@ -100,6 +104,7 @@ struct AppHome: View {
         .onChange(of: runtime.notifications.destination) { _, destination in
             guard let destination else { return }
             settings = false
+            releaseNotes = nil
             pairing = false
             recentProjects = false
             signIn = false
@@ -205,7 +210,7 @@ struct AppHome: View {
             case .machines:
                 MachinesPage(runtime: runtime, pair: { pairing = true }, open: { selectedMachine = $0 })
                     .navigationDestination(item: $selectedMachine) { MachineRoutePage(runtime: runtime, machineID: $0) }
-            case .settings: MobileSettings(runtime: runtime, embedded: true)
+            case .settings: MobileSettings(runtime: runtime, projects: projects, embedded: true)
             }
         }
     }
@@ -523,63 +528,6 @@ private struct PresentationWindow: UIViewRepresentable {
             super.didMoveToWindow()
             found?(window)
         }
-    }
-}
-
-struct MobileSettings: View {
-    let runtime: AppRuntime
-    var embedded = false
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("ruimte.ios.appearance") private var appearance = "system"
-    @AppStorage("ruimte.ios.terminalFontSize") private var fontSize = 14.0
-    @AppStorage("ruimte.ios.showHiddenFiles") private var hiddenFiles = false
-    @State private var confirmSignOut = false
-    var body: some View {
-        if embedded { content } else { NavigationStack { content } }
-    }
-    private var content: some View {
-        MobileForm {
-            Section("Appearance") {
-                Picker("Theme", selection: $appearance) {
-                    Text("System").tag("system")
-                    Text("Light").tag("light")
-                    Text("Dark").tag("dark")
-                }
-                Stepper("Terminal size: \(Int(fontSize))", value: $fontSize, in: 10...26).monospacedDigit()
-            }
-            Section("Files and agents") {
-                Toggle("Show hidden files", isOn: $hiddenFiles)
-            }
-            Section("Notifications") {
-                NavigationLink("Notifications and Live Activities") {
-                    NotificationsSettingsPage(coordinator: runtime.notifications)
-                }
-            }
-            Section("Account") {
-                if let account = runtime.account {
-                    LabeledContent("Signed in", value: account.login ?? account.provider.rawValue)
-                }
-                NavigationLink("Connection diagnostics") { ConnectionScreen(runtime: runtime) }
-                if runtime.account != nil { Button("Sign out", role: .destructive) { confirmSignOut = true } }
-            }
-            Section("About") {
-                LabeledContent(
-                    "Ruimte", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
-                )
-                Text("Projects and sessions stay on your machines. This app connects to them remotely.")
-                    .foregroundStyle(MobileStyle.muted)
-            }
-        }.navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
-            .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
-            .confirmationDialog("Sign out on this device?", isPresented: $confirmSignOut) {
-                Button("Sign out", role: .destructive) {
-                    Task {
-                        await runtime.signOut()
-                        if !embedded { dismiss() }
-                    }
-                }
-            }
     }
 }
 

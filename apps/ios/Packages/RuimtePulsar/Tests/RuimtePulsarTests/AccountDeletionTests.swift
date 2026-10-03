@@ -46,7 +46,8 @@ import Testing
             return answer(request, status: 204)
         })
         try await client.deleteAccount(
-            accessToken: "token-1", payload: AccountDeletePayload(confirmation: "DELETE", appleAuthorizationCode: "code-1"))
+            accessToken: "token-1",
+            payload: AccountDeletePayload(confirmation: "DELETE", appleAuthorizationCode: "code-1"))
     }
 
     @Test func anAccountWithoutAppleSendsNoCode() async throws {
