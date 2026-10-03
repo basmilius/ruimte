@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { FINE_POINTS } from '@ruimte/contracts';
 import { COARSE_INTERVAL_MS, ProcessMonitor } from './monitor.ts';
+import { STUCK_THRESHOLDS } from './stuck.ts';
 import { type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 
 const MACHINE: RawSample['machine'] = { cores: 4, cpuBusy: 0, cpuTotal: 0, memoryUsed: 1000, memoryTotal: 4000, diskFree: null, diskTotal: null };
@@ -166,5 +167,28 @@ describe('signals', () => {
         expect(() => monitor.signal({ pid: 300, startTime: 300_000, signal: 'SIGKILL' })).toThrow('another user');
         expect(() => monitor.signal({ pid: 100, startTime: 100_000, signal: 'SIGKILL' })).toThrow('itself');
         expect(signals).toHaveLength(1);
+    });
+});
+
+describe('warnings', () => {
+    test('an observer hears each change of the list, and only a change', () => {
+        const monitor = new ProcessMonitor({
+            sampler: new FakeSampler(),
+            sessions: () => [{ id: 'term-1', pid: 200, exited: false, agent: null }],
+            chats: () => [],
+            contextUrl: () => null,
+            reportsEnd: () => true,
+            daemonPid: 100,
+            uid: 501,
+            thresholds: { ...STUCK_THRESHOLDS, memoryBytes: 5 }
+        });
+        const heard: string[][] = [];
+        const stop = monitor.observeAlerts((alerts) => heard.push(alerts.map((alert) => `${alert.kind}:${alert.nodeId}`)));
+        monitor.sampleNow(true);
+        monitor.sampleNow(true);
+        expect(heard).toEqual([expect.arrayContaining(['memory:term-1'])]);
+        stop();
+        monitor.dismiss(monitor.alerts()[0]!.id);
+        expect(heard.length).toBe(1);
     });
 });

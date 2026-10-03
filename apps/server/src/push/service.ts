@@ -10,12 +10,21 @@ import {
     type PushEnvelope,
     type PushRouting
 } from '@ruimte/pulsar';
-import type { EventMap, AgentStatus, PushSubscribePayload, PushAttentionEntry } from '@ruimte/contracts';
+import {
+    PUSH_NOTIFY_DEFAULT,
+    type EventMap,
+    type AgentStatus,
+    type ProcessAlert,
+    type PushNotifyKind,
+    type PushSubscribePayload,
+    type PushAttentionEntry
+} from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { PushAttention } from './attention.ts';
 import type { SnoozeChange } from './snoozes.ts';
 import { encryptPush } from './encrypt.ts';
+import { processAlertBody } from './process-alert.ts';
 import { clipText } from '@ruimte/contracts';
 
 interface PushServiceOptions {
@@ -26,6 +35,8 @@ interface PushServiceOptions {
     machineName?: () => string;
     activityNodes?: () => { nodeId: string; target: PushAlertContent['target']; title: string; status: AgentStatus }[];
     titleFor?: (nodeId: string) => string | null;
+    projectOf?: (nodeId: string) => string | null;
+    targetOf?: (nodeId: string) => PushAlertContent['target'];
     send?: (push: PushEnvelope) => Promise<number>;
     onError?: (error: unknown) => void;
     snoozes?: Snoozes;
@@ -46,6 +57,12 @@ interface NodeState {
 }
 
 const APPROVAL_MAX_AGE_MS = 110_000;
+
+/* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
+export const notifyKinds = (subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] =>
+    (projectId === null ? undefined : subscription.projects?.find((entry) => entry.projectId === projectId)?.notify) ??
+    subscription.notify ??
+    PUSH_NOTIFY_DEFAULT;
 
 const sendToAddressBook = async (push: PushEnvelope): Promise<number> => {
     const response = await fetch(`${ADDRESS_BOOK_URL}/v1/push`, {
@@ -69,6 +86,8 @@ export class PushService {
     /* The approvals each chat still waits on, by request id, so the end of a snooze raises the card again. */
     private readonly approvals = new Map<string, Map<string, PushAlertContent>>();
     private readonly activityTimes = new Map<string, { phase: string; at: number }>();
+    /* The process warnings already pushed, so a warning that stays raised pushes once. */
+    private readonly processAlertIds = new Set<string>();
     private machineActivityQueue = Promise.resolve();
     private machineStartedAt = 0;
     private readonly machineActivityStates = new Map<string, string>();
@@ -230,6 +249,19 @@ export class PushService {
         if (status === 'needs-you' && !this.snoozed(nodeId)) {
             this.needsYou(target, nodeId, title);
         }
+        if (previous?.status === 'running' && (status === 'idle' || status === 'error') && !this.snoozed(nodeId)) {
+            this.broadcast(
+                {
+                    kind: 'turn',
+                    target,
+                    nodeId,
+                    title: clipText(title, 160),
+                    body: status === 'idle' ? 'The agent finished its turn.' : 'The agent stopped with an error.',
+                    expiresAt: this.now() + PUSH_MAX_AGE_MS
+                },
+                'turn'
+            );
+        }
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
             // A snoozed wait is as quiet on the node's own activity as in the machine counts.
             const phase = status === 'running' ? 'running' : status === 'needs-you' && !this.snoozed(nodeId) ? 'needs-you' : 'done';
@@ -301,6 +333,38 @@ export class PushService {
         });
     }
 
+    /* Pushes each warning about a node once while it stays raised; one that clears and comes back is new. */
+    processAlerts(alerts: readonly ProcessAlert[]): void {
+        const raised = new Set(alerts.map((alert) => alert.id));
+        for (const id of this.processAlertIds) {
+            if (!raised.has(id)) {
+                this.processAlertIds.delete(id);
+            }
+        }
+        for (const alert of alerts) {
+            if (this.processAlertIds.has(alert.id)) {
+                continue;
+            }
+            this.processAlertIds.add(alert.id);
+            // A phone opens the node a push names, so a warning about no node has nowhere to go.
+            if (alert.nodeId === null || this.snoozed(alert.nodeId)) {
+                continue;
+            }
+            const nodeId = alert.nodeId;
+            this.broadcast(
+                {
+                    kind: 'attention',
+                    target: this.nodes.get(nodeId)?.target ?? this.options.targetOf?.(nodeId) ?? 'terminal',
+                    nodeId,
+                    title: clipText(this.options.titleFor?.(nodeId) || this.nodes.get(nodeId)?.title || 'Agent', 160),
+                    body: processAlertBody(alert),
+                    expiresAt: this.now() + PUSH_MAX_AGE_MS
+                },
+                'process'
+            );
+        }
+    }
+
     synchronizeActivities(): void {
         // A snoozed wait counts as nothing at all until the snooze ends.
         const nodes = this.activityNodes().filter((node) => node.status !== 'needs-you' || !this.snoozed(node.nodeId));
@@ -365,7 +429,21 @@ export class PushService {
         for (const listener of this.listeners) {
             listener(entry);
         }
-        this.alertQueue = this.alertQueue.then(() => this.deliverAlert(content, entry.issuedAt)).catch((error: unknown) => this.options.onError?.(error));
+        this.alertQueue = this.alertQueue
+            .then(() => this.deliverAlert(content, entry.issuedAt, 'needs-you', true))
+            .catch((error: unknown) => this.options.onError?.(error));
+        this.track(this.alertQueue);
+    }
+
+    /*
+     * A push outside the attention ledger: the ledger marks a node unread on every client, and a finished
+     * turn or a process warning only reaches the devices that asked for it.
+     */
+    private broadcast(content: PushAlertContent, preference: PushNotifyKind): void {
+        const issuedAt = this.now();
+        this.alertQueue = this.alertQueue
+            .then(() => this.deliverAlert(content, issuedAt, preference, false))
+            .catch((error: unknown) => this.options.onError?.(error));
         this.track(this.alertQueue);
     }
 
@@ -387,12 +465,14 @@ export class PushService {
         };
     }
 
-    private async deliverAlert(content: PushAlertContent, issuedAt: number): Promise<void> {
+    private async deliverAlert(content: PushAlertContent, issuedAt: number, preference: PushNotifyKind, ledger: boolean): Promise<void> {
+        const projectId = this.options.projectOf?.(content.nodeId) ?? null;
         for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
             if (
-                this.attention.isRead(content.nodeId, issuedAt) ||
+                (ledger && this.attention.isRead(content.nodeId, issuedAt)) ||
                 this.connectedSessions.has(sessionId) ||
-                (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId))
+                (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId)) ||
+                !notifyKinds(subscription, projectId).includes(preference)
             ) {
                 continue;
             }

@@ -85,6 +85,7 @@ export class ProcessMonitor {
     private coarsePrevious: RawSample | null = null;
     private latest: Latest | null = null;
     private published: ProcessAlert[] = [];
+    private readonly alertListeners = new Set<(alerts: ProcessAlert[]) => void>();
     // Arguments and environments by identity, read once per process since neither changes.
     private commandLines = new Map<string, CommandLine | null>();
     private timer: ReturnType<typeof setTimeout> | null = null;
@@ -158,6 +159,14 @@ export class ProcessMonitor {
 
     alerts(): ProcessAlert[] {
         return this.published;
+    }
+
+    /* Every change of the warnings, as the whole list. */
+    observeAlerts(listener: (alerts: ProcessAlert[]) => void): () => void {
+        this.alertListeners.add(listener);
+        return () => {
+            this.alertListeners.delete(listener);
+        };
     }
 
     dismiss(id: string): void {
@@ -404,6 +413,9 @@ export class ProcessMonitor {
             console.warn(`Process ${alert.pid} (${alert.name}) started by the daemon has run for ${Math.round((alert.value ?? 0) / 1000)} s`);
         }
         this.sinks.emit({ event: 'processes.alerts', payload: { alerts } });
+        for (const listener of this.alertListeners) {
+            listener(alerts);
+        }
     }
 
     private schedule(): void {

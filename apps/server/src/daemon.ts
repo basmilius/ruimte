@@ -665,6 +665,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         attentionPath: join(config.home, 'push-attention.json'),
         identity,
         titleFor: (nodeId) => projects.index.titleFor(nodeId),
+        projectOf: (nodeId) => projects.index.locate(nodeId)?.projectId ?? null,
+        targetOf: (nodeId) => (chats.get(nodeId) ? 'chat' : 'terminal'),
         machineName: () => identity.label,
         activityNodes: () => [
             ...manager.list().flatMap((session) =>
@@ -687,6 +689,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.observe((event) => push.consume(event));
     manager.observe((event) => taskWiring.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));
+    processes.observeAlerts((alerts) => push.processAlerts(alerts));
     // Held by the daemon, so the machine stays awake with no window open and for a daemon from npm.
     const keepAwake = new KeepAwake({
         platform: process.platform,

@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PUSH_HKDF_SALT, pushEncryptionInfo, pushMessage, pushRoutingMessage, type PushEnvelope } from '@ruimte/pulsar';
-import type { AgentStatus, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
+import type { AgentStatus, ProcessAlert, PushSubscribePayload, ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { generateKeyPair, signMessage } from '../auth/keys.ts';
@@ -705,5 +705,128 @@ describe('a snoozed node', () => {
             ['done', 0, 0],
             ['needs-you', 0, 1]
         ]);
+    });
+});
+
+describe('what a device chose to hear of', () => {
+    let chosen: PushService;
+
+    beforeEach(() => {
+        chosen = new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => NOW,
+            projectOf: (nodeId) => (nodeId.startsWith('quiet') ? 'quiet-project' : 'project'),
+            targetOf: () => 'chat',
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            },
+            onError: (error) => {
+                throw error;
+            }
+        });
+    });
+
+    afterEach(async () => {
+        await chosen.settled();
+    });
+
+    const alerts = (): unknown[] => pushes.filter((push) => push.pushType === 'alert').map(decrypt);
+
+    const warning = (id: string, nodeId: string | null): ProcessAlert => ({
+        id,
+        kind: 'memory',
+        nodeId,
+        pid: 42,
+        startTime: 1,
+        name: 'node',
+        since: NOW,
+        value: 1
+    });
+
+    test('a finished turn pushes only to a device that asked, and marks nothing unread', async () => {
+        status('running', 'node', chosen);
+        status('idle', 'node', chosen);
+        await chosen.settled();
+        expect(alerts()).toEqual([]);
+        await auth.setPush(sessionId, { ...subscription, notify: ['needs-you', 'turn'] });
+        status('running', 'node', chosen);
+        status('idle', 'node', chosen);
+        status('running', 'node', chosen);
+        status('error', 'node', chosen);
+        await chosen.settled();
+        expect(alerts()).toMatchObject([
+            { kind: 'turn', nodeId: 'node', body: 'The agent finished its turn.' },
+            { kind: 'turn', nodeId: 'node', body: 'The agent stopped with an error.' }
+        ]);
+        expect(chosen.attention.snapshot()).toEqual([]);
+    });
+
+    test('a device that left out needs-you hears of no wait and no approval', async () => {
+        await auth.setPush(sessionId, { ...subscription, notify: ['turn'] });
+        status('running', 'node', chosen);
+        status('needs-you', 'node', chosen);
+        chosen.alert('chat', 'node', 'Task failed', 'It failed');
+        await chosen.settled();
+        expect(alerts()).toEqual([]);
+    });
+
+    test("a project's own list wins over the device's, and an empty one keeps the project quiet", async () => {
+        await auth.setPush(sessionId, {
+            ...subscription,
+            follow: [],
+            followAll: true,
+            notify: ['needs-you'],
+            projects: [
+                { projectId: 'quiet-project', notify: [] },
+                { projectId: 'project', notify: ['needs-you', 'turn'] }
+            ]
+        });
+        status('running', 'quiet', chosen);
+        status('needs-you', 'quiet', chosen);
+        status('running', 'node', chosen);
+        status('idle', 'node', chosen);
+        await chosen.settled();
+        expect(alerts()).toMatchObject([{ kind: 'turn', nodeId: 'node' }]);
+    });
+
+    test('a process warning about a node pushes once while it stays raised', async () => {
+        await auth.setPush(sessionId, { ...subscription, notify: ['process'] });
+        chosen.processAlerts([warning('memory:node', 'node'), warning('memory:none', null)]);
+        chosen.processAlerts([warning('memory:node', 'node')]);
+        await chosen.settled();
+        expect(alerts()).toMatchObject([{ kind: 'attention', target: 'chat', nodeId: 'node', body: 'node uses a lot of memory.' }]);
+        chosen.processAlerts([]);
+        chosen.processAlerts([warning('memory:node', 'node')]);
+        await chosen.settled();
+        expect(alerts().length).toBe(2);
+        expect(chosen.attention.snapshot()).toEqual([]);
+    });
+
+    test('a device that never chose hears of no process warning', async () => {
+        chosen.processAlerts([warning('memory:node', 'node')]);
+        await chosen.settled();
+        expect(alerts()).toEqual([]);
+    });
+
+    test('push.preferences reads back what the asking device chose, defaults filled in', async () => {
+        const dispatcher = new Dispatcher();
+        registerPushHandlers(dispatcher, auth);
+        const ask = async (owner: string | null): Promise<ServerFrame> => {
+            const replies: ServerFrame[] = [];
+            await dispatcher.handle(
+                { id: 'client', access: { reachability: 'loopback', sessionId: owner }, send: (frame) => replies.push(frame) },
+                JSON.stringify({ id: 'read', type: 'push.preferences', payload: {} })
+            );
+            return replies[0]!;
+        };
+        expect(await ask(sessionId)).toMatchObject({ ok: true, result: { subscribed: true, approvals: true, notify: ['needs-you'], projects: [] } });
+        const projects = [{ projectId: 'project', notify: ['turn' as const] }];
+        await auth.setPush(sessionId, { ...subscription, notify: ['process'], projects });
+        expect(await ask(sessionId)).toMatchObject({ ok: true, result: { subscribed: true, notify: ['process'], projects } });
+        await auth.removePush(sessionId, subscription.handle);
+        expect(await ask(sessionId)).toMatchObject({ ok: true, result: { subscribed: false, notify: ['needs-you'], projects: [] } });
+        expect(await ask(null)).toMatchObject({ ok: false, error: { code: 'unauthorized' } });
     });
 });

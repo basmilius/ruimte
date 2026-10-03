@@ -1,3 +1,4 @@
+import { PUSH_NOTIFY_DEFAULT } from '@ruimte/contracts';
 import type { PushService } from '../push/service.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
@@ -15,6 +16,19 @@ export const registerPushHandlers = (dispatcher: Dispatcher, auth: AuthStore, ch
         }
         changed();
         return {};
+    });
+    dispatcher.register('push.preferences', async (_payload, client) => {
+        const sessionId = client.access?.sessionId;
+        if (!sessionId) {
+            throw new RequestError('unauthorized', 'Push requires a paired client key');
+        }
+        const subscription = (await auth.pushSubscriptions()).find((entry) => entry.sessionId === sessionId)?.subscription;
+        return {
+            subscribed: subscription !== undefined,
+            approvals: subscription?.approvals ?? false,
+            notify: subscription?.notify ?? [...PUSH_NOTIFY_DEFAULT],
+            projects: subscription?.projects ?? []
+        };
     });
     dispatcher.register('push.unsubscribe', async (payload, client) => {
         const sessionId = client.access?.sessionId;
