@@ -128,14 +128,20 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 Four tabs, each at most two levels deep: Now, Projects, Machines and Search. The containers are UIKit and every page
 is SwiftUI: `PhoneTabController` is a `UITabBarController` with a `UITab` per tab (a `UISearchTab` for Search), each
-holding a `UINavigationController` of its own, and `PhoneHome` bridges it into SwiftUI. Each page stands in a
-`UIHostingController` of its own, so its `.navigationTitle`, `.toolbar` and `.searchable` go to that controller's
-navigation item and its scroll view folds the large title. SwiftUI cannot move the tab bar with a
-push: `.toolbar(.hidden, for: .tabBar)` drops it at once, and a flag set from inside the page comes too late. So a
-page pushed for a route carries `hidesBottomBarWhenPushed` from its creation: a project, a machine and Recently closed
-keep the tab bar, while a view (from a project, Now, Search or a notification) takes it along with the push and brings
-it back with the pop, following the finger on a swipe back. Settings opens as a sheet from the avatar, the last item
-on the right of the bar on every tab and on a project's page, and the tab bar folds in while a list scrolls down. The
+holding a `UINavigationController` of its own, and around the tabs stands one more, `PhoneRootController`, with the
+tab controller as its root. `PhoneHome` bridges it into SwiftUI. Each page stands in a `UIHostingController` of its
+own, so its `.navigationTitle`, `.toolbar` and `.searchable` go to that controller's navigation item and its scroll
+view folds the large title. A project, a machine and its pages and Recently closed go on their tab's stack and keep
+the tab bar. A view (a chat, terminal, file, canvas, drawing, diagram, browser or group member, from a project, Now,
+Search or a notification) goes on the stack around the tabs and covers them, so the whole tabbed page slides away
+with the push and returns with the pop, following the finger on a swipe back. `hidesBottomBarWhenPushed` is not used:
+under the floating tab bar it fades the bar's background and drops its items only at the end. The outer bar is
+hidden while the tabs are on top and shown over a view, toggled as a push or pop starts with the transition's
+animation, so it slides in with the view and away with it; a swipe back the person takes back keeps it. Between a
+project's page and its view the bar's items do not morph, since each stack has a bar of its own. A page SwiftUI
+pushes from inside a view (a chat's sub-agents, a canvas's nodes, a group's members) goes on the stack that holds the
+view, the one around the tabs. Settings opens as a sheet from the avatar, the last item on the right of the bar on
+every tab and on a project's page, and the tab bar folds in while a list scrolls down. The
 avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in Caches and asked again
 once per launch), else the first letter of its name.
 
@@ -174,13 +180,16 @@ once per launch), else the first letter of its name.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
   opens over Search in its project; a project opens under Projects.
 
-`PhoneRouter` holds the tab and the path of each tab's stack, as pure state (`PhoneRouterTests`). Each route (a
-project, a view, a notification, a machine, Recently closed) replaces what its tab had pushed, a project goes to
-Projects and a project's view goes over it. Each stack pushes and pops to match its path, and a path that changes
-during a transition waits until the transition ends. The stack hands its routes back to the router once a push or a
-pop settled (`navigationController(_:didShow:animated:)`), so a pop by the back button or a swipe shortens the path
-and a swipe the person takes back leaves it standing. A page SwiftUI pushes from inside a page, such as a machine's
-files or a chat's sub-agents, has no route and stays out of the path. A view opened outside its project's list
+`PhoneRouter` holds the tab, the list-level path of each tab's stack and the path of views over the tabs, as pure
+state (`PhoneRouterTests`). Each route replaces what its stack had pushed, so nothing goes deeper than two levels: a
+project goes to Projects, a project's view goes over the tabs with the project under it, so its pop lands on the
+project, a view from Now or a notification goes over Now and one from Search over Search. A list-level route takes a
+view off the tabs. Each stack pushes and pops to match its path, and a path that changes during a transition waits
+until the transition ends. A view moves without animation only when the router switches the tab in sight, so that
+tab arrives with its view already over it. Each stack hands its routes back to the router once a push or a pop
+settled (`navigationController(_:didShow:animated:)`), so a pop by the back button or a swipe shortens the path and
+a swipe the person takes back leaves it standing. A page SwiftUI pushes from inside a page, such as a machine's files
+or a chat's sub-agents, has no route and stays out of the path. A view opened outside its project's list
 (`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
 project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
 project's Views, Files, Git and Search as tabs.
