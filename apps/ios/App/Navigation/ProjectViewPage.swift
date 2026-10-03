@@ -5,7 +5,7 @@ import SwiftUI
 /// project's sessions, plans and forks the way a view opened from the list has them.
 struct ProjectViewPage: View {
     let target: ProjectViewTarget
-    /// Lets the page stand with its title and bar from the first frame of the push, so they slide in with it.
+    /// Lets the page stand with its title and bar from the first frame of the push, which is what the bar morphs into.
     let preview: ProjectViewPreview?
     @State private var workspace: MobileWorkspace?
     @State private var arrived: Bool?

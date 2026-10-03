@@ -53,7 +53,6 @@ struct SearchPage: View {
             }
         }
         .navigationTitle("Search")
-        .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, prompt: "Views and projects")
     }
 

@@ -12,8 +12,11 @@ struct WorkspacePage: View {
     @State private var search = ""
     @State private var searching = false
     @State private var showProcesses = false
+    @State private var showLaunches = false
+    @State private var showFiles = false
+    @State private var showGit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.openProjectView) private var openProjectView
+    @Environment(\.settingsLink) private var settingsLink
     var body: some View {
         Group {
             if workspace.ready {
@@ -60,7 +63,10 @@ struct WorkspacePage: View {
         .navigationTitle(isSidebar ? "" : workspace.title)
         .modifier(PhoneSubtitle(text: isSidebar ? nil : workspace.session.machine.name))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(if: isSidebar) { tabletToolbar }
+        .toolbar {
+            if isSidebar { tabletToolbar } else { phoneToolbar }
+        }
+        .navigationDestination(item: $navigation.openedViewID) { id in viewDestination(id) }
         .task { workspace.start() }
         .task(id: workspace.ready) { await openPendingView() }
         .mobileSheet(isPresented: $navigation.newChat) {
@@ -84,34 +90,30 @@ struct WorkspacePage: View {
                     }
             }
         }
-        .mobileSheet(isPresented: $navigation.showingFiles) {
+        .mobileSheet(isPresented: $showFiles) {
             NavigationStack {
                 ProjectFilesPage(workspace: workspace) { id in
-                    navigation.showingFiles = false
+                    showFiles = false
                     openView(id)
                 }
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { navigation.showingFiles = false }
-                        }
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showFiles = false } }
                     }
             }
         }
-        .mobileSheet(isPresented: $navigation.showingGit) {
+        .mobileSheet(isPresented: $showGit) {
             NavigationStack {
                 GitPage(client: workspace.client, folder: workspace.folder, workspace: workspace)
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { navigation.showingGit = false } }
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showGit = false } }
                     }
             }
         }
-        .mobileSheet(isPresented: $navigation.showingLaunches) {
+        .mobileSheet(isPresented: $showLaunches) {
             NavigationStack {
                 LaunchesPage(client: workspace.client, projectID: workspace.projectID, folder: workspace.folder)
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { navigation.showingLaunches = false }
-                        }
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { showLaunches = false } }
                     }
             }
         }
@@ -168,13 +170,44 @@ struct WorkspacePage: View {
         }
     }
 
-    /// The iPhone's project menu is UIKit's (`PhoneBars.project`).
+    /// The project's menu beside the avatar, so Settings is one tap away here too. The Chats project's folder is the
+    /// machine's own, so its menu holds New chat and Usage only.
+    @ToolbarContentBuilder private var phoneToolbar: some ToolbarContent {
+        ToolbarItem(id: "project.menu", placement: .topBarTrailing) {
+            Menu {
+                Section {
+                    if workspace.isScratch {
+                        Button("New chat", lucideIcon: "message-square-plus") { navigation.newChat = true }
+                    } else {
+                        Button("New view", lucideIcon: "plus") { navigation.adding = true }
+                    }
+                }
+                Section {
+                    if !workspace.isScratch {
+                        Button("Files", lucideIcon: "folder") { showFiles = true }
+                        Button("Git", lucideIcon: "git-branch") { showGit = true }
+                        Button("Launches", lucideIcon: "rocket") { showLaunches = true }
+                    }
+                    Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
+                }
+            } label: {
+                Image(lucide: "ellipsis")
+            }
+            .accessibilityLabel("Project menu")
+            .accessibilityIdentifier("project.menu")
+            .disabled(!workspace.ready)
+        }
+        if let settingsLink {
+            SettingsToolbarItem(link: settingsLink)
+        }
+    }
+
     @ToolbarContentBuilder private var tabletToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 // The Chats project's folder is the machine's own, so it has no launches.
                 if !workspace.isScratch {
-                    Button("Launches", lucideIcon: "rocket") { navigation.showingLaunches = true }
+                    Button("Launches", lucideIcon: "rocket") { showLaunches = true }
                 }
                 Button("Processes", lucideIcon: "activity") { showProcesses = true }
                 Button("Usage", lucideIcon: "chart-no-axes-column") { navigation.showingUsage = true }
@@ -268,6 +301,14 @@ struct WorkspacePage: View {
                     ContentUnavailableView("No matching views", lucideIcon: "search")
                 }
             }
+    }
+
+    @ViewBuilder private func viewDestination(_ id: String) -> some View {
+        if let item = workspace.views.first(where: { $0.stableID == id }) {
+            ProjectItemPage(workspace: workspace, item: item).id(id)
+        } else {
+            ContentUnavailableView("This view was removed", lucideIcon: "square-x")
+        }
     }
 
     private var listedViews: [JSONValue] {
@@ -388,8 +429,8 @@ struct WorkspacePage: View {
             navigation.section = .views
             navigation.selectedViewID = id
             searching = false
+            if !isSidebar { navigation.openedViewID = id }
         }
-        if !isSidebar { openProjectView?(id, in: navigation) }
     }
 
     private func viewRow(_ item: JSONValue) -> some View {
@@ -412,20 +453,6 @@ struct WorkspacePage: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// A view opened from its project's list on an iPhone.
-struct ProjectViewDestination: View {
-    let workspace: MobileWorkspace
-    let id: String
-
-    var body: some View {
-        if let item = workspace.views.first(where: { $0.stableID == id }) {
-            ProjectItemPage(workspace: workspace, item: item)
-        } else {
-            ContentUnavailableView("This view was removed", lucideIcon: "square-x").modifier(MobilePageSurface())
-        }
     }
 }
 

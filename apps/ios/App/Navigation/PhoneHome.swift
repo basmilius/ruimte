@@ -2,112 +2,130 @@ import RuimtePulsar
 import SwiftUI
 import UIKit
 
-/// The iPhone: four tabs, each a stack of its own (`PhoneTabController`), with Settings behind the avatar on each,
-/// inside one stack that holds the views over them (`PhoneRootController`). Every page is SwiftUI in a hosting
-/// controller of its own, so its title, `.toolbar` and `.searchable` go to that controller's navigation item. The
-/// bars of the tabs, a project and a machine are UIKit's (`PhoneBar`). The iPad keeps its split view in `AppHome`.
+/// The iPhone: four tabs under one stack, with Settings behind the avatar on each. A page pushed on the stack covers
+/// the tab bar, so the bar leaves with the push and comes back with the pop, a swipe back included. The iPad keeps
+/// its split view in `AppHome`.
+///
+/// A tab's page is hosted apart from the stack's bar, so its own title and `.toolbar` never reach that bar; the
+/// tabs' title and items sit on the `TabView`, chosen by the selected tab.
 struct PhoneHome: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
     let now: NowModel
-    let router: PhoneRouter
+    @Bindable var router: PhoneRouter
     let showSettings: () -> Void
     let pair: () -> Void
     let signIn: () -> Void
-    @Environment(\.openMobileWorkspace) private var openWorkspace
+    @State private var newChat = false
 
     var body: some View {
-        PhoneStacks(
-            tab: router.tab, paths: router.paths, views: router.views, needsYou: now.board.needsYou.count,
-            root: root, page: page,
-            selected: { tab in
-                if router.tab != tab { router.tab = tab }
-            },
-            settled: { router.settle($0, path: $1) },
-            settledViews: { router.settleViews($0) }
-        )
-        .ignoresSafeArea()
+        NavigationStack(path: $router.path) {
+            TabView(selection: $router.tab) {
+                Tab(value: PhoneTab.now) {
+                    NowPage(
+                        runtime: runtime, now: now,
+                        open: { router.show($0, from: .now) },
+                        openProject: { target in
+                            guard let workspace = workspace(for: target) else { return }
+                            router.openProject(workspace, view: target.viewID)
+                        },
+                        pair: pair
+                    )
+                } label: {
+                    Label("Now", lucideIcon: "inbox")
+                }
+                .badge(now.board.needsYou.count)
+
+                Tab(value: PhoneTab.projects) {
+                    ProjectsPage(
+                        runtime: runtime, projects: projects, inTabs: true, showRecent: router.showRecentProjects
+                    ) {
+                        EmptyView()
+                    }
+                } label: {
+                    Label("Projects", lucideIcon: "folders")
+                }
+
+                Tab(value: PhoneTab.machines) {
+                    MachinesPage(runtime: runtime, showsPairingRow: false, pair: pair, open: router.showMachine)
+                } label: {
+                    Label("Machines", lucideIcon: "monitor")
+                }
+
+                Tab(value: PhoneTab.search, role: .search) {
+                    SearchPage(
+                        now: now, projects: projects, runtime: runtime,
+                        open: { router.show($0, from: .search) }
+                    )
+                } label: {
+                    Label("Search", lucideIcon: "search")
+                }
+            }
+            .tabBarMinimizeBehavior(.onScrollDown)
+            .tabViewSearchActivation(.searchTabSelection)
+            .navigationTitle(router.tab.title)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar { tabToolbar }
+            .navigationDestination(for: PhoneRoute.self) { page(for: $0) }
+            .mobileSheet(isPresented: $newChat) {
+                NowNewChatSheet(runtime: runtime, now: now) { router.show($0, from: .now) }
+            }
+        }
+        .containerBackground(MobileStyle.surface, for: .navigation)
         .onChange(of: now.board) { _, board in
             if now.loaded { NeedsYouWidgetRecorder.record(board) }
         }
         .task(id: runtime.account?.id) { await AccountPictures.shared.load(for: runtime.account) }
+        .environment(\.settingsLink, settingsLink)
     }
 
-    private var bars: PhoneBars {
-        PhoneBars(runtime: runtime, showSettings: showSettings)
+    private var settingsLink: SettingsLink {
+        SettingsLink(
+            account: runtime.account, picture: AccountPictures.shared.picture(for: runtime.account),
+            show: showSettings)
     }
 
-    /// A hosting controller starts a SwiftUI hierarchy of its own, so what the pages read from above is set again.
-    private func hosted(_ content: some View) -> AnyView {
-        AnyView(
-            content
-                .environment(\.openMobileWorkspace, openWorkspace)
-                .environment(\.openProjectView, OpenProjectViewAction { router.openView($0, in: $1) })
-                .foregroundStyle(MobileStyle.text)
-                .tint(MobileStyle.accent)
-                .toggleStyle(SystemToggleStyle()))
-    }
-
-    private func root(_ tab: PhoneTab) -> PhonePageController {
-        switch tab {
-        case .now:
-            let requests = BarRequests()
-            let page = NowPage(
-                runtime: runtime, now: now, requests: requests,
-                open: { router.show($0, from: .now) },
-                openProject: { target in
-                    guard let workspace = workspace(for: target) else { return }
-                    router.openProject(workspace, view: target.viewID)
-                },
-                pair: pair
-            )
-            return PhonePageController(route: nil, page: hosted(page), bar: bars.now(requests: requests))
-        case .projects:
-            let page = ProjectsPage(
-                runtime: runtime, projects: projects, inTabs: true, showRecent: router.showRecentProjects
-            ) {
-                EmptyView()
+    @ToolbarContentBuilder private var tabToolbar: some ToolbarContent {
+        if router.tab == .now && !runtime.machines.isEmpty {
+            ToolbarItem(id: "now.newChat", placement: .topBarTrailing) {
+                Button {
+                    newChat = true
+                } label: {
+                    Image(lucide: "square-pen").accessibilityLabel("New chat")
+                }
+                .accessibilityIdentifier("now.newChat")
             }
-            .navigationTitle("Projects")
-            .navigationBarTitleDisplayMode(.large)
-            return PhonePageController(route: nil, page: hosted(page), bar: bars.projects(projects))
-        case .machines:
-            let page = MachinesPage(runtime: runtime, showsPairingRow: false, pair: pair, open: router.showMachine)
-            return PhonePageController(
-                route: nil, page: hosted(page), bar: bars.machines(pair: pair, signIn: signIn))
-        case .search:
-            let page = SearchPage(
-                now: now, projects: projects, runtime: runtime,
-                open: { router.show($0, from: .search) }
-            )
-            return PhonePageController(route: nil, page: hosted(page), bar: bars.search())
         }
+        if router.tab == .projects && (runtime.loading || projects.loading) && !projects.open.isEmpty {
+            ProjectsUpdatingItem()
+        }
+        if router.tab == .machines {
+            ToolbarItem(id: "machines.add", placement: .topBarTrailing) {
+                Menu {
+                    Button("Use a pairing link", lucideIcon: "link", action: pair)
+                    if runtime.account == nil {
+                        Button("Sign in", lucideIcon: "circle-user-round", action: signIn)
+                    }
+                } label: {
+                    Image(lucide: "plus").accessibilityLabel("Add a machine")
+                }
+            }
+        }
+        SettingsToolbarItem(link: settingsLink)
     }
 
-    private func page(_ route: PhoneRoute) -> PhonePageController {
+    @ViewBuilder private func page(for route: PhoneRoute) -> some View {
         switch route {
         case .project(let navigation):
-            return PhonePageController(
-                route: route, page: hosted(WorkspacePage(navigation: navigation)), bar: bars.project(navigation))
-        case .projectView(let navigation, let id):
-            return PhonePageController(
-                route: route, page: hosted(ProjectViewDestination(workspace: navigation.workspace, id: id)))
+            WorkspacePage(navigation: navigation)
         case .view(let target):
-            return PhonePageController(
-                route: route,
-                page: hosted(ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target))))
+            ProjectViewPage(runtime: runtime, target: target, preview: now.preview(of: target)).id(target.id)
         case .notification(let notification):
-            return PhonePageController(
-                route: route, page: hosted(NotificationRoutePage(runtime: runtime, now: now, destination: notification)))
+            NotificationRoutePage(runtime: runtime, now: now, destination: notification).id(notification.id)
         case .recentProjects:
-            return PhonePageController(
-                route: route, page: hosted(RecentProjectsPage(runtime: runtime, projects: projects)))
+            RecentProjectsPage(runtime: runtime, projects: projects)
         case .machine(let id):
-            let requests = BarRequests()
-            let session = runtime.machines.first { $0.id == id }.map { runtime.session(for: $0) }
-            return PhonePageController(
-                route: route, page: hosted(MachineRoutePage(runtime: runtime, machineID: id, requests: requests)),
-                bar: bars.machine(session, requests: requests))
+            MachineRoutePage(runtime: runtime, machineID: id)
         }
     }
 
@@ -117,52 +135,31 @@ struct PhoneHome: View {
     }
 }
 
-/// Bridges `PhoneRootController` into SwiftUI and keeps it on the router's state.
-private struct PhoneStacks: UIViewControllerRepresentable {
-    let tab: PhoneTab
-    let paths: [PhoneTab: [PhoneRoute]]
-    let views: [PhoneRoute]
-    let needsYou: Int
-    let root: (PhoneTab) -> PhonePageController
-    let page: (PhoneRoute) -> PhonePageController
-    let selected: (PhoneTab) -> Void
-    let settled: (PhoneTab, [PhoneRoute]) -> Void
-    let settledViews: ([PhoneRoute]) -> Void
-
-    func makeUIViewController(context: Context) -> PhoneRootController {
-        let roots = Dictionary(uniqueKeysWithValues: PhoneTab.allCases.map { ($0, root($0)) })
-        let controller = PhoneRootController(tabs: PhoneTabController(roots: roots))
-        connect(controller)
-        controller.show(tab: tab, paths: paths, views: views, needsYou: needsYou)
-        return controller
-    }
-
-    func updateUIViewController(_ controller: PhoneRootController, context: Context) {
-        connect(controller)
-        controller.show(tab: tab, paths: paths, views: views, needsYou: needsYou)
-    }
-
-    private func connect(_ controller: PhoneRootController) {
-        for (phoneTab, stack) in controller.tabs.stacks {
-            stack.appeared = selected
-            stack.makePage = page
-            stack.settled = { [settled] in settled(phoneTab, $0) }
-        }
-        controller.makePage = page
-        controller.settled = settledViews
-    }
-}
-
-/// Opens a view of a project over the project's page on an iPhone.
-struct OpenProjectViewAction {
-    let action: (String, WorkspaceNavigation) -> Void
-
-    func callAsFunction(_ id: String, in navigation: WorkspaceNavigation) {
-        action(id, navigation)
-    }
+/// What the avatar needs to open Settings. Only the iPhone sets it; the iPad keeps Settings in its sidebar.
+struct SettingsLink {
+    let account: Account?
+    /// Nil while it loads, and for an account no provider hands a picture out for.
+    let picture: UIImage?
+    let show: () -> Void
 }
 
 extension EnvironmentValues {
-    /// Only the iPhone sets it; the iPad shows a project's view in its detail column.
-    @Entry var openProjectView: OpenProjectViewAction?
+    @Entry var settingsLink: SettingsLink?
+}
+
+/// The avatar into Settings, under one id on every page that shows it, so the bar of the next page finds it at the
+/// same spot and morphs only what changes around it. It goes last in a page's own `.toolbar`: the bar puts the
+/// items of a `.toolbar` outside the page before the page's own, which would leave it left of the page's items.
+struct SettingsToolbarItem: ToolbarContent {
+    let link: SettingsLink
+
+    var body: some ToolbarContent {
+        ToolbarItem(id: "settings", placement: .topBarTrailing) {
+            Button(action: link.show) {
+                AccountAvatar.image(for: link.account, picture: link.picture)
+            }
+            .accessibilityLabel("Settings")
+            .accessibilityIdentifier("home.settings")
+        }
+    }
 }

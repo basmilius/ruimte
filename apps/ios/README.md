@@ -126,56 +126,13 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 ## Navigation on an iPhone
 
-Four tabs, each at most two levels deep: Now, Projects, Machines and Search. The containers are UIKit and every page
-is SwiftUI: `PhoneTabController` is a `UITabBarController` with a `UITab` per tab (a `UISearchTab` for Search), each
-holding a `UINavigationController` of its own, and around the tabs stands one more, `PhoneRootController`, with the
-tab controller as its root. `PhoneHome` bridges it into SwiftUI. Each page stands in a `UIHostingController` of its
-own, so its `.navigationTitle`, `.toolbar` and `.searchable` go to that controller's navigation item and its scroll
-view folds the large title. A project, a machine and its pages and Recently closed go on their tab's stack and keep
-the tab bar. A view (a chat, terminal, file, canvas, drawing, diagram, browser or group member, from a project, Now,
-Search or a notification) goes on the stack around the tabs and covers them, so the whole tabbed page slides away
-with the push and returns with the pop, following the finger on a swipe back. `hidesBottomBarWhenPushed` is not used:
-under the floating tab bar it fades the bar's background and drops its items only at the end. The outer bar is
-always hidden. A view stands in a `PhoneViewController` with a stack and a bar of its own, laid out before the push,
-so the bar and its back button slide in with the view as one page and away with it, also on a swipe back, instead of
-a hidden bar appearing during the push with its back button against the screen's edge. An empty page under the view
-gives it the system's back button, whose action, like a pop that would uncover that page, pops the outer stack.
-Between a project's page and its view the bar's items do not morph, since each has a bar of its own. A page SwiftUI
-pushes from inside a view (a chat's sub-agents, a canvas's nodes, a group's members) goes on the view's own stack and
-morphs in its bar; while one stands there, a swipe back goes back within the view.
-
-A swipe back works from anywhere on a page, as in the system's apps, on all three kinds of stack: a view goes back to
-what is under it, a project or a machine to its list, and a page pushed inside a view back within the view first.
-A tab's stack and a view's own use UIKit's `interactiveContentPopGestureRecognizer` with `PhonePopGesture` as its
-delegate, beside UIKit's edge swipe. It lets a swipe begin only when that stack has something to pop and the pan
-heads for the trailing edge, and asks every other question of the delegate UIKit gave the recognizer, so the swipe
-still yields to the scroll views under it. On the stack around the tabs UIKit's swipes do nothing, since its bar is
-hidden, so both are off there and `PhoneSwipeBack` takes their place: a pan of its own on the stack's view with the
-same rules, which drives the pop through a `UIPercentDrivenInteractiveTransition` and an animator that slides the view
-away as UIKit's pop does; every other push and pop keeps UIKit's animation. Content that takes a sideways pan for
-itself keeps it, and there only a swipe from the edge goes back: a scroll view that scrolls sideways or zooms (a
-canvas, a drawing, a document scene, a code or diff line wider than the screen, a web page, an image), a pan the app
-added (a terminal's selection) and text with a selection. A list row's swipe actions go first: the swipe back waits
-until UIKit's swipe-action pan of that list fails, so opening a row's actions either way and closing an open row win,
-and a row without actions lets the swipe back through. Over a row with actions only a swipe from the edge goes back.
-The `navigation-gesture` log category (subsystem `app.ruimte.mobile`) says which recognizer was asked, on which stack,
-and why it began, refused or waited.
-
-A stack lays a page out as soon as it stands on the stack, before the push starts on the next layout pass, since
-SwiftUI only hands a page's title and items to its navigation item when it lays the page out. For a `.toolbar` that
-is still a pass too late: the bar has started the push by then, so the items of a project or a machine popped in a
-frame after it instead of morphing out of the tab's. The bars of the four tabs, a project and a machine are therefore
-UIKit's (`PhoneBar.swift`): `PhoneHome` builds each page's `UIBarButtonItem`s with the page and sets them, with the
-title of a project or a machine, on its navigation item before the push, and those pages give SwiftUI no `.toolbar`
-on an iPhone. They follow what they show through Observation (the account, the machines, a project that becomes ready).
-A project's menu is a `UIMenu` with the same actions as before, its sheets on `WorkspaceNavigation`; Now's write
-button and a machine's Open folder ask their page through `BarRequests`. An item that morphs carries the same
-`identifier` on every page, which is how UIKit matches items across a push. Settings opens as a sheet from the
-avatar, the last item on the right of the bar on every tab, on a project's page and on a machine's, sharing its glass
-with the item beside it, and the tab bar folds in while a list scrolls down. The avatar is one `UIBarButtonItem`
-under the identifier `settings`, a new one on each page since both bars stand during a push. It shows the account's
-GitHub picture as the desktop does (`AccountAvatar.swift`, kept in Caches and asked again once per launch), else the
-first letter of its name.
+Four tabs, each at most two levels deep: Now, Projects, Machines and Search. They stand as the root of one
+navigation stack (`PhoneHome`), and every page opens on that stack over the whole tab view, so the tab bar leaves
+with a push and comes back with the pop, following the finger on a swipe back. A tab's page is hosted apart from the
+stack's bar, so the title and the bar's items of each tab sit on the tab view, chosen by the selected tab. Settings
+opens as a sheet from the avatar, the last item on the right of the bar on every tab and on a project's page, and the
+tab bar folds in while a list scrolls down. The avatar is the account's GitHub picture as the desktop shows it (`AccountAvatar.swift`, kept in
+Caches and asked again once per launch), else the first letter of its name.
 
 - Now (`App/Now`) is where the app opens: Needs you, Working and Finished over every connected machine, then the
   machines that are not connected. `NowModel` reads each machine's open projects with `project.sidebar`, again on
@@ -212,16 +169,9 @@ first letter of its name.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
   opens over Search in its project; a project opens under Projects.
 
-`PhoneRouter` holds the tab, the list-level path of each tab's stack and the path of views over the tabs, as pure
-state (`PhoneRouterTests`). Each route replaces what its stack had pushed, so nothing goes deeper than two levels: a
-project goes to Projects, a project's view goes over the tabs with the project under it, so its pop lands on the
-project, a view from Now or a notification goes over Now and one from Search over Search. A list-level route takes a
-view off the tabs. Each stack pushes and pops to match its path, and a path that changes during a transition waits
-until the transition ends. A view moves without animation only when the router switches the tab in sight, so that
-tab arrives with its view already over it. Each stack hands its routes back to the router once a push or a pop
-settled (`navigationController(_:didShow:animated:)`), so a pop by the back button or a swipe shortens the path and
-a swipe the person takes back leaves it standing. A page SwiftUI pushes from inside a page, such as a machine's files
-or a chat's sub-agents, has no route and stays out of the path. A view opened outside its project's list
+`PhoneRouter` holds the tab and the stack's path. Each route (a project, a view, a notification, a machine, Recently
+closed) replaces what was pushed, and a project goes to Projects. The stack only shortens the path once a pop
+settles, so a swipe back the person takes back leaves the route standing. A view opened outside its project's list
 (`ProjectViewPage`) opens the project behind it, so it has the project's sessions, forks and plans, and names the
 project under its title. The iPad keeps its split view with Projects, Machines and Settings in the sidebar and a
 project's Views, Files, Git and Search as tabs.

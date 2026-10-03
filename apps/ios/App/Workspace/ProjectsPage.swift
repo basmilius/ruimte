@@ -5,8 +5,7 @@ import SwiftUI
 struct ProjectsPage<Notice: View>: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
-    /// On the iPhone's Projects tab, which leaves finding a project to the Search tab and has its bar items in UIKit
-    /// (`PhoneBars.projects`).
+    /// On the iPhone's Projects tab, whose bar and search belong to the tabs around it.
     var inTabs = false
     let showRecent: () -> Void
     @ViewBuilder let notice: () -> Notice
@@ -99,8 +98,8 @@ struct ProjectsPage<Notice: View>: View {
             }
         }
         .modifier(ProjectsSearch(enabled: !inTabs, text: $search))
-        .toolbar(if: !inTabs) {
-            if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
+        .toolbar {
+            if !inTabs && (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
                 ProjectsUpdatingItem()
             }
         }
@@ -119,6 +118,7 @@ struct ProjectsPage<Notice: View>: View {
     }
 }
 
+/// The Search tab finds projects on the iPhone, and a tab's own field would not reach the bar above the tabs.
 private struct ProjectsSearch: ViewModifier {
     let enabled: Bool
     @Binding var text: String

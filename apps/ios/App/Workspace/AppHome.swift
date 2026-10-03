@@ -98,7 +98,7 @@ struct AppHome: View {
         .onChange(of: runtime.account?.id) { _, account in
             // The account restored on launch may land after the last project reopened.
             if restoring == nil || activeProject !== restoring { activeProject = nil }
-            router.reset()
+            router = PhoneRouter()
             if account != nil { signIn = false }
         }
         .onChange(of: runtime.notifications.destination) { _, destination in
@@ -313,7 +313,7 @@ struct AppHome: View {
 
     private func openWorkspace(_ workspace: MobileWorkspace, view: String?) {
         guard isPad else {
-            router.openProject(workspace, view: view)
+            withAnimation(reduceMotion ? nil : .default) { router.openProject(workspace, view: view) }
             return
         }
         restoreProblem = nil
@@ -506,11 +506,10 @@ struct MachinesPage: View {
 struct MachineRoutePage: View {
     let runtime: AppRuntime
     let machineID: String
-    var requests: BarRequests? = nil
 
     var body: some View {
         if let machine = runtime.machines.first(where: { $0.id == machineID }) {
-            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime, barRequests: requests)
+            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
         }
     }
 }

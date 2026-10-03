@@ -10,7 +10,7 @@ enum AccountAvatar {
     static let glyphSize = CGSize(width: 20, height: 20)
     /// Larger than an icon so the picture fills most of the glass circle, which stays a ring of glass around it.
     static let pictureSize = CGSize(width: 30, height: 30)
-    @MainActor private static var glyphs: [String: UIImage] = [:]
+    @MainActor private static var glyphs: [String: Image] = [:]
 
     /// The name the desktop takes the letter from: the one a provider told, else the login.
     static func name(of account: Account?) -> String? {
@@ -33,11 +33,11 @@ enum AccountAvatar {
         return URL(string: "https://github.com/\(path).png?size=\(scale)")
     }
 
-    @MainActor static func uiImage(for account: Account?, picture: UIImage?) -> UIImage {
-        if let picture { return picture }
-        guard let initial = initial(of: name(of: account)) else { return LucideIcon.uiImage(named: "circle-user-round") }
+    @MainActor static func image(for account: Account?, picture: UIImage?) -> Image {
+        if let picture { return Image(uiImage: picture) }
+        guard let initial = initial(of: name(of: account)) else { return Image(lucide: "circle-user-round") }
         if let image = glyphs[initial] { return image }
-        let image = glyph(initial)
+        let image = Image(uiImage: glyph(initial))
         glyphs[initial] = image
         return image
     }

@@ -5,8 +5,6 @@ import SwiftUI
 struct NowPage: View {
     let runtime: AppRuntime
     let now: NowModel
-    /// Its write button is in the bar (`PhoneBars.now`).
-    let requests: BarRequests
     let open: (ProjectViewTarget) -> Void
     let openProject: (ProjectViewTarget) -> Void
     let pair: () -> Void
@@ -106,11 +104,6 @@ struct NowPage: View {
                     }
                 }
             }
-        }
-        .navigationTitle("Now")
-        .navigationBarTitleDisplayMode(.large)
-        .mobileSheet(isPresented: Bindable(requests).newChat) {
-            NowNewChatSheet(runtime: runtime, now: now) { target in open(target) }
         }
         .onChange(of: now.liveRequests) { _, live in now.answers.keep(live) }
         .refreshable { await now.refresh() }
