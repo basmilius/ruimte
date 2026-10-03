@@ -221,9 +221,9 @@ struct GitConflictFilePage: View {
         }
         .navigationTitle((path as NSString).lastPathComponent)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if let file, !file.whole {
-                ToolbarItem {
+                GitBottomBar {
                     Menu {
                         let wandable = draft.wandable(in: file).count
                         Button(
@@ -237,11 +237,12 @@ struct GitConflictFilePage: View {
                             editing = GitBlockEdit(block: nil, text: draft.lines(in: file).joined(separator: "\n"))
                         }
                     } label: {
-                        Label("Resolve for me", lucideIcon: "sparkles")
-                    }.disabled(session.busy)
-                }
-                ToolbarItem {
-                    Button("Mark resolved", lucideIcon: "check") {
+                        Text("Resolve with an agent").font(.body.weight(.semibold)).lineLimit(1)
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                    }
+                    .buttonStyle(.glass)
+                    .disabled(session.busy)
+                    GitBarButton(title: "Mark resolved") {
                         Task {
                             if await session.save(client: client, paths: [path]) { dismiss() }
                         }

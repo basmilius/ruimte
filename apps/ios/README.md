@@ -46,6 +46,17 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   a size limit. Source is colored in the language the machine names, and a folder listing marks each
   file with the icon of its type. A file without a view of its own opens in Quick Look and can be
   shared to another app, once the machine serves it (images, video, sound and PDFs) and it fits in 32 MB.
+- Files of a project (`App/Pages/Files`), as a sheet from the project's toolbar that opens large and pulls down to
+  medium: each row carries what git says about it (`M`, `A` for new, `D`, `R`, `!` for a conflict, and `M` on a
+  folder with a change under it), read once for the whole folder from the same watch the git sheet uses. Find in
+  files searches the text under a folder with `fs.grep` (match case, whole word, regular expression) and groups the
+  hits per file; a hit opens the file at its line. A text file marks its changed lines in the gutter against the last
+  commit (green added, blue changed, a red notch where lines went), from `git.diff` of that one file. The bar under a
+  file mentions it in a chat of the project (the one opened last first), shows its diff and copies it. Mention adds
+  `@path` to that chat's draft: the composer on screen when the chat is open (`ChatDraftInbox`), its saved draft when
+  not. The file's menu edits a text file, opens it as a view of the project (or the view it already has), and
+  deletes it to the machine's trash after a question (`fs.delete`). An edit is written over the mtime it was read at
+  (`fs.write` with `expectedMtime`), so a file that moved on the machine refuses with the edit kept, to reload or copy.
 - Filesystem updates, usage and machine access management. Destructive actions require confirmation.
 - Launches of a project, in the project menu (behind More on an iPad): each with its state (at rest, needs approval, starting, running, stopping,
   passed, failed), how long it runs and on which port, grouped by the checkout it runs in. Launch, Restart and Stop,
@@ -64,12 +75,22 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Long-press a node's group or a process for Interrupt, Terminate or Force quit; Force quit asks first, as on the
   desktop, and the machine refuses a pid that now names another process.
 - Git over every repository a project folder holds: the one the folder is in, its initialized
-  submodules and the repositories beside it. Changes are grouped per state and named per repository,
-  the staged files decide where a commit lands, and fetch, pull and push run over the whole folder.
-  A repository of its own has its branches, its stash, its pull request and its history behind it.
-  Diffs read a working-tree file or a whole commit.
-  A checkout that stopped halfway in a merge, rebase, cherry-pick or revert says so on the git page, with
-  Continue and Abort (`git.operation`). Its conflicts are worked out in the app, never through markers in
+  submodules and the repositories beside it. It is one sheet with three segments, Changes, History and Branches,
+  under a pill that names the branch (or how many repositories there are) with what is ahead and behind. The pill
+  switches the sheet between the project folder and one of its worktrees, and leads to the branches, or with several
+  repositories to a page of them with Pull all and Push N repositories. Changes are grouped per state and named per
+  repository, the staged files decide where a commit lands, and fetch, pull and push run over the whole folder.
+  The commit opens inside the sheet, with Write with Claude (or Codex, `git.suggestMessage`), Commit and Commit and
+  push. A branch that moved on both sides asks Merge or Rebase before a pull brings it together, since a pull only
+  fast-forwards until a person says how. History is every repository at once and a row opens the whole commit's diff.
+  Branches is one repository at a time: its branches (switching stashes a dirty tree after asking), its worktrees with
+  who works in them, binding a group of the project to a worktree as the desktop's worktree dialog does
+  (`git.worktree-add`, the group's `worktree` in the private project file), and its stash with Stash changes and Pop
+  per stash. A repository of its own also has a page with its remote actions, stash, pull request and history; the
+  pull request has its base and branch, title, description and what it carries over the base, publishes the branch
+  first when needed and opens in the browser. Diffs read a working-tree file, a file against a ref, or a whole commit.
+  A checkout that stopped halfway in a merge, rebase, cherry-pick or revert heads the Changes segment, with Abort
+  and Continue in its bar (`git.operation`). Its conflicts are worked out in the app, never through markers in
   the file: a page per file folds what merged by itself and shows each conflict with both sides, to take
   one, both or a stretch written by hand, or the whole file can be edited at once; a conflict whose lines
   that edit changed counts as answered and one it left alone stays open. The wand closes what needs no choice, and an agent on the
@@ -137,8 +158,8 @@ Caches and asked again once per launch), else the first letter of its name.
   (`project.newChat`) or as a new chat view at the end of one of its open projects, and opens it.
 - Projects lists the open projects, New chat, each machine's Chats and Recently closed. A project page is its list
   of views. Its bar holds the project's menu beside the avatar: New view (New chat in Chats) in a group of its own,
-  then Files, Git and Launches (none of these in Chats) and Usage, each a sheet. A view opens over the project and
-  hides the tab bar.
+  then Files, Git and Launches (none of these in Chats) and Usage, each a sheet; Files and Git open large and pull
+  down to medium. A view opens over the project and hides the tab bar.
 - Machines lists every machine with how it is reached, and pairs or signs in from its plus. A machine opens its
   projects (which open under Projects), Chats, files, processes, usage and machine settings.
 - Search finds views and projects by name over every machine from what Now and Projects already read. A view
@@ -617,3 +638,7 @@ Apple references: [custom build scripts](https://developer.apple.com/documentati
   use VoiceOver/list view. Compare drawing paths and text against desktop.
 - Test file watching, image/video previews, Git stage/unstage/commit and confirmed process
   signals against a disposable project before using them on active work.
+- In a disposable project: edit a file on the phone while the desktop changes it (the save refuses and keeps the
+  edit), delete a file and find it in the machine's Trash, mention a file in a chat that is open and one that is not,
+  bind a group to a worktree and start a chat in it on the desktop, and stop a rebase halfway to finish it from the
+  Changes segment.

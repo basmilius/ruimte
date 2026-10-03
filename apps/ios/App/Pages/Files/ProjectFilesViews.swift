@@ -8,6 +8,7 @@ struct ProjectFilesPage: View {
     let workspace: MobileWorkspace
     var openView: ((String) -> Void)?
     @State private var repositories = GitRepositories()
+    @State private var detent = PresentationDetent.large
 
     var body: some View {
         MachineFilesPage(
@@ -15,6 +16,7 @@ struct ProjectFilesPage: View {
             project: FilesProject(workspace: workspace, openView: openView), marks: repositories
         )
         .task(id: workspace.folder) { await repositories.run(client: workspace.client, folder: workspace.folder) }
+        .presentationDetents([.medium, .large], selection: $detent)
     }
 }
 
