@@ -26,7 +26,7 @@ in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pul
 | `GET /v1/models/benchmarks`                | Intelligence Index and cost per task per model and effort, for the model comparison        |
 | `GET /v1/models/catalog`                   | The shipped model catalogs per agent kind, for a machine to pick up a new model            |
 | `GET /v1/account`                          | The account and its identities                                                             |
-| `DELETE /v1/account`                       | Delete the account and everything bound to it; the body carries the typed account name     |
+| `DELETE /v1/account`                       | Delete the account and everything bound to it, with the typed name and an Apple code       |
 | `POST /v1/account/link`                    | A single-use link token for the start URL, bound to this session                           |
 | `POST /v1/account/identities`              | The code of a link login with its verifier, from the same session                          |
 | `DELETE /v1/account/identities/<provider>` | Remove an identity; the last one is refused                                                |
@@ -54,11 +54,11 @@ adds the nullable columns, so the Worker still running while it applies keeps wo
 
 ## Deleting an account
 
-`DELETE /v1/account` takes `AccountDeletePayloadSchema` (`{ confirmation }`) with a live access token and answers
-204. `confirmation` is what the person typed: the name `accountConfirmationName` in `packages/pulsar` gives (the
-account's `displayName`, else its `login`, else the provider's name), compared ignoring case and runs of
-whitespace. A mismatch is `confirmation-mismatch` (400) and deletes nothing. It is limited to five tries a minute
-per account, and shares the per-address window of the session routes.
+`DELETE /v1/account` takes `AccountDeletePayloadSchema` (`{ confirmation, appleAuthorizationCode? }`) with a live
+access token and answers 204. `confirmation` is what the person typed: the name `accountConfirmationName` in
+`packages/pulsar` gives (the account's `displayName`, else its `login`, else the fixed word `DELETE`, never
+translated), compared ignoring case and runs of whitespace. A mismatch is `confirmation-mismatch` (400) and deletes
+nothing. It is limited to five tries a minute per account, and shares the per-address window of the session routes.
 
 One batch deletes every row bound to the account: its sessions on every device, its identities (so a later
 sign-in with one of them opens a new account), its machines and the removals it remembered, the devices and the
@@ -69,10 +69,25 @@ A machine leaves the account by its row going, so another account may list its k
 itself is not told: it keeps the account it signed for in its own `auth.json`, no statement for that account can
 be signed any more, and it takes another account only once a person on it leaves the first
 (`apps/server/README.md`, "One account per machine"). A client a statement already let in stays paired with the
-machine until then.
+machine until then. The desktop app takes its own machine off right after a deletion, with the local secret.
 
-Sign in with Apple is not revoked at Apple. Apple's revoke endpoint wants a refresh or access token of the
-identity, and this Worker keeps none: it drops Apple's tokens once the id_token is verified.
+### Revoking Sign in with Apple
+
+Apple asks an app that deletes an account made with Sign in with Apple to revoke the user's tokens. This Worker
+drops Apple's tokens at sign-in, so the iOS app brings a fresh one:
+
+1. Right before deleting, the app runs `ASAuthorizationAppleIDProvider` for the Apple ID on the account (no
+   scope, no nonce needed) and takes the credential's `authorizationCode`.
+2. It sends that as `appleAuthorizationCode` beside `confirmation` within the five minutes the code lives.
+3. The Worker trades it at `/auth/token` as `APPLE_NATIVE_CLIENT_ID` without a `redirect_uri`, checks the
+   id_token's signature, issuer, audience and expiry, and that its subject is the account's Apple identity. It
+   then posts the refresh token to `/auth/revoke` (`token_type_hint=refresh_token`), with the same client secret
+   it signs logins with. No new secret is needed.
+
+Only once Apple answers 200 does the account go. A code for another Apple ID, or one sent for an account without
+an Apple identity, is `bad-request`; Apple refusing the code or the revocation is `apple-revocation-failed` (502).
+Either way nothing is deleted, so the app asks for a new code and tries again. The desktop sends no code: a
+person deleting there ends Sign in with Apple in the Apple ID settings themselves.
 
 ## Statements and the one account of a machine
 

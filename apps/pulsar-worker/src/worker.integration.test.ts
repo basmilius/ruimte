@@ -184,12 +184,16 @@ const APPLE_SIGNING_KID = 'apple-test-key';
 
 interface AppleCode {
     sub: string;
-    nonce: string;
+    // Absent for an authorization the app asked without one.
+    nonce?: string;
     claims?: Record<string, unknown>;
     signer?: KeyObject;
     native?: boolean;
 }
 const appleCodes = new Map<string, AppleCode>();
+// The tokens Apple was asked to revoke, and whether it refuses to.
+const appleRevoked: { clientId: string; token: string; hint: string }[] = [];
+let appleRevokeFails = false;
 
 const signRs256 = (payload: Record<string, unknown>, signer: KeyObject): string => {
     const input = `${base64url(Buffer.from(JSON.stringify({ alg: 'RS256', kid: APPLE_SIGNING_KID })))}.${base64url(Buffer.from(JSON.stringify(payload)))}`;
@@ -240,8 +244,18 @@ const apple = async (request: Request, url: URL): Promise<Response> => {
             access_token: 'apple-access',
             token_type: 'Bearer',
             expires_in: 3600,
+            refresh_token: `apple-refresh-${code}`,
             id_token: signRs256(claims, entry.signer ?? appleSigningKey.privateKey)
         });
+    }
+    if (url.href === `${APPLE_ISSUER}/auth/revoke`) {
+        const form = new URLSearchParams(await request.text());
+        const clientId = form.get('client_id') ?? '';
+        if (appleRevokeFails || !appleClientSecretHolds(form.get('client_secret') ?? '', clientId)) {
+            return Response.json({ error: 'invalid_client' }, { status: 400 });
+        }
+        appleRevoked.push({ clientId, token: form.get('token') ?? '', hint: form.get('token_type_hint') ?? '' });
+        return new Response(null, { status: 200 });
     }
     return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
 };
@@ -1724,8 +1738,50 @@ describe('deleting an account', () => {
         expect((await remove(named, 'ada  lovelace')).status).toBe(204);
 
         const apple = await signInWithApple('apple-9304');
-        expect(await errorCode(await remove(apple, 'apple-9304'))).toBe('confirmation-mismatch');
-        expect((await remove(apple, 'Apple')).status).toBe(204);
+        expect(await errorCode(await remove(apple, 'Apple'))).toBe('confirmation-mismatch');
+        expect((await remove(apple, 'delete')).status).toBe(204);
+    });
+
+    const nativeCode = (sub: string): string => {
+        const code = randomBytes(8).toString('hex');
+        appleCodes.set(code, { sub, native: true });
+        return code;
+    };
+
+    const removeWithApple = (session: SessionResult, confirmation: string, appleAuthorizationCode: string): Promise<Response> =>
+        dispatch('/v1/account', { method: 'DELETE', headers: bearer(session), body: { confirmation, appleAuthorizationCode } });
+
+    test('an Apple code revokes at Apple with the native client before the account goes', async () => {
+        const session = await signInWithApple('apple-9306');
+        const code = nativeCode('apple-9306');
+        expect((await removeWithApple(session, 'DELETE', code)).status).toBe(204);
+        expect(appleRevoked).toContainEqual({ clientId: APPLE_NATIVE_CLIENT_ID, token: `apple-refresh-${code}`, hint: 'refresh_token' });
+        expect((await dispatch('/v1/account', { headers: bearer(session) })).status).toBe(401);
+    });
+
+    test('a code for another Apple ID, an account without Apple, or a refusal at Apple deletes nothing', async () => {
+        const session = await signInWithApple('apple-9307');
+        const before = appleRevoked.length;
+        const other = await removeWithApple(session, 'DELETE', nativeCode('apple-someone-else'));
+        expect(other.status).toBe(400);
+        expect(await errorCode(other)).toBe('bad-request');
+        expect(appleRevoked).toHaveLength(before);
+
+        const unknown = await removeWithApple(session, 'DELETE', 'a-code-apple-never-gave');
+        expect(unknown.status).toBe(502);
+        expect(await errorCode(unknown)).toBe('apple-revocation-failed');
+
+        appleRevokeFails = true;
+        try {
+            expect(await errorCode(await removeWithApple(session, 'DELETE', nativeCode('apple-9307')))).toBe('apple-revocation-failed');
+        } finally {
+            appleRevokeFails = false;
+        }
+        expect((await accountOf(session)).account.id).toBe(session.account.id);
+
+        const github = await signIn(9307);
+        expect(await errorCode(await removeWithApple(github, 'user-9307', nativeCode('apple-9307')))).toBe('bad-request');
+        expect((await accountOf(github)).account.id).toBe(github.account.id);
     });
 
     test('an account that tries too often is told to wait', async () => {

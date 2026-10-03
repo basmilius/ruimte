@@ -184,15 +184,16 @@ describe('address book', () => {
         expect(AccessStatementSchema.safeParse({ ...v2, machinePublicKey: 'not-a-key' }).success).toBe(false);
     });
 
-    test('deleting an account takes its name, else its login, else its provider, typed in any case', () => {
+    test('deleting an account takes its name, else its login, else the fixed word, typed in any case', () => {
         const named: Account = { id: 'account-1', provider: 'github', login: 'ada', displayName: 'Ada  Lovelace' };
         const apple: Account = { id: 'account-2', provider: 'apple', login: null, displayName: null };
         expect(accountConfirmationName(named)).toBe('Ada  Lovelace');
         expect(confirmsAccountDeletion(named, ' ada lovelace ')).toBe(true);
         expect(confirmsAccountDeletion(named, 'ada')).toBe(false);
         expect(accountConfirmationName({ ...named, displayName: null })).toBe('ada');
-        expect(accountConfirmationName(apple)).toBe('Apple');
-        expect(confirmsAccountDeletion(apple, 'apple')).toBe(true);
+        expect(accountConfirmationName(apple)).toBe('DELETE');
+        expect(confirmsAccountDeletion(apple, 'delete')).toBe(true);
+        expect(confirmsAccountDeletion(apple, 'Apple')).toBe(false);
         expect(confirmsAccountDeletion({ ...named, displayName: ' ' }, ' ')).toBe(false);
     });
 

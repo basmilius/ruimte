@@ -1,4 +1,5 @@
 import { AccountDeletePayloadSchema, accountConfirmationName, confirmsAccountDeletion } from '@ruimte/pulsar';
+import { nativeAppleConfigured, revokeNativeApple } from './apple.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, noContent, readBody } from './http.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
@@ -31,9 +32,32 @@ const ACCOUNT_DELETION = [
     'DELETE FROM account WHERE id = ?1'
 ];
 
+/* Ends Sign in with Apple for Ruimte at Apple with the code the iOS app sent; null when it did. */
+const revokeApple = async (env: Env, accountId: string, authorizationCode: string): Promise<Response | null> => {
+    const identity = await env.DB.prepare("SELECT subject FROM identity WHERE account_id = ?1 AND provider = 'apple'")
+        .bind(accountId)
+        .first<{ subject: string }>();
+    if (!identity) {
+        return failure('bad-request', 'This account does not sign in with Apple');
+    }
+    if (!nativeAppleConfigured(env)) {
+        return failure('not-configured', 'Signing in with Apple is not configured on this address book');
+    }
+    try {
+        if ((await revokeNativeApple(env, authorizationCode, identity.subject)) === 'other-identity') {
+            return failure('bad-request', 'This Apple ID does not sign in to this account. Choose the one that does.');
+        }
+    } catch (error) {
+        console.warn('revoking at Apple failed', error);
+        return failure('apple-revocation-failed', 'Apple did not end Sign in with Apple for Ruimte, so the account is still here. Try again.');
+    }
+    return null;
+};
+
 /*
  * `DELETE /v1/account`. Besides a live access token the body carries the name the person typed, compared
- * with the account as it stands now. One batch, so an account is either all there or all gone; a sign-in
+ * with the account as it stands now. With an Apple code, Apple revokes first and a failure there deletes
+ * nothing, so the app can try again. One batch, so an account is either all there or all gone; a sign-in
  * with one of its identities afterwards opens a new account.
  */
 export const deleteAccount = async (request: Request, env: Env): Promise<Response> => {
@@ -54,6 +78,12 @@ export const deleteAccount = async (request: Request, env: Env): Promise<Respons
     }
     if (!confirmsAccountDeletion(session.account, body.value.confirmation)) {
         return failure('confirmation-mismatch', `Type ${accountConfirmationName(session.account)} to delete this account`);
+    }
+    if (body.value.appleAuthorizationCode !== undefined) {
+        const refused = await revokeApple(env, session.account.id, body.value.appleAuthorizationCode);
+        if (refused) {
+            return refused;
+        }
     }
     await env.DB.batch(ACCOUNT_DELETION.map((query) => env.DB.prepare(query).bind(session.account.id)));
     return noContent();

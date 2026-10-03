@@ -180,12 +180,21 @@ export type AccountResult = z.infer<typeof AccountResultSchema>;
  * as it stands then, so a request only a token proves deletes nothing.
  */
 export const AccountDeletePayloadSchema = z.object({
-    confirmation: z.string().max(256)
+    confirmation: z.string().max(256),
+    /*
+     * A fresh authorization code of the Apple ID on the account, from the iOS app's own Sign in with Apple
+     * sheet (audience `APPLE_NATIVE_CLIENT_ID`). The address book trades it and revokes the tokens at Apple
+     * before it deletes anything, as Apple asks of an app that deletes an account made with it.
+     */
+    appleAuthorizationCode: z.string().min(1).max(4096).optional()
 });
 export type AccountDeletePayload = z.infer<typeof AccountDeletePayloadSchema>;
 
-/* What a person types to delete the account. Apple hands out no login and the iOS app asks for no name, so the provider stands in last. */
-export const accountConfirmationName = (account: Account): string => account.displayName ?? account.login ?? PROVIDER_NAMES[account.provider];
+// What an account without a name or a login is deleted with. Never translated, so every client asks for the same word.
+export const ACCOUNT_DELETE_WORD = 'DELETE';
+
+/* What a person types to delete the account. Apple hands out no login and the iOS app asks for no name, so the fixed word stands in last. */
+export const accountConfirmationName = (account: Account): string => account.displayName ?? account.login ?? ACCOUNT_DELETE_WORD;
 
 const foldName = (text: string): string => text.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -387,6 +396,8 @@ export const AddressBookErrorCodeSchema = z.enum([
     'last-identity',
     // What was typed to delete the account does not name it.
     'confirmation-mismatch',
+    // Apple did not trade the authorization code or revoke its tokens, so nothing was deleted.
+    'apple-revocation-failed',
     'rate-limited',
     // A signed time too far from the address book's: the device's clock is off, and the session is still good.
     'clock-skew',

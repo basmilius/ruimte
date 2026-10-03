@@ -90,6 +90,11 @@
       "confirmation": {
         "type": "string",
         "maxLength": 256
+      },
+      "appleAuthorizationCode": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
       }
     },
     "required": [
@@ -226,6 +231,7 @@
       "provider-linked",
       "last-identity",
       "confirmation-mismatch",
+      "apple-revocation-failed",
       "rate-limited",
       "clock-skew",
       "not-configured",
@@ -253,6 +259,7 @@
               "provider-linked",
               "last-identity",
               "confirmation-mismatch",
+              "apple-revocation-failed",
               "rate-limited",
               "clock-skew",
               "not-configured",

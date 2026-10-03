@@ -8,6 +8,7 @@ export const APPLE_ISSUER = 'https://appleid.apple.com';
 const AUTHORIZE_URL = 'https://appleid.apple.com/auth/authorize';
 const TOKEN_URL = 'https://appleid.apple.com/auth/token';
 const KEYS_URL = 'https://appleid.apple.com/auth/keys';
+const REVOKE_URL = 'https://appleid.apple.com/auth/revoke';
 
 // Apple allows six months; an hour is plenty for one exchange and keeps a secret that leaks from a log short-lived.
 const CLIENT_SECRET_LIFETIME_S = 60 * 60;
@@ -65,8 +66,9 @@ const appleKey = async (kid: string): Promise<JsonWebKey | undefined> => {
  * The `id_token` from the token endpoint, checked the way Apple's documentation asks: a signature from one
  * of Apple's keys, Apple as the issuer, an audience the caller accepts, not expired, and the nonce this
  * login sent. The token came straight from Apple over TLS, but checking it anyway costs one cached fetch.
+ * A null nonce is for a code the app authorized without one, which no login of this address book started.
  */
-export const verifyAppleIdToken = async (idToken: string, input: { audiences: readonly string[]; nonce: string; now?: number }): Promise<string> => {
+export const verifyAppleIdToken = async (idToken: string, input: { audiences: readonly string[]; nonce: string | null; now?: number }): Promise<string> => {
     const jwt = decodeJwt(idToken);
     if (!jwt || jwt.header.alg !== 'RS256' || typeof jwt.header.kid !== 'string') {
         throw new Error('Apple answered with an id_token this address book cannot read');
@@ -84,7 +86,7 @@ export const verifyAppleIdToken = async (idToken: string, input: { audiences: re
     if (typeof claims.exp !== 'number' || !Number.isFinite(claims.exp) || claims.exp + CLOCK_SKEW_S <= nowS) {
         throw new Error('The id_token expired');
     }
-    if (claims.nonce !== input.nonce) {
+    if (input.nonce !== null && claims.nonce !== input.nonce) {
         throw new Error('The id_token belongs to another login');
     }
     if (typeof claims.sub !== 'string' || claims.sub.length === 0) {
@@ -119,6 +121,48 @@ export const identifyNativeApple = async (env: Env, input: { identityToken: stri
         throw new Error('Apple did not confirm this sign-in');
     }
     return subject;
+};
+
+/*
+ * Ends Ruimte's authorization of an Apple ID at Apple. The address book keeps no Apple token, so the iOS app
+ * hands over a fresh authorization code; it is traded here, and its refresh token revoked, which Apple takes
+ * as the end of every token of that authorization. `other-identity` when the code is for another Apple ID
+ * than `subject`, which is then left alone.
+ * https://developer.apple.com/documentation/signinwithapplerestapi/revoke-tokens
+ */
+export const revokeNativeApple = async (env: Env, authorizationCode: string, subject: string): Promise<'revoked' | 'other-identity'> => {
+    const clientSecret = await appleClientSecret(env, Date.now(), APPLE_NATIVE_CLIENT_ID);
+    const response = await fetch(TOKEN_URL, {
+        method: 'POST',
+        headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: APPLE_NATIVE_CLIENT_ID, client_secret: clientSecret, code: authorizationCode, grant_type: 'authorization_code' })
+    });
+    const token = (await response.json().catch(() => null)) as { id_token?: unknown; refresh_token?: unknown; access_token?: unknown } | null;
+    if (!response.ok || typeof token?.id_token !== 'string') {
+        throw new Error(`Apple refused the code: ${response.status}`);
+    }
+    if ((await verifyAppleIdToken(token.id_token, { audiences: [APPLE_NATIVE_CLIENT_ID], nonce: null })) !== subject) {
+        return 'other-identity';
+    }
+    const [hint, revocable] =
+        typeof token.refresh_token === 'string'
+            ? (['refresh_token', token.refresh_token] as const)
+            : typeof token.access_token === 'string'
+              ? (['access_token', token.access_token] as const)
+              : [null, null];
+    if (revocable === null) {
+        throw new Error('Apple answered the code without a token to revoke');
+    }
+    const revoked = await fetch(REVOKE_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: APPLE_NATIVE_CLIENT_ID, client_secret: clientSecret, token: revocable, token_type_hint: hint })
+    });
+    await revoked.body?.cancel();
+    if (!revoked.ok) {
+        throw new Error(`Apple did not revoke the token: ${revoked.status}`);
+    }
+    return 'revoked';
 };
 
 /*
@@ -183,7 +227,7 @@ export const apple: OAuthProvider = {
         if (!response.ok || typeof token?.id_token !== 'string') {
             throw new Error(`Apple refused the code: ${typeof token?.error === 'string' ? token.error : response.status}`);
         }
-        // Apple's access and refresh tokens are dropped with the response: the address book never acts on Apple for anyone.
+        // Apple's access and refresh tokens are dropped with the response; revoking when an account goes takes a fresh code of its own.
         // The web flow's own Services ID only; a native app's token carries its bundle id and would pass its own list.
         const subject = await verifyAppleIdToken(token.id_token, { audiences: [clientId], nonce: await sha256(input.codeVerifier) });
         return { subject, login: null, displayName: appleUserName(input.callback.get('user')) };
