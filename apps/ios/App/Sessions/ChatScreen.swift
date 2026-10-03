@@ -192,7 +192,15 @@ struct ChatScreen: View {
                 ContentUnavailableView("This chat is no longer in the project", lucideIcon: "square-x")
             }
         }
-        .mobileSheet(isPresented: $composerSheets.settings) { ChatRunSettings(model: model) }
+        .mobileSheet(isPresented: compact($composerSheets.settings)) { ChatRunSettings(model: model) }
+        // Beside an iPad's sidebar it grows out of the composer, where the model's pill stands.
+        .popover(
+            isPresented: regular($composerSheets.settings), attachmentAnchor: .point(.bottom), arrowEdge: .bottom
+        ) {
+            ChatRunSettings(model: model)
+                .frame(minWidth: 380, idealWidth: 420, minHeight: 520)
+                .modifier(MobileSheetSurface())
+        }
         .mobileSheet(isPresented: $composerSheets.compare) { ModelComparisonSheet() }
         // From the screen, like Run settings: the pill sits in the composer's own hosting controller, inside the
         // timeline's UIKit container.
@@ -474,6 +482,14 @@ struct ChatScreen: View {
     private func askBookmarkName(_ id: String) {
         bookmarkName = model.presentation.bookmarks[id]?.name ?? ""
         namingBookmark = id
+    }
+
+    private func compact(_ binding: Binding<Bool>) -> Binding<Bool> {
+        sizeClass == .regular ? .constant(false) : binding
+    }
+
+    private func regular(_ binding: Binding<Bool>) -> Binding<Bool> {
+        sizeClass == .regular ? binding : .constant(false)
     }
 
     /// The toolbar offers the list only once the chat has a sub-agent to open.

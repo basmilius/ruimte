@@ -13,6 +13,8 @@ struct PadDetailColumn: View {
     let open: (ProjectViewTarget) -> Void
     let pair: () -> Void
     @State private var diagnostics = false
+    @State private var newChat = false
+    @State private var launches = false
 
     var body: some View {
         content
@@ -84,9 +86,43 @@ struct PadDetailColumn: View {
         }
     }
 
-    /// What every page beside the sidebar has in its bar: the palette, and Files and Git while a project folder is
-    /// open.
+    /// What every page beside the sidebar has in its bar: a new chat, the project's launches, the palette, and Files
+    /// and Git while a project folder is open.
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            if !runtime.machines.isEmpty {
+                Button {
+                    newChat = true
+                } label: {
+                    Image(lucide: "square-pen").accessibilityLabel("New chat")
+                }
+                .accessibilityIdentifier("pad.newChat")
+                .popover(isPresented: $newChat, arrowEdge: .top) {
+                    NowNewChatSheet(runtime: runtime, now: now, project: chatProject, opened: open)
+                        .frame(minWidth: 380, idealWidth: 420, minHeight: 480)
+                        .modifier(MobileSheetSurface())
+                }
+            }
+            if let navigation = router.project, router.offersFilesAndGit {
+                Button {
+                    launches = true
+                } label: {
+                    Image(lucide: "play").accessibilityLabel("Launches")
+                }
+                .disabled(!navigation.workspace.ready)
+                .accessibilityIdentifier("pad.launches")
+                .popover(isPresented: $launches, arrowEdge: .top) {
+                    NavigationStack {
+                        LaunchesPage(
+                            client: navigation.workspace.client, projectID: navigation.workspace.projectID,
+                            folder: navigation.workspace.folder)
+                            .navigationBarTitleDisplayMode(.inline)
+                    }
+                    .frame(minWidth: 400, idealWidth: 440, minHeight: 520)
+                    .modifier(MobileSheetSurface())
+                }
+            }
+        }
         if router.offersFilesAndGit && router.detail == .project {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
@@ -137,6 +173,13 @@ struct PadDetailColumn: View {
             }
             .id("\(navigation.id):\(String(describing: router.inspector))")
         }
+    }
+
+    /// Where the write button starts a chat: the open project, or with the Chats project open, Chats itself.
+    private var chatProject: NowChatProject? {
+        guard let workspace = router.project?.workspace, !workspace.isScratch else { return nil }
+        return NowChatProject(
+            machineID: workspace.session.machine.id, projectID: workspace.projectID, name: workspace.title)
     }
 
     private func openProject(_ target: ProjectViewTarget) {

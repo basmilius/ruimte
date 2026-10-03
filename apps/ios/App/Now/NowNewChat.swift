@@ -106,12 +106,18 @@ struct NowNewChatSheet: View {
     @State private var lease: MachineNavigationLease?
     @Environment(\.dismiss) private var dismiss
 
-    init(runtime: AppRuntime, now: NowModel, opened: @escaping (ProjectViewTarget) -> Void) {
+    /// `project` is where the chat starts unless a person picks another place, such as the project an iPad has open.
+    init(
+        runtime: AppRuntime, now: NowModel, project: NowChatProject? = nil,
+        opened: @escaping (ProjectViewTarget) -> Void
+    ) {
         self.runtime = runtime
         self.now = now
         self.opened = opened
         let first = runtime.machines.first { now.connected($0.id) } ?? runtime.machines.first
-        _model = State(initialValue: NowNewChatModel(machineID: first?.id ?? ""))
+        let model = NowNewChatModel(machineID: project?.machineID ?? first?.id ?? "")
+        model.projectID = project?.projectID
+        _model = State(initialValue: model)
     }
 
     private var session: SharedMachineSession? {
