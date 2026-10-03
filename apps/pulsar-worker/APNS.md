@@ -77,8 +77,13 @@ and foreground reconciliation removes the delivered alert. See
 
 ## Alerts
 
-An alert push is sent for attention and approval requests only. A finished turn sends
-none and creates no notification-read entry; it does update the Live Activity.
+The daemon decides which alerts a device gets; the Worker only relays them. By default
+an alert push is sent for attention and approval requests only. A device can choose
+more in its `push.subscribe` (`notify`, with a list of its own per project in
+`projects`): a finished turn, sent as kind `turn`, and a process warning about a node,
+sent as kind `attention` with the warning as its body, so no alert kind is added that
+an installed app would not decode. Neither creates a notification-read entry. A
+finished turn always updates the Live Activity, whatever a device chose.
 
 ## Live Activities
 
