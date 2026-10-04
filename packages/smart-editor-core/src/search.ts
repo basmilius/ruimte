@@ -2,7 +2,7 @@ export interface FindOptions {
     caseSensitive?: boolean;
     wholeWord?: boolean;
     regex?: boolean;
-    /** Bounds filter matches of the whole document, so anchors and lookarounds still see their context. */
+    /* Bounds filter matches of the whole document, so anchors and lookarounds still see their context. */
     from?: number;
     to?: number;
     maxResults?: number;
@@ -10,11 +10,11 @@ export interface FindOptions {
 
 export interface FindNextOptions extends FindOptions {
     backwards?: boolean;
-    /** On unless `false`. */
+    /* On unless `false`. */
     wrap?: boolean;
 }
 
-/** Only valid for the revision it was found in; `replace` refuses a stale one. */
+/* Only valid for the revision it was found in; `replace` refuses a stale one. */
 export interface FindMatch {
     from: number;
     to: number;
@@ -27,7 +27,7 @@ export interface FindMatch {
 
 const wordCharacter = /[\p{L}\p{N}\p{M}\p{Pc}$]/u;
 
-/** Whether `offset` sits between the two halves of a surrogate pair. */
+/* Whether `offset` sits between the two halves of a surrogate pair. */
 export function splitsSurrogate(text: { charAt(offset: number): string }, offset: number): boolean {
     return /[\ud800-\udbff]/.test(text.charAt(offset - 1)) && /[\udc00-\udfff]/.test(text.charAt(offset));
 }
@@ -36,7 +36,7 @@ function characterBefore(text: string, offset: number): string {
     return text.slice(offset - (splitsSurrogate(text, offset - 1) ? 2 : 1), offset);
 }
 
-/** Invalid bounds throw `RangeError`, an invalid expression `SyntaxError`. A zero-width match advances by one code point. */
+/* Invalid bounds throw `RangeError`, an invalid expression `SyntaxError`. A zero-width match advances by one code point. */
 export function findMatches(text: string, query: string, revision: number, options: FindOptions = {}): FindMatch[] {
     if (!query && !options.regex) {
         return [];
@@ -81,7 +81,7 @@ export function findMatches(text: string, query: string, revision: number, optio
     return matches;
 }
 
-/** Expands the JavaScript `$` patterns of a regex replacement. Literal replacements are returned as they are. */
+/* Expands the JavaScript `$` patterns of a regex replacement. Literal replacements are returned as they are. */
 export function replacementText(text: string, match: FindMatch, replacement: string, literal = false): string {
     if (literal || !match.regex) {
         return replacement;

@@ -1,7 +1,7 @@
 import { openers } from './lexical.ts';
 import type { DocumentLine } from './rope.ts';
 
-/** A bracket pair, string or block comment. `inner*` is the range without its delimiters. */
+/* A bracket pair, string or block comment. `inner*` is the range without its delimiters. */
 export interface StructureRange {
     from: number;
     to: number;
@@ -10,7 +10,7 @@ export interface StructureRange {
     kind: 'bracket' | 'string' | 'comment';
 }
 
-/** Lines are zero-based and the offsets half-open. Fold from the end of `startLine` through `endLine`. */
+/* Lines are zero-based and the offsets half-open. Fold from the end of `startLine` through `endLine`. */
 export interface FoldingRange {
     startLine: number;
     endLine: number;
@@ -20,13 +20,13 @@ export interface FoldingRange {
 }
 
 export interface FoldingOptions {
-    /** On unless `false`. */
+    /* On unless `false`. */
     brackets?: boolean;
-    /** On unless `false`. */
+    /* On unless `false`. */
     comments?: boolean;
     indentation?: boolean;
     tabSize?: number;
-    /** How many lines a range spans past its first one before it can fold. */
+    /* How many lines a range spans past its first one before it can fold. */
     minLines?: number;
 }
 
@@ -35,7 +35,7 @@ interface Header {
     indent: number;
 }
 
-/** Clamped to 1 through 16, with 4 for anything that is not a finite number. */
+/* Clamped to 1 through 16, with 4 for anything that is not a finite number. */
 export function tabWidth(options: { tabSize?: number }): number {
     const requested = options.tabSize ?? 4;
     return Number.isFinite(requested) ? Math.max(1, Math.min(16, Math.trunc(requested))) : 4;
@@ -49,7 +49,7 @@ export function indentationColumn(text: string, tabSize: number): number {
     return column;
 }
 
-/** Outermost first. It knows only line and block comments and the three quote characters, so a regex literal can confuse it. */
+/* Outermost first. It knows only line and block comments and the three quote characters, so a regex literal can confuse it. */
 export function scanStructure(text: string): StructureRange[] {
     const result: StructureRange[] = [];
     const stack: { from: number; closer: string }[] = [];
@@ -118,7 +118,7 @@ function indentationFolds(lineCount: number, getLine: (line: number) => Document
     return folds;
 }
 
-/** Ranges that span the same lines collapse into the first, which is the outermost. */
+/* Ranges that span the same lines collapse into the first, which is the outermost. */
 export function deriveFoldingRanges(
     ranges: readonly StructureRange[],
     lineAt: (offset: number) => number,

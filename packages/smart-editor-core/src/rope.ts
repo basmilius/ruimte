@@ -1,4 +1,4 @@
-/** `end` excludes the line break and `next` is where the following line starts, so the break is `[end, next)`. */
+/* `end` excludes the line break and `next` is where the following line starts, so the break is `[end, next)`. */
 export interface DocumentLine {
     start: number;
     end: number;
@@ -136,12 +136,12 @@ function* chunksOf(node: Node | null, from: number, to: number): Generator<strin
     }
 }
 
-/** Truncates to an integer in `[0, maximum]`; anything that is not a finite number becomes 0. */
+/* Truncates to an integer in `[0, maximum]`; anything that is not a finite number becomes 0. */
 export function clampInteger(value: number, maximum: number): number {
     return Math.max(0, Math.min(maximum, Number.isFinite(value) ? Math.trunc(value) : 0));
 }
 
-/** Immutable: an edit returns a new rope and shares every branch it did not touch, which is what makes history cheap. */
+/* Immutable: an edit returns a new rope and shares every branch it did not touch, which is what makes history cheap. */
 export class TextRope {
     private readonly root: Node | null;
 
@@ -187,7 +187,7 @@ export class TextRope {
         return new TextRope(join(join(before, build(text)), after));
     }
 
-    /** Whether both ropes hold the same text in `[from, to)`, which has to be the same range of both. */
+    /* Whether both ropes hold the same text in `[from, to)`, which has to be the same range of both. */
     equalsRange(other: TextRope, from: number, to: number): boolean {
         if (this.root === other.root) {
             return true;

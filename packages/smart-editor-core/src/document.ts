@@ -13,18 +13,18 @@ import { wordBoundary } from './words.ts';
 export type { DocumentLine, FindMatch, FindNextOptions, FindOptions, FoldingOptions, FoldingRange };
 
 export interface DocumentEditOptions extends EditOptions {
-    /** The edit is refused, with nothing changed, unless the document is still at this revision. */
+    /* The edit is refused, with nothing changed, unless the document is still at this revision. */
     expectedRevision?: number;
 }
 
 export interface TypeTextOptions extends CommandOptions {
-    /** Defaults to `typing`, which makes consecutive calls one undo step. */
+    /* Defaults to `typing`, which makes consecutive calls one undo step. */
     historyGroup?: string;
     expectedRevision?: number;
 }
 
 export interface ReplaceOptions extends DocumentEditOptions {
-    /** Insert the replacement as it is, without expanding `$1` and the like. */
+    /* Insert the replacement as it is, without expanding `$1` and the like. */
     literal?: boolean;
 }
 
@@ -39,17 +39,17 @@ interface HistoryEntry {
     before: State;
     after: State;
     group?: string;
-    /** One list per transaction folded into this step, in the coordinates of the text before each. */
+    /* One list per transaction folded into this step, in the coordinates of the text before each. */
     changes: DocumentChange[][];
 }
 
-/** An edit and where the caret that asked for it ends up, relative to the start of what it inserts. */
+/* An edit and where the caret that asked for it ends up, relative to the start of what it inserts. */
 interface SelectionEdit extends TextEdit {
     anchor: number;
     head: number;
-    /** The key was swallowed: nothing is inserted, the caret only moves. */
+    /* The key was swallowed: nothing is inserted, the caret only moves. */
     skip?: boolean;
-    /** The `)` and `]` a smart semicolon just stepped over, which the next keystroke may still type over. */
+    /* The `)` and `]` a smart semicolon just stepped over, which the next keystroke may still type over. */
     completedClosers?: string;
     consumed?: boolean;
 }
@@ -97,7 +97,7 @@ function changesText(rope: TextRope, edit: TextEdit): boolean {
     return edit.text.length !== edit.to - edit.from || rope.slice(edit.from, edit.to) !== edit.text;
 }
 
-/** Merges the carets' edits into one simultaneous batch and works out where each caret lands in the result. */
+/* Merges the carets' edits into one simultaneous batch and works out where each caret lands in the result. */
 function selectionTransaction(plans: readonly SelectionEdit[]): SelectionTransaction {
     const edits: TextEdit[] = [];
     for (const plan of plans.filter((candidate) => !candidate.skip).sort((left, right) => left.from - right.from || left.to - right.to)) {
@@ -117,7 +117,7 @@ function splitsCluster(rope: TextRope, offset: number): boolean {
     return splitsSurrogate(rope, offset) || (rope.charAt(offset - 1) === '\r' && rope.charAt(offset) === '\n');
 }
 
-/** Clamps to the document and moves back off the middle of a surrogate pair or a CRLF. */
+/* Clamps to the document and moves back off the middle of a surrogate pair or a CRLF. */
 function offsetIn(rope: TextRope, value: number): number {
     const offset = clampInteger(value, rope.length);
     return splitsCluster(rope, offset) ? offset - 1 : offset;
@@ -132,7 +132,7 @@ function isAsciiOrEmpty(character: string): boolean {
     return character === '' || character.charCodeAt(0) <= 0x7f;
 }
 
-/** One backspace or delete: a code point or a CRLF, or a whole grapheme once the text is not plain ASCII. */
+/* One backspace or delete: a code point or a CRLF, or a whole grapheme once the text is not plain ASCII. */
 function deletionStep(rope: TextRope, offset: number, direction: -1 | 1): number {
     const scalar = step(rope, offset, direction);
     const current = rope.charAt(direction < 0 ? offset - 1 : offset);
@@ -158,7 +158,7 @@ function deletionStep(rope: TextRope, offset: number, direction: -1 | 1): number
     return direction < 0 ? previous : line.end;
 }
 
-/** Clamps every selection and merges the ones that overlap or touch, so the result is ordered and disjoint. */
+/* Clamps every selection and merges the ones that overlap or touch, so the result is ordered and disjoint. */
 function normalizeSelections(rope: TextRope, selections: readonly Selection[]): Selection[] {
     const result: Selection[] = [];
     for (const raw of selections.length > 0 ? selections : [{ anchor: 0, head: 0 }]) {
@@ -178,7 +178,7 @@ function normalizeSelections(rope: TextRope, selections: readonly Selection[]): 
     return result;
 }
 
-/** Maps an offset through simultaneous edits. One inside a replaced range lands after the new text. */
+/* Maps an offset through simultaneous edits. One inside a replaced range lands after the new text. */
 function mapOffset(offset: number, edits: readonly TextEdit[]): number {
     let delta = 0;
     for (const edit of edits) {
@@ -202,7 +202,7 @@ function inverseChanges(changes: readonly DocumentChange[]): DocumentChange[] {
     });
 }
 
-/** Runs of consecutive line numbers, from a sorted list. */
+/* Runs of consecutive line numbers, from a sorted list. */
 function blocks(indices: readonly number[]): LineBlock[] {
     const result: LineBlock[] = [];
     for (const index of indices) {
@@ -216,7 +216,7 @@ function blocks(indices: readonly number[]): LineBlock[] {
     return result;
 }
 
-/** How much of the whitespace before a caret to keep so that it ends on the previous tab stop. */
+/* How much of the whitespace before a caret to keep so that it ends on the previous tab stop. */
 function indentStopLength(prefix: string, tabSize: number): number {
     const column = indentationColumn(prefix, tabSize);
     const target = Math.floor((column - 1) / tabSize) * tabSize;
@@ -233,7 +233,7 @@ function indentStopLength(prefix: string, tabSize: number): number {
     return length;
 }
 
-/**
+/*
  * Text with a selection, undo history and the editing commands of a code editor, and no idea how it
  * is drawn. Offsets are UTF-16 code units, lines and columns zero-based. The text is a persistent
  * rope, so history shares what an edit left alone.
@@ -265,22 +265,22 @@ export class DocumentModel {
         return this.rope.length;
     }
 
-    /** Counts up with every text change, undo and redo included, and never goes back to an earlier value. */
+    /* Counts up with every text change, undo and redo included, and never goes back to an earlier value. */
     getRevision(): number {
         return this.revision;
     }
 
-    /** An empty document has one line, and a trailing line break adds an empty last one. */
+    /* An empty document has one line, and a trailing line break adds an empty last one. */
     getLineCount(): number {
         return this.rope.lineCount;
     }
 
-    /** Out of range lines are clamped. */
+    /* Out of range lines are clamped. */
     getLine(line: number): DocumentLine {
         return this.rope.getLine(line);
     }
 
-    /** Plain UTF-16 substring semantics, so it can cut a surrogate pair in half. */
+    /* Plain UTF-16 substring semantics, so it can cut a surrogate pair in half. */
     slice(from: number, to: number): string {
         return this.rope.slice(from, to);
     }
@@ -308,7 +308,7 @@ export class DocumentModel {
         };
     }
 
-    /** Ends the current history group. Listeners hear about it only when the selections changed. */
+    /* Ends the current history group. Listeners hear about it only when the selections changed. */
     setSelections(selections: readonly Selection[]): void {
         const normalized = normalizeSelections(this.rope, selections);
         this.groupOpen = false;
@@ -330,7 +330,7 @@ export class DocumentModel {
         };
     }
 
-    /**
+    /*
      * Applies simultaneous edits in the coordinates of the current text. Invalid or overlapping edits
      * throw before anything changes. Returns whether the text changed, which a no-op never does.
      */
@@ -389,7 +389,7 @@ export class DocumentModel {
         return true;
     }
 
-    /** Replaces everything as one undoable external edit. */
+    /* Replaces everything as one undoable external edit. */
     setText(text: string): void {
         this.applyEdits([{ from: 0, to: this.rope.length, text }], { source: 'external' });
     }
@@ -421,7 +421,7 @@ export class DocumentModel {
         return { line, column: Math.min(clamped, bounds.end) - bounds.start };
     }
 
-    /** A column past the end of its line lands on the end of the line, before the line break. */
+    /* A column past the end of its line lands on the end of the line, before the line break. */
     offsetAt(position: Position): number {
         const line = this.rope.lineBounds(position.line);
         return offsetIn(this.rope, line.start + clampInteger(position.column, line.end - line.start));
@@ -431,7 +431,7 @@ export class DocumentModel {
         return findMatches(this.getText(), query, this.revision, options);
     }
 
-    /** Includes a match that starts at `from`, or ends there when searching backwards. */
+    /* Includes a match that starts at `from`, or ends there when searching backwards. */
     findNext(query: string, from = this.selections[0]!.head, options: FindNextOptions = {}): FindMatch | null {
         const matches = this.find(query, options);
         const offset = clampInteger(from, this.rope.length);
@@ -440,7 +440,7 @@ export class DocumentModel {
         return found ?? (options.wrap === false ? null : (ordered[0] ?? null));
     }
 
-    /** Refuses a match from an earlier revision, or one whose text no longer sits there. */
+    /* Refuses a match from an earlier revision, or one whose text no longer sits there. */
     replace(match: FindMatch, replacement: string, options: ReplaceOptions = {}): boolean {
         if (match.revision !== this.revision || (options.expectedRevision !== undefined && options.expectedRevision !== this.revision)) {
             return false;
@@ -455,7 +455,7 @@ export class DocumentModel {
         });
     }
 
-    /** One undo step. Returns the number of replacements, 0 when nothing changed. */
+    /* One undo step. Returns the number of replacements, 0 when nothing changed. */
     replaceAll(query: string, replacement: string, options: ReplaceAllOptions = {}): number {
         if (options.expectedRevision !== undefined && options.expectedRevision !== this.revision) {
             return 0;
@@ -477,7 +477,7 @@ export class DocumentModel {
         );
     }
 
-    /**
+    /*
      * Types `text` at every caret as one keystroke would: it wraps a selection in a bracket or quote,
      * closes an opener, types over a closer that is already there and, in TypeScript, JavaScript and
      * PHP, moves a `;` to the end of a statement. Comments and string contents are left alone.
@@ -513,7 +513,7 @@ export class DocumentModel {
         return changed || plans.some((plan) => plan.consumed);
     }
 
-    /** Runs a command on every caret. Returns whether the text or the selection changed. */
+    /* Runs a command on every caret. Returns whether the text or the selection changed. */
     execute(command: EditorCommand, options: CommandOptions = {}): boolean {
         if (command === 'undo') {
             return this.undo();
@@ -568,7 +568,7 @@ export class DocumentModel {
         return false;
     }
 
-    /** Sorted, with duplicates dropped. Throws before anything changes if an edit is invalid. */
+    /* Sorted, with duplicates dropped. Throws before anything changes if an edit is invalid. */
     private validateEdits(edits: readonly TextEdit[]): TextEdit[] {
         const sorted = [...edits].sort((left, right) => left.from - right.from || left.to - right.to);
         const unique: TextEdit[] = [];
@@ -653,7 +653,7 @@ export class DocumentModel {
         return !quote || (!identifier.test(this.slice(step(this.rope, offset, -1), offset)) && !this.escaped(offset));
     }
 
-    /** Remembers the closers a smart semicolon stepped over for the caret that did it, so typing them again is absorbed. */
+    /* Remembers the closers a smart semicolon stepped over for the caret that did it, so typing them again is absorbed. */
     private rememberStatementClosers(plans: readonly SelectionEdit[], transaction: SelectionTransaction, language: string): void {
         for (const [index, selection] of transaction.selections.entries()) {
             const closers = plans[index]?.completedClosers;
@@ -736,7 +736,7 @@ export class DocumentModel {
         return this.applyEdits(edits, { source: 'command' });
     }
 
-    /** The lines the carets and selections touch. A selection that ends at the start of a line does not touch it. */
+    /* The lines the carets and selections touch. A selection that ends at the start of a line does not touch it. */
     private selectedLines(): number[] {
         const indices = new Set<number>();
         for (const selection of this.selections) {
@@ -872,7 +872,7 @@ export class DocumentModel {
         );
     }
 
-    /** Whether the caret sits between an opener and its own closer, which backspace removes together. */
+    /* Whether the caret sits between an opener and its own closer, which backspace removes together. */
     private isEmptyPair(offset: number, language: string): boolean {
         const opener = this.rope.charAt(offset - 1);
         const closer = this.rope.charAt(offset);
@@ -883,7 +883,7 @@ export class DocumentModel {
         return context.mode === 'code' || this.isInterpolation(offset - 1, opener, context);
     }
 
-    /** Backspace inside the indentation of a line goes back to the previous tab stop. */
+    /* Backspace inside the indentation of a line goes back to the previous tab stop. */
     private backspaceStart(offset: number, tabSize: number): number {
         const line = this.rope.lineBounds(this.rope.lineAt(offset));
         const prefix = this.slice(line.start, offset);
@@ -913,7 +913,7 @@ export class DocumentModel {
         return changed || !sameSelections(before, this.selections);
     }
 
-    /** The line break of a line, or the document's first one for the last line, which has none. */
+    /* The line break of a line, or the document's first one for the last line, which has none. */
     private newlineAt(index: number): string {
         const line = this.rope.lineBounds(index);
         if (line.next > line.end) {
@@ -923,7 +923,7 @@ export class DocumentModel {
         return first.next > first.end ? this.slice(first.end, first.next) : '\n';
     }
 
-    /** Whether the character at `offset` is preceded by an odd number of backslashes. */
+    /* Whether the character at `offset` is preceded by an odd number of backslashes. */
     private escaped(offset: number): boolean {
         let count = 0;
         while (offset > 0 && this.rope.charAt(--offset) === '\\') {
@@ -941,7 +941,7 @@ export class DocumentModel {
         return character === '{' && this.rope.charAt(offset - 1) === '$' && context?.mode === 'template' && !context.escaped && !this.escaped(offset - 1);
     }
 
-    /**
+    /*
      * Where a `;` typed at `from` belongs: after the closing brackets of the call or array that ends
      * the statement. Undefined when it is an ordinary `;`, as in a `for` header or mid-expression.
      */
@@ -1009,7 +1009,7 @@ export class DocumentModel {
         return { from, to };
     }
 
-    /** Grows each selection to the smallest word, line, bracket or string around it that is larger than it. */
+    /* Grows each selection to the smallest word, line, bracket or string around it that is larger than it. */
     private expandSelection(): boolean {
         const selections = this.selections.map((selection) => {
             const { from, to } = rangeOf(selection);

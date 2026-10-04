@@ -16,26 +16,26 @@ export interface TypingBracket {
     at: number;
     close: string;
     previous?: TypingBracket;
-    /** An `${` whose closer resumes the template text. */
+    /* An `${` whose closer resumes the template text. */
     template?: boolean;
-    /** The parenthesis of `if`, `for` and the like. */
+    /* The parenthesis of `if`, `for` and the like. */
     control?: boolean;
-    /** A `{` that opens a block, as opposed to an object literal. */
+    /* A `{` that opens a block, as opposed to an object literal. */
     block?: boolean;
 }
 
 type Mode = 'code' | 'line-comment' | 'block-comment' | 'html-comment' | 'quote' | 'template' | 'regex';
 
-/** What the lexer knows at one offset. Bracket stacks are immutable, so states share them. */
+/* What the lexer knows at one offset. Bracket stacks are immutable, so states share them. */
 export interface TypingContext {
     mode: Mode;
     quote?: string;
     escaped: boolean;
     inClass: boolean;
     bracket?: TypingBracket;
-    /** Whether an expression may start here, which makes a `/` a regex. */
+    /* Whether an expression may start here, which makes a `/` a regex. */
     expression: boolean;
-    /** The last word, or `control-close` after the parenthesis of a control statement. */
+    /* The last word, or `control-close` after the parenthesis of a control statement. */
     word: string;
 }
 
@@ -187,7 +187,7 @@ function closeBracket(state: TypingContext, char: string): void {
     state.word = bracket.control ? 'control-close' : '';
 }
 
-/** Lexes `text` up to `end`, from the state the line started in. `offset` is where the line starts in the document. */
+/* Lexes `text` up to `end`, from the state the line started in. `offset` is where the line starts in the document. */
 function scan(text: string, end: number, start: TypingContext, rules: Rules, offset: number): TypingContext {
     const state = { ...start };
     for (let at = 0; at < end; at++) {
@@ -217,7 +217,7 @@ function sameState(left: TypingContext, right: TypingContext): boolean {
     );
 }
 
-/** The state of the lexer at the start of each line, computed on demand. An edit drops the lines from its own on. */
+/* The state of the lexer at the start of each line, computed on demand. An edit drops the lines from its own on. */
 export class TypingContexts {
     private readonly line: (index: number) => DocumentLine;
     private states: TypingContext[] = [initial()];

@@ -6,8 +6,7 @@ what is named below.
 The word-boundary predicates in src/words.ts are adapted from the IntelliJ Platform, Copyright
 2000-2023 JetBrains s.r.o. and contributors, under the Apache License, Version 2.0 (see
 LICENSE.apache-2.0.txt). The TypeScript translation is a modified version. README.md names the
-upstream file and revision. LICENSE.jetbrains.txt holds JetBrains' terms for its open-source
-builds, kept with the attribution; it is not the Apache license.
+upstream file and revision.
 
 This package is independent and is not affiliated with JetBrains or Microsoft. It does not bundle
 Monaco, CodeMirror, or the IntelliJ Platform runtime.

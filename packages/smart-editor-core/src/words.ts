@@ -17,7 +17,7 @@ const upper = /\p{Uppercase}/u;
 const digit = /\p{Nd}/u;
 const letterOrDigit = /[\p{L}\p{Nd}]/u;
 
-/** A string, or anything that reads like one, such as the rope. */
+/* A string, or anything that reads like one, such as the rope. */
 export type WordText = string | { readonly length: number; charAt(offset: number): string };
 
 function characterAt(text: WordText, offset: number): string {
@@ -28,7 +28,7 @@ function isPunctuation(character: string): boolean {
     return !(identifierPart.test(character) || whitespace.test(character));
 }
 
-/** Whether `offset` splits a camel hump, a digit run or an underscore from the word around it. */
+/* Whether `offset` splits a camel hump, a digit run or an underscore from the word around it. */
 export function isHumpBoundary(text: WordText, offset: number, isStart: boolean): boolean {
     if (offset <= 0 || offset >= text.length) {
         return false;
@@ -46,7 +46,7 @@ export function isHumpBoundary(text: WordText, offset: number, isStart: boolean)
     );
 }
 
-/** Whether a word starts (`isStart`) or ends at `offset`. Punctuation runs count as words. */
+/* Whether a word starts (`isStart`) or ends at `offset`. Punctuation runs count as words. */
 export function isWordBoundary(text: WordText, offset: number, camel: boolean, isStart: boolean): boolean {
     if (offset < 0 || offset > text.length) {
         return false;
@@ -66,7 +66,7 @@ export function isWordBoundary(text: WordText, offset: number, camel: boolean, i
     return isPunctuation(word) && !isPunctuation(neighbor);
 }
 
-/** The next stop in `direction`, never inside a surrogate pair or between CR and LF. Written here, not ported. */
+/* The next stop in `direction`, never inside a surrogate pair or between CR and LF. Written here, not ported. */
 export function wordBoundary(text: WordText, offset: number, direction: -1 | 1, camel = true): number {
     let position = offset + direction;
     while (position > 0 && position < text.length) {

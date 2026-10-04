@@ -12,7 +12,7 @@ import {
 } from './lexical.ts';
 
 export interface BracketIndex {
-    /** Both directions: an opener maps to its closer and the closer back to the opener. */
+    /* Both directions: an opener maps to its closer and the closer back to the opener. */
     pairs: ReadonlyMap<number, number>;
     unmatched: ReadonlySet<number>;
 }
@@ -20,7 +20,7 @@ export interface BracketIndex {
 interface OpenBracket {
     at: number;
     close: string;
-    /** An `${` whose closer resumes the template text. */
+    /* An `${` whose closer resumes the template text. */
     template?: boolean;
 }
 
@@ -64,7 +64,7 @@ function skipRegex(text: string, at: number): number {
     return cursor;
 }
 
-/** Lexical pairing for incomplete code; malformed nesting never produces crossing pairs. */
+/* Lexical pairing for incomplete code; malformed nesting never produces crossing pairs. */
 export function scanBrackets(text: string, language = 'typescript'): BracketIndex {
     const pairs = new Map<number, number>();
     const unmatched = new Set<number>();
