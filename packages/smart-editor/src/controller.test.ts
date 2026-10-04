@@ -221,3 +221,23 @@ describe('the fold control', () => {
         expect(toggle().className).not.toContain('se-folded');
     });
 });
+
+describe('the gutter action', () => {
+    test('draws one button on its line and reports a press without moving the caret', () => {
+        jest.useFakeTimers();
+        const { editor, page, viewport } = mountEditor({ text: 'one\ntwo\nthree' });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        const pressed: number[] = [];
+        editor.onGutterAction((line) => pressed.push(line));
+        editor.setGutterAction({ line: 1, label: 'Show code actions' });
+        const button = page.host.querySelector('.se-gutter-action') as HTMLElement;
+        expect(button.getAttribute('aria-label')).toBe('Show code actions');
+        expect(page.host.querySelectorAll('.se-gutter-action')).toHaveLength(1);
+        pointer(page.window, button, 'pointerdown', 0, 0);
+        pointer(page.window, viewport, 'pointerup', 0, 0);
+        expect(pressed).toEqual([1]);
+        editor.setGutterAction(null);
+        expect(page.host.querySelectorAll('.se-gutter-action')).toHaveLength(0);
+    });
+});

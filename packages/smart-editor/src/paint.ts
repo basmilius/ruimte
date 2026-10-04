@@ -262,6 +262,8 @@ export interface GutterPaint {
     changes: ReadonlyMap<number, EditorChangeKind>;
     /* Lines a fold can start at, and whether each is collapsed. */
     foldable: ReadonlyMap<number, boolean>;
+    /* The line that carries the host's button, and what it is called. */
+    action: { line: number; label: string } | null;
 }
 
 /* The line numbers of the visible rows, and the fold control of the lines that have one. */
@@ -279,6 +281,15 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
         const number = document.createElement('span');
         number.textContent = String(row.line + 1);
         item.append(number);
+        if (paint.action?.line === row.line) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'se-gutter-action';
+            button.dataset.gutterAction = String(row.line);
+            button.tabIndex = -1;
+            button.setAttribute('aria-label', paint.action.label);
+            item.append(button);
+        }
         const change = paint.changes.get(row.line);
         if (change) {
             const mark = document.createElement('span');

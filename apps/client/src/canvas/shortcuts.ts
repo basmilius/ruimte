@@ -40,6 +40,9 @@ export const CANVAS_SHORTCUTS = {
     // Mod+Alt+Up and Down are the grid's, so stepping through problems and uses of a name takes a function key.
     nextHighlight: shortcut('Alt+F3'),
     previousHighlight: shortcut('Alt+Shift+F3'),
+    codeActions: shortcut('Mod+.'),
+    organizeImports: shortcut('Alt+Shift+O'),
+    formatDocument: shortcut('Alt+Shift+F'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;

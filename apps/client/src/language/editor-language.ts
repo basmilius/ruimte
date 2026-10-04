@@ -1,11 +1,12 @@
 import type { Editor } from '@ruimte/smart-editor';
 import { fileUriToPath, type Location } from '@ruimte/smart-editor-lsp';
 import { openFileLink } from '@/shell/panels/file-links';
+import { CodeActionsFeature } from './code-actions';
 import { CompletionFeature } from './completion';
 import { DiagnosticsFeature } from './diagnostics';
-import type { Problem } from './diagnostics-model';
 import { HighlightsFeature } from './highlights';
 import { HoverFeature } from './hover';
+import { PickFeature } from './pick';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
@@ -29,8 +30,8 @@ export class EditorLanguage {
     readonly hover: HoverFeature;
     readonly completion: CompletionFeature;
     readonly highlights: HighlightsFeature;
-    /* What the Quick fix button of a problem calls; the code actions fill it in, and the button stays off until they do. */
-    quickFix: ((problem: Problem) => void) | null = null;
+    readonly pick: PickFeature;
+    readonly codeActions: CodeActionsFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -39,6 +40,7 @@ export class EditorLanguage {
         this.project = project;
         this.languageId = languageId;
         this.document = project.acquire(uri, languageId, editor);
+        this.pick = new PickFeature(this, timers);
         this.diagnostics = new DiagnosticsFeature(this);
         this.hover = new HoverFeature(this, timers);
         this.completion = new CompletionFeature(this, timers);
@@ -47,6 +49,7 @@ export class EditorLanguage {
         new SymbolsFeature(this, timers);
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
+        this.codeActions = new CodeActionsFeature(this, timers);
     }
 
     get uri(): string {

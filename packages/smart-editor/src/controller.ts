@@ -508,6 +508,11 @@ export class InputController {
         }
         event.preventDefault();
         /* On the press and not on click: a repaint in between replaces the gutter's buttons, and a click whose button left the DOM never arrives. */
+        const actionLine = this.view.gutterActionLineOf(event.target);
+        if (actionLine !== null) {
+            this.view.pressGutterAction(actionLine);
+            return;
+        }
         const foldLine = this.view.foldLineOf(event.target);
         if (foldLine !== null) {
             this.view.toggleFold(foldLine);

@@ -133,6 +133,13 @@ export interface EditorInlayHint {
     readonly label: string;
 }
 
+/* A button in the gutter on one line, such as the lightbulb that offers code actions. */
+export interface EditorGutterAction {
+    /* Zero-based. */
+    readonly line: number;
+    readonly label: string;
+}
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -198,7 +205,14 @@ export interface Editor {
     setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void;
     /* Hints to draw as soft pills in the text, replacing the ones set before. They follow their text through edits until set again. */
     setInlayHints(hints: readonly EditorInlayHint[]): void;
+    /* One button in the gutter, replacing the one before; null takes it away. It stays on its line until the host sets it again. */
+    setGutterAction(action: EditorGutterAction | null): void;
+    /* The button was pressed; the zero-based line it is on. */
+    onGutterAction(listener: (line: number) => void): () => void;
     getCaret(): EditorPosition;
+    /* The primary selection, start before end; empty at the caret. */
+    getSelection(): EditorRange;
+    getIndentation(): EditorIndentation;
     /* Moves the one caret and scrolls it into view. */
     setCaret(position: EditorPosition): void;
     /* The caret moved or the text under it changed. */

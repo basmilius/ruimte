@@ -21,7 +21,7 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
     const { diagnostic } = problem;
     const severity = severityOf(diagnostic);
     const label = [codeLabelOf(diagnostic), problem.server].filter((part, index, all) => part !== '' && all.indexOf(part) === index).join(' · ');
-    const quickFix = language.quickFix;
+    const supported = language.codeActions.supported;
 
     return (
         <div className="flex flex-col gap-1.5 px-3 py-2.5">
@@ -49,14 +49,15 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
                 );
             })}
             <div className="flex items-center gap-1 pt-1 pl-[22px]">
-                <Tooltip label={quickFix === null ? t('language.hover.quickFixSoon') : t('language.hover.quickFix')}>
+                <Tooltip label={supported ? t('language.hover.quickFix') : t('language.hover.quickFixNone')}>
                     <Button
                         size="xs"
                         variant="secondary"
-                        aria-disabled={quickFix === null}
+                        aria-disabled={!supported}
                         onClick={() => {
-                            if (quickFix !== null) {
-                                quickFix(problem);
+                            if (supported) {
+                                language.hover.hide();
+                                void language.codeActions.quickFixFor(problem);
                             }
                         }}
                     >

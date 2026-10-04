@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import type { ProjectView } from '@ruimte/contracts';
 import type { MenuNode, MenuRole, MenuShellAction, MenuSpec } from '@ruimte/desktop-bridge';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
+import { LANGUAGE_COMMANDS, LANGUAGE_COMMAND_IDS } from '@/language/command-table';
 import { APP_SHORTCUTS, BROWSER_KEEPS } from '@/shell/shortcuts';
 import type { ViewOffers } from '@/shell/view-offers';
 import type { KeepAwakeMode } from '@/state/settings';
@@ -313,6 +314,17 @@ export function menuModel(context: MenuContext): MenuSpec {
         ]
     };
 
+    const codeMenu = {
+        id: 'code',
+        label: t('code'),
+        items: [
+            ...only(
+                workspace && !context.settingsOpen,
+                ...LANGUAGE_COMMAND_IDS.map((id) => command(id, t(LANGUAGE_COMMANDS[id].key), { shortcut: LANGUAGE_COMMANDS[id].shortcut }))
+            )
+        ]
+    };
+
     const viewMenu = {
         id: 'view',
         label: t('view'),
@@ -431,6 +443,7 @@ export function menuModel(context: MenuContext): MenuSpec {
         ...(apple && desktop ? [appMenu] : []),
         fileMenu,
         editMenu,
+        ...(workspace && !context.settingsOpen ? [codeMenu] : []),
         viewMenu,
         ...(kindMenu ? [kindMenu] : []),
         goMenu,

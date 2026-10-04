@@ -336,10 +336,8 @@ export class WireLanguageService implements LanguageService {
         if (document.resyncing) {
             await document.resyncing;
         }
+        // Only the server is taken from where the command came from: the edit that came with it has moved the version on by now.
         const origin = this.origins.get(command);
-        if (origin && origin.version !== document.version) {
-            throw new StaleResultError(uri);
-        }
         try {
             const request = this.options.transport.request('language.command', {
                 projectId: this.options.projectId,

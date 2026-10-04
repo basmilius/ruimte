@@ -52,14 +52,45 @@ export interface SignatureView {
     readonly model: SignatureViewModel;
 }
 
+/* One line of a list the person picks from, such as a code action or a place a name is defined. */
+export interface PickRow {
+    readonly id: string;
+    readonly label: string;
+    /* What stands at the end of the line, such as a file and line. */
+    readonly detail: string;
+}
+
+export interface PickGroup {
+    readonly title: string | null;
+    readonly rows: readonly PickRow[];
+}
+
+/* The change an action would make, as the lines it takes away and the lines it puts in their place. */
+export interface PickPreview {
+    readonly removed: readonly string[];
+    readonly added: readonly string[];
+    /* Other places the change reaches, such as the files besides this one. */
+    readonly note: string | null;
+}
+
+/* A list under a character of the editor; Enter takes the active row, Escape closes it. */
+export interface PickView {
+    readonly anchor: EditorPosition;
+    readonly groups: readonly PickGroup[];
+    readonly active: string;
+    readonly preview: PickPreview | null;
+    readonly title: string | null;
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
     readonly signature: SignatureView | null;
+    readonly pick: PickView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null }));
 }

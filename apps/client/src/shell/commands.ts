@@ -17,6 +17,7 @@ import {
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
 import { focusedLanguage } from '@/language/focused-language';
+import { languageCommandRows } from '@/language/language-commands';
 import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
@@ -227,6 +228,7 @@ export function appCommands(): Command[] {
                   }
               ]
             : []),
+        ...(inWorkspace ? languageCommandRows() : []),
         ...(inWorkspace
             ? [
                   {

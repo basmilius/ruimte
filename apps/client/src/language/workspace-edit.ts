@@ -35,7 +35,7 @@ function refused(failureReason: string): ApplyWorkspaceEditResult {
 }
 
 /* The text edits of an edit per document, as the entries a document has in it; null when it creates, renames or deletes a file. */
-function entriesOf(edit: WorkspaceEdit): Map<string, TextEdit[][]> | null {
+export function entriesOf(edit: WorkspaceEdit): Map<string, TextEdit[][]> | null {
     const entries = new Map<string, TextEdit[][]>();
     const add = (uri: string, edits: TextEdit[]): void => {
         entries.set(uri, [...(entries.get(uri) ?? []), edits]);

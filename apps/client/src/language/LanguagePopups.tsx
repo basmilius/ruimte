@@ -4,6 +4,7 @@ import type { EditorLanguage } from './editor-language';
 import { AnchoredPopup } from './AnchoredPopup';
 import { CompletionPopup } from './CompletionPopup';
 import { HoverCard } from './HoverCard';
+import { PickPopup } from './PickPopup';
 import { SignatureCard } from './SignatureCard';
 
 /*
@@ -16,12 +17,14 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const hover = useStore(language.popups, (state) => state.hover);
     const completion = useStore(language.popups, (state) => state.completion);
     const signature = useStore(language.popups, (state) => state.signature);
+    const pick = useStore(language.popups, (state) => state.pick);
 
     useEffect(() => language.editor.onViewChange(redraw), [language]);
 
     const hoverRect = hover === null ? null : language.editor.rectAt(hover.anchor);
     const completionRect = completion === null ? null : language.editor.rectAt(completion.anchor);
     const signatureRect = signature === null ? null : language.editor.rectAt(signature.anchor);
+    const pickRect = pick === null ? null : language.editor.rectAt(pick.anchor);
     return (
         <>
             {hover !== null && hoverRect !== null && (
@@ -35,6 +38,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
                 </AnchoredPopup>
             )}
             {completion !== null && completionRect !== null && <CompletionPopup language={language} view={completion} rect={completionRect} />}
+            {pick !== null && pickRect !== null && <PickPopup language={language} view={pick} rect={pickRect} />}
         </>
     );
 }

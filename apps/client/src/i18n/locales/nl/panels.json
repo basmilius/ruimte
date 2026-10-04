@@ -520,7 +520,7 @@
         "logs": "Logs",
         "hover": {
             "quickFix": "Quick fix…",
-            "quickFixSoon": "Quick fixes zijn er nog niet",
+            "quickFixNone": "Deze language server biedt geen quick fixes",
             "definition": "Ga naar definitie"
         },
         "edit": {
@@ -528,6 +528,25 @@
             "staged_other": "{{count}} bestanden gewijzigd en nog niet opgeslagen",
             "stagedMore": "{{names}} en nog {{count}}",
             "saveAll": "Alles opslaan"
+        },
+        "actions": {
+            "show": "Toon code actions",
+            "none": "Geen code actions hier",
+            "unavailable": "Geen language server biedt hier code actions",
+            "organized": "De imports zijn al georganiseerd",
+            "noFormatter": "Geen language server formatteert dit bestand",
+            "readOnly": "Dit bestand is alleen-lezen",
+            "failed": "De actie kon niet worden toegepast: {{message}}",
+            "refused": "De wijziging is geweigerd",
+            "moreLines": "nog {{count}} regels",
+            "otherFiles_one": "en nog {{count}} bestand",
+            "otherFiles_other": "en nog {{count}} bestanden",
+            "groups": {
+                "quickfix": "Quick fix",
+                "refactor": "Refactor",
+                "source": "Source",
+                "other": "Overig"
+            }
         },
         "completion": {
             "insert": "Invoegen",

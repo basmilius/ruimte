@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import type { MenuNode, MenuSpec } from '@ruimte/desktop-bridge';
 import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { menuIconOf } from './icons';
+import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
+import { languageCommandRows } from '@/language/language-commands';
 import { GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX, MENU_ACTION_IDS, PALETTE_IDS } from './ids';
 import { menuModel, toAccelerator, type MenuContext } from './model';
 
@@ -102,14 +104,14 @@ const EVERY_CONTEXT: MenuContext[] = [
 
 describe('the menus', () => {
     test('macOS opens on the application menu, and the view with the focus names the fifth', () => {
-        expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
-        expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Drawing', 'Go', 'Run', 'Window', 'Help']);
-        expect(labels(menuModel(context({ view: 'chat' })))).toEqual(['Ruimte', 'File', 'Edit', 'View', 'Chat', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context()))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context({ view: 'drawing' })))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Drawing', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(menuModel(context({ view: 'chat' })))).toEqual(['Ruimte', 'File', 'Edit', 'Code', 'View', 'Chat', 'Go', 'Run', 'Window', 'Help']);
     });
 
     test('off macOS Settings sits in File and About in Help', () => {
         const spec = menuModel(context({ apple: false }));
-        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(spec)).toEqual(['File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'command' && node.id === 'settings')).toBe(true);
         expect(flatten(menu(spec, 'File')).some((node) => node.kind === 'role' && node.role === 'quit')).toBe(true);
         expect(flatten(menu(spec, 'Help')).some((node) => node.kind === 'command' && node.id === 'about')).toBe(true);
@@ -161,7 +163,7 @@ describe('the menus', () => {
 
     test('the station has no shell, no clipboard roles and no release notes', () => {
         const spec = menuModel(context({ host: 'station', apple: true, releaseNotes: false }));
-        expect(labels(spec)).toEqual(['File', 'Edit', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
+        expect(labels(spec)).toEqual(['File', 'Edit', 'Code', 'View', 'Canvas', 'Go', 'Run', 'Window', 'Help']);
         const nodes = spec.menus.flatMap((entry) => flatten(entry.items));
         expect(nodes.some((node) => node.kind === 'role' || node.kind === 'shell')).toBe(false);
         expect(commandIds(spec)).toContain('about');
@@ -349,8 +351,12 @@ describe('the commands behind the menu', () => {
     test('every palette id the menu borrows is a row of the palette', () => {
         const source = readFileSync(join(import.meta.dir, '..', 'commands.ts'), 'utf8');
         for (const id of PALETTE_IDS) {
-            expect(source.includes(`id: '${id}'`) ? id : `${id} is not in appCommands()`).toBe(id);
+            // The language commands are rows of `languageCommandRows()`, which `appCommands()` spreads in.
+            const listed = (LANGUAGE_COMMAND_IDS as readonly string[]).includes(id) || source.includes(`id: '${id}'`);
+            expect(listed ? id : `${id} is not in appCommands()`).toBe(id);
         }
+        expect(source).toContain('languageCommandRows()');
+        expect(languageCommandRows().map((row) => row.id)).toEqual([...LANGUAGE_COMMAND_IDS]);
         for (const row of [
             '`agent-${target}-${provider.kind}`',
             '`agent-view-${target}-${provider.kind}`',

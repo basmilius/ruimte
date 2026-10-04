@@ -103,6 +103,8 @@ export class EditorView {
     private readonly findListeners = new Set<(state: EditorFindState) => void>();
     private readonly scopeListeners = new Set<(scope: readonly EditorBlock[]) => void>();
     private readonly viewListeners = new Set<() => void>();
+    private readonly gutterActionListeners = new Set<(line: number) => void>();
+    private gutterAction: { line: number; label: string } | null = null;
     private semantic: ViewSemanticToken[] = [];
     private scopeColors: ScopeColors | null = null;
     private semanticVersion = 0;
@@ -897,7 +899,8 @@ export class EditorView {
         paintGutter(this.gutterLines, this.layout, rows, {
             changes: this.changedLines(rows),
             activeLines: new Set(selections.map((selection) => this.model.positionAt(selection.head).line)),
-            foldable
+            foldable,
+            action: this.gutterAction
         });
         const marks: { className: string; rects: LayoutRect[] }[] = [];
         const row = this.layout.rowForLine(this.model.positionAt(primary.head).line);
@@ -1153,6 +1156,30 @@ export class EditorView {
         this.render();
     }
 
+    setGutterAction(action: { line: number; label: string } | null): void {
+        this.gutterAction = action;
+        this.render();
+    }
+
+    onGutterAction(listener: (line: number) => void): () => void {
+        this.gutterActionListeners.add(listener);
+        return () => {
+            this.gutterActionListeners.delete(listener);
+        };
+    }
+
+    /* The line of the host's gutter button when the target is it. */
+    gutterActionLineOf(target: EventTarget | null): number | null {
+        const button = (target as HTMLElement | null)?.closest?.('[data-gutter-action]');
+        return button ? Number((button as HTMLElement).dataset.gutterAction) : null;
+    }
+
+    pressGutterAction(line: number): void {
+        for (const listener of [...this.gutterActionListeners]) {
+            listener(line);
+        }
+    }
+
     /* Whether a click at this point of the gutter is on a fold control, and which line it folds. */
     foldLineOf(target: EventTarget | null): number | null {
         const button = (target as HTMLElement | null)?.closest?.('[data-fold-line]');
@@ -1178,6 +1205,7 @@ export class EditorView {
         this.scopeListeners.clear();
         this.viewListeners.clear();
         this.hoverListeners.clear();
+        this.gutterActionListeners.clear();
         this.painter.clear();
         this.root.remove();
     }

@@ -10,6 +10,7 @@ import type {
     EditorFindQuery,
     EditorIndentation,
     EditorFindState,
+    EditorGutterAction,
     EditorHighlight,
     EditorHover,
     EditorInlayHint,
@@ -180,6 +181,15 @@ class SmartEditor implements Editor {
 
     getCaret(): EditorPosition {
         return this.positionAt(this.model.getSelections()[0]!.head);
+    }
+
+    getSelection(): EditorRange {
+        const { anchor, head } = this.model.getSelections()[0]!;
+        return { start: this.positionAt(Math.min(anchor, head)), end: this.positionAt(Math.max(anchor, head)) };
+    }
+
+    getIndentation(): EditorIndentation {
+        return { tabSize: this.settings.tabSize, insertSpaces: this.settings.insertSpaces };
     }
 
     setCaret(position: EditorPosition): void {
@@ -370,6 +380,14 @@ class SmartEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.view.setChangeMarks(marks);
+    }
+
+    setGutterAction(action: EditorGutterAction | null): void {
+        this.view.setGutterAction(action);
+    }
+
+    onGutterAction(listener: (line: number) => void): () => void {
+        return this.view.onGutterAction(listener);
     }
 
     setBlocks(blocks: readonly EditorBlock[] | null): void {

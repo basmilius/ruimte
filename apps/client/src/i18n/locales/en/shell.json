@@ -551,7 +551,10 @@
             "nextProblem": "Go to next problem",
             "previousProblem": "Go to previous problem",
             "nextHighlight": "Go to next use of the name",
-            "previousHighlight": "Go to previous use of the name"
+            "previousHighlight": "Go to previous use of the name",
+            "codeActions": "Show code actions",
+            "organizeImports": "Organize imports",
+            "formatDocument": "Format document"
         },
         "sections": {
             "recent": "Recent",
@@ -738,6 +741,10 @@
         "nextProblem": "Next Problem",
         "previousProblem": "Previous Problem",
         "nextHighlight": "Next Use of Name",
-        "previousHighlight": "Previous Use of Name"
+        "previousHighlight": "Previous Use of Name",
+        "code": "Code",
+        "codeActions": "Show Code Actions",
+        "organizeImports": "Organize Imports",
+        "formatDocument": "Format Document"
     }
 }

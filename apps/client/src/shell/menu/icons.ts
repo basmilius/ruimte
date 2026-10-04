@@ -1,6 +1,7 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     Activity,
+    AlignLeft,
     AppWindow,
     ArrowDown,
     ArrowLeft,
@@ -13,6 +14,7 @@ import {
     ChevronsRight,
     CircleHelp,
     CircleStop,
+    CodeXml,
     Command,
     Compass,
     Copy,
@@ -36,6 +38,8 @@ import {
     Globe,
     Group,
     Heading,
+    Lightbulb,
+    ListOrdered,
     Inbox,
     Info,
     Keyboard,
@@ -92,6 +96,7 @@ export type MenuIcon = { icon: LucideIcon } | { agent: AgentKind };
 const ICONS: Partial<Record<string, LucideIcon>> = {
     file: File,
     edit: Pencil,
+    code: CodeXml,
     view: Eye,
     go: Compass,
     run: Rocket,
@@ -132,6 +137,9 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'find-replace': Replace,
     'next-problem': ArrowDown,
     'previous-problem': ArrowUp,
+    'code-actions': Lightbulb,
+    'organize-imports': ListOrdered,
+    'format-document': AlignLeft,
     'next-highlight': ArrowDown,
     'previous-highlight': ArrowUp,
     'find-in-files': Search,

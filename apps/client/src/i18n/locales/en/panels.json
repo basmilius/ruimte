@@ -520,7 +520,7 @@
         "logs": "Logs",
         "hover": {
             "quickFix": "Quick fix…",
-            "quickFixSoon": "Quick fixes are not available yet",
+            "quickFixNone": "This language server offers no quick fixes",
             "definition": "Go to definition"
         },
         "edit": {
@@ -528,6 +528,25 @@
             "staged_other": "{{count}} files changed and not saved yet",
             "stagedMore": "{{names}} and {{count}} more",
             "saveAll": "Save all"
+        },
+        "actions": {
+            "show": "Show code actions",
+            "none": "No code actions here",
+            "unavailable": "No language server offers code actions here",
+            "organized": "The imports are already organized",
+            "noFormatter": "No language server formats this file",
+            "readOnly": "This file is read only",
+            "failed": "Could not apply the action: {{message}}",
+            "refused": "The edit was refused",
+            "moreLines": "{{count}} more lines",
+            "otherFiles_one": "and {{count}} other file",
+            "otherFiles_other": "and {{count}} other files",
+            "groups": {
+                "quickfix": "Quick fix",
+                "refactor": "Refactor",
+                "source": "Source",
+                "other": "Other"
+            }
         },
         "completion": {
             "insert": "Insert",

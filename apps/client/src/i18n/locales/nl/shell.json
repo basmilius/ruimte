@@ -551,7 +551,10 @@
             "nextProblem": "Ga naar volgend probleem",
             "previousProblem": "Ga naar vorig probleem",
             "nextHighlight": "Ga naar volgend gebruik van de naam",
-            "previousHighlight": "Ga naar vorig gebruik van de naam"
+            "previousHighlight": "Ga naar vorig gebruik van de naam",
+            "codeActions": "Toon code actions",
+            "organizeImports": "Imports organiseren",
+            "formatDocument": "Document formatteren"
         },
         "sections": {
             "recent": "Recent",
@@ -738,6 +741,10 @@
         "nextProblem": "Volgend probleem",
         "previousProblem": "Vorig probleem",
         "nextHighlight": "Volgend gebruik van naam",
-        "previousHighlight": "Vorig gebruik van naam"
+        "previousHighlight": "Vorig gebruik van naam",
+        "code": "Code",
+        "codeActions": "Toon code actions",
+        "organizeImports": "Imports organiseren",
+        "formatDocument": "Document formatteren"
     }
 }

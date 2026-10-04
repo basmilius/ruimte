@@ -6,6 +6,7 @@ import type {
     EditorEngine,
     EditorFindQuery,
     EditorFindState,
+    EditorGutterAction,
     EditorHighlight,
     EditorHover,
     EditorIndentation,
@@ -221,6 +222,30 @@ export class FakeEditor implements Editor {
         this.changeMarks = marks;
     }
 
+    /* The button the client set in the gutter last. */
+    gutterAction: EditorGutterAction | null = null;
+    private readonly gutterActionListeners = new Set<(line: number) => void>();
+
+    setGutterAction(action: EditorGutterAction | null): void {
+        this.gutterAction = action;
+    }
+
+    onGutterAction(listener: (line: number) => void): () => void {
+        this.gutterActionListeners.add(listener);
+        return () => {
+            this.gutterActionListeners.delete(listener);
+        };
+    }
+
+    /* A press on the gutter button, if there is one. */
+    pressGutterAction(): void {
+        if (this.gutterAction !== null) {
+            for (const listener of [...this.gutterActionListeners]) {
+                listener(this.gutterAction.line);
+            }
+        }
+    }
+
     setBlocks(blocks: readonly EditorBlock[] | null): void {
         this.blocks = blocks;
     }
@@ -281,6 +306,17 @@ export class FakeEditor implements Editor {
         return this.caret;
     }
 
+    /* The selection a person made; without one the caret. */
+    selection: EditorRange | null = null;
+
+    getSelection(): EditorRange {
+        return this.selection ?? { start: this.caret, end: this.caret };
+    }
+
+    getIndentation(): EditorIndentation {
+        return this.indentation;
+    }
+
     setCaret(position: EditorPosition): void {
         this.caret = position;
         this.revealedLine = position.line + 1;
@@ -290,6 +326,7 @@ export class FakeEditor implements Editor {
     /* The caret a person's click or key moved. */
     moveCaret(position: EditorPosition): void {
         this.caret = position;
+        this.selection = null;
         for (const listener of [...this.carets]) {
             listener(position);
         }
