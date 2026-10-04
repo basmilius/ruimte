@@ -7,18 +7,28 @@ import RuimtePulsar
     func close()
 }
 
+/// How an open link reaches its machine, as a person reads it.
+public enum LinkRoute: Equatable, Sendable {
+    /// Signaled at the machine's door on the local network.
+    case localNetwork
+    /// Signaled through the broker, with the data on a direct path.
+    case broker
+    /// The data goes through a TURN relay.
+    case relayed
+}
+
 @MainActor public struct LinkEvents {
     public var opened: () -> Void
     public var message: (String) -> Void
     /// A binary frame, which only a `bytes.read` that asked for one gets.
     public var binary: (Data) -> Void
     public var closed: (Error?) -> Void
-    public var route: (Bool?) -> Void
+    public var route: (LinkRoute?) -> Void
     /// A piece of a frame arrived, the last one included.
     public var progress: () -> Void
     public init(
         opened: @escaping () -> Void, message: @escaping (String) -> Void, binary: @escaping (Data) -> Void = { _ in },
-        closed: @escaping (Error?) -> Void, route: @escaping (Bool?) -> Void = { _ in },
+        closed: @escaping (Error?) -> Void, route: @escaping (LinkRoute?) -> Void = { _ in },
         progress: @escaping () -> Void = {}
     ) {
         self.opened = opened
@@ -74,7 +84,7 @@ import RuimtePulsar
         var idleCleanup: (() -> Void)?
         var attempt = 0
         var connected = false
-        var relayed: Bool?
+        var route: LinkRoute?
         init(open: @escaping Opener) { self.open = open }
     }
     private var machines: [String: Entry] = [:]
@@ -145,7 +155,7 @@ import RuimtePulsar
         entry.members[memberID] = events
         if entry.connected {
             events.opened()
-            events.route(entry.relayed)
+            events.route(entry.route)
         } else if entry.link == nil && entry.retry == nil && !foregroundScenes.isEmpty {
             connect(machineID, entry: entry)
         }
@@ -215,7 +225,7 @@ import RuimtePulsar
         entry.link = nil
         let wasConnected = entry.connected
         entry.connected = false
-        entry.relayed = nil
+        entry.route = nil
         previous?.close()
         if wasConnected {
             for member in Array(entry.members.values) { member.closed(nil) }
@@ -249,7 +259,7 @@ import RuimtePulsar
                 entry.generation += 1
                 entry.link = nil
                 entry.connected = false
-                entry.relayed = nil
+                entry.route = nil
                 for member in Array(entry.members.values) { member.closed(error) }
                 guard !self.foregroundScenes.isEmpty, !entry.members.isEmpty else { return }
                 let delay = min(10_000, 500 * pow(2, Double(min(entry.attempt, 5))))
@@ -262,7 +272,7 @@ import RuimtePulsar
             },
             route: { [weak entry] route in
                 guard valid(), let entry else { return }
-                entry.relayed = route
+                entry.route = route
                 for member in Array(entry.members.values) { member.route(route) }
             },
             progress: { [weak entry] in

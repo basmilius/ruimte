@@ -80,6 +80,7 @@ targets:
         NSLocalNetworkUsageDescription: Connect directly to your machines on the same Wi-Fi network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true
+          NSAllowsLocalNetworking: true
         CFBundleURLTypes:
           - CFBundleURLName: app.ruimte.mobile.pulsar
             CFBundleURLSchemes: [ruimte]

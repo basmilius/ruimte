@@ -70,6 +70,7 @@ struct MachinePage: View {
             Section("On this machine") {
                 keepAwakeRows
                 LabeledContent("Connection", value: connectionValue)
+                lanDoorRow
                 row(String(localized: "Agents"), icon: "bot") { destination = .agents }
             }
         }
@@ -164,15 +165,26 @@ struct MachinePage: View {
     private var reach: String {
         MachineReach.line(
             connected: session.connected, connecting: session.failedAttempts == 0 && session.problem == nil,
-            relayed: session.relayed, latency: endpoint.latency, problem: session.problem, lastSeen: session.lastSeen)
+            route: session.route, latency: endpoint.latency, problem: session.problem, lastSeen: session.lastSeen)
     }
 
     private var connectionValue: String {
         guard session.connected else { return String(localized: "Not connected") }
-        switch session.relayed {
-        case .some(true): return String(localized: "Relay", comment: "A connection through the relay")
-        case .some(false): return String(localized: "Direct", comment: "A direct connection")
-        case .none: return String(localized: "Broker", comment: "A connection through the broker")
+        return session.route?.label ?? String(localized: "Connected")
+    }
+
+    @ViewBuilder private var lanDoorRow: some View {
+        if let open = endpoint.lanDoor {
+            Toggle(
+                isOn: Binding(get: { open }, set: { value in Task { await endpoint.setLanDoor(value) } })
+            ) {
+                Text("Reachable on the local network")
+                Text(
+                    endpoint.lanDoorFixed
+                        ? String(localized: "A flag this machine started with decides this.")
+                        : String(localized: "Devices on the same network connect directly, without the broker."))
+            }
+            .disabled(endpoint.lanDoorFixed || endpoint.savingLanDoor || !session.connected)
         }
     }
 

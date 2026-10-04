@@ -29,6 +29,209 @@
     "-%lld" : {
       "shouldTranslate" : false
     },
+    "A flag this machine started with decides this." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een vlag waarmee deze machine startte, bepaalt dit."
+          }
+        }
+      }
+    },
+    "A machine on your account shows up here by itself. You put it there from the machine itself." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een machine op je account verschijnt hier vanzelf. Je zet hem daar vanaf de machine zelf."
+          }
+        }
+      }
+    },
+    "Add a machine to see its projects, devices and processes." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voeg een machine toe om de projecten, apparaten en processen erop te zien."
+          }
+        }
+      }
+    },
+    "An app gets in by signing in to the account %@ is on." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een app komt binnen door in te loggen op het account waar %@ op staat."
+          }
+        }
+      }
+    },
+    "Browsers and apps with access to this machine." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browsers en apps met toegang tot deze machine."
+          }
+        }
+      }
+    },
+    "Check again" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opnieuw controleren"
+          }
+        }
+      }
+    },
+    "Devices on the same network connect directly, without the broker." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apparaten op hetzelfde netwerk verbinden rechtstreeks, zonder de broker."
+          }
+        }
+      }
+    },
+    "Every client that reaches this machine sees these. Leave it empty for the machine's own name." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elke client die deze machine bereikt, ziet ze. Laat het leeg voor de eigen naam van de machine."
+          }
+        }
+      }
+    },
+    "It loses access the next time it connects, and signing in through an account will not let it back in." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hij verliest toegang bij de volgende verbinding, en inloggen via een account laat hem er niet meer in."
+          }
+        }
+      }
+    },
+    "It loses access the next time it connects." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hij verliest toegang bij de volgende verbinding."
+          }
+        }
+      }
+    },
+    "Local network" : {
+      "comment" : "A machine reached on the local network",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokaal netwerk"
+          }
+        }
+      }
+    },
+    "On the machine, run `npx ruimte login`." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voer op de machine `npx ruimte login` uit."
+          }
+        }
+      }
+    },
+    "Or open the Ruimte app there and add it to your account." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Of open daar de Ruimte-app en voeg hem toe aan je account."
+          }
+        }
+      }
+    },
+    "Reachable on the local network" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereikbaar op het lokale netwerk"
+          }
+        }
+      }
+    },
+    "Relayed" : {
+      "comment" : "A machine whose connection runs through a relay",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Via relay"
+          }
+        }
+      }
+    },
+    "Route" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route"
+          }
+        }
+      }
+    },
+    "Sign in to reach your machines." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log in om je machines te bereiken."
+          }
+        }
+      }
+    },
+    "The local network setting could not be changed. %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De instelling voor het lokale netwerk kon niet worden aangepast. %@"
+          }
+        }
+      }
+    },
+    "This is the client you are using. It loses access to this machine and forgets it here." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier."
+          }
+        }
+      }
+    },
+    "Via broker" : {
+      "comment" : "A machine reached through the broker",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Via broker"
+          }
+        }
+      }
+    },
     "…" : {
       "shouldTranslate" : false
     },
@@ -3549,16 +3752,6 @@
         }
       }
     },
-    "A computer on your account shows up by itself." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Een computer op je account verschijnt vanzelf."
-          }
-        }
-      }
-    },
     "A group" : {
       "localizations" : {
         "nl" : {
@@ -3695,16 +3888,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Een node ernaast"
-          }
-        }
-      }
-    },
-    "A pairing link comes from the machine itself: open Settings in Ruimte on %@ and choose Show pairing link under Apps with access, or run ruimte pair there." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Een pairing link komt van de machine zelf: open Instellingen in Ruimte op %@ en kies Pairing link tonen onder Apps met toegang, of voer daar ruimte pair uit."
           }
         }
       }
@@ -5303,17 +5486,6 @@
         }
       }
     },
-    "Broker" : {
-      "comment" : "A connection through the broker",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Broker"
-          }
-        }
-      }
-    },
     "Browser" : {
       "localizations" : {
         "nl" : {
@@ -5330,16 +5502,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Browser- en apparaatstreaming staat uit in de instellingen van deze machine."
-          }
-        }
-      }
-    },
-    "Browsers and apps paired with this machine." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Browsers en apps die aan deze machine gekoppeld zijn."
           }
         }
       }
@@ -5805,16 +5967,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "schoon"
-          }
-        }
-      }
-    },
-    "Clear" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wissen"
           }
         }
       }
@@ -6309,32 +6461,12 @@
         }
       }
     },
-    "Connect" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verbinden"
-          }
-        }
-      }
-    },
     "Connect and unlock it, then it shows here." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sluit het aan en ontgrendel het, dan verschijnt het hier."
-          }
-        }
-      }
-    },
-    "Connect directly to your computer" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rechtstreeks verbinden met je computer"
           }
         }
       }
@@ -6379,16 +6511,6 @@
         }
       }
     },
-    "Connected directly" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rechtstreeks verbonden"
-          }
-        }
-      }
-    },
     "Connected via relay" : {
       "localizations" : {
         "nl" : {
@@ -6425,16 +6547,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verbinden met je machines"
-          }
-        }
-      }
-    },
-    "Connecting…" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verbinden…"
           }
         }
       }
@@ -6835,16 +6947,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SVG kopiëren"
-          }
-        }
-      }
-    },
-    "Copy the link and paste it below. It works once and expires after ten minutes." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kopieer de link en plak hem hieronder. Hij werkt één keer en verloopt na tien minuten."
           }
         }
       }
@@ -7722,17 +7824,6 @@
         }
       }
     },
-    "Direct" : {
-      "comment" : "A direct connection",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Direct"
-          }
-        }
-      }
-    },
     "Directory" : {
       "localizations" : {
         "nl" : {
@@ -8451,16 +8542,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Escape"
-          }
-        }
-      }
-    },
-    "Every client that pairs with this machine sees these. Leave it empty for the machine's own name." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elke client die met deze machine koppelt, ziet ze. Laat het leeg voor de eigen naam van de machine."
           }
         }
       }
@@ -9533,16 +9614,6 @@
         }
       }
     },
-    "Go to Settings, Account, and choose Show pairing link. Or run `ruimte pair` in a terminal there." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ga naar Instellingen, Account, en kies Pairing link tonen. Of voer `ruimte pair` daar uit in een terminal."
-          }
-        }
-      }
-    },
     "Goes on by itself at %@, when the limit resets." : {
       "localizations" : {
         "nl" : {
@@ -10204,26 +10275,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hij staat niet meer in %@."
-          }
-        }
-      }
-    },
-    "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hij verliest toegang bij de volgende verbinding, en inloggen via een account laat hem er niet meer in. Opnieuw koppelen vraagt om een link."
-          }
-        }
-      }
-    },
-    "It loses access the next time it connects. Pairing again needs a new link." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hij verliest toegang bij de volgende verbinding. Opnieuw koppelen vraagt om een nieuwe link."
           }
         }
       }
@@ -13200,16 +13251,6 @@
         }
       }
     },
-    "Open Ruimte on your computer." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Ruimte op je computer."
-          }
-        }
-      }
-    },
     "Open this view in a newer Ruimte. Its content is preserved when you edit this project." : {
       "localizations" : {
         "nl" : {
@@ -13276,16 +13317,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Opent de terminal"
-          }
-        }
-      }
-    },
-    "Or sign in with the account your computer uses, and it shows up by itself." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Of log in met het account dat je computer gebruikt, dan verschijnt hij vanzelf."
           }
         }
       }
@@ -13388,62 +13419,12 @@
         }
       }
     },
-    "Pair a machine to see its projects, devices and processes." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koppel een machine om de projecten, apparaten en processen erop te zien."
-          }
-        }
-      }
-    },
     "Paired" : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gekoppeld"
-          }
-        }
-      }
-    },
-    "Paired with a link · %lld machines" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Paired with a link · 1 machine"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Paired with a link · %lld machines"
-                }
-              }
-            }
-          }
-        },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Gekoppeld met een link · 1 machine"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Gekoppeld met een link · %lld machines"
-                }
-              }
-            }
           }
         }
       }
@@ -13461,16 +13442,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Via een link gekoppeld op %1$@ · laatst gezien %2$@"
-          }
-        }
-      }
-    },
-    "Pairing succeeded, but this machine needs a public key and secure broker before iOS can connect." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koppelen gelukt, maar deze machine heeft een publieke sleutel en een beveiligde broker nodig voordat iOS verbinding kan maken."
           }
         }
       }
@@ -13586,16 +13557,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "Paste a pairing link" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Een pairing link plakken"
           }
         }
       }
@@ -14560,17 +14521,6 @@
         }
       }
     },
-    "Relay" : {
-      "comment" : "A connection through the relay",
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Relay"
-          }
-        }
-      }
-    },
     "Reload" : {
       "localizations" : {
         "nl" : {
@@ -15239,32 +15189,12 @@
         }
       }
     },
-    "Ruimte found this link on the clipboard." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ruimte vond deze link op het klembord."
-          }
-        }
-      }
-    },
     "Ruimte is not open on this machine. Install the update there." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ruimte is niet open op deze machine. Installeer de update daar."
-          }
-        }
-      }
-    },
-    "Ruimte reads a link from the clipboard when you open this screen." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ruimte leest een link van het klembord als je dit scherm opent."
           }
         }
       }
@@ -15723,16 +15653,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles selecteren"
-          }
-        }
-      }
-    },
-    "Selected ICE path" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gekozen ICE-pad"
           }
         }
       }
@@ -16340,16 +16260,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SIGKILL beëindigt proces %lld meteen. Het kan niets opslaan of opruimen, dus bestanden waar het naar schreef kunnen onvolledig blijven."
-          }
-        }
-      }
-    },
-    "Sign in" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inloggen"
           }
         }
       }
@@ -17642,16 +17552,6 @@
         }
       }
     },
-    "That is not a pairing link. One looks like https://…/pair#code." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dat is geen pairing link. Een pairing link ziet eruit als https://…/pair#code."
-          }
-        }
-      }
-    },
     "That is not the name of this account. Type %@ to delete it." : {
       "localizations" : {
         "nl" : {
@@ -17869,16 +17769,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Het apparaat"
-          }
-        }
-      }
-    },
-    "The device key is not ready. Try again." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De apparaatsleutel is nog niet klaar. Probeer het opnieuw."
           }
         }
       }
@@ -18996,16 +18886,6 @@
         }
       }
     },
-    "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier. Koppel opnieuw om weer toegang te krijgen."
-          }
-        }
-      }
-    },
     "This item cannot be attached." : {
       "localizations" : {
         "nl" : {
@@ -19152,16 +19032,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deze PDF kan niet worden geopend."
-          }
-        }
-      }
-    },
-    "This phone reaches the machines it paired with a link." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deze telefoon bereikt de machines die hij met een link heeft gekoppeld."
           }
         }
       }
@@ -20334,16 +20204,6 @@
         }
       }
     },
-    "Use a pairing link" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Een pairing link gebruiken"
-          }
-        }
-      }
-    },
     "Use default icon" : {
       "localizations" : {
         "nl" : {
@@ -20490,16 +20350,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "via relay"
-          }
-        }
-      }
-    },
-    "Via relay" : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Via relay"
           }
         }
       }

@@ -11,9 +11,9 @@ enum MachineLinkState: Equatable {
     case connecting
     case offline
 
-    init(connected: Bool, relayed: Bool?, failedAttempts: Int, problem: String?) {
+    init(connected: Bool, route: LinkRoute?, failedAttempts: Int, problem: String?) {
         if connected {
-            self = .connected(relayed: relayed == true)
+            self = .connected(relayed: route == .relayed)
         } else if failedAttempts > 0 || problem != nil {
             self = .offline
         } else {

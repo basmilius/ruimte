@@ -23,7 +23,7 @@ final class CommandPaletteTests: XCTestCase {
     }
 
     func testANameThatStartsWithTheQueryGoesFirstThenWordStarts() {
-        let names = ["Use a pairing link", "pool.test.ts", "Spool", "pool.ts", "Connection pool"]
+        let names = ["Add a machine", "pool.test.ts", "Spool", "pool.ts", "Connection pool"]
         XCTAssertEqual(
             PaletteRanking.rank(names, query: "pool", text: { $0 }),
             ["pool.test.ts", "pool.ts", "Connection pool", "Spool"])
@@ -58,7 +58,7 @@ final class CommandPaletteTests: XCTestCase {
         XCTAssertFalse(titles.contains("Follow the system appearance"))
         XCTAssertTrue(titles.contains("Use the dark appearance"))
         XCTAssertEqual(
-            PaletteCommands.featured(one).map(\.title), ["New chat", "Recently closed", "Use a pairing link", "Settings"])
+            PaletteCommands.featured(one).map(\.title), ["New chat", "Recently closed", "Add a machine", "Settings"])
 
         let studio = machine("studio")
         let several = PaletteCommands.all(projects: [], machines: [mac, studio], appearance: "dark").map(\.title)

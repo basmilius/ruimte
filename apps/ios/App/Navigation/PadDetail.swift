@@ -10,8 +10,7 @@ struct PadDetailColumn: View {
     @Bindable var router: PadRouter
     let openPalette: () -> Void
     let open: (ProjectViewTarget) -> Void
-    let pair: () -> Void
-    let signIn: () -> Void
+    let addMachine: () -> Void
     @State private var diagnostics = false
     @State private var newChat = false
     @State private var launches = false
@@ -32,7 +31,7 @@ struct PadDetailColumn: View {
         switch router.detail {
         case .now:
             NavigationStack {
-                PadNowPage(runtime: runtime, now: now, open: open, openProject: openProject, pair: pair)
+                PadNowPage(runtime: runtime, now: now, open: open, openProject: openProject, addMachine: addMachine)
                     .modifier(MobilePageSurface())
                     .toolbar { toolbar }
             }
@@ -52,7 +51,7 @@ struct PadDetailColumn: View {
                 }
             }
         case .machines:
-            PadMachinesPage(runtime: runtime, pair: pair, signIn: signIn, selectedID: $router.machineID)
+            PadMachinesPage(runtime: runtime, addMachine: addMachine, selectedID: $router.machineID)
         case .recentlyClosed:
             NavigationStack {
                 RecentProjectsPage(runtime: runtime, projects: projects)

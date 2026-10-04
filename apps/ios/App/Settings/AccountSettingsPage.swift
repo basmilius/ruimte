@@ -28,7 +28,7 @@ struct AccountSettingsPage: View {
                         Text("Signed in with \(Self.providerName(account.provider))")
                             .font(.footnote).foregroundStyle(MobileStyle.muted)
                     } else {
-                        Text("This phone reaches the machines it paired with a link.")
+                        Text("Sign in to reach your machines.")
                             .font(.footnote).foregroundStyle(MobileStyle.muted).multilineTextAlignment(.center)
                     }
                 }
@@ -84,9 +84,7 @@ struct AccountSettingsPage: View {
     }
 
     private func reach(_ session: SharedMachineSession) -> String {
-        if session.connected {
-            return session.relayed == true ? String(localized: "Connected via relay") : String(localized: "Connected")
-        }
+        if session.connected { return session.route?.label ?? String(localized: "Connected") }
         return session.problem ?? String(localized: "Not connected")
     }
 

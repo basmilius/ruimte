@@ -220,12 +220,12 @@ final class SessionVisualTests: XCTestCase {
         ])
     }
 
-    @MainActor func testPairingAtPhoneWidth() async {
+    @MainActor func testAddingAMachineAtPhoneWidth() async {
         let runtime = AppRuntime()
-        let host = UIHostingController(rootView: PairMachinePage(runtime: runtime).tint(MobileStyle.accent))
+        let host = UIHostingController(rootView: AddMachineSheet(runtime: runtime).tint(MobileStyle.accent))
         let window = makeWindow(host, size: CGSize(width: 402, height: 874))
         for _ in 0..<20 { await displayFrame() }
-        capture(window, name: "pairing-iphone")
+        capture(window, name: "add-machine-iphone")
         window.isHidden = true
         window.rootViewController = nil
     }

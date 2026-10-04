@@ -11,6 +11,16 @@
         }
       }
     },
+    "A signal on the local network names the machine but is not signed by it." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een signaal op het lokale netwerk noemt de machine, maar is niet door hem ondertekend."
+          }
+        }
+      }
+    },
     "No network path to the machine: ICE failed." : {
       "localizations" : {
         "nl" : {
@@ -71,22 +81,22 @@
         }
       }
     },
-    "The broker sent invalid UTF-8." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De broker stuurde ongeldige UTF-8."
-          }
-        }
-      }
-    },
     "The channel opened before its answer was applied." : {
       "localizations" : {
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Het kanaal ging open voordat het antwoord ervan was toegepast."
+          }
+        }
+      }
+    },
+    "The connection sent invalid UTF-8." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding stuurde ongeldige UTF-8."
           }
         }
       }
@@ -207,6 +217,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De machine maakt opnieuw verbinding. Probeer het opnieuw als hij verbonden is."
+          }
+        }
+      }
+    },
+    "The machine on the local network did not prove its identity." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine op het lokale netwerk bewees zijn identiteit niet."
           }
         }
       }

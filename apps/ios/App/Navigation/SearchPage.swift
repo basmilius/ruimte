@@ -9,7 +9,7 @@ struct SearchPage: View {
     let runtime: AppRuntime
     let navigator: any PaletteNavigator
     let showSettings: () -> Void
-    let pair: () -> Void
+    let addMachine: () -> Void
     @State private var query = ""
     @State private var files = PaletteFiles()
     @State private var newChat: NewChatTarget?
@@ -148,7 +148,7 @@ struct SearchPage: View {
         case .usage(let machineID): usage = NewChatTarget(machineID: machineID)
         case .openFolder(let machineID): navigator.showMachine(machineID)
         case .recentlyClosed: navigator.showRecentProjects()
-        case .pair: pair()
+        case .addMachine: addMachine()
         case .settings: showSettings()
         case .appearance(let value): appearance = value
         case .project(let id, let projectAction):

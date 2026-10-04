@@ -7,9 +7,10 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 ## Included
 
-- Native Sign in with Apple, GitHub web sign-in, HTTPS pairing links and
-  shared authenticated WebRTC connections. Normal ICE selection allows direct connections;
-  TURN is a fallback. The relay-only switch is confined to connection diagnostics.
+- Native Sign in with Apple, GitHub web sign-in and shared authenticated WebRTC connections. A machine is reached
+  only through the account it is on. An attempt signals at the machine's door on the local network first and through
+  the broker after a second. Normal ICE selection allows direct connections; TURN is a fallback. The relay-only switch
+  is confined to connection diagnostics.
 - Project creation and navigation, view ordering and names, local camera/selection, and
   three-way merges with explicit conflict resolution. Unknown view/node kinds survive saves.
   Separators group the view list into sections; rows show the name and the Lucide mark the desktop gives them.
@@ -72,8 +73,9 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   to install it there, and `update-no-app` and `update-none` read as such. The menu holds Name and icon (a sheet with
   the name, empty for the machine's own, and twenty icons from the project set) and Apps with access: every client
   from `auth.sessions` with how it came in and when it was last there, Revoke after a question that explains what
-  that means for its way in, and revoking this phone forgets the machine here. A paired client cannot mint a pairing
-  link, so the sheet says where to get one on the machine instead.
+  that means for its way in, and revoking this phone forgets the machine here. Beside Connection, which names the route,
+  stands the switch for the machine's door on the local network (`lanDoor` through `endpoint.setIdentity`), off limits
+  with a word on why while a flag the machine started with decides it (`lanDoorFixed`).
 - Devices of a machine (`device.list`, read again every three seconds while the page is open), grouped as the
   desktop's devices panel: running simulators first, then iOS simulators and devices and Android emulators and
   devices. Start and Shut down where the machine offers them (`device.boot`, `device.shutdown`), Retry for a device
@@ -219,16 +221,16 @@ once per launch), else the first letter of its name.
   machine does not answer and a try failed, the list dims under a glass card that says so, when it was last
   connected, and offers Diagnostics and Other project; it goes once the machine is back. A view opens over the
   project.
-- Machines lists every machine as a card with how it is reached and how fast, the limits of its CLIs and an update
-  when one is ready; one that is away says when it was last there and offers Retry. Pairing is the plus and the row at
-  the end. A machine's page opens its projects with New chat and Chats (a project opens under Projects), files,
+- Machines lists every machine as a card with how it is reached (Local network, Via broker or Relayed) and how fast,
+  the limits of its CLIs and an update when one is ready; one that is away says when it was last there and offers
+  Retry. Add a machine is the plus and the row at the end. A machine's page opens its projects with New chat and Chats (a project opens under Projects), files,
   devices, processes and usage, and keeps keep awake, name and icon and apps with access.
 - Search is the desktop's command palette (`SearchPage`, `CommandPalette.swift`): views, projects, files and commands
   over every project of every machine, without searching text inside chats. Every typed word has to appear; a name
   that starts with the query ranks first, then one where every word starts a word. Files come from `fs.search` in the
   folder of each open project. The commands are the ones that mean something on a phone: New chat, a new view or
   terminal in a project, its Files, Git, Launches and settings, opening a folder (on the machine's page), Usage,
-  Recently closed, pairing, Settings and the appearance. Nothing typed shows what needs you and the most used
+  Recently closed, Add a machine, Settings and the appearance. Nothing typed shows what needs you and the most used
   commands. A view or a file opens over Search in its project; a project and its sheets open under Projects.
 
 `PhoneRouter` holds the tab and the stack's path. Each route (a project, a view, a notification, a machine, Recently
@@ -269,7 +271,7 @@ sidebar.
   and a warning's actions above it. Devices are a grid, a running one with its live preview.
 - When the project's machine stops answering, its card stands in the content and the sidebar stays usable; Other
   project closes the project, back to the list.
-- Settings, pairing, Project settings and Compare models are form sheets; Run settings is a popover over the
+- Settings, Add a machine, Project settings and Compare models are form sheets; Run settings is a popover over the
   composer.
 
 ## Views on an iPhone
@@ -316,17 +318,15 @@ terminal or canvas that still waits for its project or session shows a spinner o
 
 Three steps (`App/Onboarding`), centered on an iPad as on an iPhone.
 
-- The welcome (`WelcomePage`) shows the light app icon in the desktop's eclipse, with the two ways in: Continue with
-  Apple or GitHub, as `/v1/providers` offers them, or Connect directly to your computer with a pairing link. When the
-  providers do not load it says so and offers Try again; a failed sign-in is an alert.
+- The welcome (`WelcomePage`) shows the light app icon in the desktop's eclipse, with the way in: Continue with Apple
+  or GitHub, as `/v1/providers` offers them. When the providers do not load it says so and offers Try again; a failed
+  sign-in is an alert.
 - The eclipse (`App/Design/Eclipse.swift`) is the desktop's `ui/Eclipse.tsx` with its seeded stars, colors and
   timings, and stands still under Reduce Motion. On the welcome and on About it is the page's background, edge to
   edge under the bars, centered on the icon as the page scrolls.
-- Add a machine (`PairMachinePage`, the same sheet as the plus on Machines) takes a pairing link only, with the steps
-  that find one: Settings, Account, Show pairing link in Ruimte on the computer, or `ruimte pair` there. When the
-  sheet opens and the clipboard looks like a web address (`detectPatterns`, which asks nothing), it reads the
-  clipboard, which is what raises the system's paste prompt, and fills in a pairing link it finds there
-  (`PairingClipboard`). The paste button pastes without a prompt. Connect appears once the field holds a link.
+- Add a machine (`AddMachineSheet`, the plus on Machines) says where a machine comes from: one on the account shows up
+  by itself, and only the machine puts itself there, with `npx ruimte login` or the Ruimte app on it. Check again
+  reads the account's machines again and closes the sheet once one more is there.
 - Once a machine is there, the notification step (`NotificationStepPage`) says which machines connected, shows an
   example notification and, on an iPhone, the Live Activity, and asks. Turn on notifications is the same as the
   switch in Settings; Not now skips it. Either answer opens the app on Now. The step follows only a way in taken
@@ -648,6 +648,16 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   supplies a fallback when direct candidates cannot connect. Relay-only is off by default
   and is available only through the test app's diagnostic switch. That switch holds a link of
   its own (`diagnostic:<machine id>`) and turns off again when its screen closes.
+- An attempt first signals at the machine's door on the local network (`LanDoor.swift`, `Signaling.swift`), at every
+  address `endpoint.info` and `endpoint.changed` report in `lan`. The door is kept per machine and key in local
+  preferences, so the next attempt knows it before anything is asked. Each address gets a WebSocket at
+  `ws://<address>:<port>/signal` (`NSAllowsLocalNetworking`); the app sends a fresh nonce and says nothing about itself
+  until the machine signed it with the pinned key (`pulsar-lan-door-v1`). The first door that proves itself carries the
+  attempt and the others close. The broker joins when no door is ready within 1000 ms, or at once when every door
+  failed, which is also what a refused Local Network permission comes down to; whichever is ready first wins. A door
+  attempt gets STUN and no TURN, so relay-only diagnostics skip the door. An attempt that won at a door and fails before
+  its channel opens passes the local network over for five minutes. A machine without a broker is reachable while its
+  door is known.
 - A machine first admits the device with an account statement. After the pinned channel
   handshake succeeds, the app persists that pairing in local preferences, bound to the
   machine ID and both public keys. Later attempts omit the statement and need no account
@@ -680,9 +690,7 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
 
 The web authentication callback is exactly `ruimte://pulsar/callback`, checked with the
 pending state before exchange. `/v1/providers` controls the login options; Apple uses
-the native token exchange described above. HTTPS pairing links are accepted from the
-welcome screen, Machines and Search; redirects are refused to
-keep a token on its intended origin. This app contains no local daemon.
+the native token exchange described above. This app contains no local daemon.
 
 ## Constraints
 
@@ -711,14 +719,14 @@ not change any production infrastructure.
    machine list should return without another browser login. The displayed public key
    should stay the same. Test Apple too when `/v1/providers` includes it.
 2. **Wi-Fi.** Leave "Require relay for this test" off and select the MacBook. Record
-   `server.hello`, the machine version, "Selected ICE path" and the milliseconds in
+   `server.hello`, the machine version, "Route" and the milliseconds in
    "Connection to server.hello". The acceptance target is below 5,000 ms. The selected
    route may be direct or relay; "Not measured" is not proof of either.
 3. **5G.** Turn Wi-Fi off in Settings, keeping mobile data enabled. Wait for the reconnect
    and record the same fields. Repeat five times with the Reconnect button. Record every
    failure as well as the median and slowest successful time.
 4. **TURN explicitly.** Enable "Require relay for this test" and reconnect on both Wi-Fi
-   and 5G. `server.hello` plus "Via relay" proves the selected candidate uses TURN. A
+   and 5G. `server.hello` plus "Relayed" proves the selected candidate uses TURN. A
    successful ordinary connection alone does not. If this fails, record the error and
    network; code availability does not prove the broker has working production TURN
    credentials or that the relay ports are reachable. Turn this setting off afterward.
@@ -739,10 +747,14 @@ not change any production infrastructure.
 8. **Path change and cancellation.** Start a connection, disconnect while it is still
    opening, then select it again. No late result from the canceled attempt should replace
    the current attempt. Switch Wi-Fi/5G while connected and verify a new hello arrives.
+9. **Local network.** On the MacBook's Wi-Fi the route reads "Local network", also after a first connection when the
+   MacBook's daemon runs with `--no-broker`. On 5G it reads "Via broker" or "Relayed", with at most a second more than
+   before. Turn Ruimte off under Settings > Privacy & Security > Local Network and reconnect on Wi-Fi: the route reads
+   "Via broker" without an error.
 
 Keep a row for each attempt:
 
-| Device / OS | Network | Relay required | Selected path | Hello ms | Foreground ms | Result / error |
+| Device / OS | Network | Relay required | Route | Hello ms | Foreground ms | Result / error |
 | --- | --- | --- | --- | --- | --- | --- |
 | | | | | | | |
 
@@ -810,8 +822,8 @@ Required configuration and device acceptance:
    Missing configuration produces an explicit `not-configured` response; no credentials are embedded here.
 3. Deploy the matching Worker and daemon through the project's normal release process.
    Registration is bound to an active account session. Delivery requires an authorized
-   machine on the same account; a manually paired machine outside that account cannot
-   use this account's push service.
+   machine on the same account; a machine outside that account cannot use this
+   account's push service.
 4. On a signed physical device, enable notifications, follow a live session, background
    the app, and test turn completion and both approval choices. Also test an expired
    request, a desktop answer arriving first, revocation, key loss and the generic fallback.

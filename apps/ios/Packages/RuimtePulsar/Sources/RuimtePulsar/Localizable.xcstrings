@@ -51,16 +51,6 @@
         }
       }
     },
-    "Paste an HTTPS pairing link ending in /pair#token." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plak een HTTPS pairing link die eindigt op /pair#token."
-          }
-        }
-      }
-    },
     "Showing US dollars until a euro exchange rate is available." : {
       "localizations" : {
         "nl" : {
@@ -171,46 +161,6 @@
         }
       }
     },
-    "The machine answered with something this app cannot read." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De machine antwoordde met iets wat deze app niet kan lezen."
-          }
-        }
-      }
-    },
-    "The machine could not be reached." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De machine kon niet worden bereikt."
-          }
-        }
-      }
-    },
-    "The machine refused this link. It may be used or expired." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De machine weigerde deze link. Misschien is hij al gebruikt of verlopen."
-          }
-        }
-      }
-    },
-    "The machine returned no HTTP response." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "De machine gaf geen HTTP-antwoord terug."
-          }
-        }
-      }
-    },
     "The notification could not be verified." : {
       "localizations" : {
         "nl" : {
@@ -287,16 +237,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deze melding is al afgeleverd."
-          }
-        }
-      }
-    },
-    "This pairing address is invalid." : {
-      "localizations" : {
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dit koppeladres is ongeldig."
           }
         }
       }

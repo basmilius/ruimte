@@ -7,7 +7,7 @@ struct NowPage: View {
     let now: NowModel
     let open: (ProjectViewTarget) -> Void
     let openProject: (ProjectViewTarget) -> Void
-    let pair: () -> Void
+    let addMachine: () -> Void
     @State private var showingSnoozed = false
 
     var body: some View {
@@ -19,7 +19,7 @@ struct NowPage: View {
                 } description: {
                     Text("Connect your computer to see what your agents are doing.")
                 } actions: {
-                    Button("Use a pairing link", action: pair)
+                    Button("Add a machine", action: addMachine)
                 }
             } else if !now.loaded && board.isEmpty {
                 MobileLoadingRow(String(localized: "Connecting to your machines"))

@@ -133,7 +133,7 @@ struct ProjectsPage<Notice: View>: View {
             reach: { machine in
                 let session = runtime.session(for: machine)
                 return MachineLinkState(
-                    connected: session.connected, relayed: session.relayed, failedAttempts: session.failedAttempts,
+                    connected: session.connected, route: session.route, failedAttempts: session.failedAttempts,
                     problem: session.problem)
             },
             activity: { activity[$0] }, git: { gitLines.line($0) })

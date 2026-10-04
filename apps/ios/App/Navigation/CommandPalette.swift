@@ -69,7 +69,7 @@ struct PaletteCommand: Identifiable, Equatable {
         case usage(machineID: String)
         /// The machine's page, which is where a folder is opened as a project.
         case openFolder(machineID: String)
-        case recentlyClosed, pair, settings
+        case recentlyClosed, addMachine, settings
         case appearance(String)
     }
 
@@ -84,7 +84,7 @@ enum PaletteCommands {
     static func featured(_ commands: [PaletteCommand]) -> [PaletteCommand] {
         commands.filter {
             switch $0.action {
-            case .newChat, .recentlyClosed, .pair, .settings: true
+            case .newChat, .recentlyClosed, .addMachine, .settings: true
             default: false
             }
         }
@@ -130,7 +130,7 @@ enum PaletteCommands {
         commands.append(
             PaletteCommand(
                 title: String(localized: "Recently closed"), icon: "clock-arrow-left", action: .recentlyClosed))
-        commands.append(PaletteCommand(title: String(localized: "Use a pairing link"), icon: "link", action: .pair))
+        commands.append(PaletteCommand(title: String(localized: "Add a machine"), icon: "plus", action: .addMachine))
         commands.append(PaletteCommand(title: String(localized: "Settings"), icon: "settings", action: .settings))
         let looks = [
             ("light", String(localized: "Use the light appearance"), "sun"),

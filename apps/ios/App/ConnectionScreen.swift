@@ -71,18 +71,14 @@ struct ConnectionScreen: View {
                                     .font(.caption).foregroundStyle(MobileStyle.muted)
                                 }
                             }
-                            .disabled(machine.brokerUrl == nil)
+                            .disabled(!runtime.reachable(machine))
                         }
                     }
                 }
                 if let machine = probe.machine {
                     Section(machine.name) {
                         LabeledContent("Status", value: probe.status)
-                        LabeledContent(
-                            "Selected ICE path",
-                            value: probe.relayed.map {
-                                $0 ? String(localized: "Via relay") : String(localized: "Direct")
-                            } ?? String(localized: "Not measured"))
+                        LabeledContent("Route", value: probe.route?.label ?? String(localized: "Not measured"))
                         if let elapsed = probe.elapsedMilliseconds {
                             LabeledContent(
                                 "Connection to server.hello",

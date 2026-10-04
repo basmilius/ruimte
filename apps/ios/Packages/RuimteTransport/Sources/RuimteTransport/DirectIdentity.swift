@@ -100,4 +100,9 @@ public enum DirectIdentity {
         }
         return "pulsar-signal-v1\n" + (try wireText(.array(fields)))
     }
+
+    /// What a machine signs at its door on the local network: `lanDoorMessage` in `packages/pulsar/src/signing.ts`.
+    public static func lanDoorMessage(nonce: String, machineID: String, publicKey: String) throws -> String {
+        "pulsar-lan-door-v1\n" + (try wireText(.array([.string(nonce), .string(machineID), .string(publicKey)])))
+    }
 }

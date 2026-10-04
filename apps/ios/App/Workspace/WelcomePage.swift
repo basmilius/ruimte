@@ -2,12 +2,11 @@ import RuimtePulsar
 import SwiftUI
 import UIKit
 
-/// The two ways in: an account through one of the providers, or a pairing link straight to a computer.
+/// The way in: an account through one of the providers, which brings the machines on it.
 struct WelcomePage: View {
     @Bindable var runtime: AppRuntime
     let window: UIWindow?
-    let pair: () -> Void
-    /// Called as a person takes either way in, before it starts.
+    /// Called as a person signs in, before it starts.
     var begin: () -> Void = {}
     @State private var retrying = false
     @State private var chosen: ProviderId?
@@ -24,8 +23,8 @@ struct WelcomePage: View {
                     Spacer(minLength: 48)
                     VStack(spacing: 12) {
                         signInOptions
-                        pairingOption
                     }
+                    .padding(.bottom, 8)
                 }
                 .frame(maxWidth: 420)
                 .frame(maxWidth: .infinity, minHeight: geometry.size.height)
@@ -96,23 +95,6 @@ struct WelcomePage: View {
                 }
             }
         }
-    }
-
-    private var pairingOption: some View {
-        Button {
-            begin()
-            pair()
-        } label: {
-            Label(String(localized: "Connect directly to your computer"), lucideIcon: "link", iconSize: 15)
-                .font(.subheadline)
-                .foregroundStyle(MobileStyle.text.opacity(0.8))
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(.rect)
-        }
-        .buttonStyle(WelcomeActionStyle())
-        .disabled(runtime.signingIn || runtime.signingOut)
-        .padding(.bottom, 8)
-        .accessibilityIdentifier("welcome.pair")
     }
 
     private func signIn(_ provider: ProviderId) {

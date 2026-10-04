@@ -1,7 +1,7 @@
 import RuimtePulsar
 import SwiftUI
 
-/// The name and icon of a machine, which every client that pairs with it sees. Both go out together, since an empty
+/// The name and icon of a machine, which every client that reaches it sees. Both go out together, since an empty
 /// name hands the machine back to the one it starts with and no icon is a choice of its own. On an iPad the apps with
 /// access stand in the same sheet.
 struct MachineIdentitySheet: View {
@@ -39,7 +39,7 @@ struct MachineIdentitySheet: View {
                 } header: {
                     Text("Name")
                 } footer: {
-                    Text("Every client that pairs with this machine sees these. Leave it empty for the machine's own name.")
+                    Text("Every client that reaches this machine sees these. Leave it empty for the machine's own name.")
                 }
                 Section("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {

@@ -2,7 +2,6 @@ import Foundation
 import Observation
 import RuimtePulsar
 import RuimteTransport
-import UIKit
 
 @MainActor @Observable
 final class SharedMachineSession {
@@ -11,7 +10,7 @@ final class SharedMachineSession {
     private(set) var generation = 0
     private(set) var failedAttempts = 0
     private(set) var problem: String?
-    private(set) var relayed: Bool?
+    private(set) var route: LinkRoute?
     /// When the link this phone had last went down; nil while it never had one this launch.
     private(set) var lastConnectedAt: Date?
     private var lease: MachineLease?
@@ -36,7 +35,12 @@ final class SharedMachineSession {
     @ObservationIgnored lazy var tasks = TaskStore(client: rpc)
     @ObservationIgnored lazy var plans = PlanStore(client: rpc)
     @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
-    @ObservationIgnored lazy var endpoint = MachineEndpoint(client: rpc, machineID: machine.id)
+    @ObservationIgnored lazy var endpoint = MachineEndpoint(
+        client: rpc, machineID: machine.id,
+        learnedLan: { [weak self] door in
+            guard let self else { return }
+            runtime?.lanDoors.remember(door, machineID: machine.id, machineKey: machine.publicKey)
+        })
     @ObservationIgnored lazy var usageWidget = UsageWidgetRecorder(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var snoozes = MachineSnoozes(machineID: machine.id, client: rpc)
     @ObservationIgnored lazy var rpc = MachineClient(send: { [weak self] text in
@@ -55,7 +59,7 @@ final class SharedMachineSession {
         guard !invalidated else { return }
         references += 1
         guard lease == nil, let runtime, let key = runtime.key else { return }
-        guard let url = machine.brokerUrl.flatMap(URL.init(string:)), url.scheme == "wss" else {
+        guard runtime.reachable(machine) else {
             problem = String(localized: "This machine needs a secure broker address.")
             return
         }
@@ -79,35 +83,16 @@ final class SharedMachineSession {
                 if error != nil || !connected { failedAttempts += 1 }
                 if connected { lastConnectedAt = .now }
                 connected = false
-                relayed = nil
+                route = nil
                 problem = error?.localizedDescription
                 discardIdleChats()
                 rpc.disconnected(error: error)
-            }, route: { [weak self] in self?.relayed = $0 }, progress: { [weak self] in self?.rpc.heard() })
+            }, route: { [weak self] in self?.route = $0 }, progress: { [weak self] in self?.rpc.heard() })
         lease = runtime.connections.hold(
             machineID: machine.id,
-            open: { [weak runtime] events in
+            open: { [weak runtime, machine] events in
                 guard let runtime else { throw CancellationError() }
-                let identity = PairingIdentity(
-                    machineID: self.machine.id, machineKey: self.machine.publicKey, clientKey: key.publicKey)
-                return try runtime.pairings.open(
-                    identity: identity,
-                    requestAccess: {
-                        guard let token = try await runtime.vault?.accessToken() else {
-                            throw TransportFailure.invalid(String(localized: "Sign in to connect to this machine."))
-                        }
-                        let access = try await runtime.client.signalAccess(
-                            accessToken: token, machineID: self.machine.id, key: key,
-                            label: "Ruimte on \(UIDevice.current.model)")
-                        return try JSONValue.decode(JSONEncoder().encode(access))
-                    }, events: events,
-                    makeLink: { access, authenticatedEvents in
-                        try NativeWebRTCLink(
-                            machineID: self.machine.id, machineKey: self.machine.publicKey, signer: key,
-                            brokerURL: url, sockets: runtime.sockets,
-                            iceServers: [.object(["urls": .string("stun:turn.ruimte.app:3478")])],
-                            access: access, events: authenticatedEvents)
-                    })
+                return try runtime.openLink(to: machine, key: key, events: events)
             }, events: events)
         attention.onRead = { [weak self] nodeID, through in
             guard let self else { return }
@@ -240,7 +225,7 @@ final class SharedMachineSession {
         linkEpoch += 1
         references = 0
         connected = false
-        relayed = nil
+        route = nil
         runtime = nil
         rpc.disconnected(error: MachineClientError.disconnected)
     }

@@ -143,8 +143,8 @@ enum MachineInstallStep: Equatable, Sendable {
 }
 
 /// One machine as `endpoint.info` describes it, followed with `endpoint.changed` and `endpoint.updateChanged`: its
-/// version, the update of its app and keep awake, with the round trip measured while a page shows it. It also sets
-/// keep awake, the name and the icon, and runs the two asks of an update install.
+/// version, the update of its app, keep awake and its door on the local network, with the round trip measured while a
+/// page shows it. It also sets keep awake, the door, the name and the icon, and runs the two asks of an update install.
 @MainActor @Observable
 final class MachineEndpoint {
     private(set) var info: JSONValue?
@@ -156,25 +156,30 @@ final class MachineEndpoint {
     private(set) var lastConnected: Date?
     private(set) var install = MachineInstallStep.idle
     private(set) var savingKeepAwake = false
+    private(set) var savingLanDoor = false
     /// Why the last action failed, until the next one.
     var problem: String?
     @ObservationIgnored private let client: any MachineRequesting
     @ObservationIgnored private let machineID: String
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let clock: @MainActor () -> Date
+    @ObservationIgnored private let learnedLan: @MainActor (LanDoorAddress?) -> Void
     @ObservationIgnored private var subscriptions: [() -> Void] = []
     @ObservationIgnored private var reading: Task<Void, Never>?
     @ObservationIgnored private var connected = false
     @ObservationIgnored private var generation = 0
 
+    /// `learnedLan` hears where the machine's door listens each time the machine says, nil once it is closed.
     init(
         client: any MachineRequesting, machineID: String, defaults: UserDefaults = .standard,
-        clock: @escaping @MainActor () -> Date = { Date() }
+        clock: @escaping @MainActor () -> Date = { Date() },
+        learnedLan: @escaping @MainActor (LanDoorAddress?) -> Void = { _ in }
     ) {
         self.client = client
         self.machineID = machineID
         self.defaults = defaults
         self.clock = clock
+        self.learnedLan = learnedLan
         let stored = defaults.double(forKey: lastConnectedKey)
         lastConnected = stored > 0 ? Date(timeIntervalSince1970: stored) : nil
     }
@@ -191,6 +196,10 @@ final class MachineEndpoint {
     }
     /// Whether this machine hands out browser and device pictures; an older daemon that does not say did.
     var streamingAllowed: Bool { info?["streamingAllowed"]?.boolValue ?? true }
+    /// Whether a person keeps the door on the local network open; nil on a machine from before the door.
+    var lanDoor: Bool? { info?["lanDoor"]?.boolValue }
+    /// A flag the machine started with decides the door, so the switch changes nothing.
+    var lanDoorFixed: Bool { info?["lanDoorFixed"]?.boolValue == true }
 
     func start() {
         guard subscriptions.isEmpty else { return }
@@ -247,6 +256,7 @@ final class MachineEndpoint {
         info = value
         update = MachineUpdate(value["update"])
         keepAwake = Self.keepAwake(in: value)
+        learnedLan(LanDoorAddress(value["lan"]))
     }
 
     /// An event leaves out what it does not change, and never carries whether keep awake is available.
@@ -315,6 +325,23 @@ final class MachineEndpoint {
         }
     }
 
+    func setLanDoor(_ open: Bool) async {
+        guard let previous = info, lanDoor != open, !savingLanDoor else { return }
+        info = previous.setting("lanDoor", .bool(open))
+        savingLanDoor = true
+        defer { savingLanDoor = false }
+        do {
+            let answer = try await client.request(
+                WireRequest.endpointSetIdentity.rawValue,
+                payload: .object(["name": currentName, "icon": previous["icon"] ?? .null, "lanDoor": .bool(open)]))
+            apply(answer)
+            problem = nil
+        } catch {
+            info = previous
+            problem = String(localized: "The local network setting could not be changed. \(error.localizedDescription)")
+        }
+    }
+
     /// Names the machine for every client; an empty name hands it back to the one it starts with.
     func setIdentity(name: String, icon: MachineIcon?) async throws {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -373,18 +400,23 @@ final class MachineEndpoint {
     }
 }
 
+extension LinkRoute {
+    var label: String {
+        switch self {
+        case .localNetwork: String(localized: "Local network", comment: "A machine reached on the local network")
+        case .broker: String(localized: "Via broker", comment: "A machine reached through the broker")
+        case .relayed: String(localized: "Relayed", comment: "A machine whose connection runs through a relay")
+        }
+    }
+}
+
 /// How a machine is reached, in the line under its name.
 enum MachineReach {
     static func line(
-        connected: Bool, connecting: Bool, relayed: Bool?, latency: Int?, problem: String?, lastSeen: Date?
+        connected: Bool, connecting: Bool, route: LinkRoute?, latency: Int?, problem: String?, lastSeen: Date?
     ) -> String {
         if connected {
-            let route =
-                switch relayed {
-                case .some(true): String(localized: "Connected via relay")
-                case .some(false): String(localized: "Connected directly")
-                case .none: String(localized: "Connected")
-                }
+            let route = route?.label ?? String(localized: "Connected")
             return latency.map {
                 String(
                     localized: "\(route) · \($0) ms",

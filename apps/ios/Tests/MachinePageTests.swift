@@ -108,6 +108,49 @@ final class MachinePageTests: XCTestCase {
         endpoint.stop()
     }
 
+    @MainActor func testTheDoorOnTheLocalNetworkIsLearnedFromEveryAnswerAndForgottenOnceClosed() async {
+        let machine = FakeMachine()
+        let lan: JSONValue = .object(["port": .number(4220), "addresses": .array([.string("192.168.1.20")])])
+        machine.answers["endpoint.info"] = { _ in self.info(["lan": lan, "lanDoor": .bool(true)]) }
+        var learned: [LanDoorAddress?] = []
+        let endpoint = MachineEndpoint(
+            client: machine, machineID: "studio", defaults: defaults(), learnedLan: { learned.append($0) })
+        endpoint.start()
+        await settle()
+        XCTAssertEqual(learned, [LanDoorAddress(port: 4220, addresses: ["192.168.1.20"])])
+        machine.emit("endpoint.changed", .object(["id": .string("studio"), "label": .string("Studio")]))
+        XCTAssertEqual(
+            learned.last, LanDoorAddress(port: 4220, addresses: ["192.168.1.20"]),
+            "An event that leaves it out changes nothing")
+        machine.emit("endpoint.changed", .object(["lan": .null, "lanDoor": .bool(false)]))
+        XCTAssertEqual(learned.last, .some(nil))
+        XCTAssertEqual(endpoint.lanDoor, false)
+        endpoint.stop()
+    }
+
+    @MainActor func testTheDoorSwitchGoesThroughSetIdentityAndStandsBackWhenRefused() async throws {
+        let machine = FakeMachine()
+        machine.answers["endpoint.info"] = { _ in self.info(["lanDoor": .bool(true), "lanDoorFixed": .bool(false)]) }
+        machine.answers["endpoint.setIdentity"] = { payload in
+            self.info(["lanDoor": payload["lanDoor"] ?? .null, "lan": .null])
+        }
+        let endpoint = await started(machine)
+        XCTAssertEqual(endpoint.lanDoor, true)
+        XCTAssertFalse(endpoint.lanDoorFixed)
+        await endpoint.setLanDoor(false)
+        let sent = try XCTUnwrap(machine.sent.last { $0.0 == "endpoint.setIdentity" }?.1)
+        XCTAssertEqual(sent["lanDoor"], .bool(false))
+        XCTAssertEqual(sent["name"], .null)
+        XCTAssertEqual(endpoint.lanDoor, false)
+
+        machine.refusals["endpoint.setIdentity"] = "forbidden"
+        await endpoint.setLanDoor(true)
+        XCTAssertEqual(endpoint.lanDoor, false, "A refused write puts the switch back")
+        XCTAssertNotNil(endpoint.problem)
+        XCTAssertNil(MachineEndpoint(client: machine, machineID: "studio").lanDoor, "Nothing read, nothing to show")
+        endpoint.stop()
+    }
+
     @MainActor func testRenamingSendsTheNameAndIconTogetherAndAnEmptyNameAsNull() async throws {
         let machine = FakeMachine()
         machine.answers["endpoint.info"] = { _ in self.info() }
@@ -194,23 +237,31 @@ final class MachinePageTests: XCTestCase {
 
         XCTAssertEqual(
             MachineReach.line(
-                connected: true, connecting: false, relayed: true, latency: 38, problem: nil, lastSeen: nil),
-            "Connected via relay · 38 ms")
+                connected: true, connecting: false, route: .relayed, latency: 38, problem: nil, lastSeen: nil),
+            "Relayed · 38 ms")
         XCTAssertEqual(
             MachineReach.line(
-                connected: true, connecting: false, relayed: false, latency: nil, problem: nil, lastSeen: nil),
-            "Connected directly")
+                connected: true, connecting: false, route: .localNetwork, latency: nil, problem: nil, lastSeen: nil),
+            "Local network")
         XCTAssertEqual(
             MachineReach.line(
-                connected: false, connecting: true, relayed: nil, latency: nil, problem: nil, lastSeen: moment),
+                connected: true, connecting: false, route: .broker, latency: 12, problem: nil, lastSeen: nil),
+            "Via broker · 12 ms")
+        XCTAssertEqual(
+            MachineReach.line(
+                connected: true, connecting: false, route: nil, latency: nil, problem: nil, lastSeen: nil),
+            "Connected")
+        XCTAssertEqual(
+            MachineReach.line(
+                connected: false, connecting: true, route: nil, latency: nil, problem: nil, lastSeen: moment),
             "Connecting")
         XCTAssertEqual(
             MachineReach.line(
-                connected: false, connecting: false, relayed: nil, latency: nil, problem: "Refused", lastSeen: nil),
+                connected: false, connecting: false, route: nil, latency: nil, problem: "Refused", lastSeen: nil),
             "Refused")
         XCTAssertTrue(
             MachineReach.line(
-                connected: false, connecting: false, relayed: nil, latency: nil, problem: nil, lastSeen: moment
+                connected: false, connecting: false, route: nil, latency: nil, problem: nil, lastSeen: moment
             ).hasPrefix("Last connected"))
     }
 

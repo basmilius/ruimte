@@ -12,17 +12,6 @@ import Testing
         #expect(path.boundingBoxOfPath.minX == 10)
         #expect(path.boundingBoxOfPath.maxX >= 140)
     }
-    @Test func pairingLinksRequireHTTPSAndKeepTokenOutOfRequestURL() throws {
-        let link = try SecurePairingLink("https://machine.example/pair#one-time")
-        #expect(link.endpoint.absoluteString == "https://machine.example/auth/pair")
-        #expect(link.token == "one-time")
-        for invalid in [
-            "http://host/pair#t", "https://user:pass@host/pair#t", "https://host/pair", "https://host/other#t",
-            "https://host/pair?other=1#t",
-        ] {
-            #expect(throws: (any Error).self) { try SecurePairingLink(invalid) }
-        }
-    }
     @Test func malformedCommandsAreRejected() {
         for source in ["L1 2", "M0 0 R2 3", "M1", "M0 0 A5 5 0 2 0 10 10", "M0 0 Z 3 4", "M0 0 L1e400 5"] {
             #expect(throws: (any Error).self) { try SVGPathParser.parse(source) }

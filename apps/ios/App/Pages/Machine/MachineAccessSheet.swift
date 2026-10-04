@@ -46,17 +46,15 @@ struct MachineClientAccess: Identifiable, Equatable {
     var revokeMessage: String {
         if current {
             return String(
-                localized:
-                    "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access."
-            )
+                localized: "This is the client you are using. It loses access to this machine and forgets it here.")
         }
         if origin == "statement" {
             return String(
                 localized:
-                    "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link."
+                    "It loses access the next time it connects, and signing in through an account will not let it back in."
             )
         }
-        return String(localized: "It loses access the next time it connects. Pairing again needs a new link.")
+        return String(localized: "It loses access the next time it connects.")
     }
 }
 
@@ -93,8 +91,7 @@ final class MachineAccess {
     }
 }
 
-/// The desktop's Apps with access: every client paired with the machine, how it came in and when it was there. Only
-/// the app on the machine itself may make a pairing link, so this sheet says where to get one instead of showing it.
+/// The desktop's Apps with access: every client with access to the machine, how it came in and when it was there.
 struct MachineAccessSheet: View {
     let session: SharedMachineSession
     let runtime: AppRuntime
@@ -166,11 +163,9 @@ struct MachineAccessSection: View {
                 Button("Try again") { Task { await access.load() } }
             }
         } header: {
-            Text("Browsers and apps paired with this machine.")
+            Text("Browsers and apps with access to this machine.")
         } footer: {
-            Text(
-                "A pairing link comes from the machine itself: open Settings in Ruimte on \(name) and choose Show pairing link under Apps with access, or run ruimte pair there."
-            )
+            Text("An app gets in by signing in to the account \(name) is on.")
         }
         .task { await access.load() }
         .alert(

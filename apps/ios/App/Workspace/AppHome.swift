@@ -8,9 +8,7 @@ struct AppHome: View {
     @State private var window: UIWindow?
     @State private var settings = false
     @State private var releaseNotes: ReleaseNotes?
-    @State private var pairing = false
-    @State private var signIn = false
-    @State private var pairAfterDismiss = false
+    @State private var addingMachine = false
     @State private var now = NowModel()
     @State private var onboarding = Onboarding()
     @State private var router = PhoneRouter()
@@ -44,31 +42,22 @@ struct AppHome: View {
             } else if usesSidebar {
                 PadHome(
                     runtime: runtime, projects: projects, now: now, router: padRouter,
-                    showSettings: { settings = true }, pair: { pairing = true }, signIn: { signIn = true })
+                    showSettings: { settings = true }, addMachine: { addingMachine = true })
             } else if hasWorkspace {
                 PhoneHome(
                     runtime: runtime, projects: projects, now: now, router: router,
-                    showSettings: { settings = true }, pair: { pairing = true }, signIn: { signIn = true })
+                    showSettings: { settings = true }, addMachine: { addingMachine = true })
             } else {
                 NavigationStack {
-                    WelcomePage(runtime: runtime, window: window, pair: { pairing = true }, begin: onboarding.begin)
+                    WelcomePage(runtime: runtime, window: window, begin: onboarding.begin)
                 }
                 .containerBackground(MobileStyle.surface, for: .navigation)
             }
         }
         .environment(\.openMobileWorkspace, OpenMobileWorkspaceAction(id: sceneID, action: openWorkspace))
-        .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
+        .mobileSheet(isPresented: $addingMachine) { AddMachineSheet(runtime: runtime) }
         .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime, projects: projects) }
         .mobileSheet(item: $releaseNotes) { ReleaseNotesSheet(notes: $0) }
-        .mobileSheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
-            NavigationStack {
-                WelcomePage(runtime: runtime, window: window) {
-                    pairAfterDismiss = true
-                    signIn = false
-                }
-                .toolbar { Button("Done") { signIn = false } }
-            }
-        }
         .id(runtime.account?.id ?? "signed-out")
         .background(PresentationWindow { window = $0 }.frame(width: 0, height: 0))
         .task {
@@ -87,10 +76,9 @@ struct AppHome: View {
         .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
         .onOpenURL { runtime.notifications.openActivityURL($0) }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
-        .onChange(of: runtime.account?.id) { _, account in
+        .onChange(of: runtime.account?.id) { _, _ in
             router = PhoneRouter()
             padRouter = PadRouter()
-            if account != nil { signIn = false }
         }
         .onChange(of: runtime.notifications.enabled) { _, enabled in
             if enabled { onboarding.finish() }
@@ -99,8 +87,7 @@ struct AppHome: View {
             guard let destination else { return }
             settings = false
             releaseNotes = nil
-            pairing = false
-            signIn = false
+            addingMachine = false
             if isPad {
                 padRouter.open(destination)
             } else {
@@ -136,13 +123,6 @@ struct AppHome: View {
             return
         }
         padRouter.openProject(workspace, view: view)
-    }
-
-    private func presentPendingPairing() {
-        if pairAfterDismiss {
-            pairAfterDismiss = false
-            pairing = true
-        }
     }
 
 }

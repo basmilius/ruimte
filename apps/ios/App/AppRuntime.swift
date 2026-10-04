@@ -20,6 +20,7 @@ final class AppRuntime {
     let sockets = BrokerSockets()
     let connections: MachineConnections
     let pairings: StatementPairings
+    let lanDoors: LanDoors
     private let defaults: UserDefaults
     private(set) var vault: SessionVault?
     private var authentication: WebAuthentication?
@@ -35,7 +36,8 @@ final class AppRuntime {
 
     init(
         client: AddressBookClient = AddressBookClient(), vault: SessionVault? = nil, defaults: UserDefaults = .standard,
-        connections: MachineConnections? = nil, pairings: StatementPairings? = nil, deviceKey: DeviceKey? = nil
+        connections: MachineConnections? = nil, pairings: StatementPairings? = nil, lanDoors: LanDoors? = nil,
+        deviceKey: DeviceKey? = nil
     ) {
         self.client = client
         self.vault = vault
@@ -43,6 +45,7 @@ final class AppRuntime {
         self.defaults = defaults
         self.connections = connections ?? MachineConnections()
         self.pairings = pairings ?? StatementPairings(store: UserDefaultsPairingStore(defaults: defaults))
+        self.lanDoors = lanDoors ?? LanDoors(defaults: defaults)
     }
 
     var attentionKeys: Set<String> {
@@ -102,7 +105,8 @@ final class AppRuntime {
         do {
             let store = KeychainStore()
             if key == nil { key = try DeviceKey.loadOrCreate(in: store) }
-            machines = pairedMachines
+            // Machines added with a pairing link, which a machine no longer lets in.
+            defaults.removeObject(forKey: "ruimte.ios.pairedMachines")
             if vault == nil {
                 vault = SessionVault(
                     client: client, store: store,
@@ -208,7 +212,7 @@ final class AppRuntime {
             guard operation == sessionRevision else { return }
             guard let token else {
                 account = nil
-                applyMachines(pairedMachines)
+                applyMachines([])
                 scheduleNotificationSync()
                 if operation == sessionRevision { problem = nil }
                 return
@@ -232,17 +236,12 @@ final class AppRuntime {
 
     func applyMachineList(_ result: MachineListResult) {
         let removed = Set(result.removedMachineIds ?? [])
-        let accountMachines = result.machines.filter { !removed.contains($0.id) }
-        let accountByID = Dictionary(uniqueKeysWithValues: accountMachines.map { ($0.id, $0) })
-        let paired = pairedMachines.filter { !removed.contains($0.id) }.map { accountByID[$0.id] ?? $0 }
-        savePairedMachines(paired)
         for id in removed { invalidateMachine(id, forgetPairing: true) }
-        applyMachines(accountMachines + paired.filter { accountByID[$0.id] == nil })
+        applyMachines(result.machines.filter { !removed.contains($0.id) })
     }
 
     func forgetMachine(_ id: String) {
         invalidateMachine(id, forgetPairing: true)
-        savePairedMachines(pairedMachines.filter { $0.id != id })
         machines.removeAll { $0.id == id }
         publishWidgetMachines()
     }
@@ -290,26 +289,52 @@ final class AppRuntime {
         sessions.removeValue(forKey: id)?.invalidate()
         connections.forget(machineID: id)
         connections.forget(machineID: ConnectionProbe.connectionKey(id))
-        if forgetPairing { pairings.forget(machineID: id) }
+        if forgetPairing {
+            pairings.forget(machineID: id)
+            lanDoors.forget(machineID: id)
+        }
     }
 
-    private func savePairedMachines(_ machines: [Machine]) {
-        if let data = try? JSONEncoder().encode(machines) { defaults.set(data, forKey: "ruimte.ios.pairedMachines") }
+    /// The broker a machine announces, which a phone reaches only over `wss`.
+    static func broker(of machine: Machine) -> URL? {
+        machine.brokerUrl.flatMap(URL.init(string:)).flatMap { $0.scheme == "wss" ? $0 : nil }
     }
 
-    private var pairedMachines: [Machine] {
-        guard let data = defaults.data(forKey: "ruimte.ios.pairedMachines") else { return [] }
-        return (try? JSONDecoder().decode([Machine].self, from: data)) ?? []
+    /// Whether an attempt has any way to signal the machine: its broker, or the door on its local network.
+    func reachable(_ machine: Machine) -> Bool {
+        Self.broker(of: machine) != nil
+            || lanDoors.door(machineID: machine.id, machineKey: machine.publicKey, hasBroker: false) != nil
     }
 
-    func addPairedMachine(_ machine: Machine) {
-        var paired = pairedMachines.filter { $0.id != machine.id }
-        paired.append(machine)
-        savePairedMachines(paired)
-        invalidateMachine(machine.id, forgetPairing: false)
-        machines.removeAll { $0.id == machine.id }
-        machines.append(machine)
-        publishWidgetMachines()
+    /// One attempt at a machine, its doors on the local network raced against its broker.
+    func openLink(to machine: Machine, key: DeviceKey, relayOnly: Bool = false, events: LinkEvents) throws
+        -> any MachineLink
+    {
+        let broker = Self.broker(of: machine)
+        // A relay-only test needs TURN, which only the broker hands out.
+        let lan =
+            relayOnly
+            ? nil : lanDoors.door(machineID: machine.id, machineKey: machine.publicKey, hasBroker: broker != nil)
+        let identity = PairingIdentity(machineID: machine.id, machineKey: machine.publicKey, clientKey: key.publicKey)
+        return try pairings.open(
+            identity: identity,
+            requestAccess: { [weak self] in
+                guard let self, let token = try await vault?.accessToken() else {
+                    throw TransportFailure.invalid(String(localized: "Sign in to connect to this machine."))
+                }
+                let access = try await client.signalAccess(
+                    accessToken: token, machineID: machine.id, key: key, label: "Ruimte on \(UIDevice.current.model)")
+                return try JSONValue.decode(JSONEncoder().encode(access))
+            }, events: events,
+            makeLink: { [lanDoors, sockets] access, authenticatedEvents in
+                try NativeWebRTCLink(
+                    signaling: MachineSignaling(
+                        machineID: machine.id, machineKey: machine.publicKey, signer: key, lan: lan, brokerURL: broker,
+                        sockets: sockets),
+                    iceServers: [.object(["urls": .string("stun:turn.ruimte.app:3478")])], relayOnly: relayOnly,
+                    access: access, events: authenticatedEvents,
+                    lanFailed: { lanDoors.skip(machineID: machine.id) })
+            })
     }
 
     /// After a deletion the account's sessions and push devices are gone already; signing out forgets them here.
@@ -330,7 +355,6 @@ final class AppRuntime {
         account = nil
         machines = []
         publishWidgetMachines()
-        defaults.removeObject(forKey: "ruimte.ios.pairedMachines")
         problem = nil
         do {
             try await vault?.signOut()

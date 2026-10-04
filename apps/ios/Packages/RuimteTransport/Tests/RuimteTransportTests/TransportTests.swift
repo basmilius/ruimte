@@ -189,7 +189,7 @@ final class TransportTests: XCTestCase {
     }
 }
 
-@MainActor private final class FakeBrokerSocket: BrokerSocket {
+@MainActor final class FakeSignalSocket: SignalSocket {
     var received: ((String) -> Void)?
     var failed: ((Error) -> Void)?
     var writes: [JSONValue] = []
@@ -204,7 +204,7 @@ final class TransportTests: XCTestCase {
     func receive(_ frame: JSONValue) throws { received?(try wireText(frame)) }
 }
 
-@MainActor private final class FakeScheduler: TransportScheduling {
+@MainActor final class FakeScheduler: TransportScheduling {
     var pending: [UUID: @MainActor () -> Void] = [:]
     var delays: [Double] = []
     func after(milliseconds: Double, _ action: @escaping @MainActor () -> Void) -> () -> Void {
@@ -347,12 +347,12 @@ final class BrokerAndLifecycleTests: XCTestCase {
     }
 
     @MainActor func testParallelAttemptsShareSocketWaitForIceAndRefreshExpiry() throws {
-        var sockets: [FakeBrokerSocket] = []
+        var sockets: [FakeSignalSocket] = []
         var now = 0.0
         let pool = BrokerSockets(
             now: { now },
             createSocket: { _ in
-                let socket = FakeBrokerSocket()
+                let socket = FakeSignalSocket()
                 sockets.append(socket)
                 return socket
             })
@@ -387,7 +387,7 @@ final class BrokerAndLifecycleTests: XCTestCase {
     }
 
     @MainActor func testExpiredIceAnswerFailsBeforeGathering() throws {
-        let socket = FakeBrokerSocket()
+        let socket = FakeSignalSocket()
         let pool = BrokerSockets(now: { 100 }, createSocket: { _ in socket })
         var failures = 0
         let member = BrokerSockets.Member(
@@ -404,7 +404,7 @@ final class BrokerAndLifecycleTests: XCTestCase {
     }
 
     @MainActor func testCancelledAttemptCannotReceiveIceReadiness() throws {
-        let socket = FakeBrokerSocket()
+        let socket = FakeSignalSocket()
         let pool = BrokerSockets(createSocket: { _ in socket })
         let key = DeviceKey()
         var ready = 0

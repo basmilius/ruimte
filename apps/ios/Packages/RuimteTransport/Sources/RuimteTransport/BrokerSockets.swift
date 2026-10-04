@@ -1,7 +1,8 @@
 import Foundation
 import RuimtePulsar
 
-@MainActor public protocol BrokerSocket: AnyObject {
+/// One WebSocket that carries signaling: to a broker, or to a machine's door on the local network.
+@MainActor public protocol SignalSocket: AnyObject {
     var received: ((String) -> Void)? { get set }
     var failed: ((Error) -> Void)? { get set }
     func start()
@@ -9,7 +10,7 @@ import RuimtePulsar
     func close()
 }
 
-@MainActor public final class URLSessionBrokerSocket: BrokerSocket {
+@MainActor public final class URLSessionSignalSocket: SignalSocket {
     public var received: ((String) -> Void)?
     public var failed: ((Error) -> Void)?
     private let socket: URLSessionWebSocketTask
@@ -32,10 +33,10 @@ import RuimtePulsar
                     case .string(let text): received?(text)
                     case .data(let data):
                         guard let text = String(data: data, encoding: .utf8) else {
-                            throw TransportFailure.invalid(String(localized: "The broker sent invalid UTF-8.", bundle: .module))
+                            throw TransportFailure.invalid(String(localized: "The connection sent invalid UTF-8.", bundle: .module))
                         }
                         received?(text)
-                    @unknown default: throw TransportFailure.invalid("Unknown broker message")
+                    @unknown default: throw TransportFailure.invalid("Unknown WebSocket message")
                     }
                 }
             } catch {
@@ -99,21 +100,21 @@ import RuimtePulsar
     }
     private final class Shared {
         var peer: BrokerPeer
-        let socket: any BrokerSocket
+        let socket: any SignalSocket
         var members: [UUID: Member] = [:]
         var waiting = Set<UUID>()
         var ice: JSONValue?
         var iceID: String?
-        init(peer: BrokerPeer, socket: any BrokerSocket) {
+        init(peer: BrokerPeer, socket: any SignalSocket) {
             self.peer = peer
             self.socket = socket
         }
     }
     private var open: [String: Shared] = [:]
-    private let createSocket: @MainActor (URL) -> any BrokerSocket
+    private let createSocket: @MainActor (URL) -> any SignalSocket
     private let now: () -> Double
 
-    public init(now: @escaping () -> Double = { Date().timeIntervalSince1970 * 1_000 }, createSocket: @escaping @MainActor (URL) -> any BrokerSocket = { URLSessionBrokerSocket(url: $0) }) {
+    public init(now: @escaping () -> Double = { Date().timeIntervalSince1970 * 1_000 }, createSocket: @escaping @MainActor (URL) -> any SignalSocket = { URLSessionSignalSocket(url: $0) }) {
         self.now = now
         self.createSocket = createSocket
     }

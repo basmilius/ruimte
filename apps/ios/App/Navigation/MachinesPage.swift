@@ -2,11 +2,11 @@ import RuimtePulsar
 import SwiftUI
 
 /// Every machine as a card: how it is reached and how fast, the limits of its CLIs and an update when one is there. A
-/// machine opens its page; one that is away offers Retry. A pairing link is the row at the end, and on the iPhone's
-/// Machines tab the plus as well.
+/// machine opens its page; one that is away offers Retry. How to add a machine is the row at the end, and on the
+/// iPhone's Machines tab the plus as well.
 struct MachinesPage: View {
     let runtime: AppRuntime
-    let pair: () -> Void
+    let addMachine: () -> Void
     /// Opens a machine by its id, on whichever stack the page stands.
     let open: (String) -> Void
     /// The machine the iPad shows beside the list, whose card is marked.
@@ -22,8 +22,8 @@ struct MachinesPage: View {
                 }
             }
             Section {
-                Button(action: pair) {
-                    MachineLinkLabel(title: String(localized: "Use a pairing link"), icon: "link")
+                Button(action: addMachine) {
+                    MachineLinkLabel(title: String(localized: "Add a machine"), icon: "plus")
                 }
                 .foregroundStyle(MobileStyle.text)
             }
@@ -91,7 +91,7 @@ private struct MachineCard: View {
 
     private var reach: String {
         MachineReach.line(
-            connected: session.connected, connecting: !retries, relayed: session.relayed,
+            connected: session.connected, connecting: !retries, route: session.route,
             latency: session.endpoint.latency, problem: session.problem, lastSeen: session.lastSeen)
     }
 }
@@ -120,23 +120,16 @@ struct MachineRoutePage: View {
 /// project's.
 struct PadMachinesPage: View {
     let runtime: AppRuntime
-    let pair: () -> Void
-    let signIn: () -> Void
+    let addMachine: () -> Void
     @Binding var selectedID: String?
 
     var body: some View {
         HStack(spacing: 0) {
             NavigationStack {
-                MachinesPage(runtime: runtime, pair: pair, open: { selectedID = $0 }, selectedID: shownID)
+                MachinesPage(runtime: runtime, addMachine: addMachine, open: { selectedID = $0 }, selectedID: shownID)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
-                            Menu {
-                                Button(String(localized: "Use a pairing link"), lucideIcon: "link", action: pair)
-                                if runtime.account == nil {
-                                    Button(
-                                        String(localized: "Sign in"), lucideIcon: "circle-user-round", action: signIn)
-                                }
-                            } label: {
+                            Button(action: addMachine) {
                                 Image(lucide: "plus").accessibilityLabel("Add a machine")
                             }
                         }
@@ -150,7 +143,7 @@ struct PadMachinesPage: View {
                 } else {
                     ContentUnavailableView(
                         String(localized: "No machines yet"), lucideIcon: "monitor",
-                        description: Text("Pair a machine to see its projects, devices and processes."))
+                        description: Text("Add a machine to see its projects, devices and processes."))
                 }
             }
             .id(shownID)

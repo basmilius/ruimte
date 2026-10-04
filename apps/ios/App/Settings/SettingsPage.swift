@@ -88,7 +88,7 @@ struct MobileSettings: View {
 }
 
 /// The account on top of Settings: its picture or initial, its name and how it signed in, and how many machines this
-/// phone reaches. Without an account the phone only reaches machines it paired with a link.
+/// phone reaches.
 private struct AccountCard: View {
     let runtime: AppRuntime
 
@@ -107,9 +107,7 @@ private struct AccountCard: View {
 
     private var subtitle: String {
         let machines = runtime.machines.count
-        guard let account = runtime.account else {
-            return String(localized: "Paired with a link · \(machines) machines")
-        }
+        guard let account = runtime.account else { return String(localized: "Sign in to reach your machines.") }
         return String(
             localized: "Signed in with \(AccountSettingsPage.providerName(account.provider)) · \(machines) machines",
             comment: "%@ is the sign-in provider, GitHub or Apple")

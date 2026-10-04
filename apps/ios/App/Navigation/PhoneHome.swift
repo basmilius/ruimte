@@ -14,8 +14,7 @@ struct PhoneHome: View {
     let now: NowModel
     @Bindable var router: PhoneRouter
     let showSettings: () -> Void
-    let pair: () -> Void
-    let signIn: () -> Void
+    let addMachine: () -> Void
     @State private var newChat = false
     @State private var gitLines = ProjectGitLines()
 
@@ -30,7 +29,7 @@ struct PhoneHome: View {
                             guard let workspace = workspace(for: target) else { return }
                             router.openProject(workspace, view: target.viewID)
                         },
-                        pair: pair
+                        addMachine: addMachine
                     )
                 } label: {
                     Label(String(localized: "Now"), lucideIcon: "inbox")
@@ -49,7 +48,7 @@ struct PhoneHome: View {
                 }
 
                 Tab(value: PhoneTab.machines) {
-                    MachinesPage(runtime: runtime, pair: pair, open: router.showMachine)
+                    MachinesPage(runtime: runtime, addMachine: addMachine, open: router.showMachine)
                 } label: {
                     Label(String(localized: "Machines"), lucideIcon: "monitor")
                 }
@@ -57,7 +56,7 @@ struct PhoneHome: View {
                 Tab(value: PhoneTab.search, role: .search) {
                     SearchPage(
                         now: now, projects: projects, runtime: runtime, navigator: router, showSettings: showSettings,
-                        pair: pair)
+                        addMachine: addMachine)
                 } label: {
                     Label(String(localized: "Search"), lucideIcon: "search")
                 }
@@ -101,12 +100,7 @@ struct PhoneHome: View {
         }
         if router.tab == .machines {
             ToolbarItem(id: "machines.add", placement: .topBarTrailing) {
-                Menu {
-                    Button(String(localized: "Use a pairing link"), lucideIcon: "link", action: pair)
-                    if runtime.account == nil {
-                        Button(String(localized: "Sign in"), lucideIcon: "circle-user-round", action: signIn)
-                    }
-                } label: {
+                Button(action: addMachine) {
                     Image(lucide: "plus").accessibilityLabel("Add a machine")
                 }
             }

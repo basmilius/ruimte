@@ -3,15 +3,14 @@ import SwiftUI
 
 /// The iPad: a sidebar with Now, the machines and the open projects, which pushes a project's views when one opens,
 /// and beside it Now, the machines or the project's view. Files and Git stand in an inspector beside the content, the
-/// palette opens with ⌘K, and settings and pairing are form sheets.
+/// palette opens with ⌘K, and settings and adding a machine are form sheets.
 struct PadHome: View {
     let runtime: AppRuntime
     let projects: UnifiedProjects
     let now: NowModel
     let router: PadRouter
     let showSettings: () -> Void
-    let pair: () -> Void
-    let signIn: () -> Void
+    let addMachine: () -> Void
     @State private var gitLines = ProjectGitLines()
     @State private var palette = false
     @State private var sidebarVisibility = NavigationSplitViewVisibility.automatic
@@ -29,7 +28,7 @@ struct PadHome: View {
         } detail: {
             PadDetailColumn(
                 runtime: runtime, projects: projects, now: now, router: router,
-                openPalette: { palette = true }, open: open, pair: pair, signIn: signIn)
+                openPalette: { palette = true }, open: open, addMachine: addMachine)
         }
         .navigationSplitViewStyle(.balanced)
         .inspector(isPresented: inspectorShown) {
@@ -60,7 +59,7 @@ struct PadHome: View {
             NavigationStack {
                 SearchPage(
                     now: now, projects: projects, runtime: runtime, navigator: navigator,
-                    showSettings: { closePalette(then: showSettings) }, pair: { closePalette(then: pair) }
+                    showSettings: { closePalette(then: showSettings) }, addMachine: { closePalette(then: addMachine) }
                 )
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

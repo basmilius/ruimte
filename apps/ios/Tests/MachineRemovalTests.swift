@@ -11,7 +11,7 @@ final class MachineRemovalTests: XCTestCase {
         Machine(id: id, name: id, icon: nil, publicKey: key, brokerUrl: broker, lastSeenAt: nil)
     }
 
-    @MainActor func testAccountRemovalsForgetPairedMachinesButKeepManualOnlyMachines() throws {
+    @MainActor func testAccountRemovalsForgetTheMachineItsPairingAndItsDoor() throws {
         let domain = "app.ruimte.mobile.tests.machines.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: domain))
         defer { defaults.removePersistentDomain(forName: domain) }
@@ -19,20 +19,34 @@ final class MachineRemovalTests: XCTestCase {
         defer { pool.shutdown() }
         let runtime = AppRuntime(defaults: defaults, connections: pool)
         let removed = machine("removed")
-        let manual = machine("manual")
-        runtime.addPairedMachine(removed)
-        runtime.addPairedMachine(manual)
+        runtime.applyMachineList(MachineListResult(machines: [removed, machine("kept")]))
         let pairings = UserDefaultsPairingStore(defaults: defaults)
         let identity = PairingIdentity(machineID: removed.id, machineKey: removed.publicKey, clientKey: "client")
         pairings.insert(identity)
-        runtime.applyMachineList(MachineListResult(machines: [machine("account")], removedMachineIds: ["removed"]))
-        XCTAssertEqual(Set(runtime.machines.map(\.id)), Set(["account", "manual"]))
+        let door = LanDoorAddress(port: 4220, addresses: ["192.168.1.20"])
+        runtime.lanDoors.remember(door, machineID: removed.id, machineKey: removed.publicKey)
+        runtime.applyMachineList(MachineListResult(machines: [machine("kept")], removedMachineIds: ["removed"]))
+        XCTAssertEqual(runtime.machines.map(\.id), ["kept"])
         XCTAssertFalse(pairings.contains(identity))
-        let persisted = try JSONDecoder().decode(
-            [Machine].self, from: XCTUnwrap(defaults.data(forKey: "ruimte.ios.pairedMachines")))
-        XCTAssertEqual(persisted.map(\.id), ["manual"])
-        runtime.applyMachineList(MachineListResult(machines: []))
-        XCTAssertEqual(runtime.machines.map(\.id), ["manual"])
+        XCTAssertNil(runtime.lanDoors.door(machineID: removed.id, machineKey: removed.publicKey, hasBroker: false))
+    }
+
+    /// A machine without a broker is still reachable once this phone knows the door on its local network.
+    @MainActor func testAMachineIsReachableThroughItsBrokerOrItsDoor() throws {
+        let domain = "app.ruimte.mobile.tests.reach.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: domain))
+        defer { defaults.removePersistentDomain(forName: domain) }
+        let runtime = AppRuntime(defaults: defaults, connections: MachineConnections(monitorPaths: false))
+        let insecure = Machine(
+            id: "studio", name: "Studio", icon: nil, publicKey: String(repeating: "A", count: 43),
+            brokerUrl: "ws://broker.test", lastSeenAt: nil)
+        XCTAssertTrue(runtime.reachable(machine("secure")))
+        XCTAssertFalse(runtime.reachable(insecure))
+        let door = LanDoorAddress(port: 4220, addresses: ["192.168.1.20"])
+        runtime.lanDoors.remember(door, machineID: insecure.id, machineKey: insecure.publicKey)
+        XCTAssertTrue(runtime.reachable(insecure))
+        runtime.lanDoors.skip(machineID: insecure.id)
+        XCTAssertTrue(runtime.reachable(insecure), "Without a broker the door is the only way, skipped or not")
     }
 
     @MainActor func testKeyAndBrokerChangesReplaceSessionsAndStaleMachineArgumentsUseCurrentIdentity() throws {
@@ -43,7 +57,7 @@ final class MachineRemovalTests: XCTestCase {
         defer { pool.shutdown() }
         let runtime = AppRuntime(defaults: defaults, connections: pool)
         let old = machine("machine", key: String(repeating: "B", count: 43))
-        runtime.addPairedMachine(old)
+        runtime.applyMachineList(MachineListResult(machines: [old]))
         let original = runtime.session(for: old)
         let pairings = UserDefaultsPairingStore(defaults: defaults)
         let identity = PairingIdentity(machineID: old.id, machineKey: old.publicKey, clientKey: "client")

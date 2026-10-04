@@ -2,14 +2,13 @@ import Foundation
 import Observation
 import RuimtePulsar
 import RuimteTransport
-import UIKit
 
 @MainActor @Observable
 final class ConnectionProbe {
     var machine: Machine?
     var status = String(localized: "Not connected")
     var hello: ServerHelloResult?
-    var relayed: Bool?
+    var route: LinkRoute?
     var elapsedMilliseconds: Int?
     var history: [String] = []
     private var lease: MachineLease?
@@ -24,7 +23,7 @@ final class ConnectionProbe {
     func connect(_ machine: Machine, runtime: AppRuntime) {
         disconnect()
         self.machine = machine
-        guard let key = runtime.key, let broker = machine.brokerUrl, let brokerURL = URL(string: broker), brokerURL.scheme == "wss" else {
+        guard let key = runtime.key, runtime.reachable(machine) else {
             status = String(localized: "This machine needs a secure broker address.")
             return
         }
@@ -39,29 +38,15 @@ final class ConnectionProbe {
             timeout?.cancel()
             helloID = nil
             hello = nil
-            relayed = nil
+            route = nil
             status = error?.localizedDescription ?? String(localized: "Waiting to reconnect")
             record(status)
             startedAt = .now
-        }, route: { [weak self] relayed in
-            self?.relayed = relayed
+        }, route: { [weak self] route in
+            self?.route = route
         })
         lease = runtime.connections.hold(machineID: Self.connectionKey(machine.id), open: { events in
-            let identity = PairingIdentity(machineID: machine.id, machineKey: machine.publicKey, clientKey: key.publicKey)
-            return try runtime.pairings.open(identity: identity, requestAccess: {
-                guard let token = try await runtime.vault?.accessToken() else {
-                    throw AddressBookRequestError(
-                        code: "unauthorized", status: 0,
-                        message: String(localized: "Sign in to connect to this machine."))
-                }
-                let access = try await runtime.client.signalAccess(accessToken: token, machineID: machine.id, key: key, label: "Ruimte on \(UIDevice.current.model)")
-                return try JSONValue.decode(JSONEncoder().encode(access))
-            }, events: events, makeLink: { access, authenticatedEvents in
-                try NativeWebRTCLink(machineID: machine.id, machineKey: machine.publicKey, signer: key,
-                                     brokerURL: brokerURL, sockets: runtime.sockets,
-                                     iceServers: [.object(["urls": .string("stun:turn.ruimte.app:3478")])],
-                                     relayOnly: runtime.relayOnly, access: access, events: authenticatedEvents)
-            })
+            try runtime.openLink(to: machine, key: key, relayOnly: runtime.relayOnly, events: events)
         }, events: events)
     }
 
@@ -82,7 +67,7 @@ final class ConnectionProbe {
         helloID = nil
         machine = nil
         hello = nil
-        relayed = nil
+        route = nil
         elapsedMilliseconds = nil
         status = String(localized: "Not connected")
     }

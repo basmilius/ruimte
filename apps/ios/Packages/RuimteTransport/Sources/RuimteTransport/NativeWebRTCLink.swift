@@ -8,6 +8,7 @@ import RuimtePulsar
     private let machineID: String
     private let machineKey: String
     private let signer: any SessionSigner
+    private let lanFailed: () -> Void
     private let ownIce: [JSONValue]
     private let relayOnly: Bool
     private let access: (() async throws -> JSONValue)?
@@ -15,15 +16,15 @@ import RuimtePulsar
     private let connectionID: String
     private let startedAt = ProcessInfo.processInfo.systemUptime
     private let scheduler: any TransportScheduling
-    private var membership: BrokerMembership?
+    private var signaling: SignalingRace?
+    private var signalingRoute: SignalingRoute?
     private var peer: RTCPeerConnection?
     private var channel: RTCDataChannel?
-    private var relayIDs = Set<String>()
     private var assembler = FrameAssembler()
     private var binaryAssembler = BinaryFrameAssembler()
     private var liveness: ChannelLiveness?
     private var receivedBytes: Double?
-    private var relayed: Bool?
+    private var reportedRoute: LinkRoute?
     private var sampling = false
     private var authenticated = false
     private var proofSent = false
@@ -42,14 +43,16 @@ import RuimtePulsar
     private var answerTask: Task<Void, Never>?
     private var accessTask: Task<Void, Never>?
 
+    /// `lanFailed` runs when an attempt that signaled at the machine's door ends before its channel opened.
     public init(
-        machineID: String, machineKey: String, signer: any SessionSigner, brokerURL: URL, sockets: BrokerSockets,
-        iceServers: [JSONValue], relayOnly: Bool = false, access: (() async throws -> JSONValue)? = nil,
-        scheduler: any TransportScheduling = TaskTransportScheduler(), events: LinkEvents
+        signaling: MachineSignaling, iceServers: [JSONValue], relayOnly: Bool = false,
+        access: (() async throws -> JSONValue)? = nil, scheduler: any TransportScheduling = TaskTransportScheduler(),
+        events: LinkEvents, lanFailed: @escaping () -> Void = {}
     ) throws {
-        self.machineID = machineID
-        self.machineKey = machineKey
-        self.signer = signer
+        machineID = signaling.machineID
+        machineKey = signaling.machineKey
+        signer = signaling.signer
+        self.lanFailed = lanFailed
         self.ownIce = iceServers
         self.relayOnly = relayOnly
         self.access = access
@@ -60,19 +63,20 @@ import RuimtePulsar
         cancelTimeout = scheduler.after(milliseconds: 20_000) { [weak self] in
             self?.end(TransportFailure.invalid(String(localized: "The direct connection did not come up within 20 seconds.", bundle: .module)))
         }
+        let race: SignalingRace
         do {
-            membership = try sockets.join(url: brokerURL, signer: signer, member: .init(ready: { [weak self] servers in
-                self?.negotiate(servers)
-            }, relayed: { [weak self] frame in
-                self?.receiveSignal(frame)
-            }, refused: { [weak self] frame in
-                guard let self, let id = frame["id"]?.stringValue, self.relayIDs.contains(id) else { return }
-                self.end(TransportFailure.invalid(frame["message"]?.stringValue ?? String(localized: "The broker refused this connection attempt.", bundle: .module)))
-            }, lost: { [weak self] error in self?.end(error) }))
+            race = try signaling.race(
+                connectionID: connectionID, scheduler: scheduler,
+                events: .init(
+                    ready: { [weak self] route, servers in self?.negotiate(route: route, servers) },
+                    signal: { [weak self] envelope in self?.receiveSignal(envelope) },
+                    failed: { [weak self] error in self?.end(error) }))
         } catch {
             cancelTimeout?()
             throw error
         }
+        self.signaling = race
+        race.start()
     }
 
     public func send(_ text: String) throws {
@@ -91,15 +95,16 @@ import RuimtePulsar
         #endif
     }
 
-    private func negotiate(_ route: [JSONValue]) {
+    private func negotiate(route: SignalingRoute, _ servers: [JSONValue]) {
         guard !ended, !negotiationStarted else { return }
         negotiationStarted = true
-        trace("broker ready, \(route.count) ICE servers")
+        signalingRoute = route
+        trace("\(route == .localNetwork ? "door" : "broker") ready, \(servers.count) ICE servers")
         do {
             let configuration = RTCConfiguration()
             configuration.sdpSemantics = .unifiedPlan
             configuration.iceTransportPolicy = relayOnly ? .relay : .all
-            configuration.iceServers = try IceServers.merge(own: ownIce, route: route).map { server in
+            configuration.iceServers = try IceServers.merge(own: ownIce, route: servers).map { server in
                 let urls = server["urls"]!.arrayValue!.compactMap(\.stringValue)
                 return RTCIceServer(urlStrings: urls, username: server["username"]?.stringValue ?? "", credential: server["credential"]?.stringValue ?? "")
             }
@@ -173,22 +178,16 @@ import RuimtePulsar
                 if let access { signal["access"] = try await access() }
                 guard !ended, !Task.isCancelled else { return }
                 let envelope = try WireSchema.validate("SignalEnvelopeSchema", .object(["connectionId": .string(connectionID), "signal": .object(signal)]))
-                if let id = try membership?.relay(to: machineKey, envelope: envelope) { relayIDs.insert(id) }
+                try signaling?.send(envelope)
                 trace("offer sent")
             } catch { if !Task.isCancelled { end(error) } }
         }
     }
 
-    private func receiveSignal(_ raw: JSONValue) {
+    /// A signal the machine signed for this attempt, whichever way it came.
+    private func receiveSignal(_ envelope: JSONValue) {
         guard !ended else { return }
         do {
-            let frame = try WireSchema.validate("BrokerRelayedSchema", raw)
-            let envelope = try field(frame, "envelope")
-            guard frame["from"]?.stringValue == machineKey, envelope["connectionId"]?.stringValue == connectionID else { return }
-            let message = try DirectIdentity.signalMessage(from: machineKey, to: signer.publicKey, envelope: envelope)
-            guard DirectIdentity.verify(publicKey: machineKey, message: message, signature: try string(frame, "signature")) else {
-                throw TransportFailure.invalid(String(localized: "A broker signal names the machine but is not signed by it.", bundle: .module))
-            }
             let signal = try field(envelope, "signal")
             switch try string(signal, "kind") {
             case "answer":
@@ -229,7 +228,7 @@ import RuimtePulsar
             let envelope = try WireSchema.validate("SignalEnvelopeSchema", .object([
                 "connectionId": .string(connectionID), "signal": signal,
             ]))
-            if let id = try membership?.relay(to: machineKey, envelope: envelope) { relayIDs.insert(id) }
+            try signaling?.send(envelope)
         } catch { end(error) }
     }
 
@@ -304,11 +303,18 @@ import RuimtePulsar
         trace("authenticated")
         cancelTimeout?()
         cancelTimeout = nil
-        membership?.leave()
-        membership = nil
+        signaling?.close()
+        signaling = nil
         liveness = ChannelLiveness(now: now)
         scheduleTick()
         events.opened()
+        report(signalingRoute == .localNetwork ? .localNetwork : .broker)
+    }
+
+    private func report(_ route: LinkRoute) {
+        guard reportedRoute != route else { return }
+        reportedRoute = route
+        events.route(route)
     }
 
     private var now: Double { ProcessInfo.processInfo.systemUptime * 1_000 }
@@ -347,18 +353,17 @@ import RuimtePulsar
                         }
                         let localType = local?.values["candidateType"] as? String
                         let remoteType = remote?.values["candidateType"] as? String
-                        let relayed: Bool? =
-                            localType == "relay" || remoteType == "relay"
-                            ? true : (localType != nil && remoteType != nil ? false : nil)
-                        if self.relayed != relayed {
-                            self.relayed = relayed
+                        let relayed = localType == "relay" || remoteType == "relay"
+                        let route: LinkRoute =
+                            relayed ? .relayed : self.signalingRoute == .localNetwork ? .localNetwork : .broker
+                        if self.reportedRoute != route {
                             let rtt = (selected.values["currentRoundTripTime"] as? NSNumber).map {
                                 Int($0.doubleValue * 1_000)
                             }
                             self.trace(
                                 "route \(localType ?? "unknown")/\(remoteType ?? "unknown"), RTT \(rtt.map(String.init) ?? "unknown")ms"
                             )
-                            self.events.route(relayed)
+                            self.report(route)
                         }
                     }
                     self.checkLiveness()
@@ -406,8 +411,9 @@ import RuimtePulsar
         answerTask = nil
         accessTask?.cancel()
         accessTask = nil
-        membership?.leave()
-        membership = nil
+        signaling?.close()
+        signaling = nil
+        if error != nil, !authenticated, signalingRoute == .localNetwork { lanFailed() }
         let closingPeer = peer
         let closingChannel = channel
         peer = nil
