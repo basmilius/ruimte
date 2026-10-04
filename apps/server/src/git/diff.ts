@@ -1,15 +1,17 @@
-import { copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, lstat, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { readCommit } from './log.ts';
-import { git, runGit, toplevel, GitError } from './run.ts';
+import { git, runGit, runGitBytes, toplevel, GitError } from './run.ts';
 
 // Beyond these a diff stops being something a person reads, and the chat file stops being small.
 const MAX_FILES = 100;
 const MAX_FILE_LINES = 2000;
 const MAX_FILE_BYTES = 128 * 1024;
 const MAX_TOTAL_BYTES = 512 * 1024;
+// Beyond this a side of one file is not handed over whole, and its diff shows only its hunks.
+const MAX_SIDE_BYTES = 512 * 1024;
 
 const PATCH_ARGS = ['--no-color', '--no-ext-diff'];
 
@@ -147,6 +149,136 @@ const diffArgs = async (top: string, path: string, options: DiffOptions, mergeBa
 /* The same call with `--numstat` in it, which is where the counts and the binary flag come from. */
 const asNumstat = (args: string[]): string[] => ['diff', '--numstat', '-z', ...args.slice(1)];
 
+/* Where one side of a file's diff is read from: a blob git names, or a file in the working tree. */
+type Side = { blob: string } | { file: string };
+
+/*
+ * The two sides a scope compares, for the scopes the panel reads one file in. An untracked file
+ * compares against nothing, which its patch says, so the index side it names is never read.
+ */
+const sidesOf = (path: string, options: DiffOptions, mergeBase: string | null): readonly [Side, Side] | null => {
+    if (options.scope === 'base') {
+        return [{ blob: `${mergeBase ?? 'HEAD'}:${path}` }, { file: path }];
+    }
+    if (options.scope !== 'worktree') {
+        return null;
+    }
+    return options.staged ? [{ blob: `HEAD:${path}` }, { blob: `:0:${path}` }] : [{ blob: `:0:${path}` }, { file: path }];
+};
+
+/* Which side a patch says the file is missing on, read from its header so no line of the file can pass for it. */
+export const missingSides = (patch: string): { old: boolean; new: boolean } => {
+    const start = patch.search(/^@@/m);
+    const header = start === -1 ? patch : patch.slice(0, start);
+    return { old: /^--- \/dev\/null$/m.test(header), new: /^\+\+\+ \/dev\/null$/m.test(header) };
+};
+
+const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+/*
+ * Whether every line a patch shows sits at its place in the two texts. A reader lays the hunks over
+ * the texts by line number, so a file written between the diff and the read would land lines in the
+ * wrong place. Under `--ignore-all-space` git shows one side's spacing on a shared line, so lines
+ * are then compared without their whitespace.
+ */
+export const patchFits = (patch: string, oldText: string, newText: string, ignoreWhitespace: boolean): boolean => {
+    const oldLines = oldText.split('\n');
+    const newLines = newText.split('\n');
+    const same = ignoreWhitespace
+        ? (shown: string, actual: string | undefined): boolean => actual !== undefined && shown.replace(/\s+/g, '') === actual.replace(/\s+/g, '')
+        : (shown: string, actual: string | undefined): boolean => shown === actual;
+    let oldAt = -1;
+    let newAt = -1;
+    let hunks = 0;
+    for (const line of patch.split('\n')) {
+        const header = HUNK_HEADER.exec(line);
+        if (header) {
+            hunks += 1;
+            oldAt = Number(header[1]) - (header[2] === '0' ? 0 : 1);
+            newAt = Number(header[3]) - (header[4] === '0' ? 0 : 1);
+            continue;
+        }
+        if (oldAt === -1) {
+            continue;
+        }
+        const body = line.slice(1);
+        if (line.startsWith(' ')) {
+            if (!same(body, oldLines[oldAt]) || !same(body, newLines[newAt])) {
+                return false;
+            }
+            oldAt += 1;
+            newAt += 1;
+        } else if (line.startsWith('-')) {
+            if (!same(body, oldLines[oldAt])) {
+                return false;
+            }
+            oldAt += 1;
+        } else if (line.startsWith('+')) {
+            if (!same(body, newLines[newAt])) {
+                return false;
+            }
+            newAt += 1;
+        }
+    }
+    return hunks > 0;
+};
+
+const hasNul = (bytes: Uint8Array): boolean => bytes.includes(0);
+
+// A patch shows a byte order mark as part of the first line, so a text keeps it too.
+const KEEP_BOM = new TextDecoder('utf-8', { ignoreBOM: true });
+
+/* A blob's text, or null when it is missing, too large or not text. */
+const readBlob = async (top: string, name: string): Promise<string | null> => {
+    const size = await runGit(['cat-file', '-s', name], top);
+    if (size.code !== 0 || Number(size.stdout.trim()) > MAX_SIDE_BYTES) {
+        return null;
+    }
+    const blob = await runGitBytes(['cat-file', 'blob', name], top);
+    return blob.code !== 0 || hasNul(blob.stdout) ? null : KEEP_BOM.decode(blob.stdout);
+};
+
+/*
+ * A file of the working tree, or null. A path that leaves the repository, also through a symlinked
+ * folder, is never read; a symlink itself is its target's name to git, not a text.
+ */
+const readWorktree = async (top: string, path: string): Promise<string | null> => {
+    try {
+        const root = await realpath(top);
+        const file = join(root, path);
+        const inside = relative(root, await realpath(file));
+        if (inside === '' || inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
+            return null;
+        }
+        const stat = await lstat(file);
+        if (!stat.isFile() || stat.size > MAX_SIDE_BYTES) {
+            return null;
+        }
+        const bytes = await readFile(file);
+        return hasNul(bytes) ? null : KEEP_BOM.decode(bytes);
+    } catch {
+        return null;
+    }
+};
+
+const readSide = (top: string, side: Side): Promise<string | null> => ('blob' in side ? readBlob(top, side.blob) : readWorktree(top, side.file));
+
+/* Both whole texts of a one-file diff, or null when either cannot be handed over as the patch reads it. */
+const readSides = async (
+    top: string,
+    patch: string,
+    [oldSide, newSide]: readonly [Side, Side],
+    ignoreWhitespace: boolean
+): Promise<{ oldText: string; newText: string } | null> => {
+    const missing = missingSides(patch);
+    const oldText = missing.old ? '' : await readSide(top, oldSide);
+    const newText = missing.new ? '' : await readSide(top, newSide);
+    if (oldText === null || newText === null || !patchFits(patch, oldText, newText, ignoreWhitespace)) {
+        return null;
+    }
+    return { oldText, newText };
+};
+
 /*
  * One file's diff for the git panel. `--no-index` answers 1 when the two sides differ, which is the
  * normal outcome and not a failure, so only a code above that means the diff could not be read.
@@ -177,6 +309,12 @@ export const diffFile = async (cwd: string, path: string, options: DiffOptions, 
         return result;
     }
     result.diff = patch.stdout;
+    const sides = patch.stdout === '' ? null : sidesOf(path, options, mergeBase);
+    const texts = sides === null ? null : await readSides(top, patch.stdout, sides, options.ignoreWhitespace);
+    if (texts !== null) {
+        result.oldText = texts.oldText;
+        result.newText = texts.newText;
+    }
     return result;
 };
 

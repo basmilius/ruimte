@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
 import type { ActionInput } from '@ruimte/actions';
+import type { DiffContents } from '@ruimte/agents-react/chat/ui/full-diff';
 import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -22,6 +23,10 @@ const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/Unified
 const MINUTE_MS = 60_000;
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
+
+/* The whole texts beside the patch, which a daemon sends only when it can hand over both sides. */
+const contentsOf = (diff: GitDiffResult): DiffContents | undefined =>
+    diff.oldText === undefined || diff.newText === undefined ? undefined : { old: diff.oldText, new: diff.newText };
 
 const omittedLabel = (omitted: GitDiffResult['omitted']): string =>
     omitted === 'binary' ? i18next.t('panels:diff.omitted.binary') : i18next.t('panels:diff.omitted.tooLarge');
@@ -162,6 +167,7 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
                     overflow={wrap ? 'wrap' : 'scroll'}
                     diffStyle={layout === 'split' ? 'split' : 'unified'}
                     fill
+                    contents={contentsOf(state.diff)}
                 />
             </Suspense>
         </div>

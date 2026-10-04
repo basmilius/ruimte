@@ -35606,6 +35606,12 @@
           "at",
           "refs"
         ]
+      },
+      "oldText": {
+        "type": "string"
+      },
+      "newText": {
+        "type": "string"
       }
     },
     "required": [

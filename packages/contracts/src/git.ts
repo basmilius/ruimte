@@ -206,7 +206,12 @@ export const GitDiffResultSchema = GitDiffFileSchema.extend({
     // Set when more files changed than `files` carries.
     truncated: z.boolean().optional(),
     // What the commit scope was read from, so the tab can name it without asking again.
-    commit: GitCommitSchema.optional()
+    commit: GitCommitSchema.optional(),
+    // One file in the worktree or base scope: its whole text on either side of `diff`, so a reader
+    // can unfold the lines between hunks. Empty for a side the file does not exist on; both are left
+    // out when a side is not text, is too large or no longer matches the patch.
+    oldText: z.string().optional(),
+    newText: z.string().optional()
 });
 export type GitDiffResult = z.infer<typeof GitDiffResultSchema>;
 

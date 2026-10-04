@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import clsx from 'clsx';
-import { PatchDiff } from '@pierre/diffs/react';
+import { FileDiff, PatchDiff } from '@pierre/diffs/react';
 import type { ChatFileChange } from '@ruimte/agent-contracts';
 import { chatHost } from '../../host';
 import { useDiffTheme } from './diff-theme';
+import { fullFileDiff, type DiffContents } from './full-diff';
 
 /*
  * A patch the CLI reported itself (Codex writes unified diffs). The renderer needs a file header
@@ -49,12 +50,21 @@ interface UnifiedDiffProps {
     diffStyle?: 'unified' | 'split';
     /* Grow to the height of a flex column around it. */
     fill?: boolean;
+    /* Both whole texts the patch was made between, with which a person can unfold the lines between hunks. */
+    contents?: DiffContents;
 }
 
-export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'unified', fill = false }: UnifiedDiffProps) {
+export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'unified', fill = false, contents }: UnifiedDiffProps) {
     const resolved = chatHost().code.useMode();
     const theme = useDiffTheme();
     const patch = useMemo(() => asPatch(change), [change]);
+    const oldText = contents?.old;
+    const newText = contents?.new;
+    const full = useMemo(
+        () => (patch === null || oldText === undefined || newText === undefined ? null : fullFileDiff(patch, change.path, { old: oldText, new: newText })),
+        [patch, change.path, oldText, newText]
+    );
+    const unfolds = full !== null;
     const options = useMemo(
         () => ({
             theme,
@@ -62,10 +72,10 @@ export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'un
             disableFileHeader: true,
             diffStyle,
             overflow,
-            hunkSeparators: 'simple' as const,
+            hunkSeparators: unfolds ? ('line-info' as const) : ('simple' as const),
             unsafeCSS: fill ? FILL_CSS : undefined
         }),
-        [diffStyle, overflow, theme, resolved, fill]
+        [diffStyle, overflow, theme, resolved, fill, unfolds]
     );
     if (patch === null) {
         return (
@@ -83,7 +93,7 @@ export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'un
     }
     return (
         <div className={clsx('chat-diff select-text', fill && 'flex grow flex-col')}>
-            <PatchDiff patch={patch} options={options} />
+            {full === null ? <PatchDiff patch={patch} options={options} /> : <FileDiff fileDiff={full} options={options} />}
         </div>
     );
 }

@@ -96,6 +96,7 @@
     "./chat/ui/diff-theme": "./src/chat/ui/diff-theme.ts",
     "./chat/ui/file-links": "./src/chat/ui/file-links.ts",
     "./chat/ui/find-reveal": "./src/chat/ui/find-reveal.ts",
+    "./chat/ui/full-diff": "./src/chat/ui/full-diff.ts",
     "./chat/ui/icons": "./src/chat/ui/icons.tsx",
     "./chat/ui/markdown-blocks": "./src/chat/ui/markdown-blocks.ts",
     "./chat/ui/quote-selection": "./src/chat/ui/quote-selection.ts",
