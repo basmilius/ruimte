@@ -12,7 +12,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import type { EditorPosition } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
-import { hoverSectionsOf, type DocTag, type HoverSection } from './hover-content';
+import { hoverSectionsOf, markdownParts, type DocTag, type HoverSection } from './hover-content';
 import type { HoverInfo } from './popups';
 import { declaredNameOf, linkTypeNames } from './symbol-links';
 
@@ -131,10 +131,16 @@ function SymbolSection({ section, onName }: { section: HoverSection; onName: (na
             {section.signatures.map((block, index) => (
                 <Signature key={index} code={block.code} language={block.language} onName={follow} />
             ))}
-            {section.markdown !== '' && (
-                <div className="text-text-muted select-text [&_.chat-markdown]:text-xs [&_p]:my-1">
-                    <Markdown text={section.markdown} fileLinks={false} />
-                </div>
+            {markdownParts(section.markdown).map((part, index) =>
+                part.kind === 'code' ? (
+                    <div key={index} className="rounded-md bg-surface-sunken px-2 py-1.5">
+                        <Signature code={part.block.code} language={part.block.language} onName={follow} />
+                    </div>
+                ) : (
+                    <div key={index} className="text-text-muted select-text [&_.chat-markdown]:text-xs [&_p]:my-1">
+                        <Markdown text={part.text} fileLinks={false} />
+                    </div>
+                )
             )}
             {section.tags.length > 0 && <DocTags tags={section.tags} />}
         </div>

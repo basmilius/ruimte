@@ -139,6 +139,61 @@ function withoutOpenTag(block: SignatureBlock): SignatureBlock {
     return { language: block.language, code: block.code.replace(/^<\?php\s*\n/, '') };
 }
 
+const HTML_CODE = /<(code|pre)>([\s\S]*?)<\/\1>/g;
+const INLINE_TAG = /\{@(see|link|linkplain)\s+([^}\s]+)(?:\s+([^}]+?))?\s*\}/g;
+
+function decodeEntities(text: string): string {
+    return text
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/&amp;/g, '&');
+}
+
+function dedent(text: string): string {
+    const lines = text.replace(/^\n+|\s+$/g, '').split('\n');
+    const indents = lines.filter((line) => line.trim() !== '').map((line) => line.length - line.trimStart().length);
+    const common = indents.length === 0 ? 0 : Math.min(...indents);
+    return lines.map((line) => line.slice(common)).join('\n');
+}
+
+/*
+ * What a docblock writes for a reader of its source, written for one of a hover: a `<code>` or `<pre>`
+ * example as a block in the symbol's language, and an inline `{@see Name}` or `{@link Name label}` as
+ * the name in code. Servers pass both on as they are, and markdown would show the tags as text.
+ */
+export function docblockMarkdown(markdown: string, language: string): string {
+    return markdown
+        .replace(HTML_CODE, (_match, _tag: string, body: string) => {
+            const code = decodeEntities(body);
+            return code.includes('\n') ? `\n\n\`\`\`${language}\n${dedent(code)}\n\`\`\`\n\n` : `\`${code.trim()}\``;
+        })
+        .replace(INLINE_TAG, (_match, _tag: string, target: string, label: string | undefined) => (label === undefined ? `\`${target}\`` : label))
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+/* Markdown cut at its fenced blocks, so a card can draw the blocks as compactly as its signatures. */
+export type MarkdownPart = { readonly kind: 'prose'; readonly text: string } | { readonly kind: 'code'; readonly block: SignatureBlock };
+
+export function markdownParts(markdown: string): MarkdownPart[] {
+    const parts: MarkdownPart[] = [];
+    let rest = markdown;
+    for (let match = ANY_FENCE.exec(rest); match !== null; match = ANY_FENCE.exec(rest)) {
+        const prose = rest.slice(0, match.index).trim();
+        if (prose !== '') {
+            parts.push({ kind: 'prose', text: prose });
+        }
+        parts.push({ kind: 'code', block: { language: match[1] || 'text', code: match[2]! } });
+        rest = rest.slice(match.index + match[0].length);
+    }
+    if (rest.trim() !== '') {
+        parts.push({ kind: 'prose', text: rest.trim() });
+    }
+    return parts;
+}
+
 /* The title is drawn as text, so the escapes that kept it from reading as markdown come off: `A\\B::\_\_construct` is `A\B::__construct`. */
 function unescapeMarkdown(text: string): string {
     return text.replace(/\\([\\`*_{}[\]()#+\-.!|<>~])/g, '$1');
@@ -157,7 +212,7 @@ function sectionOf(chunk: string, leading: readonly SignatureBlock[]): HoverSect
         signatures.push({ language: fence[1] || 'text', code: fence[2]! });
         rest = (rest.slice(0, fence.index) + rest.slice(fence.index + fence[0].length)).trim();
     }
-    const doc = splitDocTags(rest);
+    const doc = splitDocTags(docblockMarkdown(rest, signatures[0]?.language ?? 'text'));
     return {
         title: title === null ? null : unescapeMarkdown((title[1] ?? title[2])!.trim()),
         signatures: signatures.map(withoutOpenTag),

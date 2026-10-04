@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hoverSectionsOf, hoverTextOf, isEmptyHover, locationsOf, splitDocTags, splitSignatures } from './hover-content';
+import { docblockMarkdown, hoverSectionsOf, hoverTextOf, markdownParts, isEmptyHover, locationsOf, splitDocTags, splitSignatures } from './hover-content';
 
 describe('splitSignatures', () => {
     test('takes the leading code as the signature and the prose after the rule as the documentation', () => {
@@ -98,5 +98,26 @@ describe('hoverSectionsOf', () => {
                 tags: [{ name: 'returns', markdown: 'a fraction' }]
             }
         ]);
+    });
+});
+
+describe('docblockMarkdown', () => {
+    test("turns an example in <code> into a block in the symbol's language and inline tags into code", () => {
+        const raw =
+            "Used within {@see Foo::bar()} and {@see\nBaz::qux()}, or {@link Model the model}.\n\n<code>\nclass Post extends Model {\n    #[Alias('user_id')]\n}\n</code>\n\nThen <code>a &lt; b</code>.";
+        expect(docblockMarkdown(raw, 'php')).toBe(
+            "Used within `Foo::bar()` and `Baz::qux()`, or the model.\n\n```php\nclass Post extends Model {\n    #[Alias('user_id')]\n}\n```\n\nThen `a < b`."
+        );
+    });
+
+    test('reaches a hover section from the PHP server', () => {
+        const value =
+            '__Alias__\n\nClass Alias\n\n```php\n<?php\nfinal class Alias { }\n```\n\nDefines an alias.\n\n<code>\nclass Post {\n}\n</code>\n\n_@since_ 1.0.17';
+        const [section] = hoverSectionsOf(hoverTextOf({ contents: { kind: 'markdown', value } }));
+        expect(markdownParts(section!.markdown)).toEqual([
+            { kind: 'prose', text: 'Class Alias\n\nDefines an alias.' },
+            { kind: 'code', block: { language: 'php', code: 'class Post {\n}' } }
+        ]);
+        expect(section!.tags).toEqual([{ name: 'since', markdown: '1.0.17' }]);
     });
 });
