@@ -11,24 +11,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { FileTreeRowDecoration, FileTreeRowDecorationContext } from '@pierre/trees';
 import { FileTree, useFileTree } from '@pierre/trees/react';
-import {
-    AtSign,
-    ChevronsDownUp,
-    ChevronsUpDown,
-    Copy,
-    CornerUpRight,
-    EyeOff,
-    FileDiff,
-    FileText,
-    FileX,
-    Folder,
-    GitBranch,
-    Minus,
-    Plus,
-    Trash2
-} from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, CornerUpRight, EyeOff, FileDiff, FileText, FileX, Folder, GitBranch, Minus, Plus, Trash2 } from 'lucide-react';
 import type { GitFile } from '@ruimte/contracts';
-import { mentionOf, revealableInFiles } from '@/shell/panels/files-tree';
+import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+import { revealableInFiles } from '@/shell/panels/files-tree';
 import {
     buildGitTree,
     byCheckout,
@@ -76,7 +62,7 @@ import type { GitCheckout } from '@/state/git-repos';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { copyText, FILE_TREE_ICONS, Icon, PanelEmpty, ContextMenu } from '@basmilius/desktop-ui';
+import { FILE_TREE_ICONS, Icon, PanelEmpty, ContextMenu } from '@basmilius/desktop-ui';
 
 /* The marks of a checkbox, drawn in the color of its part. */
 const svgMask = (path: string): string =>
@@ -479,14 +465,11 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
             );
         }
     };
-    const copyItems = (line: (item: GitItem) => string | null, separator: string): void => {
-        copyText(
-            menuItems
-                .map(line)
-                .filter((text): text is string => text !== null)
-                .join(separator)
-        );
-    };
+    const copyTargets = menuItems.map((item) => ({
+        absolute: `${item.cwd}/${item.entry.path}`.replace(/\/+$/, ''),
+        relative: item.entry.path,
+        gone: isGone(item.entry)
+    }));
     const singleKey = single !== undefined && single.kind !== 'file' ? single.key : null;
     /* A conflict is staged file by file, after it has been looked at, and only as resolved; a whole
        folder or a selection of them at once is not a thing to offer behind one click. */
@@ -542,15 +525,7 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
                             </ContextMenu.Item>
                         )}
                         <ContextMenu.Separator />
-                        <ContextMenu.Item onClick={() => copyItems((item) => `${item.cwd}/${item.entry.path}`, '\n')}>
-                            <Icon icon={Copy} size={14} /> {t('files.copyPaths')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Item onClick={() => copyItems((item) => item.entry.path, '\n')}>
-                            <Icon icon={Copy} size={14} /> {t('files.copyRelativePaths')}
-                        </ContextMenu.Item>
-                        <ContextMenu.Item onClick={() => copyItems((item) => mentionOf(folder, `${item.cwd}/${item.entry.path}`), ' ')}>
-                            <Icon icon={AtSign} size={14} /> {t('files.copyMentions')}
-                        </ContextMenu.Item>
+                        <FileCopyRow targets={copyTargets} />
                     </>
                 )}
                 {single?.kind === 'file' && (
@@ -620,7 +595,7 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
     );
 }
 
-/* The two reveals and the two paths, which every row of the list offers for whatever it points at. */
+/* The two reveals and the copy row, which every row of the list offers for whatever it points at. */
 function RowPathItems({
     absolute,
     relative,
@@ -636,8 +611,6 @@ function RowPathItems({
 }) {
     const { t } = useTranslation('panels');
     const transport = useTransport();
-    // A file that is gone is nothing to point a chat at.
-    const mention = gone ? null : mentionOf(folder, absolute);
     return (
         <>
             <ContextMenu.Item disabled={gone || !revealableInFiles(folder, absolute)} onClick={() => useFiles.getState().revealInFiles(absolute)}>
@@ -652,17 +625,7 @@ function RowPathItems({
                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
             </ContextMenu.Item>
             <ContextMenu.Separator />
-            <ContextMenu.Item onClick={() => copyText(absolute)}>
-                <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
-            </ContextMenu.Item>
-            <ContextMenu.Item onClick={() => copyText(relative)}>
-                <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
-            </ContextMenu.Item>
-            {mention !== null && (
-                <ContextMenu.Item onClick={() => copyText(mention)}>
-                    <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
-                </ContextMenu.Item>
-            )}
+            <FileCopyRow targets={[{ absolute, relative, gone }]} />
         </>
     );
 }

@@ -13,11 +13,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import {
-    AtSign,
     ChevronsDownUp,
     ChevronsUpDown,
     Columns2,
-    Copy,
     CornerUpRight,
     FileDiff,
     FileSearch,
@@ -34,6 +32,8 @@ import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 import { createViewAction } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+import type { CopyTarget } from '@/shell/panels/file-copy';
 import {
     LOADING_NAME,
     absoluteOf,
@@ -43,7 +43,6 @@ import {
     compareRows,
     gitStatusEntries,
     isDirectoryPath,
-    mentionOf,
     mergeExpanded,
     newlyExpanded,
     relativeTo,
@@ -75,7 +74,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { copyText, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@basmilius/desktop-ui';
+import { EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -458,23 +457,15 @@ export function FilesPanel() {
         }
     };
 
-    /* Every menu item acts on the row that was right-clicked, absolute path and tree path both. */
-    /* Directories too, the way a row dragged into the composer mentions one. */
-    const menuMention = folder && menuPath ? mentionOf(folder, absoluteOf(folder, menuPath)) : null;
-
     const manyTargets = menuTargets.length > 1;
 
-    /* What every selected row stands for, as the lines a person pastes: one row per line. */
-    const copyTargets = (line: (absolute: string, treePath: string) => string | null): void => {
-        if (folder) {
-            copyText(
-                menuTargets
-                    .map((treePath) => line(absoluteOf(folder, treePath).replace(/\/+$/, ''), treePath))
-                    .filter((text): text is string => text !== null)
-                    .join('\n')
-            );
-        }
-    };
+    const copyTargets: CopyTarget[] =
+        folder === null
+            ? []
+            : menuTargets.map((treePath) => ({
+                  absolute: absoluteOf(folder, treePath).replace(/\/+$/, ''),
+                  relative: isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath
+              }));
 
     const onMenuPath = (act: (absolute: string, treePath: string) => void) => (): void => {
         if (folder && menuPath) {
@@ -633,20 +624,7 @@ export function FilesPanel() {
                                     <Icon icon={Trash2} size={14} /> {t('files.deleteMany', { count: menuTargets.length })}
                                 </ContextMenu.Item>
                                 <ContextMenu.Separator />
-                                <ContextMenu.Item onClick={() => copyTargets((absolute) => basenameOf(absolute))}>
-                                    <Icon icon={Copy} size={14} /> {t('files.copyNames')}
-                                </ContextMenu.Item>
-                                <ContextMenu.Item onClick={() => copyTargets((absolute) => absolute)}>
-                                    <Icon icon={Copy} size={14} /> {t('files.copyPaths')}
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    onClick={() => copyTargets((_absolute, treePath) => (isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
-                                >
-                                    <Icon icon={Copy} size={14} /> {t('files.copyRelativePaths')}
-                                </ContextMenu.Item>
-                                <ContextMenu.Item onClick={() => copyTargets((absolute) => mentionOf(folder, absolute))}>
-                                    <Icon icon={AtSign} size={14} /> {t('files.copyMentions')}
-                                </ContextMenu.Item>
+                                <FileCopyRow targets={copyTargets} />
                             </>
                         ) : (
                             <>
@@ -678,25 +656,10 @@ export function FilesPanel() {
                                         </ContextMenu.Item>
                                     </>
                                 )}
-                                <ContextMenu.Separator />
-                                <ContextMenu.Item onClick={onMenuPath((absolute) => copyText(basenameOf(absolute)))}>
-                                    <Icon icon={Copy} size={14} /> {t('files.copyName')}
-                                </ContextMenu.Item>
-                                <ContextMenu.Item onClick={onMenuPath((absolute) => copyText(absolute))}>
-                                    <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
-                                >
-                                    <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
-                                </ContextMenu.Item>
-                                {menuMention !== null && (
-                                    <ContextMenu.Item onClick={() => copyText(menuMention)}>
-                                        <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
-                                    </ContextMenu.Item>
-                                )}
                                 {menuPath !== null && (
                                     <>
+                                        <ContextMenu.Separator />
+                                        <FileCopyRow targets={copyTargets} />
                                         <ContextMenu.Separator />
                                         <ContextMenu.Item
                                             onClick={onMenuPath((absolute, treePath) =>

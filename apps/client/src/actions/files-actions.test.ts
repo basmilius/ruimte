@@ -129,6 +129,15 @@ describe('file actions', () => {
         expect(copied).toEqual(['src/a.ts', '/repo/src/a.ts']);
     });
 
+    test('files are copied once each, a folder standing for what is selected inside it', async () => {
+        const copiedFiles: string[][] = [];
+        const { registry } = fakes({}, { copyFiles: async (paths) => void copiedFiles.push(paths) });
+        const copied = completed(await registry.execute('file.copy', { paths: ['src/a.ts', 'src', '/repo/src', 'docs/b.md'] }, PERSON_ACTION_CALL));
+        expect(copied.output).toEqual({ paths: ['/repo/src', '/repo/docs/b.md'] });
+        expect(copiedFiles).toEqual([['/repo/src', '/repo/docs/b.md']]);
+        expect(await registry.execute('file.copy', { paths: ['/etc/hosts'] }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'outside-project' } });
+    });
+
     test('only a person deletes, by asking the machine and then forgetting the tabs of what is gone', async () => {
         const { registry, asked, forgotten } = fakes({ 'fs.delete': () => ({}) });
         expect(await registry.execute('file.delete', { paths: ['src/a.ts'] }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'forbidden-action' } });

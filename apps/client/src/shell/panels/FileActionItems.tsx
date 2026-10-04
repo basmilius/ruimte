@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { AtSign, Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
+import { Columns2, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
 import { createNodeAction, createViewAction, runAsPerson } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
-import { basenameOf, mentionOf, revealableInFiles } from '@/shell/panels/files-tree';
+import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { copyText, Icon, Menu } from '@basmilius/desktop-ui';
+import { Icon, Menu } from '@basmilius/desktop-ui';
 
 /* Which of the three surfaces these items are on, since a file already on one does not offer to go
    there again: a node is not shown on the canvas twice and a view is not opened as one. */
@@ -37,7 +38,6 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
     const offerShow = on !== 'node' && onCanvas;
     const offerView = on !== 'view';
     const name = basenameOf(path);
-    const mention = mentionOf(folder, path);
 
     const openInBrowserNode = (): void => {
         void createNodeAction('browser', { url: localFileUrl(path) });
@@ -72,17 +72,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
                 </Menu.Item>
             )}
             <Menu.Separator />
-            <Menu.Item onClick={() => void runAsPerson('file.copyPath', { path, relative: false })}>
-                <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
-            </Menu.Item>
-            <Menu.Item disabled={folder === null} onClick={() => void runAsPerson('file.copyPath', { path, relative: true })}>
-                <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
-            </Menu.Item>
-            {mention !== null && (
-                <Menu.Item onClick={() => copyText(mention)}>
-                    <Icon icon={AtSign} size={14} /> {t('file.menu.copyMention')}
-                </Menu.Item>
-            )}
+            <FileCopyRow targets={[{ absolute: path, relative: folder === null ? null : relativeTo(folder, path) }]} />
             {onRefresh !== undefined && (
                 <>
                     <Menu.Separator />

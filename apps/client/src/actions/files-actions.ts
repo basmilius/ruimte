@@ -1,6 +1,8 @@
 import { ActionRefusal, FILE_READ_MAX_LINES, type ActionActorKind, type ActionHandlers } from '@ruimte/actions';
 import type { Transport } from '@/transport/transport';
 import { asRefusal } from '@/actions/developer-actions';
+import { desktop } from '@/desktop/bridge';
+import { canCopyFilesOn } from '@/shell/panels/file-copy';
 import { absoluteOf, basenameOf, isAbsolutePath, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
@@ -17,6 +19,8 @@ export interface FilesMachine {
     /* The project folder on the machine it runs on, or null for a project without one. */
     folder(): string | null;
     writeText(text: string): Promise<void>;
+    /* Puts files and folders on the clipboard as themselves, for the file manager to paste. */
+    copyFiles(paths: string[]): Promise<void>;
     /* Whether the preview has this file open as itself, not as a diff. */
     isOpen(path: string): boolean;
     open(path: string, line: number | null): void;
@@ -34,6 +38,15 @@ const LIVE_MACHINE: FilesMachine = {
             throw new ActionRefusal('no-clipboard', 'This window has no clipboard to copy to.');
         }
         await navigator.clipboard.writeText(text);
+    },
+    copyFiles: async (paths) => {
+        const copyFiles = desktop()?.copyFiles;
+        if (!canCopyFilesOn(currentEndpointId()) || copyFiles === undefined) {
+            throw new ActionRefusal('not-this-computer', 'Only files of a project on this computer, in the desktop app, can be copied as files.');
+        }
+        if (!(await copyFiles(paths))) {
+            throw new ActionRefusal('not-copied', 'The files could not be copied; one of them may no longer exist.');
+        }
     },
     // A file tab is named by its path, so that is also what says whether it is open.
     isOpen: (path) => useFiles.getState().tabs.some((tab) => tab.key === path),
@@ -75,6 +88,12 @@ export const projectPathOf = (folder: string | null, path: string, actor: Action
 };
 
 const resolvedPath = (machine: FilesMachine, path: string, actor: ActionActorKind): string => projectPathOf(machine.folder(), path, actor);
+
+/* The paths named, once each, without those inside a folder that is named too. */
+const outermostPaths = (machine: FilesMachine, paths: readonly string[], actor: ActionActorKind): string[] => {
+    const absolutes = [...new Set(paths.map((path) => resolvedPath(machine, path, actor)))];
+    return absolutes.filter((path) => !absolutes.some((other) => path.startsWith(`${other}/`)));
+};
 
 /*
  * What a person does with the files of a project, as actions: the files panel, its search, find in
@@ -184,8 +203,7 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
             return { output: { path: absolute } };
         },
         'file.delete': async ({ paths }, { actor }) => {
-            const absolutes = [...new Set(paths.map((path) => resolvedPath(machine, path, actor.kind)))];
-            const targets = absolutes.filter((path) => !absolutes.some((other) => path.startsWith(`${other}/`)));
+            const targets = outermostPaths(machine, paths, actor.kind);
             for (const target of targets) {
                 await requested(() => connected().request('fs.delete', { path: target }));
                 machine.forget(target);
@@ -197,6 +215,11 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
             const copied = relative ? relativeTo(projectFolder(), absolute) : absolute;
             await machine.writeText(copied);
             return { output: { path: absolute, copied } };
+        },
+        'file.copy': async ({ paths }, { actor }) => {
+            const targets = outermostPaths(machine, paths, actor.kind);
+            await machine.copyFiles(targets);
+            return { output: { paths: targets } };
         }
     };
 }

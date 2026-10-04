@@ -100,6 +100,9 @@
             "notShown": "{{name}} is een {{format}}-afbeelding, een formaat dat deze app niet toont."
         },
         "menu": {
+            "copy": "Kopiëren",
+            "copyAsText": "Als tekst kopiëren",
+            "copyFailed": "Kon de bestanden niet kopiëren",
             "copyPath": "Pad kopiëren",
             "copyRelativePath": "Relatief pad kopiëren",
             "copyMention": "Als @mention kopiëren",

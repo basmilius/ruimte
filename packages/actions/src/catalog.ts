@@ -2956,6 +2956,16 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ path: filePath, relative: z.boolean().describe('Relative to the project folder instead of whole') }),
         output: z.object({ path: z.string(), copied: z.string() })
     },
+    'file.copy': {
+        title: 'Copy files',
+        description: 'Copies files and folders of a project on this computer to the clipboard, for the file manager to paste.',
+        effect: 'local',
+        domain: 'files',
+        actors: PERSON_AND_VOICE,
+        input: z.object({ paths: z.array(filePath).min(1) }),
+        // What was copied: a folder stands for what was selected inside it too.
+        output: z.object({ paths: z.array(z.string()) })
+    },
     'note.read': {
         title: 'Read a note',
         description: 'Reads what a note on a canvas says.',

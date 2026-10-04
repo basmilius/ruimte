@@ -100,6 +100,9 @@
             "notShown": "{{name}} is a {{format}} image, a format this app does not show."
         },
         "menu": {
+            "copy": "Copy",
+            "copyAsText": "Copy as text",
+            "copyFailed": "Could not copy the files",
             "copyPath": "Copy path",
             "copyRelativePath": "Copy relative path",
             "copyMention": "Copy as @mention",
