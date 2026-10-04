@@ -83,3 +83,39 @@ export function sameRange(left: EditorRange, right: EditorRange): boolean {
         left.end.character === right.end.character
     );
 }
+
+/* One `@tag` of a docblock, the way a server writes it into a hover: `_@since_ 1.0` or `*@param* `name` — what it is`. */
+export interface DocTag {
+    readonly name: string;
+    readonly markdown: string;
+}
+
+const TAG_LINE = /^(?:_@([\w-]+)_|\*@([\w-]+)\*|@([\w-]+))(?:\s+|$)([\s\S]*)$/;
+
+/* Tags whose text is a block of its own, which a row of the tag list has no room for. */
+const BLOCK_TAGS = new Set(['example']);
+
+/*
+ * The docblock tags of hover prose apart from the rest, so a card can list them as rows instead of a
+ * paragraph each. Only a paragraph that holds nothing but tag lines is taken; prose that mentions an
+ * `@` stays prose.
+ */
+export function splitDocTags(markdown: string): { readonly markdown: string; readonly tags: readonly DocTag[] } {
+    const tags: DocTag[] = [];
+    const kept: string[] = [];
+    for (const paragraph of markdown.split(/\n{2,}/)) {
+        const lines = paragraph.split('\n');
+        const matches = lines.map((line) => TAG_LINE.exec(line.trim()));
+        const names = matches.map((match) => (match === null ? null : (match[1] ?? match[2] ?? match[3])!));
+        if (paragraph.trim() === '' || names.some((name) => name === null || BLOCK_TAGS.has(name))) {
+            kept.push(paragraph);
+            continue;
+        }
+        matches.forEach((match, index) => {
+            // The TypeScript server puts a dash between a tag, its parameter and its text.
+            const text = match![4]!.replace(/^[—–-]\s*/, '').replace(/^(`[^`]+`)\s+[—–-]\s+/, '$1 ');
+            tags.push({ name: names[index]!, markdown: text.trim() });
+        });
+    }
+    return { markdown: kept.join('\n\n').trim(), tags };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hoverTextOf, isEmptyHover, locationsOf, splitSignatures } from './hover-content';
+import { hoverTextOf, isEmptyHover, locationsOf, splitDocTags, splitSignatures } from './hover-content';
 
 describe('splitSignatures', () => {
     test('takes the leading code as the signature and the prose after the rule as the documentation', () => {
@@ -40,5 +40,30 @@ describe('locationsOf', () => {
         expect(locationsOf([{ targetUri: 'file:///a.ts', targetRange: range, targetSelectionRange: range }])).toEqual([{ uri: 'file:///a.ts', range }]);
         expect(locationsOf(null)).toEqual([]);
         expect(locationsOf({ uri: 'file:///b.ts', range })).toEqual([{ uri: 'file:///b.ts', range }]);
+    });
+});
+
+describe('splitDocTags', () => {
+    test('takes the tags of the PHP server, a paragraph each', () => {
+        const split = splitDocTags('Returns the cost.\n\n_@since_ 04-08-2024\n\n_@author_ Bas Milius <bas@mili.us>\n\n_@package_ Passly\\Data\\Dto');
+        expect(split.markdown).toBe('Returns the cost.');
+        expect(split.tags).toEqual([
+            { name: 'since', markdown: '04-08-2024' },
+            { name: 'author', markdown: 'Bas Milius <bas@mili.us>' },
+            { name: 'package', markdown: 'Passly\\Data\\Dto' }
+        ]);
+    });
+
+    test('drops the dashes the TypeScript server puts between a tag, its parameter and its text', () => {
+        const split = splitDocTags('Share.\n\n*@param* `have` — the skills\n\n*@returns* — a fraction');
+        expect(split.tags).toEqual([
+            { name: 'param', markdown: '`have` the skills' },
+            { name: 'returns', markdown: 'a fraction' }
+        ]);
+    });
+
+    test('leaves prose that mentions an @ and an example as they are', () => {
+        const text = 'Mail @bas about it.\n\n*@example*\n```ts\nshare()\n```';
+        expect(splitDocTags(text)).toEqual({ markdown: text, tags: [] });
     });
 });
