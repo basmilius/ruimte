@@ -2941,6 +2941,19 @@ export const ACTION_DEFINITIONS = {
         input: z.object({ path: filePath }),
         output: z.object({ path: z.string() })
     },
+    'file.create': {
+        title: 'Create a file or folder',
+        description: 'Creates one file or folder in the project, with the folders above it that are missing. A name that is taken is refused.',
+        effect: 'shared',
+        domain: 'files',
+        actors: PERSON,
+        input: z.object({
+            path: filePath.describe('Relative to the project folder or absolute'),
+            kind: z.enum(['file', 'directory']),
+            text: z.string().nullable().describe('What a new file starts with; null for an empty file')
+        }),
+        output: z.object({ path: z.string(), kind: z.enum(['file', 'directory']) })
+    },
     'file.delete': {
         title: 'Delete files and folders',
         description: 'Moves files and folders of the project to the machine’s trash, where they can be restored from.',

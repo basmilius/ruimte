@@ -185,6 +185,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     // A jump to a line is asked of a tab, so a node or a view of its own never answers one.
     const tabKey = useFileActions()?.tabKey ?? null;
     const reveal = useFiles((s) => (s.revealLine !== null && s.revealLine.key === tabKey ? s.revealLine : null));
+    const caret = useFiles((s) => (s.caret !== null && s.caret.key === tabKey ? s.caret : null));
 
     const { chunks, lineCount } = useMemo(() => {
         // A file that ends in a newline has no last line, only a last line break.
@@ -210,6 +211,14 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const find = useFind(surface, editor !== null);
     const editorFind = useEditorFind(find, editor);
     const scope = useEditorScope(editor);
+    useEffect(() => {
+        if (caret === null || editor === null || readOnlyReason !== null) {
+            return;
+        }
+        useFiles.getState().clearCaret();
+        // A frame later: the files cell takes the keyboard for the tab that just opened, and the editor comes after it.
+        requestAnimationFrame(() => editor.focus());
+    }, [caret, editor, readOnlyReason]);
     const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
     useEffect(() => {
         const element = surface.current;

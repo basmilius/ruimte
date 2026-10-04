@@ -40,6 +40,7 @@ import { hasLocalMachine } from '@/state/local-machine';
 import { providersOf } from '@ruimte/agents-react/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
+import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -284,6 +285,25 @@ export function appCommands(): Command[] {
                           requestAnimationFrame(() => {
                               focusedLanguage()?.diagnostics.step(-1);
                           });
+                      }
+                  }
+              ]
+            : []),
+        ...(folder && inWorkspace
+            ? [
+                  {
+                      id: 'file-new',
+                      label: i18next.t('shell:palette.commands.newFile'),
+                      // A frame later: the palette hands the focus back as it closes, and the field that names the file would lose it.
+                      run: () => {
+                          requestAnimationFrame(() => useFiles.getState().requestCreate('file'));
+                      }
+                  },
+                  {
+                      id: 'folder-new',
+                      label: i18next.t('shell:palette.commands.newFolder'),
+                      run: () => {
+                          requestAnimationFrame(() => useFiles.getState().requestCreate('directory'));
                       }
                   }
               ]

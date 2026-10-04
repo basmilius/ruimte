@@ -188,6 +188,34 @@
         "copyNames": "Namen kopiëren",
         "copyPaths": "Paden kopiëren",
         "copyRelativePaths": "Relatieve paden kopiëren",
+        "create": {
+            "file": "Nieuw bestand…",
+            "fileName": "Bestandsnaam",
+            "folder": "Nieuwe map…",
+            "folderName": "Mapnaam",
+            "problem": {
+                "characters": "“{{name}}” bevat een teken dat niet in een naam kan.",
+                "dots": "“{{name}}” is geen naam.",
+                "empty": "Typ een naam.",
+                "exists": "“{{name}}” bestaat al.",
+                "in-file": "“{{name}}” is een bestand, dus daar kan niets in.",
+                "long": "“{{name}}” is te lang.",
+                "reserved": "“{{name}}” kan hier niet worden gemaakt.",
+                "segment": "Een mapnaam tussen twee slashes is leeg."
+            },
+            "refused": {
+                "bad-path": "Dat is geen pad dat de machine kan gebruiken.",
+                "exists": "Die naam is al in gebruik.",
+                "git-state": "Git bewaart daar zijn eigen staat, dus daarin wordt niets gemaakt.",
+                "machine-state": "Dat hoort bij de machine en kan hier niet worden gemaakt.",
+                "no-machine": "De machine waarop dit project draait is niet verbonden.",
+                "not-a-directory": "Een deel van dat pad is een bestand, geen map.",
+                "not-writable": "De machine kan daar niet schrijven.",
+                "outside-project": "Dat valt buiten dit project.",
+                "ruimte-state": "Ruimte bewaart daar zijn eigen staat, dus daarin wordt niets gemaakt.",
+                "too-large": "Die tekst is te groot."
+            }
+        },
         "delete": "Naar de prullenbak",
         "deleteDialog": {
             "confirm": "Naar de prullenbak",

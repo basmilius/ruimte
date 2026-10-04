@@ -152,6 +152,20 @@ describe('file actions', () => {
         expect(forgotten).toEqual(['/repo/src', '/repo/docs/b.md']);
     });
 
+    test('only a person creates, by asking the machine for the absolute path', async () => {
+        const { registry, asked } = fakes({ 'fs.create': () => ({ size: 0, mtime: 1 }) });
+        const input = { path: 'src/new/a.ts', kind: 'file', text: null } as const;
+        expect(await registry.execute('file.create', input, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'forbidden-action' } });
+        expect(asked).toEqual([]);
+        const created = completed(await registry.execute('file.create', input, PERSON_ACTION_CALL));
+        completed(await registry.execute('file.create', { path: 'docs', kind: 'directory', text: null }, PERSON_ACTION_CALL));
+        expect(created.output).toEqual({ path: '/repo/src/new/a.ts', kind: 'file' });
+        expect(asked).toEqual([
+            { type: 'fs.create', payload: { path: '/repo/src/new/a.ts', kind: 'file' } },
+            { type: 'fs.create', payload: { path: '/repo/docs', kind: 'directory' } }
+        ]);
+    });
+
     test('a machine that is not connected is said so', async () => {
         const { registry } = fakes({}, { transport: () => null });
         expect(await registry.execute('file.search', { query: 'a', limit: null }, VOICE_ACTION_CALL)).toMatchObject({ error: { code: 'no-machine' } });

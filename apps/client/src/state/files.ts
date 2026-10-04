@@ -116,6 +116,19 @@ export interface RevealRequest {
     nonce: number;
 }
 
+export interface CaretRequest {
+    /* The tab whose editor takes the keyboard; a file that is not the one up ignores it. */
+    key: string;
+    /* Goes up on every ask, so a file created twice under one name is two asks. */
+    nonce: number;
+}
+
+export interface CreateRequest {
+    kind: 'file' | 'directory';
+    /* Goes up on every ask, so asking for the same kind twice is two asks. */
+    nonce: number;
+}
+
 /* How many closed files the empty preview offers to open again. */
 export const RECENT_FILES_LIMIT = 5;
 
@@ -144,6 +157,10 @@ interface FilesStore extends TabState {
     reveal: RevealRequest | null;
     /* The line the viewer was asked to jump to, from a file reference that named one. */
     revealLine: RevealLineRequest | null;
+    /* A new file's editor, asked to take the keyboard once it is there; the editor clears it. */
+    caret: CaretRequest | null;
+    /* A new file or folder asked of the files panel from a menu or the palette, which names it inline. */
+    createRequest: CreateRequest | null;
     load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
     open(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
     /* The tab without the cell, for a caller that puts the files on the grid itself, such as a drop. */
@@ -155,6 +172,9 @@ interface FilesStore extends TabState {
     setScope(key: string, scope: GitDiffScope): void;
     setStaged(key: string, staged: boolean): void;
     revealInFiles(path: string): void;
+    requestCreate(kind: CreateRequest['kind']): void;
+    requestCaret(key: string): void;
+    clearCaret(): void;
     activate(key: string): void;
     setExpandedDirs(dirs: string[]): void;
 }
@@ -173,8 +193,20 @@ export const useFiles = create<FilesStore>((set, get) => ({
     expandedDirs: [],
     reveal: null,
     revealLine: null,
+    caret: null,
+    createRequest: null,
     load(projectId, state) {
-        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null, revealLine: null, recent: [] });
+        set({
+            projectId,
+            tabs: state.tabs,
+            active: state.active,
+            expandedDirs: state.expandedDirs,
+            reveal: null,
+            revealLine: null,
+            caret: null,
+            createRequest: null,
+            recent: []
+        });
     },
     /* A tab and the cell that draws it are one thing to the person opening a file: an open puts the
        files in the cell they were working in, like any view, and the last close takes the cell away
@@ -236,6 +268,17 @@ export const useFiles = create<FilesStore>((set, get) => ({
     revealInFiles(path) {
         useUi.getState().setPanel({ open: true, kind: 'files' });
         set({ reveal: { path, nonce: (get().reveal?.nonce ?? 0) + 1 } });
+    },
+    /* The files panel comes up if it was closed, and names the entry in the folder that is selected there. */
+    requestCreate(kind) {
+        useUi.getState().setPanel({ open: true, kind: 'files' });
+        set({ createRequest: { kind, nonce: (get().createRequest?.nonce ?? 0) + 1 } });
+    },
+    requestCaret(key) {
+        set({ caret: { key, nonce: (get().caret?.nonce ?? 0) + 1 } });
+    },
+    clearCaret() {
+        set({ caret: null });
     },
     activate(key) {
         set({ active: key });

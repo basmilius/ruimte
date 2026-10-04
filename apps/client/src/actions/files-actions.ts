@@ -101,8 +101,8 @@ function outermostPaths(machine: FilesMachine, paths: readonly string[], actor: 
 
 /*
  * What a person does with the files of a project, as actions: the files panel, its search, find in
- * files and the menus a file has on a tab, a node and a view of its own. None of them writes or
- * renames a file, and only a person deletes one, to the trash. Revealing a file in the machine's file manager
+ * files and the menus a file has on a tab, a node and a view of its own. None of them writes over or
+ * renames a file; only a person creates one or deletes one, to the trash. Revealing a file in the machine's file manager
  * stays the menu's own: it acts on the screen of whichever machine the project runs on.
  */
 export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandlers<void> {
@@ -205,6 +205,11 @@ export function filesActions(overrides: Partial<FilesMachine> = {}): ActionHandl
             }
             machine.reveal(absolute);
             return { output: { path: absolute } };
+        },
+        'file.create': async ({ path, kind, text }, { actor }) => {
+            const absolute = resolvedPath(machine, path, actor.kind);
+            await requested(() => connected().request('fs.create', { path: absolute, kind, ...(text === null ? {} : { text }) }));
+            return { output: { path: absolute, kind } };
         },
         'file.delete': async ({ paths }, { actor }) => {
             const targets = outermostPaths(machine, paths, actor.kind);

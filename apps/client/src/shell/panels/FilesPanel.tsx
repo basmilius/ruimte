@@ -1,4 +1,5 @@
 import { revealFile } from './reveal-file';
+import { ActionRefusal } from '@ruimte/actions';
 import { performAsPerson } from '@/actions/client-actions';
 import {
     useCallback,
@@ -20,8 +21,10 @@ import {
     CornerUpRight,
     FileDiff,
     FileSearch,
+    FilePlus,
     Folder,
     FolderOpen,
+    FolderPlus,
     Frame,
     MoreHorizontal,
     RefreshCw,
@@ -35,6 +38,17 @@ import { showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { FileSearch as FileSearchFlow, type FileSearchResult } from './file-search';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
+import {
+    creationParentOf,
+    newEntryPathOf,
+    placeholderPathOf,
+    validateNewEntry,
+    PLACEHOLDER_CSS,
+    type Creation,
+    type NameFault,
+    type NewEntryKind
+} from '@/shell/panels/file-create';
+import { NewEntryRow } from '@/shell/panels/NewEntryRow';
 import type { CopyTarget } from '@/shell/panels/file-copy';
 import {
     LOADING_NAME,
@@ -76,7 +90,20 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { Button, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@basmilius/desktop-ui';
+import {
+    Button,
+    ButtonGroup,
+    EmptyState,
+    FILE_TREE_ICONS,
+    Icon,
+    IconButton,
+    Input,
+    Menu,
+    Kbd,
+    PanelEmpty,
+    ContextMenu,
+    PromptDialog
+} from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -100,6 +127,7 @@ const FILES_TREE_CSS = `
         background: currentColor;
     }
     ${PANEL_TREE_CSS}
+    ${PLACEHOLDER_CSS}
 `;
 
 const EMPTY_MATCHES: readonly string[] = [];
@@ -145,6 +173,19 @@ export function FilesPanel() {
     const [menuTargets, setMenuTargets] = useState<string[]>([]);
     const [deleting, setDeleting] = useState<{ absolutes: string[]; directory: boolean } | null>(null);
     const [deleteBusy, setDeleteBusy] = useState(false);
+    /* The entry being named: where it is made and what kind it is. The tree holds a row open for it. */
+    const [creation, setCreation] = useState<Creation | null>(null);
+    const [entryName, setEntryName] = useState('');
+    const [entryBusy, setEntryBusy] = useState(false);
+    /* What the machine refused with, until the name changes. */
+    const [entryFailure, setEntryFailure] = useState<string | null>(null);
+    /* The entry that was made, until the listing that holds it has been drawn and the row is in view. */
+    /* Set the moment the request goes out, since disabling the field blurs it before the state says so. */
+    const submittingRef = useRef(false);
+    const madeRef = useRef<{ treePath: string; kind: NewEntryKind } | null>(null);
+    /* Set when a menu item started the entry, so the menu does not give the keyboard back to the tree as it closes. */
+    const menuStartedRef = useRef(false);
+    const createRequest = useFiles((s) => s.createRequest);
     /* The reveal that was answered, so a listing arriving later does not scroll the tree again. */
     const answeredReveal = useRef(0);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
@@ -190,7 +231,25 @@ export function FilesPanel() {
     const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(activeModel, folder ?? '');
     /* The rows the tree is fed, kept here as well because what they add up to is what says whether
        the panel has anything to show. */
-    const treeInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
+    const listedInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
+    const treeInput = useMemo(
+        () => (creation === null ? listedInput : { ...listedInput, paths: [...listedInput.paths, placeholderPathOf(creation.parent, creation.kind)] }),
+        [listedInput, creation]
+    );
+    const fault: NameFault | null = useMemo(
+        () =>
+            folder === null || creation === null
+                ? null
+                : validateNewEntry(entryName, creation.kind, {
+                      parent: absoluteOf(folder, creation.parent),
+                      atRoot: creation.parent === '',
+                      windows: platform === 'win32',
+                      children: (directory) => cache.get(directory)
+                  }),
+        [cache, creation, entryName, folder, platform]
+    );
+    // An empty name is not yet a mistake, so the field stays quiet until something is typed.
+    const entryMessage = entryFailure ?? (fault === null || entryName.trim() === '' ? null : t(`files.create.problem.${fault.problem}`, { name: fault.name }));
     const changed = useMemo(() => (folder === null ? [] : gitStatusEntries(folder, gitStatus?.root ?? null, gitStatus?.files ?? [])), [folder, gitStatus]);
     /* Which side of git the row the menu is on sits on, or null for a file git has nothing to say
        about; it is what decides whether that menu offers the diff. */
@@ -338,6 +397,23 @@ export function FilesPanel() {
         [model]
     );
 
+    const startCreate = useCallback(
+        (kind: NewEntryKind, parent: string): void => {
+            setQuery('');
+            // The row is drawn in the folder, so a folder that is closed opens first.
+            for (const dir of [...ancestorDirsOf(parent), parent]) {
+                if (dir !== '') {
+                    directoryHandle(model, dir)?.expand();
+                }
+            }
+            setEntryName('');
+            setEntryFailure(null);
+            setEntryBusy(false);
+            setCreation({ kind, parent });
+        },
+        [model]
+    );
+
     /*
      * A reveal asked for somewhere else in the app: a menu in the git panel, on a tab, or in the
      * preview's toolbar. The filter goes first, since a row a filter hides cannot be shown, and the
@@ -357,6 +433,30 @@ export function FilesPanel() {
             answeredReveal.current = reveal.nonce;
         }
     }, [bringIntoView, cache, folder, reveal, searching]);
+
+    /* The entry that was just made shows up with the listing the machine's change brings, and is
+       selected there; a folder opens too, so what a person is about to put in it is in view. */
+    useEffect(() => {
+        const made = madeRef.current;
+        if (made === null || !bringIntoView(made.treePath)) {
+            return;
+        }
+        madeRef.current = null;
+        if (made.kind === 'directory') {
+            directoryHandle(model, made.treePath)?.expand();
+        }
+    }, [bringIntoView, cache, model, treeInput]);
+
+    /* A new file or folder asked from a menu or the palette goes in the folder that is selected here, or the project folder. */
+    useEffect(() => {
+        if (!folder || createRequest === null || !cache.has(folder)) {
+            return;
+        }
+        useFiles.setState({ createRequest: null });
+        // The ask is another surface's, and it can wait on the first listing, so it is answered here and not where it was made.
+        // oxlint-disable-next-line react/set-state-in-effect
+        startCreate(createRequest.kind, creationParentOf(selectionRef.current[0] ?? null));
+    }, [cache, createRequest, folder, startCreate]);
 
     useEffect(() => {
         const flow = search.current;
@@ -453,6 +553,64 @@ export function FilesPanel() {
         for (const dir of cache.keys()) {
             void load(dir);
         }
+    };
+
+    const cancelEntry = (): void => {
+        setCreation(null);
+        setEntryName('');
+        setEntryFailure(null);
+    };
+
+    const submitEntry = async (): Promise<void> => {
+        if (!folder || creation === null || submittingRef.current || fault !== null) {
+            return;
+        }
+        submittingRef.current = true;
+        const { kind, parent } = creation;
+        const parentPath = absoluteOf(folder, parent);
+        const path = newEntryPathOf(parentPath, entryName, kind);
+        setEntryBusy(true);
+        try {
+            await performAsPerson('file.create', { path, kind, text: null });
+        } catch (error: unknown) {
+            setEntryFailure(
+                error instanceof ActionRefusal
+                    ? t(`files.create.refused.${error.code}`, { defaultValue: error.message })
+                    : error instanceof Error
+                      ? error.message
+                      : t('error.generic')
+            );
+            submittingRef.current = false;
+            setEntryBusy(false);
+            return;
+        }
+        submittingRef.current = false;
+        madeRef.current = { treePath: `${relativeTo(folder, path)}${kind === 'directory' ? '/' : ''}`, kind };
+        cancelEntry();
+        setEntryBusy(false);
+        // The machine's change report settles for a moment; asking its listing now keeps the new row from blinking out and back.
+        void load(parentPath);
+        if (kind === 'file') {
+            useFiles.getState().open(path, tabLimit);
+            useFiles.getState().requestCaret(path);
+        }
+    };
+
+    /* Leaving the field keeps a name that can be made and drops one that cannot; the window losing focus is not leaving it. */
+    const onEntryBlur = (): void => {
+        if (submittingRef.current || !document.hasFocus()) {
+            return;
+        }
+        if (entryName.trim() !== '' && fault === null) {
+            void submitEntry();
+        } else {
+            cancelEntry();
+        }
+    };
+
+    const startFromMenu = (kind: NewEntryKind, parent: string): void => {
+        menuStartedRef.current = true;
+        startCreate(kind, parent);
     };
 
     const manyTargets = menuTargets.length > 1;
@@ -553,6 +711,20 @@ export function FilesPanel() {
                         }}
                     />
                 </span>
+                <ButtonGroup className="shrink-0">
+                    <IconButton
+                        icon={FilePlus}
+                        size="sm"
+                        label={t('files.create.file')}
+                        onClick={() => startCreate('file', creationParentOf(selectionRef.current[0] ?? null))}
+                    />
+                    <IconButton
+                        icon={FolderPlus}
+                        size="sm"
+                        label={t('files.create.folder')}
+                        onClick={() => startCreate('directory', creationParentOf(selectionRef.current[0] ?? null))}
+                    />
+                </ButtonGroup>
                 <Menu.Root>
                     <IconButton icon={MoreHorizontal} size="sm" label={t('common:action.more')} render={<Menu.Trigger />} />
                     <Menu.Popup align="end">
@@ -584,107 +756,141 @@ export function FilesPanel() {
             {empty !== null ? (
                 <div className="grid min-h-0 grow place-items-center">{empty}</div>
             ) : (
-                <ContextMenu.Root>
-                    <ContextMenu.Trigger
-                        ref={attachShift}
-                        render={<div />}
-                        /* The padding is on the frame, not the scroller, so the first row keeps its
+                <div className="relative flex min-h-0 grow flex-col overflow-hidden">
+                    <ContextMenu.Root>
+                        <ContextMenu.Trigger
+                            ref={attachShift}
+                            render={<div />}
+                            /* The padding is on the frame, not the scroller, so the first row keeps its
                            distance from the toolbar instead of sliding under it. */
-                        className="min-h-0 grow overflow-hidden pt-2"
-                        onKeyDownCapture={onKeyDownCapture}
-                        onContextMenu={(event) => {
-                            const path = rowPathOf(event);
-                            setMenuPath(path);
-                            if (path === null) {
-                                setMenuTargets([]);
-                                return;
-                            }
-                            const targets = menuTargetsOf(path, selectionRef.current);
-                            if (targets.length === 1 && !selectionRef.current.includes(path)) {
-                                // A right click outside the selection acts on its own row, so the selection lets go first.
-                                for (const selected of activeModel.getSelectedPaths()) {
-                                    activeModel.getItem(selected)?.deselect();
+                            className="min-h-0 grow overflow-hidden pt-2"
+                            onKeyDownCapture={onKeyDownCapture}
+                            onContextMenu={(event) => {
+                                const path = rowPathOf(event);
+                                setMenuPath(path);
+                                if (path === null) {
+                                    setMenuTargets([]);
+                                    return;
                                 }
-                                activeModel.getItem(path)?.select();
-                            }
-                            setMenuTargets(targets);
-                        }}
-                    >
-                        <FileTree
-                            key={searching ? 'search' : 'tree'}
-                            model={activeModel}
-                            className="panel-tree"
-                            onClick={onClick}
-                            onKeyDown={onKeyDown}
-                            onDragStart={onDragStart}
-                        />
-                        {shiftBar}
-                    </ContextMenu.Trigger>
-                    <ContextMenu.Popup>
-                        {manyTargets ? (
-                            <>
-                                <ContextMenu.Item
-                                    onClick={() =>
-                                        folder &&
-                                        setDeleting({
-                                            absolutes: menuTargets.map((treePath) => absoluteOf(folder, treePath).replace(/\/+$/, '')),
-                                            directory: false
-                                        })
+                                const targets = menuTargetsOf(path, selectionRef.current);
+                                if (targets.length === 1 && !selectionRef.current.includes(path)) {
+                                    // A right click outside the selection acts on its own row, so the selection lets go first.
+                                    for (const selected of activeModel.getSelectedPaths()) {
+                                        activeModel.getItem(selected)?.deselect();
                                     }
-                                >
-                                    <Icon icon={Trash2} size={14} /> {t('files.deleteMany', { count: menuTargets.length })}
-                                </ContextMenu.Item>
-                                <ContextMenu.Separator />
-                                <FileCopyRow targets={copyTargets} />
-                            </>
-                        ) : (
-                            <>
-                                <ContextMenu.Item onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
-                                    <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
-                                </ContextMenu.Item>
-                                {changedStatus !== null && (
-                                    <ContextMenu.Item onClick={openChanges}>
-                                        <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
+                                    activeModel.getItem(path)?.select();
+                                }
+                                setMenuTargets(targets);
+                            }}
+                        >
+                            <FileTree
+                                key={searching ? 'search' : 'tree'}
+                                model={activeModel}
+                                className="panel-tree"
+                                onClick={onClick}
+                                onKeyDown={onKeyDown}
+                                onDragStart={onDragStart}
+                            />
+                            {shiftBar}
+                        </ContextMenu.Trigger>
+                        <ContextMenu.Popup
+                            // A menu that started an entry has nothing to give the keyboard back to: the field has it.
+                            finalFocus={() => {
+                                const startedEntry = menuStartedRef.current;
+                                menuStartedRef.current = false;
+                                return !startedEntry;
+                            }}
+                        >
+                            {manyTargets ? (
+                                <>
+                                    <ContextMenu.Item
+                                        onClick={() =>
+                                            folder &&
+                                            setDeleting({
+                                                absolutes: menuTargets.map((treePath) => absoluteOf(folder, treePath).replace(/\/+$/, '')),
+                                                directory: false
+                                            })
+                                        }
+                                    >
+                                        <Icon icon={Trash2} size={14} /> {t('files.deleteMany', { count: menuTargets.length })}
                                     </ContextMenu.Item>
-                                )}
-                                <ContextMenu.Item
-                                    onClick={onMenuPath((absolute) => {
-                                        revealFile(transport, absolute);
-                                    })}
-                                >
-                                    <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
-                                </ContextMenu.Item>
-                                {menuPath !== null && !isDirectoryPath(menuPath) && (
-                                    <>
-                                        <ContextMenu.Separator />
-                                        {onCanvas && (
-                                            <ContextMenu.Item onClick={onMenuPath((absolute) => void showFileOnCanvas(absolute))}>
-                                                <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
+                                    <ContextMenu.Separator />
+                                    <FileCopyRow targets={copyTargets} />
+                                </>
+                            ) : (
+                                <>
+                                    <ContextMenu.Item onClick={() => startFromMenu('file', creationParentOf(menuPath))}>
+                                        <Icon icon={FilePlus} size={14} /> {t('files.create.file')}
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Item onClick={() => startFromMenu('directory', creationParentOf(menuPath))}>
+                                        <Icon icon={FolderPlus} size={14} /> {t('files.create.folder')}
+                                    </ContextMenu.Item>
+                                    {menuPath !== null && (
+                                        <>
+                                            <ContextMenu.Separator />
+                                            <ContextMenu.Item onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
+                                                <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
                                             </ContextMenu.Item>
-                                        )}
-                                        <ContextMenu.Item onClick={onMenuPath((absolute) => void createViewAction('file', { path: absolute }))}>
-                                            <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
-                                        </ContextMenu.Item>
-                                    </>
-                                )}
-                                {menuPath !== null && (
-                                    <>
-                                        <ContextMenu.Separator />
-                                        <FileCopyRow targets={copyTargets} />
-                                        <ContextMenu.Separator />
-                                        <ContextMenu.Item
-                                            onClick={onMenuPath((absolute, treePath) =>
-                                                setDeleting({ absolutes: [absolute.replace(/\/+$/, '')], directory: isDirectoryPath(treePath) })
+                                            {changedStatus !== null && (
+                                                <ContextMenu.Item onClick={openChanges}>
+                                                    <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
+                                                </ContextMenu.Item>
                                             )}
-                                        >
-                                            <Icon icon={Trash2} size={14} /> {t('files.delete')}
-                                        </ContextMenu.Item>
-                                    </>
-                                )}
-                            </>
-                        )}
-                    </ContextMenu.Popup>
-                </ContextMenu.Root>
+                                            <ContextMenu.Item
+                                                onClick={onMenuPath((absolute) => {
+                                                    revealFile(transport, absolute);
+                                                })}
+                                            >
+                                                <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
+                                            </ContextMenu.Item>
+                                            {!isDirectoryPath(menuPath) && (
+                                                <>
+                                                    <ContextMenu.Separator />
+                                                    {onCanvas && (
+                                                        <ContextMenu.Item onClick={onMenuPath((absolute) => void showFileOnCanvas(absolute))}>
+                                                            <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
+                                                        </ContextMenu.Item>
+                                                    )}
+                                                    <ContextMenu.Item onClick={onMenuPath((absolute) => void createViewAction('file', { path: absolute }))}>
+                                                        <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
+                                                    </ContextMenu.Item>
+                                                </>
+                                            )}
+                                            <ContextMenu.Separator />
+                                            <FileCopyRow targets={copyTargets} />
+                                            <ContextMenu.Separator />
+                                            <ContextMenu.Item
+                                                onClick={onMenuPath((absolute, treePath) =>
+                                                    setDeleting({ absolutes: [absolute.replace(/\/+$/, '')], directory: isDirectoryPath(treePath) })
+                                                )}
+                                            >
+                                                <Icon icon={Trash2} size={14} /> {t('files.delete')}
+                                            </ContextMenu.Item>
+                                        </>
+                                    )}
+                                </>
+                            )}
+                        </ContextMenu.Popup>
+                    </ContextMenu.Root>
+                    {creation !== null && (
+                        <NewEntryRow
+                            model={model}
+                            placeholder={placeholderPathOf(creation.parent, creation.kind)}
+                            kind={creation.kind}
+                            value={entryName}
+                            message={entryMessage}
+                            busy={entryBusy}
+                            label={t(creation.kind === 'file' ? 'files.create.fileName' : 'files.create.folderName')}
+                            onChange={(value) => {
+                                setEntryName(value);
+                                setEntryFailure(null);
+                            }}
+                            onSubmit={() => void submitEntry()}
+                            onCancel={cancelEntry}
+                            onBlur={onEntryBlur}
+                        />
+                    )}
+                </div>
             )}
             <PromptDialog
                 open={deleting !== null}

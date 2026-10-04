@@ -261,6 +261,7 @@ export function menuModel(context: MenuContext): MenuSpec {
                 ])
             ),
             command('open-folder', t('openFolder')),
+            ...only(workspace && context.folder, command('file-new', t('newFile')), command('folder-new', t('newFolder'))),
             ...only(workspace && context.folder, command('reveal', t('reveal', { app: context.fileManager }))),
             ...only(workspace, command('project-settings', t('projectSettings'))),
             separator,

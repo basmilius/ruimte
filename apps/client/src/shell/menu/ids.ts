@@ -44,6 +44,8 @@ export const PALETTE_IDS = [
     ...LANGUAGE_COMMAND_IDS,
     'open-folder',
     'chat-new',
+    'file-new',
+    'folder-new',
     'reveal',
     'find',
     'find-replace',

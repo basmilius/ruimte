@@ -188,6 +188,34 @@
         "copyNames": "Copy names",
         "copyPaths": "Copy paths",
         "copyRelativePaths": "Copy relative paths",
+        "create": {
+            "file": "New file…",
+            "fileName": "File name",
+            "folder": "New folder…",
+            "folderName": "Folder name",
+            "problem": {
+                "characters": "“{{name}}” has a character a name cannot hold.",
+                "dots": "“{{name}}” is not a name.",
+                "empty": "Type a name.",
+                "exists": "“{{name}}” already exists.",
+                "in-file": "“{{name}}” is a file, so nothing can go in it.",
+                "long": "“{{name}}” is too long.",
+                "reserved": "“{{name}}” cannot be made here.",
+                "segment": "A folder name between two slashes is empty."
+            },
+            "refused": {
+                "bad-path": "That is not a path the machine can use.",
+                "exists": "That name is already taken.",
+                "git-state": "Git keeps its own state in there, so nothing is made in it.",
+                "machine-state": "That belongs to the machine and cannot be made here.",
+                "no-machine": "The machine this project runs on is not connected.",
+                "not-a-directory": "A part of that path is a file, not a folder.",
+                "not-writable": "The machine cannot write there.",
+                "outside-project": "That is outside this project.",
+                "ruimte-state": "Ruimte keeps its own state in there, so nothing is made in it.",
+                "too-large": "That text is too large."
+            }
+        },
         "delete": "Move to trash",
         "deleteDialog": {
             "confirm": "Move to trash",
