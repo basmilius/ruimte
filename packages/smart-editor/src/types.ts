@@ -104,6 +104,8 @@ export interface EditorMarker {
     readonly unnecessary?: boolean;
     /* Drawn struck through. */
     readonly deprecated?: boolean;
+    /* What the tick of this problem in the scroll track says when the pointer rests on it, and a press on the tick goes to the problem. */
+    readonly message?: string;
 }
 
 /* The kind of use a highlighted name has at the caret. */

@@ -269,7 +269,8 @@ class SmartEditor implements Editor {
                 from: this.offsetAt(marker.range.start),
                 to: this.offsetAt(marker.range.end),
                 unnecessary: marker.unnecessary === true,
-                deprecated: marker.deprecated === true
+                deprecated: marker.deprecated === true,
+                ...(marker.message === undefined ? {} : { message: marker.message })
             }))
         );
     }

@@ -76,6 +76,7 @@ export interface ViewMarker {
     to: number;
     unnecessary: boolean;
     deprecated: boolean;
+    message?: string;
 }
 
 /*
@@ -98,6 +99,7 @@ export class EditorView {
     private readonly notice: HTMLElement;
     private readonly sticky: HTMLElement;
     private readonly overview: HTMLElement;
+    private readonly tickTip: HTMLElement;
     private readonly painter: RowPainter;
     private readonly document: Document;
     private readonly resizeObserver: ResizeObserver | undefined;
@@ -199,10 +201,13 @@ export class EditorView {
         this.sticky.hidden = true;
         this.overview = make('div', 'se-overview');
         this.overview.setAttribute('aria-hidden', 'true');
+        this.tickTip = make('div', 'se-tick-tip');
+        this.tickTip.hidden = true;
         this.notice = make('div', 'se-notice');
         this.notice.setAttribute('role', 'status');
         this.notice.hidden = true;
-        this.root.append(this.viewport, this.overview, this.input, this.notice);
+        this.root.append(this.viewport, this.overview, this.tickTip, this.input, this.notice);
+        this.wireOverview();
         container.append(this.root);
 
         this.font = readEditorFont(this.root);
@@ -1063,6 +1068,39 @@ export class EditorView {
         return { first: this.layout.rowAt(top).line, last: this.layout.rowAt(top + this.viewportHeight).line };
     }
 
+    /* A problem's tick says what the problem is when the pointer rests on it, and a press goes to it. The rest of the track lets the pointer through. */
+    private wireOverview(): void {
+        const tickOf = (event: Event): HTMLElement | null => (event.target as HTMLElement | null)?.closest?.<HTMLElement>('.se-tick[data-offset]') ?? null;
+        this.overview.addEventListener('pointerover', (event) => {
+            const tick = tickOf(event);
+            const title = tick?.getAttribute('data-title');
+            if (tick === null || !title) {
+                this.tickTip.hidden = true;
+                return;
+            }
+            this.tickTip.textContent = title;
+            this.tickTip.style.top = tick.style.top;
+            this.tickTip.hidden = false;
+        });
+        this.overview.addEventListener('pointerout', () => {
+            this.tickTip.hidden = true;
+        });
+        this.overview.addEventListener('pointerdown', (event) => {
+            const tick = tickOf(event);
+            if (tick !== null) {
+                event.preventDefault();
+                this.jumpTo(Number(tick.getAttribute('data-offset')));
+            }
+        });
+    }
+
+    /* Puts the caret on an offset, in the middle of the view, and gives the editor the keyboard. */
+    private jumpTo(offset: number): void {
+        this.model.setSelections([{ anchor: offset, head: offset }]);
+        this.revealOffset(offset, true);
+        this.focus();
+    }
+
     /* The find matches and the changes as ticks in the scroll track, redrawn when what they stand on changes. */
     private paintOverview(): void {
         const trackHeight = this.viewportHeight;
@@ -1087,7 +1125,13 @@ export class EditorView {
             if (marker.severity !== 'hint' && marker.to > marker.from) {
                 const start = this.model.positionAt(marker.from).line;
                 const end = this.model.positionAt(marker.to).line;
-                spans.push({ kind: marker.severity, top: rowTop(start), bottom: rowBottom(end) });
+                spans.push({
+                    kind: marker.severity,
+                    top: rowTop(start),
+                    bottom: rowBottom(end),
+                    offset: marker.from,
+                    ...(marker.message === undefined ? {} : { title: marker.message })
+                });
             }
         }
         matches.forEach((match, index) => {

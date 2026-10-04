@@ -5,12 +5,17 @@ export interface OverviewSpan {
     kind: OverviewKind;
     top: number;
     bottom: number;
+    /* Where a press on the tick goes, and what it says: a problem has both. */
+    offset?: number;
+    title?: string;
 }
 
 export interface OverviewTick {
     kind: OverviewKind;
     y: number;
     height: number;
+    offset?: number;
+    title?: string;
 }
 
 const MIN_TICK_HEIGHT = 3;
@@ -28,7 +33,9 @@ export function overviewTicks(spans: readonly OverviewSpan[], contentHeight: num
         .map((span): OverviewTick => ({
             kind: span.kind,
             y: Math.round(span.top * scale),
-            height: Math.max(MIN_TICK_HEIGHT, Math.round((span.bottom - span.top) * scale))
+            height: Math.max(MIN_TICK_HEIGHT, Math.round((span.bottom - span.top) * scale)),
+            ...(span.offset === undefined ? {} : { offset: span.offset }),
+            ...(span.title === undefined ? {} : { title: span.title })
         }))
         .sort((left, right) => left.y - right.y);
     const merged: OverviewTick[] = [];
@@ -61,6 +68,12 @@ export function paintOverview(container: HTMLElement, ticks: readonly OverviewTi
                 element.className = `se-tick se-tick-${tick.kind}`;
                 element.style.top = `${tick.y}px`;
                 element.style.height = `${tick.height}px`;
+                if (tick.offset !== undefined) {
+                    element.setAttribute('data-offset', String(tick.offset));
+                }
+                if (tick.title !== undefined) {
+                    element.setAttribute('data-title', tick.title);
+                }
                 return element;
             })
     );
