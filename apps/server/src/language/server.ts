@@ -37,7 +37,7 @@ export interface SharedDocument {
     readonly absolutePath: string;
     readonly uri: string;
     /* The kind of server that serves it; null for a language none does, which the daemon still holds so a client's calls stay uniform. */
-    readonly kind: LanguageServerKind | null;
+    kind: LanguageServerKind | null;
     /* The stored path a client hears about it under. */
     readonly storedPath: string;
     languageId: string;

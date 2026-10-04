@@ -30,7 +30,7 @@ interface Rig {
 }
 
 /* The install of a kind is played by `run`, which leaves the scripts where bun would. */
-function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner } = {}): Rig {
+function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner; packageJson?: string } = {}): Rig {
     const spawner = options.spawner ?? fakeSpawner();
     const holders = new Set(['client-1']);
     const installs: LanguageServerKind[] = [];
@@ -58,7 +58,8 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner 
             return 0;
         },
         clock: new ManualClock(),
-        exists: async () => false
+        exists: async () => false,
+        readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : null)
     });
     const events: Record<string, SessionEvent[]> = { 'client-1': [], 'client-2': [] };
     for (const clientId of Object.keys(events)) {
@@ -67,8 +68,8 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner 
     return { host, spawner, holders, events, installs };
 }
 
-async function installed(kinds: LanguageServerKind[] = ['typescript']): Promise<Rig> {
-    const result = rig();
+async function installed(kinds: LanguageServerKind[] = ['typescript'], options: { packageJson?: string } = {}): Promise<Rig> {
+    const result = rig(options);
     for (const kind of kinds) {
         await result.host.install(kind);
     }
@@ -107,6 +108,42 @@ const open = (host: LanguageHost, path = 'src/a.ts', text = 'let a = 1;\n', clie
 function kinds(events: SessionEvent[], event: SessionEvent['event']): SessionEvent[] {
     return events.filter((candidate) => candidate.event === event);
 }
+
+describe('a project that uses Vue', () => {
+    const vuePackage = JSON.stringify({ dependencies: { vue: '^3.5.0' } });
+
+    it('serves its scripts from the Vue kind, so one TypeScript server runs for the scripts and the components', async () => {
+        const { host, spawner } = await installed(['typescript', 'vue'], { packageJson: vuePackage });
+        const script = await open(host, 'src/main.ts', "import App from './App.vue';\n");
+        expect(script.servers).toEqual(['vue']);
+        await ready(host, 'vue');
+        const component = await open(host, 'src/App.vue', '<template></template>\n', 'client-1', 'vue');
+        expect(component.servers).toEqual(['vue']);
+        await settle();
+        expect(spawner.of('typescript')).toHaveLength(1);
+        expect(spawner.of('vue')).toHaveLength(1);
+        expect(spawner.of('typescript')[0].server.documents.has('file:///work/src/main.ts')).toBe(true);
+    });
+
+    it('leaves a project without Vue on the TypeScript kind', async () => {
+        const { host } = await installed(['typescript', 'vue'], { packageJson: JSON.stringify({ dependencies: { react: '^19' } }) });
+        expect((await open(host, 'src/main.ts')).servers).toEqual(['typescript']);
+    });
+
+    it('moves the scripts already open to the Vue kind when a .vue file shows the project uses it, and ends the TypeScript server', async () => {
+        const { host, spawner } = await installed(['typescript', 'vue']);
+        await openReady(host, 'src/main.ts');
+        expect(spawner.of('typescript')).toHaveLength(1);
+        await open(host, 'src/App.vue', '<template></template>\n', 'client-1', 'vue');
+        await ready(host, 'vue');
+        await settle();
+        expect(spawner.of('typescript')[0].kills.length).toBeGreaterThan(0);
+        // The Vue kind starts its own TypeScript server, which now holds the script.
+        const live = spawner.of('typescript').at(-1)!;
+        expect(live.server.documents.has('file:///work/src/main.ts')).toBe(true);
+        expect((await host.status('p1')).find((status) => status.server === 'typescript')?.state).toBe('stopped');
+    });
+});
 
 describe('documents', () => {
     it('opens a document at version 1 and brings the server up for it', async () => {

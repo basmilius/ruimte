@@ -45,8 +45,22 @@ const FILES: Record<string, string> = {
         "<?php\ndeclare(strict_types=1);\n\nfunction greet(string $name): string\n{\n    return 'Hello, ' . $name;\n}\n\n$message = greet('Ada');\necho $message;\n"
 };
 
+/* A project that does not use Vue, whose TypeScript stays on the TypeScript kind. */
+const PLAIN_FILES: Record<string, string> = {
+    'tsconfig.json': FILES['tsconfig.json'],
+    'package.json': JSON.stringify({ private: true, type: 'module' }),
+    'src/helpers.ts': FILES['src/helpers.ts'],
+    'src/a.ts': FILES['src/a.ts']
+};
+
+/* The Vue project's own script, which imports a component. */
+const SCRIPT_FILES: Record<string, string> = {
+    'src/use-counter.ts': "import Counter from '../Counter.vue';\n\nexport const component = Counter;\nexport const wrong: string = 1;\n"
+};
+
 let base = '';
 let project = '';
+let plain = '';
 let host: LanguageHost;
 let runtime: LanguageRuntime;
 const events: SessionEvent[] = [];
@@ -76,8 +90,8 @@ function positionOf(text: string, needle: string, offset = 0): Position {
     return { line: before.length - 1, character: before[before.length - 1].length };
 }
 
-async function ask(path: string, method: string, params: unknown): Promise<LanguageRequestResult> {
-    return host.request({ projectId: 'p1', path, method: method as never, params });
+async function ask(path: string, method: string, params: unknown, projectId = 'p1'): Promise<LanguageRequestResult> {
+    return host.request({ projectId, path, method: method as never, params });
 }
 
 function diagnosticsOf(path: string, server?: string): Diagnostic[] {
@@ -88,10 +102,10 @@ function diagnosticsOf(path: string, server?: string): Diagnostic[] {
     return last && last.event === 'language.diagnostics' ? (last.payload.diagnostics as Diagnostic[]) : [];
 }
 
-async function waitReady(kind: LanguageServerKind): Promise<void> {
+async function waitReady(kind: LanguageServerKind, projectId = 'p1'): Promise<void> {
     await eventually(
         `${kind} ready`,
-        async () => (await host.status('p1')).find((status) => status.server === kind),
+        async () => (await host.status(projectId)).find((status) => status.server === kind),
         (status) => status?.state === 'ready' || status?.state === 'indexing'
     );
 }
@@ -112,9 +126,15 @@ async function install(kind: LanguageServerKind): Promise<void> {
 beforeAll(async () => {
     base = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-language-')));
     project = join(base, 'project');
-    for (const [path, text] of Object.entries(FILES)) {
-        await mkdir(join(project, path, '..'), { recursive: true });
-        await writeFile(join(project, path), text);
+    plain = join(base, 'plain');
+    for (const [root, files] of [
+        [project, { ...FILES, ...SCRIPT_FILES }],
+        [plain, PLAIN_FILES]
+    ] as const) {
+        for (const [path, text] of Object.entries(files)) {
+            await mkdir(join(root, path, '..'), { recursive: true });
+            await writeFile(join(root, path), text);
+        }
     }
     const stub = join(base, 'ruimte-runtime');
     await writeFile(join(base, 'stub.ts'), "console.log('ruimte-runtime-stub');\n");
@@ -127,7 +147,7 @@ beforeAll(async () => {
     runtime = { command: stub, args: [], env: { BUN_BE_BUN: '1' } };
     host = new LanguageHost({
         root: join(base, 'home', 'language-servers'),
-        folderOf: (projectId) => (projectId === 'p1' ? project : null),
+        folderOf: (projectId) => (projectId === 'p1' ? project : projectId === 'p2' ? plain : null),
         holders: () => ['c1'],
         machineHome: new MachineHome(join(base, 'home')),
         runtime,
@@ -162,9 +182,9 @@ describe('TypeScript', () => {
     test('installs, starts on a document and answers features', async () => {
         await install('typescript');
         const text = FILES['src/a.ts'];
-        const opened = await host.open('c1', { projectId: 'p1', path: 'src/a.ts', languageId: 'typescript', text });
+        const opened = await host.open('c1', { projectId: 'p2', path: 'src/a.ts', languageId: 'typescript', text });
         expect(opened).toMatchObject({ version: 1, servers: ['typescript'] });
-        await waitReady('typescript');
+        await waitReady('typescript', 'p2');
 
         const diagnostics = await eventually(
             'a type error',
@@ -175,15 +195,15 @@ describe('TypeScript', () => {
 
         const hover = await eventually(
             'a hover',
-            () => ask('src/a.ts', 'textDocument/hover', { position: positionOf(text, 'add(a', 0) }).then((reply) => reply.result),
+            () => ask('src/a.ts', 'textDocument/hover', { position: positionOf(text, 'add(a', 0) }, 'p2').then((reply) => reply.result),
             Boolean
         );
         expect(JSON.stringify(hover)).toContain('function add');
 
-        const hints = await ask('src/a.ts', 'textDocument/inlayHint', { range: { start: { line: 0, character: 0 }, end: { line: 8, character: 0 } } });
+        const hints = await ask('src/a.ts', 'textDocument/inlayHint', { range: { start: { line: 0, character: 0 }, end: { line: 8, character: 0 } } }, 'p2');
         expect((hints.result as { kind?: number }[]).filter((hint) => hint.kind === 2).length).toBeGreaterThanOrEqual(2);
 
-        const providers = (await host.open('c1', { projectId: 'p1', path: 'src/a.ts', languageId: 'typescript', text })).providers;
+        const providers = (await host.open('c1', { projectId: 'p2', path: 'src/a.ts', languageId: 'typescript', text })).providers;
         expect(Object.keys(providers)).toEqual(expect.arrayContaining(['textDocument/hover', 'textDocument/completion', 'textDocument/inlayHint']));
     }, 180_000);
 
@@ -191,7 +211,7 @@ describe('TypeScript', () => {
         const text = FILES['src/a.ts'];
         const end = positionOf(text, "greet('Ada');\n", "greet('Ada');\n".length);
         const changed = await host.change({
-            projectId: 'p1',
+            projectId: 'p2',
             path: 'src/a.ts',
             baseVersion: 1,
             changes: [{ range: { start: end, end }, text: 'add(1, 2).toF' }]
@@ -200,28 +220,28 @@ describe('TypeScript', () => {
         const after = { line: end.line, character: 'add(1, 2).toF'.length };
         const completion = await eventually(
             'a completion',
-            () => ask('src/a.ts', 'textDocument/completion', { position: after }),
+            () => ask('src/a.ts', 'textDocument/completion', { position: after }, 'p2'),
             (reply) => JSON.stringify(reply.result).includes('toFixed')
         );
         expect(completion.version).toBe(2);
-        await expect(host.change({ projectId: 'p1', path: 'src/a.ts', baseVersion: 1, changes: [{ text: '' }] })).rejects.toMatchObject({
+        await expect(host.change({ projectId: 'p2', path: 'src/a.ts', baseVersion: 1, changes: [{ text: '' }] })).rejects.toMatchObject({
             code: 'stale-document'
         });
     }, 60_000);
 
     test('renames across files and formats', async () => {
-        const rename = await ask('src/a.ts', 'textDocument/rename', { position: positionOf(FILES['src/a.ts'], 'add(a', 0), newName: 'sum' });
+        const rename = await ask('src/a.ts', 'textDocument/rename', { position: positionOf(FILES['src/a.ts'], 'add(a', 0), newName: 'sum' }, 'p2');
         expect(JSON.stringify(rename.result)).toContain('sum');
-        const formatted = await ask('src/a.ts', 'textDocument/formatting', { options: { tabSize: 4, insertSpaces: true } });
+        const formatted = await ask('src/a.ts', 'textDocument/formatting', { options: { tabSize: 4, insertSpaces: true } }, 'p2');
         expect(Array.isArray(formatted.result)).toBe(true);
     }, 60_000);
 
     test('ends the server with its last document', async () => {
         const before = exits.length;
-        await host.closeDocument('c1', { projectId: 'p1', path: 'src/a.ts' });
+        await host.closeDocument('c1', { projectId: 'p2', path: 'src/a.ts' });
         await eventually(
             'the server stopping',
-            async () => (await host.status('p1')).find((status) => status.server === 'typescript'),
+            async () => (await host.status('p2')).find((status) => status.server === 'typescript'),
             (status) => status?.state === 'stopped'
         );
         await Promise.all(exits.slice(0, before));
@@ -257,6 +277,31 @@ describe('Vue', () => {
             (reply) => JSON.stringify(reply.result).includes('toFixed')
         );
         expect(completion.server).toBe('typescript');
+    }, 180_000);
+
+    test('serves a script that imports a component from the same TypeScript server, so it is typed and no second tsserver starts', async () => {
+        const text = SCRIPT_FILES['src/use-counter.ts'];
+        const processesBefore = exits.length;
+        const opened = await host.open('c1', { projectId: 'p1', path: 'src/use-counter.ts', languageId: 'typescript', text });
+        expect(opened.servers).toEqual(['vue']);
+        // Only a type error of its own: with the plugin the `.vue` import resolves, without it the module is not found.
+        const diagnostics = await eventually(
+            'script diagnostics',
+            () => diagnosticsOf('src/use-counter.ts', 'typescript'),
+            (list) => list.some((item) => /not assignable/.test(item.message))
+        );
+        expect(diagnostics.some((item) => /Cannot find module/.test(item.message))).toBe(false);
+        const hover = await eventually(
+            'a hover on the component',
+            () => ask('src/use-counter.ts', 'textDocument/hover', { position: positionOf(text, 'Counter;', 2) }),
+            (reply) => reply.result !== null
+        );
+        expect(hover.server).toBe('typescript');
+        expect(JSON.stringify(hover.result)).toContain('Counter');
+        expect(exits.length).toBe(processesBefore);
+        const statuses = await host.status('p1');
+        expect(statuses.find((status) => status.server === 'typescript')?.state).toBe('stopped');
+        await host.closeDocument('c1', { projectId: 'p1', path: 'src/use-counter.ts' });
     }, 180_000);
 
     test('reports a script error after a change and clears it when the text is put back', async () => {

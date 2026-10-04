@@ -271,6 +271,19 @@ describe('the Vue pair', () => {
         expect(Object.keys(server.capabilities ?? {})).toEqual(['typescript', 'vue']);
     });
 
+    it('opens a script in the TypeScript server only, which loads the plugin, so one tsserver serves the whole project', async () => {
+        const { server, spawner } = rig('vue');
+        const script = document('/work/src/main.ts', 'typescript', "import App from './App.vue';\n");
+        server.attach(script);
+        await settle();
+        const [typescript, vue] = spawner.processes;
+        expect(typescript.server.documents.get('file:///work/src/main.ts')?.languageId).toBe('typescript');
+        expect(vue.server.documents.has('file:///work/src/main.ts')).toBe(false);
+        expect(spawner.processes.filter((process) => process.name === 'typescript')).toHaveLength(1);
+        typescript.server.handle('textDocument/hover', () => ({ contents: 'from typescript' }));
+        expect((await server.request(script, 'textDocument/hover', { position: { line: 0, character: 3 } })).server).toBe('typescript');
+    });
+
     it('relays the tsserver requests of Vue to the TypeScript server and answers Vue', async () => {
         const { server, spawner } = rig(
             'vue',

@@ -62,7 +62,8 @@ export const KIND_PROFILES: Record<LanguageServerKind, KindProfile> = {
     vue: {
         kind: 'vue',
         components: [
-            typescriptComponent(['vue'], true),
+            // The one TypeScript server of a project that uses Vue serves its scripts too, so a `.ts` file that imports a `.vue` one gets its types and only one tsserver runs.
+            typescriptComponent([...SCRIPT_LANGUAGES, 'vue'], true),
             {
                 name: 'vue',
                 languages: ['vue'],
@@ -124,4 +125,22 @@ export async function resolveTypescriptLib(projectFolder: string, installDirecto
         return own;
     }
     return join(installDirectory, 'node_modules', 'typescript', 'lib');
+}
+
+const VUE_PACKAGES = /^(vue|nuxt|@nuxt\/.+|@vue\/.+|@vitejs\/plugin-vue)$/;
+
+/* Whether the text of a `package.json` names Vue or something built on it, in any kind of dependency. */
+export function usesVue(packageJson: string | null): boolean {
+    if (packageJson === null) {
+        return false;
+    }
+    try {
+        const parsed = JSON.parse(packageJson) as Record<string, unknown>;
+        return ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].some((field) => {
+            const dependencies = parsed[field];
+            return typeof dependencies === 'object' && dependencies !== null && Object.keys(dependencies).some((name) => VUE_PACKAGES.test(name));
+        });
+    } catch {
+        return false;
+    }
 }

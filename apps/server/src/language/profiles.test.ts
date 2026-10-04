@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { KIND_PROFILES, kindForLanguage, lspLanguageId, resolveTypescriptLib } from './profiles.ts';
+import { KIND_PROFILES, kindForLanguage, lspLanguageId, resolveTypescriptLib, usesVue } from './profiles.ts';
 import { LANGUAGE_KIND_PACKAGES, LANGUAGE_PACKAGE_VERSIONS, pinnedVersionsOf, versionOf } from './versions.ts';
 
 const context = { installDirectory: '/home/.ruimte/language-servers/vue', projectFolder: '/work/app', typescriptLib: '/work/app/node_modules/typescript/lib' };
@@ -40,6 +40,21 @@ describe('server profiles', () => {
             plugins: [{ name: '@vue/typescript-plugin', location: '/home/.ruimte/language-servers/vue/node_modules', languages: ['vue'] }]
         });
         expect(vue.args(context)).toEqual(['--stdio', '--tsdk=/work/app/node_modules/typescript/lib']);
+    });
+
+    it('has the one TypeScript server of a Vue project serve the scripts as well as the Vue files', () => {
+        const [typescript, vue] = KIND_PROFILES.vue.components;
+        expect(typescript.languages).toEqual(['typescript', 'typescriptreact', 'javascript', 'javascriptreact', 'vue']);
+        expect(vue.languages).toEqual(['vue']);
+    });
+
+    it('reads Vue off a package.json, in any kind of dependency, and nothing off one that does not name it', () => {
+        expect(usesVue(JSON.stringify({ dependencies: { vue: '^3.5.0' } }))).toBe(true);
+        expect(usesVue(JSON.stringify({ devDependencies: { '@vitejs/plugin-vue': '^5' } }))).toBe(true);
+        expect(usesVue(JSON.stringify({ dependencies: { nuxt: '^3' } }))).toBe(true);
+        expect(usesVue(JSON.stringify({ dependencies: { react: '^19', 'vuex-like': '1' } }))).toBe(false);
+        expect(usesVue('not json')).toBe(false);
+        expect(usesVue(null)).toBe(false);
     });
 
     it('keeps the PHP index in the install and its telemetry off', () => {

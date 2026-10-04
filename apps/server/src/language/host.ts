@@ -1,5 +1,5 @@
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { access, readFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import {
     LANGUAGE_ERROR_CODES,
     LANGUAGE_METHODS,
@@ -24,7 +24,7 @@ import { applyContentChanges, ErrorCodes, LspError, pathToFileUri, StaleResultEr
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageInstaller } from './installer.ts';
-import { KIND_PROFILES, kindForLanguage } from './profiles.ts';
+import { KIND_PROFILES, kindForLanguage, usesVue } from './profiles.ts';
 import { bunRuntime, runCommand, spawnLanguageProcess, type LanguageRuntime, type RunCommand, type SpawnLanguageProcess } from './runtime.ts';
 import { LanguageServer, realLanguageClock, type LanguageClock, type LanguageServerHooks, type SharedDocument } from './server.ts';
 import { versionOf } from './versions.ts';
@@ -46,6 +46,8 @@ export interface LanguageHostOptions {
     run?: RunCommand;
     clock?: LanguageClock;
     exists?: (path: string) => Promise<boolean>;
+    /* The text of a file, or null when it cannot be read. */
+    readText?: (path: string) => Promise<string | null>;
     now?: () => number;
 }
 
@@ -54,6 +56,13 @@ interface ProjectLanguage {
     folder: string;
     documents: Map<string, SharedDocument>;
     servers: Map<LanguageServerKind, LanguageServer>;
+    /* Whether the project uses Vue, which sends its scripts to the Vue kind; unknown until its `package.json` was read or a `.vue` file opened. */
+    vue: boolean | undefined;
+    vueCheck: Promise<boolean> | undefined;
+}
+
+async function readTextOrNull(path: string): Promise<string | null> {
+    return readFile(path, 'utf8').catch(() => null);
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -160,7 +169,7 @@ export class LanguageHost {
     async open(clientId: string, payload: LanguageDocumentOpenPayload): Promise<LanguageDocumentOpenResult> {
         const project = this.projectFor(payload.projectId);
         const absolutePath = await this.pathOf(project, payload.path);
-        const kind = kindForLanguage(payload.languageId);
+        const kind = await this.kindFor(project, kindForLanguage(payload.languageId));
         let document = project.documents.get(absolutePath);
         if (document) {
             document.clients.add(clientId);
@@ -258,9 +267,51 @@ export class LanguageHost {
         if (folder === null) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.projectNotFound, `No project ${projectId}`);
         }
-        const project: ProjectLanguage = { projectId, folder, documents: new Map(), servers: new Map() };
+        const project: ProjectLanguage = { projectId, folder, documents: new Map(), servers: new Map(), vue: undefined, vueCheck: undefined };
         this.projects.set(projectId, project);
         return project;
+    }
+
+    /*
+     * The kind that serves a document. In a project that uses Vue the scripts go to the Vue kind, whose
+     * one TypeScript server loads Vue's plugin, so a `.ts` file importing a `.vue` one is typed and only one
+     * tsserver runs. A `.vue` file opening in a project that did not say so makes it one.
+     */
+    private async kindFor(project: ProjectLanguage, kind: LanguageServerKind | null): Promise<LanguageServerKind | null> {
+        if (kind === 'vue') {
+            await this.markVue(project);
+            return 'vue';
+        }
+        return kind === 'typescript' && (await this.projectUsesVue(project)) ? 'vue' : kind;
+    }
+
+    private projectUsesVue(project: ProjectLanguage): Promise<boolean> {
+        if (project.vue !== undefined) {
+            return Promise.resolve(project.vue);
+        }
+        project.vueCheck ??= (this.options.readText ?? readTextOrNull)(join(project.folder, 'package.json')).then((text) => {
+            project.vue ??= usesVue(text);
+            return project.vue;
+        });
+        return project.vueCheck;
+    }
+
+    /* The scripts already open go to the Vue server, and the TypeScript one ends with its last document. */
+    private async markVue(project: ProjectLanguage): Promise<void> {
+        if (project.vue === true) {
+            return;
+        }
+        project.vue = true;
+        const typescript = project.servers.get('typescript');
+        const moved = [...project.documents.values()].filter((document) => document.kind === 'typescript');
+        for (const document of moved) {
+            await typescript?.detach(document);
+            document.kind = 'vue';
+            this.ensureServer(project, 'vue').attach(document);
+        }
+        if (typescript && moved.length > 0 && typescript.documentCount === 0 && typescript.state !== 'crashed') {
+            await typescript.stop();
+        }
     }
 
     /* Where a stored path leads, after the same line a file read stops at. */
