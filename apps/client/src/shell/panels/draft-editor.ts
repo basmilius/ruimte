@@ -1,5 +1,6 @@
 import type { Editor, EditorEngine, EditorOptions } from '@ruimte/smart-editor';
 import { endpointKey } from '@/state/keys';
+import { blankLineEdits } from '@/shell/panels/blank-lines';
 import { type DiskText, type TextDrafts, useTextDrafts } from '@/state/text-drafts';
 
 /*
@@ -17,6 +18,13 @@ export function bindDraftEditor(editor: Editor, drafts: TextDrafts, endpointId: 
     const offBlur = editor.onBlur(() => {
         void drafts.save(endpointId, path);
     });
+    // Its own caret line keeps its indentation, since the autosave runs while a person pauses on it.
+    const offPrepare = drafts.beforeSave(endpointId, path, () => {
+        const edits = blankLineEdits(editor.getText(), editor.getCaret().line);
+        if (edits.length > 0) {
+            editor.applyEdits(edits);
+        }
+    });
     const offDraft = useTextDrafts.subscribe((state, previous) => {
         const text = state.rows[key]?.text;
         if (text !== undefined && text !== previous.rows[key]?.text && text !== editor.getText()) {
@@ -27,6 +35,7 @@ export function bindDraftEditor(editor: Editor, drafts: TextDrafts, endpointId: 
         offChange();
         offSave();
         offBlur();
+        offPrepare();
         offDraft();
     };
 }

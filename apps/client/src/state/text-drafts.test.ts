@@ -365,6 +365,26 @@ describe('surfaces', () => {
         expect(engine.last.getText()).toBe('two');
     });
 
+    test('a save empties lines of only whitespace, but not the one an editor has its caret on', async () => {
+        const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'one', theme: 'light' });
+        bindDraftEditor(editor, drafts, MACHINE, PATH);
+        editor.focus();
+        editor.setText('a\n  \nb\n    ');
+        editor.setCaret({ line: 3, character: 4 });
+        drafts.edit(MACHINE, PATH, editor.getText());
+        void drafts.save(MACHINE, PATH);
+        await flush();
+        expect(link.writes.at(-1)?.text).toBe('a\n\nb\n    ');
+        expect(editor.getText()).toBe('a\n\nb\n    ');
+    });
+
+    test('a draft no editor holds is tidied whole', async () => {
+        drafts.stage(MACHINE, PATH, { text: 'one', mtime: 1 }, 'x\n\t\ny');
+        void drafts.save(MACHINE, PATH);
+        await flush();
+        expect(link.writes.at(-1)?.text).toBe('x\n\ny');
+    });
+
     test('leaving the editor saves at once, and a reload reaches every editor', async () => {
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'one', theme: 'light' });
         bindDraftEditor(editor, drafts, MACHINE, PATH);

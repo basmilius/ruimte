@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { create } from 'zustand';
 import type { FsReadResult, FsWriteResult } from '@ruimte/contracts';
+import { collapseBlankLines } from '@/shell/panels/blank-lines';
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
 import { transportFor } from '@/transport';
@@ -81,6 +82,7 @@ function messageOf(error: unknown): string {
 export class TextDrafts {
     private readonly linkFor: (endpointId: string) => DraftLink | null;
     private readonly pending = new Map<string, Pending>();
+    private readonly preparers = new Map<string, Set<() => void>>();
 
     constructor(linkFor: (endpointId: string) => DraftLink | null) {
         this.linkFor = linkFor;
@@ -162,14 +164,47 @@ export class TextDrafts {
         this.dropIfIdle(key);
     }
 
+    /*
+     * Runs before every save of the file, so an editor can tidy its own text (it knows where its caret
+     * is) and the tidy text is what gets written. A draft no editor holds is tidied here instead.
+     */
+    beforeSave(endpointId: string, path: string, prepare: () => void): () => void {
+        const key = endpointKey(endpointId, path);
+        const hooks = this.preparers.get(key) ?? new Set<() => void>();
+        hooks.add(prepare);
+        this.preparers.set(key, hooks);
+        return () => {
+            hooks.delete(prepare);
+            if (hooks.size === 0) {
+                this.preparers.delete(key);
+            }
+        };
+    }
+
+    private prepare(key: string): void {
+        const hooks = this.preparers.get(key);
+        if (hooks !== undefined) {
+            hooks.forEach((prepare) => prepare());
+            return;
+        }
+        const text = useTextDrafts.getState().rows[key]?.text;
+        if (text !== undefined && collapseBlankLines(text) !== text) {
+            this.patch(key, { text: collapseBlankLines(text) });
+        }
+    }
+
     /* Writes the draft now. True once nothing is left unsaved; false while a problem stands in the way. */
     save(endpointId: string, path: string): Promise<boolean> {
         const key = endpointKey(endpointId, path);
         const pending = this.pendingOf(key);
-        this.clearTimer(key);
         if (pending.saving !== null) {
+            this.clearTimer(key);
             return pending.saving.then(() => this.save(endpointId, path));
         }
+        if (isUnsavedDraft(useTextDrafts.getState().rows[key])) {
+            this.prepare(key);
+        }
+        this.clearTimer(key);
         const draft = useTextDrafts.getState().rows[key];
         if (draft === undefined || !isUnsavedDraft(draft)) {
             if (draft?.problem?.kind === 'error') {
