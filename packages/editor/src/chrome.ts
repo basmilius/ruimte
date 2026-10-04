@@ -86,19 +86,29 @@ export const readChromeColors = (element: HTMLElement): Record<string, string> =
     return colors;
 };
 
-const pixels = (style: CSSStyleDeclaration, token: string): number | undefined => {
-    const value = Number.parseFloat(style.getPropertyValue(token));
-    return Number.isFinite(value) ? value : undefined;
+/* The first of the tokens the page defines, in pixels. */
+const pixels = (style: CSSStyleDeclaration, ...tokens: string[]): number | undefined => {
+    for (const token of tokens) {
+        const value = Number.parseFloat(style.getPropertyValue(token));
+        if (Number.isFinite(value)) {
+            return value;
+        }
+    }
+    return undefined;
 };
 
-/* The viewer's code face: `--font-mono`, which the terminal font setting overrides, at `--text-code`, with ligatures unless the page turned them off. */
+/*
+ * The viewer's code face: `--font-mono`, which the terminal font setting overrides, at `--code-font-size`
+ * and `--code-line-height`, with ligatures unless the page turned them off. A page without the code
+ * tokens gets its interface's `--text-code`.
+ */
 export const readEditorFont = (element: HTMLElement): EditorFont => {
     const style = getComputedStyle(element);
     const family = style.getPropertyValue('--font-mono').trim();
     return {
         fontFamily: family === '' ? undefined : family,
-        fontSize: pixels(style, '--text-code'),
-        lineHeight: pixels(style, '--text-code--line-height'),
+        fontSize: pixels(style, '--code-font-size', '--text-code'),
+        lineHeight: pixels(style, '--code-line-height', '--text-code--line-height'),
         fontLigatures: style.fontVariantLigatures !== 'none'
     };
 };

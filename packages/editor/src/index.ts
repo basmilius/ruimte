@@ -59,6 +59,8 @@ export interface Editor {
     endFind(): void;
     setWrap(wrap: boolean): void;
     setTheme(theme: EditorTheme): void;
+    /* Reads the code face off the page again, after the page changed its size, family or ligatures. */
+    refreshFont(): void;
     setReadOnly(readOnly: boolean, reason?: string): void;
     focus(): void;
     dispose(): void;

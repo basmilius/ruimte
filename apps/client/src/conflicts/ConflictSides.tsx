@@ -26,7 +26,7 @@ function Side({ label, lines, take, disabled, onTake }: SideProps) {
                 {lines.length === 0 ? (
                     <EmptyState className="h-full">{t('side.nothing')}</EmptyState>
                 ) : (
-                    <pre className="px-2 py-1 font-mono text-code leading-(--text-code--line-height) text-text">{lines.join('\n')}</pre>
+                    <pre className="px-2 py-1 font-mono text-(length:--code-font-size) leading-(--code-line-height) text-text">{lines.join('\n')}</pre>
                 )}
             </div>
         </div>

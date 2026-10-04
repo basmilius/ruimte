@@ -3,6 +3,7 @@ import type { Editor, EditorEngine } from '@ruimte/editor';
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
+import { useSettings } from '@/state/settings';
 import { type DiskText, textDrafts } from '@/state/text-drafts';
 
 interface FileEditorProps {
@@ -34,6 +35,9 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
     const host = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Editor | null>(null);
     const theme = useCodeTheme();
+    const codeFontSize = useSettings((s) => s.codeFontSize);
+    const font = useSettings((s) => s.font);
+    const codeLigatures = useSettings((s) => s.codeLigatures);
     // What the editor mounts with; every later change reaches it through the effects below.
     const initial = useRef({ disk, language, wrap, readOnlyReason, theme, reveal });
     const revealed = useRef<number | null>(null);
@@ -71,6 +75,11 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
     useEffect(() => {
         editorRef.current?.setTheme(theme);
     }, [theme]);
+
+    // The settings wrote the tokens on the root before the store told anyone, so the editor reads the new face.
+    useEffect(() => {
+        editorRef.current?.refreshFont();
+    }, [codeFontSize, font, codeLigatures]);
 
     useEffect(() => {
         editorRef.current?.setWrap(wrap);

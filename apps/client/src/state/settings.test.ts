@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
-import { codeThemesOf, iceServersFrom, settingsFrom, useSettings, type KeepAwakeMode, type Settings } from './settings';
+import { codeLineHeight, codeThemesOf, iceServersFrom, settingsFrom, useSettings, type KeepAwakeMode, type Settings } from './settings';
 
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
@@ -127,6 +127,26 @@ describe('the rest of a stored blob', () => {
         expect(settings.fontSize).toBe(20);
         expect(settings.filesShowHidden).toBe(true);
         expect(settings.browseStartFolder).toBe('/Users/bas');
+    });
+});
+
+describe('the code font size', () => {
+    test('starts at 13 and is held to the range of the terminal, in whole pixels', () => {
+        expect(settingsFrom({}).codeFontSize).toBe(13);
+        expect(settingsFrom({ codeFontSize: 99 }).codeFontSize).toBe(20);
+        expect(settingsFrom({ codeFontSize: 4 }).codeFontSize).toBe(10);
+        expect(settingsFrom({ codeFontSize: 14.5 }).codeFontSize).toBe(15);
+        expect(settingsFrom({ codeFontSize: '16' as unknown as number }).codeFontSize).toBe(13);
+    });
+
+    test('draws on a line of whole pixels that is 20 at 13, as code read before the setting', () => {
+        expect(codeLineHeight(13)).toBe(20);
+        expect(codeLineHeight(10)).toBe(15);
+        expect(codeLineHeight(14)).toBe(22);
+        expect(codeLineHeight(20)).toBe(31);
+        for (let size = 10; size <= 20; size += 1) {
+            expect(Number.isInteger(codeLineHeight(size))).toBe(true);
+        }
     });
 });
 

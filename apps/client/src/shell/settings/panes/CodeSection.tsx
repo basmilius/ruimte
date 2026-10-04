@@ -17,13 +17,20 @@ const PREVIEW_CODE = [
     '}'
 ].join('\n');
 
+interface CodeThemePreviewProps {
+    theme: string;
+    mode: 'light' | 'dark';
+    label: string;
+    code?: string;
+}
+
 /* A few lines in a theme, on the code background of the app's side it is for, which is what the viewer and the editor draw it on. */
-function CodeThemePreview({ theme, mode, label }: { theme: string; mode: 'light' | 'dark'; label: string }) {
+export function CodeThemePreview({ theme, mode, label, code = PREVIEW_CODE }: CodeThemePreviewProps) {
     const [html, setHtml] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
-        highlightCode(PREVIEW_CODE, 'typescript', theme)
+        highlightCode(code, 'typescript', theme)
             .then((result) => {
                 if (!cancelled) {
                     setHtml(result);
@@ -33,7 +40,7 @@ function CodeThemePreview({ theme, mode, label }: { theme: string; mode: 'light'
         return () => {
             cancelled = true;
         };
-    }, [theme]);
+    }, [code, theme]);
 
     return (
         <div className="code-theme-preview overflow-hidden rounded-lg border border-border bg-clip-padding" role="img" aria-label={label}>
@@ -43,7 +50,7 @@ function CodeThemePreview({ theme, mode, label }: { theme: string; mode: 'light'
                     // The plain lines hold the same height until the highlighted ones arrive, so the pane does not jump.
                     <pre>
                         <code>
-                            {PREVIEW_CODE.split('\n').map((line, index) => (
+                            {code.split('\n').map((line, index) => (
                                 <span key={index} className="line">
                                     {line}
                                 </span>

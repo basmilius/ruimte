@@ -28,6 +28,13 @@
     --color-iron-950: #020513;
 }
 
+/* Code in the panels, the editor and the conflict overlay, at the size the settings set on the root.
+   A chat and every other use of `--text-code` in the interface keep that token. */
+:root {
+    --code-font-size: var(--text-code);
+    --code-line-height: var(--text-code--line-height);
+}
+
 /* The sky behind the welcome and About (`ui/Eclipse.tsx`): a night sky in the dark theme and a pale
    morning one in the light theme, so the words on it follow the theme like any other. */
 :root, [data-theme="light"] {
@@ -451,6 +458,11 @@
         --diffs-light-bg: var(--surface);
         --diffs-dark-bg: var(--surface);
     }
+    .file-diff .chat-diff {
+        font-size: var(--code-font-size);
+        --diffs-font-size: var(--code-font-size);
+        --diffs-line-height: var(--code-line-height);
+    }
 
     /* A file of code, drawn a chunk at a time by shiki. Every state of a chunk (reserved, plain,
        highlighted) draws the same line box, so nothing below it shifts while shiki catches up. The
@@ -461,15 +473,15 @@
         margin: 0;
         background: transparent !important;
         font-family: var(--font-mono);
-        font-size: var(--text-code);
-        line-height: var(--text-code--line-height);
+        font-size: var(--code-font-size);
+        line-height: var(--code-line-height);
         white-space: pre;
     }
     .file-code code { display: block; font-family: inherit; }
     .file-code .line {
         display: block;
         position: relative;
-        min-height: var(--text-code--line-height);
+        min-height: var(--code-line-height);
         padding: 0 16px 0 64px;
     }
     .file-code .line::before {
@@ -507,12 +519,12 @@
         padding: 12px 16px;
         overflow-x: auto;
         font-family: var(--font-mono);
-        font-size: var(--text-code);
-        line-height: var(--text-code--line-height);
+        font-size: var(--code-font-size);
+        line-height: var(--code-line-height);
         white-space: pre;
     }
     .code-theme-preview code { display: block; font-family: inherit; }
-    .code-theme-preview .line { display: block; min-height: var(--text-code--line-height); }
+    .code-theme-preview .line { display: block; min-height: var(--code-line-height); }
     /* The mark over a plan step the active item in the header went to. A layer of its own, so a row
        with a background keeps it while the mark fades; with motion off it stays until the timer ends it. */
     .plan-step-revealed {
@@ -639,8 +651,8 @@
 .conflict-editor .cm-editor .cm-scroller {
     overflow: auto;
     font-family: var(--font-mono);
-    font-size: var(--text-code);
-    line-height: var(--text-code--line-height);
+    font-size: var(--code-font-size);
+    line-height: var(--code-line-height);
 }
 .conflict-editor .cm-editor .cm-content { caret-color: var(--text); }
 .conflict-editor .cm-editor .cm-gutters { border-right: 1px solid var(--border); background: var(--surface); color: var(--text-faint); }

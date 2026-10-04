@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Select, Stepper, Switch } from '@basmilius/desktop-ui';
 import { SettingsRow } from '@basmilius/desktop-ui/settings';
+import { CodeThemePreview } from '@/shell/settings/panes/CodeSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { useCodeTheme } from '@/state/code-theme';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, INTERFACE_FONTS, MONO_FONTS, useSettings } from '@/state/settings';
+import { useTheme } from '@/state/theme';
+
+const CODE_SIZE_PREVIEW = ['export function greet(name: string): string {', '    return `Hello ${name}.`;', '}'].join('\n');
 
 function TerminalPreview({ fontSize }: { fontSize: number }) {
     return (
@@ -25,8 +30,11 @@ export function FontSection() {
     const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
     const font = useSettings((s) => s.font);
     const fontSize = useSettings((s) => s.fontSize);
+    const codeFontSize = useSettings((s) => s.codeFontSize);
     const codeLigatures = useSettings((s) => s.codeLigatures);
     const update = useSettings((s) => s.update);
+    const codeTheme = useCodeTheme();
+    const side = useTheme((s) => s.resolved);
 
     return (
         <SettingsSection title={t('appearance.font.title')}>
@@ -96,6 +104,24 @@ export function FontSection() {
                 }
             >
                 <TerminalPreview fontSize={fontSize} />
+            </SettingsRow>
+            <SettingsRow
+                searchId="appearance.font.codeSize"
+                label={t('appearance.font.codeSize.label')}
+                description={t('appearance.font.codeSize.description')}
+                control={
+                    <Stepper
+                        value={codeFontSize}
+                        min={FONT_SIZE_RANGE.min}
+                        max={FONT_SIZE_RANGE.max}
+                        step={FONT_SIZE_RANGE.step}
+                        unit=" px"
+                        label={t('appearance.font.codeSize.label')}
+                        onValueChange={(value) => update({ codeFontSize: value })}
+                    />
+                }
+            >
+                <CodeThemePreview theme={codeTheme} mode={side} label={t('appearance.font.codeSize.preview')} code={CODE_SIZE_PREVIEW} />
             </SettingsRow>
             <SettingsRow
                 searchId="appearance.font.ligatures"

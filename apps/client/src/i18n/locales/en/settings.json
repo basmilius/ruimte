@@ -54,6 +54,11 @@
             "terminalSize": {
                 "label": "Terminal font size"
             },
+            "codeSize": {
+                "label": "Code font size",
+                "description": "Code and diffs in files, the editor and the git panel. Chats keep their own size.",
+                "preview": "Code at the chosen size"
+            },
             "ligatures": {
                 "label": "Ligatures",
                 "description": "Draws => and !== as one symbol in files, the editor, diffs and chats."

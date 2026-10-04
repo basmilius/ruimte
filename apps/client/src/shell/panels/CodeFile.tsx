@@ -23,10 +23,6 @@ import { useSettings } from '@/state/settings';
 // long file is a handful of blocks instead of thousands.
 const CHUNK_LINES = 400;
 
-// `--text-code--line-height` in `styles.css`. A chunk that has not been mounted reserves this per
-// line, so the scrollbar is the right length from the first paint.
-const LINE_HEIGHT = 20;
-
 // How far outside the viewport a chunk starts drawing itself, so scrolling never waits for it.
 const LOOK_AHEAD = '600px';
 
@@ -125,7 +121,8 @@ function CodeChunk({ code, lines, start, language, theme, reveal, revealNonce }:
     }, [near, code, language, theme]);
 
     // The counter starts one line before the first, since every line increments it before it prints.
-    const style = { counterReset: `line ${start - 1}`, minHeight: lines * LINE_HEIGHT };
+    // The height is reserved before the chunk draws, so the scrollbar is the right length from the first paint.
+    const style = { counterReset: `line ${start - 1}`, minHeight: `calc(${lines} * var(--code-line-height))` };
 
     if (html !== null) {
         return <div ref={ref} className="file-code-chunk" data-start={start} style={style} dangerouslySetInnerHTML={{ __html: html }} />;

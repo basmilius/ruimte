@@ -80,6 +80,9 @@ export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
+/* The line a code size draws on, in whole pixels. 20 at 13, the pair the interface's own code token has. */
+export const codeLineHeight = (size: number): number => Math.round((size * 20) / 13);
+
 export interface Settings {
     sidebarScope: 'current' | 'all-open';
     /* "Needs you" lists what waits in every open project, not only the one on screen. The combined sidebar always does. */
@@ -93,6 +96,8 @@ export interface Settings {
     /* The root font size in px, so the rem-based interface scales with it. Code and the terminal
        keep their own absolute sizes and stay put. */
     interfaceFontSize: number;
+    /* Code and diffs in the panels and the editor, in px. A chat keeps the interface's own code size. */
+    codeFontSize: number;
     /* How many files the viewer keeps open before the oldest unpinned tab makes room. */
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
@@ -190,6 +195,7 @@ const DEFAULT_SETTINGS: Settings = {
     font: 'system',
     fontSize: 13,
     interfaceFontSize: 15,
+    codeFontSize: 13,
     filesTabLimit: 5,
     filesShowHidden: false,
     browseStartFolder: '',
@@ -237,6 +243,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     needsYouAllProjects: stored.needsYouAllProjects !== false,
     fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
     interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
+    codeFontSize: clampSize(stored.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize),
     filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
     // A path is typed by hand and read back as one; anything else in the blob is no folder.
     browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
@@ -300,6 +307,8 @@ const apply = (settings: Settings): void => {
     }
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
+    root.setProperty('--code-font-size', `${settings.codeFontSize}px`);
+    root.setProperty('--code-line-height', `${codeLineHeight(settings.codeFontSize)}px`);
     const accent = accentColor(settings.accent);
     if (accent) {
         root.setProperty('--accent', accent);
@@ -341,6 +350,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 font,
                 fontSize,
                 interfaceFontSize,
+                codeFontSize,
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
@@ -379,6 +389,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 font,
                 fontSize,
                 interfaceFontSize,
+                codeFontSize,
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
@@ -412,6 +423,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
+            next.codeFontSize = clampSize(next.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize);
             next.filesTabLimit = clampSize(next.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit);
             try {
                 localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));

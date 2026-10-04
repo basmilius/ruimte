@@ -64,6 +64,12 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
     },
     { id: 'appearance.font.terminalSize', section: 'appearance', label: 'settings:appearance.font.terminalSize.label' },
     {
+        id: 'appearance.font.codeSize',
+        section: 'appearance',
+        label: 'settings:appearance.font.codeSize.label',
+        description: 'settings:appearance.font.codeSize.description'
+    },
+    {
         id: 'appearance.font.ligatures',
         section: 'appearance',
         label: 'settings:appearance.font.ligatures.label',

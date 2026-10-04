@@ -14,6 +14,8 @@ export class FakeEditor implements Editor {
     readOnlyReason: string | undefined;
     revealedLine: number | null;
     focused = false;
+    /* How often the client asked it to read the code face off the page again. */
+    fontRefreshes = 0;
     disposed = false;
     /* What the client asked to find last; null once it ended the find. */
     findQuery: EditorFindQuery | null = null;
@@ -119,6 +121,10 @@ export class FakeEditor implements Editor {
 
     setTheme(theme: EditorTheme): void {
         this.theme = theme;
+    }
+
+    refreshFont(): void {
+        this.fontRefreshes += 1;
     }
 
     setReadOnly(readOnly: boolean, reason?: string): void {

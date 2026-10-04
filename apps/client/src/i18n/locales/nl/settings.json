@@ -54,6 +54,11 @@
             "terminalSize": {
                 "label": "Tekstgrootte terminal"
             },
+            "codeSize": {
+                "label": "Tekstgrootte code",
+                "description": "Code en diffs in bestanden, de editor en het git-paneel. Chats houden hun eigen grootte.",
+                "preview": "Code op de gekozen grootte"
+            },
             "ligatures": {
                 "label": "Ligaturen",
                 "description": "Tekent => en !== als één teken in bestanden, de editor, diffs en chats."

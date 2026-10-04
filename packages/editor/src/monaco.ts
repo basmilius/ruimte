@@ -257,6 +257,10 @@ class MonacoEditor implements Editor {
         this.engine.applyTheme(this.element, theme);
     }
 
+    refreshFont(): void {
+        this.editor.updateOptions(readEditorFont(this.element));
+    }
+
     setReadOnly(readOnly: boolean, reason?: string): void {
         this.editor.updateOptions(readOnlyOptions(readOnly, reason));
     }
