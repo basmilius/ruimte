@@ -1,9 +1,9 @@
 import { type DocumentModel, type EditorSnapshot, type FoldingRange, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
 import { FindController } from './find.ts';
-import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING } from './layout.ts';
+import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { mapOffset } from './offsets.ts';
-import { Outline, scopeChain, stickyChain, structuralEntries } from './outline.ts';
+import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { paintCarets, paintGutter, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
 import { TokenCache } from './tokens.ts';
 import type { EditorBlock, EditorFindQuery, EditorFindState, LineTokenizer } from './types.ts';
@@ -26,13 +26,16 @@ const NOTICE_MS = 3000;
 const DEFAULT_HEIGHT = 400;
 const DEFAULT_WIDTH = 800;
 const FOLD_LIMIT = 2_000_000;
+const MIN_GUTTER_WIDTH = 64;
+/* The caret stays solid this long after it moved, so holding an arrow key does not blink it between steps. */
+const CARET_SOLID_MS = 500;
 const STICKY_MAX_LINES = 5;
 /* A view shows at most this share of its rows as sticky headers, so a small node keeps most of its text. */
 const STICKY_ROW_SHARE = 4;
 
-/* Where the delimiter that closes a range starts; indentation folds have none. */
-function closerOf(range: FoldingRange): number | undefined {
-    return range.kind === 'bracket' ? range.to - 1 : range.kind === 'comment' ? range.to - 2 : undefined;
+/* A line that starts several ranges folds as the outermost one, which the sort puts first. */
+export function outermostPerLine(ranges: readonly FoldingRange[]): FoldingRange[] {
+    return ranges.filter((range, index) => index === 0 || range.startLine !== ranges[index - 1]!.startLine);
 }
 
 /* A mark the host asked for, such as every use of the name under the caret. */
@@ -69,6 +72,11 @@ export class EditorView {
     private readonly outline = new Outline();
     private stickyEntries: StickyEntry[] = [];
     private scopeKey = '';
+    private gutterWidth = MIN_GUTTER_WIDTH;
+    private frame: number | undefined;
+    private caretTimer: ReturnType<typeof setTimeout> | undefined;
+    private caretKey = '';
+    private renderedScroll = { top: -1, left: -1 };
     private font: EditorFont;
     private layoutVersion = 0;
     private revision: number;
@@ -117,7 +125,10 @@ export class EditorView {
         }
         code.setAttribute('aria-hidden', 'true');
         this.content.append(this.overlays, code, this.carets);
-        this.viewport.append(this.content);
+        // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
+        const scroller = make('div', 'se-scroller');
+        scroller.append(this.gutter, this.content);
+        this.viewport.append(scroller);
         this.input = make('textarea', 'se-input');
         this.input.wrap = 'off';
         this.input.spellcheck = false;
@@ -132,7 +143,7 @@ export class EditorView {
         this.notice = make('div', 'se-notice');
         this.notice.setAttribute('role', 'status');
         this.notice.hidden = true;
-        this.root.append(this.gutter, this.viewport, this.sticky, this.input, this.notice);
+        this.root.append(this.viewport, this.sticky, this.input, this.notice);
         container.append(this.root);
 
         this.font = readEditorFont(this.root);
@@ -154,7 +165,7 @@ export class EditorView {
                   }
               })
             : undefined;
-        this.resizeObserver = ResizeObserverClass ? new ResizeObserverClass(() => this.render()) : undefined;
+        this.resizeObserver = ResizeObserverClass ? new ResizeObserverClass(() => this.requestRender()) : undefined;
         this.resizeObserver?.observe(this.viewport);
         this.painter = new RowPainter(code, this.layout, this.blockObserver);
         this.revision = model.getRevision();
@@ -235,8 +246,9 @@ export class EditorView {
         return this.viewport.clientHeight || DEFAULT_HEIGHT;
     }
 
+    /* The width the text has, which is what the viewport has left of the gutter. */
     private get viewportWidth(): number {
-        return this.viewport.clientWidth || DEFAULT_WIDTH;
+        return Math.max(1, (this.viewport.clientWidth || DEFAULT_WIDTH) - this.gutterWidth);
     }
 
     private modelChanged(snapshot: EditorSnapshot): void {
@@ -269,7 +281,7 @@ export class EditorView {
         if (this.rowEndCaret !== null && this.model.getSelections()[0]!.head !== this.rowEndCaret) {
             this.rowEndCaret = null;
         }
-        this.render();
+        this.requestRender();
     }
 
     private displayedInlays(): Inlay[] {
@@ -287,7 +299,7 @@ export class EditorView {
             startLine: range.startLine,
             endLine: range.endLine,
             collapsed: this.collapsed.has(range.from),
-            closer: closerOf(range)
+            closer: this.collapsed.has(range.from) ? this.closerOf(range) : undefined
         }));
     }
 
@@ -302,13 +314,14 @@ export class EditorView {
         if (this.disposed) {
             return;
         }
-        this.foldRanges =
+        const ranges =
             this.model.getLength() > FOLD_LIMIT
                 ? []
                 : this.model.getFoldingRanges({ indentation: /^(python|py|yaml|yml)$/.test(this.settings.language ?? ''), tabSize: this.settings.tabSize });
+        this.foldRanges = outermostPerLine(ranges);
         this.outline.setStructure(
             structuralEntries(
-                this.foldRanges,
+                ranges,
                 this.model,
                 (from, to) => this.model.slice(from, to),
                 (offset) => this.brackets().pairs.get(offset)
@@ -319,6 +332,22 @@ export class EditorView {
         this.anchorScroll(() => this.layout.configure({ folds: this.foldStates() }));
         this.moveHiddenCarets();
         this.render();
+    }
+
+    /* Where what stays visible of a collapsed range starts on its last line: its closer, with any closers right before it, so `])` is kept whole. */
+    private closerOf(range: FoldingRange): number | undefined {
+        if (range.kind === 'comment') {
+            return range.to - 2;
+        }
+        if (range.kind !== 'bracket') {
+            return undefined;
+        }
+        const lineStart = this.model.getLine(range.endLine).start;
+        let start = range.to - 1;
+        while (start > lineStart && /[)\]}]/.test(this.model.slice(start - 1, start))) {
+            start--;
+        }
+        return start;
     }
 
     /* The range a collapsed or collapsible line starts, outermost first. */
@@ -410,7 +439,7 @@ export class EditorView {
 
     private syncWrap(): void {
         const width =
-            this.settings.wrap && this.viewport.clientWidth > 0 ? Math.max(this.layout.metrics.charWidth * 8, this.viewport.clientWidth - RIGHT_PADDING) : null;
+            this.settings.wrap && this.viewport.clientWidth > 0 ? Math.max(this.layout.metrics.charWidth * 8, this.viewportWidth - RIGHT_PADDING) : null;
         if (width !== this.wrapWidth) {
             this.wrapWidth = width;
             this.layoutVersion++;
@@ -451,11 +480,11 @@ export class EditorView {
     contentPoint(clientX: number, clientY: number): { x: number; y: number } {
         const rect = this.viewport.getBoundingClientRect?.();
         if (!rect) {
-            return { x: clientX + this.viewport.scrollLeft, y: clientY + this.viewport.scrollTop };
+            return { x: clientX - this.gutterWidth + this.viewport.scrollLeft, y: clientY + this.viewport.scrollTop };
         }
         const scaleX = this.viewport.offsetWidth > 0 ? rect.width / this.viewport.offsetWidth : 1;
         const scaleY = this.viewport.offsetHeight > 0 ? rect.height / this.viewport.offsetHeight : 1;
-        return { x: (clientX - rect.left) / scaleX + this.viewport.scrollLeft, y: (clientY - rect.top) / scaleY + this.viewport.scrollTop };
+        return { x: (clientX - rect.left) / scaleX - this.gutterWidth + this.viewport.scrollLeft, y: (clientY - rect.top) / scaleY + this.viewport.scrollTop };
     }
 
     offsetAtPoint(clientX: number, clientY: number): number {
@@ -494,7 +523,7 @@ export class EditorView {
                 this.viewport.scrollLeft = caret.x - width + 24;
             }
         }
-        this.render();
+        this.requestRender();
     }
 
     revealCaret(): void {
@@ -565,12 +594,46 @@ export class EditorView {
         );
     }
 
+    /* The gutter is as wide as its widest number needs, which only changes when the line count gains a digit. */
+    private syncGutter(): void {
+        const digits = String(this.model.getLineCount()).length;
+        const width = Math.max(MIN_GUTTER_WIDTH, Math.ceil(digits * this.layout.metrics.charWidth) + 40);
+        if (width !== this.gutterWidth) {
+            this.gutterWidth = width;
+            this.root.style.setProperty('--se-gutter-width', `${width}px`);
+        }
+    }
+
+    /* A render in the next frame, so a key that moves the caret and scrolls, and the scroll event after it, paint once together. */
+    requestRender(): void {
+        if (this.disposed || this.frame !== undefined) {
+            return;
+        }
+        const view = this.document.defaultView;
+        if (!view?.requestAnimationFrame) {
+            this.render();
+            return;
+        }
+        this.frame = view.requestAnimationFrame(() => {
+            this.frame = undefined;
+            this.render();
+        });
+    }
+
+    /* The viewport scrolled, by the wheel, a scroll bar or the browser; what is drawn follows unless it already did. */
+    scrolled(): void {
+        if (this.viewport.scrollTop !== this.renderedScroll.top || this.viewport.scrollLeft !== this.renderedScroll.left) {
+            this.requestRender();
+        }
+    }
+
     render(): void {
         if (this.disposed || this.rendering) {
             return;
         }
         this.rendering = true;
         try {
+            this.syncGutter();
             this.syncWrap();
             let rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight);
             if (this.layout.syncRows(rows)) {
@@ -594,8 +657,7 @@ export class EditorView {
             }
             this.content.style.height = `${this.layout.height}px`;
             this.content.style.width = `${Math.max(this.layout.width, this.viewportWidth)}px`;
-            const digits = String(this.model.getLineCount()).length;
-            this.root.style.setProperty('--se-gutter-width', `${Math.max(64, Math.ceil(digits * this.layout.metrics.charWidth) + 40)}px`);
+            this.renderedScroll = { top: this.viewport.scrollTop, left: this.viewport.scrollLeft };
             this.paintDecorations(rows);
             this.paintSticky();
             this.announceScope();
@@ -615,7 +677,6 @@ export class EditorView {
                 foldable.set(range.startLine, this.collapsed.has(range.from));
             }
         }
-        this.gutterLines.style.transform = `translateY(${-this.viewport.scrollTop}px)`;
         paintGutter(this.gutterLines, this.layout, rows, {
             activeLines: new Set(selections.map((selection) => this.model.positionAt(selection.head).line)),
             foldable
@@ -667,10 +728,16 @@ export class EditorView {
                   .map((selection) => this.caretOf(selection.head))
                   .filter((rect) => rect.y + rect.height >= top - rect.height && rect.y <= top + this.viewportHeight)
             : [];
+        const caretKey = caretRects.map((rect) => `${rect.x},${rect.y}`).join(' ');
+        if (caretKey !== this.caretKey) {
+            this.caretKey = caretKey;
+            this.carets.dataset.moving = 'true';
+            clearTimeout(this.caretTimer);
+            this.caretTimer = setTimeout(() => delete this.carets.dataset.moving, CARET_SOLID_MS);
+        }
         paintCarets(this.carets, caretRects);
         const caret = this.caretOf(primary.head);
-        const gutterWidth = this.gutter.getBoundingClientRect?.().width || 64;
-        this.input.style.left = `${gutterWidth + Math.max(0, Math.min(this.viewportWidth - 2, caret.x - this.viewport.scrollLeft))}px`;
+        this.input.style.left = `${this.gutterWidth + Math.max(0, Math.min(this.viewportWidth - 2, caret.x - this.viewport.scrollLeft))}px`;
         this.input.style.top = `${Math.max(0, Math.min(this.viewportHeight - this.layout.metrics.lineHeight, caret.y - top))}px`;
         this.input.style.height = `${this.layout.metrics.lineHeight}px`;
         this.root.dataset.carets = String(selections.length);
@@ -711,22 +778,33 @@ export class EditorView {
         return Math.min(STICKY_MAX_LINES, Math.floor(this.viewportHeight / this.layout.metrics.lineHeight / STICKY_ROW_SHARE));
     }
 
-    private stickyAt(scrollTop: number): ReturnType<typeof stickyChain> {
-        return stickyChain(this.outline.blocks(this.model), scrollTop, this.layout.metrics.lineHeight, this.stickyLimit(), (y) => this.layout.rowAt(y).line);
+    private stickyAt(scrollTop: number): StickyPlacement[] {
+        const { layout } = this;
+        const bottomOf = (line: number): number => {
+            const row = layout.rowForLine(line);
+            return row.top + row.height;
+        };
+        return stickyPlacements(this.outline.blocks(this.model), scrollTop, layout.metrics.lineHeight, this.stickyLimit(), {
+            top: (line) => layout.rowForLine(line).top,
+            bottom: bottomOf,
+            startsRow: (line) => {
+                const row = layout.rowForLine(line);
+                return row.kind === 'text' && row.line === line;
+            }
+        });
     }
 
     private stickyHeightAt(scrollTop: number): number {
-        return scrollTop <= 0 ? 0 : this.stickyAt(scrollTop).length * this.layout.metrics.lineHeight;
+        return scrollTop <= 0 ? 0 : stickyCover(this.stickyAt(scrollTop), this.layout.metrics.lineHeight);
     }
 
-    /* Pins the headers of the blocks that have scrolled out of sight above the first visible line. */
+    /* Pins the headers of the blocks that have scrolled out of sight above the first visible line, and pushes the last one out as its block ends. */
     private paintSticky(): void {
-        const chain = this.viewport.scrollTop <= 0 ? [] : this.stickyAt(this.viewport.scrollTop);
-        const entries = chain.flatMap((block): StickyEntry[] => {
-            const row = this.layout.rowForLine(block.startLine);
-            return row.kind === 'text' && row.line === block.startLine
-                ? [{ line: block.startLine, geometry: this.layout.geometry(row), tokens: this.tokens.tokensOf(block.startLine) }]
-                : [];
+        const lineHeight = this.layout.metrics.lineHeight;
+        const placements = this.viewport.scrollTop <= 0 ? [] : this.stickyAt(this.viewport.scrollTop);
+        const entries = placements.map((placement): StickyEntry => {
+            const row = this.layout.rowForLine(placement.block.startLine) as TextRow;
+            return { line: placement.block.startLine, geometry: this.layout.geometry(row), tokens: this.tokens.tokensOf(placement.block.startLine) };
         });
         const changed =
             entries.length !== this.stickyEntries.length ||
@@ -739,8 +817,16 @@ export class EditorView {
         this.sticky.style.setProperty('--se-scrollbar', `${Math.max(0, this.viewport.offsetWidth - this.viewport.clientWidth)}px`);
         if (changed) {
             this.stickyEntries = entries;
-            paintSticky(this.sticky, entries, this.layout.metrics.lineHeight);
+            paintSticky(this.sticky, entries, lineHeight);
         }
+        this.sticky.style.height = `${stickyCover(placements, lineHeight)}px`;
+        placements.forEach((placement, index) => {
+            const row = this.sticky.children[index] as HTMLElement | undefined;
+            if (row) {
+                row.style.transform = placement.offset === 0 ? '' : `translateY(${placement.offset}px)`;
+                row.style.zIndex = String(placements.length - index);
+            }
+        });
     }
 
     /* A click on a pinned header: the caret goes to it and it scrolls into place under the headers of the blocks around it. */
@@ -769,6 +855,10 @@ export class EditorView {
         clearTimeout(this.foldTimer);
         clearTimeout(this.colorTimer);
         clearTimeout(this.noticeTimer);
+        clearTimeout(this.caretTimer);
+        if (this.frame !== undefined) {
+            this.document.defaultView?.cancelAnimationFrame?.(this.frame);
+        }
         this.findListeners.clear();
         this.scopeListeners.clear();
         this.painter.clear();

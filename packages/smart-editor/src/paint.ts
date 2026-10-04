@@ -285,7 +285,6 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
             button.dataset.foldLine = String(row.line);
             button.tabIndex = -1;
             button.setAttribute('aria-label', collapsed ? 'Expand' : 'Collapse');
-            button.textContent = collapsed ? '›' : '⌄';
             item.append(button);
         }
         fragment.append(item);

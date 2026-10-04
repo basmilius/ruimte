@@ -77,7 +77,7 @@ export class InputController {
             viewport,
             offsetAt: (x, y) => view.offsetAtPoint(x, y),
             focus: () => view.focus(),
-            scrolled: () => view.render()
+            scrolled: () => view.requestRender()
         });
         this.subscription = model.subscribe(() => {
             if (!this.keepDesiredXs) {
@@ -110,8 +110,8 @@ export class InputController {
             this.view.render();
         });
         this.listen(input, 'select', () => this.native.readSelection());
-        this.listen(input, 'focus', () => this.view.render());
-        this.listen(input, 'blur', () => this.view.render());
+        this.listen(input, 'focus', () => this.view.requestRender());
+        this.listen(input, 'blur', () => this.view.requestRender());
         this.listen(root, 'focusout', (event) => {
             if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) {
                 this.options.blur();
@@ -128,11 +128,12 @@ export class InputController {
         });
         this.listen(input, 'copy', (event) => this.copy(event, false));
         this.listen(input, 'cut', (event) => this.copy(event, true));
-        this.listen(viewport, 'scroll', () => this.view.render());
+        this.listen(viewport, 'scroll', () => this.view.scrolled());
+        this.listen(viewport, 'wheel', (event) => this.wheel(event));
         this.listen(viewport, 'pointerdown', (event) => this.pointerDown(event));
         this.listen(this.view.gutterElement, 'pointerdown', (event) => this.gutterDown(event));
         this.listen(this.view.stickyElement, 'pointerdown', (event) => this.stickyDown(event));
-        this.listen(this.view.stickyElement, 'wheel', (event) => this.stickyWheel(event));
+        this.listen(this.view.stickyElement, 'wheel', (event) => this.wheel(event));
         this.listen(this.view.gutterElement, 'click', (event) => {
             const line = this.view.foldLineOf(event.target);
             if (line !== null) {
@@ -447,7 +448,7 @@ export class InputController {
 
     private pointerDown(event: PointerEvent): void {
         const target = event.target as HTMLElement;
-        if (event.button !== 0 || target.closest('button, a, input, textarea, [contenteditable], .se-block')) {
+        if (event.button !== 0 || target.closest('button, a, input, textarea, [contenteditable], .se-block, .se-gutter')) {
             return;
         }
         event.preventDefault();
@@ -465,13 +466,28 @@ export class InputController {
         this.view.focus();
     }
 
-    /* The pinned headers sit over the scroll area, so the wheel over them scrolls it all the same. */
-    private stickyWheel(event: WheelEvent): void {
+    /*
+     * The wheel scrolls here and not in the browser, so the text, the pinned headers and the rows that
+     * come into view all move in the frame the wheel came in; a scroll the browser did on its own thread
+     * would show a frame before the script that draws them. A pinch, which zooms, is left alone.
+     */
+    private wheel(event: WheelEvent): void {
+        if (event.ctrlKey || event.deltaMode === 2) {
+            return;
+        }
         const { viewport, layout } = this.view;
         const unit = event.deltaMode === 1 ? layout.metrics.lineHeight : 1;
-        viewport.scrollTop += event.deltaY * unit;
-        viewport.scrollLeft += event.deltaX * unit;
+        const maxTop = viewport.scrollHeight - viewport.clientHeight;
+        const maxLeft = viewport.scrollWidth - viewport.clientWidth;
+        const top = Math.max(0, Math.min(maxTop, viewport.scrollTop + event.deltaY * unit));
+        const left = this.view.settings.wrap ? 0 : Math.max(0, Math.min(maxLeft, viewport.scrollLeft + event.deltaX * unit));
+        if (top === viewport.scrollTop && left === viewport.scrollLeft) {
+            return;
+        }
         event.preventDefault();
+        viewport.scrollTop = top;
+        viewport.scrollLeft = left;
+        this.view.scrolled();
     }
 
     /* A press on a line number selects the line. */

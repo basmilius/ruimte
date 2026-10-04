@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { mountEditor, pointer } from './testing.ts';
 
-/* With the fallback face a character is 7.8px wide and a line 20px tall; the gutter is not part of the content. */
-const column = (n: number): number => Math.round(n * 7.8);
+/* With the fallback face a character is 7.8px wide and a line 20px tall, and the gutter is as wide as it is at the least. */
+const GUTTER = 64;
+const column = (n: number): number => GUTTER + Math.round(n * 7.8);
 const row = (n: number): number => n * 20 + 5;
 
 describe('the mouse', () => {

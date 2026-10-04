@@ -195,33 +195,51 @@ export class Outline {
     }
 }
 
+/* Where the rows of the document are, which the pinned headers are placed by. */
+export interface StickyRows {
+    /* The top and the bottom of the row a line is drawn in. */
+    top(line: number): number;
+    bottom(line: number): number;
+    /* Whether the line starts a row of its own, which a line a fold hides does not. */
+    startsRow(line: number): boolean;
+}
+
+export interface StickyPlacement {
+    block: OutlineBlock;
+    /* How many headers are pinned above this one. */
+    depth: number;
+    /* Zero while the block goes on, then up to a row's height of pixels it is pushed out of the top by the end of its block. */
+    offset: number;
+}
+
 /*
- * The headers that stay at the top while the document scrolls under them: the blocks around the line
- * at each sticky row's height whose header is already out of sight, outermost first.
+ * The headers pinned at the top, outermost first. A header is pinned from the moment its own row
+ * reaches the place it would be pinned at, which is the one a row of its own is at when it comes
+ * there, so it never jumps. At the end of its block the next row pushes it up and out.
  */
-export function stickyChain(
-    blocks: readonly OutlineBlock[],
-    scrollTop: number,
-    lineHeight: number,
-    max: number,
-    lineAt: (y: number) => number
-): OutlineBlock[] {
-    const chain: OutlineBlock[] = [];
+export function stickyPlacements(blocks: readonly OutlineBlock[], scrollTop: number, lineHeight: number, max: number, rows: StickyRows): StickyPlacement[] {
+    const placements: StickyPlacement[] = [];
     for (let depth = 0; depth < max; depth++) {
-        const line = lineAt(scrollTop + depth * lineHeight);
-        const parent = chain.at(-1);
+        const pinnedAt = scrollTop + depth * lineHeight;
+        const parent = placements.at(-1)?.block;
         const next = blocks.find(
             (block) =>
-                block.startLine < line &&
-                block.endLine >= line &&
-                (parent === undefined || (block.startLine > parent.startLine && block.endLine <= parent.endLine))
+                (parent === undefined || (block.startLine > parent.startLine && block.endLine <= parent.endLine)) &&
+                rows.startsRow(block.startLine) &&
+                rows.top(block.startLine) < pinnedAt &&
+                rows.bottom(block.endLine) > pinnedAt
         );
         if (next === undefined) {
             break;
         }
-        chain.push(next);
+        placements.push({ block: next, depth, offset: Math.min(0, rows.bottom(next.endLine) - (pinnedAt + lineHeight)) });
     }
-    return chain;
+    return placements;
+}
+
+/* How far down from the top the pinned headers reach. */
+export function stickyCover(placements: readonly StickyPlacement[], lineHeight: number): number {
+    return Math.max(0, ...placements.map((placement) => (placement.depth + 1) * lineHeight + placement.offset));
 }
 
 /* The named blocks around a line, outermost first. */

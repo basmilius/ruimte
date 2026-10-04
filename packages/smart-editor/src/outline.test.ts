@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DocumentModel, scanBrackets } from '@ruimte/smart-editor-core';
-import { describeHeader, headerLabel, Outline, scopeChain, stickyChain, structuralEntries } from './outline.ts';
+import { describeHeader, headerLabel, Outline, scopeChain, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 
 function outlineOf(text: string, language = 'typescript'): Outline {
     const model = new DocumentModel(text);
@@ -109,28 +109,86 @@ describe('provided blocks', () => {
     });
 });
 
-describe('stickyChain', () => {
+describe('stickyPlacements', () => {
     const blocks = [
         { startLine: 0, endLine: 9 },
         { startLine: 1, endLine: 8 },
         { startLine: 4, endLine: 6 }
     ];
-    const lineAt = (y: number): number => Math.floor(y / 20);
+    /* Every line a row of 20px, so the top of line n is 20n. */
+    const rows = { top: (line: number) => line * 20, bottom: (line: number) => line * 20 + 20, startsRow: () => true };
+    const summary = (scrollTop: number, max = 5) =>
+        stickyPlacements(blocks, scrollTop, 20, max, rows).map((placement) => [placement.block.startLine, placement.depth, placement.offset]);
 
-    test('is empty until a header scrolls out of sight', () => {
-        expect(stickyChain(blocks, 0, 20, 5, lineAt)).toEqual([]);
+    test('pins a header from the moment its own row passes the place it is pinned at, not before and not a row later', () => {
+        expect(summary(0)).toEqual([]);
+        expect(summary(1)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0]
+        ]);
+        expect(summary(40)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0]
+        ]);
+        expect(summary(41)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0],
+            [4, 2, 0]
+        ]);
     });
 
-    test('pins the blocks around the first line, outermost first, each under the one before', () => {
-        expect(stickyChain(blocks, 20 * 5, 20, 5, lineAt).map((block) => block.startLine)).toEqual([0, 1]);
-        expect(stickyChain(blocks, 20 * 4, 20, 5, lineAt).map((block) => block.startLine)).toEqual([0, 1, 4]);
-        expect(stickyChain(blocks, 20, 20, 5, lineAt).map((block) => block.startLine)).toEqual([0, 1]);
+    test('pushes a header up and out as the end of its block comes, innermost first', () => {
+        expect(summary(80)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0],
+            [4, 2, 0]
+        ]);
+        expect(summary(90)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0],
+            [4, 2, -10]
+        ]);
+        expect(summary(99)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0],
+            [4, 2, -19]
+        ]);
+        expect(summary(100)).toEqual([
+            [0, 0, 0],
+            [1, 1, 0]
+        ]);
+        expect(summary(150)).toEqual([
+            [0, 0, 0],
+            [1, 1, -10]
+        ]);
+        expect(summary(190)).toEqual([[0, 0, -10]]);
+        expect(summary(200)).toEqual([]);
     });
 
-    test('lets a block go once its end is under the headers, and holds the limit', () => {
-        expect(stickyChain(blocks, 20 * 9, 20, 5, lineAt).map((block) => block.startLine)).toEqual([0]);
-        expect(stickyChain(blocks, 20 * 5, 20, 1, lineAt).length).toBe(1);
-        expect(stickyChain(blocks, 20 * 5, 20, 0, lineAt)).toEqual([]);
+    test('holds the limit', () => {
+        expect(summary(81, 1).length).toBe(1);
+        expect(summary(81, 0)).toEqual([]);
+    });
+
+    test('leaves out a block whose header a fold hides', () => {
+        const folded = { ...rows, startsRow: (line: number) => line !== 1 };
+        expect(stickyPlacements(blocks, 81, 20, 5, folded).map((placement) => placement.block.startLine)).toEqual([0, 4]);
+    });
+});
+
+describe('stickyCover', () => {
+    test('reaches down to the lowest edge of the pinned headers, pushes included', () => {
+        const block = { startLine: 0, endLine: 1 };
+        expect(stickyCover([], 20)).toBe(0);
+        expect(
+            stickyCover(
+                [
+                    { block, depth: 0, offset: 0 },
+                    { block, depth: 1, offset: -5 }
+                ],
+                20
+            )
+        ).toBe(35);
     });
 });
 

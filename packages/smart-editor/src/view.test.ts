@@ -84,6 +84,24 @@ describe('folding', () => {
         expect(runs).toEqual(['def a():']);
     });
 
+    test('offers one control per line when several ranges start on it, and folds the outermost', () => {
+        const source = 'await Promise.all([\n    one(),\n    two()\n]);\nnext();';
+        const { host, view } = mount(source);
+        view.refreshFolds();
+        expect(host.querySelectorAll('.se-fold-toggle').length).toBe(1);
+        expect(host.querySelector('.se-fold-toggle')!.textContent).toBe('');
+        view.toggleFold(0);
+        expect(rendered(host)).toEqual(['0', '4']);
+    });
+
+    test('keeps every closer on the last line of a collapsed range, not only the one that closes it', () => {
+        const { host, view } = mount('await Promise.all([\n    one(),\n]);\nnext();');
+        view.refreshFolds();
+        view.toggleFold(0);
+        const runs = [...host.querySelectorAll('.se-line[data-line="0"] .se-run')].map((run) => run.textContent);
+        expect(runs.at(-1)).toBe(']);');
+    });
+
     test('folds the range around the caret and every range', () => {
         const { host, model, view } = mount(text);
         view.refreshFolds();
@@ -178,6 +196,18 @@ describe('sticky scroll', () => {
         expect(host.querySelectorAll('.se-sticky-row').length).toBe(0);
     });
 
+    test('pushes the last header up as its block ends', () => {
+        const { host, view } = mount(text);
+        view.refreshFolds();
+        const lineHeight = view.layout.metrics.lineHeight;
+        // `inner` ends on line 42; with one header above it, it is pinned at the second row.
+        view.viewport.scrollTop = lineHeight * 41 + 10;
+        view.render();
+        const inner = host.querySelectorAll('.se-sticky-row')[1] as HTMLElement;
+        expect(inner.style.transform).toBe('translateY(-10px)');
+        expect((host.querySelector('.se-sticky') as HTMLElement).style.height).toBe(`${lineHeight * 2 - 10}px`);
+    });
+
     test('takes the blocks the host hands it over its own reading', () => {
         const { host, view } = mount(text);
         const viewport = view.viewport;
@@ -208,6 +238,22 @@ describe('sticky scroll', () => {
         const target = model.getLine(21).start;
         view.revealOffset(target);
         expect(viewport.scrollTop).toBeLessThanOrEqual(20 * (21 - 2));
+    });
+});
+
+describe('the gutter', () => {
+    test('scrolls with the text, in the one container, instead of following it from a script', () => {
+        const { host, view } = mount('a\nb');
+        expect(host.querySelector('.se-viewport .se-scroller > .se-gutter')).not.toBeNull();
+        expect(view.gutterElement.parentElement).toBe(host.querySelector('.se-scroller'));
+        expect((view.gutterElement.firstElementChild as HTMLElement).style.transform).toBe('');
+    });
+
+    test('moves the text right by its own width', () => {
+        const { view } = mount('abc');
+        view.render();
+        expect(view.offsetAtPoint(64, 5)).toBe(0);
+        expect(view.offsetAtPoint(64 + 8 * 3, 5)).toBe(3);
     });
 });
 
