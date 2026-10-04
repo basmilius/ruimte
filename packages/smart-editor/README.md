@@ -16,10 +16,11 @@ The element needs a positioned box that its parent sizes, and the page needs `ed
 ## How it is put together
 
 - `layout.ts`: the rows of the document, free of the DOM. A row is a line, a widget or a fold's first line. It owns wrapping into visual lines, tab stops, inlays, folded lines, caret and selection boxes, hit testing and moving by visual line. Only the rows on screen are measured; the others stand on an estimate that the first draw corrects.
-- `view.ts`: the DOM, the scroll, the folds and what is drawn behind and above the text. `paint.ts` holds the drawing of rows, the gutter, the selection and the carets. Rows are absolutely placed runs of text, so the layout decides where each character is.
+- `view.ts`: the DOM, the scroll (the gutter sticks to the left of the text inside one scroll container, and the wheel scrolls in script so the text, the pinned headers and the rows move in one frame), the folds and what is drawn behind and above the text. `paint.ts` holds the drawing of rows, the gutter, the selection and the carets. Rows are absolutely placed runs of text, so the layout decides where each character is.
 - `controller.ts`: what a person does. Keys are mapped in `keymap.ts` to the model's commands, typing goes through `DocumentModel.typeText`, the mouse through `pointer.ts`. The textarea (`native-input.ts`) is only the sink for the platform's typing, composition and paste, and carries the text around the caret for assistive technology.
 - `tokens.ts` and `shiki.ts`: coloring. A grammar needs the state the previous line ended in, so lines are colored from a frontier down, a slice at a time, on the screen plus a margin. An edit moves the frontier to the changed line and stops as soon as a line ends in the state it had before. The tokenizer is injected (`TokenizerSource`); `shikiTokenizers` adapts the viewer's Shiki highlighter.
 - `outline.ts`: the blocks of the document with a header line, read from braces and indentation until the host hands over better ones with `setBlocks` (a language server's symbols). Sticky scroll pins the headers of the blocks scrolled out of sight, and `onScope` reports the named blocks around the caret for a breadcrumb.
+- `overview.ts`: the ticks in the scroll track for the host's change marks (`setChangeMarks`, also drawn in the gutter) and the find matches.
 - `find.ts`: the matches of the host's find bar. They are marked in the editor and never touch the selection until `endFind`.
 - `engine.ts`: the `Editor` contract over a model and a view.
 
