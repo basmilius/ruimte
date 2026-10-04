@@ -10,6 +10,8 @@ export interface Problem {
 const SEVERITIES: Record<number, EditorMarkerSeverity> = { 1: 'error', 2: 'warning', 3: 'info', 4: 'hint' };
 const UNNECESSARY = 1;
 const DEPRECATED = 2;
+/* The scroll track's tip is a line or two, so a long message is cut where it stops being a tip. */
+const TICK_MESSAGE_LENGTH = 300;
 
 /* A report that names no severity is an error, which is the safer side to be wrong on. */
 export function severityOf(diagnostic: Diagnostic): EditorMarkerSeverity {
@@ -21,7 +23,8 @@ export function markerOf(diagnostic: Diagnostic): EditorMarker {
         range: diagnostic.range,
         severity: severityOf(diagnostic),
         unnecessary: diagnostic.tags?.includes(UNNECESSARY) === true,
-        deprecated: diagnostic.tags?.includes(DEPRECATED) === true
+        deprecated: diagnostic.tags?.includes(DEPRECATED) === true,
+        message: diagnostic.message.length > TICK_MESSAGE_LENGTH ? `${diagnostic.message.slice(0, TICK_MESSAGE_LENGTH)}…` : diagnostic.message
     };
 }
 

@@ -7,6 +7,11 @@ const range = (line: number, start: number, end: number) => ({ start: at(line, s
 const problem = (diagnostic: Diagnostic): Problem => ({ diagnostic, server: 'typescript' });
 
 describe('markerOf', () => {
+    test('carries the message for the tick in the scroll track, cut when it is long', () => {
+        expect(markerOf({ range: range(0, 0, 1), message: 'Cannot find name' }).message).toBe('Cannot find name');
+        expect(markerOf({ range: range(0, 0, 1), message: 'x'.repeat(500) }).message).toBe(`${'x'.repeat(300)}…`);
+    });
+
     test('reads the severity, and a missing one as an error', () => {
         expect(markerOf({ range: range(0, 0, 1), message: 'x' }).severity).toBe('error');
         expect(markerOf({ range: range(0, 0, 1), message: 'x', severity: 2 }).severity).toBe('warning');
