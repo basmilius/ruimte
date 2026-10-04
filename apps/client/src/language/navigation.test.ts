@@ -45,8 +45,8 @@ describe('places', () => {
     });
 
     test('reads a row as the file and line, with its folder', () => {
-        expect(locationRow(there, 'src/lib/b.ts')).toEqual({ label: 'b.ts:10', detail: 'src/lib' });
-        expect(locationRow(here, 'a.ts')).toEqual({ label: 'a.ts:4', detail: '' });
+        expect(locationRow(there, 'src/lib/b.ts')).toEqual({ label: 'b.ts:10', detail: 'src/lib', path: true });
+        expect(locationRow(here, 'a.ts')).toEqual({ label: 'a.ts:4', detail: '', path: true });
     });
 });
 

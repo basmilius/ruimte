@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { EditorRect } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
+import { PathText } from './PathText';
 import { placePopup } from './popup-placement';
 import type { PickPreview, PickView } from './popups';
 
@@ -76,10 +77,14 @@ export function PickPopup({ language, view, rect }: { language: EditorLanguage; 
                                 className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-xs cursor-row"
                                 onClick={() => language.pick.choose(row.id)}
                             >
-                                <span className="min-w-0 truncate">{row.label}</span>
-                                <span className="ml-auto shrink-0 font-mono text-text-faint">
-                                    {row.id === view.active && row.detail === '' ? '↵' : row.detail}
-                                </span>
+                                <span className={row.path ? 'shrink-0' : 'min-w-0 truncate'}>{row.label}</span>
+                                {row.path ? (
+                                    <PathText path={row.detail} className="ml-auto font-mono text-text-faint" />
+                                ) : (
+                                    <span className="ml-auto shrink-0 font-mono text-text-faint">
+                                        {row.id === view.active && row.detail === '' ? '↵' : row.detail}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>

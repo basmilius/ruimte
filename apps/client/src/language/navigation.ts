@@ -148,9 +148,9 @@ export class NavigationFeature {
 }
 
 /* How a place reads in a list: the file and the line, with the folder it is in. */
-export function locationRow(location: Location, stored: string | null): { label: string; detail: string } {
+export function locationRow(location: Location, stored: string | null): { label: string; detail: string; path: true } {
     const path = stored ?? fileUriToPath(location.uri) ?? location.uri;
     const name = basenameOf(path);
     const folder = path.slice(0, Math.max(0, path.length - name.length)).replace(/\/$/, '');
-    return { label: `${name}:${location.range.start.line + 1}`, detail: folder };
+    return { label: `${name}:${location.range.start.line + 1}`, detail: folder, path: true };
 }

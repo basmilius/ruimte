@@ -65,8 +65,10 @@ export interface SignatureView {
 export interface PickRow {
     readonly id: string;
     readonly label: string;
-    /* What stands at the end of the line, such as a file and line. */
+    /* What stands at the end of the line, such as a folder. */
     readonly detail: string;
+    /* The detail is a path, which gives way from its start before the label gives way at all. */
+    readonly path?: boolean;
 }
 
 export interface PickGroup {
