@@ -31,8 +31,8 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 | 3a | The view in the app | Done |
 | 3b | Folding, wrap, editorconfig, sticky scroll, breadcrumb, git markers, scroll track, find and replace | Done |
 | 4a | Binding, status bar, diagnostics, semantic tokens, inlay hints, hover, completion, signature help, highlights, symbols, Vue | Done |
-| 4b | Workspace edits and commands, code actions, rename, go to definition, peek references, go to symbol, Problems, context menu, clickable names in the hover | In progress |
-| Test round | A round of testing the editor without AI before building on it | Next |
+| 4b | Workspace edits and commands, code actions, rename, go to definition, peek references, go to symbol, Problems, context menu, clickable names in the hover | Done |
+| Test round | A round of testing the editor without AI before building on it | Now |
 | 5 | AI in the editor | After the test round |
 | 6 | On the device | After 5 |
 | Cleanup | Remove the previous engine, close the known limits | When parity is confirmed |
@@ -72,4 +72,13 @@ On-device model (Apple Foundation Models), code never leaves the Mac:
 ### Cleanup
 
 - Remove `packages/editor` and its dependency once Bas confirms parity.
-- Known limits: snippets are inserted as plain text without tab stops, the status bar shows no progress percentage (the servers send none), semantic tokens go without deltas, workspace edits refuse creating, renaming and deleting files.
+- Known limits:
+  - Snippets are inserted as plain text without tab stops.
+  - The status bar shows no progress percentage (the servers send none).
+  - Semantic tokens go without deltas.
+  - Workspace edits refuse creating, renaming and deleting files.
+  - Problems lists only open files, since servers report only on documents they were given.
+  - A link to another file opens on its line, not its column (`file.preview` knows only a line).
+  - Peek marks the line of a reference, not the match, and reads at most 30 files.
+  - Mod plus hover does not underline names in the editor itself yet.
+  - The code lens above functions ("N references") is not built.
