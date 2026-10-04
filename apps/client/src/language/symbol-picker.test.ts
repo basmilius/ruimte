@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character = 0) => ({ line, character });
@@ -37,8 +38,7 @@ beforeEach(() => {
 describe('go to symbol', () => {
     test('opens on its shortcut with the symbols of the file and goes to the one chosen', async () => {
         const { editor, language } = await setup();
-        const mod = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
-        expect(editor.press({ key: 'O', code: 'KeyO', shiftKey: true, ...mod })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.goToSymbol))).toBe(true);
         for (let turn = 0; turn < 100; turn++) {
             await Promise.resolve();
         }

@@ -4,6 +4,8 @@ import { comparePositions, rangeHolds } from './diagnostics-model';
 import { isIdentifierCharacter } from './completion-model';
 import type { EditorLanguage } from './editor-language';
 import { Refresher } from './refresher';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { isShortcut } from './shortcut-keys';
 import { realTimers, type Timers } from './timers';
 
 const METHOD = 'textDocument/documentHighlight';
@@ -70,10 +72,11 @@ export class HighlightsFeature {
                 this.refresher.later();
             }),
             editor.onKeyDown((event) => {
-                if (event.key !== 'F3' || !event.altKey || event.ctrlKey || event.metaKey) {
+                const next = isShortcut(CANVAS_SHORTCUTS.nextHighlight, event);
+                if (!next && !isShortcut(CANVAS_SHORTCUTS.previousHighlight, event)) {
                     return false;
                 }
-                return this.step(event.shiftKey ? -1 : 1);
+                return this.step(next ? 1 : -1);
             })
         ];
         language.onDispose(() => {

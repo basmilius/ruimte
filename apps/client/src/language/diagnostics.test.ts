@@ -3,6 +3,8 @@ import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -31,13 +33,13 @@ describe('problem navigation', () => {
     test('steps to the next problem with Alt+F8 and back with Alt+Shift+F8', async () => {
         const { editor } = await setup();
         editor.moveCaret(at(1, 1));
-        expect(editor.press({ key: 'F8', altKey: true })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.nextProblem))).toBe(true);
         expect(editor.getCaret()).toEqual(at(2, 0));
-        editor.press({ key: 'F8', altKey: true, shiftKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.previousProblem));
         expect(editor.getCaret()).toEqual(at(0, 0));
-        editor.press({ key: 'F8', altKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.nextProblem));
         expect(editor.getCaret()).toEqual(at(2, 0));
-        editor.press({ key: 'F8', altKey: true, shiftKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.previousProblem));
         expect(editor.getCaret()).toEqual(at(0, 0));
     });
 
@@ -54,7 +56,7 @@ describe('problem navigation', () => {
             version: 1,
             diagnostics: [{ range: range(2, 0, 5), message: 'second', severity: 2 }]
         });
-        editor.press({ key: 'F8', altKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.nextProblem));
         expect(language.popups.getState().hover?.problems[0]?.diagnostic.message).toBe('second');
         editor.scroll();
         expect(language.popups.getState().hover).not.toBeNull();

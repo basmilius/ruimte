@@ -12,7 +12,7 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 
 ## Decisions
 
-- The keymap follows the platform's macOS keymap wherever it does not collide with Ruimte's own shortcuts; every shortcut keeps a modifier.
+- The keymap follows the platform's macOS keymap wherever it does not collide with Ruimte's own shortcuts; every shortcut keeps a modifier. See "Keymap".
 - Camel-hump word movement is off by default and a setting.
 
 - The daemon is the brain. A client never talks to a language server itself.
@@ -24,6 +24,24 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 - The file tree no longer follows the open file.
 - Inline edit (⌘I) follows design 2b: the proposal sits under the selection, and the code stays untouched until Apply.
 - Agent changes in open files follow the settings design: Off, Gutter (2c) or Review (2d).
+
+## Keymap
+
+One table, `KEYMAP` in `packages/smart-editor/src/keymap-table.ts`, holds the key of every editor and language command for macOS and for the other platforms. The editor binds its keys from it, and the client prints the same keys in the Code and Go menus, the palette, the context menu and the Keyboard pane (`apps/client/src/shell/editor-keymap.ts`), so a printed key is the key that answers. macOS gets the platform's macOS keymap and the other platforms its default keymap. A test (`editor-keymap.test.ts`) holds the table against the shortcuts Ruimte answers from anywhere, so a collision fails the run.
+
+Where Ruimte's own shortcut holds a key, the entry says which key the platform has and what holds it (`takenMac`, `takenOther`), and its chord is the closest free one:
+
+| Command | Platform | Ruimte's | Chosen |
+| --- | --- | --- | --- |
+| Go to definition | Cmd+B, Ctrl+B | Toggle sidebar | Alt+Shift+D |
+| Go to implementation | Cmd+Alt+B, Ctrl+Alt+B | Toggle panel | Alt+Shift+I |
+| Quick definition, other platforms | Ctrl+Shift+I | Developer tools | Alt+Shift+P |
+| Extend selection, other platforms | Ctrl+W | Close cell | Alt+Up (Alt+Down shrinks, as on macOS) |
+| Match brace, other platforms | Ctrl+Shift+M | Voice control | Ctrl+M |
+| Back and forward, other platforms | Ctrl+Alt+Left and Right | Focus the cell beside | Ctrl+[ and Ctrl+] |
+| Next problem | F2 | Every shortcut needs a modifier | Alt+F2 (Alt+Shift+F2 for the previous one) |
+
+Find (Cmd+F) and Replace (Cmd+Shift+H) are Ruimte's, for every surface with a find bar. Text motion (arrows, Home, End, Page Up and Down, Enter, Tab, Backspace, Delete, Escape, and Cmd+Up and Down for the ends of the text on macOS) is the same everywhere and not in the table.
 
 ## Phases
 

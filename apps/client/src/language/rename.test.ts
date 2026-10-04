@@ -4,12 +4,13 @@ import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';
 const at = (line: number, character: number) => ({ line, character });
 const range = (line: number, start: number, end: number) => ({ start: at(line, start), end: at(line, end) });
-const ALT_SHIFT = { altKey: true, shiftKey: true, code: 'KeyR' };
 
 async function settle(): Promise<void> {
     for (let turn = 0; turn < 100; turn++) {
@@ -65,7 +66,7 @@ describe('rename', () => {
     test('puts the input on the symbol the server prepared and lights up every place the name has', async () => {
         const { editor, language } = await setup();
         editor.moveCaret(at(0, 8));
-        expect(editor.press({ key: 'R', ...ALT_SHIFT })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.rename))).toBe(true);
         await settle();
         const view = language.popups.getState().rename!;
         expect(view).toMatchObject({ phase: 'input', original: 'weights', placeholder: 'weights', range: range(0, 6, 13) });

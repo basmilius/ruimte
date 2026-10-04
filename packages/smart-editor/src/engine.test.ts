@@ -408,7 +408,7 @@ describe('replace', () => {
         editor.find(query('([a-z]+)(\\d)', { regex: true }));
         expect(editor.replaceAll('$2$1')).toBe(2);
         expect(editor.getText()).toBe('1ab 2cd');
-        press('z', { metaKey: true, ctrlKey: true });
+        press('z', { ctrlKey: true });
         expect(editor.getText()).toBe('ab1 cd2');
     });
 

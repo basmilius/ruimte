@@ -1,4 +1,5 @@
 import type { EditorCommand } from '@ruimte/smart-editor-core';
+import { chordOf, KEYMAP_IDS, type KeymapId, parseChord } from './keymap-table.ts';
 import type { KeyChord } from './types.ts';
 
 export interface KeyLike {
@@ -17,7 +18,7 @@ export type KeyAction =
     | { readonly type: 'command'; readonly command: EditorCommand }
     | { readonly type: 'move'; readonly key: MoveKey; readonly extend: boolean }
     | { readonly type: 'edge'; readonly end: boolean; readonly extend: boolean }
-    | { readonly type: 'bracket'; readonly extend: boolean }
+    | { readonly type: 'bracket' }
     | { readonly type: 'fold'; readonly collapse: boolean; readonly all: boolean }
     | { readonly type: 'save' }
     | { readonly type: 'escape' };
@@ -28,16 +29,112 @@ function command(name: EditorCommand): KeyAction {
     return { type: 'command', command: name };
 }
 
-/* Whether the physical modifiers of an event are the ones a chord names, with `mod` as Cmd on macOS and Ctrl elsewhere. */
-export function chordMatches(chord: KeyChord, event: KeyLike, apple: boolean): boolean {
-    const key = chord.key.length === 1 ? chord.key.toUpperCase() : chord.key;
-    const pressed = event.key.length === 1 ? event.key.toUpperCase() : event.key;
-    if (key !== pressed) {
-        return false;
+/* What each key of the table does in the editor. A key of the table that is not here is a language command, which the host answers. */
+const ACTIONS: Partial<Record<KeymapId, KeyAction>> = {
+    undo: command('undo'),
+    redo: command('redo'),
+    selectAll: command('selectAll'),
+    save: { type: 'save' },
+    duplicateLine: command('duplicateLine'),
+    deleteLine: command('deleteLine'),
+    moveLineUp: command('moveLineUp'),
+    moveLineDown: command('moveLineDown'),
+    toggleLineComment: command('toggleLineComment'),
+    toggleBlockComment: command('toggleBlockComment'),
+    joinLines: command('joinLines'),
+    startNewLine: command('startNewLine'),
+    startNewLineBefore: command('startNewLineBefore'),
+    splitLine: command('splitLine'),
+    toggleCase: command('toggleCase'),
+    autoIndentLines: command('autoIndentLines'),
+    expandSelection: command('expandSelection'),
+    shrinkSelection: command('shrinkSelection'),
+    matchBrace: { type: 'bracket' },
+    selectNextOccurrence: command('selectNextOccurrence'),
+    wordLeft: command('wordLeft'),
+    wordRight: command('wordRight'),
+    selectWordLeft: command('selectWordLeft'),
+    selectWordRight: command('selectWordRight'),
+    deleteWordLeft: command('deleteWordLeft'),
+    deleteWordRight: command('deleteWordRight'),
+    smartHome: command('smartHome'),
+    selectSmartHome: command('selectSmartHome'),
+    smartEnd: command('smartEnd'),
+    selectSmartEnd: command('selectSmartEnd'),
+    textStart: { type: 'edge', end: false, extend: false },
+    selectTextStart: { type: 'edge', end: false, extend: true },
+    textEnd: { type: 'edge', end: true, extend: false },
+    selectTextEnd: { type: 'edge', end: true, extend: true },
+    collapse: { type: 'fold', collapse: true, all: false },
+    expand: { type: 'fold', collapse: false, all: false },
+    collapseAll: { type: 'fold', collapse: true, all: true },
+    expandAll: { type: 'fold', collapse: false, all: true }
+};
+
+const PUNCTUATION_CODES: Readonly<Record<string, string>> = {
+    ',': 'Comma',
+    '.': 'Period',
+    '/': 'Slash',
+    ';': 'Semicolon',
+    "'": 'Quote',
+    '`': 'Backquote',
+    '\\': 'Backslash',
+    '[': 'BracketLeft',
+    ']': 'BracketRight'
+};
+
+/* The fold keys sit on the minus and the equals key, which Shift and Option turn into other characters. */
+const FOLD_CODES: Readonly<Record<string, readonly string[]>> = { '-': ['Minus', 'NumpadSubtract'], '=': ['Equal', 'NumpadAdd'] };
+
+/* Letters and punctuation by the physical key when the event has one, since Option changes the character on macOS and Shift on every platform. */
+function keyMatches(chordKey: string, event: KeyLike): boolean {
+    const code = event.code;
+    if (/^[A-Z]$/.test(chordKey)) {
+        return code ? code === `Key${chordKey}` : event.key.toUpperCase() === chordKey;
     }
+    if (/^[0-9]$/.test(chordKey)) {
+        return code ? code === `Digit${chordKey}` || code === `Numpad${chordKey}` : event.key === chordKey;
+    }
+    const fold = FOLD_CODES[chordKey];
+    if (fold !== undefined) {
+        return (code !== undefined && fold.includes(code)) || event.key === chordKey || (chordKey === '=' && event.key === '+');
+    }
+    const punctuation = PUNCTUATION_CODES[chordKey];
+    if (punctuation !== undefined) {
+        return code ? code === punctuation : event.key === chordKey;
+    }
+    if (chordKey === 'Space') {
+        return event.key === ' ' || code === 'Space';
+    }
+    return event.key === chordKey;
+}
+
+/* Whether an event is a chord, with `mod` as Cmd on macOS and Ctrl elsewhere and every modifier the chord does not name up. */
+export function chordMatches(chord: KeyChord, event: KeyLike, apple: boolean): boolean {
     const wantsMeta = chord.meta || (chord.mod && apple);
     const wantsCtrl = chord.ctrl || (chord.mod && !apple);
-    return wantsMeta === event.metaKey && wantsCtrl === event.ctrlKey && chord.alt === event.altKey && chord.shift === event.shiftKey;
+    return (
+        wantsMeta === event.metaKey &&
+        wantsCtrl === event.ctrlKey &&
+        chord.alt === event.altKey &&
+        chord.shift === event.shiftKey &&
+        keyMatches(chord.key, event)
+    );
+}
+
+interface BoundAction {
+    readonly chord: KeyChord;
+    readonly action: KeyAction;
+}
+
+const BOUND: Record<'mac' | 'other', readonly BoundAction[]> = { mac: bound(true), other: bound(false) };
+
+function bound(apple: boolean): BoundAction[] {
+    return KEYMAP_IDS.flatMap((id) => {
+        const text = chordOf(id, apple);
+        const action = ACTIONS[id];
+        return text === null || action === undefined ? [] : [{ chord: parseChord(text), action }];
+    });
 }
 
 /*
@@ -45,92 +142,16 @@ export function chordMatches(chord: KeyChord, event: KeyLike, apple: boolean): b
  * to the textarea. Movement of the caret is the view's, since it depends on how the lines are drawn.
  */
 export function keyAction(event: KeyLike, apple: boolean): KeyAction | null {
+    for (const { chord, action } of BOUND[apple ? 'mac' : 'other']) {
+        if (chordMatches(chord, event, apple)) {
+            return action;
+        }
+    }
     const key = event.key.toLowerCase();
     const mod = apple ? event.metaKey : event.ctrlKey;
     const { altKey: alt, shiftKey: shift, ctrlKey: ctrl, metaKey: meta } = event;
-    if (mod && !alt && key === 's') {
-        return { type: 'save' };
-    }
-    if (ctrl && shift && key === 'm') {
-        return { type: 'bracket', extend: alt };
-    }
-    if (mod && !alt && (key === '-' || key === '=' || key === '+')) {
-        return { type: 'fold', collapse: key === '-', all: shift };
-    }
-    if ((mod && (key === 'home' || key === 'end')) || (meta && (key === 'arrowup' || key === 'arrowdown'))) {
-        return { type: 'edge', end: key === 'end' || key === 'arrowdown', extend: shift };
-    }
-    if (mod && key === 'z') {
-        return command(shift ? 'redo' : 'undo');
-    }
-    if (ctrl && key === 'y') {
-        return command('redo');
-    }
-    if (mod && key === 'a') {
-        return command('selectAll');
-    }
-    if (mod && key === 'd') {
-        return command('duplicateLine');
-    }
-    if (mod && key === 'g') {
-        return command('selectNextOccurrence');
-    }
-    if (mod && !alt && !shift && key === '/') {
-        return command('toggleLineComment');
-    }
-    if (apple ? mod && alt && !shift && event.code === 'Slash' : mod && shift && !alt && (key === '/' || key === '?')) {
-        return command('toggleBlockComment');
-    }
-    if (mod && shift && key === 'k') {
-        return command('deleteLine');
-    }
-    if (mod && !alt && !shift && key === 'enter') {
-        return command('splitLine');
-    }
-    if (mod && alt && !shift && key === 'enter') {
-        return command('startNewLineBefore');
-    }
-    if (mod && shift && !alt && key === 'u') {
-        return command('toggleCase');
-    }
-    if (ctrl && shift && !alt && key === 'j') {
-        return command('joinLines');
-    }
-    if (ctrl && alt && !shift && key === 'i') {
-        return command('autoIndentLines');
-    }
-    if (ctrl && key === 'w') {
-        return command(shift ? 'shrinkSelection' : 'expandSelection');
-    }
-    if (alt && (shift || ctrl) && (key === 'arrowup' || key === 'arrowdown')) {
-        return command(key === 'arrowup' ? 'addCaretAbove' : 'addCaretBelow');
-    }
-    if (alt && !mod && key === 'arrowup') {
-        return command('moveLineUp');
-    }
-    if (alt && !mod && key === 'arrowdown') {
-        return command('moveLineDown');
-    }
-    if (alt && !mod && key === 'j') {
-        return command('selectNextOccurrence');
-    }
-    if (meta && key === 'arrowleft') {
-        return command(shift ? 'selectSmartHome' : 'smartHome');
-    }
-    if (meta && key === 'arrowright') {
-        return command(shift ? 'selectSmartEnd' : 'smartEnd');
-    }
-    if ((alt || ctrl) && key === 'arrowleft') {
-        return command(shift ? 'selectWordLeft' : 'wordLeft');
-    }
-    if ((alt || ctrl) && key === 'arrowright') {
-        return command(shift ? 'selectWordRight' : 'wordRight');
-    }
-    if ((alt || ctrl) && key === 'backspace') {
-        return command('deleteWordLeft');
-    }
-    if ((alt || ctrl) && key === 'delete') {
-        return command('deleteWordRight');
+    if (mod && !alt && (key === 'home' || key === 'end')) {
+        return { type: 'edge', end: key === 'end', extend: shift };
     }
     if (mod || alt || ctrl || meta) {
         return null;
@@ -145,7 +166,7 @@ export function keyAction(event: KeyLike, apple: boolean): KeyAction | null {
         return command(shift ? 'outdent' : 'insertTab');
     }
     if (key === 'enter') {
-        return command(shift ? 'startNewLine' : 'insertNewline');
+        return command('insertNewline');
     }
     if (key === 'backspace') {
         return command('smartBackspace');

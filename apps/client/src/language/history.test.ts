@@ -1,15 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import { isApplePlatform } from '@/desktop/bridge';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const other = 'file:///work/app/src/b.ts';
 const at = (line: number, character: number) => ({ line, character });
 const range = (line: number, start: number, end: number) => ({ start: at(line, start), end: at(line, end) });
-const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 
 async function settle(): Promise<void> {
     for (let turn = 0; turn < 100; turn++) {
@@ -38,9 +38,9 @@ describe('back and forward', () => {
         editor.moveCaret(at(0, 2));
         await language.navigation.go('definition');
         expect(editor.getCaret()).toEqual(at(3, 4));
-        expect(editor.press({ key: '[', code: 'BracketLeft', ...MOD })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.historyBack))).toBe(true);
         expect(editor.getCaret()).toEqual(at(0, 2));
-        editor.press({ key: ']', code: 'BracketRight', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.historyForward));
         expect(editor.getCaret()).toEqual(at(3, 4));
     });
 
@@ -93,7 +93,7 @@ describe('recent locations', () => {
         editor.moveCaret(at(0, 0));
         language.jump(at(1, 0));
         language.jump(at(3, 0));
-        editor.press({ key: 'e', code: 'KeyE', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.recentLocations));
         await settle();
         const view = language.popups.getState().pick!;
         expect(view.groups[0]!.rows.map((row) => row.label)).toEqual(['a.ts:2', 'a.ts:1']);

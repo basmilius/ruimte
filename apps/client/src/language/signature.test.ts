@@ -4,6 +4,8 @@ import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
 import { ManualTimers } from './timers';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 
@@ -96,7 +98,7 @@ describe('overloads', () => {
         timers.advance(100);
         await settle();
         editor.press({ key: 'Escape' });
-        expect(editor.press({ key: ' ', ctrlKey: true, shiftKey: true })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.parameterInfo))).toBe(true);
         timers.advance(100);
         await settle();
         expect(view()).not.toBeNull();

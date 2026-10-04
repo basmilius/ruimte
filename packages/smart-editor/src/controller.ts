@@ -324,7 +324,7 @@ export class InputController {
         this.view.revealCaret();
     }
 
-    private goToMatchingBracket(extend: boolean): void {
+    private goToMatchingBracket(): void {
         const { model } = this.view;
         let changed = false;
         model.setSelections(
@@ -335,7 +335,7 @@ export class InputController {
                 }
                 const head = bracket.mate > bracket.at ? bracket.mate + 1 : bracket.mate;
                 changed = true;
-                return { anchor: extend ? selection.anchor : head, head };
+                return { anchor: head, head };
             })
         );
         if (changed) {
@@ -367,7 +367,7 @@ export class InputController {
             }
             case 'bracket':
                 event.preventDefault();
-                this.goToMatchingBracket(action.extend);
+                this.goToMatchingBracket();
                 return;
             case 'fold':
                 event.preventDefault();

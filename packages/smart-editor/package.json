@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./editor.css": "./src/editor.css",
-    "./fake": "./src/fake.ts"
+    "./fake": "./src/fake.ts",
+    "./keymap": "./src/keymap-table.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

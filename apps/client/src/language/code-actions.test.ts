@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
 import { ManualTimers } from './timers';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
 const range = (line: number, start: number, end: number) => ({ start: at(line, start), end: at(line, end) });
-const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 
 async function settle(): Promise<void> {
     for (let turn = 0; turn < 100; turn++) {
@@ -106,7 +106,7 @@ describe('a problem elsewhere on the line', () => {
         const diagnostic = { range: range(0, 4, 10), message: 'nope', severity: 1 };
         emit(transport, [diagnostic]);
         editor.moveCaret(at(0, 14));
-        editor.press({ key: '.', code: 'Period', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.codeActions));
         await settle();
         const asked = codeActionRequests(requests);
         expect(asked).toHaveLength(2);
@@ -133,11 +133,11 @@ describe('a problem elsewhere on the line', () => {
             { range: range(0, 11, 12), message: 'hint', severity: 4 }
         ]);
         editor.moveCaret(at(0, 5));
-        editor.press({ key: '.', code: 'Period', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.codeActions));
         await settle();
         expect(codeActionRequests(requests)).toHaveLength(1);
         editor.moveCaret(at(0, 14));
-        editor.press({ key: '.', code: 'Period', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.codeActions));
         await settle();
         expect(codeActionRequests(requests)).toHaveLength(3);
     });
@@ -147,7 +147,7 @@ describe('the list', () => {
     test('opens under the caret on Mod+. grouped by kind, preferred first, and shows what the active action would change', async () => {
         const { editor, timers, language } = await setup();
         editor.moveCaret(at(0, 8));
-        expect(editor.press({ key: '.', code: 'Period', ...MOD })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.codeActions))).toBe(true);
         await settle();
         const view = language.popups.getState().pick!;
         expect(view.groups.map((group) => [group.title, group.rows.map((row) => row.label)])).toEqual([

@@ -2,6 +2,8 @@ import type { SignatureHelp, SignatureHelpContext } from '@ruimte/smart-editor-l
 import type { EditorPosition, EditorTextChange } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { signatureViewOf } from './signature-model';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { isShortcut } from './shortcut-keys';
 import { realTimers, type Timers } from './timers';
 
 const METHOD = 'textDocument/signatureHelp';
@@ -34,7 +36,7 @@ export class SignatureFeature {
                     this.close();
                     return true;
                 }
-                if (event.key === ' ' && event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey) {
+                if (isShortcut(CANVAS_SHORTCUTS.parameterInfo, event)) {
                     this.invoke();
                     return true;
                 }

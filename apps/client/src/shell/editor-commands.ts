@@ -1,7 +1,7 @@
 import i18next from 'i18next';
-import { shortcut, type Shortcut } from '@basmilius/desktop-ui';
+import type { Shortcut } from '@basmilius/desktop-ui';
 import type { EditorCommand } from '@ruimte/smart-editor';
-import { isApplePlatform } from '@/desktop/bridge';
+import { editorShortcut } from '@/shell/editor-keymap';
 import { focusedEditor } from '@/shell/panels/focused-editor';
 
 /*
@@ -17,18 +17,14 @@ interface EditorCommandSpec {
 }
 
 const TABLE = {
-    'toggle-line-comment': { key: 'toggleLineComment', command: 'toggleLineComment', shortcut: shortcut('Mod+/') },
-    'toggle-block-comment': {
-        key: 'toggleBlockComment',
-        command: 'toggleBlockComment',
-        shortcut: isApplePlatform() ? shortcut('Mod+Alt+/') : shortcut('Mod+Shift+/')
-    },
-    'join-lines': { key: 'joinLines', command: 'joinLines', shortcut: shortcut('Ctrl+Shift+J') },
-    'split-line': { key: 'splitLine', command: 'splitLine', shortcut: shortcut('Mod+Enter') },
-    'start-new-line': { key: 'startNewLine', command: 'startNewLine', shortcut: shortcut('Shift+Enter') },
-    'start-new-line-before': { key: 'startNewLineBefore', command: 'startNewLineBefore', shortcut: shortcut('Mod+Alt+Enter') },
-    'toggle-case': { key: 'toggleCase', command: 'toggleCase', shortcut: shortcut('Mod+Shift+U') },
-    'auto-indent-lines': { key: 'autoIndentLines', command: 'autoIndentLines', shortcut: shortcut('Ctrl+Alt+I') }
+    'toggle-line-comment': { key: 'toggleLineComment', command: 'toggleLineComment', shortcut: editorShortcut('toggleLineComment') },
+    'toggle-block-comment': { key: 'toggleBlockComment', command: 'toggleBlockComment', shortcut: editorShortcut('toggleBlockComment') },
+    'join-lines': { key: 'joinLines', command: 'joinLines', shortcut: editorShortcut('joinLines') },
+    'split-line': { key: 'splitLine', command: 'splitLine', shortcut: editorShortcut('splitLine') },
+    'start-new-line': { key: 'startNewLine', command: 'startNewLine', shortcut: editorShortcut('startNewLine') },
+    'start-new-line-before': { key: 'startNewLineBefore', command: 'startNewLineBefore', shortcut: editorShortcut('startNewLineBefore') },
+    'toggle-case': { key: 'toggleCase', command: 'toggleCase', shortcut: editorShortcut('toggleCase') },
+    'auto-indent-lines': { key: 'autoIndentLines', command: 'autoIndentLines', shortcut: editorShortcut('autoIndentLines') }
 } satisfies Record<string, EditorCommandSpec>;
 
 export type EditorCommandId = keyof typeof TABLE;

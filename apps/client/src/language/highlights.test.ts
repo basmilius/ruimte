@@ -5,6 +5,8 @@ import { FakeLanguageTransport } from './fake-daemon';
 import { editorHighlightsOf, neighborRange } from './highlights';
 import { ProjectLanguage } from './project-language';
 import { ManualTimers } from './timers';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -69,13 +71,13 @@ describe('highlights', () => {
         editor.moveCaret(at(0, 6));
         timers.advance(200);
         await settle();
-        expect(editor.press({ key: 'F3', altKey: true })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.nextHighlight))).toBe(true);
         expect(editor.getCaret()).toEqual(at(1, 0));
-        editor.press({ key: 'F3', altKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.nextHighlight));
         expect(editor.getCaret()).toEqual(at(2, 6));
-        editor.press({ key: 'F3', altKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.nextHighlight));
         expect(editor.getCaret()).toEqual(at(0, 4));
-        editor.press({ key: 'F3', altKey: true, shiftKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.previousHighlight));
         expect(editor.getCaret()).toEqual(at(2, 6));
     });
 });

@@ -1,6 +1,8 @@
 import type { Diagnostic } from '@ruimte/smart-editor-lsp';
 import type { EditorContentChange, EditorPosition } from '@ruimte/smart-editor';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { EditorLanguage } from './editor-language';
+import { isShortcut } from './shortcut-keys';
 import { markerOf, neighborProblem, problemsAt, shiftRange, type Problem } from './diagnostics-model';
 
 export interface ProblemCounts {
@@ -30,12 +32,13 @@ export class DiagnosticsFeature {
             }
         });
         const edits = editor.onTextChange((change) => this.shift(change.changes));
-        // Alt+F8 and Alt+Shift+F8 are the editor's while it has the keyboard; elsewhere the menu's commands answer.
+        // These keys are the editor's while it has the keyboard; elsewhere the menu's commands answer.
         const keys = editor.onKeyDown((event) => {
-            if (event.key !== 'F8' || !event.altKey || event.metaKey || event.ctrlKey) {
+            const next = isShortcut(CANVAS_SHORTCUTS.nextProblem, event);
+            if (!next && !isShortcut(CANVAS_SHORTCUTS.previousProblem, event)) {
                 return false;
             }
-            this.step(event.shiftKey ? -1 : 1);
+            this.step(next ? 1 : -1);
             return true;
         });
         language.onDispose(() => {

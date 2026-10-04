@@ -4,8 +4,9 @@ import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
 import { ManualTimers } from './timers';
-import { isApplePlatform } from '@/desktop/bridge';
 import { useToasts } from '@/state/toasts';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const range = (line: number, start: number, end: number) => ({ start: { line, character: start }, end: { line, character: end } });
@@ -181,8 +182,6 @@ describe('the reference count', () => {
 });
 
 describe('quick info', () => {
-    const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
-
     test('opens the card at the caret on Mod+J, survives a scroll and goes on Escape or when the caret moves', async () => {
         const { language, editor, report, transport } = await setup({ 'textDocument/hover': {} });
         transport.answers.set('language.request', () => ({
@@ -192,7 +191,7 @@ describe('quick info', () => {
         }));
         report([{ range: range(0, 8, 17), message: 'Cannot find name', severity: 1 }]);
         editor.moveCaret({ line: 0, character: 10 });
-        expect(editor.press({ key: 'j', code: 'KeyJ', ...MOD })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.quickInfo))).toBe(true);
         await settle();
         expect(language.popups.getState().hover?.problems).toHaveLength(1);
         expect(language.popups.getState().hover?.info?.text.signatures[0]?.code).toBe('function salaryFit(): number');
@@ -200,7 +199,7 @@ describe('quick info', () => {
         expect(language.popups.getState().hover).not.toBeNull();
         editor.press({ key: 'Escape' });
         expect(language.popups.getState().hover).toBeNull();
-        editor.press({ key: 'j', code: 'KeyJ', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.quickInfo));
         await settle();
         expect(language.popups.getState().hover).not.toBeNull();
         editor.moveCaret({ line: 1, character: 0 });
@@ -211,7 +210,7 @@ describe('quick info', () => {
         const { language, editor, transport } = await setup({ 'textDocument/hover': {} });
         transport.answers.set('language.request', () => ({ result: null, server: 'typescript', version: 1 }));
         editor.moveCaret({ line: 1, character: 0 });
-        editor.press({ key: 'j', code: 'KeyJ', ...MOD });
+        editor.press(eventOf(CANVAS_SHORTCUTS.quickInfo));
         await settle();
         expect(language.popups.getState().hover).toBeNull();
         expect(useToasts.getState().toasts.some((toast) => toast.id === 'language-hover')).toBe(true);

@@ -18,6 +18,8 @@ import {
 } from './completion-model';
 import { RecentChoices, recentChoicesOf } from './recent-choices';
 import { shikiLanguageOf } from './language-ids';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { isShortcut } from './shortcut-keys';
 import type { CompletionRow, CompletionView } from './popups';
 import { realTimers, type Timers } from './timers';
 
@@ -182,7 +184,7 @@ export class CompletionFeature {
     }
 
     private key(event: KeyboardEvent): boolean {
-        if (event.key === ' ' && event.ctrlKey && !event.shiftKey && !event.metaKey && !event.altKey) {
+        if (isShortcut(CANVAS_SHORTCUTS.triggerCompletion, event)) {
             if (this.isOpen) {
                 this.detailsOpen = !this.detailsOpen;
                 this.publish();

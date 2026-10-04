@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { chordMatches, type KeyLike, keyAction } from './keymap.ts';
+import { chordOf, KEYMAP_IDS, parseChord } from './keymap-table.ts';
 import type { KeyChord } from './types.ts';
 
 function key(name: string, modifiers: Partial<Omit<KeyLike, 'key'>> = {}): KeyLike {
@@ -48,7 +49,7 @@ describe('keyAction', () => {
 
     test('toggles a block comment with the platform`s chord for each system', () => {
         expect(keyAction(key('÷', { metaKey: true, altKey: true, code: 'Slash' }), true)).toEqual({ type: 'command', command: 'toggleBlockComment' });
-        expect(keyAction(key('?', { ctrlKey: true, shiftKey: true }), false)).toEqual({ type: 'command', command: 'toggleBlockComment' });
+        expect(keyAction(key('?', { ctrlKey: true, shiftKey: true, code: 'Slash' }), false)).toEqual({ type: 'command', command: 'toggleBlockComment' });
         expect(keyAction(key('/', { ctrlKey: true }), false)).toEqual({ type: 'command', command: 'toggleLineComment' });
     });
 
@@ -86,5 +87,42 @@ describe('keyAction', () => {
     test('ignores what is the page`s or the textarea`s', () => {
         expect(keyAction(key('a'), true)).toBeNull();
         expect(keyAction(key('c', { metaKey: true }), true)).toBeNull();
+    });
+});
+
+describe('the key table', () => {
+    for (const apple of [true, false]) {
+        const platform = apple ? 'macOS' : 'the other platforms';
+
+        test(`reads every chord on ${platform} and gives no two commands the same one`, () => {
+            const seen = new Map<string, string>();
+            for (const id of KEYMAP_IDS) {
+                const text = chordOf(id, apple);
+                if (text === null) {
+                    continue;
+                }
+                const chord = parseChord(text);
+                const signature = [apple ? chord.mod || chord.meta : false, chord.ctrl || (!apple && chord.mod), chord.alt, chord.shift, chord.key].join('|');
+                expect(seen.get(signature), `${id} and ${seen.get(signature)} share ${text}`).toBeUndefined();
+                seen.set(signature, id);
+            }
+        });
+    }
+
+    test('matches letters and punctuation by the physical key, since Option changes the character on macOS', () => {
+        expect(keyAction(key('¬', { metaKey: true, altKey: true, code: 'KeyL' }), true)).toBeNull();
+        expect(chordMatches(parseChord('Mod+Alt+L'), key('¬', { metaKey: true, altKey: true, code: 'KeyL' }), true)).toBe(true);
+        expect(chordMatches(parseChord('Mod+Alt+-'), key('–', { metaKey: true, altKey: true, code: 'Minus' }), true)).toBe(true);
+        expect(chordMatches(parseChord('Mod+Shift+='), key('+', { metaKey: true, shiftKey: true, code: 'Equal' }), true)).toBe(true);
+    });
+
+    test('has the platform`s key for the line commands on each system', () => {
+        expect(keyAction(key('Backspace', { metaKey: true }), true)).toEqual({ type: 'command', command: 'deleteLine' });
+        expect(keyAction(key('y', { ctrlKey: true }), false)).toEqual({ type: 'command', command: 'deleteLine' });
+        expect(keyAction(key('d', { metaKey: true }), true)).toEqual({ type: 'command', command: 'duplicateLine' });
+        expect(keyAction(key('ArrowUp', { altKey: true, shiftKey: true }), true)).toEqual({ type: 'command', command: 'moveLineUp' });
+        expect(keyAction(key('ArrowUp', { altKey: true }), true)).toEqual({ type: 'command', command: 'expandSelection' });
+        expect(keyAction(key('g', { ctrlKey: true }), true)).toEqual({ type: 'command', command: 'selectNextOccurrence' });
+        expect(keyAction(key('j', { altKey: true }), false)).toEqual({ type: 'command', command: 'selectNextOccurrence' });
     });
 });

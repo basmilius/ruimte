@@ -1,6 +1,7 @@
 import type { SplitDirection } from '@/shell/split';
 import type { NodeKind } from '@/state/canvas';
 import { shortcut, type Shortcut } from '@basmilius/desktop-ui';
+import { requiredShortcut } from '@/shell/editor-keymap';
 
 /*
  * The shortcuts `canvas-shortcuts.ts` binds, in a module of their own so a menu, the palette, the Keyboard
@@ -35,27 +36,27 @@ export const CANVAS_SHORTCUTS = {
     zoomOut: shortcut('-'),
     find: shortcut('Mod+F'),
     findReplace: shortcut('Mod+Shift+H'),
-    nextProblem: shortcut('Alt+F8'),
-    previousProblem: shortcut('Alt+Shift+F8'),
-    // Mod+Alt+Up and Down are the grid's, so stepping through problems and uses of a name takes a function key.
-    nextHighlight: shortcut('Alt+F3'),
-    previousHighlight: shortcut('Alt+Shift+F3'),
-    codeActions: shortcut('Mod+.'),
-    quickInfo: shortcut('Mod+J'),
-    triggerCompletion: shortcut('Ctrl+Space'),
-    parameterInfo: shortcut('Ctrl+Shift+Space'),
-    historyBack: shortcut('Mod+['),
-    historyForward: shortcut('Mod+]'),
-    recentLocations: shortcut('Mod+E'),
-    goToDefinition: shortcut('Alt+Shift+D'),
-    goToTypeDefinition: shortcut('Alt+Shift+T'),
-    goToImplementation: shortcut('Alt+Shift+I'),
-    goToSymbol: shortcut('Mod+Shift+O'),
-    peekReferences: shortcut('Alt+F7'),
-    peekDefinition: shortcut('Alt+Shift+P'),
-    rename: shortcut('Alt+Shift+R'),
-    organizeImports: shortcut('Alt+Shift+O'),
-    formatDocument: shortcut('Alt+Shift+F'),
+    // The editor's and the language commands' keys are the platform's own, in the one table the editor binds (`editor-keymap.ts`).
+    nextProblem: requiredShortcut('nextProblem'),
+    previousProblem: requiredShortcut('previousProblem'),
+    nextHighlight: requiredShortcut('nextHighlight'),
+    previousHighlight: requiredShortcut('previousHighlight'),
+    codeActions: requiredShortcut('codeActions'),
+    quickInfo: requiredShortcut('quickInfo'),
+    triggerCompletion: requiredShortcut('triggerCompletion'),
+    parameterInfo: requiredShortcut('parameterInfo'),
+    historyBack: requiredShortcut('historyBack'),
+    historyForward: requiredShortcut('historyForward'),
+    recentLocations: requiredShortcut('recentLocations'),
+    goToDefinition: requiredShortcut('goToDefinition'),
+    goToTypeDefinition: requiredShortcut('goToTypeDefinition'),
+    goToImplementation: requiredShortcut('goToImplementation'),
+    goToSymbol: requiredShortcut('goToSymbol'),
+    peekReferences: requiredShortcut('peekReferences'),
+    peekDefinition: requiredShortcut('peekDefinition'),
+    rename: requiredShortcut('renameSymbol'),
+    organizeImports: requiredShortcut('organizeImports'),
+    formatDocument: requiredShortcut('formatDocument'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;

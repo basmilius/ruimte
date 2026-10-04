@@ -5,6 +5,8 @@ import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { distinguishingFolders } from './peek-model';
 import { ProjectLanguage } from './project-language';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const otherUri = 'file:///work/app/src/b.ts';
@@ -108,7 +110,7 @@ describe('peek definition', () => {
         const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'use();', theme: 'light' });
         const language = new EditorLanguage(project, editor, uri, 'typescript');
         await language.document.ready;
-        editor.press({ key: 'P', code: 'KeyP', altKey: true, shiftKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.peekDefinition));
         for (let turn = 0; turn < 100; turn++) {
             await Promise.resolve();
         }

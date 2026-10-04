@@ -7,6 +7,8 @@ import { ProjectLanguage } from './project-language';
 import { useToasts } from '@/state/toasts';
 import { forgetRecentChoices } from './recent-choices';
 import { ManualTimers } from './timers';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { eventOf } from './key-events';
 
 const uri = 'file:///work/app/src/a.ts';
 const at = (line: number, character: number) => ({ line, character });
@@ -153,14 +155,14 @@ describe('asking for the list', () => {
             { label: 'filter', kind: 2 },
             { label: 'map', kind: 2 }
         ]);
-        expect(one.editor.press({ key: ' ', ctrlKey: true })).toBe(true);
+        expect(one.editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion))).toBe(true);
         one.timers.advance(10);
         await settle();
         expect(one.editor.getText()).toBe("import 'x';\nfilter");
         expect(one.view()).toBeNull();
         useToasts.setState({ toasts: [] });
         const none = await setup('zzz', ITEMS);
-        none.editor.press({ key: ' ', ctrlKey: true });
+        none.editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion));
         none.timers.advance(10);
         await settle();
         expect(none.view()).toBeNull();
@@ -169,7 +171,7 @@ describe('asking for the list', () => {
 
     test('lists several suggestions as usual', async () => {
         const { editor, timers, view } = await setup('fi');
-        editor.press({ key: ' ', ctrlKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion));
         timers.advance(10);
         await settle();
         expect(view()?.rows.length).toBe(3);
@@ -204,7 +206,7 @@ describe('commit characters', () => {
         const first = await open();
         expect(first.editor.press({ key: '.' })).toBe(false);
         const second = await setup('', items);
-        expect(second.editor.press({ key: ' ', ctrlKey: true })).toBe(true);
+        expect(second.editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion))).toBe(true);
         second.timers.advance(10);
         await settle();
         expect(second.editor.press({ key: '(' })).toBe(true);
@@ -254,11 +256,11 @@ describe('keys', () => {
 
     test('Ctrl+Space opens the list and then shows or hides the documentation', async () => {
         const { editor, timers, view } = await setup('items.f');
-        expect(editor.press({ key: ' ', ctrlKey: true })).toBe(true);
+        expect(editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion))).toBe(true);
         timers.advance(10);
         await settle();
         expect(view()?.detailsOpen).toBe(true);
-        editor.press({ key: ' ', ctrlKey: true });
+        editor.press(eventOf(CANVAS_SHORTCUTS.triggerCompletion));
         expect(view()?.detailsOpen).toBe(false);
     });
 });

@@ -159,22 +159,22 @@ describe('the keyboard', () => {
 
     test('moves a line up and down', () => {
         const { editor, press } = mountEditor({ text: 'a\nb\nc' });
-        press('ArrowDown', { altKey: true });
+        press('ArrowDown', { altKey: true, shiftKey: true });
         expect(editor.getText()).toBe('b\na\nc');
-        press('ArrowUp', { altKey: true });
+        press('ArrowUp', { altKey: true, shiftKey: true });
         expect(editor.getText()).toBe('a\nb\nc');
     });
 
-    test('adds a caret on the next line with Alt+Shift+Down', () => {
-        const { editor, press, type } = mountEditor({ text: 'ab\ncd' });
-        press('ArrowDown', { altKey: true, shiftKey: true });
+    test('adds a caret on the next line with the add caret command', () => {
+        const { editor, type } = mountEditor({ text: 'ab\ncd' });
+        editor.runCommand('addCaretBelow');
         type('-');
         expect(editor.getText()).toBe('-ab\n-cd');
     });
 
     test('collapses several carets and a selection on Escape, and leaves a lone caret to the page', () => {
         const { editor, press, type } = mountEditor({ text: 'ab\ncd' });
-        press('ArrowDown', { altKey: true, shiftKey: true });
+        editor.runCommand('addCaretBelow');
         expect(press('Escape')).toBe(true);
         type('-');
         expect(editor.getText()).toBe('-ab\ncd');
@@ -185,7 +185,7 @@ describe('the keyboard', () => {
         const { editor, press, type } = mountEditor({ text: 'f(a, b)', language: 'typescript' });
         press('ArrowRight');
         press('ArrowRight');
-        press('m', { ctrlKey: true, shiftKey: true });
+        press('m', { ctrlKey: true });
         type('!');
         expect(editor.getText()).toBe('f(a, b)!');
     });
