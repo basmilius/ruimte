@@ -1,4 +1,5 @@
 import { parseDocument } from 'yaml';
+import type { CSSProperties } from 'react';
 import { absoluteOf, isAbsolutePath } from '@ruimte/contracts';
 
 export interface MarkdownDocument {
@@ -30,6 +31,15 @@ export function parseMarkdownDocument(text: string): MarkdownDocument {
     } catch {
         return { body: text, rows: null, invalid: true };
     }
+}
+
+/*
+ * A height attribute on its own, as a style: every `img` rule says `height: auto`, which beats an
+ * attribute. Beside a width the two attributes already give the image its ratio.
+ */
+export function markdownImageStyle(width: string | number | undefined, height: string | number | undefined): CSSProperties | undefined {
+    const pixels = height === undefined || width !== undefined ? null : /^(\d+(?:\.\d+)?)(?:px)?$/.exec(String(height).trim());
+    return pixels === null ? undefined : { height: `${pixels[1]}px` };
 }
 
 export function markdownImagePath(src: string, folder: string | null): string | null {

@@ -2,13 +2,13 @@ import { useMemo, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { useFileLinkCwd } from '@ruimte/agents-react/chat/ui/file-links';
-import { parseMarkdownDocument, markdownImagePath } from '@/shell/panels/markdown-document';
+import { parseMarkdownDocument, markdownImagePath, markdownImageStyle } from '@/shell/panels/markdown-document';
 import { FILE_HTML_PLUGINS } from '@/shell/panels/markdown-html';
 import { useFileRead } from '@/shell/panels/use-file-read';
 import { useEndpointId } from '@/state/keys';
 import { useMachineUrl } from '@/transport/machine-url';
 
-type ImageProps = Pick<ComponentProps<'img'>, 'src' | 'alt' | 'title' | 'width' | 'height'>;
+type ImageProps = Pick<ComponentProps<'img'>, 'src' | 'alt' | 'title' | 'width' | 'height' | 'style'>;
 
 function LocalImage({ path, ...props }: ImageProps & { path: string }) {
     const { state } = useFileRead(path);
@@ -24,7 +24,7 @@ function LocalImage({ path, ...props }: ImageProps & { path: string }) {
 function DocumentImage({ src, alt, title, width, height }: ImageProps) {
     const folder = useFileLinkCwd();
     const path = markdownImagePath(src ?? '', folder);
-    const props = { alt, title, width, height };
+    const props = { alt, title, width, height, style: markdownImageStyle(width, height) };
     return path === null ? (
         <img {...props} src={src || undefined} loading="lazy" referrerPolicy="no-referrer" />
     ) : (

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseMarkdownDocument, markdownImagePath } from './markdown-document';
+import { parseMarkdownDocument, markdownImagePath, markdownImageStyle } from './markdown-document';
 
 describe('markdown frontmatter', () => {
     test('shows YAML values without losing types or multiline text', () => {
@@ -42,4 +42,14 @@ test('resolves local images from the document folder without treating URLs as pa
     for (const src of ['https://example.com/logo.svg', '//example.com/logo.svg', 'data:image/png;base64,a', 'javascript:alert(1)', '#logo', '%zz']) {
         expect(markdownImagePath(src, '/repo')).toBeNull();
     }
+});
+
+test('keeps a height attribute that stands without a width', () => {
+    expect(markdownImageStyle(undefined, '48')).toEqual({ height: '48px' });
+    expect(markdownImageStyle(undefined, 48)).toEqual({ height: '48px' });
+    expect(markdownImageStyle(undefined, ' 48px ')).toEqual({ height: '48px' });
+    expect(markdownImageStyle('120', '48')).toBeUndefined();
+    expect(markdownImageStyle(undefined, undefined)).toBeUndefined();
+    expect(markdownImageStyle(undefined, '50%')).toBeUndefined();
+    expect(markdownImageStyle(undefined, 'calc(1px)')).toBeUndefined();
 });
