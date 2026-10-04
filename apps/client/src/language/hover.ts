@@ -12,6 +12,8 @@ import { realTimers, type Timers } from './timers';
 
 const SHOW_DELAY_MS = 300;
 const HIDE_DELAY_MS = 250;
+/* How long a card has to stay up before the references of its symbol are counted, which can be a request over the whole project. */
+const COUNT_DELAY_MS = 500;
 const TOAST_ID = 'language-hover';
 
 /*
@@ -23,6 +25,9 @@ export class HoverFeature {
     private readonly language: EditorLanguage;
     private readonly timers: Timers;
     private showTimer: unknown;
+    private countTimer: unknown;
+    /* The counts asked for since the text last changed, by the symbol's position, so moving back to a name does not ask again. */
+    private readonly counts = new Map<string, number>();
     private hideTimer: unknown;
     private inCard = false;
     /* Counts every request, so an answer that arrives after the pointer moved on is dropped. */
@@ -37,7 +42,10 @@ export class HoverFeature {
         const { editor } = language;
         const offs = [
             editor.onHover((hover) => this.moved(hover)),
-            editor.onTextChange(() => this.hide()),
+            editor.onTextChange(() => {
+                this.counts.clear();
+                this.hide();
+            }),
             editor.onViewChange(() => {
                 if (!this.pinned) {
                     this.hide();
@@ -103,6 +111,7 @@ export class HoverFeature {
         this.lookup?.abort();
         this.timers.clear(this.showTimer);
         this.timers.clear(this.hideTimer);
+        this.timers.clear(this.countTimer);
         this.inCard = false;
         if (this.language.popups.getState().hover !== null) {
             this.language.popups.setState({ hover: null });
@@ -186,7 +195,7 @@ export class HoverFeature {
         this.pinned = pinned;
         this.present(position, problems, info, problems[0]?.diagnostic.range ?? range);
         if (info !== null) {
-            void this.count(position, request, controller.signal);
+            this.scheduleCount(position, request, controller.signal);
         }
     }
 
@@ -204,17 +213,45 @@ export class HoverFeature {
         });
     }
 
+    /* The references of the symbol are counted once the card has stayed up a while, or at once when the text has not changed since they were. */
+    private scheduleCount(position: EditorPosition, request: number, signal: AbortSignal): void {
+        const key = `${position.line}:${this.wordStart(position)}`;
+        const known = this.counts.get(key);
+        if (known !== undefined) {
+            this.showCount(known, request);
+            return;
+        }
+        this.timers.clear(this.countTimer);
+        this.countTimer = this.timers.set(() => void this.count(position, key, request, signal), COUNT_DELAY_MS);
+    }
+
     /* How many places use the symbol, which can take a while in a large project and so arrives after the card does. */
-    private async count(position: EditorHover['position'], request: number, signal: AbortSignal): Promise<void> {
+    private async count(position: EditorPosition, key: string, request: number, signal: AbortSignal): Promise<void> {
         const { service } = this.language.project;
-        if (!service.supports('textDocument/references', this.language.uri)) {
+        if (request !== this.request || !service.supports('textDocument/references', this.language.uri)) {
             return;
         }
         const found = await service.references(this.language.uri, position, false, { signal }).catch(() => null);
-        const shown = this.language.popups.getState().hover;
-        if (found === null || request !== this.request || shown?.info == null) {
+        if (found === null) {
             return;
         }
-        this.language.popups.setState({ hover: { ...shown, info: { ...shown.info, references: found.length } } });
+        this.counts.set(key, found.length);
+        this.showCount(found.length, request);
+    }
+
+    private showCount(count: number, request: number): void {
+        const shown = this.language.popups.getState().hover;
+        if (request === this.request && shown?.info != null) {
+            this.language.popups.setState({ hover: { ...shown, info: { ...shown.info, references: count } } });
+        }
+    }
+
+    /* Where the word at a position starts, which names the symbol for the cache. */
+    wordStart(position: EditorPosition): number {
+        const line = this.language.editor.textInRange({
+            start: { line: position.line, character: 0 },
+            end: { line: position.line, character: Number.MAX_SAFE_INTEGER }
+        });
+        return wordRangeAt(line, position)?.start.character ?? position.character;
     }
 }

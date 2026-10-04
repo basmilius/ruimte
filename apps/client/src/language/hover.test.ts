@@ -128,6 +128,58 @@ describe('hover card', () => {
     });
 });
 
+describe('the reference count', () => {
+    async function counted() {
+        const mounted = await setup({ 'textDocument/hover': {}, 'textDocument/references': {} });
+        let asked = 0;
+        mounted.transport.answers.set('language.request', (payload: { method: string }) => {
+            if (payload.method === 'textDocument/references') {
+                asked++;
+            }
+            const result =
+                payload.method === 'textDocument/hover'
+                    ? { contents: { kind: 'markdown', value: '```typescript\nfunction salaryFit(): number\n```' }, range: range(0, 8, 17) }
+                    : [{ uri, range: range(0, 8, 17) }];
+            return { result, server: 'typescript', version: 1 };
+        });
+        return { ...mounted, asked: () => asked };
+    }
+
+    test('is not asked for while the pointer only passes over a name', async () => {
+        const { editor, timers, asked } = await counted();
+        editor.hover({ line: 0, character: 10 });
+        timers.advance(300);
+        await settle();
+        editor.hover(null);
+        timers.advance(300);
+        await settle();
+        timers.advance(1000);
+        await settle();
+        expect(asked()).toBe(0);
+    });
+
+    test('is asked for once per name until the text changes', async () => {
+        const { editor, timers, asked, language } = await counted();
+        const rest = async (character: number) => {
+            editor.hover({ line: 0, character });
+            timers.advance(300);
+            await settle();
+            timers.advance(500);
+            await settle();
+        };
+        await rest(10);
+        expect(asked()).toBe(1);
+        editor.hover(null);
+        timers.advance(300);
+        await rest(11);
+        expect(asked()).toBe(1);
+        expect(language.popups.getState().hover?.info?.references).toBe(1);
+        editor.type('let a = salaryFit(1);\nlet b = 3;');
+        await rest(10);
+        expect(asked()).toBe(2);
+    });
+});
+
 describe('quick info', () => {
     const MOD = isApplePlatform() ? { metaKey: true } : { ctrlKey: true };
 
@@ -207,6 +259,9 @@ describe('hover information', () => {
         });
         editor.hover({ line: 0, character: 10 });
         timers.advance(300);
+        await settle();
+        expect(language.popups.getState().hover?.info).toMatchObject({ word: 'salaryFit', references: null });
+        timers.advance(500);
         await settle();
         expect(language.popups.getState().hover?.info).toMatchObject({ word: 'salaryFit', references: 2 });
         expect(language.popups.getState().hover?.position).toEqual({ line: 0, character: 10 });
