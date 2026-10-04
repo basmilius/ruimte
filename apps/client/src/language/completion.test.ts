@@ -1,9 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
 import type { CompletionItem } from '@ruimte/smart-editor-lsp';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import { forgetRecentChoices } from './recent-choices';
 import { ManualTimers } from './timers';
 
 const uri = 'file:///work/app/src/a.ts';
@@ -14,6 +15,8 @@ async function settle(): Promise<void> {
         await Promise.resolve();
     }
 }
+
+beforeEach(() => forgetRecentChoices());
 
 const ITEMS: CompletionItem[] = [
     { label: 'filter', kind: 2, labelDetails: { detail: '(predicate, thisArg?)' }, sortText: '1' },
@@ -30,7 +33,7 @@ async function typeIn(editor: { getText(): string; type(text: string): void }, t
     }
 }
 
-async function setup(text = 'items.') {
+async function setup(text = 'items.', items: CompletionItem[] = ITEMS) {
     const transport = new FakeLanguageTransport();
     transport.providers = { 'textDocument/completion': { triggerCharacters: ['.'] }, 'completionItem/resolve': { resolveProvider: true } };
     const requests: { method: string; params: unknown }[] = [];
@@ -44,7 +47,7 @@ async function setup(text = 'items.') {
                       detail: 'filter(): void',
                       additionalTextEdits: [{ range: { start: at(0, 0), end: at(0, 0) }, newText: "import 'x';\n" }]
                   }
-                : { isIncomplete: false, items: ITEMS };
+                : { isIncomplete: false, items };
         return { result, server: 'typescript', version: 1 };
     });
     const project = new ProjectLanguage(transport, 'p1', '/work/app');
@@ -177,5 +180,49 @@ describe('accepting', () => {
         await settle();
         editor.moveCaret(at(0, 3));
         expect(view()).toBeNull();
+    });
+});
+
+/* As intelephense answers `#[P`: the namespace in `labelDetails.description`, the import as `detail`. */
+const PHP_ITEMS: CompletionItem[] = [
+    { label: 'Parameter', kind: 4, detail: 'use Raxos\\OpenApi\\Attribute\\Parameter', labelDetails: { description: 'Raxos\\OpenApi\\Attribute' } },
+    { label: 'Property', kind: 4, detail: 'use Raxos\\Database\\Orm\\Property', labelDetails: { description: 'Raxos\\Database\\Orm' } },
+    { label: 'Property', kind: 4, detail: 'use Raxos\\OpenApi\\Attribute\\Property', labelDetails: { description: 'Raxos\\OpenApi\\Attribute' } },
+    { label: 'parseFoo', kind: 3, detail: 'void', labelDetails: { detail: '($a, $b)', description: 'Raxos\\Database\\Orm' } }
+];
+
+describe('rows', () => {
+    test('mark the characters that match, show the parameters after the label and the namespace apart, and tell two of one label apart', async () => {
+        const { editor, timers, view } = await setup('', PHP_ITEMS);
+        editor.type('P');
+        timers.advance(100);
+        await settle();
+        const rows = view()!.rows;
+        expect(rows.map((row) => [row.label, row.description])).toEqual([
+            ['Parameter', 'Raxos\\OpenApi\\Attribute'],
+            ['Property', 'Raxos\\Database\\Orm'],
+            ['Property', 'Raxos\\OpenApi\\Attribute'],
+            ['parseFoo', 'Raxos\\Database\\Orm']
+        ]);
+        expect(rows.map((row) => row.matches)).toEqual([[0], [0], [0], [0]]);
+        expect(rows[3]!.detail).toBe('($a, $b)');
+    });
+
+    test('put the item chosen last time first among equal matches, the one of the other namespace staying behind', async () => {
+        const { editor, language, timers, view } = await setup('', PHP_ITEMS);
+        editor.type('P');
+        timers.advance(100);
+        await settle();
+        await language.completion.accept(false, 2);
+        editor.setText('');
+        editor.type('P');
+        timers.advance(100);
+        await settle();
+        expect(view()!.rows.map((row) => [row.label, row.description])).toEqual([
+            ['Property', 'Raxos\\OpenApi\\Attribute'],
+            ['Parameter', 'Raxos\\OpenApi\\Attribute'],
+            ['Property', 'Raxos\\Database\\Orm'],
+            ['parseFoo', 'Raxos\\Database\\Orm']
+        ]);
     });
 });

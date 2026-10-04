@@ -19,52 +19,64 @@ export function identifierPrefix(before: string): string {
     return characters.slice(start).join('');
 }
 
+export interface MatchDetail {
+    /* Lower is better. */
+    readonly score: number;
+    /* The UTF-16 offsets of the characters of the value the prefix matched, for marking them. */
+    readonly positions: readonly number[];
+}
+
+function run(start: number, length: number): number[] {
+    return Array.from({ length }, (_, offset) => start + offset);
+}
+
 /*
- * How well a prefix fits a label, lower being better, or undefined when it does not. A match that
- * starts the label beats one that ignores case, which beats one at a camel hump or after an
- * underscore, then the initials of the humps (`gbi` for `getById`), and last the letters in order
- * for a prefix of two or more.
+ * How well a prefix fits a label, lower being better, and which characters it matched, or undefined when
+ * it does not fit. A match that starts the label beats one that ignores case, which beats one at a camel
+ * hump or after an underscore, then the initials of the humps (`gbi` for `getById`), and last the letters
+ * in order for a prefix of two or more.
  */
-export function matchScore(value: string, prefix: string): number | undefined {
+export function matchDetail(value: string, prefix: string): MatchDetail | undefined {
     if (prefix === '') {
-        return 0;
+        return { score: 0, positions: [] };
     }
     if (value.startsWith(prefix)) {
-        return 0;
+        return { score: 0, positions: run(0, prefix.length) };
     }
     const lower = value.toLocaleLowerCase();
     const query = prefix.toLocaleLowerCase();
     if (lower.startsWith(query)) {
-        return 1;
+        return { score: 1, positions: run(0, query.length) };
     }
     const boundaries = [...value.matchAll(/(?:^|[_$\s-])([\p{L}\p{N}])|(\p{Lu})/gu)];
-    for (const boundary of boundaries) {
-        const offset = boundary.index! + (boundary[1] ? boundary[0].length - boundary[1].length : 0);
+    const offsets = boundaries.map((boundary) => boundary.index! + (boundary[1] ? boundary[0].length - boundary[1].length : 0));
+    for (const offset of offsets) {
         if (lower.slice(offset).startsWith(query)) {
-            return 2 + offset / 1000;
+            return { score: 2 + offset / 1000, positions: run(offset, query.length) };
         }
     }
-    if (
-        boundaries
-            .map((match) => match[1] ?? match[2])
-            .join('')
-            .toLocaleLowerCase()
-            .startsWith(query)
-    ) {
-        return 3;
+    const initials = boundaries.map((match) => match[1] ?? match[2]).join('');
+    if (initials.toLocaleLowerCase().startsWith(query)) {
+        return { score: 3, positions: offsets.slice(0, query.length) };
     }
     if (query.length < 2 || lower[0] !== query[0]) {
         return undefined;
     }
     let cursor = 0;
+    const positions: number[] = [];
     for (const character of query) {
         const next = lower.indexOf(character, cursor);
         if (next < 0) {
             return undefined;
         }
+        positions.push(next);
         cursor = next + character.length;
     }
-    return 4 + cursor / 1000;
+    return { score: 4 + cursor / 1000, positions };
+}
+
+export function matchScore(value: string, prefix: string): number | undefined {
+    return matchDetail(value, prefix)?.score;
 }
 
 /* The range an item replaces when it is accepted; for an insert-or-replace edit, the one `replace` asks for. */
@@ -127,22 +139,75 @@ export function prefixFor(item: CompletionItem, caret: EditorPosition, lineBefor
 export interface Ranked {
     readonly item: CompletionItem;
     readonly score: number;
+    /* What was typed of the item, which its matched characters are found against. */
+    readonly prefix: string;
 }
 
-/* The items that fit what is typed, best first: by how they match, a preselected one before the rest, then the server's own order. */
-export function rankCompletions(items: readonly CompletionItem[], prefixOf: (item: CompletionItem) => string, limit = 150): Ranked[] {
+/*
+ * The items that fit what is typed, best first: by how they match, then one the person chose lately, a
+ * preselected one, and the server's own order. `recency` is higher for a choice made more recently, and 0 for none.
+ */
+export function rankCompletions(
+    items: readonly CompletionItem[],
+    prefixOf: (item: CompletionItem) => string,
+    recency: (item: CompletionItem) => number = () => 0,
+    limit = 150
+): Ranked[] {
     return items
-        .map((item, index) => ({ item, index, score: matchScore(item.filterText ?? item.label, prefixOf(item)) }))
-        .filter((entry): entry is { item: CompletionItem; index: number; score: number } => entry.score !== undefined)
+        .map((item, index) => {
+            const prefix = prefixOf(item);
+            return { item, index, prefix, score: matchScore(item.filterText ?? item.label, prefix), recent: recency(item) };
+        })
+        .filter((entry): entry is typeof entry & { score: number } => entry.score !== undefined)
         .sort(
             (left, right) =>
                 left.score - right.score ||
+                right.recent - left.recent ||
                 Number(right.item.preselect === true) - Number(left.item.preselect === true) ||
                 (left.item.sortText ?? left.item.label).localeCompare(right.item.sortText ?? right.item.label) ||
                 left.index - right.index
         )
         .slice(0, limit)
-        .map(({ item, score }) => ({ item, score }));
+        .map(({ item, score, prefix }) => ({ item, score, prefix }));
+}
+
+/* The characters of a label to mark for what was typed; none when the label is not what the server filtered on. */
+export function matchedCharacters(label: string, prefix: string): readonly number[] {
+    return matchDetail(label, prefix)?.positions ?? [];
+}
+
+/* The first line of what a server says about where an item comes from, with a PHP `use` made into the namespace it names. */
+function sourceOf(item: CompletionItem): string {
+    const detail = item.detail?.split('\n')[0]?.trim() ?? '';
+    const imported = /^use\s+(.+)$/.exec(detail);
+    return imported === null ? detail : imported[1]!.slice(0, Math.max(0, imported[1]!.lastIndexOf('\\')));
+}
+
+/* What stands right-aligned after a row: the module or namespace the item comes from, else what the server calls its type. */
+export function qualifierOf(item: CompletionItem): string {
+    const description = item.labelDetails?.description?.trim() ?? '';
+    return description !== '' ? description : sourceOf(item);
+}
+
+/*
+ * The qualifier of each row of a list. Items that share a label are told apart however it takes: by the
+ * qualifier, or by what the server says besides, and by a number when a server says nothing that differs.
+ */
+export function qualifiersOf(items: readonly CompletionItem[]): string[] {
+    const result = items.map(qualifierOf);
+    const groups = new Map<string, number[]>();
+    items.forEach((item, index) => groups.set(item.label, [...(groups.get(item.label) ?? []), index]));
+    for (const indexes of groups.values()) {
+        if (indexes.length < 2 || new Set(indexes.map((index) => result[index])).size === indexes.length) {
+            continue;
+        }
+        const alternate = indexes.map((index) => sourceOf(items[index]!) || result[index]!);
+        const distinct = new Set(alternate).size === indexes.length && !alternate.includes('');
+        indexes.forEach((index, position) => {
+            result[index] = distinct ? alternate[position]! : `${result[index] ?? ''} #${position + 1}`.trim();
+        });
+    }
+    return result;
 }
 
 /* A snippet as the plain text it would insert: tab stops and variables vanish, placeholders and choices become their text, and the escapes of the format are undone. */

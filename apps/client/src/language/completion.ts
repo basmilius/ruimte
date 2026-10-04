@@ -2,7 +2,19 @@ import { StaleResultError, type CompletionContext, type CompletionItem } from '@
 import type { EditorContentChange, EditorPosition, EditorRange, EditorTextChange } from '@ruimte/smart-editor';
 import { comparePositions, shiftPosition } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
-import { documentationText, identifierPrefix, insertionOf, isIdentifierCharacter, itemsOf, prefixFor, rankCompletions, type Ranked } from './completion-model';
+import {
+    documentationText,
+    identifierPrefix,
+    insertionOf,
+    isIdentifierCharacter,
+    itemsOf,
+    matchedCharacters,
+    prefixFor,
+    qualifiersOf,
+    rankCompletions,
+    type Ranked
+} from './completion-model';
+import { recentChoicesOf } from './recent-choices';
 import { shikiLanguageOf } from './language-ids';
 import type { CompletionRow, CompletionView } from './popups';
 import { realTimers, type Timers } from './timers';
@@ -84,6 +96,7 @@ export class CompletionFeature {
             return;
         }
         const { editor, project, uri } = this.language;
+        recentChoicesOf(this.language.languageId).record(entry.item);
         let item = this.resolved.get(entry.item) ?? entry.item;
         const needsResolve = !this.resolved.has(entry.item) && project.service.providerOptions('completionItem/resolve', uri) !== undefined;
         this.close();
@@ -293,7 +306,12 @@ export class CompletionFeature {
         const lineBefore = editor.textInRange({ start: { line: caret.line, character: 0 }, end: caret });
         const textBetween = (range: EditorRange): string => editor.textInRange(range);
         const before = this.ranked[this.active]?.item;
-        this.ranked = rankCompletions(this.pool, (item) => prefixFor(item, caret, lineBefore, textBetween));
+        const recent = recentChoicesOf(this.language.languageId);
+        this.ranked = rankCompletions(
+            this.pool,
+            (item) => prefixFor(item, caret, lineBefore, textBetween),
+            (item) => recent.recency(item)
+        );
         if (this.ranked.length === 0) {
             if (this.incomplete && this.pool.length > 0) {
                 this.beginRequest({ triggerKind: 3 }, START_DELAY_MS);
@@ -338,10 +356,13 @@ export class CompletionFeature {
             return;
         }
         const item = this.resolved.get(entry.item) ?? entry.item;
-        const rows: CompletionRow[] = this.ranked.map(({ item: row }) => ({
+        const descriptions = qualifiersOf(this.ranked.map((ranked) => ranked.item));
+        const rows: CompletionRow[] = this.ranked.map(({ item: row, prefix }, index) => ({
             label: row.label,
             kind: row.kind,
             detail: row.labelDetails?.detail ?? '',
+            description: descriptions[index]!,
+            matches: matchedCharacters(row.label, prefix),
             deprecated: row.deprecated === true || row.tags?.includes(1) === true
         }));
         const signature = item.detail ?? '';

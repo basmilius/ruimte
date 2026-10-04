@@ -6,6 +6,7 @@ import type { EditorRect } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { kindLetterOf, kindToneOf, type KindTone } from './completion-model';
 import { Signature } from './HoverCard';
+import { PathText } from './PathText';
 import { placeBeside, placePopup } from './popup-placement';
 import type { CompletionView } from './popups';
 
@@ -15,6 +16,37 @@ const TONES: Record<KindTone, string> = {
     type: 'bg-status-idle/15 text-status-idle',
     other: 'bg-surface-hover text-text-muted'
 };
+
+/* The label with the characters that match what was typed set apart. */
+function MarkedLabel({ label, matches }: { label: string; matches: readonly number[] }) {
+    if (matches.length === 0) {
+        return <>{label}</>;
+    }
+    const marked = new Set(matches);
+    const runs: { text: string; marked: boolean }[] = [];
+    for (let at = 0; at < label.length; at++) {
+        const isMarked = marked.has(at);
+        const last = runs[runs.length - 1];
+        if (last !== undefined && last.marked === isMarked) {
+            last.text += label[at];
+        } else {
+            runs.push({ text: label[at]!, marked: isMarked });
+        }
+    }
+    return (
+        <>
+            {runs.map((run, index) =>
+                run.marked ? (
+                    <span key={index} className="font-semibold text-accent">
+                        {run.text}
+                    </span>
+                ) : (
+                    run.text
+                )
+            )}
+        </>
+    );
+}
 
 const CARD = 'fixed top-0 left-0 z-(--z-popup) overflow-hidden rounded-lg border border-border bg-surface-raised text-text shadow-(--float-shadow)';
 const ROW_HEIGHT = 24;
@@ -77,8 +109,11 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                             >
                                 {kindLetterOf(row.kind)}
                             </span>
-                            <span className={`shrink-0 font-mono text-code ${row.deprecated ? 'line-through' : ''}`}>{row.label}</span>
-                            <span className="ml-auto min-w-0 truncate font-mono text-text-faint">{row.detail}</span>
+                            <span className={`shrink-0 font-mono text-code ${row.deprecated ? 'line-through' : ''}`}>
+                                <MarkedLabel label={row.label} matches={row.matches} />
+                            </span>
+                            <span className="min-w-0 grow truncate font-mono text-text-faint">{row.detail}</span>
+                            <PathText path={row.description} className="max-w-[55%] shrink-0 font-mono text-text-faint" />
                         </button>
                     ))}
                 </div>

@@ -34,8 +34,12 @@ export interface HoverInfo {
 export interface CompletionRow {
     readonly label: string;
     readonly kind: number | undefined;
-    /* The parameters or type the server puts after the label. */
+    /* The parameters the server puts after the label. */
     readonly detail: string;
+    /* Where the item comes from, such as the module or namespace of an import, right-aligned. */
+    readonly description: string;
+    /* UTF-16 offsets of the characters of the label that match what was typed. */
+    readonly matches: readonly number[];
     readonly deprecated: boolean;
 }
 

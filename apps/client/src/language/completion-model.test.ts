@@ -1,6 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import type { CompletionItem } from '@ruimte/smart-editor-lsp';
-import { identifierPrefix, insertionOf, itemsOf, matchScore, prefixFor, rankCompletions, snippetToText } from './completion-model';
+import {
+    identifierPrefix,
+    insertionOf,
+    itemsOf,
+    matchDetail,
+    matchedCharacters,
+    matchScore,
+    prefixFor,
+    qualifierOf,
+    qualifiersOf,
+    rankCompletions,
+    snippetToText
+} from './completion-model';
 
 const at = (line: number, character: number) => ({ line, character });
 const item = (label: string, extra: Partial<CompletionItem> = {}): CompletionItem => ({ label, ...extra });
@@ -64,6 +76,69 @@ describe('prefixFor', () => {
         const withRange = item('filter', { textEdit: { range: { start: at(0, 8), end: at(0, 11) }, newText: 'filter' } });
         expect(prefixFor(withRange, at(0, 11), 'thisArg.fil', text)).toBe('fil');
         expect(prefixFor(item('filter'), at(0, 11), 'thisArg.fil', text)).toBe('fil');
+    });
+});
+
+describe('matched characters', () => {
+    test('names the characters of the label a prefix matched, whichever way it matched', () => {
+        expect(matchedCharacters('filterAll', 'fil')).toEqual([0, 1, 2]);
+        expect(matchedCharacters('filterAll', 'FIL')).toEqual([0, 1, 2]);
+        expect(matchedCharacters('getElementById', 'ById')).toEqual([10, 11, 12, 13]);
+        expect(matchedCharacters('getElementById', 'gebi')).toEqual([0, 3, 10, 12]);
+        expect(matchedCharacters('filterAll', 'flr')).toEqual([0, 2, 5]);
+        expect(matchedCharacters('filterAll', 'zz')).toEqual([]);
+        expect(matchedCharacters('filterAll', '')).toEqual([]);
+        expect(matchDetail('filterAll', 'fil')?.score).toBe(matchScore('filterAll', 'fil'));
+    });
+});
+
+/* As intelephense answers `#[P`, with the namespace in `labelDetails.description` and the import as `detail`. */
+const PHP_PROPERTY_ORM = item('Property', {
+    kind: 4,
+    detail: 'use Raxos\\Database\\Orm\\Property',
+    labelDetails: { description: 'Raxos\\Database\\Orm' }
+});
+const PHP_PROPERTY_OPENAPI = item('Property', {
+    kind: 4,
+    detail: 'use Raxos\\OpenApi\\Attribute\\Property',
+    labelDetails: { description: 'Raxos\\OpenApi\\Attribute' }
+});
+
+describe('qualifiers', () => {
+    test('shows the namespace of a PHP class, the module of an auto import and the type of the rest', () => {
+        expect(qualifierOf(PHP_PROPERTY_ORM)).toBe('Raxos\\Database\\Orm');
+        expect(qualifierOf(item('parseFoo', { kind: 3, detail: 'void', labelDetails: { detail: '($a, $b)', description: 'Raxos\\Database\\Orm' } }))).toBe(
+            'Raxos\\Database\\Orm'
+        );
+        expect(qualifierOf(item('parseFoo', { kind: 3, detail: './lib' }))).toBe('./lib');
+        expect(qualifierOf(item('map', { kind: 2 }))).toBe('');
+    });
+
+    test('reads the namespace off a `use` detail when a server sends no description', () => {
+        expect(qualifierOf(item('Property', { detail: 'use Raxos\\OpenApi\\Attribute\\Property' }))).toBe('Raxos\\OpenApi\\Attribute');
+    });
+
+    test('tells two items of one label apart', () => {
+        expect(qualifiersOf([PHP_PROPERTY_ORM, item('Parameter', { kind: 4 }), PHP_PROPERTY_OPENAPI])).toEqual([
+            'Raxos\\Database\\Orm',
+            '',
+            'Raxos\\OpenApi\\Attribute'
+        ]);
+        const sameNamespace = [
+            item('Property', { detail: 'use A\\B\\Property', labelDetails: { description: 'A\\B' } }),
+            item('Property', { detail: 'use A\\B\\Other\\Property', labelDetails: { description: 'A\\B' } })
+        ];
+        expect(qualifiersOf(sameNamespace)).toEqual(['A\\B', 'A\\B\\Other']);
+        expect(qualifiersOf([item('Property'), item('Property')])).toEqual(['#1', '#2']);
+    });
+});
+
+describe('ranking by choice', () => {
+    test('puts the item chosen lately first among equal matches, and never above a better match', () => {
+        const items = [item('fill', { sortText: '0' }), item('filter', { sortText: '1' }), item('Fillet', { sortText: '2' })];
+        const recent = (chosen: string) => (candidate: CompletionItem) => (candidate.label === chosen ? 1 : 0);
+        expect(rankCompletions(items, () => 'fil', recent('filter')).map((entry) => entry.item.label)).toEqual(['filter', 'fill', 'Fillet']);
+        expect(rankCompletions(items, () => 'fil', recent('Fillet')).map((entry) => entry.item.label)).toEqual(['fill', 'filter', 'Fillet']);
     });
 });
 
