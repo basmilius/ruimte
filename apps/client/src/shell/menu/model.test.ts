@@ -6,6 +6,7 @@ import { CANVAS_SHORTCUTS, ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { menuIconOf } from './icons';
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
 import { languageCommandRows } from '@/language/language-commands';
+import { EDITOR_COMMAND_IDS, editorCommandRows } from '@/shell/editor-commands';
 import { GO_VIEW_PREFIX, isPaletteId, LAUNCH_CHOOSE_PREFIX, MENU_ACTION_IDS, PALETTE_IDS } from './ids';
 import { menuModel, toAccelerator, type MenuContext } from './model';
 
@@ -352,11 +353,16 @@ describe('the commands behind the menu', () => {
         const source = readFileSync(join(import.meta.dir, '..', 'commands.ts'), 'utf8');
         for (const id of PALETTE_IDS) {
             // The language commands are rows of `languageCommandRows()`, which `appCommands()` spreads in.
-            const listed = (LANGUAGE_COMMAND_IDS as readonly string[]).includes(id) || source.includes(`id: '${id}'`);
+            const listed =
+                (LANGUAGE_COMMAND_IDS as readonly string[]).includes(id) ||
+                (EDITOR_COMMAND_IDS as readonly string[]).includes(id) ||
+                source.includes(`id: '${id}'`);
             expect(listed ? id : `${id} is not in appCommands()`).toBe(id);
         }
         expect(source).toContain('languageCommandRows()');
         expect(languageCommandRows().map((row) => row.id)).toEqual([...LANGUAGE_COMMAND_IDS]);
+        expect(source).toContain('editorCommandRows()');
+        expect(editorCommandRows().map((row) => row.id)).toEqual([...EDITOR_COMMAND_IDS]);
         for (const row of [
             '`agent-${target}-${provider.kind}`',
             '`agent-view-${target}-${provider.kind}`',

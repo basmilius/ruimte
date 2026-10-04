@@ -1,4 +1,5 @@
 import { LANGUAGE_COMMAND_IDS } from '@/language/command-table';
+import { EDITOR_COMMAND_IDS } from '@/shell/editor-commands';
 
 /* The commands only the menu has; `actions.ts` holds a handler for each. */
 export const MENU_ACTION_IDS = [
@@ -42,6 +43,7 @@ export type MenuActionId = (typeof MENU_ACTION_IDS)[number];
 /* The commands the menu borrows from the palette (`appCommands()` in `shell/commands.ts`), run by the same row. */
 export const PALETTE_IDS = [
     ...LANGUAGE_COMMAND_IDS,
+    ...EDITOR_COMMAND_IDS,
     'open-folder',
     'chat-new',
     'file-new',

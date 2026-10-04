@@ -4,6 +4,7 @@ import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/smart-editor';
 import { FindBar } from '@/find/FindBar';
 import { registerFocusedLanguage } from '@/language/focused-language';
+import { registerFocusedEditor } from '@/shell/panels/focused-editor';
 import { LanguagePopups } from '@/language/LanguagePopups';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
@@ -219,6 +220,10 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
         // A frame later: the files cell takes the keyboard for the tab that just opened, and the editor comes after it.
         requestAnimationFrame(() => editor.focus());
     }, [caret, editor, readOnlyReason]);
+    useEffect(() => {
+        const element = surface.current;
+        return editor === null || element === null ? undefined : registerFocusedEditor(editor, element);
+    }, [editor]);
     const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
     useEffect(() => {
         const element = surface.current;
