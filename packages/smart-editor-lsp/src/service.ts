@@ -86,6 +86,8 @@ export interface LanguageService {
     rename(uri: string, position: Position, newName: string, options?: LanguageRequestOptions): Promise<WorkspaceEdit | null>;
     codeActions(uri: string, range: Range, context?: CodeActionContext, options?: LanguageRequestOptions): Promise<(CodeAction | Command)[] | null>;
     resolveCodeAction(uri: string, action: CodeAction, options?: LanguageRequestOptions): Promise<CodeAction>;
+    /* Runs a command of a code action on the server that offered it. The server may ask for edits while it runs, which the host applies. */
+    executeCommand(uri: string, command: Command, options?: LanguageRequestOptions): Promise<unknown>;
     formatting(uri: string, formatting: FormattingOptions, options?: LanguageRequestOptions): Promise<TextEdit[] | null>;
     rangeFormatting(uri: string, range: Range, formatting: FormattingOptions, options?: LanguageRequestOptions): Promise<TextEdit[] | null>;
     semanticTokens(uri: string, options?: LanguageRequestOptions): Promise<SemanticTokens | null>;

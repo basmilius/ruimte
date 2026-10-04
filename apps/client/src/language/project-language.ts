@@ -1,8 +1,9 @@
-import type { ContentChange, LanguageService } from '@ruimte/smart-editor-lsp';
+import type { ApplyWorkspaceEditResult, ContentChange, LanguageService, WorkspaceEdit } from '@ruimte/smart-editor-lsp';
 import type { Editor } from '@ruimte/smart-editor';
 import type { Transport } from '@/transport/transport';
 import { LanguageStatusTracker } from './status';
 import { WireLanguageService } from './wire-service';
+import { applyWorkspaceEdit, type ProjectFiles } from './workspace-edit';
 
 /* One file of a project as one editor holds it open, until `release`. */
 export interface LanguageDocumentHandle {
@@ -82,17 +83,25 @@ export class ProjectLanguage {
     /* The project folder on the machine of the daemon. */
     readonly folder: string;
     private readonly holders = new Map<string, Holder>();
+    private readonly files: ProjectFiles | null;
 
-    constructor(transport: Transport, projectId: string, folder: string) {
+    constructor(transport: Transport, projectId: string, folder: string, files: ProjectFiles | null = null) {
         this.folder = folder;
+        this.files = files;
         this.status = new LanguageStatusTracker(transport, projectId);
         this.service = new WireLanguageService({
             transport,
             projectId,
             folder,
-            textOf: (uri) => this.holders.get(uri)?.sync.text
+            textOf: (uri) => this.holders.get(uri)?.sync.text,
+            applyEdit: (params) => this.applyWorkspaceEdit(params.edit)
         });
         void this.status.refresh().catch(() => undefined);
+    }
+
+    /* Makes an edit of a language server: an open document takes it as one undo step and any other file gets an unsaved draft. */
+    applyWorkspaceEdit(edit: WorkspaceEdit): Promise<ApplyWorkspaceEditResult> {
+        return applyWorkspaceEdit(edit, { editorOf: (uri) => this.holders.get(uri)?.editors[0], files: this.files });
     }
 
     /* Opens `uri` for the editor, or joins the editors that already hold it. */
@@ -155,7 +164,12 @@ interface Entry {
 const entries = new WeakMap<Transport, Map<string, Entry>>();
 
 /* The project's language side, made on the first call and ended with the last release. */
-export function acquireProjectLanguage(transport: Transport, projectId: string, folder: string): { language: ProjectLanguage; release(): void } {
+export function acquireProjectLanguage(
+    transport: Transport,
+    projectId: string,
+    folder: string,
+    files: ProjectFiles | null = null
+): { language: ProjectLanguage; release(): void } {
     let byProject = entries.get(transport);
     if (byProject === undefined) {
         byProject = new Map();
@@ -164,7 +178,7 @@ export function acquireProjectLanguage(transport: Transport, projectId: string, 
     const key = `${projectId}\0${folder}`;
     let entry = byProject.get(key);
     if (entry === undefined) {
-        entry = { language: new ProjectLanguage(transport, projectId, folder), references: 0 };
+        entry = { language: new ProjectLanguage(transport, projectId, folder, files), references: 0 };
         byProject.set(key, entry);
     }
     entry.references += 1;

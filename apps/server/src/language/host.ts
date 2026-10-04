@@ -5,6 +5,7 @@ import {
     LANGUAGE_METHODS,
     resolveStoredPath,
     storedPathOf,
+    type LanguageCommandResult,
     type LanguageDocumentOpenResult,
     type LanguageErrorCode,
     type LanguageLogLine,
@@ -13,14 +14,24 @@ import {
     type LanguageServerStatus
 } from '@ruimte/contracts';
 import type {
+    LanguageCommandPayload,
     LanguageDiagnosticsEvent,
     LanguageDocumentChangePayload,
     LanguageDocumentOpenPayload,
     LanguageDocumentTargetPayload,
+    LanguageEditAnswerPayload,
     LanguageRequestPayload
 } from '@ruimte/contracts';
 import { CodedError } from '@ruimte/agents/coded-error';
-import { applyContentChanges, ErrorCodes, LspError, pathToFileUri, StaleResultError } from '@ruimte/smart-editor-lsp';
+import {
+    applyContentChanges,
+    ErrorCodes,
+    LspError,
+    pathToFileUri,
+    StaleResultError,
+    type ApplyWorkspaceEditParams,
+    type ApplyWorkspaceEditResult
+} from '@ruimte/smart-editor-lsp';
 import { ClientSinks } from '../client-sinks.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LanguageInstaller } from './installer.ts';
@@ -59,7 +70,19 @@ interface ProjectLanguage {
     /* Whether the project uses Vue, which sends its scripts to the Vue kind; unknown until its `package.json` was read or a `.vue` file opened. */
     vue: boolean | undefined;
     vueCheck: Promise<boolean> | undefined;
+    /* The clients whose command is running, newest last: the one a server's request for an edit goes to. */
+    commands: Array<{ clientId: string }>;
 }
+
+/* An edit a server asked for and a client has not answered yet. */
+interface PendingEdit {
+    projectId: string;
+    clientId: string;
+    settle(result: ApplyWorkspaceEditResult): void;
+}
+
+/* How long a client has to say whether it made an edit. */
+const EDIT_ANSWER_MS = 30_000;
 
 async function readTextOrNull(path: string): Promise<string | null> {
     return readFile(path, 'utf8').catch(() => null);
@@ -103,6 +126,8 @@ export class LanguageHost {
     private readonly installer: LanguageInstaller;
     private readonly sinks = new ClientSinks((clientId) => this.dropClient(clientId));
     private readonly projects = new Map<string, ProjectLanguage>();
+    private readonly edits = new Map<string, PendingEdit>();
+    private editCounter = 0;
     private readonly hooks: LanguageServerHooks = {
         status: (server) =>
             this.toHolders(server.projectId, { event: 'language.status', payload: { projectId: server.projectId, status: this.serverStatus(server) } }),
@@ -116,6 +141,7 @@ export class LanguageHost {
                 this.toHolders(projectId, { event: 'language.diagnostics', payload });
             }
         },
+        applyEdit: (server, params) => this.askForEdit(server, params),
         providers: (document) => {
             const projectId = this.projectOf(document);
             const server = projectId === null || document.kind === null ? undefined : this.projects.get(projectId)?.servers.get(document.kind);
@@ -242,6 +268,32 @@ export class LanguageHost {
         }
     }
 
+    /* Runs a command of a server for a client, which may be asked to make edits while it runs. */
+    async command(clientId: string, payload: LanguageCommandPayload): Promise<LanguageCommandResult> {
+        const { project, document } = this.documentOf(payload);
+        const server = this.serverOf(project, document);
+        if (!server) {
+            throw new LanguageError(LANGUAGE_ERROR_CODES.unavailable, `No language server serves ${document.languageId}`);
+        }
+        const running = { clientId };
+        project.commands.push(running);
+        try {
+            return await server.executeCommand(document, payload.command, payload.arguments, payload.server);
+        } catch (error) {
+            throw translated(error);
+        } finally {
+            project.commands.splice(project.commands.indexOf(running), 1);
+        }
+    }
+
+    /* A client says whether it made an edit a server asked for. */
+    answerEdit(clientId: string, payload: LanguageEditAnswerPayload): void {
+        const pending = this.edits.get(payload.editId);
+        if (pending && pending.clientId === clientId && pending.projectId === payload.projectId) {
+            pending.settle({ applied: payload.applied, ...(payload.failureReason ? { failureReason: payload.failureReason } : {}) });
+        }
+    }
+
     /* The project closed on the machine, which is its last client going: its servers end with it. */
     async end(projectId: string): Promise<void> {
         const project = this.projects.get(projectId);
@@ -267,7 +319,7 @@ export class LanguageHost {
         if (folder === null) {
             throw new LanguageError(LANGUAGE_ERROR_CODES.projectNotFound, `No project ${projectId}`);
         }
-        const project: ProjectLanguage = { projectId, folder, documents: new Map(), servers: new Map(), vue: undefined, vueCheck: undefined };
+        const project: ProjectLanguage = { projectId, folder, documents: new Map(), servers: new Map(), vue: undefined, vueCheck: undefined, commands: [] };
         this.projects.set(projectId, project);
         return project;
     }
@@ -390,6 +442,11 @@ export class LanguageHost {
     }
 
     private dropClient(clientId: string): void {
+        for (const pending of this.edits.values()) {
+            if (pending.clientId === clientId) {
+                pending.settle({ applied: false, failureReason: 'The client went away' });
+            }
+        }
         for (const project of this.projects.values()) {
             for (const document of [...project.documents.values()]) {
                 if (document.clients.has(clientId)) {
@@ -397,6 +454,35 @@ export class LanguageHost {
                 }
             }
         }
+    }
+
+    /* The edit goes to the client whose command is running, which makes it or says why not; a request with no command to answer for is refused. */
+    private askForEdit(server: LanguageServer, params: ApplyWorkspaceEditParams): Promise<ApplyWorkspaceEditResult> {
+        const running = this.projects.get(server.projectId)?.commands.at(-1);
+        if (!running) {
+            return Promise.resolve({ applied: false, failureReason: 'No command of a client is running' });
+        }
+        const editId = `edit-${++this.editCounter}`;
+        return new Promise<ApplyWorkspaceEditResult>((resolve) => {
+            const cancel = (this.options.clock ?? realLanguageClock).set(
+                () => pending.settle({ applied: false, failureReason: 'The client did not answer' }),
+                EDIT_ANSWER_MS
+            );
+            const pending: PendingEdit = {
+                projectId: server.projectId,
+                clientId: running.clientId,
+                settle: (result) => {
+                    cancel();
+                    this.edits.delete(editId);
+                    resolve(result);
+                }
+            };
+            this.edits.set(editId, pending);
+            this.sinks.to(running.clientId, {
+                event: 'language.edit',
+                payload: { projectId: server.projectId, editId, ...(params.label ? { label: params.label } : {}), edit: params.edit }
+            });
+        });
     }
 
     private projectOf(document: SharedDocument): string | null {

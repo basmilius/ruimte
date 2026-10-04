@@ -38,7 +38,8 @@ function rig(kind: LanguageServerKind, spawner = fakeSpawner()): Rig {
     const hooks: LanguageServerHooks = {
         status: (server) => states.push(server.state),
         diagnostics: (doc, component, params) => diagnostics.push({ path: doc.storedPath, component, params }),
-        providers: (doc) => providers.push(doc.storedPath)
+        providers: (doc) => providers.push(doc.storedPath),
+        applyEdit: async () => ({ applied: false })
     };
     const server = new LanguageServer({
         kind,

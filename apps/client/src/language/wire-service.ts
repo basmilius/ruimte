@@ -5,6 +5,8 @@ import {
     LspError,
     pathToFileUri,
     StaleResultError,
+    type ApplyWorkspaceEditParams,
+    type ApplyWorkspaceEditResult,
     type CodeAction,
     type CodeActionContext,
     type CodeLens,
@@ -49,6 +51,8 @@ export interface WireLanguageServiceOptions {
      * cannot be trusted, which is after a refused change, another client's text and a reconnect.
      */
     textOf(uri: string): string | undefined;
+    /* Makes the edit a server asked for while a command of this client ran, and says whether it did. Without it every such edit is refused. */
+    applyEdit?(params: ApplyWorkspaceEditParams): Promise<ApplyWorkspaceEditResult>;
 }
 
 interface OpenDocument {
@@ -133,6 +137,11 @@ export class WireLanguageService implements LanguageService {
                         version: event.version,
                         diagnostics: event.diagnostics as DiagnosticsReport['diagnostics']
                     });
+                }
+            }),
+            transport.on('language.edit', (event) => {
+                if (event.projectId === projectId) {
+                    void this.answerEdit(event.editId, { label: event.label, edit: event.edit as ApplyWorkspaceEditParams['edit'] });
                 }
             }),
             transport.on('language.providers', (event) => {
@@ -322,6 +331,30 @@ export class WireLanguageService implements LanguageService {
         return this.call(uri, 'codeAction/resolve', action, options);
     }
 
+    async executeCommand(uri: string, command: Command, options: LanguageRequestOptions = {}): Promise<unknown> {
+        const document = this.documentOf(uri);
+        if (document.resyncing) {
+            await document.resyncing;
+        }
+        const origin = this.origins.get(command);
+        if (origin && origin.version !== document.version) {
+            throw new StaleResultError(uri);
+        }
+        try {
+            const request = this.options.transport.request('language.command', {
+                projectId: this.options.projectId,
+                path: document.path,
+                command: command.command,
+                ...(command.arguments ? { arguments: command.arguments } : {}),
+                ...(origin ? { server: origin.server } : {})
+            });
+            const reply = options.signal ? await abortable(request, options.signal) : await request;
+            return reply.result;
+        } catch (error) {
+            throw this.translate(error, uri);
+        }
+    }
+
     formatting(uri: string, formatting: FormattingOptions, options?: LanguageRequestOptions): Promise<TextEdit[] | null> {
         return this.call(uri, 'textDocument/formatting', { options: formatting }, options);
     }
@@ -461,11 +494,33 @@ export class WireLanguageService implements LanguageService {
         }
     }
 
+    private async answerEdit(editId: string, params: ApplyWorkspaceEditParams): Promise<void> {
+        let answer: ApplyWorkspaceEditResult;
+        try {
+            answer = this.options.applyEdit
+                ? await this.options.applyEdit(params)
+                : { applied: false, failureReason: 'This client makes no edits for a server' };
+        } catch (error) {
+            answer = { applied: false, failureReason: error instanceof Error ? error.message : String(error) };
+        }
+        await this.options.transport
+            .request('language.edit.answer', {
+                projectId: this.options.projectId,
+                editId,
+                applied: answer.applied,
+                ...(answer.failureReason ? { failureReason: answer.failureReason } : {})
+            })
+            .catch(() => undefined);
+    }
+
     private remember(result: unknown, origin: Origin): void {
         if (!result || typeof result !== 'object') {
             return;
         }
         this.origins.set(result, origin);
+        if ('command' in result && typeof result.command === 'object') {
+            this.remember(result.command, origin);
+        }
         if (Array.isArray(result)) {
             for (const item of result) {
                 this.remember(item, origin);

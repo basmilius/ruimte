@@ -186,6 +186,41 @@ export const LanguageRequestResultSchema = z.object({
 });
 export type LanguageRequestResult = z.infer<typeof LanguageRequestResultSchema>;
 
+/*
+ * `workspace/executeCommand` of the server that answered the action the command came from (`server`, as
+ * that answer said), or of the document's first server that supports it. A command may make the server
+ * ask for an edit, which the daemon forwards to the client that ran the command as `language.edit` and
+ * answers the server from `language.edit.answer`; a server's edit request with no command of a client
+ * running is refused. The edit is applied by the client, never by the daemon.
+ */
+export const LanguageCommandPayloadSchema = LanguageDocumentTargetPayloadSchema.extend({
+    command: z.string().min(1),
+    arguments: z.array(z.unknown()).optional(),
+    server: z.string().optional()
+});
+export type LanguageCommandPayload = z.infer<typeof LanguageCommandPayloadSchema>;
+
+export const LanguageCommandResultSchema = z.object({ result: z.unknown(), server: z.string() });
+export type LanguageCommandResult = z.infer<typeof LanguageCommandResultSchema>;
+
+/* To the one client that ran a command: a server asks it to apply an LSP `WorkspaceEdit`, which it answers with `language.edit.answer`. */
+export const LanguageEditEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    editId: z.string().min(1),
+    label: z.string().optional(),
+    // LSP `WorkspaceEdit`.
+    edit: z.unknown()
+});
+export type LanguageEditEvent = z.infer<typeof LanguageEditEventSchema>;
+
+export const LanguageEditAnswerPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    editId: z.string().min(1),
+    applied: z.boolean(),
+    failureReason: z.string().optional()
+});
+export type LanguageEditAnswerPayload = z.infer<typeof LanguageEditAnswerPayloadSchema>;
+
 /* To every client that has the project open, from one process of the kind. A report replaces the earlier one of the same `server` for the file. */
 export const LanguageDiagnosticsEventSchema = z.object({
     projectId: ProjectIdSchema,

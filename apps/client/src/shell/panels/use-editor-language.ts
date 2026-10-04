@@ -3,7 +3,9 @@ import { pathToFileUri } from '@ruimte/smart-editor-lsp';
 import type { Editor } from '@ruimte/smart-editor';
 import { EditorLanguage } from '@/language/editor-language';
 import { lspLanguageIdOf } from '@/language/language-ids';
+import { draftFiles } from '@/language/project-files';
 import { acquireProjectLanguage } from '@/language/project-language';
+import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 
@@ -35,6 +37,7 @@ function createHolder<T>(): { get(): T | null; set(value: T | null): void; subsc
  */
 export function useEditorLanguage(editor: Editor | null, path: string, language: string | undefined): EditorLanguage | null {
     const transport = useTransport();
+    const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const folder = useProject((s) => s.current?.folder ?? null);
     const holder = useMemo(() => createHolder<EditorLanguage>(), []);
@@ -44,7 +47,7 @@ export function useEditorLanguage(editor: Editor | null, path: string, language:
         if (editor === null || projectId === null || folder === null || languageId === null) {
             return;
         }
-        const held = acquireProjectLanguage(transport, projectId, folder);
+        const held = acquireProjectLanguage(transport, projectId, folder, draftFiles(endpointId, transport));
         const editorLanguage = new EditorLanguage(held.language, editor, pathToFileUri(path), languageId);
         holder.set(editorLanguage);
         return () => {
@@ -52,7 +55,7 @@ export function useEditorLanguage(editor: Editor | null, path: string, language:
             editorLanguage.dispose();
             held.release();
         };
-    }, [transport, editor, projectId, folder, path, language, holder]);
+    }, [transport, endpointId, editor, projectId, folder, path, language, holder]);
 
     return useSyncExternalStore(holder.subscribe, holder.get);
 }

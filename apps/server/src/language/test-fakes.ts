@@ -8,7 +8,8 @@ export const FULL_CAPABILITIES: ServerCapabilities = {
     hoverProvider: true,
     completionProvider: { resolveProvider: true, triggerCharacters: ['.'] },
     renameProvider: { prepareProvider: true },
-    inlayHintProvider: true
+    inlayHintProvider: true,
+    executeCommandProvider: { commands: ['fix.all'] }
 };
 
 export interface FakeProcess {

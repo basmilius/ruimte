@@ -235,6 +235,59 @@ describe('events', () => {
     });
 });
 
+describe('commands', () => {
+    const command = { title: 'Fix all', command: 'fix.all', arguments: [1] };
+
+    test('runs a command of an item on the server that made it', async () => {
+        const { transport, language } = service();
+        await language.openDocument({ uri, languageId: 'typescript', text: 'let a = 1;' });
+        transport.answers.set('language.request', () => ({ result: [{ title: 'Fix', command }], server: 'vue', version: 1 }));
+        transport.answers.set('language.command', () => ({ result: 'done', server: 'vue' }));
+        const actions = await language.codeActions(uri, { start: origin, end: origin });
+        const item = actions![0] as { command: typeof command };
+        expect(await language.executeCommand(uri, item.command)).toBe('done');
+        expect(transport.callsOf('language.command')[0].payload).toEqual({
+            projectId: 'p1',
+            path: 'src/a.ts',
+            command: 'fix.all',
+            arguments: [1],
+            server: 'vue'
+        });
+    });
+
+    test('hands an edit the server asks for to the host and answers with what it said', async () => {
+        const transport = new FakeLanguageTransport();
+        const asked: unknown[] = [];
+        const language = new WireLanguageService({
+            transport,
+            projectId: 'p1',
+            folder,
+            textOf: () => '',
+            applyEdit: async (params) => {
+                asked.push(params);
+                return { applied: false, failureReason: 'read only' };
+            }
+        });
+        transport.answers.set('language.edit.answer', () => ({}));
+        transport.emit('language.edit', { projectId: 'p1', editId: 'edit-1', label: 'Fix', edit: { changes: {} } });
+        transport.emit('language.edit', { projectId: 'p2', editId: 'edit-2', edit: { changes: {} } });
+        await settle();
+        expect(asked).toEqual([{ label: 'Fix', edit: { changes: {} } }]);
+        expect(transport.callsOf('language.edit.answer').map((call) => call.payload)).toEqual([
+            { projectId: 'p1', editId: 'edit-1', applied: false, failureReason: 'read only' }
+        ]);
+        language.dispose();
+    });
+
+    test('refuses an edit while no host is attached', async () => {
+        const { transport } = service();
+        transport.answers.set('language.edit.answer', () => ({}));
+        transport.emit('language.edit', { projectId: 'p1', editId: 'edit-1', edit: {} });
+        await settle();
+        expect(transport.callsOf('language.edit.answer')[0].payload).toMatchObject({ applied: false });
+    });
+});
+
 describe('uris', () => {
     test('turns a stored path into the URI the servers use and back', () => {
         const { language } = service();

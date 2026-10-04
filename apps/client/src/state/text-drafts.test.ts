@@ -87,6 +87,34 @@ afterEach(() => {
     jest.useRealTimers();
 });
 
+describe('staged text', () => {
+    const OTHER = '/repo/b.ts';
+
+    test('waits for a save of a person, with or without a surface drawing the file', async () => {
+        drafts.stage(MACHINE, OTHER, { text: 'two', mtime: 4 }, 'three');
+        jest.advanceTimersByTime(AUTOSAVE_DELAY_MS * 3);
+        await flush();
+        expect(link.writes).toHaveLength(0);
+        expect(drafts.draft(MACHINE, OTHER)).toMatchObject({ disk: 'two', text: 'three', mtime: 4 });
+        expect(drafts.isUnsaved(MACHINE, OTHER)).toBe(true);
+
+        const saving = drafts.save(MACHINE, OTHER);
+        await flush();
+        expect(link.writes.map(({ path, text, expectedMtime }) => ({ path, text, expectedMtime }))).toEqual([{ path: OTHER, text: 'three', expectedMtime: 4 }]);
+        await link.land(5);
+        expect(await saving).toBe(true);
+    });
+
+    test('stops a save that was due when the staged text lands on a file that is being typed in', async () => {
+        drafts.edit(MACHINE, PATH, 'one two');
+        drafts.stage(MACHINE, PATH, { text: 'one', mtime: 1 }, 'one three');
+        jest.advanceTimersByTime(AUTOSAVE_DELAY_MS);
+        await flush();
+        expect(link.writes).toHaveLength(0);
+        expect(draft()?.text).toBe('one three');
+    });
+});
+
 describe('autosave', () => {
     test('saves once the typing has paused, over the mtime it read', async () => {
         drafts.edit(MACHINE, PATH, 'one two');

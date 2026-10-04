@@ -15,7 +15,7 @@ Everything comes from the package root; `@ruimte/smart-editor-lsp/testing` holds
 - Edits: `applyTextEdits` and `planWorkspaceEdit` (simultaneous edits and a multi-file plan, which refuses file operations), `applyContentChanges` (sequential), `minimalChange`, `offsetAt`, `positionAt` and `endPosition`.
 - `bridgeVueTypeScript` relays Vue's `tsserver/request` to the TypeScript server, and `vueServerOrder` says which of the two servers of a `.vue` document to ask first.
 - `pathToFileUri` and `fileUriToPath`.
-- `LanguageService`: what the editor asks of the language side (open, change and close a document, every feature above, `supports`, `providerOptions`, `onProvidersChanged` and `onDiagnostics`). Results stay in LSP shapes. The daemon's host and the client's wire adapter (`apps/server/src/language`, `apps/client/src/language`) are what stand behind it.
+- `LanguageService`: what the editor asks of the language side (open, change and close a document, every feature above, `executeCommand`, `supports`, `providerOptions`, `onProvidersChanged` and `onDiagnostics`). Results stay in LSP shapes. The daemon's host and the client's wire adapter (`apps/server/src/language`, `apps/client/src/language`) are what stand behind it.
 - `@ruimte/smart-editor-lsp/testing`: `FakeLanguageServer`, a server on the far end of a transport that answers the handshake, mirrors document text and answers whatever a test registers, and `createMemoryTransportPair`.
 
 ## Known limits

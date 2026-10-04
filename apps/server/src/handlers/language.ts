@@ -23,4 +23,13 @@ export function registerLanguageHandlers(dispatcher: Dispatcher, host: LanguageH
     );
 
     dispatcher.register('language.request', (payload) => translate(() => host.request(payload)));
+
+    dispatcher.register('language.command', (payload, client) => translate(() => host.command(client.id, payload)));
+
+    dispatcher.register('language.edit.answer', (payload, client) =>
+        translate(async () => {
+            host.answerEdit(client.id, payload);
+            return {};
+        })
+    );
 }

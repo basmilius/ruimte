@@ -34154,6 +34154,80 @@
       "version"
     ]
   },
+  "request.language.command.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "command": {
+        "type": "string",
+        "minLength": 1
+      },
+      "arguments": {
+        "type": "array",
+        "items": {}
+      },
+      "server": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "projectId",
+      "path",
+      "command"
+    ]
+  },
+  "request.language.command.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "result": {},
+      "server": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "result",
+      "server"
+    ]
+  },
+  "request.language.edit.answer.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "editId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "applied": {
+        "type": "boolean"
+      },
+      "failureReason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "projectId",
+      "editId",
+      "applied"
+    ]
+  },
+  "request.language.edit.answer.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.launches.read.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -52378,6 +52452,29 @@
       "projectId",
       "path",
       "providers"
+    ]
+  },
+  "event.language.edit": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "editId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "label": {
+        "type": "string"
+      },
+      "edit": {}
+    },
+    "required": [
+      "projectId",
+      "editId",
+      "edit"
     ]
   },
   "event.launch.status": {

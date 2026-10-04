@@ -146,12 +146,16 @@ import {
     DiagramTargetPayloadSchema
 } from './diagram.ts';
 import {
+    LanguageCommandPayloadSchema,
+    LanguageCommandResultSchema,
     LanguageDiagnosticsEventSchema,
     LanguageDocumentChangePayloadSchema,
     LanguageDocumentChangeResultSchema,
     LanguageDocumentOpenPayloadSchema,
     LanguageDocumentOpenResultSchema,
     LanguageDocumentTargetPayloadSchema,
+    LanguageEditAnswerPayloadSchema,
+    LanguageEditEventSchema,
     LanguageInstallPayloadSchema,
     LanguageLogResultSchema,
     LanguageProvidersEventSchema,
@@ -405,6 +409,8 @@ export const REQUEST_SCHEMAS = {
     'language.document.change': { payload: LanguageDocumentChangePayloadSchema, result: LanguageDocumentChangeResultSchema },
     'language.document.close': { payload: LanguageDocumentTargetPayloadSchema, result: EmptySchema },
     'language.request': { payload: LanguageRequestPayloadSchema, result: LanguageRequestResultSchema },
+    'language.command': { payload: LanguageCommandPayloadSchema, result: LanguageCommandResultSchema },
+    'language.edit.answer': { payload: LanguageEditAnswerPayloadSchema, result: EmptySchema },
     'launches.read': { payload: LaunchesTargetPayloadSchema, result: LaunchesDocumentSchema },
     // A person's save; it approves on this machine every launch it adds or changes.
     'launches.save': { payload: LaunchesSavePayloadSchema, result: LaunchesSaveResultSchema },
@@ -539,6 +545,7 @@ export const EVENT_SCHEMAS = {
     'language.diagnostics': LanguageDiagnosticsEventSchema,
     'language.status': LanguageStatusEventSchema,
     'language.providers': LanguageProvidersEventSchema,
+    'language.edit': LanguageEditEventSchema,
     'launch.status': LaunchStatusSchema,
     'launches.changed': LaunchesChangedEventSchema,
     'fs.changed': FsChangedEventSchema,

@@ -7,6 +7,8 @@ import {
     LspSession,
     pathToFileUri,
     vueServerOrder,
+    type ApplyWorkspaceEditParams,
+    type ApplyWorkspaceEditResult,
     type ContentChange,
     type Disposable,
     type LspDocument,
@@ -52,6 +54,8 @@ export interface LanguageServerHooks {
     diagnostics(document: SharedDocument, component: string, params: PublishDiagnosticsParams): void;
     /* What a document may ask changed. */
     providers(document: SharedDocument): void;
+    /* The server asks for an edit, which only the client that ran a command can be asked to make. */
+    applyEdit(server: LanguageServer, params: ApplyWorkspaceEditParams): Promise<ApplyWorkspaceEditResult>;
 }
 
 export interface LanguageServerOptions {
@@ -230,6 +234,20 @@ export class LanguageServer {
         throw new LspError(`No ${this.kind} server answers ${method} for this document`, ErrorCodes.MethodNotFound);
     }
 
+    /* Runs a server command for this document, on the process that offered it (`hint`) or the first that supports commands. */
+    async executeCommand(document: SharedDocument, command: string, args: unknown[] | undefined, hint?: string): Promise<{ result: unknown; server: string }> {
+        if (this.phase !== 'ready') {
+            throw new LspError(`The ${this.kind} language server is ${this.state}`, ErrorCodes.ServerNotInitialized);
+        }
+        for (const component of this.orderFor(document, 'workspace/executeCommand', {}, hint)) {
+            if (component.documents.has(document.absolutePath) && component.session.supports('workspace/executeCommand')) {
+                const result = await component.session.executeCommand(command, args, { timeoutMs: 0 });
+                return { result, server: component.profile.name };
+            }
+        }
+        throw new LspError(`No ${this.kind} server runs commands for this document`, ErrorCodes.MethodNotFound);
+    }
+
     /* A person's restart, the only way out of crashed. */
     async restart(): Promise<void> {
         await this.stop();
@@ -310,6 +328,7 @@ export class LanguageServer {
             workspaceFolders: [{ uri: rootUri, name: basename(this.options.folder) }],
             initializationOptions: profile.initializationOptions(context),
             clientInfo: { name: 'ruimte' },
+            onApplyEdit: (params) => this.options.hooks.applyEdit(this, params),
             timeoutMs: 0
         });
         const component: Component = { profile, child, session, documents: new Map(), progress: new Set(), subscriptions: [] };

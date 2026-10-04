@@ -27,6 +27,7 @@ interface Rig {
     holders: Set<string>;
     events: Record<string, SessionEvent[]>;
     installs: LanguageServerKind[];
+    clock: ManualClock;
 }
 
 /* The install of a kind is played by `run`, which leaves the scripts where bun would. */
@@ -34,6 +35,7 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
     const spawner = options.spawner ?? fakeSpawner();
     const holders = new Set(['client-1']);
     const installs: LanguageServerKind[] = [];
+    const clock = new ManualClock();
     const host = new LanguageHost({
         root,
         folderOf: (projectId) => (projectId === 'p1' ? '/work' : null),
@@ -57,7 +59,7 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
             }
             return 0;
         },
-        clock: new ManualClock(),
+        clock,
         exists: async () => false,
         readText: async (path) => (path === '/work/package.json' ? (options.packageJson ?? null) : null)
     });
@@ -65,7 +67,7 @@ function rig(options: { installed?: LanguageServerKind[]; spawner?: FakeSpawner;
     for (const clientId of Object.keys(events)) {
         host.subscribe(clientId, (event) => events[clientId].push(event));
     }
-    return { host, spawner, holders, events, installs };
+    return { host, spawner, holders, events, installs, clock };
 }
 
 async function installed(kinds: LanguageServerKind[] = ['typescript'], options: { packageJson?: string } = {}): Promise<Rig> {
@@ -307,6 +309,62 @@ describe('requests', () => {
         await expect(host.request({ ...base, path: 'src/none.ts', method: 'textDocument/hover' })).rejects.toMatchObject({
             code: LANGUAGE_ERROR_CODES.documentNotOpen
         });
+    });
+});
+
+describe('commands', () => {
+    const edit = { changes: { 'file:///work/src/a.ts': [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } }, newText: 'const' }] } };
+
+    async function commandRig() {
+        const result = await installed();
+        await openReady(result.host);
+        const { server } = result.spawner.processes[0];
+        return { ...result, server };
+    }
+
+    it('runs a command on the server and hands the result back', async () => {
+        const { host, server } = await commandRig();
+        server.handle('workspace/executeCommand', (params) => ({ ran: (params as { command: string }).command }));
+        expect(await host.command('client-1', { projectId: 'p1', path: 'src/a.ts', command: 'fix.all', arguments: [1] })).toEqual({
+            result: { ran: 'fix.all' },
+            server: 'typescript'
+        });
+        expect(server.paramsOf('workspace/executeCommand')).toEqual([{ command: 'fix.all', arguments: [1] }]);
+    });
+
+    it('forwards an edit the server asks for during a command to that client only, and answers the server with what the client said', async () => {
+        const { host, server, events } = await commandRig();
+        server.handle('workspace/executeCommand', async () => ({ applied: await server.request('workspace/applyEdit', { label: 'Fix', edit }) }));
+        const running = host.command('client-1', { projectId: 'p1', path: 'src/a.ts', command: 'fix.all' });
+        await settle();
+        const [asked] = kinds(events['client-1'], 'language.edit');
+        expect(asked).toMatchObject({ payload: { projectId: 'p1', label: 'Fix', edit } });
+        expect(kinds(events['client-2'], 'language.edit')).toHaveLength(0);
+        const { editId } = (asked as { payload: { editId: string } }).payload;
+        host.answerEdit('client-2', { projectId: 'p1', editId, applied: true });
+        host.answerEdit('client-1', { projectId: 'p1', editId, applied: false, failureReason: 'Not open' });
+        expect((await running).result).toEqual({ applied: { applied: false, failureReason: 'Not open' } });
+    });
+
+    it('refuses an edit while no command runs, and one the client leaves unanswered', async () => {
+        const { host, server, clock, events } = await commandRig();
+        expect(await server.request('workspace/applyEdit', { edit })).toMatchObject({ applied: false });
+        expect(kinds(events['client-1'], 'language.edit')).toHaveLength(0);
+        server.handle('workspace/executeCommand', async () => server.request('workspace/applyEdit', { edit }));
+        const running = host.command('client-1', { projectId: 'p1', path: 'src/a.ts', command: 'fix.all' });
+        await settle();
+        clock.fire();
+        expect((await running).result).toEqual({ applied: false, failureReason: 'The client did not answer' });
+    });
+
+    it('stops waiting for a client that went away', async () => {
+        const { host, server } = await commandRig();
+        const leave = host.subscribe('client-3', () => undefined);
+        server.handle('workspace/executeCommand', async () => server.request('workspace/applyEdit', { edit }));
+        const running = host.command('client-3', { projectId: 'p1', path: 'src/a.ts', command: 'fix.all' });
+        await settle();
+        leave();
+        expect((await running).result).toMatchObject({ applied: false });
     });
 });
 

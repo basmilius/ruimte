@@ -150,6 +150,18 @@ export class TextDrafts {
         }, AUTOSAVE_DELAY_MS);
     }
 
+    /* Sets the draft's text without a save ever being scheduled: an edit nobody typed waits until a person saves it. */
+    stage(endpointId: string, path: string, disk: DiskText, text: string): void {
+        const key = endpointKey(endpointId, path);
+        if (useTextDrafts.getState().rows[key] === undefined) {
+            this.put(key, { disk: disk.text, mtime: disk.mtime, text, saving: false, problem: null });
+        } else {
+            this.patch(key, { text });
+        }
+        this.clearTimer(key);
+        this.dropIfIdle(key);
+    }
+
     /* Writes the draft now. True once nothing is left unsaved; false while a problem stands in the way. */
     save(endpointId: string, path: string): Promise<boolean> {
         const key = endpointKey(endpointId, path);

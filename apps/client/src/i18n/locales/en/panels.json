@@ -523,6 +523,12 @@
             "quickFixSoon": "Quick fixes are not available yet",
             "definition": "Go to definition"
         },
+        "edit": {
+            "staged_one": "{{count}} file changed and not saved yet",
+            "staged_other": "{{count}} files changed and not saved yet",
+            "stagedMore": "{{names}} and {{count}} more",
+            "saveAll": "Save all"
+        },
         "completion": {
             "insert": "Insert",
             "replace": "Replace",

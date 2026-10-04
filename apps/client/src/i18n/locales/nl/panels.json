@@ -523,6 +523,12 @@
             "quickFixSoon": "Quick fixes zijn er nog niet",
             "definition": "Ga naar definitie"
         },
+        "edit": {
+            "staged_one": "{{count}} bestand gewijzigd en nog niet opgeslagen",
+            "staged_other": "{{count}} bestanden gewijzigd en nog niet opgeslagen",
+            "stagedMore": "{{names}} en nog {{count}}",
+            "saveAll": "Alles opslaan"
+        },
         "completion": {
             "insert": "Invoegen",
             "replace": "Vervangen",
