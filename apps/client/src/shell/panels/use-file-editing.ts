@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FsReadText } from '@ruimte/contracts';
 import type { EditorEngine, EditorIndentation } from '@ruimte/smart-editor';
 import { type EditBlock, editBlockOf, isCoarsePointer, useFileNodeGate } from '@/shell/panels/edit-gate';
-import { editorConfigDirs, indentationFor } from '@/shell/panels/editor-config';
+import { DEFAULT_INDENTATION, editorConfigDirs, indentationFor } from '@/shell/panels/editor-config';
 import { loadEditorEngine, loadedEditorEngine } from '@/shell/panels/editor-engine';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -18,8 +18,8 @@ export interface FileEditing {
     viewer: boolean;
     /* Null while it loads; the viewer draws the file in the meantime. */
     engine: EditorEngine | null;
-    /* Null until the project's `.editorconfig` has been read, which the editor waits for so it opens at its final tab size. */
-    indentation: EditorIndentation | null;
+    /* The defaults until the project's `.editorconfig` has been read; the editor opens at once and takes the settings when they arrive. */
+    indentation: EditorIndentation;
     loadFailed: boolean;
     /* Whether the node it is in has the keyboard; null in a tab and a view. */
     focused: boolean | null;
@@ -98,7 +98,7 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
         };
     }, [viewer, transport, endpointId, path, roots]);
 
-    const indentation = indent?.endpointId === endpointId && indent.path === path ? indent.value : null;
+    const indentation = indent?.endpointId === endpointId && indent.path === path ? indent.value : DEFAULT_INDENTATION;
 
     const retryLoad = (): void => {
         setLoadFailed(false);

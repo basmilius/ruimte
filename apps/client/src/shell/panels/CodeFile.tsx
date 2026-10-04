@@ -259,7 +259,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                         replacement={{ onReplace: editorFind.replace, onReplaceAll: editorFind.replaceAll, disabledReason: readOnlyReason }}
                     />
                 )}
-                {!editing.viewer && editing.engine !== null && editing.indentation !== null ? (
+                {!editing.viewer && editing.engine !== null ? (
                     <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
                         <FileEditor
                             engine={editing.engine}
@@ -301,7 +301,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     <LanguagePopups language={editorLanguage} />
                 </ErrorBoundary>
             )}
-            {editor !== null && editing.indentation !== null && (
+            {editor !== null && (
                 <EditorStatusBar
                     editor={editor}
                     language={editorLanguage}
