@@ -33,7 +33,9 @@ services:
       - '127.0.0.1:4310:4310'
       # A direct connection is UDP; the container announces 127.0.0.1 on these ports, which Docker forwards in.
       - '127.0.0.1:43100-43109:43100-43109/udp'
-    command: ['--no-stun', '--direct-ports', '43100-43109', '--direct-host-address', '127.0.0.1']
+    # The door on the local network stays closed: the addresses it would report are the container's own
+    # network's, which the app on this machine cannot dial. The app reaches this one through a broker.
+    command: ['--no-stun', '--direct-ports', '43100-43109', '--direct-host-address', '127.0.0.1', '--no-lan']
     environment:
       RUIMTE_LABEL: docker-linux
       # Off unless set when compose runs (apps/pulsar-broker/README.md): the broker this container
@@ -57,6 +59,8 @@ services:
     profiles: ['test']
     ports:
       - '127.0.0.1:4320:4320'
+      # The door on the local network, at the daemon's port plus 10, which a client of the suite signals through.
+      - '127.0.0.1:4330:4330'
       - '127.0.0.1:43200-43209:43200-43209/udp'
     command: ['--no-stun', '--direct-ports', '43200-43209', '--direct-host-address', '127.0.0.1']
     environment:
@@ -67,7 +71,8 @@ services:
       RUIMTE_BROKER_URL: ws://host.docker.internal:4420
       RUIMTE_BROKER_ADVERTISE_URL: ws://127.0.0.1:4420
       # The bench's own statement key (`test.sh` makes one per run), believed in place of the address
-      # book's; a daemon from source reads it, a compiled one never does.
+      # book's, so a client of the suite gets in the way the app does; a daemon from source reads it, a
+      # compiled one never does.
       RUIMTE_PULSAR_TEST_STATEMENT_KEY: ${RUIMTE_PULSAR_TEST_STATEMENT_KEY:-}
       # No volumes at all, and a wipe on every start, so the restart halfway through the suite
       # lands on a fresh machine as well.

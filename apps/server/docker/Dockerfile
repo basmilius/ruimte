@@ -1,4 +1,4 @@
-# A second Ruimte daemon, on Linux, so a client on macOS can pair with a machine that is not its
+# A second Ruimte daemon, on Linux, so a client on macOS can reach a machine that is not its
 # own. Build from the repository root: `docker compose -f apps/server/docker/compose.yml build`.
 FROM oven/bun:1.4.0-debian
 

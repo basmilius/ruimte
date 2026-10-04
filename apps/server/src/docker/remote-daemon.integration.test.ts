@@ -9,10 +9,12 @@ import {
     accessStatementMessage,
     accessStatementV2Message,
     brokerHostOf,
+    lanDoorMessage,
+    lanDoorUrl,
     signalMessage,
     type AccessStatement,
     type BrokerRelayed,
-    type SignalCloseReason,
+    type LanDoorMachineFrame,
     type SignalEnvelope
 } from '@ruimte/pulsar';
 import { verifySignature } from '@ruimte/pulsar/verify-node';
@@ -21,16 +23,11 @@ import { readLocalSecret } from '../auth/local-secret.ts';
 import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
 import {
     BYTES_CHUNK_MAX,
-    clientAuthMessage,
-    daemonChallengeMessage,
     parseServerFrame,
-    type AuthChallengeResult,
     type AuthSessionsResult,
-    type AuthTicketResult,
     type BytesReadResult,
     type EndpointChangedEvent,
     type EndpointInfo,
-    type PairResult,
     type FsBrowseResult,
     type FsListResult,
     type GitStatus,
@@ -46,7 +43,9 @@ import {
 
 /*
  * Opt-in wire tests for the disposable daemon container on port 4320. The development container on
- * 4310 keeps state and must never receive these count-sensitive tests.
+ * 4310 keeps state and must never receive these count-sensitive tests. A client on another machine
+ * gets in the way the app does: a statement signed with this run's own key (`test.sh`), carried in an
+ * offer through the door on the local network. The owner reads the local secret out of the container.
  */
 const ENABLED = process.env.RUIMTE_DOCKER === '1';
 
@@ -55,8 +54,20 @@ const CONTAINER = process.env.RUIMTE_DOCKER_CONTAINER ?? 'ruimte-remote-test';
 // The compose file maps this port straight through, so it names the daemon on both sides.
 const PORT = Number(process.env.RUIMTE_DOCKER_PORT ?? 4320);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+// The door listens on the daemon's port plus 10, which the compose file publishes as it is.
+const DOOR_PORT = PORT + 10;
 const REPO = '/work/atlas';
 const HOME = '/root/.ruimte';
+// What the machine calls a client the suite let in on a statement.
+const CLIENT_LABEL = 'Bench laptop';
+// A broker of the suite's own on this machine, which the test container dials (`compose.yml`).
+const BROKER_PORT = 4420;
+const BROKER_URL = `ws://127.0.0.1:${BROKER_PORT}`;
+const BROKER_HEALTH = `http://127.0.0.1:${BROKER_PORT}/health`;
+
+const STATEMENT_PRIVATE_KEY = process.env.RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY
+    ? Buffer.from(process.env.RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY, 'base64url').toString('utf8')
+    : null;
 
 interface Pending {
     resolve(value: unknown): void;
@@ -87,6 +98,7 @@ class RemoteClient {
         };
     }
 
+    /* `token` is the local secret of the daemon's home or a ticket a direct channel handed out. */
     static async connect(token: string | null, port: number = PORT): Promise<RemoteClient> {
         const query = token === null ? '' : `?token=${encodeURIComponent(token)}`;
         const socket = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`);
@@ -174,71 +186,277 @@ const waitUntil = async (label: string, ready: () => boolean | Promise<boolean>,
 const inContainer = async (command: string[]): Promise<string> =>
     (await new Response(Bun.spawn(['docker', 'exec', CONTAINER, ...command], { stderr: 'inherit' }).stdout).text()).trim();
 
+/* Starts, stops or pauses the container itself, for the tests about a machine falling away. */
+const docker = async (args: string[]): Promise<void> => {
+    const exit = await Bun.spawn(['docker', ...args], { stdout: 'ignore', stderr: 'inherit' }).exited;
+    if (exit !== 0) {
+        throw new Error(`docker ${args.join(' ')} exited with ${exit}`);
+    }
+};
+
+const answers = async (url: string): Promise<boolean> => (await fetch(`${url}/health`).catch(() => null))?.ok === true;
+
+const randomNonce = (): string => crypto.getRandomValues(new Uint8Array(16)).reduce((text, byte) => text + byte.toString(16).padStart(2, '0'), '');
+
+interface KeyPair {
+    publicKey: string;
+    privateKey: string;
+}
+
+interface Machine {
+    id: string;
+    publicKey: string;
+}
+
+// Every channel and signaling socket the suite opened, closed at the end whatever failed on the way.
+const openChannels: DirectClient[] = [];
+const openSockets: WebSocket[] = [];
+
+afterAll(() => {
+    for (const channel of openChannels.splice(0)) {
+        channel.close();
+    }
+    for (const socket of openSockets.splice(0)) {
+        socket.close();
+    }
+});
+
+/* Who the container is, as the address book lists it: read off its home, never off the door under test. */
+const machineInContainer = async (): Promise<Machine> => {
+    const written = JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`])) as Machine;
+    return { id: written.id, publicKey: written.publicKey };
+};
+
+/* The app on the container's own machine, which presents the local secret of its home. */
+const connectOwner = async (): Promise<RemoteClient> => RemoteClient.connect(await inContainer(['cat', `${HOME}/local.key`]));
+
+/* A statement v2 as the address book signs one, with this run's key in place of the address book's. */
+const statementFor = (machine: Machine, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement => {
+    if (STATEMENT_PRIVATE_KEY === null) {
+        throw new Error('No statement key to sign with; run the suite with `bun run --cwd apps/server docker:test`, which makes one');
+    }
+    const issuedAt = Date.now();
+    const base = {
+        machineId: machine.id,
+        machinePublicKey: machine.publicKey,
+        accountId: 'bench-account',
+        clientPublicKey,
+        nonce: randomNonce(),
+        issuedAt,
+        expiresAt: issuedAt + ACCESS_STATEMENT_LIFETIME_MS,
+        ...overrides
+    };
+    return {
+        ...base,
+        signature: signMessage(STATEMENT_PRIVATE_KEY, accessStatementMessage(base.machineId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)),
+        accountSignature: signMessage(
+            STATEMENT_PRIVATE_KEY,
+            accessStatementV2Message(base.machineId, base.machinePublicKey, base.accountId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
+        )
+    };
+};
+
+/* A way to the machine's signals: sends what the client signed, and hands back only what the pinned machine key signed for it. */
+interface SignalLine {
+    send(envelope: SignalEnvelope): void;
+    listen(listener: (envelope: SignalEnvelope) => void): void;
+    close(): void;
+}
+
 /*
- * A pairing token goes only to a client on the daemon's own machine, so the ask happens inside
- * the container. The URL it prints names the container, which nothing here resolves; only the
- * token behind the fragment travels back to the host.
+ * The door on the local network, as the app uses it: a nonce first, the machine's proof checked against
+ * the pinned key, and only then the signals, signed by `signer`.
  */
-const pair = async (publicKey?: string): Promise<PairResult> => {
-    const printed = await inContainer(['bun', '/app/apps/server/src/main.ts', 'pair', '--port', String(PORT)]);
-    const token = printed.split('\n').at(-1)?.split('#').at(-1) ?? '';
-    if (!token) {
-        throw new Error(`No pairing token in what \`ruimte pair\` printed: ${printed}`);
-    }
-    const response = await fetch(`${BASE_URL}/auth/pair`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, label: 'docker test', ...(publicKey ? { publicKey } : {}) })
+const doorLine = async (signer: KeyPair, machine: Machine): Promise<SignalLine> => {
+    const socket = new WebSocket(lanDoorUrl('127.0.0.1', DOOR_PORT));
+    openSockets.push(socket);
+    await new Promise<void>((resolve, reject) => {
+        socket.onopen = () => resolve();
+        socket.onerror = () => reject(new Error(`Nothing answers at the door on port ${DOOR_PORT}`));
     });
-    if (!response.ok) {
-        throw new Error(`Pairing failed: ${response.status} ${await response.text()}`);
-    }
-    return (await response.json()) as PairResult;
+    const nonce = randomNonce();
+    const listeners = new Set<(envelope: SignalEnvelope) => void>();
+    const proven = new Promise<void>((resolve, reject) => {
+        socket.onmessage = (message) => {
+            const frame = JSON.parse(String(message.data)) as LanDoorMachineFrame;
+            if (frame.type === 'door') {
+                const pinned = frame.machineId === machine.id && frame.publicKey === machine.publicKey;
+                if (pinned && verifySignature(machine.publicKey, lanDoorMessage(nonce, frame.machineId, frame.publicKey), frame.signature)) {
+                    resolve();
+                } else {
+                    reject(new Error('The door did not prove the machine that was pinned'));
+                }
+                return;
+            }
+            if (frame.type === 'error') {
+                reject(new Error(`${frame.code}: ${frame.message}`));
+                return;
+            }
+            if (verifySignature(machine.publicKey, signalMessage(machine.publicKey, signer.publicKey, frame.envelope), frame.signature)) {
+                for (const listener of listeners) {
+                    listener(frame.envelope);
+                }
+            }
+        };
+    });
+    socket.send(JSON.stringify({ type: 'hello', nonce }));
+    await proven;
+    return {
+        send: (envelope) =>
+            socket.send(
+                JSON.stringify({
+                    type: 'signal',
+                    from: signer.publicKey,
+                    envelope,
+                    signature: signMessage(signer.privateKey, signalMessage(signer.publicKey, machine.publicKey, envelope))
+                })
+            ),
+        listen: (listener) => {
+            listeners.add(listener);
+        },
+        close: () => socket.close()
+    };
 };
 
-/* The client half of the handshake: take the daemon's nonce, check who signed it, sign it back. */
-const signIn = async (key: { publicKey: string; privateKey: string }, daemonId: string): Promise<Response> => {
-    const challenge = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
-    if (!verifySignature(challenge.daemon.publicKey, daemonChallengeMessage(challenge.daemon.id, challenge.challenge), challenge.daemon.signature)) {
-        throw new Error('The daemon did not sign its own challenge');
-    }
-    return fetch(`${BASE_URL}/auth/ticket`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-            publicKey: key.publicKey,
-            challenge: challenge.challenge,
-            signature: signMessage(key.privateKey, clientAuthMessage(daemonId, challenge.challenge, key.publicKey))
-        })
+/* A client on the broker, the way the app signs in: its own key, the host it dialed, every relay signed. */
+const onBroker = async (key: KeyPair) => {
+    const socket = new WebSocket(BROKER_URL);
+    openSockets.push(socket);
+    const relayed: BrokerRelayed[] = [];
+    const listeners = new Set<(frame: BrokerRelayed) => void>();
+    let ready = false;
+    const peer = new BrokerPeer({
+        role: 'client',
+        publicKey: key.publicKey,
+        host: brokerHostOf(BROKER_URL),
+        sign: (message) => signMessage(key.privateKey, message),
+        send: (frame) => socket.send(frame),
+        events: {
+            ready: () => {
+                ready = true;
+            },
+            relayed: (frame) => {
+                relayed.push(frame);
+                for (const listener of listeners) {
+                    listener(frame);
+                }
+            },
+            refused: (frame) => {
+                throw new Error(`The broker refused: ${JSON.stringify(frame)}`);
+            },
+            failed: (reason) => {
+                throw new Error(reason);
+            }
+        }
     });
+    socket.onopen = () => peer.start();
+    socket.onmessage = (message) => void peer.receive(String(message.data));
+    await waitUntil('the client to sign in to the broker', () => ready);
+    return {
+        socket,
+        peer,
+        relayed,
+        listen: (listener: (frame: BrokerRelayed) => void) => {
+            listeners.add(listener);
+        }
+    };
 };
 
-const ticketFor = async (key: { publicKey: string; privateKey: string }, daemonId: string): Promise<string> => {
-    const response = await signIn(key, daemonId);
-    if (!response.ok) {
-        throw new Error(`Signing in failed: ${response.status} ${await response.text()}`);
+/* The broker as a line: relays to the machine's key and believes only what that key signed, the way the app does. */
+const brokerLine = async (key: KeyPair, machine: Machine): Promise<SignalLine> => {
+    const broker = await onBroker(key);
+    return {
+        send: (envelope) => void broker.peer.relay(machine.publicKey, envelope),
+        listen: (listener) =>
+            broker.listen((frame) => {
+                if (
+                    frame.from === machine.publicKey &&
+                    verifySignature(machine.publicKey, signalMessage(machine.publicKey, key.publicKey, frame.envelope), frame.signature)
+                ) {
+                    listener(frame.envelope);
+                }
+            }),
+        close: () => broker.socket.close()
+    };
+};
+
+const keyCredential = (key: KeyPair, machine: Machine): DirectCredential => ({
+    kind: 'key',
+    publicKey: key.publicKey,
+    privateKey: key.privateKey,
+    daemonId: machine.id,
+    daemonPublicKey: machine.publicKey
+});
+
+interface OfferOptions {
+    statement?: AccessStatement;
+    // Pings a quiet channel the way the app does.
+    ping?: { idleMs?: number; timeoutMs?: number };
+}
+
+/* A channel offered over `line`; `open()` answers its ticket, or rejects with what the machine said. */
+const offerOver = (line: SignalLine, credential: DirectCredential, options: OfferOptions = {}): DirectClient => {
+    const client = new DirectClient({
+        stunServers: [],
+        credential,
+        ...(options.statement ? { access: { statement: options.statement, label: CLIENT_LABEL } } : {}),
+        ...(options.ping ? { ping: options.ping } : {}),
+        timeoutMs: 20_000,
+        signal: (envelope) => line.send(envelope)
+    });
+    openChannels.push(client);
+    line.listen((envelope) => client.receiveSignal(envelope));
+    return client;
+};
+
+interface LetIn {
+    key: KeyPair;
+    machine: Machine;
+    channel: DirectClient;
+    // Opens one socket on the WebSocket API, and serves bytes for as long as it lives.
+    ticket: string;
+}
+
+/*
+ * A client on another machine as the app is one: a new key gets in on a statement through the door, a
+ * key the machine already let in offers without one. The door socket goes once the channel is up.
+ */
+const throughDoor = async (options: { key?: KeyPair; ping?: OfferOptions['ping'] } = {}): Promise<LetIn> => {
+    const key = options.key ?? generateKeyPair();
+    const machine = await machineInContainer();
+    const line = await doorLine(key, machine);
+    try {
+        const channel = offerOver(line, keyCredential(key, machine), {
+            ...(options.key ? {} : { statement: statementFor(machine, key.publicKey) }),
+            ...(options.ping ? { ping: options.ping } : {})
+        });
+        const { ticket } = await channel.open();
+        if (ticket === null) {
+            throw new Error('The machine let the channel in without a ticket');
+        }
+        return { key, machine, channel, ticket };
+    } finally {
+        line.close();
     }
-    return ((await response.json()) as AuthTicketResult).ticket;
+};
+
+/* A socket of a client on another machine, on the ticket of a channel through the door that is closed again. */
+const remoteSocket = async (key?: KeyPair): Promise<LetIn & { client: RemoteClient }> => {
+    const letIn = await throughDoor(key ? { key } : {});
+    letIn.channel.close();
+    return { ...letIn, client: await RemoteClient.connect(letIn.ticket) };
 };
 
 describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     let client: RemoteClient;
-    let paired: PairResult;
-    let sessionToken: string;
     const openedProjects: string[] = [];
     const startedSessions: string[] = [];
 
     beforeAll(async () => {
-        const answers = async (): Promise<boolean> => {
-            const response = await fetch(`${BASE_URL}/health`).catch(() => null);
-            return response?.ok === true;
-        };
         // A container started a second ago is still writing its repositories; anything longer is a container that is not there.
-        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:test\``, answers, 5_000);
-        paired = await pair();
-        sessionToken = paired.sessionToken!;
-        client = await RemoteClient.connect(sessionToken);
-    });
+        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:test\``, () => answers(BASE_URL), 5_000);
+        client = (await remoteSocket()).client;
+    }, 30_000);
 
     afterAll(async () => {
         for (const sessionId of startedSessions) {
@@ -255,12 +473,6 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const health = (await response.json()) as { ok: boolean; version: string };
         expect(health.ok).toBe(true);
         expect(health.version.length).toBeGreaterThan(0);
-    });
-
-    test('pairing hands out a session token that opens a socket', async () => {
-        expect(sessionToken.length).toBeGreaterThan(20);
-        const second = await RemoteClient.connect(sessionToken);
-        second.close();
     });
 
     test('an unknown token gets nowhere', async () => {
@@ -295,13 +507,6 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(info.reachability).toBe('lan');
     });
 
-    test('the pairing answer and endpoint.info name the same daemon', async () => {
-        const info = await client.request<EndpointInfo>('endpoint.info', {});
-        expect(info.id.length).toBeGreaterThan(8);
-        // The row a client keeps is built from the pairing answer, so the id has to be in it too.
-        expect(paired.endpoint.id).toBe(info.id);
-    });
-
     test('the daemon keeps its id in its home, so a restart finds the same machine', async () => {
         const info = await client.request<EndpointInfo>('endpoint.info', {});
         const written = JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`])) as { version: number; id: string; publicKey: string };
@@ -321,19 +526,32 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(restarted).toBe(info.id);
     });
 
-    test('a client on another machine cannot mint a pairing link', async () => {
-        await expect(client.request('auth.pairingToken', {})).rejects.toThrow(/forbidden/);
+    test('pairing is gone: its routes answer 410, and neither the owner nor a client gets a pairing token', async () => {
+        for (const path of ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket']) {
+            const response = await fetch(`${BASE_URL}${path}`, { method: 'POST' });
+            expect([path, response.status]).toEqual([path, 410]);
+            expect(await response.text()).toContain('ruimte login');
+        }
+        const owner = await connectOwner();
+        try {
+            for (const asker of [client, owner]) {
+                await expect(asker.request('auth.pairingToken', {})).rejects.toThrow(/^pairing-removed:/);
+                await expect(asker.request('auth.registerKey', { publicKey: generateKeyPair().publicKey })).rejects.toThrow(/^pairing-removed:/);
+            }
+        } finally {
+            owner.close();
+        }
     });
 
     /*
      * Inside the container every request comes from loopback, which is what a tunnel or a reverse
-     * proxy in front of a daemon looks like. Without the local secret none of it opens. `pair()`
-     * above is the same request with the secret, read from the home the way `ruimte pair` reads it.
+     * proxy in front of a daemon looks like. Without the local secret none of it opens. `ruimte status`
+     * asks `/machine/status` with the secret, read from the home.
      */
     test('loopback without the local secret gets through no door', async () => {
         const doors = [
             ['/ws', 'GET'],
-            ['/auth/pairing-token', 'POST'],
+            ['/machine/status', 'GET'],
             [`/fs/file?path=${REPO}/README.md`, 'GET'],
             ['/projects/nope/icon', 'GET'],
             ['/attachments/node-1/deadbeef', 'GET']
@@ -341,11 +559,11 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const script = `const codes = []; for (const [path, method] of ${JSON.stringify(doors)}) { codes.push((await fetch('http://127.0.0.1:${PORT}' + path, { method })).status); } console.log(codes.join(','));`;
         expect(await inContainer(['bun', '-e', script])).toBe('401,403,401,401,401');
         // A wrong secret is no secret either.
-        const guessed = `console.log((await fetch('http://127.0.0.1:${PORT}/auth/pairing-token', { method: 'POST', headers: { authorization: 'Bearer guessed' } })).status);`;
+        const guessed = `console.log((await fetch('http://127.0.0.1:${PORT}/machine/status', { headers: { authorization: 'Bearer guessed' } })).status);`;
         expect(await inContainer(['bun', '-e', guessed])).toBe('403');
     });
 
-    test('a freshly paired daemon lists nothing at all, and asking twice still makes nothing', async () => {
+    test('a daemon that has seen nothing lists nothing at all, and asking twice still makes nothing', async () => {
         expect((await client.request<ProjectListResult>('project.list', {})).projects).toEqual([]);
         expect((await client.request<ProjectListResult>('project.list', {})).projects).toEqual([]);
     });
@@ -361,7 +579,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     });
 
     test('naming the machine reaches every client and outlives the label it was started with', async () => {
-        const other = await RemoteClient.connect(sessionToken);
+        const other = await connectOwner();
         try {
             const named = await client.request<EndpointInfo>('endpoint.setIdentity', { name: 'The box downstairs', icon: { kind: 'lucide', value: 'server' } });
             expect(named.label).toBe('The box downstairs');
@@ -391,7 +609,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     });
 
     test('closing a project drops it under Recent on the machine, and opening it brings it back', async () => {
-        const other = await RemoteClient.connect(sessionToken);
+        const other = await connectOwner();
         try {
             const opened = await client.request<ProjectOpenResult>('project.open', { folder: '/work/beacon', name: 'Beacon' });
             const { projectId } = opened.summary;
@@ -457,7 +675,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     });
 
     test('a project another client still has open keeps its place and its sessions', async () => {
-        const other = await RemoteClient.connect(sessionToken);
+        const other = await connectOwner();
         try {
             const opened = await client.request<ProjectOpenResult>('project.open', { folder: '/work/beacon', name: 'Beacon' });
             const { projectId } = opened.summary;
@@ -535,158 +753,120 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     });
 });
 
-describe.skipIf(!ENABLED)('signing in instead of carrying a token', () => {
-    let daemonId: string;
-    let daemonKey: string;
+/*
+ * A client a statement let in reaches everything a person works with, and nothing that only the local
+ * secret grants: the machine's account, its own state under the home, and a way back in once revoked.
+ */
+describe.skipIf(!ENABLED)('a client let in on a statement is not the owner', () => {
+    let remote: LetIn & { client: RemoteClient };
+    let owner: RemoteClient;
 
     beforeAll(async () => {
-        const answers = async (): Promise<boolean> => (await fetch(`${BASE_URL}/health`).catch(() => null))?.ok === true;
-        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:test\``, answers, 5_000);
-        const info = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
-        daemonId = info.daemon.id;
-        daemonKey = info.daemon.publicKey;
+        await waitUntil(`a daemon on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
+        remote = await remoteSocket();
+        owner = await connectOwner();
+    }, 30_000);
+
+    afterAll(() => {
+        remote?.client.close();
+        owner?.close();
     });
 
-    test('pairing with a public key hands out nothing to carry around', async () => {
-        const key = generateKeyPair();
-        const result = await pair(key.publicKey);
-        expect(result.sessionToken).toBeUndefined();
-        expect(result.endpoint.publicKey).toBe(daemonKey);
-        expect(result.endpoint.id).toBe(daemonId);
-
-        const client = await RemoteClient.connect(await ticketFor(key, daemonId));
-        const info = await client.request<EndpointInfo>('endpoint.info', {});
-        expect(info.authenticated).toBe(true);
-        expect(info.publicKey).toBe(daemonKey);
-        client.close();
+    test('it cannot put the machine on an account or take it off, and is not told which account it is on', async () => {
+        await expect(remote.client.request('endpoint.signRegistration', { accountId: 'bench-account' })).rejects.toThrow(/^forbidden:/);
+        await expect(remote.client.request('endpoint.leaveAccount', {})).rejects.toThrow(/^forbidden:/);
+        expect((await remote.client.request<EndpointInfo>('endpoint.info', {})).accountId).toBeUndefined();
+        // The owner is told, and letting a client in on a statement put the machine on no account.
+        expect((await owner.request<EndpointInfo>('endpoint.info', {})).accountId).toBeNull();
     });
 
-    test('every connection carries a credential of its own', async () => {
-        const key = generateKeyPair();
-        await pair(key.publicKey);
-        const first = await ticketFor(key, daemonId);
-        const second = await ticketFor(key, daemonId);
-        expect(first).not.toBe(second);
-
-        const client = await RemoteClient.connect(second);
-        expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
-        client.close();
+    test("it reads nothing of the machine's own state under the home, by request or by URL", async () => {
+        for (const path of [`${HOME}/local.key`, `${HOME}/endpoint.json`, `${HOME}/auth.json`]) {
+            await expect(remote.client.request('fs.read', { path })).rejects.toThrow(/^machine-state:/);
+        }
+        const byUrl = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${HOME}/local.key`)}&token=${encodeURIComponent(remote.ticket)}`);
+        expect(byUrl.status).toBe(403);
+        // The same client reads a person's files, so the refusal is about the path and not about who asked.
+        await expect(remote.client.request('fs.read', { path: `${REPO}/README.md` })).resolves.toBeDefined();
     });
 
-    test('the daemon proves which machine it is, and its key is not the one next door', async () => {
-        const challenge = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
-        expect(verifySignature(daemonKey, daemonChallengeMessage(daemonId, challenge.challenge), challenge.daemon.signature)).toBe(true);
-        // What a client sees when something else answers on the address it remembered.
-        expect(verifySignature(generateKeyPair().publicKey, daemonChallengeMessage(daemonId, challenge.challenge), challenge.daemon.signature)).toBe(false);
+    test('revoking it closes its socket, and neither its key nor a new statement for it gets back in', async () => {
+        const victim = await remoteSocket();
+        const mine = (await victim.client.request<AuthSessionsResult>('auth.sessions', {})).sessions.find((session) => session.current);
+        expect(mine).toMatchObject({ label: CLIENT_LABEL, origin: 'statement' });
+
+        await owner.request('auth.revoke', { id: mine!.id });
+        await waitUntil('the socket of a revoked client to close', () => victim.client.closed);
+        // Its ticket went with it, so the bytes it could fetch a moment ago are closed too.
+        expect((await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/README.md`)}&token=${encodeURIComponent(victim.ticket)}`)).status).toBe(
+            401
+        );
+
+        for (const statement of [null, statementFor(victim.machine, victim.key.publicKey)]) {
+            const line = await doorLine(victim.key, victim.machine);
+            try {
+                const attempt = offerOver(line, keyCredential(victim.key, victim.machine), statement ? { statement } : {});
+                await expect(attempt.open()).rejects.toThrow('The machine closed the attempt: not-paired');
+            } finally {
+                line.close();
+            }
+        }
+    }, 60_000);
+});
+
+describe.skipIf(!ENABLED)('the door on the local network', () => {
+    test('endpoint.info says where the door listens', async () => {
+        const owner = await connectOwner();
+        try {
+            const info = await owner.request<EndpointInfo>('endpoint.info', {});
+            expect(info.lanDoor).toBe(true);
+            expect(info.lanDoorFixed).toBe(false);
+            expect(info.lan?.port).toBe(DOOR_PORT);
+            // The container's own interfaces, which only Docker's network reaches; the suite dials the published port instead.
+            expect(info.lan?.addresses.length).toBeGreaterThan(0);
+        } finally {
+            owner.close();
+        }
     });
 
-    test('a wrong signature, a replayed challenge and a key nobody paired all get 401', async () => {
-        const key = generateKeyPair();
-        await pair(key.publicKey);
-
-        const challenge = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
-        const signature = signMessage(key.privateKey, clientAuthMessage(daemonId, challenge.challenge, key.publicKey));
-        const redeem = (body: unknown) =>
-            fetch(`${BASE_URL}/auth/ticket`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-
-        expect((await redeem({ publicKey: key.publicKey, challenge: challenge.challenge, signature: 'nope' })).status).toBe(401);
-        // That attempt used the nonce up, so the signature that was right for it is too late now.
-        expect((await redeem({ publicKey: key.publicKey, challenge: challenge.challenge, signature })).status).toBe(401);
-
-        const response = await signIn(generateKeyPair(), daemonId);
-        expect(response.status).toBe(401);
+    test('anything at the door but its socket answers 404', async () => {
+        for (const path of ['/', '/ws', '/health', '/auth/pair', '/signal/more']) {
+            const response = await fetch(`http://127.0.0.1:${DOOR_PORT}${path}`);
+            expect([path, response.status]).toEqual([path, 404]);
+        }
     });
 
-    test('a signature meant for another machine is refused here', async () => {
-        const key = generateKeyPair();
-        await pair(key.publicKey);
-        expect((await signIn(key, 'a-daemon-somewhere-else')).status).toBe(401);
-    });
+    test('a key without a statement gets a not-paired the machine signed, and no channel', async () => {
+        const machine = await machineInContainer();
+        const stranger = generateKeyPair();
+        // The line only hands on what the pinned machine key signed, so the refusal that arrives is the machine's own.
+        const line = await doorLine(stranger, machine);
+        try {
+            await expect(offerOver(line, keyCredential(stranger, machine)).open()).rejects.toThrow('The machine closed the attempt: not-paired');
+        } finally {
+            line.close();
+        }
+    }, 30_000);
 
-    test('revoking a signed-in client kills its ticket in the same breath', async () => {
-        const key = generateKeyPair();
-        await pair(key.publicKey);
-        const ticket = await ticketFor(key, daemonId);
-        const signed = await RemoteClient.connect(ticket);
-        const mine = (await signed.request<{ sessions: { id: string; current: boolean }[] }>('auth.sessions', {})).sessions.find((session) => session.current)!;
-
-        // From another client, because revoking a session closes its own sockets before it could hear the answer.
-        const other = await RemoteClient.connect((await pair()).sessionToken!);
-        await other.request('auth.revoke', { id: mine.id });
-        await waitUntil('the socket of a revoked client to close', () => signed.closed);
-
-        expect((await fetch(`${BASE_URL}/ws?token=${ticket}`)).status).toBe(401);
-        // Signing again is no way back in either. The key went with the session.
-        expect((await signIn(key, daemonId)).status).toBe(401);
-        other.close();
-    });
-
-    test('a client paired on a token moves onto a key over its own connection', async () => {
-        const token = (await pair()).sessionToken!;
-        const client = await RemoteClient.connect(token);
-        const key = generateKeyPair();
-
-        expect(await client.request<{ registered: boolean }>('auth.registerKey', { publicKey: key.publicKey })).toEqual({ registered: true });
-        // The token still works until the key has proved itself, so nothing is locked out mid-upgrade.
-        const stillFine = await RemoteClient.connect(token);
-        stillFine.close();
-
-        const ticket = await ticketFor(key, daemonId);
-        expect((await fetch(`${BASE_URL}/ws?token=${token}`)).status).toBe(401);
-        const signed = await RemoteClient.connect(ticket);
-        expect((await signed.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
-        signed.close();
-        client.close();
-    });
+    test('ruimte status inside the container exits 0 and names the door', async () => {
+        const status = Bun.spawn(['docker', 'exec', CONTAINER, 'bun', '/app/apps/server/src/main.ts', 'status', '--port', String(PORT)], {
+            stdout: 'pipe',
+            stderr: 'inherit'
+        });
+        const [printed, exitCode] = await Promise.all([new Response(status.stdout).text(), status.exited]);
+        expect(exitCode).toBe(0);
+        expect(printed).toMatch(new RegExp(`^Network +\\S+:${DOOR_PORT}`, 'm'));
+    }, 30_000);
 });
 
 /*
- * The wire over a WebRTC DataChannel instead of the socket. The signals ride over a socket to the
- * container because there is no broker yet, and that socket is closed the moment the channel is up.
- * Everything after it, the terminal included, travels over UDP through the ports the compose file
- * publishes, on the access the channel's own handshake gave it.
+ * The wire over a WebRTC DataChannel instead of the socket. The signals go through the door, and its
+ * socket is closed the moment the channel is up. Everything after it, the terminal included, travels
+ * over UDP through the ports the compose file publishes, on the access the channel's own handshake gave it.
  */
-describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', () => {
-    const clients: DirectClient[] = [];
-    const sockets: RemoteClient[] = [];
-
-    afterAll(() => {
-        for (const client of clients) {
-            client.close();
-        }
-        for (const socket of sockets) {
-            socket.close();
-        }
-    });
-
-    /* A channel signaled over a socket that holds a credential of its own, whatever the channel then presents. */
-    const openDirect = async (credential: DirectCredential, socketToken: string, ping?: { idleMs?: number; timeoutMs?: number }): Promise<DirectClient> => {
-        const socket = await RemoteClient.connect(socketToken);
-        sockets.push(socket);
-        const client = new DirectClient({
-            stunServers: [],
-            credential,
-            timeoutMs: 20_000,
-            ...(ping ? { ping } : {}),
-            signal: (envelope) => void socket.request('direct.signal', { envelope })
-        });
-        clients.push(client);
-        socket.listen('direct.signaled', (payload) => client.receiveSignal((payload as { envelope: Parameters<DirectClient['receiveSignal']>[0] }).envelope));
-        try {
-            await client.open();
-        } finally {
-            socket.close();
-        }
-        return client;
-    };
-
-    test('a paired key opens the channel from outside the container and a terminal answers over it', async () => {
-        const key = generateKeyPair();
-        const paired = await pair(key.publicKey);
-        const client = await openDirect(
-            { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: paired.endpoint.id, daemonPublicKey: paired.endpoint.publicKey! },
-            await ticketFor(key, paired.endpoint.id)
-        );
+describe.skipIf(!ENABLED)('a direct connection through the door', () => {
+    test('a key let in on a statement opens the channel from outside the container, and a terminal answers over it', async () => {
+        const { channel: client } = await throughDoor();
         expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
 
         let output = '';
@@ -705,22 +885,11 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
         } finally {
             await client.request('session.kill', { sessionId }).catch(() => undefined);
         }
-        console.log(`direct channel to the container: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);
+        console.log(`direct channel through the door: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);
     }, 60_000);
 
-    /* A client on a paired key, the way the app holds one. */
-    const pairedDirect = async (ping?: { idleMs?: number; timeoutMs?: number }): Promise<DirectClient> => {
-        const key = generateKeyPair();
-        const paired = await pair(key.publicKey);
-        return openDirect(
-            { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: paired.endpoint.id, daemonPublicKey: paired.endpoint.publicKey! },
-            await ticketFor(key, paired.endpoint.id),
-            ping
-        );
-    };
-
     test('the bytes of a file come over the channel in pieces, and what the route would refuse is refused', async () => {
-        const client = await pairedDirect();
+        const { channel: client } = await throughDoor();
         const path = `${REPO}/direct-bytes.gif`;
         const huge = `${REPO}/direct-huge.gif`;
         // A GIF header is all the daemon sniffs; the noise behind it makes three pieces.
@@ -745,7 +914,8 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
             console.log(`bytes over the direct channel: ${size} bytes in ${parts.length} pieces, ${Date.now() - started} ms`);
 
             const refused = (resource: unknown) => client.request('bytes.read', { resource, offset: 0, length: 1024 });
-            await expect(refused({ kind: 'file', path: '/etc/passwd' })).rejects.toThrow(/^not-found:/);
+            // A program, since text is served and only a binary that is no picture, sound, video or PDF is not.
+            await expect(refused({ kind: 'file', path: '/usr/bin/git' })).rejects.toThrow(/^not-found:/);
             await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^machine-state:/);
             await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toThrow(/^not-found:/);
             const deep = await client.request<BytesReadResult>('bytes.read', {
@@ -761,7 +931,7 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
     }, 60_000);
 
     test('a machine that stops answering is noticed by the ping long before ICE gives up', async () => {
-        const client = await pairedDirect({ idleMs: 2_000, timeoutMs: 5_000 });
+        const { channel: client } = await throughDoor({ ping: { idleMs: 2_000, timeoutMs: 5_000 } });
         let lostAt: number | null = null;
         client.onLost(() => {
             lostAt = Date.now();
@@ -789,37 +959,23 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
         expect(noticed).toBeLessThan(9_000);
     }, 60_000);
 
-    test('a key nobody paired and a channel without a proof get nothing, whatever the signaling socket holds', async () => {
-        const paired = await pair(generateKeyPair().publicKey);
-        const socketKey = generateKeyPair();
-        await pair(socketKey.publicKey);
-        const ticket = await ticketFor(socketKey, paired.endpoint.id);
-        const stranger = generateKeyPair();
-        await expect(
-            openDirect(
-                {
-                    kind: 'key',
-                    publicKey: stranger.publicKey,
-                    privateKey: stranger.privateKey,
-                    daemonId: paired.endpoint.id,
-                    daemonPublicKey: paired.endpoint.publicKey!
-                },
-                ticket
-            )
-        ).rejects.toThrow(/does not recognize/);
-        await expect(openDirect({ kind: 'none' }, await ticketFor(socketKey, paired.endpoint.id))).rejects.toThrow(/^Expected a proof$/);
+    test('a channel proved by a key the machine does not know, or by no proof at all, gets nothing, whichever key signaled it', async () => {
+        const known = await throughDoor();
+        known.channel.close();
+        const attempts: Array<[DirectCredential, RegExp]> = [
+            [keyCredential(generateKeyPair(), known.machine), /does not know this device/],
+            [{ kind: 'none' }, /^Expected a proof$/]
+        ];
+        for (const [credential, refusal] of attempts) {
+            const line = await doorLine(known.key, known.machine);
+            try {
+                await expect(offerOver(line, credential).open()).rejects.toThrow(refusal);
+            } finally {
+                line.close();
+            }
+        }
     }, 60_000);
 });
-
-/* Starts or stops the container itself, for the half of the pool that is about a daemon falling away. */
-const docker = async (args: string[]): Promise<void> => {
-    const exit = await Bun.spawn(['docker', ...args], { stdout: 'ignore', stderr: 'inherit' }).exited;
-    if (exit !== 0) {
-        throw new Error(`docker ${args.join(' ')} exited with ${exit}`);
-    }
-};
-
-const answers = async (url: string): Promise<boolean> => (await fetch(`${url}/health`).catch(() => null))?.ok === true;
 
 /*
  * Two daemons at once, which is what the client's transport pool holds: a socket per machine, each
@@ -833,6 +989,7 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
     let home = '';
     let here: RemoteClient;
     let there: RemoteClient;
+    let firstMachine: Machine;
     const startedSessions: string[] = [];
 
     beforeAll(async () => {
@@ -848,7 +1005,8 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
                 String(LOCAL_PORT),
                 '--no-hooks',
                 '--no-price-fetch',
-                '--no-model-fetch'
+                '--no-model-fetch',
+                '--no-lan'
             ],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
@@ -857,7 +1015,9 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         // Being on this machine is not enough for the daemon here either. The secret of its home is what gets in.
         await expect(RemoteClient.connect(null, LOCAL_PORT)).rejects.toThrow();
         here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
-        there = await RemoteClient.connect((await pair()).sessionToken!);
+        const remote = await remoteSocket();
+        there = remote.client;
+        firstMachine = remote.machine;
     }, 60_000);
 
     afterAll(async () => {
@@ -945,16 +1105,18 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         }
     });
 
-    test('the container comes back and pairs again, next to the connection that never dropped', async () => {
+    test('the container comes back as a new machine and lets a client in on a statement again, next to the connection that never dropped', async () => {
         await docker(['start', CONTAINER]);
         await waitUntil(`the container on ${BASE_URL} again`, () => answers(BASE_URL), 60_000);
 
-        const back = await RemoteClient.connect((await pair()).sessionToken!);
-        const info = await back.request<EndpointInfo>('endpoint.info', {});
+        const back = await remoteSocket();
+        // A start of the test container wipes its home, so the statement names a machine with a new id and key.
+        expect(back.machine.id).not.toBe(firstMachine.id);
+        const info = await back.client.request<EndpointInfo>('endpoint.info', {});
         expect(info.platform).toBe('linux');
-        expect(back.closed).toBe(false);
+        expect(back.client.closed).toBe(false);
         expect(here.closed).toBe(false);
-        back.close();
+        back.client.close();
     }, 90_000);
 });
 
@@ -997,14 +1159,15 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
                 String(LOCAL_PORT),
                 '--no-hooks',
                 '--no-price-fetch',
-                '--no-model-fetch'
+                '--no-model-fetch',
+                '--no-lan'
             ],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
         here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
-        there = await RemoteClient.connect((await pair()).sessionToken!);
+        there = (await remoteSocket()).client;
         await seedRepo(async (command) => Bun.spawn(command, { stdout: 'ignore', stderr: 'inherit' }).exited, 'here', 'mine.txt');
         await seedRepo((command) => inContainer(command), 'there', 'theirs.txt');
     }, 60_000);
@@ -1176,7 +1339,7 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
     let folder = '';
     let here: RemoteClient;
     let there: RemoteClient;
-    let sessionToken = '';
+    let ticket = '';
     let mine = '';
     let theirs = '';
     /* The rev each file is at; a save names the one it was based on and the daemon refuses any other. */
@@ -1208,15 +1371,17 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
                 String(LOCAL_PORT),
                 '--no-hooks',
                 '--no-price-fetch',
-                '--no-model-fetch'
+                '--no-model-fetch',
+                '--no-lan'
             ],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
         here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
-        sessionToken = (await pair()).sessionToken!;
-        there = await RemoteClient.connect(sessionToken);
+        const remote = await remoteSocket();
+        there = remote.client;
+        ticket = remote.ticket;
 
         const [opened, openedThere] = await Promise.all([
             here.request<ProjectOpenResult>('project.open', { folder, name: 'Here' }),
@@ -1304,8 +1469,8 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
 
     /*
      * The bytes of an image never travel over the socket, so the viewer of each workspace builds a
-     * URL against its own daemon with its own token. The token of one machine opens nothing on the
-     * other, which is the half that has to hold.
+     * URL against its own daemon with its own credential: the local secret here, the ticket of the
+     * channel there. Without the container's ticket the container's URL opens nothing.
      */
     test('the bytes a viewer draws come from the daemon of its own workspace', async () => {
         /* A one pixel GIF, because the route serves images and video and nothing else. The two
@@ -1318,12 +1483,12 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         const localSecret = encodeURIComponent((await readLocalSecret(home)) ?? '');
         const mineBytes = await fetch(`${LOCAL_URL}/fs/file?path=${encodeURIComponent(join(folder, 'here.gif'))}&v=1-1&token=${localSecret}`);
         expect(Buffer.from(await mineBytes.arrayBuffer()).toString('base64')).toBe(here_gif);
-        const theirsBytes = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1&token=${encodeURIComponent(sessionToken)}`);
+        const theirsBytes = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1&token=${encodeURIComponent(ticket)}`);
         expect(Buffer.from(await theirsBytes.arrayBuffer()).toString('base64')).toBe(there_gif);
 
-        // The same URL without this machine's token. A workspace only reaches the daemon it paired with.
-        const withoutToken = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1`);
-        expect(withoutToken.status).toBe(401);
+        // The same URL without the container's ticket. A workspace only reaches the daemon that let it in.
+        const withoutTicket = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1`);
+        expect(withoutTicket.status).toBe(401);
     }, 30_000);
 
     /* Last of this block. The container goes down and only comes back for the tests after it. */
@@ -1343,93 +1508,54 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
     }, 120_000);
 });
 
+/* Runs the suite's broker on this machine until `stop`; the container backs off up to 30 seconds between tries to reach it. */
+const startBroker = async (): Promise<Subprocess> => {
+    const broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
+        stdout: 'ignore',
+        stderr: 'inherit'
+    });
+    await waitUntil('the broker to answer', async () => (await fetch(BROKER_HEALTH).catch(() => null))?.ok === true);
+    return broker;
+};
+
+const machineAnnounced = (): Promise<void> =>
+    waitUntil(
+        'the machine in the container to announce itself to the broker',
+        async () => (((await (await fetch(BROKER_HEALTH)).json()) as { machines: number }).machines ?? 0) >= 1,
+        45_000
+    );
+
 /*
  * The same channel with no socket to the container at all. A broker runs on this machine, the
  * container dials it at `host.docker.internal` (`compose.yml`), and a client here signals through it
- * alone. Port 4320 is used for pairing and nothing after it. Stopping the broker afterwards shows
- * that a channel that is in never needed it again.
+ * alone, on a key the door let in before. Stopping the broker afterwards shows that a channel that is
+ * in never needed it again.
  */
 describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () => {
-    const BROKER_PORT = 4420;
-    const BROKER_URL = `ws://127.0.0.1:${BROKER_PORT}`;
-    const BROKER_HEALTH = `http://127.0.0.1:${BROKER_PORT}/health`;
     let broker: Subprocess | null = null;
-    const clients: DirectClient[] = [];
-    const sockets: WebSocket[] = [];
 
     beforeAll(async () => {
-        broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
-            stdout: 'ignore',
-            stderr: 'inherit'
-        });
-        await waitUntil('the broker to answer', async () => (await fetch(BROKER_HEALTH).catch(() => null))?.ok === true);
+        broker = await startBroker();
     });
 
     afterAll(async () => {
-        for (const client of clients) {
-            client.close();
-        }
-        for (const socket of sockets) {
-            socket.close();
-        }
         broker?.kill();
         await broker?.exited;
     });
 
-    /* The container retries the broker with a backoff of up to 30 seconds, and it was started before the broker was. */
-    const machineAnnounced = (): Promise<void> =>
-        waitUntil(
-            'the machine in the container to announce itself to the broker',
-            async () => (((await (await fetch(BROKER_HEALTH)).json()) as { machines: number }).machines ?? 0) >= 1,
-            45_000
-        );
-
-    /* A client on the broker, the way the app signs in: its own key, the host it dialed, every relay signed. */
-    const onBroker = async (key: { publicKey: string; privateKey: string }) => {
-        const socket = new WebSocket(BROKER_URL);
-        sockets.push(socket);
-        const relayed: BrokerRelayed[] = [];
-        const listeners = new Set<(frame: BrokerRelayed) => void>();
-        let ready = false;
-        const peer = new BrokerPeer({
-            role: 'client',
-            publicKey: key.publicKey,
-            host: brokerHostOf(BROKER_URL),
-            sign: (message) => signMessage(key.privateKey, message),
-            send: (frame) => socket.send(frame),
-            events: {
-                ready: () => {
-                    ready = true;
-                },
-                relayed: (frame) => {
-                    relayed.push(frame);
-                    for (const listener of listeners) {
-                        listener(frame);
-                    }
-                },
-                refused: (frame) => {
-                    throw new Error(`The broker refused: ${JSON.stringify(frame)}`);
-                },
-                failed: (reason) => {
-                    throw new Error(reason);
-                }
-            }
-        });
-        socket.onopen = () => peer.start();
-        socket.onmessage = (message) => void peer.receive(String(message.data));
-        await waitUntil('the client to sign in to the broker', () => ready);
-        return { socket, peer, relayed, listen: (listener: (frame: BrokerRelayed) => void) => listeners.add(listener) };
-    };
-
-    test('the pairing answer names the broker the machine announces itself to', async () => {
-        const paired = await pair(generateKeyPair().publicKey);
-        expect(paired.endpoint.brokerUrl).toBe(BROKER_URL);
+    test('endpoint.info names the broker the machine announces itself to', async () => {
+        const owner = await connectOwner();
+        try {
+            expect((await owner.request<EndpointInfo>('endpoint.info', {})).brokerUrl).toBe(BROKER_URL);
+        } finally {
+            owner.close();
+        }
         await machineAnnounced();
     }, 60_000);
 
-    test('a key nobody paired gets a signed not-paired, and a signal a paired key did not sign gets nothing', async () => {
+    test('a key nobody let in gets a signed not-paired, and a signal a known key did not sign gets nothing', async () => {
         await machineAnnounced();
-        const machineKey = (await pair(generateKeyPair().publicKey)).endpoint.publicKey!;
+        const { publicKey: machineKey } = await machineInContainer();
         const offer: SignalEnvelope = { connectionId: `stranger-${Date.now()}`, signal: { kind: 'offer', sdp: 'v=0' } };
 
         const stranger = generateKeyPair();
@@ -1441,45 +1567,32 @@ describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () 
         expect(refusal.envelope).toEqual({ connectionId: offer.connectionId, signal: { kind: 'close', reason: 'not-paired' } });
         expect(verifySignature(machineKey, signalMessage(machineKey, stranger.publicKey, refusal.envelope), refusal.signature)).toBe(true);
 
-        const pairedKey = generateKeyPair();
-        await pair(pairedKey.publicKey);
-        const pairedOnBroker = await onBroker(pairedKey);
+        const known = await throughDoor();
+        known.channel.close();
+        const knownOnBroker = await onBroker(known.key);
         const forged: SignalEnvelope = { connectionId: `forged-${Date.now()}`, signal: { kind: 'offer', sdp: 'v=0' } };
-        pairedOnBroker.socket.send(
+        knownOnBroker.socket.send(
             JSON.stringify({
                 type: 'relay',
                 id: 'forged',
                 to: machineKey,
                 envelope: forged,
-                signature: signMessage(generateKeyPair().privateKey, signalMessage(pairedKey.publicKey, machineKey, forged))
+                signature: signMessage(generateKeyPair().privateKey, signalMessage(known.key.publicKey, machineKey, forged))
             })
         );
         await new Promise((resolve) => setTimeout(resolve, 3_000));
-        expect(pairedOnBroker.relayed).toEqual([]);
+        expect(knownOnBroker.relayed).toEqual([]);
     }, 60_000);
 
-    test('a paired key opens the channel through the broker alone, and the channel outlives the broker', async () => {
+    test('a key the door let in opens the channel through the broker alone, with no statement, and the channel outlives the broker', async () => {
         await machineAnnounced();
-        const key = generateKeyPair();
-        const paired = await pair(key.publicKey);
-        const machineKey = paired.endpoint.publicKey!;
-        const onTheBroker = await onBroker(key);
-        const client = new DirectClient({
-            stunServers: [],
-            credential: { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: paired.endpoint.id, daemonPublicKey: machineKey },
-            timeoutMs: 20_000,
-            signal: (envelope) => void onTheBroker.peer.relay(machineKey, envelope)
-        });
-        clients.push(client);
-        onTheBroker.listen((frame) => {
-            // Believed only from the pinned key and only with its signature, the way the app does it.
-            if (frame.from === machineKey && verifySignature(machineKey, signalMessage(machineKey, key.publicKey, frame.envelope), frame.signature)) {
-                client.receiveSignal(frame.envelope);
-            }
-        });
+        const known = await throughDoor();
+        known.channel.close();
+        const line = await brokerLine(known.key, known.machine);
+        const client = offerOver(line, keyCredential(known.key, known.machine));
         await client.open();
         // Like the app, the broker socket is only for the signals.
-        onTheBroker.socket.close();
+        line.close();
         expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
         console.log(`direct channel through the broker: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);
 
@@ -1510,139 +1623,33 @@ describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () 
 });
 
 /*
- * A client that never paired, on the route the account list opens: a statement signed with the bench's
- * own key (`test.sh`, believed by the test container only), carried in the offer through the broker.
- * Port 4320 is used for nothing but reading who the machine is, which the address book would have said,
- * and for one paired client that flips the refusal switch.
+ * The route the account list opens from anywhere: a statement carried in an offer through the broker,
+ * from a key the machine has never seen. Nothing here reaches the container but the broker.
  */
-const STATEMENT_PRIVATE_KEY = process.env.RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY
-    ? Buffer.from(process.env.RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY, 'base64url').toString('utf8')
-    : null;
-
-describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on a statement, never paired', () => {
-    const BROKER_PORT = 4420;
-    const BROKER_URL = `ws://127.0.0.1:${BROKER_PORT}`;
-    const BROKER_HEALTH = `http://127.0.0.1:${BROKER_PORT}/health`;
+describe.skipIf(!ENABLED)('a machine opened on a statement through the broker', () => {
     let broker: Subprocess | null = null;
-    const clients: DirectClient[] = [];
-    const sockets: WebSocket[] = [];
 
     beforeAll(async () => {
-        broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
-            stdout: 'ignore',
-            stderr: 'inherit'
-        });
-        await waitUntil('the broker to answer', async () => (await fetch(BROKER_HEALTH).catch(() => null))?.ok === true);
-        // The container backs off up to 30 seconds between tries, and the broker before this one went away.
-        await waitUntil(
-            'the machine in the container to announce itself to the broker',
-            async () => (((await (await fetch(BROKER_HEALTH)).json()) as { machines: number }).machines ?? 0) >= 1,
-            45_000
-        );
+        broker = await startBroker();
+        // The broker before this one went away, so the container is somewhere in its backoff.
+        await machineAnnounced();
     }, 60_000);
 
     afterAll(async () => {
-        for (const client of clients) {
-            client.close();
-        }
-        for (const socket of sockets) {
-            socket.close();
-        }
         broker?.kill();
         await broker?.exited;
     });
 
-    /* Who the machine is, as the address book lists it; the challenge route tells anybody. */
-    const machine = async (): Promise<{ id: string; publicKey: string }> => {
-        const answer = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST', body: '{}' })).json()) as AuthChallengeResult;
-        return { id: answer.daemon.id, publicKey: answer.daemon.publicKey };
-    };
-
-    const statementFor = (machineAt: { id: string; publicKey: string }, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement => {
-        const issuedAt = Date.now();
-        const base = {
-            machineId: machineAt.id,
-            machinePublicKey: machineAt.publicKey,
-            accountId: 'bench-account',
-            clientPublicKey,
-            nonce: randomNonce(),
-            issuedAt,
-            expiresAt: issuedAt + ACCESS_STATEMENT_LIFETIME_MS,
-            ...overrides
-        };
-        return {
-            ...base,
-            signature: signMessage(
-                STATEMENT_PRIVATE_KEY!,
-                accessStatementMessage(base.machineId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
-            ),
-            accountSignature: signMessage(
-                STATEMENT_PRIVATE_KEY!,
-                accessStatementV2Message(base.machineId, base.machinePublicKey, base.accountId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
-            )
-        };
-    };
-
-    /* Offers from a key over the broker, believing only what the machine's key signed; answers the client and what came back. */
-    const offerFrom = async (key: { publicKey: string; privateKey: string }, machineAt: { id: string; publicKey: string }, statement?: AccessStatement) => {
-        const socket = new WebSocket(BROKER_URL);
-        sockets.push(socket);
-        const closes: SignalCloseReason[] = [];
-        let client: DirectClient | null = null;
-        let ready = false;
-        const peer = new BrokerPeer({
-            role: 'client',
-            publicKey: key.publicKey,
-            host: brokerHostOf(BROKER_URL),
-            sign: (message) => signMessage(key.privateKey, message),
-            send: (frame) => socket.send(frame),
-            events: {
-                ready: () => {
-                    ready = true;
-                },
-                relayed: (frame: BrokerRelayed) => {
-                    if (
-                        frame.from !== machineAt.publicKey ||
-                        !verifySignature(machineAt.publicKey, signalMessage(machineAt.publicKey, key.publicKey, frame.envelope), frame.signature)
-                    ) {
-                        return;
-                    }
-                    if (frame.envelope.signal.kind === 'close') {
-                        closes.push(frame.envelope.signal.reason);
-                    }
-                    client?.receiveSignal(frame.envelope);
-                },
-                refused: (frame) => {
-                    throw new Error(`The broker refused: ${JSON.stringify(frame)}`);
-                },
-                failed: (reason) => {
-                    throw new Error(reason);
-                }
-            }
-        });
-        socket.onopen = () => peer.start();
-        socket.onmessage = (message) => void peer.receive(String(message.data));
-        await waitUntil('the client to sign in to the broker', () => ready);
-        client = new DirectClient({
-            stunServers: [],
-            credential: { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: machineAt.id, daemonPublicKey: machineAt.publicKey },
-            ...(statement ? { access: { statement, label: 'Bench laptop' } } : {}),
-            timeoutMs: 20_000,
-            signal: (envelope) => void peer.relay(machineAt.publicKey, envelope)
-        });
-        clients.push(client);
-        return { client, socket, closes };
-    };
-
-    test('a statement for this machine and this key opens a terminal, and the machine lists the client as signed in through a statement', async () => {
-        const machineAt = await machine();
+    test('a statement for this machine and this key opens a terminal, and the machine lists the client as let in through a statement', async () => {
+        const machine = await machineInContainer();
         const key = generateKeyPair();
-        const { client, socket } = await offerFrom(key, machineAt, statementFor(machineAt, key.publicKey));
+        const line = await brokerLine(key, machine);
+        const client = offerOver(line, keyCredential(key, machine), { statement: statementFor(machine, key.publicKey) });
         await client.open();
-        socket.close();
+        line.close();
         expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
         const { sessions } = await client.request<AuthSessionsResult>('auth.sessions', {});
-        expect(sessions.find((session) => session.current)).toMatchObject({ label: 'Bench laptop', origin: 'statement' });
+        expect(sessions.find((session) => session.current)).toMatchObject({ label: CLIENT_LABEL, origin: 'statement' });
 
         let output = '';
         client.onFrame((raw) => {
@@ -1662,65 +1669,40 @@ describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on
         }
     }, 90_000);
 
-    test('no statement, a statement for another key, one that ran out, one for another machine and one that names no account all get not-paired and no channel', async () => {
-        const machineAt = await machine();
-        const attempts: Array<[string, (key: { publicKey: string }) => AccessStatement | undefined]> = [
-            ['no statement', () => undefined],
-            ['another key', () => statementFor(machineAt, generateKeyPair().publicKey)],
+    test('no statement, one for another key, one that ran out, one for another machine or its key and one that names no account all get not-paired and no channel', async () => {
+        const machine = await machineInContainer();
+        const attempts: Array<[string, (key: KeyPair) => AccessStatement | null]> = [
+            ['no statement', () => null],
+            ['another key', () => statementFor(machine, generateKeyPair().publicKey)],
             [
                 'ran out',
                 (key) =>
-                    statementFor(machineAt, key.publicKey, {
+                    statementFor(machine, key.publicKey, {
                         issuedAt: Date.now() - 10 * 60_000,
                         expiresAt: Date.now() - 10 * 60_000 + ACCESS_STATEMENT_LIFETIME_MS
                     })
             ],
-            ['another machine', (key) => statementFor({ ...machineAt, id: 'the-machine-next-door' }, key.publicKey)],
+            ['another machine', (key) => statementFor({ ...machine, id: 'the-machine-next-door' }, key.publicKey)],
+            ['another machine key', (key) => statementFor({ ...machine, publicKey: generateKeyPair().publicKey }, key.publicKey)],
             [
                 'no account, as a client older than 0.12 sends it',
                 (key) => {
-                    const { machineId, clientPublicKey, nonce, issuedAt, expiresAt, signature } = statementFor(machineAt, key.publicKey);
+                    const { machineId, clientPublicKey, nonce, issuedAt, expiresAt, signature } = statementFor(machine, key.publicKey);
                     return { machineId, clientPublicKey, nonce, issuedAt, expiresAt, signature };
                 }
             ]
         ];
-        for (const [what, statement] of attempts) {
+        for (const [what, statementOf] of attempts) {
             const key = generateKeyPair();
-            const { client, closes } = await offerFrom(key, machineAt, statement(key));
-            const opening = client.open().then(
+            const line = await brokerLine(key, machine);
+            const statement = statementOf(key);
+            const client = offerOver(line, keyCredential(key, machine), statement ? { statement } : {});
+            const outcome = await client.open().then(
                 () => 'opened',
-                () => 'refused'
+                (e: Error) => e.message
             );
-            await waitUntil(`the refusal for ${what}`, () => closes.length > 0);
-            expect([what, closes]).toEqual([what, ['not-paired']]);
-            client.close();
-            expect(await opening).toBe('refused');
+            expect([what, outcome]).toEqual([what, 'The machine closed the attempt: not-paired']);
+            line.close();
         }
     }, 120_000);
-
-    test('with the refusal switch on, a good statement gets statements-refused and nothing else', async () => {
-        const machineAt = await machine();
-        const paired = await pair();
-        const admin = await RemoteClient.connect(paired.sessionToken!);
-        const info = await admin.request<EndpointInfo>('endpoint.info', {});
-        const identity = { name: info.nameSource === 'chosen' ? info.label : null, icon: info.icon ?? null };
-        await admin.request('endpoint.setIdentity', { ...identity, refuseStatements: true });
-        try {
-            const key = generateKeyPair();
-            const { client, closes } = await offerFrom(key, machineAt, statementFor(machineAt, key.publicKey));
-            void client.open().catch(() => undefined);
-            await waitUntil('the refusal', () => closes.length > 0);
-            expect(closes).toEqual(['statements-refused']);
-            client.close();
-            const { sessions } = await admin.request<AuthSessionsResult>('auth.sessions', {});
-            expect(
-                sessions.some((session) => session.label === 'Bench laptop' && session.origin === 'statement' && session.lastSeenAt > Date.now() - 5_000)
-            ).toBe(false);
-        } finally {
-            await admin.request('endpoint.setIdentity', { ...identity, refuseStatements: false });
-            admin.close();
-        }
-    }, 90_000);
 });
-
-const randomNonce = (): string => crypto.getRandomValues(new Uint8Array(16)).reduce((text, byte) => text + byte.toString(16).padStart(2, '0'), '');

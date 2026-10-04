@@ -16,7 +16,7 @@ console.log(`export RUIMTE_PULSAR_TEST_STATEMENT_KEY=${pair.publicKey.export({ f
 console.log(`export RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY=${Buffer.from(pem).toString("base64url")}`);
 ')"
 
-# Recreated every run: the tests expect a daemon that has paired with nobody and a /work that
+# Recreated every run: the tests expect a daemon that has let nobody in and a /work that
 # holds the two seeded repositories and nothing else.
 "${compose[@]}" up -d --build --force-recreate --wait daemon-test
 
