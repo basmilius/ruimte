@@ -11,6 +11,7 @@ import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
 import { SemanticTokensFeature } from './semantic-tokens';
 import { SignatureFeature } from './signature';
+import { SymbolsFeature } from './symbols';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
 
 /*
@@ -43,6 +44,7 @@ export class EditorLanguage {
         this.completion = new CompletionFeature(this, timers);
         new SignatureFeature(this, timers);
         this.highlights = new HighlightsFeature(this, timers);
+        new SymbolsFeature(this, timers);
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
     }
