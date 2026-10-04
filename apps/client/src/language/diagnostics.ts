@@ -30,9 +30,9 @@ export class DiagnosticsFeature {
             }
         });
         const edits = editor.onTextChange((change) => this.shift(change.changes));
-        // F8 and Shift+F8 are the editor's while it has the keyboard; elsewhere the menu's commands answer.
+        // Alt+F8 and Alt+Shift+F8 are the editor's while it has the keyboard; elsewhere the menu's commands answer.
         const keys = editor.onKeyDown((event) => {
-            if (event.key !== 'F8' || event.metaKey || event.ctrlKey || event.altKey) {
+            if (event.key !== 'F8' || !event.altKey || event.metaKey || event.ctrlKey) {
                 return false;
             }
             this.step(event.shiftKey ? -1 : 1);
