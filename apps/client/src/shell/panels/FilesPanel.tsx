@@ -118,8 +118,6 @@ export function FilesPanel() {
     const platform = useServer((s) => s.platform);
     const showHidden = useSettings((s) => s.filesShowHidden);
     const endpointId = useEndpointId();
-    /* Which file the preview has up; a diff tab points at the same file and counts as well. */
-    const activeFile = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.path ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const transport = useTransport();
     /* What git says about the project folder, so a changed file carries a dot. The git panel reads
@@ -142,8 +140,6 @@ export function FilesPanel() {
     const directoriesRef = useRef<ReadonlySet<string>>(new Set());
     const resettingRef = useRef(false);
     const selectionRef = useRef<readonly string[]>([]);
-    /* The file the tree last followed the preview to, so a click of the person's own is never undone. */
-    const revealedRef = useRef<string | null>(null);
     const [menuPath, setMenuPath] = useState<string | null>(null);
     /* The rows the open context menu acts on: one, or the whole selection when the row is part of one. */
     const [menuTargets, setMenuTargets] = useState<string[]>([]);
@@ -343,19 +339,6 @@ export function FilesPanel() {
     );
 
     /*
-     * The tree follows the preview: the file of the active tab is the selected row. It runs on a tab
-     * change and on the listings that a reveal asks for, never on a selection the person makes here.
-     */
-    useEffect(() => {
-        if (!folder || searching || activeFile === null || revealedRef.current === activeFile) {
-            return;
-        }
-        if (bringIntoView(relativeTo(folder, activeFile))) {
-            revealedRef.current = activeFile;
-        }
-    }, [activeFile, bringIntoView, cache, folder, searching]);
-
-    /*
      * A reveal asked for somewhere else in the app: a menu in the git panel, on a tab, or in the
      * preview's toolbar. The filter goes first, since a row a filter hides cannot be shown, and the
      * ask is answered once however many listings it takes to get there.
@@ -372,7 +355,6 @@ export function FilesPanel() {
         }
         if (bringIntoView(relativeTo(folder, reveal.path))) {
             answeredReveal.current = reveal.nonce;
-            revealedRef.current = reveal.path;
         }
     }, [bringIntoView, cache, folder, reveal, searching]);
 
