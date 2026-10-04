@@ -134,13 +134,6 @@ export class InputController {
         this.listen(this.view.gutterElement, 'pointerdown', (event) => this.gutterDown(event));
         this.listen(this.view.stickyElement, 'pointerdown', (event) => this.stickyDown(event));
         this.listen(this.view.stickyElement, 'wheel', (event) => this.wheel(event));
-        this.listen(this.view.gutterElement, 'click', (event) => {
-            const line = this.view.foldLineOf(event.target);
-            if (line !== null) {
-                this.view.toggleFold(line);
-                this.view.focus();
-            }
-        });
         const move = (event: Event): void => this.pointer.move(event as PointerEvent);
         const end = (): void => {
             this.pointer.end();
@@ -492,10 +485,17 @@ export class InputController {
 
     /* A press on a line number selects the line. */
     private gutterDown(event: PointerEvent): void {
-        if (event.button !== 0 || this.view.foldLineOf(event.target) !== null) {
+        if (event.button !== 0) {
             return;
         }
         event.preventDefault();
+        /* On the press and not on click: a repaint in between replaces the gutter's buttons, and a click whose button left the DOM never arrives. */
+        const foldLine = this.view.foldLineOf(event.target);
+        if (foldLine !== null) {
+            this.view.toggleFold(foldLine);
+            this.view.focus();
+            return;
+        }
         const { model, layout } = this.view;
         const row = layout.rowAt(this.view.contentPoint(event.clientX, event.clientY).y);
         if (row.kind === 'text') {

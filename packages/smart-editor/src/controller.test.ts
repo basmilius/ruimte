@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, jest, test } from 'bun:test';
 import { mountEditor, pointer } from './testing.ts';
 
 /* With the fallback face a character is 7.8px wide and a line 20px tall, and the gutter is as wide as it is at the least. */
@@ -203,5 +203,21 @@ describe('an input method', () => {
         const { editor, page, input } = mountEditor({ text: 'ab' });
         compose(page.window, input, 'aXb', 2);
         expect(editor.getText()).toBe('aXb');
+    });
+});
+
+describe('the fold control', () => {
+    test('folds on the first press, whatever repaints before the button is released', () => {
+        jest.useFakeTimers();
+        const { page, viewport } = mountEditor({ text: 'function a() {\n    one();\n}\nconst b = 1;\n' });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        const toggle = (): HTMLElement => page.host.querySelector('.se-fold-toggle') as HTMLElement;
+        expect(toggle()).not.toBeNull();
+        pointer(page.window, toggle(), 'pointerdown', 0, 0);
+        pointer(page.window, viewport, 'pointerup', 0, 0);
+        expect(toggle().className).toContain('se-folded');
+        pointer(page.window, toggle(), 'pointerdown', 0, 0);
+        expect(toggle().className).not.toContain('se-folded');
     });
 });
