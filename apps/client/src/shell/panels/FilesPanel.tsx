@@ -405,6 +405,8 @@ export function FilesPanel() {
         if (event.key !== 'Enter') {
             return;
         }
+        // A row is a button, and Enter would also click it: a folder would fold and unfold again.
+        event.preventDefault();
         const focused = activeModel.getFocusedPath();
         if (focused !== null && isDirectoryPath(focused)) {
             directoryHandle(activeModel, focused)?.toggle();
