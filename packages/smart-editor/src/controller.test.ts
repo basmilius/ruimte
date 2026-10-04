@@ -283,6 +283,27 @@ describe('the keyboard', () => {
         expect(viewport.scrollTop).toBe(80 * 20 - 133);
     });
 
+    test('goes by the rows of a wrapped line on Home and End', () => {
+        const text = 'abcd '.repeat(40).trimEnd();
+        const { editor, press, viewport } = mountEditor({ text });
+        // linkedom has no layout, so the view is given a width to wrap at: about 40 characters beside the gutter.
+        Object.defineProperty(viewport, 'clientWidth', { value: 400 });
+        editor.setWrap(true);
+        press('End');
+        const rowText = editor.getCaret().character;
+        expect(rowText).toBeLessThan(text.length);
+        expect(text[rowText]).toBe(' ');
+        press('End');
+        expect(editor.getCaret().character).toBe(rowText + 1);
+        press('End');
+        expect(editor.getCaret().character).toBe(text.length);
+        press('ArrowLeft');
+        press('Home');
+        expect(editor.getCaret().character).toBe(160);
+        press('Home');
+        expect(editor.getCaret().character).toBe(0);
+    });
+
     test('stops paging at the ends of the text and extends the selection with shift', () => {
         const text = Array.from({ length: 30 }, (_, i) => `line ${i}`).join('\n');
         const { editor, press, viewport } = mountEditor({ text });

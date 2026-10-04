@@ -103,6 +103,9 @@ interface TypingInput {
     dedent: boolean;
 }
 
+/* The row of the screen an offset is on: where it starts and where it ends, which is where the next one starts when the line wraps. */
+export type VisualLineOf = (offset: number) => { start: number; end: number };
+
 /* Where a word move may stop: at the start of words, at their end, or both. */
 type CaretStopAt = 'start' | 'end' | 'both';
 
@@ -659,7 +662,7 @@ export class DocumentModel {
             return this.shrinkSelection();
         }
         if (command === 'smartHome' || command === 'smartEnd' || command === 'selectSmartHome' || command === 'selectSmartEnd') {
-            return this.moveToLineEdge(command);
+            return this.moveToLineEdge(command, tabWidth(options), options.visualLine);
         }
         const wordMatch = wordCommand.exec(command);
         if (wordMatch) {
@@ -918,17 +921,98 @@ export class DocumentModel {
         return indentationColumn(this.slice(this.rope.lineBounds(this.rope.lineAt(offset)).start, offset), tabSize);
     }
 
-    private moveToLineEdge(command: 'smartHome' | 'smartEnd' | 'selectSmartHome' | 'selectSmartEnd'): boolean {
+    private moveToLineEdge(
+        command: 'smartHome' | 'smartEnd' | 'selectSmartHome' | 'selectSmartEnd',
+        tabSize: number,
+        visualLine: VisualLineOf | undefined
+    ): boolean {
         const home = command.endsWith('Home');
         const select = command.startsWith('select');
         return this.changeSelections(
             this.selections.map((selection) => {
-                const line = this.getLine(this.rope.lineAt(selection.head));
-                const smart = home ? line.start + indentLength(line.text) : line.end - trailingBlankLength(line.text);
-                const head = selection.head === smart ? (home ? line.start : line.end) : smart;
+                const head = home ? this.homeOffset(selection.head, tabSize, visualLine) : this.endOffset(selection.head, visualLine);
                 return { anchor: select ? selection.anchor : head, head };
             })
         );
+    }
+
+    /* The first character on a line that is not a space or a tab, or -1 when there is none. */
+    private firstNonSpace(line: DocumentLine): number {
+        const found = line.text.search(/[^ \t]/);
+        return found === -1 ? -1 : line.start + found;
+    }
+
+    /*
+     * Home. On a wrapped row it goes to the row's start, and from there to the first character of the line.
+     * On the line itself it alternates between the first character and the start: from the start to the
+     * first character (or, on a blank line, to where the nearest line above begins), from anywhere in the
+     * text to the first character, and from the first character or inside the indentation to the start.
+     */
+    private homeOffset(offset: number, tabSize: number, visualLine: VisualLineOf | undefined): number {
+        const line = this.getLine(this.rope.lineAt(offset));
+        const row = visualLine?.(offset) ?? line;
+        if (row.start > line.start) {
+            return offset > row.start ? row.start : Math.max(this.firstNonSpace(line), line.start);
+        }
+        const indent = this.firstNonSpace(line);
+        if (offset === line.start) {
+            return this.offsetAtColumn(line, this.smartIndentColumn(line.start, tabSize), tabSize);
+        }
+        return indent !== -1 && indent < offset ? indent : line.start;
+    }
+
+    /* The visual column of the first character of this line, or of the nearest line above that has one. */
+    private smartIndentColumn(offset: number, tabSize: number): number {
+        for (let index = this.rope.lineAt(offset); index >= 0; index--) {
+            const line = this.getLine(index);
+            const indent = this.firstNonSpace(line);
+            if (indent !== -1) {
+                return indentationColumn(line.text.slice(0, indent - line.start), tabSize);
+            }
+        }
+        return 0;
+    }
+
+    /* The offset on a line at a visual column, with a tab as wide as the stop it goes to; a line that is shorter ends first. */
+    private offsetAtColumn(line: DocumentLine, column: number, tabSize: number): number {
+        if (column <= 0) {
+            return line.start;
+        }
+        let width = 0;
+        for (let index = 0; index < line.text.length && width < column; index++) {
+            width += line.text[index] === '\t' ? tabSize - (width % tabSize) : 1;
+            if (width >= column) {
+                return line.start + index + 1;
+            }
+        }
+        return line.end;
+    }
+
+    /*
+     * End. On a wrapped row it goes to the end of the row's text and then to the row's end; from the row's
+     * end it goes on to the end of the line's text and then to the line's end. Trailing spaces are skipped on
+     * the way, and a stop at the end of the text sends the next one past them.
+     */
+    private endOffset(offset: number, visualLine: VisualLineOf | undefined): number {
+        const line = this.getLine(this.rope.lineAt(offset));
+        const row = visualLine?.(offset) ?? line;
+        let end = row.end;
+        if (offset === row.end && offset < this.rope.length) {
+            end = line.end;
+        }
+        let target = end;
+        for (let at = end - 1; at >= line.start; at--) {
+            if (at > line.start && visualLine !== undefined && visualLine(at).start === at) {
+                target = end;
+                break;
+            }
+            const character = this.rope.charAt(at);
+            if (character !== ' ' && character !== '\t') {
+                break;
+            }
+            target = at;
+        }
+        return target === end || target === offset ? end : target;
     }
 
     private moveByWord(mode: 'select' | 'delete' | undefined, direction: -1 | 1, camel: boolean): boolean {

@@ -126,4 +126,6 @@ export interface CommandOptions {
     smartEnter?: boolean;
     /* A pasted block moves to the indentation of the line it lands on. On unless false. */
     indentOnPaste?: boolean;
+    /* Where the row of the screen an offset is on starts and ends, so Home and End go by wrapped rows. Without it a line is one row. */
+    visualLine?: (offset: number) => { start: number; end: number };
 }

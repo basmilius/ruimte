@@ -244,7 +244,8 @@ export class InputController {
             indentOnPaste: keys.indentOnPaste,
             smartSemicolon: keys.smartSemicolon,
             language: settings.language ?? 'plaintext',
-            camelCase: keys.camelHumps
+            camelCase: keys.camelHumps,
+            visualLine: (offset) => this.view.rowOf(offset)
         };
     }
 
@@ -282,6 +283,9 @@ export class InputController {
             }
         }
         const result = model.execute(name, this.commandOptions());
+        if (name === 'smartEnd' || name === 'selectSmartEnd') {
+            this.view.markRowEnd(model.getPrimary().head);
+        }
         this.view.revealCaret();
         return result;
     }

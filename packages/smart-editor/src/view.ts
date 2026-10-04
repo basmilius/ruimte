@@ -712,6 +712,21 @@ export class EditorView {
         return offset;
     }
 
+    /* The visual line an offset is on, where a caret drawn at the end of a wrapped row counts as being on that row. */
+    rowOf(offset: number): { start: number; end: number } {
+        const { start, end } = this.layout.visualLine(offset === this.rowEndCaret ? offset - 1 : offset);
+        return { start, end };
+    }
+
+    /* A caret that went to the end of a wrapped row stays drawn there, though its offset is where the next row starts. */
+    markRowEnd(offset: number): void {
+        const line = this.model.getLine(this.model.positionAt(offset).line);
+        if (offset > line.start && offset < line.end && this.layout.visualLine(offset).start === offset) {
+            this.rowEndCaret = offset;
+            this.requestRender();
+        }
+    }
+
     onHover(listener: (offset: number | null) => void): () => void {
         this.hoverListeners.add(listener);
         return () => {
