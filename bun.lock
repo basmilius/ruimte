@@ -392,6 +392,14 @@
         "typescript": "^7.0.2",
       },
     },
+    "packages/smart-editor-lsp": {
+      "name": "@ruimte/smart-editor-lsp",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+        "typescript": "^7.0.2",
+      },
+    },
   },
   "trustedDependencies": [
     "electron",
@@ -1021,6 +1029,8 @@
     "@ruimte/site": ["@ruimte/site@workspace:apps/site"],
 
     "@ruimte/smart-editor-core": ["@ruimte/smart-editor-core@workspace:packages/smart-editor-core"],
+
+    "@ruimte/smart-editor-lsp": ["@ruimte/smart-editor-lsp@workspace:packages/smart-editor-lsp"],
 
     "@ruimte/station": ["@ruimte/station@workspace:apps/station"],
 
