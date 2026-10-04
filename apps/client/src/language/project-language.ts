@@ -1,6 +1,8 @@
 import { fileUriToPath, type ApplyWorkspaceEditResult, type ContentChange, type LanguageService, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor, EditorPosition } from '@ruimte/smart-editor';
+import { openFileLink } from '@/shell/panels/file-links';
 import type { Transport } from '@/transport/transport';
+import { NavigationHistory, type Place } from './navigation-history';
 import { ProjectProblems } from './project-problems';
 import { LanguageStatusTracker } from './status';
 import { WireLanguageService } from './wire-service';
@@ -85,12 +87,24 @@ export class ProjectLanguage {
     readonly problems: ProjectProblems;
     /* The project folder on the machine of the daemon. */
     readonly folder: string;
+    /* Where the caret was before each jump, across every file of the project. */
+    readonly history = new NavigationHistory();
     private readonly holders = new Map<string, Holder>();
     private readonly files: ProjectFiles | null;
+    private readonly openFile: (folder: string, path: string, line: number) => void;
+    private pendingCaret: Place | null = null;
+    private lastPlace: Place | null = null;
 
-    constructor(transport: Transport, projectId: string, folder: string, files: ProjectFiles | null = null) {
+    constructor(
+        transport: Transport,
+        projectId: string,
+        folder: string,
+        files: ProjectFiles | null = null,
+        openFile: (folder: string, path: string, line: number) => void = (root, path, line) => void openFileLink(root, { path, line, directory: false })
+    ) {
         this.folder = folder;
         this.files = files;
+        this.openFile = openFile;
         this.status = new LanguageStatusTracker(transport, projectId);
         this.problems = new ProjectProblems(transport, projectId);
         this.service = new WireLanguageService({
@@ -116,6 +130,42 @@ export class ProjectLanguage {
         }
         const path = fileUriToPath(uri);
         return path === null || this.files === null ? null : ((await this.files.read(path))?.text ?? null);
+    }
+
+    /*
+     * Opens the file of a place on its line. A file opens on a line only, so the column is kept here until the editor
+     * that shows the line asks for it with `takeCaret`.
+     */
+    openPlace(place: Place): void {
+        const path = fileUriToPath(place.uri);
+        if (path === null) {
+            return;
+        }
+        this.pendingCaret = place;
+        this.openFile(this.folder, path, place.position.line + 1);
+    }
+
+    /* Where an editor's caret stands now, so a jump from a surface without an editor, such as the Problems panel, still knows what it left. */
+    noteCaret(place: Place): void {
+        this.lastPlace = place;
+    }
+
+    /* Opens a place from outside any editor and remembers the caret that was last seen. */
+    jumpTo(place: Place): void {
+        if (this.lastPlace !== null) {
+            this.history.record(this.lastPlace);
+        }
+        this.openPlace(place);
+    }
+
+    /* The column an opened place waits for, once the editor of its file has put its caret on the line; each place is asked for once. */
+    takeCaret(uri: string, line: number): EditorPosition | null {
+        const pending = this.pendingCaret;
+        if (pending === null || pending.uri !== uri || pending.position.line !== line) {
+            return null;
+        }
+        this.pendingCaret = null;
+        return pending.position;
     }
 
     /* Opens `uri` for the editor, or joins the editors that already hold it. */

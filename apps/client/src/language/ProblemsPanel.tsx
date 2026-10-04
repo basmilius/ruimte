@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleCheck, CircleX, Info, Search, TriangleAlert } from 'lucide-react';
 import { resolveStoredPath } from '@ruimte/contracts';
+import type { EditorPosition } from '@ruimte/smart-editor';
+import { pathToFileUri } from '@ruimte/smart-editor-lsp';
 import { Icon, PanelEmpty } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
-import { openFileLink } from '@/shell/panels/file-links';
 import { createHolder } from '@/shell/panels/use-editor-language';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useEndpointId } from '@/state/keys';
@@ -83,10 +84,10 @@ export function ProblemsPanel() {
         setHidden(next);
     }
 
-    function open(path: string, line: number): void {
+    function open(path: string, position: EditorPosition): void {
         const absolute = folder === null ? null : resolveStoredPath(folder, path);
         if (absolute !== null) {
-            void openFileLink(folder, { path: absolute, line: line + 1, directory: false });
+            language?.jumpTo({ uri: pathToFileUri(absolute), position });
         }
     }
 
@@ -147,7 +148,7 @@ export function ProblemsPanel() {
                                                 key={index}
                                                 type="button"
                                                 className="flex w-full items-start gap-2 px-3 py-1 text-left text-xs hover:bg-surface-hover"
-                                                onClick={() => open(file.path, start.line)}
+                                                onClick={() => open(file.path, start)}
                                             >
                                                 <Icon icon={ICONS[severity]} size={14} className={`mt-px shrink-0 ${COLORS[severity]}`} />
                                                 <span className="min-w-0 grow break-words">

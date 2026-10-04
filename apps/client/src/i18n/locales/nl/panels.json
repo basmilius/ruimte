@@ -649,6 +649,9 @@
             "insert": "Invoegen",
             "replace": "Vervangen",
             "details": "Details"
+        },
+        "history": {
+            "recent": "Recente plekken"
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",

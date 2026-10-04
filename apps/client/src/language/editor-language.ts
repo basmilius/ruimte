@@ -1,11 +1,11 @@
 import type { Editor, EditorPosition } from '@ruimte/smart-editor';
-import { fileUriToPath, type Location } from '@ruimte/smart-editor-lsp';
-import { openFileLink } from '@/shell/panels/file-links';
+import type { Location } from '@ruimte/smart-editor-lsp';
 import { CodeActionsFeature } from './code-actions';
 import { CompletionFeature } from './completion';
 import { ContextMenuFeature } from './context-menu';
 import { DiagnosticsFeature } from './diagnostics';
 import { HighlightsFeature } from './highlights';
+import { HistoryFeature } from './history';
 import { HoverFeature } from './hover';
 import { NavigationFeature, locationRow } from './navigation';
 import { PeekFeature } from './peek';
@@ -18,6 +18,7 @@ import { InlayHintsFeature } from './inlay-hints';
 import { SemanticTokensFeature } from './semantic-tokens';
 import { SignatureFeature } from './signature';
 import { SymbolsFeature } from './symbols';
+import type { Place } from './navigation-history';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
 
 /*
@@ -42,6 +43,7 @@ export class EditorLanguage {
     readonly peek: PeekFeature;
     readonly symbolPicker: SymbolPickerFeature;
     readonly contextMenu: ContextMenuFeature;
+    readonly history: HistoryFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -65,6 +67,19 @@ export class EditorLanguage {
         this.peek = new PeekFeature(this);
         this.symbolPicker = new SymbolPickerFeature(this);
         this.contextMenu = new ContextMenuFeature(this);
+        this.history = new HistoryFeature(this);
+        this.placeOpenedCaret(editor.getCaret());
+        this.onDispose(editor.onCaret((position) => this.placeOpenedCaret(position)));
+    }
+
+    /* A file opened from another one lands on the line; this puts the caret on the column the jump meant. */
+    private placeOpenedCaret(position: EditorPosition): void {
+        const column = this.project.takeCaret(this.uri, position.line);
+        if (column !== null && column.character !== position.character) {
+            this.editor.setCaret(column);
+            return;
+        }
+        this.project.noteCaret({ uri: this.uri, position });
     }
 
     get uri(): string {
@@ -75,16 +90,29 @@ export class EditorLanguage {
         return this.disposed;
     }
 
-    /* Takes the caret to a place the servers named, in this file or in another one that opens beside it. */
+    /* Where the caret is, as a place the history can come back to. */
+    get place(): Place {
+        return { uri: this.uri, position: this.editor.getCaret() };
+    }
+
+    /* Takes the caret to a place the servers named, in this file or in another one that opens beside it, and remembers where it was. */
     goTo(location: Location): void {
-        if (location.uri === this.uri) {
-            this.editor.setCaret(location.range.start);
+        this.project.history.record(this.place);
+        this.visit({ uri: location.uri, position: location.range.start });
+    }
+
+    /* Takes the caret to a position of this file and remembers where it was. */
+    jump(position: EditorPosition): void {
+        this.goTo({ uri: this.uri, range: { start: position, end: position } });
+    }
+
+    /* Goes to a place without touching the history, which is how Back and Forward move. */
+    visit(place: Place): void {
+        if (place.uri === this.uri) {
+            this.editor.setCaret(place.position);
             this.editor.focus();
-            return;
-        }
-        const path = fileUriToPath(location.uri);
-        if (path !== null) {
-            void openFileLink(this.project.folder, { path, line: location.range.start.line + 1, directory: false });
+        } else {
+            this.project.openPlace(place);
         }
     }
 

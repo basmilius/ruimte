@@ -649,6 +649,9 @@
             "insert": "Insert",
             "replace": "Replace",
             "details": "Details"
+        },
+        "history": {
+            "recent": "Recent locations"
         }
     },
     "machineNotAnswering": "This machine is not answering.",

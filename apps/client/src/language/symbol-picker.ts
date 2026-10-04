@@ -62,13 +62,13 @@ export class SymbolPickerFeature {
     /* Puts the caret on a symbol of the file. */
     goTo(entry: SymbolEntry): void {
         this.close();
-        this.language.editor.setCaret({ line: entry.line, character: entry.character });
+        this.language.jump({ line: entry.line, character: entry.character });
     }
 
     /* Puts the caret on a one-based line. */
     goToLine(line: number): void {
         this.close();
-        this.language.editor.setCaret({ line: line - 1, character: 0 });
+        this.language.jump({ line: line - 1, character: 0 });
     }
 
     /* The symbols of the project that answer to a name, which is a request to the server and so waits for a pause in the typing. */

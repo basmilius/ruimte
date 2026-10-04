@@ -5,7 +5,6 @@ import { CircleX, Info, TriangleAlert } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
 import { Button, Icon, Tooltip } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
-import { openFileLink } from '@/shell/panels/file-links';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';
 import { basenameOf } from '@/shell/panels/files-tree';
@@ -39,11 +38,7 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
                 return (
                     <div key={index} className="pl-[22px] text-xs text-text-muted">
                         {path !== null ? (
-                            <button
-                                type="button"
-                                className="font-mono text-accent hover:underline"
-                                onClick={() => void openFileLink(language.project.folder, { path, line, directory: false })}
-                            >
+                            <button type="button" className="font-mono text-accent hover:underline" onClick={() => language.goTo(related.location)}>
                                 {basenameOf(path)}:{line}
                             </button>
                         ) : null}{' '}
