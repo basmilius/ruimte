@@ -117,10 +117,21 @@ export const selectOnly = (model: FileTree, path: string | null): void => {
     }
 };
 
-/* The tree moves its focus while the key is still being dispatched and leaves the selection where it
-   was, so the selection catches up once the dispatch is over, the way a list of the OS moves both. */
-export const followFocus = (model: FileTree): void => {
-    queueMicrotask(() => selectOnly(model, model.getFocusedPath()));
+/*
+ * The tree moves its focus and leaves the selection where it was, so the selection catches up, the
+ * way a list of the OS moves both. Not in a microtask: one runs between this capture listener and
+ * the tree's own handler, which moves the focus and stops the key, so it would select the row the
+ * focus is leaving. `onMoved` hears the row the focus landed on, once it is another one.
+ */
+export const followFocus = (model: FileTree, onMoved?: (path: string) => void): void => {
+    const from = model.getFocusedPath();
+    window.setTimeout(() => {
+        const path = model.getFocusedPath();
+        selectOnly(model, path);
+        if (path !== null && path !== from) {
+            onMoved?.(path);
+        }
+    }, 0);
 };
 
 /* Gives one row the keyboard. A row that takes the focus tells the tree itself, so the tree's own

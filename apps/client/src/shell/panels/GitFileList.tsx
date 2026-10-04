@@ -804,7 +804,12 @@ function GitRepoTree({
         } else if (event.key === ' ') {
             leave(() => toggleRows(menuTargetsOf(pathOfRow(row), model.getSelectedPaths())));
         } else if (movesFocus(event)) {
-            followFocus(model);
+            followFocus(model, (path) => {
+                const entry = byPath.get(path);
+                if (entry !== undefined) {
+                    onOpen(shownFile(entry));
+                }
+            });
         }
     };
 
