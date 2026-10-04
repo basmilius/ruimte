@@ -26,6 +26,7 @@ import type { ThemeState } from '@basmilius/desktop-shell/bridge';
 import { type AgentActivity, type BackgroundServiceState, type KeepAwakeRequest, type MenuShellAction, type MenuSpec } from '@ruimte/desktop-bridge';
 import { isWindowKey, isWindowView, totalActivity, windowUrl } from './app-windows';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
+import { copyablePaths, fileClipboard, osClipboardFormat } from './file-clipboard';
 import { editFrameOf, runGuestEdit } from './guest-edit';
 import { askDaemonWork, proveDaemon, type DaemonPort } from './daemon-proof';
 import { createKeepAwakeHold, keepAwakeBlocker, keepAwakeRequestFrom, LEGACY_KEEP_AWAKE, mergeKeepAwake } from './keep-awake';
@@ -57,6 +58,8 @@ import {
 const {
     app,
     BrowserWindow,
+    clipboard,
+    ClipboardItem,
     dialog,
     ipcMain,
     Menu,
@@ -929,6 +932,18 @@ handleFromApp('shell:open-system-settings', async (_event, url: string) => {
     if (process.platform === 'darwin' && isSystemSettingsPane(url)) {
         await shell.openExternal(url);
     }
+});
+
+/* Files a person copied from a menu, for the file manager to paste. One path that is relative or gone refuses the whole copy. */
+handleFromApp('clipboard:copy-files', async (_event, requested: unknown) => {
+    const paths = copyablePaths(requested);
+    const contents = paths === null ? null : fileClipboard(process.platform, paths);
+    if (paths === null || contents === null || !paths.every((path) => existsSync(path))) {
+        return false;
+    }
+    const formats = Object.entries(contents.formats).map(([format, value]) => [osClipboardFormat(format), new Blob([value])] as const);
+    await clipboard.write([new ClipboardItem({ 'text/plain': contents.text, ...Object.fromEntries(formats) })]);
+    return true;
 });
 
 onFromApp('devtools:guest', (_event, id: number) => guestDevTools(id));

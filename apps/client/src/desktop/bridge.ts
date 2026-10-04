@@ -189,6 +189,10 @@ export interface DesktopBridge {
     /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
+    /* Puts files of this machine on the clipboard the way its file manager pastes them, with the paths
+       as text beside them. False when a path is not absolute or no longer exists. Optional for the same
+       reason `onBrowserContextMenu` is, and absent on a platform the shell has no format for. */
+    copyFiles?(paths: string[]): Promise<boolean>;
     /* Updating, which only the shell can do. Optional for the same reason `onBrowserContextMenu`
        is. A shell that is already running carries the preload it started with. Without them the
        client shows no update button and About says where updates come from instead. */

@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     setAgentActivity: (activity: { working: number; attention: number }): void => ipcRenderer.send('agents:activity', activity),
     saveFile: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null> =>
         ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime),
+    /* Only where the shell knows the file manager's clipboard formats (`file-clipboard.ts`), so elsewhere the client offers no copy. */
+    copyFiles:
+        process.platform === 'darwin' || process.platform === 'linux'
+            ? (paths: string[]): Promise<boolean> => ipcRenderer.invoke('clipboard:copy-files', paths)
+            : undefined,
     updateState: (): Promise<unknown> => ipcRenderer.invoke('update:state'),
     onUpdateState: (listener: (state: unknown) => void): (() => void) => {
         const handler = (_event: unknown, state: unknown): void => listener(state);
