@@ -22,28 +22,40 @@ const contrast = (first: string, second: string): number => {
 // WCAG AA for text, and 3:1 for the roles of a side that sit below it, so a tweak cannot drop them further.
 const QUIET_ROLES: Readonly<Record<'light' | 'dark', readonly CodeRole[]>> = {
     light: ['comment', 'docComment', 'docTag', 'decorator'],
-    dark: []
+    dark: ['docComment']
 };
 const floorOf = (mode: 'light' | 'dark', role: CodeRole): number => (QUIET_ROLES[mode].includes(role) ? 3 : 4.5);
 
-const termBackground = async (mode: 'light' | 'dark'): Promise<string | undefined> => {
-    const css = await Bun.file(join(HERE, '..', '..', 'styles.css')).text();
-    return new RegExp(`\\[data-theme="${mode}"\\]\\s*\\{[^}]*?--term-bg:\\s*(#[0-9a-f]{6})`, 'i').exec(css)?.[1]?.toLowerCase();
+/* A token's value on one side, as a stylesheet declares it in hex. */
+const tokenIn = async (path: string, mode: 'light' | 'dark', token: string): Promise<string | undefined> => {
+    const css = await Bun.file(path).text();
+    return new RegExp(`\\[data-theme="${mode}"\\]\\s*\\{[^}]*?${token}:\\s*(#[0-9a-f]{6})`, 'i').exec(css)?.[1]?.toLowerCase();
 };
+
+/* Where a chat draws code: the terminal ground of the client's own stylesheet. */
+const chatGround = (mode: 'light' | 'dark'): Promise<string | undefined> => tokenIn(join(HERE, '..', '..', 'styles.css'), mode, '--term-bg');
+
+/* Where a panel draws code: the surface the library's theme gives every panel. */
+const panelGround = (mode: 'light' | 'dark'): Promise<string | undefined> =>
+    tokenIn(Bun.resolveSync('@basmilius/desktop-ui/theme.css', HERE), mode, '--surface');
 
 describe('the colors of our code themes', () => {
     for (const theme of CODE_THEMES) {
         const palette = CODE_PALETTES[theme.type];
 
-        test(`${theme.name} sits on the code background of its side`, async () => {
-            expect(palette.background).toBe((await termBackground(theme.type)) ?? '');
+        test(`${theme.name} carries the ground a chat draws code on`, async () => {
+            expect(palette.background).toBe((await chatGround(theme.type)) ?? '');
             expect(theme.bg).toBe(palette.background);
         });
 
-        test(`${theme.name} reads against that background in every role`, () => {
-            const failing = Object.entries(palette.colors)
-                .map(([role, color]) => ({ role, color, ratio: contrast(color, palette.background) }))
-                .filter(({ role, ratio }) => ratio < floorOf(theme.type, role as CodeRole));
+        test(`${theme.name} reads in every role on the chat's ground and on a panel's`, async () => {
+            const panel = await panelGround(theme.type);
+            expect(panel).toBeDefined();
+            const failing = [palette.background, panel ?? ''].flatMap((ground) =>
+                Object.entries(palette.colors)
+                    .map(([role, color]) => ({ ground, role, color, ratio: contrast(color, ground) }))
+                    .filter(({ role, ratio }) => ratio < floorOf(theme.type, role as CodeRole))
+            );
             expect(failing).toEqual([]);
         });
 

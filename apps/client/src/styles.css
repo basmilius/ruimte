@@ -448,20 +448,20 @@
         --trees-padding-inline-override: 20px;
     }
 
-    /* The diff draws its rows on a surface of its own, which is white or black unless the page says
-       otherwise. Naming both sides the same token puts it on the app's code surface in either theme,
-       and the container carries it too, so a diff shorter than the panel still fills it. */
-    .file-diff {
-        background: var(--term-bg);
-        --diffs-light-bg: var(--term-bg);
-        --diffs-dark-bg: var(--term-bg);
+    /* A diff in a panel sits on the panel itself, so it is no darker block. The library names its
+       ground on its own element from the code theme, which is the chat's darker one; a rule on that
+       element from out here outranks it. The container carries it too, so a short diff still fills. */
+    .file-diff { background: var(--surface); }
+    .file-diff diffs-container {
+        --diffs-light-bg: var(--surface);
+        --diffs-dark-bg: var(--surface);
     }
 
     /* A file of code, drawn a chunk at a time by shiki. Every state of a chunk (reserved, plain,
        highlighted) draws the same line box, so nothing below it shifts while shiki catches up. The
        line number is a counter each chunk starts at its own offset, which is what keeps the chunks
        independent. */
-    .file-code { background: var(--term-bg); }
+    .file-code { background: var(--surface); }
     .file-code pre {
         margin: 0;
         background: transparent !important;
@@ -503,9 +503,9 @@
     .monaco-editor .find-hit-current { background: var(--find-current); }
     /* Over Shiki's token colors, which sit on the spans of the line with a class each. */
     .monaco-editor .find-hit-current-text { color: var(--find-current-text) !important; }
-    /* A code theme in settings, on the app's code background like the viewer, so shiki's own is dropped.
+    /* A code theme in settings, on the ground the viewer draws it on, so shiki's own is dropped.
        The token is read under the side's own `data-theme`; a utility would resolve it at the root. */
-    .code-theme-preview > [data-theme] { background: var(--term-bg); }
+    .code-theme-preview > [data-theme] { background: var(--surface); }
     .code-theme-preview pre {
         margin: 0;
         background: transparent !important;

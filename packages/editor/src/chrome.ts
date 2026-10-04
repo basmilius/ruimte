@@ -1,13 +1,13 @@
 /*
  * What Monaco draws around the tokens, from the semantic tokens of the client's `styles.css`, so the
- * editor sits on the same ground as the file viewer (`.file-code`) and the terminal, and its widgets
- * (suggestions, hovers, parameter hints) read as the app's own popups. Shiki's theme keeps whatever is
- * not listed here, its bracket colors among them.
+ * editor sits on the same ground as the file viewer (`.file-code`), the surface around it, and its
+ * widgets (suggestions, hovers, parameter hints) read as the app's own popups. Shiki's theme keeps
+ * whatever is not listed here, its bracket colors among them.
  */
 const CHROME_TOKENS: Readonly<Record<string, string>> = {
-    'editor.background': '--term-bg',
+    'editor.background': '--surface',
     'editor.foreground': '--term-fg',
-    'editorGutter.background': '--term-bg',
+    'editorGutter.background': '--surface',
     'editorLineNumber.foreground': '--text-faint',
     'editorLineNumber.activeForeground': '--text-muted',
     'editorCursor.foreground': '--term-cursor',
