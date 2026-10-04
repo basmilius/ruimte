@@ -2,7 +2,7 @@ import type { EditorHover, EditorRange } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { rangeHolds } from './diagnostics-model';
 import { hoverTextOf, isEmptyHover, locationsOf } from './hover-content';
-import { createPopupStore, type HoverInfo } from './popups';
+import type { HoverInfo } from './popups';
 import { realTimers, type Timers } from './timers';
 
 const SHOW_DELAY_MS = 300;
@@ -14,7 +14,6 @@ const HIDE_DELAY_MS = 250;
  * the word or on the card itself, and goes when the text, the scroll or the focus moves.
  */
 export class HoverFeature {
-    readonly store = createPopupStore();
     private readonly language: EditorLanguage;
     private readonly timers: Timers;
     private showTimer: unknown;
@@ -33,7 +32,7 @@ export class HoverFeature {
             editor.onTextChange(() => this.hide()),
             editor.onViewChange(() => this.hide()),
             editor.onKeyDown((event) => {
-                if (event.key === 'Escape' && this.store.getState().hover !== null) {
+                if (event.key === 'Escape' && this.language.popups.getState().hover !== null) {
                     this.hide();
                     return true;
                 }
@@ -64,8 +63,8 @@ export class HoverFeature {
         this.timers.clear(this.showTimer);
         this.timers.clear(this.hideTimer);
         this.inCard = false;
-        if (this.store.getState().hover !== null) {
-            this.store.setState({ hover: null });
+        if (this.language.popups.getState().hover !== null) {
+            this.language.popups.setState({ hover: null });
         }
     }
 
@@ -76,7 +75,7 @@ export class HoverFeature {
             this.scheduleHide();
             return;
         }
-        const shown = this.store.getState().hover;
+        const shown = this.language.popups.getState().hover;
         if (shown !== null && rangeHolds(shown.subject, hover.position)) {
             this.timers.clear(this.hideTimer);
             return;
@@ -88,7 +87,7 @@ export class HoverFeature {
 
     private scheduleHide(): void {
         this.timers.clear(this.hideTimer);
-        if (this.store.getState().hover === null || this.inCard) {
+        if (this.language.popups.getState().hover === null || this.inCard) {
             return;
         }
         this.hideTimer = this.timers.set(() => {
@@ -131,7 +130,7 @@ export class HoverFeature {
         }
         const subject = problems[0]?.diagnostic.range ?? range ?? { start: hover.position, end: hover.position };
         this.timers.clear(this.hideTimer);
-        this.store.setState({
+        this.language.popups.setState({
             hover: {
                 anchor: subject.start.line === hover.position.line ? subject.start : hover.position,
                 subject,

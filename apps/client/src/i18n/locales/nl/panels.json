@@ -522,6 +522,11 @@
             "quickFix": "Quick fix…",
             "quickFixSoon": "Quick fixes zijn er nog niet",
             "definition": "Ga naar definitie"
+        },
+        "completion": {
+            "insert": "Invoegen",
+            "replace": "Vervangen",
+            "details": "Details"
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",

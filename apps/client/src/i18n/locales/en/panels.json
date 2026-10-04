@@ -522,6 +522,11 @@
             "quickFix": "Quick fix…",
             "quickFixSoon": "Quick fixes are not available yet",
             "definition": "Go to definition"
+        },
+        "completion": {
+            "insert": "Insert",
+            "replace": "Replace",
+            "details": "Details"
         }
     },
     "machineNotAnswering": "This machine is not answering.",

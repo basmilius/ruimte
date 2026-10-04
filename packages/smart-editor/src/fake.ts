@@ -14,6 +14,7 @@ import type {
     EditorMarker,
     EditorOptions,
     EditorPosition,
+    EditorRange,
     EditorRect,
     EditorSemanticToken,
     EditorTextChange,
@@ -76,7 +77,7 @@ export class FakeEditor implements Editor {
         if (this.readOnly || text === this.text) {
             return;
         }
-        this.replaceText(text);
+        this.replaceText(text, 'input');
         emit(this.changes);
     }
 
@@ -103,14 +104,19 @@ export class FakeEditor implements Editor {
     }
 
     /* The text becomes `text`, and listeners of the text hear the one stretch that differs, as the real editor reports it. */
-    private replaceText(text: string): void {
+    private replaceText(text: string, source: EditorTextChange['source'] = 'external'): void {
         const span = changedSpan(this.text, text);
         const before = this.text;
         this.text = text;
         if (span === null) {
             return;
         }
+        // As in the real editor the caret lands behind what was typed, and listeners of the caret hear it before those of the text.
+        if (source !== 'external') {
+            this.moveCaret(positionIn(text, span.start + span.text.length));
+        }
         const change: EditorTextChange = {
+            source,
             changes: [{ range: { start: positionIn(before, span.start), end: positionIn(before, span.end) }, text: span.text }]
         };
         for (const listener of [...this.textChanges]) {
@@ -127,6 +133,10 @@ export class FakeEditor implements Editor {
 
     positionAt(offset: number): EditorPosition {
         return positionIn(this.text, offset);
+    }
+
+    textInRange(range: EditorRange): string {
+        return this.text.slice(this.offsetAt(range.start), this.offsetAt(range.end));
     }
 
     offsetAt(position: EditorPosition): number {
@@ -346,7 +356,8 @@ export class FakeEditor implements Editor {
         for (const edit of ordered) {
             text = text.slice(0, edit.from) + edit.text + text.slice(edit.to);
         }
-        this.type(text);
+        this.replaceText(text, 'command');
+        emit(this.changes);
         return true;
     }
 

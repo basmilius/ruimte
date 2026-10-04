@@ -1,9 +1,12 @@
 import type { Editor } from '@ruimte/smart-editor';
 import { fileUriToPath, type Location } from '@ruimte/smart-editor-lsp';
 import { openFileLink } from '@/shell/panels/file-links';
+import { CompletionFeature } from './completion';
 import { DiagnosticsFeature } from './diagnostics';
 import type { Problem } from './diagnostics-model';
 import { HoverFeature } from './hover';
+import { createPopupStore } from './popups';
+import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
 import { SemanticTokensFeature } from './semantic-tokens';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
@@ -17,22 +20,26 @@ export class EditorLanguage {
     readonly project: ProjectLanguage;
     readonly document: LanguageDocumentHandle;
     readonly languageId: string;
+    /* What the features of this editor have open over it: the hover card, the suggestions, the signature. */
+    readonly popups = createPopupStore();
     readonly diagnostics: DiagnosticsFeature;
     readonly hover: HoverFeature;
+    readonly completion: CompletionFeature;
     /* What the Quick fix button of a problem calls; the code actions fill it in, and the button stays off until they do. */
     quickFix: ((problem: Problem) => void) | null = null;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
-    constructor(project: ProjectLanguage, editor: Editor, uri: string, languageId: string) {
+    constructor(project: ProjectLanguage, editor: Editor, uri: string, languageId: string, timers: Timers = realTimers) {
         this.editor = editor;
         this.project = project;
         this.languageId = languageId;
         this.document = project.acquire(uri, languageId, editor);
         this.diagnostics = new DiagnosticsFeature(this);
-        this.hover = new HoverFeature(this);
-        new SemanticTokensFeature(this);
-        new InlayHintsFeature(this);
+        this.hover = new HoverFeature(this, timers);
+        this.completion = new CompletionFeature(this, timers);
+        new SemanticTokensFeature(this, timers);
+        new InlayHintsFeature(this, timers);
     }
 
     get uri(): string {

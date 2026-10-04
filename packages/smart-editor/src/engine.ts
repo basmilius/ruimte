@@ -17,6 +17,7 @@ import type {
     EditorMarker,
     EditorOptions,
     EditorPosition,
+    EditorRange,
     EditorRect,
     EditorSemanticToken,
     EditorTextChange,
@@ -75,7 +76,7 @@ class SmartEditor implements Editor {
             if (snapshot.revision !== this.revision) {
                 this.revision = snapshot.revision;
                 if (snapshot.contentEdits !== undefined && snapshot.contentEdits.length > 0) {
-                    this.announceTextChange(snapshot.contentEdits);
+                    this.announceTextChange(snapshot.contentEdits, snapshot.source ?? 'external');
                 }
                 if (!this.settingText) {
                     emit(this.changes);
@@ -153,8 +154,9 @@ class SmartEditor implements Editor {
         };
     }
 
-    private announceTextChange(edits: NonNullable<EditorSnapshot['contentEdits']>): void {
+    private announceTextChange(edits: NonNullable<EditorSnapshot['contentEdits']>, source: EditorTextChange['source']): void {
         const change: EditorTextChange = {
+            source,
             changes: edits.map((edit) => ({
                 range: { start: { line: edit.start.line, character: edit.start.column }, end: { line: edit.end.line, character: edit.end.column } },
                 text: edit.text
@@ -262,6 +264,10 @@ class SmartEditor implements Editor {
     positionAt(offset: number): EditorPosition {
         const { line, column } = this.model.positionAt(offset);
         return { line, character: column };
+    }
+
+    textInRange(range: EditorRange): string {
+        return this.model.slice(this.offsetAt(range.start), this.offsetAt(range.end));
     }
 
     offsetAt(position: EditorPosition): number {

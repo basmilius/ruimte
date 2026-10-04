@@ -20,12 +20,37 @@ export interface HoverInfo {
     readonly definition: Location | null;
 }
 
+/* One line of the suggestions list. */
+export interface CompletionRow {
+    readonly label: string;
+    readonly kind: number | undefined;
+    /* The parameters or type the server puts after the label. */
+    readonly detail: string;
+    readonly deprecated: boolean;
+}
+
+/* The suggestions while a word is being typed. */
+export interface CompletionView {
+    /* The start of the word, which the list is placed under. */
+    readonly anchor: EditorPosition;
+    readonly rows: readonly CompletionRow[];
+    readonly active: number;
+    /* Whether the documentation of the active row is shown beside the list. */
+    readonly detailsOpen: boolean;
+    readonly docs: { readonly signature: string; readonly markdown: string } | null;
+    /* The server the suggestions came from. */
+    readonly server: string;
+    /* The shiki id of the file's language, for the signature in the documentation. */
+    readonly highlightLanguage: string;
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
+    readonly completion: CompletionView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null }));
 }

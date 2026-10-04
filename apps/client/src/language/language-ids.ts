@@ -31,3 +31,10 @@ export function lspLanguageIdOf(language: string | undefined): string | null {
 export function serverKindOf(lspLanguageId: string): LanguageServerKind | null {
     return SERVER_KINDS[lspLanguageId] ?? null;
 }
+
+const SHIKI_IDS: Record<string, string> = { typescriptreact: 'tsx', javascriptreact: 'jsx' };
+
+/* The highlighter id of an LSP language id, for code a server sends back to be drawn. */
+export function shikiLanguageOf(lspLanguageId: string): string {
+    return SHIKI_IDS[lspLanguageId] ?? lspLanguageId;
+}

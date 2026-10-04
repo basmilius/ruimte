@@ -65,6 +65,8 @@ export interface EditorContentChange {
 export interface EditorTextChange {
     /* In order, so a language server can follow them one by one. */
     readonly changes: readonly EditorContentChange[];
+    /* A person typing, one of the editor's own commands such as undo, or a change from outside. */
+    readonly source: 'input' | 'command' | 'external';
 }
 
 export type EditorMarkerSeverity = 'error' | 'warning' | 'info' | 'hint';
@@ -161,6 +163,8 @@ export interface Editor {
     /* An offset past the end, or a character past the end of its line, lands on the end. */
     positionAt(offset: number): EditorPosition;
     offsetAt(position: EditorPosition): number;
+    /* The text of a range, such as the word before the caret. */
+    textInRange(range: EditorRange): string;
     /* Mod+S from inside the editor; what happens then is the client's. */
     onSave(listener: () => void): () => void;
     /* The focus left the editor and every widget of its own, such as its suggestions. */

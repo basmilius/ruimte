@@ -68,7 +68,7 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
 }
 
 /* Code as the viewer colors it, plain until the grammar is in so the card never changes size under the pointer by much. */
-function Signature({ code, language }: { code: string; language: string }) {
+export function Signature({ code, language }: { code: string; language: string }) {
     const theme = useCodeTheme();
     const [html, setHtml] = useState<{ key: string; html: string } | null>(null);
     const key = `${language}\0${theme}\0${code}`;
