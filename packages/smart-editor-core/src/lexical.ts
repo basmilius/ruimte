@@ -25,7 +25,7 @@ export function hasSlashComments(language: string): boolean {
 }
 
 export function hasMarkupComments(language: string): boolean {
-    return /^(html|xml|vue)$/i.test(language);
+    return /^(html|xml|vue|svg|xsl|markdown|md|mdx)$/i.test(language);
 }
 
 export function hasSmartSemicolon(language: string): boolean {

@@ -1,22 +1,9 @@
-import { commentSyntax, type VueRegion } from './languages.ts';
+import type { EditSource } from './edit-source.ts';
+import { commentSyntax } from './languages.ts';
 import { hasSlashComments, isPhp } from './lexical.ts';
 import type { DocumentLine } from './rope.ts';
 import { indentationColumn } from './structure.ts';
 import type { TypingContext } from './typing-context.ts';
-
-/* What Enter needs to read from the document. */
-export interface EnterSource {
-    slice(from: number, to: number): string;
-    charAt(offset: number): string;
-    lineAt(offset: number): number;
-    line(index: number): DocumentLine;
-    /* The line break of a line. */
-    newline(index: number): string;
-    context(offset: number): TypingContext;
-    region(line: number): VueRegion | null;
-    /* Whether a `{` at this offset has no closer anywhere in the document. */
-    unmatchedBrace(offset: number): boolean;
-}
 
 export interface EnterOptions {
     language: string;
@@ -81,10 +68,10 @@ function continues(text: string, context: TypingContext, language: string): bool
 }
 
 class Enter {
-    private readonly source: EnterSource;
+    private readonly source: EditSource;
     private readonly options: EnterOptions;
 
-    constructor(source: EnterSource, options: EnterOptions) {
+    constructor(source: EditSource, options: EnterOptions) {
         this.source = source;
         this.options = options;
     }
@@ -391,6 +378,6 @@ class Enter {
 }
 
 /* Where one Enter puts its break and caret, as a replacement of text around the caret. */
-export function planEnter(source: EnterSource, from: number, to: number, options: EnterOptions): EnterPlan {
+export function planEnter(source: EditSource, from: number, to: number, options: EnterOptions): EnterPlan {
     return new Enter(source, options).plan(from, to);
 }

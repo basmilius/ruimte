@@ -556,3 +556,22 @@ describe('Tab', () => {
         expect(editor.getText()).toBe('f(1)x');
     });
 });
+
+describe('comments and Enter', () => {
+    test('toggles a line comment by the language of the file and moves down', () => {
+        const { editor, press: key } = setup({ text: 'a = 1\nb = 2', language: 'python' });
+        key('/', { ctrlKey: true });
+        expect(editor.getText()).toBe('# a = 1\nb = 2');
+        expect(editor.getCaret()).toEqual({ line: 1, character: 2 });
+    });
+
+    test('continues a block comment and closes it on Enter', () => {
+        const { editor, press: key, type } = setup({ text: '', language: 'typescript' });
+        type('/');
+        type('*');
+        type('*');
+        key('Enter');
+        expect(editor.getText()).toBe('/**\n * \n */');
+        expect(editor.getCaret()).toEqual({ line: 1, character: 3 });
+    });
+});

@@ -88,6 +88,7 @@ export type EditorCommand =
     | 'moveLineUp'
     | 'moveLineDown'
     | 'toggleLineComment'
+    | 'toggleBlockComment'
     | 'insertTab'
     | 'indent'
     | 'outdent'
@@ -100,6 +101,7 @@ export interface CommandOptions {
     /* Clamped to 1 through 16. */
     tabSize?: number;
     insertSpaces?: boolean;
+    /* Replaces the line comment marker of the language. */
     commentToken?: string;
     /* Whether the plain word commands stop at camel humps. The explicit camel commands always do. */
     camelCase?: boolean;

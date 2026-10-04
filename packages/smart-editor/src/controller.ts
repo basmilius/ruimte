@@ -26,6 +26,7 @@ const MODIFYING = new Set<EditorCommand>([
     'moveLineUp',
     'moveLineDown',
     'toggleLineComment',
+    'toggleBlockComment',
     'insertTab',
     'indent',
     'outdent',
@@ -36,8 +37,6 @@ const MODIFYING = new Set<EditorCommand>([
 
 /* Typing in the same stretch is one undo step until a pause this long. */
 const TYPING_PAUSE_MS = 750;
-const HASH_COMMENTS = /^(python|py|sh|shell|bash|zsh|yaml|yml|toml|ruby|rb|perl|r|makefile|dockerfile|powershell|ini|properties|nix)$/;
-const DASH_COMMENTS = /^(sql|lua|haskell|hs)$/;
 const PAIR_CHARACTER = /^[()[\]{}'"`;]$/;
 
 /*
@@ -215,7 +214,6 @@ export class InputController {
         smartSemicolon: boolean;
         language: string;
         camelCase: boolean;
-        commentToken: string;
     } {
         const language = this.view.settings.language ?? 'plaintext';
         return {
@@ -224,8 +222,7 @@ export class InputController {
             autoClosingPairs: true,
             smartSemicolon: true,
             language,
-            camelCase: true,
-            commentToken: HASH_COMMENTS.test(language) ? '#' : DASH_COMMENTS.test(language) ? '--' : '//'
+            camelCase: true
         };
     }
 

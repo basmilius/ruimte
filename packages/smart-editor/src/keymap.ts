@@ -3,6 +3,8 @@ import type { KeyChord } from './types.ts';
 
 export interface KeyLike {
     key: string;
+    /* The physical key, for a chord whose character depends on the layout or on Option. */
+    code?: string;
     ctrlKey: boolean;
     metaKey: boolean;
     altKey: boolean;
@@ -73,8 +75,11 @@ export function keyAction(event: KeyLike, apple: boolean): KeyAction | null {
     if (mod && key === 'g') {
         return command('selectNextOccurrence');
     }
-    if (mod && key === '/') {
+    if (mod && !alt && !shift && key === '/') {
         return command('toggleLineComment');
+    }
+    if (apple ? mod && alt && !shift && event.code === 'Slash' : mod && shift && !alt && (key === '/' || key === '?')) {
+        return command('toggleBlockComment');
     }
     if (mod && shift && key === 'k') {
         return command('deleteLine');

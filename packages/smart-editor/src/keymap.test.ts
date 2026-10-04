@@ -42,7 +42,14 @@ describe('keyAction', () => {
         expect(keyAction(key('Enter'), true)).toEqual({ type: 'command', command: 'insertNewline' });
         expect(keyAction(key('Backspace'), true)).toEqual({ type: 'command', command: 'smartBackspace' });
         expect(keyAction(key('Tab', { shiftKey: true }), true)).toEqual({ type: 'command', command: 'outdent' });
+        expect(keyAction(key('Tab'), true)).toEqual({ type: 'command', command: 'insertTab' });
         expect(keyAction(key('/', { metaKey: true }), true)).toEqual({ type: 'command', command: 'toggleLineComment' });
+    });
+
+    test('toggles a block comment with the platform`s chord for each system', () => {
+        expect(keyAction(key('÷', { metaKey: true, altKey: true, code: 'Slash' }), true)).toEqual({ type: 'command', command: 'toggleBlockComment' });
+        expect(keyAction(key('?', { ctrlKey: true, shiftKey: true }), false)).toEqual({ type: 'command', command: 'toggleBlockComment' });
+        expect(keyAction(key('/', { ctrlKey: true }), false)).toEqual({ type: 'command', command: 'toggleLineComment' });
     });
 
     test('moves by word with Option on macOS and Ctrl elsewhere, and to a line end with Cmd', () => {

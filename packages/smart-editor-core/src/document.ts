@@ -1,6 +1,9 @@
 import { CloserTracker } from './closer-tracker.ts';
+import { planBlockComment, planLineComments } from './comments.ts';
+import type { CommentPlan } from './comments.ts';
 import { planEnter } from './enter.ts';
-import type { EnterOptions, EnterPlan, EnterSource } from './enter.ts';
+import type { EnterOptions, EnterPlan } from './enter.ts';
+import type { EditSource } from './edit-source.ts';
 import { vueRegionAt } from './languages.ts';
 import { scanBrackets } from './brackets.ts';
 import type { BracketIndex } from './brackets.ts';
@@ -628,7 +631,10 @@ export class DocumentModel {
         if (command === 'insertTab') {
             return this.insertTab(tabSize, options);
         }
-        if (command === 'indent' || command === 'outdent' || command === 'toggleLineComment') {
+        if (command === 'toggleLineComment' || command === 'toggleBlockComment') {
+            return this.toggleComment(command, tabSize, options, language);
+        }
+        if (command === 'indent' || command === 'outdent') {
             return this.changeLineIndentation(command, tabSize, options);
         }
         const selectedLines = this.selectedLines();
@@ -823,28 +829,27 @@ export class DocumentModel {
         return this.changeSelections([...this.selections, ...additions]);
     }
 
-    private changeLineIndentation(command: 'indent' | 'outdent' | 'toggleLineComment', tabSize: number, options: CommandOptions): boolean {
-        const token = options.commentToken ?? '//';
-        if (command === 'toggleLineComment' && !token) {
-            return false;
-        }
+    private changeLineIndentation(command: 'indent' | 'outdent', tabSize: number, options: CommandOptions): boolean {
         const indentation = options.insertSpaces === false ? '\t' : ' '.repeat(tabSize);
-        const selectedLines = this.selectedLines();
-        const uncomment = command === 'toggleLineComment' && selectedLines.every((index) => this.getLine(index).text.trimStart().startsWith(token));
-        const edits = selectedLines.map((index) => {
+        const edits = this.selectedLines().map((index) => {
             const line = this.getLine(index);
             if (command === 'indent') {
                 return { from: line.start, to: line.start, text: indentation };
             }
-            if (command === 'outdent') {
-                const length = line.text.startsWith('\t') ? 1 : Math.min(line.text.match(/^ */)?.[0].length ?? 0, tabSize);
-                return { from: line.start, to: line.start + length, text: '' };
-            }
-            const at = line.start + indentLength(line.text);
-            const length = uncomment ? token.length + (this.rope.charAt(at + token.length) === ' ' ? 1 : 0) : 0;
-            return { from: at, to: at + length, text: uncomment ? '' : token + ' ' };
+            const length = line.text.startsWith('\t') ? 1 : Math.min(line.text.match(/^ */)?.[0].length ?? 0, tabSize);
+            return { from: line.start, to: line.start + length, text: '' };
         });
         return this.applyEdits(edits, { source: 'command' });
+    }
+
+    private toggleComment(command: 'toggleLineComment' | 'toggleBlockComment', tabSize: number, options: CommandOptions, language: string): boolean {
+        const commentOptions = { language, tabSize, insertSpaces: options.insertSpaces !== false, lineToken: options.commentToken };
+        const source = this.editSource(language);
+        const plan: CommentPlan | null =
+            command === 'toggleLineComment'
+                ? planLineComments(source, this.selections, commentOptions)
+                : planBlockComment(source, this.selections, commentOptions);
+        return plan !== null && this.applyEdits(plan.edits, { source: 'command', selections: plan.selections });
     }
 
     /* The lines the carets and selections touch. A selection that ends at the start of a line does not touch it. */
@@ -944,7 +949,7 @@ export class DocumentModel {
     }
 
     private insertNewline(options: EnterOptions): boolean {
-        const source = this.enterSource(options.language);
+        const source = this.editSource(options.language);
         const plan = (reach: boolean): EnterPlan[] =>
             this.selections.map((selection) => {
                 const { from, to } = rangeOf(selection);
@@ -961,8 +966,9 @@ export class DocumentModel {
         );
     }
 
-    private enterSource(language: string): EnterSource {
+    private editSource(language: string): EditSource {
         return {
+            lineCount: this.getLineCount(),
             slice: (from, to) => this.slice(from, to),
             charAt: (offset) => this.rope.charAt(offset),
             lineAt: (offset) => this.rope.lineAt(offset),
