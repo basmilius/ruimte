@@ -1,4 +1,5 @@
 export { createSmartEditorEngine } from './engine.ts';
+export { DEFAULT_SMART_KEYS } from './smart-keys.ts';
 export { shikiScopeColors, shikiTokenizers } from './shiki.ts';
 export type {
     Editor,
@@ -23,6 +24,7 @@ export type {
     EditorMarker,
     EditorMarkerSeverity,
     EditorRect,
+    EditorSmartKeys,
     EditorOptions,
     EditorPosition,
     EditorRange,

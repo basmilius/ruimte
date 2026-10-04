@@ -80,6 +80,41 @@
                 "description": "In files, the editor and diffs."
             }
         },
+        "smartKeys": {
+            "title": "Smart keys",
+            "pairBrackets": {
+                "label": "Pair brackets",
+                "description": "Typing ( [ or { adds the closing bracket, and typing it goes over it."
+            },
+            "pairQuotes": {
+                "label": "Pair quotes",
+                "description": "Typing a quote adds the closing one."
+            },
+            "surroundSelection": {
+                "label": "Surround selection",
+                "description": "Typing a bracket or quote over a selection wraps it."
+            },
+            "tabOut": {
+                "label": "Tab out of closers",
+                "description": "Tab steps over a bracket or quote the editor added."
+            },
+            "smartEnter": {
+                "label": "Smart indent on Enter",
+                "description": "Enter indents the new line, continues comments and closes braces."
+            },
+            "indentOnPaste": {
+                "label": "Indent on paste",
+                "description": "A pasted block moves to the indentation of the line it lands on."
+            },
+            "smartSemicolon": {
+                "label": "Smart semicolon",
+                "description": "A semicolon typed inside a call goes to the end of the statement."
+            },
+            "camelHumps": {
+                "label": "Camel humps",
+                "description": "Moving by word also stops inside camelCase and snake_case words."
+            }
+        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",

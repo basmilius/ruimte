@@ -1,5 +1,6 @@
 import { changedSpan, DocumentModel, type EditorCommand, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
+import { resolveSmartKeys } from './smart-keys.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import type {
     Editor,
@@ -23,6 +24,7 @@ import type {
     EditorRange,
     EditorRect,
     EditorSemanticToken,
+    EditorSmartKeys,
     EditorTextChange,
     EditorTheme,
     EditorWidget,
@@ -64,7 +66,8 @@ class SmartEditor implements Editor {
             insertSpaces: options.indentation?.insertSpaces ?? true,
             readOnly: options.readOnly ?? false,
             readOnlyReason: options.readOnlyReason,
-            wrap: options.wrap ?? false
+            wrap: options.wrap ?? false,
+            smartKeys: resolveSmartKeys(options.smartKeys)
         };
         this.view = new EditorView(element, this.model, this.settings);
         this.controller = new InputController(this.view, {
@@ -441,6 +444,10 @@ class SmartEditor implements Editor {
 
     onScope(listener: (scope: readonly EditorBlock[]) => void): () => void {
         return this.view.onScope(listener);
+    }
+
+    setSmartKeys(keys: Partial<EditorSmartKeys>): void {
+        this.settings.smartKeys = { ...this.settings.smartKeys, ...keys };
     }
 
     setIndentation(indentation: EditorIndentation): void {

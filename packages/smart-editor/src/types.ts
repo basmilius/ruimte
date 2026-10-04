@@ -18,12 +18,33 @@ export interface EditorOptions {
     readonly wrap?: boolean;
     /* The width of a tab stop, and whether Tab inserts spaces; 4 and spaces without them. */
     readonly indentation?: EditorIndentation;
+    /* What it does as a person types; whatever is left out is on, except the camel humps. */
+    readonly smartKeys?: Partial<EditorSmartKeys>;
     /* One-based, the line the cursor opens on. */
     readonly line?: number;
     /* One-based, where on that line. */
     readonly column?: number;
     /* In pixels, where the view opens; without it the cursor's line is brought into view. */
     readonly scrollTop?: number;
+}
+
+/* What the editor does by itself as a person types. Every one is on, except the camel humps. */
+export interface EditorSmartKeys {
+    /* A typed bracket brings its closer, and typing the closer goes over it. */
+    readonly autoPairBrackets: boolean;
+    readonly autoPairQuotes: boolean;
+    /* A bracket or quote typed over a selection wraps it. */
+    readonly surroundSelection: boolean;
+    /* Tab steps over a closer the editor added. */
+    readonly tabOutOfClosers: boolean;
+    /* Enter works out the indentation of the new line, continues comments and closes braces. */
+    readonly smartIndentOnEnter: boolean;
+    /* A pasted block moves to the indentation of the line it lands on. */
+    readonly indentOnPaste: boolean;
+    /* A `;` typed inside a call goes to the end of the statement. */
+    readonly smartSemicolon: boolean;
+    /* Moving by word also stops inside `camelCase` and `snake_case` words. Off. */
+    readonly camelHumps: boolean;
 }
 
 /* A part of the document with a header line, such as a function, a class or a method. */
@@ -228,6 +249,8 @@ export interface Editor {
     endFind(): void;
     setWrap(wrap: boolean): void;
     setIndentation(indentation: EditorIndentation): void;
+    /* Changes what it does as a person types; the keys left out stay as they are. */
+    setSmartKeys(keys: Partial<EditorSmartKeys>): void;
     /* Marks that follow their lines through edits until the host sets them again. */
     setChangeMarks(marks: readonly EditorChangeMark[]): void;
     /* The blocks sticky scroll and the breadcrumb go by. The editor reads them from brackets and

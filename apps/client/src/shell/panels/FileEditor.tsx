@@ -54,8 +54,9 @@ export function FileEditor({
     const codeFontSize = useSettings((s) => s.codeFontSize);
     const font = useSettings((s) => s.font);
     const codeLigatures = useSettings((s) => s.codeLigatures);
+    const smartKeys = useSettings((s) => s.smartKeys);
     // What the editor mounts with; every later change reaches it through the effects below.
-    const initial = useRef({ disk, language, wrap, indentation, readOnlyReason, theme, reveal });
+    const initial = useRef({ disk, language, wrap, indentation, smartKeys, readOnlyReason, theme, reveal });
     const revealed = useRef<number | null>(null);
     const readOnly = readOnlyReason !== null;
 
@@ -77,6 +78,7 @@ export function FileEditor({
                 ...(first.readOnlyReason === null ? {} : { readOnly: true, readOnlyReason: first.readOnlyReason }),
                 wrap: first.wrap,
                 indentation: first.indentation,
+                smartKeys: first.smartKeys,
                 ...openingPlace(first.reveal, viewStates.get(key), placeholderScroll.current)
             }
         );
@@ -108,6 +110,10 @@ export function FileEditor({
     useEffect(() => {
         editorRef.current?.setIndentation(indentation);
     }, [indentation]);
+
+    useEffect(() => {
+        editorRef.current?.setSmartKeys(smartKeys);
+    }, [smartKeys]);
 
     useEffect(() => {
         editorRef.current?.setReadOnly(readOnly, readOnlyReason ?? undefined);

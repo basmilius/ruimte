@@ -95,6 +95,54 @@ export const SETTINGS_INDEX: readonly SearchEntry[] = [
         label: 'settings:appearance.code.wrap.label',
         description: 'settings:appearance.code.wrap.description'
     },
+    {
+        id: 'appearance.smartKeys.pairBrackets',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.pairBrackets.label',
+        description: 'settings:appearance.smartKeys.pairBrackets.description'
+    },
+    {
+        id: 'appearance.smartKeys.pairQuotes',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.pairQuotes.label',
+        description: 'settings:appearance.smartKeys.pairQuotes.description'
+    },
+    {
+        id: 'appearance.smartKeys.surroundSelection',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.surroundSelection.label',
+        description: 'settings:appearance.smartKeys.surroundSelection.description'
+    },
+    {
+        id: 'appearance.smartKeys.tabOut',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.tabOut.label',
+        description: 'settings:appearance.smartKeys.tabOut.description'
+    },
+    {
+        id: 'appearance.smartKeys.smartEnter',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.smartEnter.label',
+        description: 'settings:appearance.smartKeys.smartEnter.description'
+    },
+    {
+        id: 'appearance.smartKeys.indentOnPaste',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.indentOnPaste.label',
+        description: 'settings:appearance.smartKeys.indentOnPaste.description'
+    },
+    {
+        id: 'appearance.smartKeys.smartSemicolon',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.smartSemicolon.label',
+        description: 'settings:appearance.smartKeys.smartSemicolon.description'
+    },
+    {
+        id: 'appearance.smartKeys.camelHumps',
+        section: 'appearance',
+        label: 'settings:appearance.smartKeys.camelHumps.label',
+        description: 'settings:appearance.smartKeys.camelHumps.description'
+    },
     { id: 'views.drawing.snap', section: 'views', label: 'settings:views.drawing.snap.label', description: 'settings:views.drawing.snap.description' },
     {
         id: 'views.browser.swipe',

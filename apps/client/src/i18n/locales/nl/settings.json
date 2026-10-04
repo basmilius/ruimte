@@ -80,6 +80,41 @@
                 "description": "In bestanden, de editor en diffs."
             }
         },
+        "smartKeys": {
+            "title": "Slimme toetsen",
+            "pairBrackets": {
+                "label": "Haakjes automatisch sluiten",
+                "description": "Typ je ( [ of {, dan komt de sluithaak vanzelf, en typ je die zelf, dan stap je eroverheen."
+            },
+            "pairQuotes": {
+                "label": "Aanhalingstekens automatisch sluiten",
+                "description": "Typ je een aanhalingsteken, dan komt het sluitende vanzelf."
+            },
+            "surroundSelection": {
+                "label": "Selectie omringen",
+                "description": "Typ je een haakje of aanhalingsteken over een selectie, dan omringt het die."
+            },
+            "tabOut": {
+                "label": "Met Tab uit haakjes",
+                "description": "Tab stapt over een haakje of aanhalingsteken dat de editor toevoegde."
+            },
+            "smartEnter": {
+                "label": "Slim inspringen bij Enter",
+                "description": "Enter laat de nieuwe regel inspringen, zet commentaar voort en sluit accolades."
+            },
+            "indentOnPaste": {
+                "label": "Inspringen bij plakken",
+                "description": "Een geplakt blok springt in tot de inspringing van de regel waar het landt."
+            },
+            "smartSemicolon": {
+                "label": "Slimme puntkomma",
+                "description": "Een puntkomma die je binnen een aanroep typt, gaat naar het einde van de instructie."
+            },
+            "camelHumps": {
+                "label": "Camel humps",
+                "description": "Woord voor woord bewegen stopt ook binnen camelCase- en snake_case-woorden."
+            }
+        },
         "sidebar": {
             "label": "Sidebar",
             "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",

@@ -1,4 +1,4 @@
-import type { EditorCommand, Selection, TextEdit } from '@ruimte/smart-editor-core';
+import type { CommandOptions, EditorCommand, Selection, TextEdit } from '@ruimte/smart-editor-core';
 import { replacementEdits } from './input.ts';
 import { chordMatches, type KeyAction, keyAction, type MoveKey } from './keymap.ts';
 import { NativeInput } from './native-input.ts';
@@ -224,22 +224,21 @@ export class InputController {
         this.view.revealCaret();
     }
 
-    private commandOptions(): {
-        tabSize: number;
-        insertSpaces: boolean;
-        autoClosingPairs: boolean;
-        smartSemicolon: boolean;
-        language: string;
-        camelCase: boolean;
-    } {
-        const language = this.view.settings.language ?? 'plaintext';
+    private commandOptions(): CommandOptions {
+        const { settings } = this.view;
+        const keys = settings.smartKeys;
         return {
-            tabSize: this.view.settings.tabSize,
-            insertSpaces: this.view.settings.insertSpaces,
-            autoClosingPairs: true,
-            smartSemicolon: true,
-            language,
-            camelCase: true
+            tabSize: settings.tabSize,
+            insertSpaces: settings.insertSpaces,
+            autoClosingBrackets: keys.autoPairBrackets,
+            autoClosingQuotes: keys.autoPairQuotes,
+            surroundSelection: keys.surroundSelection,
+            tabOutOfClosers: keys.tabOutOfClosers,
+            smartEnter: keys.smartIndentOnEnter,
+            indentOnPaste: keys.indentOnPaste,
+            smartSemicolon: keys.smartSemicolon,
+            language: settings.language ?? 'plaintext',
+            camelCase: keys.camelHumps
         };
     }
 

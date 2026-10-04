@@ -267,3 +267,29 @@ describe('the onboarding', () => {
         expect(settingsFrom({ onboardingSeen: 'yes' as unknown as boolean }).onboardingSeen).toBe(false);
     });
 });
+
+describe('smart keys', () => {
+    test('are on for a fresh client, except the camel humps', () => {
+        expect(settingsFrom({}).smartKeys).toEqual({
+            autoPairBrackets: true,
+            autoPairQuotes: true,
+            surroundSelection: true,
+            tabOutOfClosers: true,
+            smartIndentOnEnter: true,
+            indentOnPaste: true,
+            smartSemicolon: true,
+            camelHumps: false
+        });
+    });
+
+    test('keep what is stored and take the default for what is not, or is not a switch', () => {
+        const stored = { autoPairQuotes: false, camelHumps: true, smartSemicolon: 'no' as unknown as boolean };
+        expect(settingsFrom({ smartKeys: stored as never }).smartKeys).toMatchObject({
+            autoPairQuotes: false,
+            camelHumps: true,
+            smartSemicolon: true,
+            autoPairBrackets: true
+        });
+        expect(settingsFrom({ smartKeys: null as never }).smartKeys.camelHumps).toBe(false);
+    });
+});

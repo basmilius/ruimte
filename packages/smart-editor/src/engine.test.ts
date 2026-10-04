@@ -654,3 +654,47 @@ describe('typed handlers', () => {
         expect(editor.getText()).toBe('foobar');
     });
 });
+
+describe('smart keys', () => {
+    test('are on at the start, except the camel humps', () => {
+        const { editor, press: key, type } = setup({ text: '', language: 'typescript' });
+        type('(');
+        expect(editor.getText()).toBe('()');
+        key('Tab');
+        type('fooBar');
+        key('ArrowLeft', { ctrlKey: true });
+        type('X');
+        expect(editor.getText()).toBe('()XfooBar');
+    });
+
+    test('stop at the camel humps when they are on', () => {
+        const { editor, press: key, type } = setup({ text: 'fooBar', smartKeys: { camelHumps: true } });
+        key('ArrowRight', { ctrlKey: true });
+        type('X');
+        expect(editor.getText()).toBe('fooXBar');
+    });
+
+    test('can leave out a pair or a wrap, now or later', () => {
+        const { editor, press: key, type } = setup({ text: '', language: 'typescript', smartKeys: { autoPairBrackets: false } });
+        type('(');
+        expect(editor.getText()).toBe('(');
+        editor.setSmartKeys({ surroundSelection: false });
+        key('a', { ctrlKey: true });
+        type('[');
+        expect(editor.getText()).toBe('[');
+        editor.setSmartKeys({ autoPairBrackets: true });
+        type('{');
+        expect(editor.getText()).toBe('[{}');
+    });
+
+    test('can leave out the indentation of Enter', () => {
+        const { editor, press: key, type } = setup({ text: '', language: 'typescript', smartKeys: { smartIndentOnEnter: false } });
+        type('{');
+        key('Enter');
+        expect(editor.getText()).toBe('{\n}');
+        key('z', { ctrlKey: true });
+        editor.setSmartKeys({ smartIndentOnEnter: true });
+        key('Enter');
+        expect(editor.getText()).toBe('{\n    \n}');
+    });
+});

@@ -17,6 +17,7 @@ import type {
     EditorHighlightKind,
     EditorMarkerSeverity,
     EditorRect,
+    EditorSmartKeys,
     LineToken,
     LineTokenizer,
     ScopeColors
@@ -29,6 +30,7 @@ export interface ViewSettings {
     readOnly: boolean;
     readOnlyReason: string | undefined;
     wrap: boolean;
+    smartKeys: EditorSmartKeys;
 }
 
 /* The lines past the visible ones that are colored ahead of the scroll, and how long one slice of that work may take. */

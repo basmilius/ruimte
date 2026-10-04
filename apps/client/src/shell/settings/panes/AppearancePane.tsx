@@ -7,6 +7,7 @@ import { SettingsRow } from '@basmilius/desktop-ui/settings';
 import { chooseLanguage, chooseRegion } from '@/i18n';
 import { APP_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_SYSTEM } from '@/i18n/languages';
 import { CodeSection } from '@/shell/settings/panes/CodeSection';
+import { SmartKeysSection } from '@/shell/settings/panes/SmartKeysSection';
 import { FontSection } from '@/shell/settings/panes/FontSection';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useSettings } from '@/state/settings';
@@ -227,6 +228,7 @@ export function AppearancePane() {
             </SettingsSection>
             <FontSection />
             <CodeSection />
+            <SmartKeysSection />
         </>
     );
 }

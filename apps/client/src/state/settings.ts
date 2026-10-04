@@ -5,9 +5,34 @@ import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@basmilius/desktop-ui/format';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
+import type { EditorSmartKeys } from '@ruimte/smart-editor';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 
 export const SETTINGS_STORAGE_KEY = 'ruimte.settings';
+
+/* The editor's own defaults, written out so the settings never load the editor to know them. */
+export const DEFAULT_SMART_KEYS: EditorSmartKeys = {
+    autoPairBrackets: true,
+    autoPairQuotes: true,
+    surroundSelection: true,
+    tabOutOfClosers: true,
+    smartIndentOnEnter: true,
+    indentOnPaste: true,
+    smartSemicolon: true,
+    camelHumps: false
+};
+
+/* A key a client has not stored is what a fresh one gets, so the keys a later version adds start as it decides. */
+export function smartKeysFrom(stored: unknown): EditorSmartKeys {
+    const keys: Partial<Record<keyof EditorSmartKeys, unknown>> = typeof stored === 'object' && stored !== null ? stored : {};
+    const result = { ...DEFAULT_SMART_KEYS };
+    for (const name of Object.keys(DEFAULT_SMART_KEYS) as (keyof EditorSmartKeys)[]) {
+        if (typeof keys[name] === 'boolean') {
+            result[name] = keys[name];
+        }
+    }
+    return result;
+}
 
 export const MONO_FONTS = [
     { id: 'system', label: 'System', stack: 'ui-monospace, "SF Mono", Menlo, monospace' },
@@ -120,6 +145,8 @@ export interface Settings {
     codeWrap: boolean;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
+    /* What the editor does by itself as you type. The defaults are the editor's own: all on, except the camel humps. */
+    smartKeys: EditorSmartKeys;
     /* Whether a diff draws the two sides next to each other or one patch under the other. */
     diffLayout: 'stacked' | 'split';
     /* Whether a diff counts and shows changes that are whitespace alone. */
@@ -208,6 +235,7 @@ const DEFAULT_SETTINGS: Settings = {
     codeThemeDark: 'ruimte-dark',
     codeWrap: false,
     codeLigatures: true,
+    smartKeys: { ...DEFAULT_SMART_KEYS },
     diffLayout: 'stacked',
     diffWhitespace: true,
     worktreeMergeStrategy: 'squash',
@@ -257,6 +285,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeThemeDark: codeThemeFrom(stored.codeThemeDark, 'dark', DEFAULT_SETTINGS.codeThemeDark),
         codeWrap: stored.codeWrap === true,
         codeLigatures: stored.codeLigatures !== false,
+        smartKeys: smartKeysFrom(stored.smartKeys),
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
         accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
         // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
@@ -366,6 +395,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeThemeDark,
                 codeWrap,
                 codeLigatures,
+                smartKeys,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,
@@ -405,6 +435,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeThemeDark,
                 codeWrap,
                 codeLigatures,
+                smartKeys,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,

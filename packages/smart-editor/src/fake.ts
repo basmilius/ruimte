@@ -22,6 +22,7 @@ import type {
     EditorRange,
     EditorRect,
     EditorSemanticToken,
+    EditorSmartKeys,
     EditorTextChange,
     EditorTheme,
     EditorWidget
@@ -69,6 +70,7 @@ export class FakeEditor implements Editor {
         this.path = options.path;
         this.wrap = options.wrap ?? false;
         this.indentation = options.indentation ?? { tabSize: 4, insertSpaces: true };
+        this.smartKeys = options.smartKeys ?? {};
         this.theme = options.theme;
         this.readOnly = options.readOnly ?? false;
         this.readOnlyReason = options.readOnlyReason;
@@ -274,6 +276,12 @@ export class FakeEditor implements Editor {
         for (const listener of [...this.scopes]) {
             listener(scope);
         }
+    }
+
+    smartKeys: Partial<EditorSmartKeys>;
+
+    setSmartKeys(keys: Partial<EditorSmartKeys>): void {
+        this.smartKeys = keys;
     }
 
     setIndentation(indentation: EditorIndentation): void {

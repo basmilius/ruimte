@@ -1,9 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import { DocumentModel } from '@ruimte/smart-editor-core';
+import { DEFAULT_SMART_KEYS } from './smart-keys.ts';
 import { createPage } from './testing.ts';
 import { EditorView, type ViewSettings } from './view.ts';
 
-const SETTINGS: ViewSettings = { language: 'typescript', tabSize: 4, insertSpaces: true, readOnly: false, readOnlyReason: undefined, wrap: false };
+const SETTINGS: ViewSettings = {
+    language: 'typescript',
+    tabSize: 4,
+    insertSpaces: true,
+    readOnly: false,
+    readOnlyReason: undefined,
+    wrap: false,
+    smartKeys: DEFAULT_SMART_KEYS
+};
 
 function mount(text: string, settings: Partial<ViewSettings> = {}) {
     const page = createPage();
