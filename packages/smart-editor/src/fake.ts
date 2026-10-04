@@ -395,8 +395,18 @@ export class FakeEditor implements Editor {
         return subscribe(this.views, listener);
     }
 
-    /* The editor scrolling. */
-    scroll(): void {
+    /* What `getVisibleRange` answers; the whole text until a test scrolls. */
+    visibleRange: EditorRange | null = null;
+
+    getVisibleRange(): EditorRange {
+        return this.visibleRange ?? { start: { line: 0, character: 0 }, end: this.positionAt(Number.MAX_SAFE_INTEGER) };
+    }
+
+    /* The editor scrolling, to a range of lines when a test says which. */
+    scroll(range?: EditorRange): void {
+        if (range !== undefined) {
+            this.visibleRange = range;
+        }
         emit(this.views);
     }
 

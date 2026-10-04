@@ -1055,6 +1055,12 @@ export class EditorView {
         return lines;
     }
 
+    /* The first and last line in view, zero-based. */
+    visibleLines(): { first: number; last: number } {
+        const top = this.viewport.scrollTop;
+        return { first: this.layout.rowAt(top).line, last: this.layout.rowAt(top + this.viewportHeight).line };
+    }
+
     /* The find matches and the changes as ticks in the scroll track, redrawn when what they stand on changes. */
     private paintOverview(): void {
         const trackHeight = this.viewportHeight;

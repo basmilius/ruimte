@@ -265,6 +265,8 @@ export interface Editor {
     onHover(listener: (hover: EditorHover | null) => void): () => void;
     /* The character cell at a position in screen coordinates, or null where the editor has no layout. */
     rectAt(position: EditorPosition): EditorRect | null;
+    /* The lines in view, from the start of the first to the end of the last. */
+    getVisibleRange(): EditorRange;
     /* The editor scrolled or changed size, so whatever is placed by `rectAt` is somewhere else. */
     onViewChange(listener: () => void): () => void;
     /* Rows of the host's own DOM under lines of the text, replacing the ones set before. */

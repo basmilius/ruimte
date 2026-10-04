@@ -296,6 +296,11 @@ class SmartEditor implements Editor {
         this.view.setLink(range === null ? null : { from: this.offsetAt(range.start), to: this.offsetAt(range.end) });
     }
 
+    getVisibleRange(): EditorRange {
+        const { first, last } = this.view.visibleLines();
+        return { start: { line: first, character: 0 }, end: this.positionAt(this.model.getLine(last).end) };
+    }
+
     positionAt(offset: number): EditorPosition {
         const { line, column } = this.model.positionAt(offset);
         return { line, character: column };
