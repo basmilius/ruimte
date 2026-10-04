@@ -237,6 +237,11 @@ export class LspDocument {
         return this.feature('textDocument/diagnostic', { previousResultId, identifier }, options);
     }
 
+    /* Any feature by its LSP method, for a caller that gets the method from elsewhere. `params` leave out `textDocument`; a resolve method takes the item. */
+    request<T = unknown>(method: string, params: object, options?: DocumentRequestOptions): Promise<T> {
+        return method.endsWith('/resolve') ? (this.resolve(method, params, options) as Promise<T>) : this.feature<T>(method, params, options);
+    }
+
     /* Sends `didClose` after every change queued before it. The uri stays taken until then, so a reopen cannot overtake it. */
     close(): Promise<void> {
         if (this.closePromise) {

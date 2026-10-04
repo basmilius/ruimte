@@ -57,6 +57,7 @@ export interface ConnectionServices {
     diagrams: Subscribable;
     launchStore?: Subscribable;
     launches?: Subscribable;
+    language?: Subscribable;
     folders: Attachable;
     statuses: Attachable;
     usage: Subscribable;
@@ -130,6 +131,7 @@ export function connectionOpener(services: ConnectionServices): (channel: Client
             services.diagrams.subscribe(clientId, sink),
             services.launchStore?.subscribe(clientId, sink) ?? (() => undefined),
             services.launches?.subscribe(clientId, sink) ?? (() => undefined),
+            services.language?.subscribe(clientId, sink) ?? (() => undefined),
             services.folders.subscribe(clientId, sink),
             services.statuses.subscribe(clientId, sink),
             services.usage.subscribe(clientId, sink),

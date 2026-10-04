@@ -138,6 +138,7 @@
         "@ruimte/plan": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
+        "@ruimte/smart-editor-lsp": "workspace:*",
         "@xterm/addon-serialize": "^0.14.0",
         "@xterm/headless": "^6.0.0",
         "linkedom": "^0.18.13",

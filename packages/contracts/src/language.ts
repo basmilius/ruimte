@@ -52,7 +52,7 @@ export const LanguageInstallPayloadSchema = z.object({ server: LanguageServerKin
 
 export const LanguageServerTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, server: LanguageServerKindSchema });
 
-/* The status the kind has right after the request: `installing` or `starting`, with the end of it coming as an event. */
+/* The status right after the request: an install answers while it runs and its end comes as an event, a restart answers once the server is up again, crashed again, or not installed. */
 export const LanguageServerStatusResultSchema = z.object({ status: LanguageServerStatusSchema });
 
 export const LanguageLogLineSchema = z.object({
@@ -67,6 +67,7 @@ export type LanguageLogLine = z.infer<typeof LanguageLogLineSchema>;
 export const LanguageLogResultSchema = z.object({ lines: z.array(LanguageLogLineSchema) });
 
 export const LanguageDocumentTargetPayloadSchema = z.object({ projectId: ProjectIdSchema, path: z.string().min(1) });
+export type LanguageDocumentTargetPayload = z.infer<typeof LanguageDocumentTargetPayloadSchema>;
 
 /*
  * The text replaces what the daemon holds when another client already has the file open, so two
@@ -76,6 +77,7 @@ export const LanguageDocumentOpenPayloadSchema = LanguageDocumentTargetPayloadSc
     languageId: z.string().min(1),
     text: z.string()
 });
+export type LanguageDocumentOpenPayload = z.infer<typeof LanguageDocumentOpenPayloadSchema>;
 
 /* What each method of the document may ask, by LSP method, as the options its server gave (`{}` for a plain yes). Empty while no server is up. */
 export const LanguageProvidersSchema = z.record(z.string(), z.unknown());
@@ -110,10 +112,26 @@ export const LanguageDocumentChangePayloadSchema = LanguageDocumentTargetPayload
     baseVersion: z.number().int().positive(),
     changes: z.array(LanguageContentChangeSchema).min(1)
 });
+export type LanguageDocumentChangePayload = z.infer<typeof LanguageDocumentChangePayloadSchema>;
 
 export const LanguageDocumentChangeResultSchema = z.object({ version: z.number().int().positive() });
 
-export const LANGUAGE_STALE_DOCUMENT = 'stale-document';
+/* The codes a language request can fail with, besides the generic ones every request has. */
+export const LANGUAGE_ERROR_CODES = {
+    // The client's base or version is not the one the daemon holds, so the client opens the document again.
+    staleDocument: 'stale-document',
+    documentNotOpen: 'document-not-open',
+    // No server of the kind is up: not installed, still starting, or crashed.
+    unavailable: 'language-unavailable',
+    unsupported: 'language-unsupported',
+    cancelled: 'language-cancelled',
+    // The server answered with an error.
+    failed: 'language-failed',
+    badPath: 'bad-path',
+    projectNotFound: 'project-not-found',
+    installFailed: 'install-failed'
+} as const;
+export type LanguageErrorCode = (typeof LANGUAGE_ERROR_CODES)[keyof typeof LANGUAGE_ERROR_CODES];
 
 /* The LSP methods a client may ask of a document. The daemon adds the `textDocument` itself. */
 export const LANGUAGE_METHODS = [
@@ -158,6 +176,7 @@ export const LanguageRequestPayloadSchema = LanguageDocumentTargetPayloadSchema.
     version: z.number().int().positive().optional(),
     server: z.string().optional()
 });
+export type LanguageRequestPayload = z.infer<typeof LanguageRequestPayloadSchema>;
 
 /* `result` is the LSP 3.17 result of the method, `server` the process that answered and `version` the version it answered for. */
 export const LanguageRequestResultSchema = z.object({

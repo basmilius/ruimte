@@ -103,6 +103,8 @@ import { readServedFile } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerLaunchHandlers } from './handlers/launches.ts';
+import { registerLanguageHandlers } from './handlers/language.ts';
+import { LanguageHost } from './language/host.ts';
 import { agentLaunches } from './launches/agent-host.ts';
 import { LaunchRunner } from './launches/runner.ts';
 import { managerSessions } from './launches/sessions.ts';
@@ -832,6 +834,14 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         disconnect: disconnectSession
     });
     const machineHome = new MachineHome(config.home);
+    const language = new LanguageHost({
+        root: join(config.home, 'language-servers'),
+        folderOf: (projectId) => projects.index.folderOf(projectId),
+        holders: (projectId) => projects.holdersOf(projectId),
+        machineHome
+    });
+    projects.attachLanguage(language);
+    registerLanguageHandlers(dispatcher, language);
     registerFsHandlers(
         dispatcher,
         folders,
@@ -985,6 +995,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         diagrams,
         launchStore,
         launches,
+        language,
         folders,
         statuses,
         usage,
@@ -1273,6 +1284,7 @@ export async function startDaemon(config: ServerConfig): Promise<void> {
         diagrams.closeAll();
         launches.close();
         launchStore.closeAll();
+        await step('Stopping language servers', () => language.close());
         peers.closeAll();
         lanDoor.stop();
         await relay.stop();

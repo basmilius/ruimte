@@ -96,6 +96,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - A machine is on at most one account and is shared only with its owner: only the local secret (the app on it, `ruimte login`) puts it on one, another account gets `machine-has-account` until a person on the machine leaves the first, a machine takes only a statement v2, and a machine on an account only one of that account (`apps/server/README.md`, "One account per machine").
 - A zustand selector that builds a new array or object per call loops forever under `useShallow`: select the object and derive with `useMemo`.
 
+- Language servers (`apps/server/src/language`) are installed only when a person presses Install, and never by an agent or a verb. The daemon runs them itself, one per project per kind, shared by every client of the project, and a server that crashes stays crashed until a person restarts it. A server starts with the first document that needs it and ends with its last document or its project closing.
 - Speech to Text is optional and off by default. Enabling downloads one verified local streaming model; it never opens the microphone. Audio is never uploaded or saved. Voice Control is the separate cloud-backed feature; both share the microphone and language settings and never record together.
 - Dictation previews text and inserts only after stopping. A terminal receives an editable draft and only an explicit paste writes sanitized text without Enter. Agents cannot start dictation.
 

@@ -555,6 +555,22 @@ describe('ProjectStore', () => {
         expect(calls).toEqual([`opened:${projectId}`, `end:${projectId}`]);
     });
 
+    test('the language servers of a project end with the last client out and stay while another has it open', async () => {
+        const ended: string[] = [];
+        store.attachLanguage({ end: async (id) => void ended.push(id) });
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        await store.save(projectId, opened.document.rev, content());
+        store.hold('c1', projectId);
+        store.hold('c2', projectId);
+        expect(store.holdersOf(projectId).sort()).toEqual(['c1', 'c2']);
+        await store.closeProject(projectId, 'c1');
+        expect(ended).toEqual([]);
+        await store.closeProject(projectId, 'c2');
+        expect(ended).toEqual([projectId]);
+        expect(store.holdersOf(projectId)).toEqual([]);
+    });
+
     test('what closing would do counts the sessions, or counts the clients that keep them running', async () => {
         const opened = await store.openProject({ folder });
         const { projectId } = opened.summary;

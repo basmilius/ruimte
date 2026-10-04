@@ -39,6 +39,11 @@ export class ProjectHolds {
         return this.byClient.get(clientId)?.has(projectId) === true;
     }
 
+    /* Who has the project open, for whatever tells every one of them something. */
+    clientsOf(projectId: string): string[] {
+        return [...this.byClient].filter(([, held]) => held.has(projectId)).map(([clientId]) => clientId);
+    }
+
     holders(projectId: string): number {
         let count = 0;
         for (const held of this.byClient.values()) {

@@ -160,6 +160,11 @@ export interface ProjectLaunches {
     end(projectId: string): Promise<number>;
 }
 
+/* What the store needs of the language servers: they end with the project. */
+export interface ProjectLanguage {
+    end(projectId: string): Promise<void>;
+}
+
 /* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
 export interface ProjectMutation<T> {
     /* Null when nothing changed, which is what a dry run leaves behind: it runs every check under
@@ -249,6 +254,7 @@ export class ProjectStore {
     private personSaved: SaveListener = async () => undefined;
 
     private launches: ProjectLaunches | null = null;
+    private language: ProjectLanguage | null = null;
 
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH, writeIO: ProjectWriteIO = PROJECT_WRITE_IO) {
         this.home = home;
@@ -269,6 +275,10 @@ export class ProjectStore {
 
     attachLaunches(launches: ProjectLaunches): void {
         this.launches = launches;
+    }
+
+    attachLanguage(language: ProjectLanguage): void {
+        this.language = language;
     }
 
     /* Only `save` tells it, which only a client's `project.save` calls: a verb, a watcher or a pull never does. */
@@ -401,6 +411,11 @@ export class ProjectStore {
         for (const projectId of this.holds.dropClient(clientId)) {
             this.release(projectId);
         }
+    }
+
+    /* The clients that have the project on screen. */
+    holdersOf(projectId: string): string[] {
+        return this.holds.clientsOf(projectId);
     }
 
     /* The folders of the projects this client has on screen, which is as far as a save from it may reach. */
@@ -958,6 +973,9 @@ export class ProjectStore {
             ended += 1;
         }
         const launches = reopened() ? 0 : ((await this.launches?.end(projectId)) ?? 0);
+        if (!reopened()) {
+            await this.language?.end(projectId);
+        }
         const kept = await this.locked(async () => {
             if (reopened()) {
                 return true;

@@ -232,4 +232,20 @@ describe('versioned language documents', () => {
         expect(await resolved).toMatchObject({ command: { title: '1 reference' } });
         await session.shutdown();
     });
+    it('runs a feature by its method name, resolve methods included', async () => {
+        const { session, transport } = await sessionWith({ hoverProvider: true, completionProvider: { resolveProvider: true } });
+        const document = session.openDocument({ uri: 'file:///main.ts', languageId: 'typescript', text: 'x' });
+        const hover = document.request('textDocument/hover', { position: origin });
+        await flush();
+        expect(transport.request('textDocument/hover').params).toEqual({ position: origin, textDocument: { uri: document.uri } });
+        transport.respond('textDocument/hover', { contents: 'h' });
+        expect(await hover).toEqual({ contents: 'h' });
+        const item = { label: 'a', data: 1 };
+        const resolved = document.request('completionItem/resolve', item);
+        await flush();
+        expect(transport.request('completionItem/resolve').params).toEqual(item);
+        transport.respond('completionItem/resolve', { ...item, detail: 'd' });
+        expect(await resolved).toEqual({ ...item, detail: 'd' });
+        await session.shutdown();
+    });
 });
