@@ -41,21 +41,20 @@ export function SymbolPicker({ language, view }: { language: EditorLanguage; vie
     const [found, setFound] = useState<{ text: string; entries: WorkspaceEntry[] }>({ text: '', entries: [] });
     const activeRow = useRef<HTMLButtonElement>(null);
     const mode = modeOf(input);
+    const filterText = mode.mode === 'symbol' ? mode.text : '';
+    const searchText = mode.mode === 'workspace' ? mode.text : '';
 
-    const groups = useMemo(
-        () => groupEntries(filterEntries(view.entries, mode.mode === 'symbol' ? mode.text : '')),
-        [view.entries, mode.mode === 'symbol' ? mode.text : '']
-    );
+    const groups = useMemo(() => groupEntries(filterEntries(view.entries, filterText)), [view.entries, filterText]);
     const flat: SymbolEntry[] = groups.flatMap((group) => group.entries);
     const places = mode.mode === 'workspace' && found.text === mode.text ? found.entries : [];
     const count = mode.mode === 'workspace' ? places.length : mode.mode === 'line' ? (mode.line === null ? 0 : 1) : flat.length;
 
     useEffect(() => {
-        if (mode.mode !== 'workspace' || mode.text === '') {
+        if (searchText === '') {
             return;
         }
         const controller = new AbortController();
-        const text = mode.text;
+        const text = searchText;
         const timer = setTimeout(() => {
             language.symbolPicker
                 .search(text, controller.signal)
@@ -66,7 +65,7 @@ export function SymbolPicker({ language, view }: { language: EditorLanguage; vie
             clearTimeout(timer);
             controller.abort();
         };
-    }, [language, mode.mode, mode.mode === 'workspace' ? mode.text : '']);
+    }, [language, searchText]);
 
     useEffect(() => {
         activeRow.current?.scrollIntoView({ block: 'nearest' });
