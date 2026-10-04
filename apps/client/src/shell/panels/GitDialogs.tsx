@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
-import { Icon, Input, Menu, Dialog } from '@basmilius/desktop-ui';
+import { Button, FormError, Icon, Input, Menu, Dialog } from '@basmilius/desktop-ui';
 
 export interface Choice {
     value: string;
@@ -20,12 +20,15 @@ interface ChoiceProps {
     /* Shown above the list once there are more rows than a person scans at a glance. */
     filterFrom?: number;
     empty: string;
+    loading?: boolean;
+    error?: string | null;
+    onRetry?(): void;
     onPick(value: string): void;
     onClose(): void;
 }
 
 /* Picking one branch or one stash: the same list the branch menu draws, in a dialog. */
-export function GitChoice({ open, title, description, choices, filterFrom = 10, empty, onPick, onClose }: ChoiceProps) {
+export function GitChoice({ open, title, description, choices, filterFrom = 10, empty, loading = false, error, onRetry, onPick, onClose }: ChoiceProps) {
     const { t } = useTranslation('panels');
     /* The filter belongs to one opening of the dialog; closing it is what empties the field. */
     const [filter, setFilter] = useState({ open, query: '' });
@@ -57,7 +60,16 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                     </span>
                 )}
                 <div className="mt-3 max-h-72 overflow-y-auto">
-                    {shown.length === 0 && <p className="px-1 py-6 text-center text-sm text-text-faint">{empty}</p>}
+                    {loading && <p className="px-1 py-6 text-center text-sm text-text-faint">{t('git.branchMenu.loading')}</p>}
+                    {error && (
+                        <div className="flex flex-col items-start gap-2 py-3">
+                            <FormError>{error}</FormError>
+                            <Button size="sm" onClick={onRetry}>
+                                {t('common:action.retry')}
+                            </Button>
+                        </div>
+                    )}
+                    {!loading && !error && shown.length === 0 && <p className="px-1 py-6 text-center text-sm text-text-faint">{empty}</p>}
                     {shown.map((choice) => (
                         <button
                             key={choice.value}

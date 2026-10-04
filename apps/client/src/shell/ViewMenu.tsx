@@ -1,8 +1,8 @@
-import { Fragment, useMemo, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
 import { isOpenableView, viewIconOf, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
-import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
+import { ProviderRows } from '@/agents/ProviderRows';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { createViewAction } from '@/actions/client-actions';
@@ -11,8 +11,7 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
-import { useProviders } from '@ruimte/agents-react/state/providers';
-import { Tile, cameThroughPortal, Icon, Menu, Kbd, ContextMenu } from '@basmilius/desktop-ui';
+import { Tile, cameThroughPortal, Icon, Menu, Kbd, ContextMenu, SectionLabel } from '@basmilius/desktop-ui';
 import { labelCollator } from '@basmilius/desktop-ui/format';
 import { useUi } from '@/state/ui';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
@@ -43,100 +42,37 @@ function inOrder(entries: (NewViewEntry | false)[]): ReactNode[] {
         .map((entry) => <Fragment key={entry.id}>{entry.node}</Fragment>);
 }
 
-/* Dividers are left out of the start screen because there are no views to group yet. */
 export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
     const { t } = useTranslation('shell');
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
-    const providers = useProviders((s) => s.providers);
-    const agents = useMemo(() => providers.filter((provider) => provider.installed && provider.capabilities.chat), [providers]);
+    const tools = [
+        { kind: 'terminal', icon: Terminal, run: () => void createViewAction('terminal') },
+        { kind: 'browser', icon: Globe, run: () => useUi.getState().setViewDialog({ kind: 'new-browser' }) },
+        ...(hasFolder ? [{ kind: 'file', icon: FileText, run: () => useUi.getState().openFilePicker({ kind: 'view' }) }] : []),
+        { kind: 'canvas', icon: Frame, run: () => void createViewAction('canvas') },
+        { kind: 'diagram', icon: Workflow, run: () => void createViewAction('diagram') },
+        { kind: 'drawing', icon: PenTool, run: () => void createViewAction('drawing') }
+    ];
     return (
-        <div className="grid grid-cols-2 gap-1.5">
-            {inOrder([
-                {
-                    id: 'canvas',
-                    label: t('viewKinds.canvas'),
-                    node: (
+        <div className="flex flex-col gap-6">
+            <ProviderRows onPick={(provider) => void createViewAction('chat', { provider: provider.kind })} />
+            <section className="flex flex-col gap-2">
+                <SectionLabel render={<h2 />} className="px-1">
+                    {t('projectStart.open')}
+                </SectionLabel>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-2">
+                    {tools.map((tool) => (
                         <Tile
+                            key={tool.kind}
+                            className="min-h-22 flex-col justify-center gap-2! text-center [&>span:last-child]:grow-0 [&>span:last-child]:items-center [&>span:first-child]:bg-transparent"
                             size={size}
-                            icon={<Icon icon={Frame} size={14} />}
-                            title={t('viewKinds.canvas')}
-                            onClick={() => void createViewAction('canvas')}
+                            icon={<Icon icon={tool.icon} size={20} />}
+                            title={t(`viewKinds.${tool.kind}`)}
+                            onClick={tool.run}
                         />
-                    )
-                },
-                {
-                    id: 'drawing',
-                    label: t('viewKinds.drawing'),
-                    node: (
-                        <Tile
-                            size={size}
-                            icon={<Icon icon={PenTool} size={14} />}
-                            title={t('viewKinds.drawing')}
-                            onClick={() => void createViewAction('drawing')}
-                        />
-                    )
-                },
-                {
-                    id: 'diagram',
-                    label: t('viewKinds.diagram'),
-                    node: (
-                        <Tile
-                            size={size}
-                            icon={<Icon icon={Workflow} size={14} />}
-                            title={t('viewKinds.diagram')}
-                            onClick={() => void createViewAction('diagram')}
-                        />
-                    )
-                },
-                {
-                    id: 'terminal',
-                    label: t('viewKinds.terminal'),
-                    node: (
-                        <Tile
-                            size={size}
-                            icon={<Icon icon={Terminal} size={14} />}
-                            title={t('viewKinds.terminal')}
-                            onClick={() => void createViewAction('terminal')}
-                        />
-                    )
-                },
-                ...agents.map((provider) => ({
-                    id: `agent:${provider.kind}`,
-                    label: provider.name,
-                    node: (
-                        <Tile
-                            size={size}
-                            icon={<AgentIcon kind={provider.kind} size={14} />}
-                            title={provider.name}
-                            onClick={() => void createViewAction('chat', { provider: provider.kind })}
-                        />
-                    )
-                })),
-                {
-                    id: 'browser',
-                    label: t('viewKinds.browser'),
-                    node: (
-                        <Tile
-                            size={size}
-                            icon={<Icon icon={Globe} size={14} />}
-                            title={t('viewKinds.browser')}
-                            onClick={() => useUi.getState().setViewDialog({ kind: 'new-browser' })}
-                        />
-                    )
-                },
-                hasFolder && {
-                    id: 'file',
-                    label: t('viewKinds.file'),
-                    node: (
-                        <Tile
-                            size={size}
-                            icon={<Icon icon={FileText} size={14} />}
-                            title={t('viewKinds.file')}
-                            onClick={() => useUi.getState().openFilePicker({ kind: 'view' })}
-                        />
-                    )
-                }
-            ])}
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }

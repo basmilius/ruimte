@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import {
     useCallback,
     useEffect,
@@ -629,7 +630,7 @@ function RowPathItems({
             <ContextMenu.Item
                 disabled={gone}
                 onClick={() => {
-                    void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
+                    revealFile(transport, absolute);
                 }}
             >
                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}

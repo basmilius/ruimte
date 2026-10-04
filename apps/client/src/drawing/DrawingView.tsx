@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
@@ -7,6 +8,7 @@ import { GRID, toWorld } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
+import { nearestHandle } from './handle-hit';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { loadDrawingFont } from '@/drawing/fonts';
@@ -60,15 +62,16 @@ type Gesture =
 
 /* The letters of the tools a first stroke usually starts with, as the keys in `use-drawing-keys.ts` read them. */
 const FIRST_TOOLS: readonly { key: string; name: string }[] = [
-    { key: 'R', name: 'rectangle' },
+    { key: 'R', name: 'rect' },
     { key: 'O', name: 'ellipse' },
     { key: 'A', name: 'arrow' },
-    { key: 'P', name: 'pen' },
+    { key: 'P', name: 'freehand' },
     { key: 'T', name: 'text' }
 ];
 
 /* A word on an empty drawing about how to begin; it goes with the first element, and with a stroke on its way. */
 function EmptyDrawing({ id }: { id: string }) {
+    const { t } = useTranslation('drawing');
     const empty = useDrawing((s) => s.viewId === id && !s.loading && s.elements.length === 0 && s.draft === null && s.editingTextId === null);
     if (!empty) {
         return null;
@@ -76,14 +79,23 @@ function EmptyDrawing({ id }: { id: string }) {
     return (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pt-6 pb-20">
             <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
-                Nothing drawn yet. Pick a tool with{' '}
-                {FIRST_TOOLS.map((tool, at) => (
-                    <span key={tool.key}>
-                        <Kbd variant="inline">{tool.key}</Kbd> {tool.name}
-                        {at < FIRST_TOOLS.length - 1 ? ', ' : ''}
-                    </span>
-                ))}
-                , or paste shapes copied from another drawing with <Kbd shortcut={DRAWING_SHORTCUTS.paste} variant="inline" />.
+                <Trans
+                    t={t}
+                    i18nKey="empty.description"
+                    components={{
+                        tools: (
+                            <span>
+                                {FIRST_TOOLS.map((tool, at) => (
+                                    <span key={tool.key}>
+                                        <Kbd variant="inline">{tool.key}</Kbd> {t(`tools.${tool.name}`)}
+                                        {at < FIRST_TOOLS.length - 1 ? ', ' : ''}
+                                    </span>
+                                ))}
+                            </span>
+                        ),
+                        paste: <Kbd shortcut={DRAWING_SHORTCUTS.paste} variant="inline" />
+                    }}
+                />
             </p>
         </div>
     );
@@ -257,7 +269,11 @@ export function DrawingView({ id }: { id: string }) {
             start({ kind: 'pan', last: { x: e.clientX, y: e.clientY } }, e);
             return;
         }
-        const handle = (e.target as HTMLElement).closest('[data-handle]')?.getAttribute('data-handle');
+        const handles = [...(rootRef.current?.querySelectorAll<HTMLElement>('[data-handle]') ?? [])].map((element) => {
+            const rect = element.getBoundingClientRect();
+            return { kind: element.dataset.handle!, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        });
+        const handle = nearestHandle({ x: e.clientX, y: e.clientY }, handles);
         const selected = state.elements.filter((element) => state.selection.includes(element.id));
         if (handle && selected.length > 0) {
             const bounds = boundsOfElements(selected)!;

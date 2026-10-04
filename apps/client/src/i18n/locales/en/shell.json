@@ -1,7 +1,8 @@
 {
     "projectStart": {
         "description": "Choose what you want to start with. You can add more later.",
-        "failed": "The project start screen failed to render"
+        "failed": "The project start screen failed to render",
+        "open": "Open"
     },
     "sidebar": {
         "hide": "Hide sidebar",

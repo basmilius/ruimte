@@ -7,6 +7,7 @@ import {
     defaultProvider,
     parseChatPreferences,
     selectionFor,
+    startingSelection,
     withAccount,
     withSelection,
     type ChatPreferences
@@ -139,4 +140,13 @@ describe('the account for new agents', () => {
         expect(withAccount(picked, 'local', 'claude', 'claude').accountByMachine).toEqual({});
         expect(withAccount(picked, 'local', 'claude', null).accountByMachine).toEqual({});
     });
+});
+
+test('each provider starts with its remembered model or its own catalog default', () => {
+    const picked = withSelection(preferences(), 'claude', { model: 'sonnet', options: { effort: 'high' } });
+    const claude = { kind: 'claude', defaultModel: 'opus' } as import('@ruimte/agent-contracts').ProviderInfo;
+    const codex = { kind: 'codex', defaultModel: 'gpt' } as import('@ruimte/agent-contracts').ProviderInfo;
+    expect(startingSelection(picked, claude)).toEqual({ model: 'sonnet', options: { effort: 'high' } });
+    expect(startingSelection(picked, codex)).toEqual({ model: 'gpt', options: {} });
+    expect(startingSelection(picked, { ...codex, defaultModel: null })).toBeNull();
 });

@@ -51,7 +51,9 @@ struct LaunchesPage: View {
                     Button(String(localized: "New launch"), lucideIcon: "plus") { sheet = .edit(nil) }
                     Button(String(localized: "Find in this project…"), lucideIcon: "search") { sheet = .importing }
                     if store.anyLive {
-                        Button(String(localized: "Stop all"), lucideIcon: "square", role: .destructive) { Task { await store.stopAll() } }
+                        Button(String(localized: "Stop all"), lucideIcon: "square", role: .destructive) {
+                            Task { await store.stopAll() }
+                        }
                     }
                 } label: {
                     Image(lucide: "plus")
@@ -92,7 +94,8 @@ struct LaunchesPage: View {
     @ViewBuilder private var content: some View {
         if store.unsupported {
             ContentUnavailableView(
-                String(localized: "Needs an update"), lucideIcon: "circle-alert", description: Text(LaunchesText.outdated))
+                String(localized: "Needs an update"), lucideIcon: "circle-alert",
+                description: Text(LaunchesText.outdated))
         } else if let document = store.document {
             if document.launches.isEmpty {
                 ContentUnavailableView {
@@ -248,12 +251,15 @@ struct LaunchButtons: View {
         HStack(spacing: 6) {
             let name = view.launch.name
             if view.phase == .stopping {
-                button("octagon-x", label: String(localized: "Force stop \(name)")) { await store.stop(view.launch.id, force: true) }
+                button("octagon-x", label: String(localized: "Force stop \(name)")) {
+                    await store.stop(view.launch.id, force: true)
+                }
             } else if view.live {
                 if let showOutput {
                     Button(action: showOutput) {
                         Image(lucide: "terminal", size: 13).frame(width: 32, height: 32)
                             .background(MobileStyle.hover, in: .circle)
+                            .frame(width: 44, height: 44).contentShape(.rect)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Output of \(name)")
@@ -265,6 +271,7 @@ struct LaunchButtons: View {
                 } label: {
                     Text("Approve").font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(height: 30)
                         .background(MobileStyle.text, in: .capsule).foregroundStyle(MobileStyle.surface)
+                        .frame(minHeight: 44).contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Approve and launch \(name)")
@@ -282,6 +289,7 @@ struct LaunchButtons: View {
         } label: {
             Image(lucide: icon, size: 13).frame(width: 32, height: 32)
                 .background(MobileStyle.hover, in: .circle)
+                .frame(width: 44, height: 44).contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -300,7 +308,9 @@ struct LaunchMenuItems: View {
                 Task { await store.stop(id, force: true) }
             }
         } else if view.live {
-            Button(String(localized: "Restart"), lucideIcon: "rotate-cw") { Task { await store.run(id, restart: true) } }
+            Button(String(localized: "Restart"), lucideIcon: "rotate-cw") {
+                Task { await store.run(id, restart: true) }
+            }
             Button(String(localized: "Stop"), lucideIcon: "square") { Task { await store.stop(id) } }
         } else {
             Button(String(localized: "Launch"), lucideIcon: "play") { Task { await store.press(view.launch) } }
@@ -354,7 +364,8 @@ struct LaunchAskModifier: ViewModifier {
             } message: {
                 if let busy {
                     Text(
-                        "\(store.name(busy.holder)) uses port \(busy.port). Stop it and launch \(store.name(busy.launchID))?")
+                        "\(store.name(busy.holder)) uses port \(busy.port). Stop it and launch \(store.name(busy.launchID))?"
+                    )
                 }
             }
     }

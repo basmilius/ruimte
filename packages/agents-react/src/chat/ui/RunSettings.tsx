@@ -52,6 +52,7 @@ const RING_RADIUS = 5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 interface RunSettingsProps {
+    disabled?: boolean;
     /* Whose models may be picked: every installed chat CLI before the first message, the chat's own after it. */
     providers: ProviderInfo[];
     provider: AgentKind;
@@ -104,9 +105,10 @@ function modelValue(provider: AgentKind, slug: string): string {
 
 /*
  * Everything that decides how the next turn runs, behind one pill: the model, its own knobs and the
- * permission mode. The pill reads back all of it, so nothing has to be opened to know what is set.
+ * permission mode. Model and effective permissions stay visible as the composer narrows.
  */
 export function RunSettings({
+    disabled = false,
     providers,
     provider,
     selection,
@@ -179,6 +181,7 @@ export function RunSettings({
             <Tooltip label={permissionHint ?? t('pickers.settings.title')} kbd="/model">
                 {/* Styled from `open`: the tooltip puts `data-popup-open` on the same trigger. */}
                 <Menu.Trigger
+                    disabled={disabled}
                     className={clsx(
                         'flex h-8 min-w-0 items-center gap-2 rounded-full border pr-3 pl-2.5 text-xs whitespace-nowrap text-text-muted @max-xl/composer:gap-1.5 @max-sm/composer:pr-2.5',
                         open ? 'border-accent bg-accent-soft' : 'border-border hover:bg-surface-hover'
@@ -193,7 +196,7 @@ export function RunSettings({
                             <span className="flex min-w-0 items-center gap-2 @max-xl/composer:gap-1.5">
                                 <span className="shrink-0 text-text-faint">·</span>
                                 <AccountDot color={account.choice.current?.account.color} />
-                                {/* The name goes before anything else does; the dot says which account on its own. */}
+                                {/* The account name remains in the menu when the composer is narrow. */}
                                 <span className="truncate @max-xl/composer:hidden">
                                     {account.choice.current === null ? account.choice.currentId : account.choice.nameOf(account.choice.current)}
                                 </span>
@@ -202,7 +205,7 @@ export function RunSettings({
                         {summary.map((entry) => (
                             <span
                                 key={entry.id}
-                                className={clsx('flex shrink-0 items-center gap-2 @max-xl/composer:gap-1.5', !entry.ring && '@max-md/composer:hidden')}
+                                className={clsx('flex shrink-0 items-center gap-2 @max-xl/composer:gap-1.5', !entry.ring && '@max-xl/composer:hidden')}
                             >
                                 <span className="text-text-faint">·</span>
                                 {entry.ring && <ContextRing usage={usage} />}
@@ -212,9 +215,7 @@ export function RunSettings({
                         <span className="shrink-0 text-text-faint">·</span>
                         <span className={clsx('flex shrink-0 items-center gap-1', fullAccess && 'text-status-needs-you')}>
                             <Icon icon={MODE_ICONS[shownMode]} size={12} className="shrink-0" />
-                            <span className="@max-xl/composer:hidden">
-                                {effectiveRuntimeMode === undefined && permissionMode !== undefined ? permissionMode : t(`modes.${shownMode}.short`)}
-                            </span>
+                            <span>{effectiveRuntimeMode === undefined && permissionMode !== undefined ? permissionMode : t(`modes.${shownMode}.short`)}</span>
                             {permissionFallback && <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />}
                         </span>
                     </span>

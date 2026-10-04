@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type Rect, type WrittenElement } from '@ruimte/drawing';
+import { HANDLE_HIT_SIZE } from './handle-hit';
 import { fitTextBox } from '@/drawing/paint';
 import { readFontStacks } from '@/drawing/palette';
 import { isWritten, useDrawing, useDrawingStore } from '@/state/drawing';
@@ -69,23 +70,39 @@ export function DrawingOverlay({ marquee }: { marquee: Rect | null }) {
                             <span
                                 key={handle}
                                 data-handle={handle}
-                                className="pointer-events-auto absolute rounded-sm border border-accent bg-surface-raised"
-                                style={{ left: point.x - HANDLE / 2, top: point.y - HANDLE / 2, width: HANDLE, height: HANDLE, cursor: CURSOR[handle] }}
-                            />
+                                className="pointer-events-auto absolute grid place-items-center"
+                                style={{
+                                    left: point.x - HANDLE_HIT_SIZE / 2,
+                                    top: point.y - HANDLE_HIT_SIZE / 2,
+                                    width: HANDLE_HIT_SIZE,
+                                    height: HANDLE_HIT_SIZE,
+                                    cursor: CURSOR[handle]
+                                }}
+                            >
+                                <span
+                                    className="pointer-events-none rounded-sm border border-accent bg-surface-raised"
+                                    style={{ width: HANDLE, height: HANDLE }}
+                                />
+                            </span>
                         );
                     })}
                     {single && (
                         <span
                             data-handle="rotate"
-                            className="pointer-events-auto absolute rounded-full border border-accent bg-surface-raised"
+                            className="pointer-events-auto absolute grid place-items-center"
                             style={{
-                                left: (bounds.w * camera.zoom) / 2 - HANDLE / 2,
-                                top: -ROTATE_OFFSET,
-                                width: HANDLE,
-                                height: HANDLE,
+                                left: (bounds.w * camera.zoom) / 2 - HANDLE_HIT_SIZE / 2,
+                                top: -ROTATE_OFFSET + HANDLE / 2 - HANDLE_HIT_SIZE / 2,
+                                width: HANDLE_HIT_SIZE,
+                                height: HANDLE_HIT_SIZE,
                                 cursor: 'grab'
                             }}
-                        />
+                        >
+                            <span
+                                className="pointer-events-none rounded-full border border-accent bg-surface-raised"
+                                style={{ width: HANDLE, height: HANDLE }}
+                            />
+                        </span>
                     )}
                 </div>
             )}

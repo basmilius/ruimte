@@ -28,7 +28,7 @@ import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedRepos, type GitCheckoutRef } from '@/state/git-repos';
 import { gitTarget, gitTargets, type GitTarget } from '@/state/git-target';
-import { useEndpointId } from '@/state/keys';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
@@ -63,13 +63,7 @@ function filesOf(work: readonly GitWork[]): GitFile[] {
     return work.flatMap((step) => step.files);
 }
 
-/*
- * What the daemon knows about the checkouts of a project: every repository the folder holds, the
- * changed files of each grouped the way a person acts on them, and for the one the panel is pointed
- * at the branch it is on, every branch it could be on, the message of the commit to come and the
- * history under it. Every action goes through one `git.action` request whose progress lands in a
- * toast, so a push says where it is and a failure keeps what git wrote.
- */
+/* Staged files choose the commit's repositories; a worktree can take over the whole panel. */
 export function GitPanel() {
     const { t } = useTranslation('panels');
     const nodes = useCanvas((s) => s.nodes);
@@ -122,7 +116,7 @@ export function GitPanel() {
         [targets, cwd, only, folder]
     );
     /* A message is typed once and commits whatever is staged, so it belongs to the project. */
-    const messageKey = worktree?.cwd ?? folder ?? '';
+    const messageKey = endpointKey(endpointId, worktree?.cwd ?? folder ?? '');
     const sources = useMemo<readonly LogSource[]>(
         () => checkouts.map((checkout) => ({ cwd: checkout.path, repo: named ? checkout.label : '', revision: checkout.revision })),
         [checkouts, named]
@@ -131,7 +125,11 @@ export function GitPanel() {
     const [capabilities, setCapabilities] = useState<GitCapabilitiesResult | null>(null);
     /* The branches and stashes of every checkout a person walked into, read when its level opens: a
        folder of nine repositories is nine `git.refs` calls only for whoever asks for all nine. */
-    const [refsByCwd, setRefsByCwd] = useState<Record<string, { refs: readonly GitRef[]; stashes: readonly GitStash[]; loading: boolean }>>({});
+    const [refsRequests] = useState(() => new Map<string, number>());
+    const checkoutKey = useCallback((path: string) => endpointKey(endpointId, path), [endpointId]);
+    const [refsByCwd, setRefsByCwd] = useState<
+        Record<string, { refs: readonly GitRef[]; stashes: readonly GitStash[]; loading: boolean; error: string | null }>
+    >({});
     /* The change the preview is showing, so the row a person is reading stands out in its own list. */
     const readingTab = useFiles((s) => s.tabs.find((tab) => tab.key === s.active));
     const reading = useMemo(() => activeDiff(readingTab), [readingTab]);
@@ -151,20 +149,47 @@ export function GitPanel() {
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
 
-    const loadRefs = useCallback((path: string): void => {
-        setRefsByCwd((previous) => ({ ...previous, [path]: { refs: previous[path]?.refs ?? [], stashes: previous[path]?.stashes ?? [], loading: true } }));
-        performAsPerson('git.refs', { repository: path })
-            .then((answer) => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: answer.refs, stashes: answer.stashes, loading: false } })))
-            .catch(() => setRefsByCwd((previous) => ({ ...previous, [path]: { refs: [], stashes: [], loading: false } })));
-    }, []);
+    const loadRefs = useCallback(
+        (path: string): void => {
+            const key = checkoutKey(path);
+            const generation = (refsRequests.get(key) ?? 0) + 1;
+            refsRequests.set(key, generation);
+            setRefsByCwd((previous) => ({
+                ...previous,
+                [key]: { refs: previous[key]?.refs ?? [], stashes: previous[key]?.stashes ?? [], loading: true, error: null }
+            }));
+            performAsPerson('git.refs', { repository: path })
+                .then((answer) => {
+                    if (refsRequests.get(key) === generation) {
+                        setRefsByCwd((previous) => ({ ...previous, [key]: { refs: answer.refs, stashes: answer.stashes, loading: false, error: null } }));
+                    }
+                })
+                .catch((error: unknown) => {
+                    if (refsRequests.get(key) === generation) {
+                        setRefsByCwd((previous) => ({
+                            ...previous,
+                            [key]: {
+                                refs: previous[key]?.refs ?? [],
+                                stashes: previous[key]?.stashes ?? [],
+                                loading: false,
+                                error: error instanceof Error ? error.message : String(error)
+                            }
+                        }));
+                    }
+                });
+        },
+        [checkoutKey, refsRequests]
+    );
 
     const refsOf = useCallback(
         (path: string): CheckoutRefs => ({
-            refs: refsByCwd[path]?.refs ?? [],
-            loading: refsByCwd[path]?.loading ?? false,
+            refs: refsByCwd[checkoutKey(path)]?.refs ?? [],
+            loading: refsByCwd[checkoutKey(path)]?.loading ?? false,
+            error: refsByCwd[checkoutKey(path)]?.error ?? null,
+            retry: () => loadRefs(path),
             branch: checkouts.find((checkout) => checkout.path === path)?.status?.branch ?? null
         }),
-        [refsByCwd, checkouts]
+        [refsByCwd, checkouts, loadRefs, checkoutKey]
     );
 
     const probe = checkouts[0]?.path ?? null;
@@ -370,11 +395,12 @@ export function GitPanel() {
 
     /* One message over every repository that has something staged: one commit each, same words. */
     const commit = (message: { subject: string; body: string }, options: { targets: readonly CommitCandidate[]; stageAll: boolean; push: boolean }): void => {
+        const version = useGit.getState().messageVersions[messageKey] ?? 0;
         const kind: GitActionKind = options.push ? 'commit-push' : 'commit';
         const extra = { subject: message.subject, body: message.body, stageAll: options.stageAll };
         const clear = (ok: boolean): void => {
             if (ok) {
-                useGit.getState().setMessage(messageKey, '');
+                useGit.getState().clearMessage(messageKey, version);
             }
         };
         const one = options.targets[0];
@@ -426,7 +452,7 @@ export function GitPanel() {
             cwd={path}
             busy={busy}
             canPullRequest={capabilities?.gh === true}
-            stashes={refsByCwd[path]?.stashes ?? []}
+            stashes={refsByCwd[checkoutKey(path)]?.stashes ?? []}
             branch={checkouts.find((checkout) => checkout.path === path)?.status?.branch ?? ''}
             onAction={(kind, extra) => void act(path, kind, extra)}
             onDialog={setDialog}
@@ -765,6 +791,9 @@ export function GitPanel() {
             />
             <GitChoice
                 open={dialog?.kind === 'pick-branch'}
+                loading={dialog?.kind === 'pick-branch' && refsOf(dialog.cwd).loading}
+                error={dialog?.kind === 'pick-branch' ? refsOf(dialog.cwd).error : null}
+                onRetry={dialog?.kind === 'pick-branch' ? refsOf(dialog.cwd).retry : undefined}
                 title={
                     dialog?.kind === 'pick-branch'
                         ? dialog.action === 'merge'
@@ -790,9 +819,12 @@ export function GitPanel() {
             />
             <GitChoice
                 open={dialog?.kind === 'pick-stash'}
+                loading={dialog?.kind === 'pick-stash' && refsOf(dialog.cwd).loading}
+                error={dialog?.kind === 'pick-stash' ? refsOf(dialog.cwd).error : null}
+                onRetry={dialog?.kind === 'pick-stash' ? refsOf(dialog.cwd).retry : undefined}
                 title={t('git.dialog.popStash.title')}
                 description={t('git.dialog.popStash.description')}
-                choices={(dialog?.kind === 'pick-stash' ? (refsByCwd[dialog.cwd]?.stashes ?? []) : []).map((stash) => ({
+                choices={(dialog?.kind === 'pick-stash' ? (refsByCwd[checkoutKey(dialog.cwd)]?.stashes ?? []) : []).map((stash) => ({
                     value: stash.ref,
                     label: stash.ref,
                     hint: stash.message

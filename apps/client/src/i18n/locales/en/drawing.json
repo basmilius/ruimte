@@ -126,5 +126,8 @@
         "sendToBack": "Send to back",
         "lock": "Lock",
         "unlock": "Unlock"
+    },
+    "empty": {
+        "description": "Nothing drawn yet. Choose a tool with <tools/> or paste shapes from another drawing with <paste/>."
     }
 }

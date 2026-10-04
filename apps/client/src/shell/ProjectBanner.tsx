@@ -1,15 +1,17 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, Eye, GitBranch } from 'lucide-react';
 import { diagramClient, drawingClient, projectClient } from '@/project';
-import { focusedDiagram, useDiagram } from '@/state/diagram';
+import { useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
-import { focusedDrawing, useDrawing } from '@/state/drawing';
+import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { Button, Banner } from '@basmilius/desktop-ui';
 
 // One banner slot: possible data loss outranks an agent's repeatable view request.
 export function ProjectBanner() {
     const { t } = useTranslation(['shell', 'common']);
+    const [retrying, setRetrying] = useState(false);
     const projectConflict = useProject((s) => s.conflict);
     const drawingConflict = useDrawing((s) => s.conflict);
     const diagramConflict = useDiagram((s) => s.conflict);
@@ -17,15 +19,20 @@ export function ProjectBanner() {
     const drawingError = useDrawing((s) => s.error);
     const diagramError = useDiagram((s) => s.error);
     const notice = useDocument((s) => s.viewNotice);
-    // One banner for every file: the wording is the same and several of them would stack.
     const file =
-        drawingConflict !== null || (drawingError !== null && projectError === null)
-            ? 'drawing'
-            : diagramConflict !== null || (diagramError !== null && projectError === null)
-              ? 'diagram'
-              : 'project';
-    const conflict = projectConflict ?? drawingConflict ?? diagramConflict;
-    const error = projectError ?? drawingError ?? diagramError;
+        projectConflict !== null
+            ? 'project'
+            : drawingConflict !== null
+              ? 'drawing'
+              : diagramConflict !== null
+                ? 'diagram'
+                : projectError !== null
+                  ? 'project'
+                  : drawingError !== null
+                    ? 'drawing'
+                    : 'diagram';
+    const conflict = file === 'project' ? projectConflict : file === 'drawing' ? drawingConflict : diagramConflict;
+    const error = file === 'project' ? projectError : file === 'drawing' ? drawingError : diagramError;
     if (!conflict && !error) {
         return notice === null ? null : (
             <Banner icon={Eye} tone="neutral" message={notice.message}>
@@ -44,14 +51,13 @@ export function ProjectBanner() {
         const client = file === 'drawing' ? drawingClient : file === 'diagram' ? diagramClient : projectClient;
         void client.resolveConflict(choice);
     };
-    const dismiss = (): void => {
-        if (file === 'drawing') {
-            focusedDrawing().getState().setError(null);
-        } else if (file === 'diagram') {
-            focusedDiagram().getState().setError(null);
-        } else {
-            useProject.getState().setError(null);
-        }
+    const retry = (): void => {
+        const client = file === 'drawing' ? drawingClient : file === 'diagram' ? diagramClient : projectClient;
+        setRetrying(true);
+        void client
+            .flush()
+            .catch(() => undefined)
+            .finally(() => setRetrying(false));
     };
     return conflict ? (
         <Banner icon={GitBranch} tone="attention" message={t(`projectBanner.conflict.${file}`)}>
@@ -64,8 +70,8 @@ export function ProjectBanner() {
         </Banner>
     ) : (
         <Banner icon={CircleAlert} tone="error" message={error}>
-            <Button size="sm" onClick={dismiss}>
-                {t('common:action.dismiss')}
+            <Button size="sm" disabled={retrying} onClick={retry}>
+                {t('common:action.retry')}
             </Button>
         </Banner>
     );

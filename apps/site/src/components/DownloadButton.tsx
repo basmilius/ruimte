@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Download } from 'lucide-react';
+import { downloadPlatform } from '@/lib/download-platform';
 import { PLATFORMS, type Platform } from '@/lib/release.ts';
 
 interface LatestRelease {
@@ -13,50 +14,66 @@ function subscribe() {
     return () => {};
 }
 
-function detectPlatform(): Platform {
-    const agent = navigator.userAgent;
-    if (!/Linux/.test(agent) || /Android/.test(agent)) {
-        return 'mac';
-    }
-    return /aarch64|arm64/i.test(agent) ? 'appimage-arm64' : 'appimage-x64';
-}
-
-/**
- * The download for the platform this page runs on. It renders for macOS on the server and switches
- * to Linux once the browser says it is one; anything else gets the Mac build and a way to the rest.
- */
 export function DownloadButton() {
-    const platform = useSyncExternalStore(subscribe, detectPlatform, () => 'mac' as const);
+    const platform = useSyncExternalStore(
+        subscribe,
+        () => downloadPlatform(navigator.userAgent),
+        () => null
+    );
+    const [failed, setFailed] = useState(false);
     const [release, setRelease] = useState<LatestRelease | null>(null);
 
     useEffect(() => {
         const controller = new AbortController();
         fetch('/api/release', { signal: controller.signal })
-            .then((response) => (response.ok ? (response.json() as Promise<LatestRelease>) : null))
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Release unavailable');
+                }
+                return response.json() as Promise<LatestRelease>;
+            })
             .then(setRelease)
-            .catch(() => {});
+            .catch(() => {
+                if (!controller.signal.aborted) {
+                    setFailed(true);
+                }
+            });
         return () => controller.abort();
     }, []);
 
-    const { os, arch, format } = PLATFORMS[platform];
-    const detail = platform === 'mac' ? arch : `${format}, ${arch}`;
+    const available = platform !== null && release?.platforms.includes(platform) === true;
+    const build = platform === null ? null : PLATFORMS[platform];
+    const detail = build === null ? null : platform === 'mac' ? build.arch : `${build.format}, ${build.arch}`;
 
     return (
         <div className="flex flex-col items-start gap-3">
             <a
-                href={`/download/${platform}`}
+                href={available ? `/download/${platform}` : '#download'}
                 className="inline-flex items-center gap-2.5 rounded-full bg-text px-6 py-3.5 text-[15px] font-medium text-bg shadow-[0_1px_2px_rgb(0_0_0/0.2)] transition-[background-color,transform] hover:bg-white active:scale-[0.96]"
             >
                 <Download size={18} strokeWidth={2.2} />
-                Download for {os}
+                {available && build !== null ? `Download for ${build.os}` : 'Choose a download'}
             </a>
             <div className="text-[14px] leading-snug text-text-muted">
-                <span>{release ? `Version ${release.version}, ${detail}` : detail}</span>
+                <span>
+                    {available
+                        ? `Version ${release?.version}, ${detail}`
+                        : failed
+                          ? 'Could not check the latest builds'
+                          : platform !== null && release !== null
+                            ? 'This build is not in the latest release'
+                            : 'Available for macOS and Linux'}
+                </span>
                 <span className="mx-2 text-text-faint">/</span>
                 <a href="#download" className="text-text underline decoration-border-strong underline-offset-4 hover:decoration-text">
-                    {platform === 'mac' ? 'Linux and other builds' : 'Other builds'}
+                    {available ? 'Other builds' : 'See builds'}
                 </a>
             </div>
+            {!available && (
+                <a href="https://station.ruimte.app" className="text-[14px] text-text underline underline-offset-4">
+                    Open the web app
+                </a>
+            )}
         </div>
     );
 }

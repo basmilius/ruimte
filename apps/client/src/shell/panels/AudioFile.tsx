@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileAudio } from 'lucide-react';
@@ -26,7 +27,7 @@ export function AudioFile({ path, name, read }: { path: string; name: string; re
     const bytes = useMachineUrl({ kind: 'media', path, mtime: read.mtime, size: read.size }, endpointId);
 
     const reveal = (): void => {
-        void transport.request('fs.reveal', { path }).catch(() => undefined);
+        revealFile(transport, path);
     };
 
     return (

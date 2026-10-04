@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "File search failed" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bestanden zoeken mislukt"
+          }
+        }
+      }
+    },
+    "Searching files…" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bestanden zoeken…"
+          }
+        }
+      }
+    },
     "" : {
       "shouldTranslate" : false
     },

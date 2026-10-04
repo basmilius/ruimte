@@ -20,7 +20,10 @@
     },
     "menu": {
         "none": "No agent CLI found",
-        "connecting": "Connecting"
+        "connecting": "Connecting",
+        "newChat": "New chat",
+        "setup": "Set up agents",
+        "defaultModel": "Default model"
     },
     "target": {
         "chat": "Agent (Chat)",

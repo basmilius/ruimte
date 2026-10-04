@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         ipcRenderer.on('menu:settings', handler);
         return () => ipcRenderer.removeListener('menu:settings', handler);
     },
+    setLanguage: (language: string): void => ipcRenderer.send('app:language', language),
     setMenu: (spec: MenuSpec): void => ipcRenderer.send('menu:set', spec),
     onMenuCommand: (listener: (id: string) => void): (() => void) => {
         const handler = (_event: unknown, id: string): void => listener(id);

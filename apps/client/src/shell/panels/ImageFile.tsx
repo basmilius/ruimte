@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CornerUpRight, ImageOff, Maximize, Scan } from 'lucide-react';
@@ -27,7 +28,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
     const bytes = useMachineUrl(drawable ? { kind: 'file', path, mtime: read.mtime, size: read.size } : null, endpointId);
 
     const reveal = (): void => {
-        void transport.request('fs.reveal', { path }).catch(() => undefined);
+        revealFile(transport, path);
     };
 
     return (

@@ -31,6 +31,8 @@ function descriptionFor(status: OpenAiCredentialStatus): string {
 export function VoicePane() {
     const { t } = useTranslation('settings');
     const [status, setStatus] = useState<OpenAiCredentialStatus | null>(null);
+    const [readError, setReadError] = useState<string | null>(null);
+    const [attempt, setAttempt] = useState(0);
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
     const bridge = desktop()?.openAi;
@@ -46,24 +48,20 @@ export function VoicePane() {
             ?.credentialStatus()
             .then((next) => {
                 if (current) {
+                    setReadError(null);
                     setStatus(next);
                     useVoice.getState().setCredential(next);
                 }
             })
             .catch((error: unknown) => {
                 if (current) {
-                    // Read off i18next rather than the hook's `t`, which would make the language a reason to ask again.
-                    useToasts.getState().show({
-                        kind: 'error',
-                        title: i18next.t('settings:voice.toast.readFailed'),
-                        description: messageOf(error, i18next.t('settings:voice.key.readFailure'))
-                    });
+                    setReadError(messageOf(error, i18next.t('settings:voice.key.readFailure')));
                 }
             });
         return () => {
             current = false;
         };
-    }, [bridge]);
+    }, [bridge, attempt]);
 
     async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
         event.preventDefault();
@@ -132,9 +130,19 @@ export function VoicePane() {
                 <SettingsRow
                     searchId="voice.key"
                     label={t('voice.key.label')}
-                    description={displayStatus ? descriptionFor(displayStatus) : t('voice.key.checking')}
+                    description={readError ?? (displayStatus ? descriptionFor(displayStatus) : t('voice.key.checking'))}
                     control={
-                        displayStatus ? (
+                        readError ? (
+                            <Button
+                                size="sm"
+                                onClick={() => {
+                                    setReadError(null);
+                                    setAttempt((value) => value + 1);
+                                }}
+                            >
+                                {t('common:action.retry')}
+                            </Button>
+                        ) : displayStatus ? (
                             <Pill shape="tag" tone={displayStatus.configured ? 'accent' : 'muted'}>
                                 {displayStatus.configured ? t('voice.key.configured') : t('voice.key.notConfigured')}
                             </Pill>

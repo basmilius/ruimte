@@ -63,7 +63,8 @@ enum ProjectSettingsLogic {
         guard let image = UIImage(data: data) else { return nil }
         for side in [512.0, 256.0, 128.0] {
             let scale = min(1, side / max(image.size.width, image.size.height))
-            let size = CGSize(width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
+            let size = CGSize(
+                width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
             let format = UIGraphicsImageRendererFormat()
             format.scale = 1
             let png = UIGraphicsImageRenderer(size: size, format: format).pngData { _ in
@@ -112,7 +113,7 @@ struct ProjectSettingsPage: View {
                 Section {
                     VStack(spacing: 12) {
                         ProjectBadge(summary: shown, session: workspace.session, size: 60)
-                        HStack(spacing: 8) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 4)], spacing: 4) {
                             ForEach(ProjectSettingsLogic.palette, id: \.self) { hex in
                                 Button {
                                     setColor(hex)
@@ -122,10 +123,13 @@ struct ProjectSettingsPage: View {
                                         .frame(width: 28, height: 28)
                                         .overlay {
                                             if ProjectSettingsLogic.sameColor(hex, color) {
-                                                RoundedRectangle(cornerRadius: 10).stroke(MobileStyle.text, lineWidth: 2)
-                                                    .padding(-4)
+                                                RoundedRectangle(cornerRadius: 10).stroke(
+                                                    MobileStyle.text, lineWidth: 2
+                                                )
+                                                .padding(-4)
                                             }
                                         }
+                                        .frame(width: 44, height: 44).contentShape(.rect)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel("Color \(hex)")
@@ -193,7 +197,8 @@ struct ProjectSettingsPage: View {
                 }
             }
             .alert(
-                "Close \(workspace.title)?", isPresented: Binding(get: { closing != nil }, set: { if !$0 { closing = nil } }),
+                "Close \(workspace.title)?",
+                isPresented: Binding(get: { closing != nil }, set: { if !$0 { closing = nil } }),
                 presenting: closing
             ) { _ in
                 Button("Close project", role: .destructive) { Task { await close() } }

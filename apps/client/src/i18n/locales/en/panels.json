@@ -176,8 +176,11 @@
             "title_other": "Close {{count}} files without saving?",
             "description_one": "The changes could not be saved. Closing drops them.",
             "description_other": "The changes could not be saved. Closing drops them.",
-            "confirm": "Close without saving"
-        }
+            "confirm": "Close without saving",
+            "failedTitle": "Some files could not be saved",
+            "keepEditing": "Keep editing"
+        },
+        "revealFailed": "Could not show this file"
     },
     "files": {
         "copyMentions": "Copy mentions",
@@ -203,7 +206,9 @@
         "noMatch": "No files match the filter.",
         "onlyHidden": "Everything in this folder is hidden or ignored. Turn on Show hidden and ignored files in the More menu.",
         "reading": "Reading {{name}}.",
-        "showHidden": "Show hidden and ignored files"
+        "showHidden": "Show hidden and ignored files",
+        "searching": "Searching files…",
+        "searchFailed": "Could not search files: {{reason}}"
     },
     "git": {
         "action": {
@@ -262,7 +267,8 @@
             "tooltipRepos_one": "{{count}} repository and its branches",
             "tooltipRepos_other": "{{count}} repositories and their branches",
             "tooltipWorktree": "{{branch}}, in the worktree {{worktree}}",
-            "worktrees": "Worktrees"
+            "worktrees": "Worktrees",
+            "failed": "Could not read branches: {{reason}}"
         },
         "commit": {
             "commit": "Commit",
@@ -281,7 +287,9 @@
             "writeFailedBody": "The message could not be written.",
             "writeFailedTitle": "Could not write the message",
             "writeOneRepo": "A message is written from one repository at a time",
-            "writing": "Writing"
+            "writing": "Writing",
+            "suggestionReady": "Your draft changed while this suggestion was being written.",
+            "useSuggestion": "Use suggestion"
         },
         "conflict": {
             "cherry-pick": "A cherry-pick waits on you",

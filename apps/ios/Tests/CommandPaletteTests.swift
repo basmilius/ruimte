@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import XCTest
 
 @testable import Ruimte
@@ -67,6 +68,26 @@ final class CommandPaletteTests: XCTestCase {
         XCTAssertTrue(several.contains("Open a folder on Studio…"))
     }
 
+    @MainActor
+    func testFileSearchKeepsPartialResultsAndReportsTheProjectThatFailed() async {
+        let files = PaletteFiles()
+        let success = PaletteMachine()
+        let failed = PaletteMachine()
+        failed.fail = true
+        await files.search(
+            "pool", projects: [row(machine("mac"), "app", name: "App"), row(machine("other"), "api", name: "API")]
+        ) {
+            $0.id == "mac" ? success : failed
+        }
+        XCTAssertEqual(files.results.map(\.path), ["src/pool.ts"])
+        XCTAssertEqual(files.failures.map(\.name), ["API"])
+        XCTAssertFalse(files.searching)
+        files.invalidate("")
+        XCTAssertTrue(files.results.isEmpty)
+        XCTAssertTrue(files.failures.isEmpty)
+        XCTAssertFalse(files.searching)
+    }
+
     func testAFileIsPlacedFromItsProjectFolderDown() {
         let file = PaletteFile(
             project: UnifiedProjectRow.ID(machineID: "mac", projectID: "app"), projectName: "Recept Maker",
@@ -78,4 +99,15 @@ final class CommandPaletteTests: XCTestCase {
         XCTAssertEqual(top.place, "app")
         XCTAssertEqual(top.absolutePath, "/code/app/README.md")
     }
+}
+
+@MainActor private final class PaletteMachine: MachineRequesting {
+    var fail = false
+
+    func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
+        if fail { throw MachineClientError.server(code: "offline", message: "Offline") }
+        return .object(["files": .array([.string("src/pool.ts")])])
+    }
+
+    func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void { {} }
 }

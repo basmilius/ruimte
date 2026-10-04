@@ -4,15 +4,16 @@ import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { performAsPerson } from '@/actions/client-actions';
 import type { ChatSendExtras } from '@ruimte/agents-react/chat/chat-client';
-import { defaultProvider, readChatPreferences, selectionFor } from '@ruimte/agents-react/chat/preferences';
+import { providersOf } from '@ruimte/agents-react/state/providers';
+import { defaultProvider, readChatPreferences, selectionFor, startingSelection, rememberChatSelection } from '@ruimte/agents-react/chat/preferences';
 import { composerWrites, useSubagentTrail } from '@ruimte/agents-react/chat/subagent-view';
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@ruimte/agents-react/chat/ui/Composer';
 import { SubagentTimeline } from '@ruimte/agents-react/chat/ui/SubagentTimeline';
 import { Timeline } from '@ruimte/agents-react/chat/ui/Timeline';
-import { useChatRow } from '@ruimte/agents-react/state/chats';
+import { useChats, useChatRow } from '@ruimte/agents-react/state/chats';
 import { useProject } from '@/state/project';
-import { useEndpointId } from '@/state/keys';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { chatClientFor } from '@/transport/connections';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
@@ -49,13 +50,14 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         const preferences = readChatPreferences();
         // A node without a provider of its own opens on the CLI whose model was picked last.
         const provider = host?.provider ?? defaultProvider(preferences) ?? undefined;
+        const catalog = providersOf(endpointId).providers.find((entry) => entry.kind === provider);
         chats
             .open(id, {
                 provider,
                 account: host?.account,
                 cwd: host?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: host?.resume,
-                selection: selectionFor(preferences, provider) ?? undefined,
+                selection: (catalog === undefined ? selectionFor(preferences, provider) : startingSelection(preferences, catalog)) ?? undefined,
                 runtimeMode: preferences.runtimeMode
             })
             .catch((e: unknown) => {
@@ -71,12 +73,12 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     }, [endpointId, id, generation]);
 
     // The chat is gone on the machine until it opened again on the other CLI, so a send or another switch meanwhile waits for that.
-    const retarget = (provider: AgentKind, selection: ModelSelection): void => {
-        switched.current = switched.current.then(() =>
-            performAsPerson('chat.setProvider', { chatId: id, provider, model: null, selection })
-                .then(() => undefined)
-                .catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.retargetFailed')))
-        );
+    const retarget = (provider: AgentKind, selection: ModelSelection): Promise<void> => {
+        const changed = switched.current
+            .then(() => performAsPerson('chat.setProvider', { chatId: id, provider, model: null, selection }))
+            .then(() => undefined);
+        switched.current = changed.catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.retargetFailed')));
+        return changed;
     };
 
     const send = (text: string, extras: ChatSendExtras): void => {
@@ -87,11 +89,16 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         if (host && !host.titleSource && title) {
             renameHost(id, title, 'auto');
         }
-        void switched.current.then(() =>
-            performAsPerson('chat.send', { chatId: id, prompt: text, ...extras }).catch((e: unknown) =>
-                setFailure(e instanceof Error ? e.message : t('chat.sendFailed'))
-            )
-        );
+        void switched.current
+            .then(async () => {
+                // An older chat may use a different model from the last picker choice.
+                const info = useChats.getState().byKey[endpointKey(endpointId, id)]?.info;
+                await performAsPerson('chat.send', { chatId: id, prompt: text, ...extras });
+                if (info !== undefined) {
+                    rememberChatSelection(info.provider, info.selection);
+                }
+            })
+            .catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.sendFailed')));
     };
 
     return (

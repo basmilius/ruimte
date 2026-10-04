@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { AGENTS_LOCALES, AGENTS_NAMESPACES } from '@ruimte/agents-react/locales';
 import { UI_NAMESPACE } from '@basmilius/desktop-ui';
+import { desktop } from '@/desktop/bridge';
 import { activeLanguage } from '@/i18n/active';
 import { FALLBACK_LANGUAGE, type AppLanguage } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
@@ -45,6 +46,7 @@ async function ensure(language: AppLanguage): Promise<void> {
 /* What a screen reader announces in and what a spell checker checks against. `index.html` ships
    with English on it, so it is only ever wrong between the first byte and this line. */
 function markDocument(language: string): void {
+    desktop()?.setLanguage?.(language);
     if (typeof document !== 'undefined') {
         document.documentElement.lang = language;
     }

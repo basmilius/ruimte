@@ -27,7 +27,9 @@ enum PaletteRanking {
 
     /// What answers the query, best first and otherwise in the order it came in. `extra` is matched but not ranked,
     /// such as the project a view is in.
-    static func rank<Item>(_ items: [Item], query: String, text: (Item) -> String, extra: (Item) -> String = { _ in "" })
+    static func rank<Item>(
+        _ items: [Item], query: String, text: (Item) -> String, extra: (Item) -> String = { _ in "" }
+    )
         -> [Item]
     {
         items.enumerated().compactMap { index, item -> (Int, Int, Item)? in
@@ -162,52 +164,72 @@ struct PaletteFile: Identifiable, Equatable {
     var absolutePath: String { folder.hasSuffix("/") ? folder + path : folder + "/" + path }
 }
 
-/// The files of every open project whose name answers the query, asked of each machine with `fs.search`.
+struct PaletteFileFailure: Identifiable {
+    let project: UnifiedProjectRow.ID
+    let name: String
+    let message: String
+    var id: String { "\(project.machineID):\(project.projectID)" }
+}
+
 @MainActor @Observable
 final class PaletteFiles {
     static let perProject = 5
     static let shortest = 2
+    private(set) var query = ""
     private(set) var results: [PaletteFile] = []
+    private(set) var failures: [PaletteFileFailure] = []
     private(set) var searching = false
     @ObservationIgnored private var generation = 0
 
-    func search(_ query: String, projects: [UnifiedProjectRow], client: (Machine) -> any MachineRequesting) async {
+    // Retire requests before the debounce, so a previous query cannot arrive during the wait.
+    func invalidate(_ query: String) {
         generation += 1
+        self.query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        results = []
+        failures = []
+        searching = self.query.count >= Self.shortest
+    }
+
+    func search(_ query: String, projects: [UnifiedProjectRow], client: (Machine) -> any MachineRequesting) async {
+        invalidate(query)
         let current = generation
-        let typed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard typed.count >= Self.shortest else {
-            results = []
-            searching = false
-            return
-        }
-        searching = true
+        let typed = self.query
+        guard typed.count >= Self.shortest else { return }
         let asked = projects.filter {
             $0.connected && !NewChat.isChats($0.summary) && $0.summary["available"] != .bool(false)
         }
         let tasks = asked.map { row in
             let machineClient = client(row.machine)
             let folder = row.summary.text("folder")
-            return Task { () -> [PaletteFile] in
-                guard
-                    let answer = try? await machineClient.request(
+            let name = row.summary.text("name", fallback: String(localized: "Untitled project"))
+            return Task { () -> ([PaletteFile], PaletteFileFailure?) in
+                do {
+                    let answer = try await machineClient.request(
                         "fs.search",
                         payload: .object([
                             "cwd": .string(folder), "query": .string(typed),
                             "limit": .number(Double(Self.perProject)),
                         ]))
-                else { return [] }
-                return answer.list("files").compactMap(\.stringValue).map {
-                    PaletteFile(
-                        project: row.id,
-                        projectName: row.summary.text("name", fallback: String(localized: "Untitled project")),
-                        path: $0, folder: folder)
+                    return (
+                        answer.list("files").compactMap(\.stringValue).map {
+                            PaletteFile(project: row.id, projectName: name, path: $0, folder: folder)
+                        }, nil
+                    )
+                } catch {
+                    return ([], PaletteFileFailure(project: row.id, name: name, message: error.localizedDescription))
                 }
             }
         }
         var found: [PaletteFile] = []
-        for task in tasks { found += await task.value }
-        guard current == generation else { return }
+        var failed: [PaletteFileFailure] = []
+        for task in tasks {
+            let (files, failure) = await task.value
+            found += files
+            if let failure { failed.append(failure) }
+        }
+        guard current == generation && !Task.isCancelled else { return }
         results = found
+        failures = failed
         searching = false
     }
 }

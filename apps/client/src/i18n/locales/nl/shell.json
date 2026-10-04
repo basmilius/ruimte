@@ -1,7 +1,8 @@
 {
     "projectStart": {
         "description": "Kies waarmee je wilt beginnen. Je kunt later meer toevoegen.",
-        "failed": "Het startscherm van het project kon niet worden weergegeven"
+        "failed": "Het startscherm van het project kon niet worden weergegeven",
+        "open": "Openen"
     },
     "sidebar": {
         "hide": "Zijbalk verbergen",

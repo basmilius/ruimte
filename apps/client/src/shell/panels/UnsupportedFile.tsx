@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileQuestion } from 'lucide-react';
 import type { FsReadBinary, FsReadTooLarge } from '@ruimte/contracts';
@@ -16,7 +17,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
     const transport = useTransport();
     const endpointId = useEndpointId();
     const reveal = (): void => {
-        void transport.request('fs.reveal', { path }).catch(() => undefined);
+        revealFile(transport, path);
     };
     return (
         // The bar as well: there is nothing to draw, but everything that can be asked of the file

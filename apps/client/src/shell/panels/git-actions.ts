@@ -101,6 +101,7 @@ export function manySummary(done: number, failed: readonly string[], diverged: r
 
 /* One checkout as the commit box weighs it: what is staged in it decides whether it takes the commit. */
 export interface CommitCandidate {
+    revision?: number;
     path: string;
     label: string;
     status: GitStatus | null;

@@ -153,6 +153,8 @@ export interface DesktopBridge {
        command's id. Optional for the same reason `onBrowserContextMenu` is; without them the shell
        keeps its own fixed menu. */
     setMenu?(spec: MenuSpec): void;
+    /* Retained by the shell after its last window closes, for the native quit question. */
+    setLanguage?(language: string): void;
     onMenuCommand?(listener: (id: string) => void): () => void;
     isFullscreen(): Promise<boolean>;
     onFullscreen(listener: (fullscreen: boolean) => void): () => void;

@@ -110,7 +110,7 @@ function DropIndicator({ box, zone }: { box: { top: number; height: number }; zo
     return (
         <div
             aria-hidden
-            className="pointer-events-none absolute z-20 rounded-sm border-2 border-accent bg-accent/15 transition-all duration-100"
+            className="pointer-events-none absolute z-20 rounded-sm border-2 border-accent bg-accent/15 transition-[left,width,top,height] duration-100"
             style={{
                 left: `${shape.x * 100}%`,
                 width: `${shape.width * 100}%`,

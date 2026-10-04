@@ -126,5 +126,8 @@
         "sendToBack": "Naar achteren",
         "lock": "Vergrendelen",
         "unlock": "Ontgrendelen"
+    },
+    "empty": {
+        "description": "Er is nog niets getekend. Kies een gereedschap met <tools/> of plak vormen uit een andere tekening met <paste/>."
     }
 }

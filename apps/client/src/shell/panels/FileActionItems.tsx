@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import { useTranslation } from 'react-i18next';
 import { Columns2, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
 import { createNodeAction, createViewAction, runAsPerson } from '@/actions/client-actions';
@@ -50,7 +51,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
             </Menu.Item>
             <Menu.Item
                 onClick={() => {
-                    void transport.request('fs.reveal', { path }).catch(() => undefined);
+                    revealFile(transport, path);
                 }}
             >
                 <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}

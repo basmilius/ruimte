@@ -41,3 +41,13 @@ describe('quitQuestion', () => {
         });
     });
 });
+
+test('the quit question follows the app language, including after its windows close', () => {
+    const stopped = quitQuestion({ language: 'nl', survives: false, windows: NO_WINDOW_WORK, machine: { agents: 1, terminals: 2 } });
+    expect(stopped?.buttons).toEqual(['Toch afsluiten', 'Verder werken']);
+    expect(stopped?.message).toBe('Een agent en 2 terminals zijn nog actief.');
+    expect(stopped?.defaultId).toBe(1);
+    const service = quitQuestion({ language: 'nl-NL', survives: true, windows: { working: 1, attention: 0 }, machine: null });
+    expect(service?.message).toBe('Er is nog een agent aan het werk.');
+    expect(service?.detail).toContain('blijven');
+});

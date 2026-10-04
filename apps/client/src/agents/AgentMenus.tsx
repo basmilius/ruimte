@@ -7,6 +7,8 @@ import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
 import { runtimeModeLabel } from '@ruimte/agents-react/chat/runtime-modes';
 import { useChatPreferences } from '@ruimte/agents-react/chat/preferences';
 import { useProviders } from '@ruimte/agents-react/state/providers';
+import { availableAgents } from './creation';
+import { useUi } from '@/state/ui';
 import { Icon, Menu } from '@basmilius/desktop-ui';
 
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
@@ -30,11 +32,18 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const runtimeMode = useChatPreferences((s) => s.terminalRuntimeMode);
-    const rows = providers.filter((provider) => provider.installed && provider.capabilities[target]);
+    const rows = availableAgents(providers, target);
     const modeLabel = runtimeModeLabel(runtimeMode);
 
     if (rows.length === 0) {
-        return <Menu.Item disabled>{loaded ? t('menu.none') : t('menu.connecting')}</Menu.Item>;
+        return loaded ? (
+            <Menu.Item onClick={() => useUi.getState().setSettings({ open: true, section: 'agents' })}>
+                <Icon icon={Bot} size={14} />
+                {t('menu.setup')}
+            </Menu.Item>
+        ) : (
+            <Menu.Item disabled>{t('menu.connecting')}</Menu.Item>
+        );
     }
     return (
         <>

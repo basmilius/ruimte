@@ -20,7 +20,10 @@
     },
     "menu": {
         "none": "Geen agent-CLI gevonden",
-        "connecting": "Verbinden"
+        "connecting": "Verbinden",
+        "newChat": "Nieuwe chat",
+        "setup": "Agents instellen",
+        "defaultModel": "Standaardmodel"
     },
     "target": {
         "chat": "Agent (Chat)",

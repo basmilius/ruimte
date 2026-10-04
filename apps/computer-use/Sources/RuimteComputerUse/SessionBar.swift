@@ -37,11 +37,13 @@ final class SessionBar {
         self.screen = screen
         update(content, accent: accent, reduceMotion: reduceMotion)
         if !panel.isVisible {
-            panel.alphaValue = 0
+            panel.alphaValue = reduceMotion ? 1 : 0
             panel.orderFrontRegardless()
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = OverlayStyle.Motion.label.duration
-                panel.animator().alphaValue = 1
+            if !reduceMotion {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = OverlayStyle.Motion.label.duration
+                    panel.animator().alphaValue = 1
+                }
             }
         }
     }

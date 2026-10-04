@@ -1,6 +1,7 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
+import { parseSync, Visitor } from 'oxc-parser';
 import { APP_LANGUAGES, FALLBACK_LANGUAGE } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
 
@@ -131,4 +132,29 @@ describe('the translation files', () => {
             }
         }
     });
+});
+
+test('starter screens keep their visible prose in translation files', async () => {
+    for (const path of ['drawing/DrawingView.tsx', 'shell/ProjectStartScreen.tsx', 'agents/ProviderRows.tsx']) {
+        const text = await Bun.file(join(HERE, '..', path)).text();
+        const prose: string[] = [];
+        new Visitor({
+            JSXText(node) {
+                if (/[a-z]{2}/i.test(node.value)) {
+                    prose.push(node.value.trim());
+                }
+            },
+            JSXAttribute(node) {
+                if (
+                    node.name.type === 'JSXIdentifier' &&
+                    ['label', 'aria-label', 'placeholder', 'description'].includes(node.name.name) &&
+                    node.value?.type === 'Literal' &&
+                    typeof node.value.value === 'string'
+                ) {
+                    prose.push(node.value.value);
+                }
+            }
+        }).visit(parseSync(path, text).program);
+        expect({ path, prose }).toEqual({ path, prose: [] });
+    }
 });

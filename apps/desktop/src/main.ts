@@ -544,6 +544,12 @@ function dropWindowShares(windowId: number): void {
 
 /* Set once a person has said to quit with work still running, so the question is asked once. */
 let quitConfirmed = false;
+let interfaceLanguage: string | null = null;
+onFromApp('app:language', (_event, language: unknown) => {
+    if (language === 'en' || language === 'nl') {
+        interfaceLanguage = language;
+    }
+});
 /* While the question is out, another quit waits for its answer. */
 let quitAsked = false;
 
@@ -572,7 +578,12 @@ if (launcherPipe !== undefined) {
  */
 async function askBeforeQuit(): Promise<boolean> {
     const survives = serviceController.survivesQuit(stopMachineOnQuit);
-    const question = quitQuestion({ survives, windows: agentActivity, machine: survives ? null : await askDaemonWork(daemonPort) });
+    const question = quitQuestion({
+        language: interfaceLanguage ?? app.getPreferredSystemLanguages()[0],
+        survives,
+        windows: agentActivity,
+        machine: survives ? null : await askDaemonWork(daemonPort)
+    });
     if (question === null) {
         return true;
     }

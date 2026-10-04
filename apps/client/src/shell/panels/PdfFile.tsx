@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileText, Maximize, Scan } from 'lucide-react';
@@ -178,7 +179,7 @@ export function PdfFile({ path, name, read }: { path: string; name: string; read
     }, []);
 
     const reveal = (): void => {
-        void transport.request('fs.reveal', { path }).catch(() => undefined);
+        revealFile(transport, path);
     };
 
     // The page that was being read stays at the top when the zoom changes under it.

@@ -1,3 +1,4 @@
+import { revealFile } from './reveal-file';
 import { performAsPerson } from '@/actions/client-actions';
 import {
     useCallback,
@@ -32,6 +33,7 @@ import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 import { createViewAction } from '@/actions/client-actions';
 import { showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { FileSearch as FileSearchFlow, type FileSearchResult } from './file-search';
 import { FileCopyRow } from '@/shell/panels/FileCopyRow';
 import type { CopyTarget } from '@/shell/panels/file-copy';
 import {
@@ -74,7 +76,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@basmilius/desktop-ui';
+import { Button, EmptyState, FILE_TREE_ICONS, Icon, IconButton, Input, Menu, Kbd, PanelEmpty, ContextMenu, PromptDialog } from '@basmilius/desktop-ui';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -100,6 +102,7 @@ const FILES_TREE_CSS = `
     ${PANEL_TREE_CSS}
 `;
 
+const EMPTY_MATCHES: readonly string[] = [];
 const EMPTY_CACHE: EntryCache = new Map();
 
 /*
@@ -127,7 +130,13 @@ export function FilesPanel() {
        effect that would render twice to empty the tree. */
     const [listed, setListed] = useState<{ folder: string | null; byDir: EntryCache }>({ folder: null, byDir: EMPTY_CACHE });
     const [query, setQuery] = useState('');
-    const [matches, setMatches] = useState<readonly string[]>([]);
+    const search = useRef(new FileSearchFlow());
+    const [searchResult, setSearchResult] = useState<{ key: string; result: FileSearchResult } | null>(null);
+    const [searchAttempt, setSearchAttempt] = useState(0);
+    const searchKey = JSON.stringify([endpointId, folder, query.trim(), searchAttempt]);
+    const currentSearch = searchResult?.key === searchKey ? searchResult.result : null;
+    const matches = currentSearch?.kind === 'ready' ? currentSearch.files : EMPTY_MATCHES;
+
     const cacheRef = useRef<EntryCache>(EMPTY_CACHE);
     const expandedRef = useRef<ReadonlySet<string>>(new Set());
     const directoriesRef = useRef<ReadonlySet<string>>(new Set());
@@ -368,18 +377,25 @@ export function FilesPanel() {
     }, [bringIntoView, cache, folder, reveal, searching]);
 
     useEffect(() => {
+        const flow = search.current;
         if (!folder || !searching) {
+            flow.invalidate();
             return;
         }
         const timer = window.setTimeout(() => {
-            performAsPerson('file.search', { query: query.trim(), limit: SEARCH_LIMIT })
-                .then((result) => setMatches(result.files))
-                .catch(() => setMatches([]));
+            void flow
+                .search(() => performAsPerson('file.search', { query: query.trim(), limit: SEARCH_LIMIT }))
+                .then((result) => {
+                    if (result !== null) {
+                        setSearchResult({ key: searchKey, result });
+                    }
+                });
         }, SEARCH_DEBOUNCE_MS);
         return () => {
             window.clearTimeout(timer);
+            flow.invalidate();
         };
-    }, [folder, query, searching]);
+    }, [endpointId, folder, query, searching, searchKey]);
 
     useEffect(() => {
         searchModel.resetPaths([...matches]);
@@ -505,6 +521,19 @@ export function FilesPanel() {
        way, a folder with nothing in it, or a filter nothing here answers to. */
     const placeholder = (): ReactNode => {
         if (searching) {
+            if (currentSearch === null) {
+                return <EmptyState busy>{t('files.searching')}</EmptyState>;
+            }
+            if (currentSearch.kind === 'error') {
+                return (
+                    <EmptyState icon={FileSearch}>
+                        <span>{t('files.searchFailed', { reason: currentSearch.message })}</span>
+                        <Button size="sm" onClick={() => setSearchAttempt((attempt) => attempt + 1)}>
+                            {t('common:action.retry')}
+                        </Button>
+                    </EmptyState>
+                );
+            }
             return matches.length > 0 ? null : <EmptyState icon={Search}>{t('files.noMatch')}</EmptyState>;
         }
         if (!cache.has(folder)) {
@@ -638,7 +667,7 @@ export function FilesPanel() {
                                 )}
                                 <ContextMenu.Item
                                     onClick={onMenuPath((absolute) => {
-                                        void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
+                                        revealFile(transport, absolute);
                                     })}
                                 >
                                     <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}

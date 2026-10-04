@@ -24,15 +24,16 @@ interface GitStore {
     commitTreeWidth: number;
     /* Whole pixels the commit log takes; it travels with the project like the widths beside it. */
     logHeight: number;
-    /* The commit message being written, per project, since one message commits whatever is staged and
-       that can be more than one repository. It stays in memory: a half-written message is not
-       something to find back after a reload. */
+    /* One in-memory draft per project on its machine, shared by all staged repositories. */
     messages: Record<string, string>;
+    /* An edit followed by undo still retires an in-flight suggestion. */
+    messageVersions: Record<string, number>;
     setScope(scope: GitDiffScope): void;
     toggleRepo(label: string): void;
     setHiddenRepos(labels: string[]): void;
     setLogHeight(height: number): void;
-    setMessage(cwd: string, message: string): void;
+    setMessage(key: string, message: string): void;
+    clearMessage(key: string, version: number): void;
     setCounts(key: string, counts: { added: number; deleted: number }): void;
     setCommitFile(key: string, path: string): void;
     setCommitTreeWidth(width: number): void;
@@ -53,6 +54,7 @@ export const useGit = create<GitStore>((set, get) => ({
     commitTreeWidth: DEFAULT_COMMIT_TREE_WIDTH,
     logHeight: DEFAULT_LOG_HEIGHT,
     messages: {},
+    messageVersions: {},
     setScope(scope) {
         set({ scope });
     },
@@ -66,8 +68,16 @@ export const useGit = create<GitStore>((set, get) => ({
     setLogHeight(height) {
         set({ logHeight: Math.round(height) });
     },
-    setMessage(cwd, message) {
-        set({ messages: { ...get().messages, [cwd]: message } });
+    setMessage(key, message) {
+        if ((get().messages[key] ?? '') === message) {
+            return;
+        }
+        set({ messages: { ...get().messages, [key]: message }, messageVersions: { ...get().messageVersions, [key]: (get().messageVersions[key] ?? 0) + 1 } });
+    },
+    clearMessage(key, version) {
+        if ((get().messageVersions[key] ?? 0) === version) {
+            get().setMessage(key, '');
+        }
     },
     setCounts(key, counts) {
         set({ counts: { ...get().counts, [key]: counts } });

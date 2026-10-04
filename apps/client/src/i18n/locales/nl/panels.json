@@ -176,8 +176,11 @@
             "title_other": "{{count}} bestanden sluiten zonder op te slaan?",
             "description_one": "De wijzigingen konden niet worden opgeslagen. Sluiten gooit ze weg.",
             "description_other": "De wijzigingen konden niet worden opgeslagen. Sluiten gooit ze weg.",
-            "confirm": "Sluiten zonder opslaan"
-        }
+            "confirm": "Sluiten zonder opslaan",
+            "failedTitle": "Sommige bestanden konden niet worden opgeslagen",
+            "keepEditing": "Verder bewerken"
+        },
+        "revealFailed": "Dit bestand kon niet worden getoond"
     },
     "files": {
         "copyMentions": "Mentions kopiëren",
@@ -203,7 +206,9 @@
         "noMatch": "Geen bestanden die aan het filter voldoen.",
         "onlyHidden": "Alles in deze map is verborgen of genegeerd. Zet Verborgen en genegeerde bestanden tonen aan in het menu Meer.",
         "reading": "{{name}} lezen.",
-        "showHidden": "Verborgen en genegeerde bestanden tonen"
+        "showHidden": "Verborgen en genegeerde bestanden tonen",
+        "searching": "Bestanden zoeken…",
+        "searchFailed": "Bestanden zoeken is mislukt: {{reason}}"
     },
     "git": {
         "action": {
@@ -262,7 +267,8 @@
             "tooltipRepos_one": "{{count}} repository en zijn branches",
             "tooltipRepos_other": "{{count}} repositories en hun branches",
             "tooltipWorktree": "{{branch}}, in de worktree {{worktree}}",
-            "worktrees": "Worktrees"
+            "worktrees": "Worktrees",
+            "failed": "Branches lezen is mislukt: {{reason}}"
         },
         "commit": {
             "commit": "Commit",
@@ -281,7 +287,9 @@
             "writeFailedBody": "Het bericht kon niet geschreven worden.",
             "writeFailedTitle": "Kon het bericht niet schrijven",
             "writeOneRepo": "Een message wordt uit één repository geschreven",
-            "writing": "Schrijven"
+            "writing": "Schrijven",
+            "suggestionReady": "Je concept is gewijzigd terwijl dit voorstel werd geschreven.",
+            "useSuggestion": "Voorstel gebruiken"
         },
         "conflict": {
             "cherry-pick": "Er wacht een cherry-pick op je",

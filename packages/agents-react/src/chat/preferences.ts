@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentKind, ChatPreferencesPayload, ModelSelection, ProviderAccounts, RuntimeMode } from '@ruimte/agent-contracts';
+import type { AgentKind, ChatPreferencesPayload, ModelSelection, ProviderInfo, ProviderAccounts, RuntimeMode } from '@ruimte/agent-contracts';
 import { persistedJson } from './persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.preferences';
@@ -63,6 +63,10 @@ export function selectionFor(preferences: ChatPreferences, provider: AgentKind |
         return null;
     }
     return preferences.selectionByProvider[owner] ?? null;
+}
+
+export function startingSelection(preferences: ChatPreferences, provider: ProviderInfo): ModelSelection | null {
+    return selectionFor(preferences, provider.kind) ?? (provider.defaultModel === null ? null : { model: provider.defaultModel, options: {} });
 }
 
 /* The pick lands in its provider's slot and makes that provider the global default. */
@@ -140,7 +144,17 @@ export function rememberChatPreferences(patch: Partial<ChatPreferences>): void {
 }
 
 export function rememberChatSelection(provider: AgentKind, selection: ModelSelection): void {
-    write(withSelection(useChatPreferences.getState(), provider, selection));
+    const current = useChatPreferences.getState();
+    const previous = current.selectionByProvider[provider];
+    if (
+        current.lastProvider === provider &&
+        previous?.model === selection.model &&
+        Object.keys(previous.options).length === Object.keys(selection.options).length &&
+        Object.entries(selection.options).every(([key, value]) => previous.options[key] === value)
+    ) {
+        return;
+    }
+    write(withSelection(current, provider, selection));
 }
 
 export function rememberChatAccount(scopeId: string, provider: AgentKind, account: string | null): void {

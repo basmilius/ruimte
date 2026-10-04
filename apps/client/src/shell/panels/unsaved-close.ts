@@ -37,3 +37,17 @@ export function closeWithoutSaving(pending: PendingClose): void {
     }
     pending.run();
 }
+
+export async function retryClose(pending: PendingClose): Promise<void> {
+    const saved = await Promise.all(pending.paths.map((path) => textDrafts.save(pending.endpointId, path)));
+    if (useUnsavedClose.getState().pending !== pending) {
+        return;
+    }
+    const paths = pending.paths.filter((_, index) => !saved[index]);
+    if (paths.length > 0) {
+        useUnsavedClose.setState({ pending: { ...pending, paths } });
+    } else {
+        useUnsavedClose.setState({ pending: null });
+        pending.run();
+    }
+}

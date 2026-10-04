@@ -12,6 +12,7 @@ struct SearchPage: View {
     let addMachine: () -> Void
     @State private var query = ""
     @State private var files = PaletteFiles()
+    @State private var searchAttempt = 0
     @State private var newChat: NewChatTarget?
     @State private var usage: NewChatTarget?
     @AppStorage("ruimte.ios.appearance") private var appearance = "system"
@@ -19,6 +20,9 @@ struct SearchPage: View {
 
     var body: some View {
         let typed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fileResults = files.query == typed ? files.results : []
+        let fileFailures = files.query == typed ? files.failures : []
+        let fileSearching = typed.count >= PaletteFiles.shortest && (files.query != typed || files.searching)
         let commands = PaletteCommands.all(projects: projects.open, machines: runtime.machines, appearance: appearance)
         MobileList {
             if typed.isEmpty {
@@ -47,9 +51,9 @@ struct SearchPage: View {
                         ForEach(found.prefix(5)) { row in projectRow(row) }
                     }
                 }
-                if !files.results.isEmpty {
+                if !fileResults.isEmpty {
                     Section("Files") {
-                        ForEach(files.results) { file in fileRow(file, query: typed) }
+                        ForEach(fileResults) { file in fileRow(file, query: typed) }
                     }
                 }
                 if !matching.isEmpty {
@@ -57,14 +61,31 @@ struct SearchPage: View {
                         ForEach(matching.prefix(8)) { command in commandRow(command, query: typed) }
                     }
                 }
-                if views.isEmpty && found.isEmpty && files.results.isEmpty && matching.isEmpty && !files.searching {
+                if fileSearching {
+                    Section("Files") { ProgressView("Searching files…") }
+                }
+                if !fileFailures.isEmpty {
+                    Section("File search failed") {
+                        ForEach(fileFailures) { failure in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(failure.name).font(.headline)
+                                Text(failure.message).font(.caption).foregroundStyle(MobileStyle.muted)
+                            }
+                        }
+                        Button("Try again") { searchAttempt += 1 }
+                    }
+                }
+                if views.isEmpty && found.isEmpty && fileResults.isEmpty && matching.isEmpty && !fileSearching
+                    && fileFailures.isEmpty
+                {
                     ContentUnavailableView.search(text: typed)
                 }
             }
         }
         .navigationTitle("Search")
         .searchable(text: $query, prompt: "Views, files and commands")
-        .task(id: typed) {
+        .task(id: "\(typed):\(searchAttempt)") {
+            files.invalidate(typed)
             if typed.count >= PaletteFiles.shortest {
                 do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
             }
@@ -154,7 +175,8 @@ struct SearchPage: View {
         case .project(let id, let projectAction):
             guard let row = projects.open.first(where: { $0.id == id }) else { return }
             let navigation = navigator.openProject(
-                MobileWorkspace(session: runtime.session(for: row.machine), projectID: id.projectID, summary: row.summary))
+                MobileWorkspace(
+                    session: runtime.session(for: row.machine), projectID: id.projectID, summary: row.summary))
             switch projectAction {
             case .newView: navigation.pendingSheet = .newView
             case .newTerminal: navigation.pendingKind = "terminal"

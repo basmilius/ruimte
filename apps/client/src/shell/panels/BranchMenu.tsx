@@ -13,6 +13,8 @@ const MENU_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Escape', 'Tab', 'Enter']);
 export interface CheckoutRefs {
     refs: readonly GitRef[];
     loading: boolean;
+    error?: string | null;
+    retry?(): void;
     /* The branch that checkout's HEAD is on, for the hint on its row before its branches are in. */
     branch: string | null;
 }
@@ -284,7 +286,13 @@ function BranchList({ cwd, state, branch, onCheckout, onCreate }: BranchListProp
                 <IconButton icon={Plus} label={t('git.branchMenu.create')} render={<Menu.Item unstyled />} onClick={() => onCreate(cwd)} />
             </div>
             {loading && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.loading')}</p>}
-            {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}
+            {state.error && (
+                <>
+                    <p className="px-3 py-2 text-xs text-status-error">{t('git.branchMenu.failed', { reason: state.error })}</p>
+                    <Menu.Item onClick={state.retry}>{t('common:action.retry')}</Menu.Item>
+                </>
+            )}
+            {!loading && !state.error && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}
             <Menu.RadioGroup
                 value={current}
                 onValueChange={(value: string) => {

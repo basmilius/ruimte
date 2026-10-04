@@ -1,9 +1,10 @@
 import { useMemo, type ReactNode } from 'react';
-import { Bot, FileText, Globe, LayoutGrid, LayoutTemplate, LoaderCircle, MessageSquare, PenTool, StickyNote, Terminal, Type, Workflow } from 'lucide-react';
+import { FileText, Globe, LayoutGrid, LayoutTemplate, MessageSquare, PenTool, StickyNote, Terminal, Type, Workflow } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { applyLayoutAction, createNodeAction, createTextAction, showViewOnCanvasAction } from '@/actions/client-actions';
+import { ProviderRows } from '@/agents/ProviderRows';
 import { AgentIcon } from '@ruimte/agents-react/agents/AgentIcon';
-import { emptyCanvasSections, emptyCanvasSize, type EmptyCanvasTile } from '@/canvas/empty-canvas';
+import { emptyCanvasSections, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { toWorld } from '@/canvas/math';
 import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -12,7 +13,7 @@ import { useDocument } from '@/state/document';
 import { shownFolderOf, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useUi } from '@/state/ui';
-import { Icon, IconButton, Kbd, SectionLabel, Tile } from '@basmilius/desktop-ui';
+import { Icon, Kbd, SectionLabel, Tile } from '@basmilius/desktop-ui';
 import type { Shortcut } from '@basmilius/desktop-ui';
 
 interface TileLook {
@@ -36,23 +37,15 @@ const NODE_ICON = {
 /* The sections of the grid, in the order their tiles take in the tab order. */
 const SECTIONS = ['agents', 'place', 'project'] as const;
 
-/*
- * What an empty canvas offers, as tiles that put the node in the middle of the camera the way the dock
- * does. It sits over the canvas in screen space, clear of the dock, and shrinks with its cell: a row
- * of icons in a narrow cell and only the sentence in a tiny one. Clicking beside the tiles still
- * reaches the canvas, which box-selects as it always does.
- */
+/* All start choices remain reachable by scrolling, including inside a small split cell. */
 export function EmptyCanvas() {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
-    const viewport = useCanvas((s) => s.viewport);
     const layouts = useCanvas((s) => s.layouts);
     const views = useDocument((s) => s.views);
     const hasFolder = useProject((s) => shownFolderOf(s.current) !== null);
     const providers = useProviders((s) => s.providers);
-    const loaded = useProviders((s) => s.loaded);
-    const sections = useMemo(() => emptyCanvasSections({ providers, loaded, hasFolder, layouts, views }), [providers, loaded, hasFolder, layouts, views]);
-    const size = emptyCanvasSize(viewport);
+    const sections = useMemo(() => emptyCanvasSections({ providers, hasFolder, layouts, views }), [providers, hasFolder, layouts, views]);
 
     const center = (): { x: number; y: number } => {
         const state = canvasStore.getState();
@@ -65,25 +58,10 @@ export function EmptyCanvas() {
                 return {
                     icon: <AgentIcon kind={tile.provider} size={16} />,
                     title: tile.name,
-                    description: tile.target === 'chat' ? t('empty.agent.chat') : t('empty.agent.terminal'),
+                    description: t('empty.agent.terminal'),
                     run: () => void createNodeAction(tile.target, { provider: tile.provider })
                 };
             }
-            case 'connecting':
-                return {
-                    icon: <Icon icon={LoaderCircle} size={16} className="animate-spin" />,
-                    title: t('empty.connecting.title'),
-                    description: t('empty.connecting.description'),
-                    disabled: true,
-                    run: () => undefined
-                };
-            case 'setup':
-                return {
-                    icon: <Icon icon={Bot} size={16} />,
-                    title: t('empty.setup.title'),
-                    description: t('empty.setup.description'),
-                    run: () => useUi.getState().setSettings({ open: true, section: 'agents' })
-                };
             case 'node':
                 return {
                     icon: <Icon icon={NODE_ICON[tile.node]} size={16} />,
@@ -132,57 +110,33 @@ export function EmptyCanvas() {
     return (
         // The bottom padding keeps the grid clear of the dock, which floats over the same cell.
         <div className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden px-4 pt-4 pb-20">
-            {size === 'minimal' && hint}
-            {size === 'compact' && (
-                <div className="pointer-events-auto flex max-w-full flex-col items-center gap-3">
-                    <div className="flex max-w-full flex-wrap justify-center gap-1">
-                        {SECTIONS.flatMap((key) => sections[key]).map((tile) => {
-                            const look = lookOf(tile);
-                            return (
-                                <IconButton
-                                    key={tile.id}
-                                    label={look.title}
-                                    tooltip={look.description ? `${look.title}: ${look.description}` : undefined}
-                                    kbd={look.shortcut}
-                                    disabled={look.disabled}
-                                    onClick={look.run}
-                                >
-                                    {look.icon}
-                                </IconButton>
-                            );
-                        })}
-                    </div>
-                    {hint}
-                </div>
-            )}
-            {size === 'full' && (
-                <div className="pointer-events-auto flex max-h-full w-full max-w-3xl flex-col gap-5 overflow-auto">
-                    {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
-                        <section key={key} className="flex flex-col gap-2">
-                            <SectionLabel render={<h2 />} className="px-1">
-                                {t(`empty.sections.${key}`)}
-                            </SectionLabel>
-                            <div className="grid grid-cols-3 gap-2">
-                                {sections[key].map((tile) => {
-                                    const look = lookOf(tile);
-                                    return (
-                                        <Tile
-                                            key={tile.id}
-                                            icon={look.icon}
-                                            title={look.title}
-                                            description={look.description}
-                                            shortcut={look.shortcut}
-                                            disabled={look.disabled}
-                                            onClick={look.run}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    ))}
-                    {hint}
-                </div>
-            )}
+            <div className="pointer-events-auto flex max-h-full w-full max-w-3xl flex-col gap-5 overflow-auto">
+                <ProviderRows onPick={(provider) => void createNodeAction('chat', { provider: provider.kind })} />
+                {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
+                    <section key={key} className="flex flex-col gap-2">
+                        <SectionLabel render={<h2 />} className="px-1">
+                            {t(`empty.sections.${key}`)}
+                        </SectionLabel>
+                        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))' }}>
+                            {sections[key].map((tile) => {
+                                const look = lookOf(tile);
+                                return (
+                                    <Tile
+                                        key={tile.id}
+                                        icon={look.icon}
+                                        title={look.title}
+                                        description={look.description}
+                                        shortcut={look.shortcut}
+                                        disabled={look.disabled}
+                                        onClick={look.run}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </section>
+                ))}
+                {hint}
+            </div>
         </div>
     );
 }

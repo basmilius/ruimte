@@ -119,7 +119,7 @@ interface ComposerProps {
     providerFixed: boolean;
     onSend(text: string, extras: ChatSendExtras): void;
     /* Another provider's model was picked before the first message; whatever holds the chat has to follow. */
-    onRetarget(provider: AgentKind, selection: ModelSelection): void;
+    onRetarget(provider: AgentKind, selection: ModelSelection): Promise<void>;
 }
 
 function usePendingRequests(chatId: string) {
@@ -172,6 +172,8 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
     const [skillQuery, setSkillQuery] = useState<MentionQuery | null>(null);
     const [skills, setSkills] = useState<ChatSkill[]>([]);
     const [searched, setSearched] = useState<MentionSearch>(NO_MENTION_SEARCH);
+    const configuring = useRef(false);
+    const [configurationPending, setConfigurationPending] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
     const [dragging, setDragging] = useState(false);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
@@ -389,30 +391,50 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
         inputRef.current?.focus();
     };
 
-    const configure = (patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode }): void => {
-        if (patch.selection) {
-            rememberChatSelection(info.provider, patch.selection);
+    const configure = (patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode; account?: string }): void => {
+        if (configuring.current) {
+            return;
         }
-        if (patch.runtimeMode) {
-            rememberChatPreferences({ runtimeMode: patch.runtimeMode });
-        }
-        void actions.configure(chatId, patch).catch(() => undefined);
+        configuring.current = true;
+        setConfigurationPending(true);
+        void actions
+            .configure(chatId, patch)
+            .then(() => {
+                if (patch.selection) {
+                    rememberChatSelection(info.provider, patch.selection);
+                }
+                if (patch.runtimeMode) {
+                    rememberChatPreferences({ runtimeMode: patch.runtimeMode });
+                }
+                if (patch.account) {
+                    rememberChatAccount(scope.id, info.provider, patch.account);
+                }
+            })
+            .catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error)))
+            .finally(() => {
+                configuring.current = false;
+                setConfigurationPending(false);
+            });
     };
 
-    /* From the next turn on, and the default for new agents of this CLI on this machine, as a model pick is. */
-    const chooseAccount = (account: string): void => {
-        void actions
-            .configure(chatId, { account })
-            .then(() => rememberChatAccount(scope.id, info.provider, account))
-            .catch((e: unknown) => setNotice(e instanceof Error ? e.message : String(e)));
-    };
+    const chooseAccount = (account: string): void => configure({ account });
 
     /* A model of another CLI re-points the whole chat; one of this CLI's own is a configure. */
     const chooseModel = (provider: AgentKind, slug: string): void => {
         const selection: ModelSelection = { model: slug, options: {} };
         if (provider !== info.provider) {
-            rememberChatSelection(provider, selection);
-            onRetarget(provider, selection);
+            if (configuring.current) {
+                return;
+            }
+            configuring.current = true;
+            setConfigurationPending(true);
+            void onRetarget(provider, selection)
+                .then(() => rememberChatSelection(provider, selection))
+                .catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error)))
+                .finally(() => {
+                    configuring.current = false;
+                    setConfigurationPending(false);
+                });
             return;
         }
         configure({ selection });
@@ -420,10 +442,14 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
 
     const stop = (shiftKey: boolean): void => {
         if (composerStopOf(shiftKey) === 'turn') {
-            void actions.stopTurn(chatId, false).catch(() => undefined);
+            void actions.stopTurn(chatId, false).catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error)));
             return;
         }
-        chatHost().confirm.stopSubagents(scope.id, chatId, () => void actions.stopTurn(chatId, true).catch(() => undefined));
+        chatHost().confirm.stopSubagents(
+            scope.id,
+            chatId,
+            () => void actions.stopTurn(chatId, true).catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error)))
+        );
     };
 
     /* The host decides whether a turn is in the way; only its refusal asks the person first. */
@@ -1231,6 +1257,7 @@ export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabl
                             }}
                         />
                         <RunSettings
+                            disabled={configurationPending || !writable}
                             providers={pickable}
                             provider={info.provider}
                             selection={info.selection}
