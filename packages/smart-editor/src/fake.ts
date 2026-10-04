@@ -21,6 +21,7 @@ import type {
     EditorOptions,
     EditorPosition,
     EditorRange,
+    EditorReveal,
     EditorRect,
     EditorSemanticToken,
     EditorSmartKeys,
@@ -170,8 +171,12 @@ export class FakeEditor implements Editor {
         return subscribe(this.blurs, listener);
     }
 
-    revealLine(line: number): void {
+    /* How the client last asked the view to follow a jump. */
+    lastReveal: EditorReveal | null = null;
+
+    revealLine(line: number, reveal: EditorReveal = 'center'): void {
         this.revealedLine = line;
+        this.lastReveal = reveal;
     }
 
     /* Counts plain occurrences only; the matcher itself is the editor's, and a test here is about the client's side. */
@@ -372,13 +377,15 @@ export class FakeEditor implements Editor {
         return this.indentation;
     }
 
-    setCaret(position: EditorPosition): void {
+    setCaret(position: EditorPosition, reveal: EditorReveal = 'relative'): void {
+        this.lastReveal = reveal;
         this.caret = position;
         this.revealedLine = position.line + 1;
         this.moveCaret(position);
     }
 
-    setSelection(range: EditorRange): void {
+    setSelection(range: EditorRange, reveal: EditorReveal = 'relative'): void {
+        this.lastReveal = reveal;
         this.caret = range.end;
         this.selection = range;
         for (const listener of [...this.carets]) {

@@ -3,7 +3,7 @@ import type { EditorContentChange, EditorPosition } from '@ruimte/smart-editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import type { EditorLanguage } from './editor-language';
 import { isShortcut } from './shortcut-keys';
-import { markerOf, neighborProblem, problemsAt, shiftRange, type Problem } from './diagnostics-model';
+import { comparePositions, markerOf, neighborProblem, problemsAt, shiftRange, type Problem } from './diagnostics-model';
 
 export interface ProblemCounts {
     readonly error: number;
@@ -70,7 +70,7 @@ export class DiagnosticsFeature {
         if (target === null) {
             return false;
         }
-        editor.setCaret(target.diagnostic.range.start);
+        editor.setCaret(target.diagnostic.range.start, comparePositions(target.diagnostic.range.start, editor.getCaret()) > 0 ? 'centerDown' : 'centerUp');
         editor.focus();
         this.language.hover.showProblemsAt(editor.getCaret());
         return true;
@@ -83,7 +83,7 @@ export class DiagnosticsFeature {
         if (target === null) {
             return false;
         }
-        editor.setCaret(target.diagnostic.range.start);
+        editor.setCaret(target.diagnostic.range.start, 'center');
         editor.focus();
         this.language.hover.showProblemsAt(editor.getCaret());
         return true;

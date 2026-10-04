@@ -600,6 +600,16 @@ export class EditorLayout {
         return { x: TEXT_PADDING + geometry[affinity][stop]!, y: row.top + subRow * this.metrics.lineHeight, width: 1, height: this.metrics.lineHeight };
     }
 
+    /* A height snapped up to the top of the visual line it is in, so a page scrolls to whole lines. */
+    lineBase(y: number): number {
+        const row = this.rowAt(y);
+        if (row.kind !== 'text') {
+            return y;
+        }
+        const base = row.top + Math.floor((y - row.top) / this.metrics.lineHeight) * this.metrics.lineHeight;
+        return y > base && y < base + this.metrics.lineHeight ? base : y;
+    }
+
     /*
      * The visual line an offset is on, as the platform counts it: a wrapped line is as many as it has
      * rows and a collapsed fold is one. `end` is where its text stops and `next` where the line after it starts.

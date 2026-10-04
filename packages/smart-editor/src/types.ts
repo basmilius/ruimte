@@ -201,6 +201,14 @@ export interface EditorGutterAction {
     readonly label: string;
 }
 
+/*
+ * How the view follows a caret that was moved from outside. `relative` keeps it in view with a line
+ * of margin, `center` puts a target out of view a third from the top and leaves one in view alone, and
+ * `centerDown` and `centerUp` do the same for a step through results that goes one way, so each next one
+ * lands where the eye expects it.
+ */
+export type EditorReveal = 'relative' | 'center' | 'centerDown' | 'centerUp';
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -246,7 +254,8 @@ export interface Editor {
     onSave(listener: () => void): () => void;
     /* The focus left the editor and every widget of its own, such as its suggestions. */
     onBlur(listener: () => void): () => void;
-    revealLine(line: number): void;
+    /* Puts the cursor at the start of a one-based line and scrolls it into view, a third from the top when it was out of view. */
+    revealLine(line: number, reveal?: EditorReveal): void;
     /* Marks every match and moves to the first one from the cursor on; null takes the marks away. The
        count comes back through `onFind`, and again whenever an edit changes it. */
     find(query: EditorFindQuery | null): void;
@@ -296,9 +305,9 @@ export interface Editor {
     getSelection(): EditorRange;
     getIndentation(): EditorIndentation;
     /* Moves the one caret and scrolls it into view. */
-    setCaret(position: EditorPosition): void;
+    setCaret(position: EditorPosition, reveal?: EditorReveal): void;
     /* Replaces the selections with one over the range, the caret at its end, and scrolls it into view. */
-    setSelection(range: EditorRange): void;
+    setSelection(range: EditorRange, reveal?: EditorReveal): void;
     /* The caret moved or the text under it changed. */
     onCaret(listener: (position: EditorPosition) => void): () => void;
     /* The pointer moved onto another character, or null when it left the text. */

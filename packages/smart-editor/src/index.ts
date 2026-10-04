@@ -24,6 +24,7 @@ export type {
     EditorKeyHandler,
     EditorMarker,
     EditorMarkerSeverity,
+    EditorReveal,
     EditorRect,
     EditorSmartKeys,
     EditorOptions,

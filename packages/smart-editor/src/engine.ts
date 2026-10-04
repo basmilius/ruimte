@@ -23,6 +23,7 @@ import type {
     EditorOptions,
     EditorPosition,
     EditorRange,
+    EditorReveal,
     EditorRect,
     EditorSemanticToken,
     EditorSmartKeys,
@@ -103,7 +104,7 @@ class SmartEditor implements Editor {
             const offset = Math.min(bounds.end, bounds.start + Math.max(0, (options.column ?? 1) - 1));
             this.model.setSelections([{ anchor: offset, head: offset }]);
             if (options.scrollTop === undefined) {
-                this.view.revealOffset(offset, true);
+                this.view.revealOffset(offset, 'center');
             }
         }
         if (options.scrollTop !== undefined) {
@@ -203,16 +204,16 @@ class SmartEditor implements Editor {
         return { tabSize: this.settings.tabSize, insertSpaces: this.settings.insertSpaces };
     }
 
-    setCaret(position: EditorPosition): void {
+    setCaret(position: EditorPosition, reveal: EditorReveal = 'relative'): void {
         const offset = this.offsetAt(position);
         this.model.setSelections([{ anchor: offset, head: offset }]);
-        this.view.revealOffset(offset);
+        this.view.revealOffset(offset, reveal);
     }
 
-    setSelection(range: EditorRange): void {
+    setSelection(range: EditorRange, reveal: EditorReveal = 'relative'): void {
         const head = this.offsetAt(range.end);
         this.model.setSelections([{ anchor: this.offsetAt(range.start), head }]);
-        this.view.revealOffset(head);
+        this.view.revealOffset(head, reveal);
     }
 
     onCaret(listener: (position: EditorPosition) => void): () => void {
@@ -327,10 +328,10 @@ class SmartEditor implements Editor {
         return subscribe(this.blurs, listener);
     }
 
-    revealLine(line: number): void {
+    revealLine(line: number, reveal: EditorReveal = 'center'): void {
         const bounds = this.model.getLine(this.clampLine(line));
         this.model.setSelections([{ anchor: bounds.start, head: bounds.start }]);
-        this.view.revealOffset(bounds.start, true);
+        this.view.revealOffset(bounds.start, reveal);
     }
 
     find(query: EditorFindQuery | null): void {
@@ -428,7 +429,7 @@ class SmartEditor implements Editor {
             direction === 1 ? (matches.find((match) => match.from >= to) ?? matches[0]!) : (matches.findLast((match) => match.to <= from) ?? matches.at(-1)!);
         this.view.ensureVisible(target.from);
         this.model.setSelections([direction === 1 ? { anchor: target.from, head: target.to } : { anchor: target.to, head: target.from }]);
-        this.view.revealCaret();
+        this.view.revealCaret(target.from > head ? 'centerDown' : 'centerUp');
         return true;
     }
 

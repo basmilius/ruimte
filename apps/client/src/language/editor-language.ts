@@ -116,7 +116,7 @@ export class EditorLanguage {
     /* Goes to a place without touching the history, which is how Back and Forward move. */
     visit(place: Place): void {
         if (place.uri === this.uri) {
-            this.editor.setCaret(place.position);
+            this.editor.setCaret(place.position, 'center');
             this.editor.focus();
         } else {
             this.project.openPlace(place);

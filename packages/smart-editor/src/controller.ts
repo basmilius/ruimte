@@ -301,20 +301,42 @@ export class InputController {
         }
     }
 
-    private moveCarets(key: MoveKey, extend: boolean): void {
+    /* A page scrolls whole lines, and every caret goes as far, so each stays on its row of the screen. */
+    private movePages(direction: -1 | 1, extend: boolean): void {
         const { model, layout, viewport } = this.view;
-        const vertical = key === 'ArrowUp' || key === 'ArrowDown' || key === 'PageUp' || key === 'PageDown';
-        const direction = key === 'ArrowLeft' || key === 'ArrowUp' || key === 'PageUp' ? -1 : 1;
+        const { lineHeight } = layout.metrics;
+        const height = this.view.viewportHeight;
+        const page = Math.trunc(height / lineHeight) * lineHeight;
+        const scrollTop = direction < 0 ? viewport.scrollTop - page : Math.min(layout.height - height, viewport.scrollTop + page);
+        viewport.scrollTop = Math.max(0, layout.lineBase(scrollTop));
+        const distance = direction < 0 ? height : height + lineHeight - 1;
+        const selections = model.getSelections().map((selection, index) => {
+            this.desiredXs[index] ??= layout.caret(selection.head).x;
+            const head = layout.verticalOffset(selection.head, direction, this.desiredXs[index]!, distance);
+            return { anchor: extend ? selection.anchor : head, head };
+        });
+        this.keepDesiredXs = true;
+        model.setSelections(selections);
+        this.keepDesiredXs = false;
+        this.historyGroup++;
+        this.view.revealCaret();
+    }
+
+    private moveCarets(key: MoveKey, extend: boolean): void {
+        if (key === 'PageUp' || key === 'PageDown') {
+            this.movePages(key === 'PageUp' ? -1 : 1, extend);
+            return;
+        }
+        const { model, layout } = this.view;
+        const vertical = key === 'ArrowUp' || key === 'ArrowDown';
+        const direction = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : 1;
         const selections = model.getSelections().map((selection, index) => {
             let head: number;
             if (!vertical && !extend && selection.anchor !== selection.head) {
                 head = direction < 0 ? Math.min(selection.anchor, selection.head) : Math.max(selection.anchor, selection.head);
             } else if (vertical) {
                 this.desiredXs[index] ??= layout.caret(selection.head).x;
-                const distance = key.startsWith('Page')
-                    ? Math.max(layout.metrics.lineHeight, (viewport.clientHeight || 400) - layout.metrics.lineHeight)
-                    : layout.metrics.lineHeight;
-                head = layout.verticalOffset(selection.head, direction, this.desiredXs[index]!, distance);
+                head = layout.verticalOffset(selection.head, direction, this.desiredXs[index]!);
             } else {
                 head = layout.horizontalOffset(selection.head, direction);
             }

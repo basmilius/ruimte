@@ -99,7 +99,7 @@ export class HighlightsFeature {
         if (target === null) {
             return false;
         }
-        editor.setCaret(target.start);
+        editor.setCaret(target.start, comparePositions(target.start, editor.getCaret()) > 0 ? 'centerDown' : 'centerUp');
         return true;
     }
 

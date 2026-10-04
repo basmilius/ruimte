@@ -240,6 +240,65 @@ describe('the keyboard', () => {
         expect(editor.getText()).toBe('abcd\n?x\nabc!d');
     });
 
+    test('pages by whole lines, with the caret on the same row of the screen', () => {
+        const text = Array.from({ length: 100 }, (_, i) => `line ${i}`).join('\n');
+        const { editor, press, viewport } = mountEditor({ text, line: 3, column: 3 });
+        press('PageDown');
+        expect(viewport.scrollTop).toBe(400);
+        expect(editor.getCaret()).toEqual({ line: 22, character: 2 });
+        press('PageDown');
+        expect(viewport.scrollTop).toBe(800);
+        expect(editor.getCaret()).toEqual({ line: 42, character: 2 });
+        press('PageUp');
+        expect(viewport.scrollTop).toBe(400);
+        expect(editor.getCaret()).toEqual({ line: 22, character: 2 });
+    });
+
+    test('keeps a line of margin below the caret while it moves down and above it while it moves up', () => {
+        const text = Array.from({ length: 100 }, (_, i) => `line ${i}`).join('\n');
+        const { press, viewport } = mountEditor({ text, line: 19 });
+        expect(viewport.scrollTop).toBe(0);
+        press('ArrowDown');
+        expect(viewport.scrollTop).toBe(20);
+        press('ArrowDown');
+        expect(viewport.scrollTop).toBe(40);
+        viewport.scrollTop = 400;
+        for (let i = 0; i < 3; i++) {
+            press('ArrowUp');
+        }
+        press('ArrowUp');
+        expect(viewport.scrollTop).toBeLessThan(400);
+    });
+
+    test('puts a jump to a line out of view a third from the top and leaves one in view alone', () => {
+        const text = Array.from({ length: 100 }, (_, i) => `line ${i}`).join('\n');
+        const { editor, viewport } = mountEditor({ text });
+        editor.revealLine(10);
+        expect(viewport.scrollTop).toBe(0);
+        editor.revealLine(61);
+        expect(viewport.scrollTop).toBe(60 * 20 - 133);
+        editor.setCaret({ line: 80, character: 0 }, 'centerDown');
+        expect(viewport.scrollTop).toBe(80 * 20 - 133);
+        editor.setCaret({ line: 80, character: 1 });
+        expect(viewport.scrollTop).toBe(80 * 20 - 133);
+    });
+
+    test('stops paging at the ends of the text and extends the selection with shift', () => {
+        const text = Array.from({ length: 30 }, (_, i) => `line ${i}`).join('\n');
+        const { editor, press, viewport } = mountEditor({ text });
+        press('PageDown', { shiftKey: true });
+        expect(editor.getSelection().end.line).toBe(20);
+        press('PageDown');
+        press('PageDown');
+        expect(viewport.scrollTop).toBe(30 * 20 + 8 - 400);
+        expect(editor.getCaret().line).toBe(29);
+        press('PageUp');
+        press('PageUp');
+        press('PageUp');
+        expect(viewport.scrollTop).toBe(0);
+        expect(editor.getCaret()).toEqual({ line: 0, character: 0 });
+    });
+
     test('selects with shift and replaces the selection by typing', () => {
         const { editor, press, type } = mountEditor({ text: 'abcdef' });
         press('ArrowRight');

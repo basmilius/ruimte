@@ -3,6 +3,7 @@ import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { mapOffset } from './offsets.ts';
+import { type ScrollKind, scrollPosition } from './scroll.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
 import { paintCarets, paintGutter, paintOver, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
@@ -46,6 +47,12 @@ const FOLD_LIMIT = 2_000_000;
 const MIN_GUTTER_WIDTH = 64;
 /* The caret stays solid this long after it moved, so holding an arrow key does not blink it between steps. */
 const CARET_SOLID_MS = 500;
+/*
+ * A jump to something already in view leaves the view where it is, and one to something out of view puts it
+ * a third from the top. The platform's own default is to move the view for a jump even then; here it is a
+ * switch, so the one place that decides it says so.
+ */
+const REFRAIN_FROM_SCROLLING = true;
 const STICKY_MAX_LINES = 5;
 /* A view shows at most this share of its rows as sticky headers, so a small node keeps most of its text. */
 const STICKY_ROW_SHARE = 4;
@@ -391,7 +398,7 @@ export class EditorView {
         return this.document.activeElement === this.input;
     }
 
-    private get viewportHeight(): number {
+    get viewportHeight(): number {
         return this.viewport.clientHeight || DEFAULT_HEIGHT;
     }
 
@@ -749,36 +756,48 @@ export class EditorView {
         return this.layout.caret(head, 'after', head === this.rowEndCaret);
     }
 
-    /* Scrolls the least that brings the offset into view; `center` puts its line in the middle instead. */
-    revealOffset(offset: number, center = false): void {
+    /* Scrolls an offset into view the way `kind` asks; the pinned headers at the top count as not being view. */
+    revealOffset(offset: number, kind: ScrollKind = 'relative'): void {
         this.ensureVisible(offset);
         this.syncWrap();
         const caret = this.layout.caret(offset);
-        const height = this.viewportHeight;
+        const row = this.layout.rowForLine(this.model.positionAt(offset).line);
+        const above = this.layout.rows[Math.max(0, row.index - 1)]!;
         const width = this.viewportWidth;
-        const cover = this.stickyHeightAt(this.viewport.scrollTop);
         this.content.style.height = `${this.layout.height}px`;
         this.content.style.width = `${Math.max(this.layout.width, width)}px`;
-        if (center) {
-            this.viewport.scrollTop = Math.max(0, caret.y - (height - caret.height) / 2);
-        } else if (caret.y < this.viewport.scrollTop + cover) {
-            // The headers pinned at the top would cover it, so it stops under them.
-            this.viewport.scrollTop = Math.max(0, caret.y - this.stickyHeightAt(Math.max(0, caret.y - cover)));
-        } else if (caret.y + caret.height > this.viewport.scrollTop + height) {
-            this.viewport.scrollTop = caret.y + caret.height - height;
-        }
-        if (!this.settings.wrap) {
-            if (caret.x < this.viewport.scrollLeft + 8) {
-                this.viewport.scrollLeft = Math.max(0, caret.x - 8);
-            } else if (caret.x > this.viewport.scrollLeft + width - 24) {
-                this.viewport.scrollLeft = caret.x - width + 24;
+        // The headers pinned at the top change with the scroll, so the position is worked out again where it lands.
+        let cover = this.stickyHeightAt(this.viewport.scrollTop);
+        let position = { x: this.viewport.scrollLeft, y: this.viewport.scrollTop };
+        for (let attempt = 0; attempt < 3; attempt++) {
+            position = scrollPosition(
+                {
+                    target: { x: caret.x, y: caret.y },
+                    view: { x: this.viewport.scrollLeft, y: this.viewport.scrollTop + cover, width, height: this.viewportHeight - cover },
+                    content: { width: Math.max(this.layout.width, width), height: this.layout.height },
+                    lineHeight: this.layout.metrics.lineHeight,
+                    charWidth: this.layout.metrics.charWidth,
+                    topBound: above.top,
+                    bottomBound: row.top + row.height + this.layout.metrics.lineHeight,
+                    refrain: REFRAIN_FROM_SCROLLING,
+                    horizontal: !this.settings.wrap,
+                    inset: cover
+                },
+                kind
+            );
+            const next = this.stickyHeightAt(position.y);
+            if (next === cover) {
+                break;
             }
+            cover = next;
         }
+        this.viewport.scrollTop = position.y;
+        this.viewport.scrollLeft = position.x;
         this.requestRender();
     }
 
-    revealCaret(): void {
-        this.revealOffset(this.model.getPrimary().head);
+    revealCaret(kind: ScrollKind = 'relative'): void {
+        this.revealOffset(this.model.getPrimary().head, kind);
     }
 
     /* What a regular expression replacement writes for the match the find is on, drawn under that match; null takes it away. */
@@ -851,14 +870,8 @@ export class EditorView {
 
     revealFind(): void {
         const mark = this.find.currentMark;
-        if (!mark) {
-            return;
-        }
-        this.ensureVisible(mark.from);
-        const caret = this.layout.caret(mark.from);
-        const top = this.viewport.scrollTop;
-        if (caret.y < top || caret.y + caret.height > top + this.viewportHeight) {
-            this.viewport.scrollTop = Math.max(0, caret.y - this.viewportHeight / 2);
+        if (mark) {
+            this.revealOffset(mark.from, 'center');
         }
     }
 
@@ -1143,7 +1156,7 @@ export class EditorView {
     /* Puts the caret on an offset, in the middle of the view, and gives the editor the keyboard. */
     private jumpTo(offset: number): void {
         this.model.setSelections([{ anchor: offset, head: offset }]);
-        this.revealOffset(offset, true);
+        this.revealOffset(offset, 'center');
         this.focus();
     }
 
