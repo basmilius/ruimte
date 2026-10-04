@@ -1,16 +1,28 @@
 import i18next from 'i18next';
-import { StaleResultError, type Location } from '@ruimte/smart-editor-lsp';
+import { StaleResultError, type Location, type Range } from '@ruimte/smart-editor-lsp';
 import type { EditorPosition } from '@ruimte/smart-editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';
-import { PEEK_READ_FILES, peekFilesOf, snippetOf, type PeekFile } from './peek-model';
+import { uniquePlaces } from './navigation';
+import { PEEK_READ_FILES, definitionSnippetOf, peekFilesOf, snippetOf, type PeekFile } from './peek-model';
+import type { PeekView } from './popups';
 import { isShortcut } from './shortcut-keys';
 
-const METHOD = 'textDocument/references';
 const TOAST_ID = 'language-peek';
 /* Tall enough for the code and the list, until the editor has measured it. */
 export const PEEK_HEIGHT = 300;
+
+type PeekKind = PeekView['kind'];
+
+const KINDS = {
+    references: { method: 'textDocument/references', unavailable: 'unavailable', none: 'none' },
+    definitions: { method: 'textDocument/definition', unavailable: 'unavailableDefinition', none: 'noDefinition' }
+} as const;
+
+function placeKey(location: Location): string {
+    return `${location.uri}\0${location.range.start.line}\0${location.range.start.character}`;
+}
 
 function say(key: string, options?: Record<string, unknown>): string {
     return i18next.t(`panels:language.peek.${key}`, options);
@@ -23,6 +35,9 @@ function say(key: string, options?: Record<string, unknown>): string {
  */
 export class PeekFeature {
     private readonly language: EditorLanguage;
+    private kind: PeekKind = 'references';
+    /* The whole declaration of each place of a definition peek, where the server gave it. */
+    private targets = new Map<string, Range>();
     private texts = new Map<string, string>();
     private places = new Map<string, Location>();
     private order: string[] = [];
@@ -36,6 +51,10 @@ export class PeekFeature {
             editor.onKeyDown((event) => {
                 if (isShortcut(CANVAS_SHORTCUTS.peekReferences, event)) {
                     void this.open();
+                    return true;
+                }
+                if (isShortcut(CANVAS_SHORTCUTS.peekDefinition, event)) {
+                    void this.openDefinition();
                     return true;
                 }
                 return this.key(event);
@@ -54,16 +73,17 @@ export class PeekFeature {
         return this.language.popups.getState().peek !== null;
     }
 
-    async open(position: EditorPosition = this.language.editor.getCaret()): Promise<void> {
+    async open(position: EditorPosition = this.language.editor.getCaret(), kind: PeekKind = 'references'): Promise<void> {
         const { editor, project, uri } = this.language;
-        if (!project.service.supports(METHOD, uri)) {
-            this.tell(say('unavailable'));
+        const method = KINDS[kind].method;
+        if (!project.service.supports(method, uri)) {
+            this.tell(say(KINDS[kind].unavailable));
             return;
         }
         const token = ++this.token;
-        let locations: Location[] | null;
+        let found: { locations: Location[]; targets: Map<string, Range> };
         try {
-            locations = await project.service.references(uri, position, true);
+            found = await this.fetch(kind, position);
         } catch (error) {
             if (!(error instanceof StaleResultError)) {
                 this.tell(say('failed', { message: error instanceof Error ? error.message : String(error) }));
@@ -73,19 +93,20 @@ export class PeekFeature {
         if (token !== this.token) {
             return;
         }
-        if (locations === null || locations.length === 0) {
-            this.tell(say('none'));
-            return;
-        }
-        const unique = locations.filter(
+        const { targets } = found;
+        const unique = found.locations.filter(
             (location, index) =>
-                locations!.findIndex(
+                found.locations.findIndex(
                     (other) =>
                         other.uri === location.uri &&
                         other.range.start.line === location.range.start.line &&
                         other.range.start.character === location.range.start.character
                 ) === index
         );
+        if (unique.length === 0) {
+            this.tell(say(KINDS[kind].none));
+            return;
+        }
         const uris = [...new Set(unique.map((location) => location.uri))].slice(0, PEEK_READ_FILES);
         const texts = new Map<string, string>();
         await Promise.all(
@@ -100,18 +121,37 @@ export class PeekFeature {
             return;
         }
         this.texts = texts;
+        this.kind = kind;
+        this.targets = targets;
         const files = peekFilesOf(unique, uri, (target) => texts.get(target) ?? null);
         this.places = new Map(files.flatMap((file: PeekFile) => file.places.map((place) => [place.id, place.location] as const)));
         this.order = files.flatMap((file) => file.places.map((place) => place.id));
-        // Open on the first place that is not the one the caret is on, which is what a person came to see.
+        // The references open on the first place that is not the one the caret is on, which is what a person came to see.
         const first =
-            files.flatMap((file) => file.places).find((place) => !(place.location.uri === uri && place.line === position.line)) ?? files[0]!.places[0]!;
+            kind === 'definitions'
+                ? files[0]!.places[0]!
+                : (files.flatMap((file) => file.places).find((place) => !(place.location.uri === uri && place.line === position.line)) ?? files[0]!.places[0]!);
         this.line = position.line;
-        this.language.popups.setState({ peek: { container: null, files, active: first.id, count: unique.length, preview: null } });
+        this.language.popups.setState({ peek: { kind, container: null, files, active: first.id, count: unique.length, preview: null } });
         this.select(first.id);
         editor.setWidgets([{ id: 'peek', line: this.line, height: PEEK_HEIGHT, render: (container) => this.mounted(container) }]);
         // The keys come through the editor, which a click on the hover's link or a menu command has taken the focus from.
         editor.focus();
+    }
+
+    /* The definition of the name at the caret, as its source between the lines of the file. */
+    openDefinition(position: EditorPosition = this.language.editor.getCaret()): Promise<void> {
+        return this.open(position, 'definitions');
+    }
+
+    private async fetch(kind: PeekKind, position: EditorPosition): Promise<{ locations: Location[]; targets: Map<string, Range> }> {
+        const { project, uri } = this.language;
+        if (kind === 'references') {
+            return { locations: (await project.service.references(uri, position, true)) ?? [], targets: new Map() };
+        }
+        const places = uniquePlaces(await project.service.definition(uri, position));
+        const targets = new Map(places.flatMap(({ location, target }) => (target === null ? [] : [[placeKey(location), target] as const])));
+        return { locations: places.map(({ location }) => location), targets };
     }
 
     close(): void {
@@ -132,9 +172,14 @@ export class PeekFeature {
             return;
         }
         const text = this.texts.get(location.uri);
-        this.language.popups.setState({
-            peek: { ...view, active: id, preview: text === undefined ? null : { ...snippetOf(text, location.range.start.line), uri: location.uri } }
-        });
+        const line = location.range.start.line;
+        const snippet =
+            text === undefined
+                ? null
+                : this.kind === 'definitions'
+                  ? definitionSnippetOf(text, line, this.targets.get(placeKey(location)) ?? null)
+                  : snippetOf(text, line);
+        this.language.popups.setState({ peek: { ...view, active: id, preview: snippet === null ? null : { ...snippet, uri: location.uri } } });
     }
 
     /* Goes to a place and closes the peek. */

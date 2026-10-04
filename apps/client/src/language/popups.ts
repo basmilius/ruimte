@@ -123,6 +123,8 @@ export interface RenameView {
 
 /* The references of a name between the lines of the file: a list of places and the code around the one that is active. */
 export interface PeekView {
+    /* What the places are: where the name is used, or where it is defined. */
+    readonly kind: 'references' | 'definitions';
     /* The row the editor draws it in, which the editor makes again when it scrolls back into view. */
     readonly container: HTMLElement | null;
     readonly files: readonly PeekFile[];

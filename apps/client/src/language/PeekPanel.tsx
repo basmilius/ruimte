@@ -133,7 +133,10 @@ export function PeekPanel({ language, view }: { language: EditorLanguage; view: 
                 <span className="shrink-0 font-medium">{path === null ? '' : basenameOf(path)}</span>
                 <PathText path={shown} className="text-text-faint" />
                 <span className="ml-auto shrink-0 text-text-muted">
-                    {t('language.peek.references', { count: view.count, formatted: formatNumber(view.count) })}
+                    {t(view.kind === 'definitions' ? 'language.peek.definitions' : 'language.peek.references', {
+                        count: view.count,
+                        formatted: formatNumber(view.count)
+                    })}
                 </span>
                 <IconButton icon={X} size="xs" label={t('language.peek.close')} onClick={() => language.peek.close()} />
             </div>

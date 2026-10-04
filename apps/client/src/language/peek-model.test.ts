@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { lineTextOf, peekFilesOf, snippetOf } from './peek-model';
+import { definitionSnippetOf, lineTextOf, peekFilesOf, snippetOf } from './peek-model';
 
 const at = (line: number, character: number) => ({ line, character });
 const place = (uri: string, line: number) => ({ uri, range: { start: at(line, 2), end: at(line, 6) } });
@@ -29,5 +29,25 @@ describe('the places of a peek', () => {
         expect(snippet.text.split('\n')[snippet.active]).toBe('line 15');
         expect(snippetOf(text, 1)).toMatchObject({ startLine: 0, active: 1 });
         expect(snippetOf('a\nb', 1).text).toBe('a\nb');
+    });
+});
+
+describe('definitionSnippetOf', () => {
+    const text = Array.from({ length: 60 }, (_, index) => `line ${index}`).join('\n');
+    const at = (line: number) => ({ line, character: 0 });
+
+    test('takes the lines of the declaration, and a screenful of a long one', () => {
+        expect(definitionSnippetOf(text, 5, { start: at(4), end: at(8) })).toMatchObject({
+            startLine: 4,
+            active: 1,
+            text: 'line 4\nline 5\nline 6\nline 7\nline 8'
+        });
+        const long = definitionSnippetOf(text, 5, { start: at(4), end: at(50) });
+        expect(long.text.split('\n')).toHaveLength(25);
+    });
+
+    test('starts a little above the name when the server gave no declaration', () => {
+        expect(definitionSnippetOf(text, 10, null)).toMatchObject({ startLine: 8, active: 2 });
+        expect(definitionSnippetOf(text, 0, null).startLine).toBe(0);
     });
 });

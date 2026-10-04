@@ -1,11 +1,10 @@
 import i18next from 'i18next';
-import { StaleResultError, fileUriToPath, type Location, type NavigationResult } from '@ruimte/smart-editor-lsp';
+import { StaleResultError, fileUriToPath, type Location, type LocationLink, type NavigationResult, type Range } from '@ruimte/smart-editor-lsp';
 import type { EditorPosition } from '@ruimte/smart-editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';
-import { locationsOf } from './hover-content';
 import { rangeHolds } from './diagnostics-model';
 import { placesOfName } from './symbol-links';
 import { isShortcut } from './shortcut-keys';
@@ -31,18 +30,30 @@ function say(key: string, options?: Record<string, unknown>): string {
     return i18next.t(`panels:language.navigation.${key}`, options);
 }
 
-/* The places of a result, each once: the two servers of a Vue file may both know the same one. */
-export function uniqueLocations(result: NavigationResult): Location[] {
+/* The places of a result, each once: the two servers of a Vue file may both know the same one. `target` is the whole declaration when the server gave it. */
+export function uniquePlaces(result: NavigationResult): { location: Location; target: Range | null }[] {
     const seen = new Set<string>();
-    return locationsOf(result).filter((location) => {
-        const { start } = location.range;
-        const key = `${location.uri}\0${start.line}\0${start.character}`;
-        if (seen.has(key)) {
-            return false;
-        }
-        seen.add(key);
-        return true;
-    });
+    const list = result === null ? [] : Array.isArray(result) ? (result as (Location | LocationLink)[]) : [result];
+    return list
+        .map((entry) =>
+            'targetUri' in entry
+                ? { location: { uri: entry.targetUri, range: entry.targetSelectionRange }, target: entry.targetRange as Range | null }
+                : { location: entry, target: null }
+        )
+        .filter(({ location }) => {
+            const { start } = location.range;
+            const key = `${location.uri}\0${start.line}\0${start.character}`;
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+}
+
+/* The places of a result, each once. */
+export function uniqueLocations(result: NavigationResult): Location[] {
+    return uniquePlaces(result).map(({ location }) => location);
 }
 
 /*

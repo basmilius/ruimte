@@ -612,7 +612,11 @@
             "failed": "Referenties opzoeken mislukt: {{message}}",
             "references_one": "{{formatted}} referentie",
             "references_other": "{{formatted}} referenties",
-            "close": "Sluit"
+            "close": "Sluit",
+            "definitions_one": "{{formatted}} definitie",
+            "definitions_other": "{{formatted}} definities",
+            "noDefinition": "Geen definitie gevonden",
+            "unavailableDefinition": "Geen language server vindt definities in dit bestand"
         },
         "symbols": {
             "unavailable": "Geen language server kent de symbolen van dit bestand",

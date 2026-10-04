@@ -95,6 +95,37 @@ describe('peek references', () => {
     });
 });
 
+describe('peek definition', () => {
+    test('shows the whole declaration of the definition in its file and goes there on Enter', async () => {
+        const link = { targetUri: otherUri, targetRange: { start: at(0, 0), end: at(2, 1) }, targetSelectionRange: { start: at(2, 4), end: at(2, 9) } };
+        const transport = new FakeLanguageTransport();
+        transport.providers = { 'textDocument/definition': {} };
+        transport.answers.set('language.request', () => ({ result: [link], server: 'typescript', version: 1 }));
+        const project = new ProjectLanguage(transport, 'p1', '/work/app', {
+            read: async (path) => (path === '/work/app/src/b.ts' ? { text: 'function use() {\n  return 1;\n}\nother();', mtime: 1 } : null),
+            stage: () => undefined
+        });
+        const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'use();', theme: 'light' });
+        const language = new EditorLanguage(project, editor, uri, 'typescript');
+        await language.document.ready;
+        editor.press({ key: 'P', code: 'KeyP', altKey: true, shiftKey: true });
+        for (let turn = 0; turn < 100; turn++) {
+            await Promise.resolve();
+        }
+        const view = language.popups.getState().peek!;
+        expect(view.kind).toBe('definitions');
+        expect(view.preview).toMatchObject({ uri: otherUri, startLine: 0, text: 'function use() {\n  return 1;\n}', active: 2 });
+        editor.press({ key: 'Enter' });
+        expect(language.popups.getState().peek).toBeNull();
+    });
+
+    test('says so when there is no definition or no server for it', async () => {
+        const { language } = await setup(null);
+        await language.peek.openDefinition();
+        expect(useToasts.getState().toasts.at(-1)?.title).toBe('No language server finds definitions in this file');
+    });
+});
+
 describe('files with the same name in the list', () => {
     test('shows the folders that tell them apart, and nothing for a name of its own', () => {
         expect(distinguishingFolders(['src/a/TestData.php', 'src/b/TestData.php', 'src/Other.php'])).toEqual(['a', 'b', '']);

@@ -1,4 +1,4 @@
-import type { Location } from '@ruimte/smart-editor-lsp';
+import type { Location, Range } from '@ruimte/smart-editor-lsp';
 
 /* One reference in the list: the line it is on, as the file reads there. */
 export interface PeekPlace {
@@ -67,6 +67,19 @@ export function snippetOf(text: string, line: number): PeekSnippet {
     const startLine = Math.max(0, line - BEFORE);
     const end = Math.min(lines.length, line + AFTER + 1);
     return { startLine, text: lines.slice(startLine, end).join('\n'), active: line - startLine };
+}
+
+const DEFINITION_LINES = 24;
+
+/*
+ * The source of a definition: the lines of the whole declaration when the server gave them, else a stretch
+ * from just above the name, cut at a screenful since a class is longer than a peek is tall.
+ */
+export function definitionSnippetOf(text: string, line: number, declaration: Range | null): PeekSnippet {
+    const lines = text.split(/\r\n|\r|\n/);
+    const startLine = declaration === null ? Math.max(0, line - 2) : Math.min(declaration.start.line, line);
+    const end = Math.min(lines.length - 1, declaration === null ? line + DEFINITION_LINES / 2 : Math.min(declaration.end.line, startLine + DEFINITION_LINES));
+    return { startLine, text: lines.slice(startLine, end + 1).join('\n'), active: line - startLine };
 }
 
 /*

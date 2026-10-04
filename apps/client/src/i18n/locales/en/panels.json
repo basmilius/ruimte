@@ -612,7 +612,11 @@
             "failed": "Could not look up the references: {{message}}",
             "references_one": "{{formatted}} reference",
             "references_other": "{{formatted}} references",
-            "close": "Close"
+            "close": "Close",
+            "definitions_one": "{{formatted}} definition",
+            "definitions_other": "{{formatted}} definitions",
+            "noDefinition": "No definition found",
+            "unavailableDefinition": "No language server finds definitions in this file"
         },
         "symbols": {
             "unavailable": "No language server knows the symbols of this file",
