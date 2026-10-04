@@ -39,6 +39,8 @@ export interface FoldState {
     startLine: number;
     endLine: number;
     collapsed: boolean;
+    /* Where the closing delimiter starts on `endLine`; a collapsed fold keeps it drawn after its placeholder. */
+    closer?: number;
 }
 
 interface RowBase {
@@ -54,6 +56,8 @@ export interface TextRow extends RowBase {
     kind: 'text';
     /* The last document line the row covers: more than `line` when a fold hides the lines after it. */
     lastLine: number;
+    /* The offset on `lastLine` from which a collapsed fold draws what stays visible after its placeholder. */
+    tail: number | null;
     /* Visual lines, which is more than one for a wrapped line. */
     subRows: number;
 }
@@ -114,6 +118,8 @@ export const TEXT_PADDING = 0;
 export const BOTTOM_PADDING = 8;
 export const RIGHT_PADDING = 16;
 const DEFAULT_BLOCK_HEIGHT = 40;
+/* How many characters a wrapped line's continuation rows sit in past the line's own indentation. */
+const WRAP_INDENT_STEP = 2;
 const GEOMETRY_CACHE_SIZE = 400;
 const PLAIN = /^[\x20-\x7e\t]*$/;
 const SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
@@ -160,11 +166,24 @@ function characterWidth(metrics: LayoutMetrics, text: string, x: number): number
     return text.length === 1 && text >= ' ' && text <= '~' ? metrics.charWidth : metrics.measureText(text);
 }
 
+/* Where the continuation rows of a wrapped line start, kept to half the row so a deep indent never leaves no room for text. */
+export function wrapIndent(text: string, metrics: LayoutMetrics, limit: number): number {
+    let x = 0;
+    for (const character of text) {
+        if (!isSpace(character)) {
+            break;
+        }
+        x += characterWidth(metrics, character, x);
+    }
+    return Math.min(x + WRAP_INDENT_STEP * metrics.charWidth, limit / 2);
+}
+
 /*
  * The stops at which a wrapped line starts a new visual line, after the space a word ends in when
  * there is one on the visual line and in the middle of a word when there is not.
  */
 export function wrapStops(text: string, offsets: readonly number[], metrics: LayoutMetrics, limit: number): number[] {
+    const indent = wrapIndent(text, metrics, limit);
     const breaks: number[] = [];
     const count = offsets.length - 1;
     let rowStart = 0;
@@ -179,7 +198,7 @@ export function wrapStops(text: string, offsets: readonly number[], metrics: Lay
             breaks.push(target);
             rowStart = target;
             opportunity = -1;
-            x = 0;
+            x = indent;
             index = target;
             continue;
         }
@@ -202,6 +221,7 @@ export function scanLine(
     const text = line.text;
     const offsets = characterOffsets(text);
     const breakStops = limit === null ? [] : wrapStops(text, offsets, metrics, limit);
+    const indent = limit === null ? 0 : wrapIndent(text, metrics, limit);
     const geometry: LineGeometry = {
         start: line.start,
         end: line.end,
@@ -237,7 +257,7 @@ export function scanLine(
             geometry.rowStarts.push(stop);
             nextBreak++;
             row++;
-            x = 0;
+            x = indent;
         }
         geometry.before.push(x);
         geometry.rowOf.push(row);
@@ -371,10 +391,10 @@ export class EditorLayout {
             const target = block.placement === 'above' ? above : below;
             target.set(line, [...(target.get(line) ?? []), block]);
         }
-        const folds = new Map<number, number>();
+        const folds = new Map<number, FoldState>();
         for (const fold of this.folds) {
-            if (fold.collapsed) {
-                folds.set(fold.startLine, Math.max(folds.get(fold.startLine) ?? 0, fold.endLine));
+            if (fold.collapsed && fold.endLine > (folds.get(fold.startLine)?.endLine ?? 0)) {
+                folds.set(fold.startLine, fold);
             }
         }
         const count = this.document.getLineCount();
@@ -396,11 +416,23 @@ export class EditorLayout {
             for (const block of above.get(line) ?? []) {
                 addBlock(block, line);
             }
-            const last = Math.max(line, Math.min(count - 1, folds.get(line) ?? line));
+            const fold = folds.get(line);
+            const last = Math.max(line, Math.min(count - 1, fold?.endLine ?? line));
+            const tail = fold?.closer !== undefined && last > line ? this.tailOf(fold.closer, last) : null;
             const index = this.rows.length;
             const bounds = this.wrapWidth === null ? null : this.document.getLine(line);
             const subRows = this.rowCountOf(line, bounds === null ? 0 : bounds.end - bounds.start);
-            this.rows.push({ key: `line:${line}`, kind: 'text', index, line, lastLine: last, subRows, top: 0, height: subRows * this.metrics.lineHeight });
+            this.rows.push({
+                key: `line:${line}`,
+                kind: 'text',
+                index,
+                line,
+                lastLine: last,
+                tail,
+                subRows,
+                top: 0,
+                height: subRows * this.metrics.lineHeight
+            });
             for (let covered = line; covered <= last; covered++) {
                 this.lineRows[covered] = index;
             }
@@ -410,6 +442,12 @@ export class EditorLayout {
             line = last;
         }
         this.reflow();
+    }
+
+    /* The closer a fold ends in, clamped to its last line since the fold may be a moment older than an edit. */
+    private tailOf(closer: number, line: number): number {
+        const bounds = this.document.getLine(line);
+        return Math.min(bounds.end, Math.max(bounds.start, closer));
     }
 
     private reflow(): void {
@@ -511,31 +549,36 @@ export class EditorLayout {
         return TEXT_PADDING + geometry[affinity][this.stopOf(geometry, offset)]!;
     }
 
-    /* The offset nearest an x on one visual line of a laid out line. */
-    offsetAtX(geometry: LineGeometry, subRow: number, x: number): number {
+    /*
+     * The offset nearest an x on one visual line of a laid out line. `rowEnd` is set when that is the
+     * offset a wrap starts the next visual line at, which the caret may be drawn at the end of this one for.
+     */
+    offsetAtX(geometry: LineGeometry, subRow: number, x: number): { offset: number; rowEnd: boolean } {
         const local = x - TEXT_PADDING;
         for (const box of geometry.inlays) {
             if (box.subRow === subRow && local >= box.x && local <= box.x + box.width) {
-                return box.inlay.at;
+                return { offset: box.inlay.at, rowEnd: false };
             }
         }
         const first = geometry.rowStarts[subRow] ?? 0;
         const last = subRow + 1 < geometry.rowStarts.length ? geometry.rowStarts[subRow + 1]! : geometry.offsets.length - 1;
-        let best = geometry.offsets[first]!;
+        const wrapped = subRow + 1 < geometry.rowStarts.length;
+        let best = first;
         let distance = Math.abs(local - geometry.before[first]!);
         // The stop that starts the next visual line stands in for the end of this one.
         for (let stop = first + 1; stop <= last; stop++) {
-            const edge = stop === last && subRow + 1 < geometry.rowStarts.length ? geometry.rowEnds[subRow]! : geometry.before[stop]!;
+            const edge = stop === last && wrapped ? geometry.rowEnds[subRow]! : geometry.before[stop]!;
             const candidate = Math.abs(local - edge);
             if (candidate < distance) {
                 distance = candidate;
-                best = geometry.offsets[stop]!;
+                best = stop;
             }
         }
-        return geometry.start + best;
+        return { offset: geometry.start + geometry.offsets[best]!, rowEnd: wrapped && best === last };
     }
 
-    caret(offset: number, affinity: Affinity = 'after'): LayoutRect {
+    /* With `rowEnd`, an offset a wrap starts a visual line at is drawn at the end of the line before it. */
+    caret(offset: number, affinity: Affinity = 'after', rowEnd = false): LayoutRect {
         const position = this.document.positionAt(offset);
         const row = this.rowForLine(position.line);
         if (row.kind !== 'text') {
@@ -543,18 +586,26 @@ export class EditorLayout {
         }
         const geometry = this.geometry(row);
         const stop = this.stopOf(geometry, offset);
-        return {
-            x: TEXT_PADDING + geometry[affinity][stop]!,
-            y: row.top + geometry.rowOf[stop]! * this.metrics.lineHeight,
-            width: 1,
-            height: this.metrics.lineHeight
-        };
+        const subRow = geometry.rowOf[stop]!;
+        if (rowEnd && subRow > 0 && geometry.rowStarts[subRow] === stop) {
+            return {
+                x: TEXT_PADDING + geometry.rowEnds[subRow - 1]!,
+                y: row.top + (subRow - 1) * this.metrics.lineHeight,
+                width: 1,
+                height: this.metrics.lineHeight
+            };
+        }
+        return { x: TEXT_PADDING + geometry[affinity][stop]!, y: row.top + subRow * this.metrics.lineHeight, width: 1, height: this.metrics.lineHeight };
     }
 
     hitTest(x: number, y: number): number {
+        return this.hitTestRow(x, y).offset;
+    }
+
+    hitTestRow(x: number, y: number): { offset: number; rowEnd: boolean } {
         const row = this.rowAt(y);
         if (row.kind === 'block') {
-            return row.widget.at;
+            return { offset: row.widget.at, rowEnd: false };
         }
         const geometry = this.geometry(row);
         const subRow = Math.max(0, Math.min(geometry.subRows - 1, Math.floor((y - row.top) / this.metrics.lineHeight)));

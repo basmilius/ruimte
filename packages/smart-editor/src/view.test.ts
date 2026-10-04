@@ -66,6 +66,24 @@ describe('folding', () => {
         expect(rendered(host)).toEqual(['0', '1', '2', '3', '7', '8']);
     });
 
+    test('keeps the closing delimiter drawn after the placeholder', () => {
+        const { host, view } = mount('function a() {\n    one();\n}, extra\nlast');
+        view.refreshFolds();
+        view.toggleFold(0);
+        const row = host.querySelector('.se-line[data-line="0"]')!;
+        const tail = [...row.querySelectorAll('.se-run')].map((run) => run.textContent).at(-1);
+        expect(tail).toBe('}, extra');
+        expect(row.querySelector('.se-fold-chip')).not.toBeNull();
+    });
+
+    test('draws no tail for a fold that has no closer', () => {
+        const { host, view } = mount('def a():\n    one\n    two\nb = 1', { language: 'python' });
+        view.refreshFolds();
+        view.toggleFold(0);
+        const runs = [...host.querySelectorAll('.se-line[data-line="0"] .se-run')].map((run) => run.textContent);
+        expect(runs).toEqual(['def a():']);
+    });
+
     test('folds the range around the caret and every range', () => {
         const { host, model, view } = mount(text);
         view.refreshFolds();

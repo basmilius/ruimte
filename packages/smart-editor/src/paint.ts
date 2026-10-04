@@ -1,4 +1,4 @@
-import type { EditorLayout, LayoutRect, LayoutRow, LineGeometry, TextRow } from './layout.ts';
+import { type EditorLayout, type LayoutRect, type LayoutRow, type LineGeometry, scanLine, type TextRow } from './layout.ts';
 import type { LineToken } from './types.ts';
 
 const ITALIC = 1;
@@ -12,7 +12,14 @@ interface PaintedRow {
     tokens: readonly LineToken[] | null;
     layoutVersion: number;
     folded: boolean;
+    /* What a collapsed fold keeps drawn after its placeholder, and the colors of the line it is from. */
+    tail: string;
+    tailTokens: readonly LineToken[] | null;
 }
+
+/* The gap around a collapsed fold's placeholder, so it reads as `{…}` and not as three separate things. */
+const FOLD_GAP = 4;
+const FOLD_CHIP_PADDING = 12;
 
 export interface RowPaint {
     /* Changes whenever the metrics, the wrapping or the inlays do, which moves every character. */
@@ -39,13 +46,13 @@ function styleSpan(span: HTMLElement, token: LineToken): void {
     }
 }
 
-/* The text of one run, split along the colors of the line. */
-function fillRun(run: HTMLElement, geometry: LineGeometry, from: number, to: number, tokens: readonly LineToken[] | null): void {
+/* The text of one run, split along the colors of the line. `tokensFrom` is the offset the first token starts at, which is the geometry's own start unless it is a slice of a line. */
+function fillRun(run: HTMLElement, geometry: LineGeometry, from: number, to: number, tokens: readonly LineToken[] | null, tokensFrom = geometry.start): void {
     if (tokens === null) {
         run.textContent = geometry.text.slice(from - geometry.start, to - geometry.start);
         return;
     }
-    let tokenStart = geometry.start;
+    let tokenStart = tokensFrom;
     for (const token of tokens) {
         const tokenEnd = tokenStart + token.length;
         const start = Math.max(from, tokenStart);
@@ -105,15 +112,26 @@ export class RowPainter {
         const geometry = this.layout.geometry(row);
         const tokens = paint.tokensOf(row.line);
         const folded = row.lastLine > row.line;
+        const lastLine = folded && row.tail !== null ? this.layout.document.getLine(row.lastLine) : null;
+        const tail = lastLine === null ? '' : lastLine.text.slice(row.tail! - lastLine.start);
+        const tailTokens = tail === '' ? null : paint.tokensOf(row.lastLine);
         let entry = this.rows.get(row.key);
-        if (!entry || entry.text !== geometry.text || entry.tokens !== tokens || entry.layoutVersion !== paint.layoutVersion || entry.folded !== folded) {
-            const element = this.buildText(row, geometry, tokens, paint);
+        if (
+            !entry ||
+            entry.text !== geometry.text ||
+            entry.tokens !== tokens ||
+            entry.layoutVersion !== paint.layoutVersion ||
+            entry.folded !== folded ||
+            entry.tail !== tail ||
+            entry.tailTokens !== tailTokens
+        ) {
+            const element = this.buildText(row, geometry, tokens, paint, tail, tailTokens);
             if (entry) {
                 entry.element.replaceWith(element);
             } else {
                 this.code.append(element);
             }
-            entry = { element, text: geometry.text, tokens, layoutVersion: paint.layoutVersion, folded };
+            entry = { element, text: geometry.text, tokens, layoutVersion: paint.layoutVersion, folded, tail, tailTokens };
             this.rows.set(row.key, entry);
         }
         entry.element.style.top = `${row.top}px`;
@@ -121,7 +139,14 @@ export class RowPainter {
         entry.element.dataset.line = String(row.line);
     }
 
-    private buildText(row: TextRow, geometry: LineGeometry, tokens: readonly LineToken[] | null, paint: RowPaint): HTMLElement {
+    private buildText(
+        row: TextRow,
+        geometry: LineGeometry,
+        tokens: readonly LineToken[] | null,
+        paint: RowPaint,
+        tail: string,
+        tailTokens: readonly LineToken[] | null
+    ): HTMLElement {
         const document = this.code.ownerDocument;
         const element = document.createElement('div');
         element.className = 'se-line';
@@ -151,13 +176,34 @@ export class RowPainter {
             chip.className = 'se-fold-chip';
             chip.textContent = '…';
             chip.tabIndex = -1;
-            chip.style.left = `${geometry.rowEnds[geometry.rowEnds.length - 1]! + 8}px`;
+            const chipLeft = geometry.rowEnds[geometry.rowEnds.length - 1]! + FOLD_GAP;
+            const chipWidth = Math.ceil(this.layout.metrics.charWidth) + FOLD_CHIP_PADDING;
+            chip.style.left = `${chipLeft}px`;
             chip.style.top = `${(geometry.subRows - 1) * lineHeight}px`;
+            chip.style.width = `${chipWidth}px`;
             chip.addEventListener('pointerdown', (event) => event.stopPropagation());
             chip.addEventListener('click', () => paint.onUnfold(row.line));
             element.append(chip);
+            if (tail !== '' && row.tail !== null) {
+                this.appendTail(element, row, geometry, tail, tailTokens, chipLeft + chipWidth + FOLD_GAP);
+            }
         }
         return element;
+    }
+
+    /* The closing delimiter of a collapsed fold, laid out as a line of its own that starts after the placeholder. */
+    private appendTail(element: HTMLElement, row: TextRow, header: LineGeometry, tail: string, tokens: readonly LineToken[] | null, left: number): void {
+        const document = this.code.ownerDocument;
+        const lineStart = this.layout.document.getLine(row.lastLine).start;
+        const geometry = scanLine({ start: row.tail!, end: row.tail! + tail.length, text: tail }, this.layout.metrics, null, []);
+        for (const run of geometry.runs) {
+            const span = document.createElement('span');
+            span.className = 'se-run';
+            span.style.left = `${left + run.x}px`;
+            span.style.top = `${(header.subRows - 1) * this.layout.metrics.lineHeight}px`;
+            fillRun(span, geometry, run.from, run.to, tokens, lineStart);
+            element.append(span);
+        }
     }
 
     private paintBlock(row: Extract<LayoutRow, { kind: 'block' }>, paint: RowPaint): boolean {
@@ -174,7 +220,7 @@ export class RowPainter {
             }
             this.code.append(element);
             this.observer?.observe(element);
-            entry = { element, text: '', tokens: null, layoutVersion: 0, folded: false };
+            entry = { element, text: '', tokens: null, layoutVersion: 0, folded: false, tail: '', tailTokens: null };
             this.rows.set(row.key, entry);
         }
         entry.element.style.top = `${row.top}px`;

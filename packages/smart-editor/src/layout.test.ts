@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { DocumentModel } from '@ruimte/smart-editor-core';
-import { EditorLayout, type LayoutMetrics, scanLine, wrapStops } from './layout.ts';
+import { EditorLayout, type LayoutMetrics, scanLine, wrapIndent, wrapStops } from './layout.ts';
 
 /* Every character is 10px wide, a line 20px tall, so the numbers in an assertion can be read off the text. */
 const METRICS: LayoutMetrics = {
@@ -151,23 +151,35 @@ describe('movement', () => {
 });
 
 describe('soft wrap', () => {
+    const offsetsOf = (text: string): number[] => Array.from({ length: text.length + 1 }, (_, i) => i);
+
     test('breaks after the space a word ends in', () => {
         const text = 'aaa bbb ccc';
-        const offsets = Array.from({ length: text.length + 1 }, (_, i) => i);
-        expect(wrapStops(text, offsets, METRICS, 60)).toEqual([4, 8]);
-        expect(wrapStops(text, offsets, METRICS, 1000)).toEqual([]);
+        expect(wrapStops(text, offsetsOf(text), METRICS, 60)).toEqual([4, 8]);
+        expect(wrapStops(text, offsetsOf(text), METRICS, 1000)).toEqual([]);
     });
 
     test('breaks in the middle of a word that is longer than the line', () => {
-        const text = 'abcdefghij';
-        const offsets = Array.from({ length: text.length + 1 }, (_, i) => i);
-        expect(wrapStops(text, offsets, METRICS, 40)).toEqual([4, 8]);
+        const text = 'abcdefghijkl';
+        // Continuation rows start two characters in, so they hold two characters fewer.
+        expect(wrapStops(text, offsetsOf(text), METRICS, 60)).toEqual([6, 10]);
     });
 
     test('lets trailing spaces hang over the edge instead of wrapping them', () => {
         const text = 'ab     cd';
-        const offsets = Array.from({ length: text.length + 1 }, (_, i) => i);
-        expect(wrapStops(text, offsets, METRICS, 40)).toEqual([7]);
+        expect(wrapStops(text, offsetsOf(text), METRICS, 40)).toEqual([7]);
+    });
+
+    test('indents continuation rows to the line indentation plus a step', () => {
+        const text = '    aaa bbb ccc';
+        expect(wrapIndent(text, METRICS, 200)).toBe(60);
+        const geometry = scanLine({ start: 0, end: text.length, text }, METRICS, 120, []);
+        expect(geometry.runs.filter((run) => run.subRow > 0).every((run) => run.x === 60)).toBe(true);
+        expect(geometry.before[geometry.rowStarts[1]!]).toBe(60);
+    });
+
+    test('keeps the indent of a deeply indented line to half the row', () => {
+        expect(wrapIndent(' '.repeat(30) + 'x', METRICS, 100)).toBe(50);
     });
 
     test('lays a wrapped line over several visual lines', () => {
@@ -176,8 +188,8 @@ describe('soft wrap', () => {
         expect(geometry.rowOf).toEqual([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]);
         expect(geometry.runs.map((run) => [run.text, run.subRow, run.x])).toEqual([
             ['aaa bbb ccc'.slice(0, 4), 0, 0],
-            ['bbb ', 1, 0],
-            ['ccc', 2, 0]
+            ['bbb ', 1, 20],
+            ['ccc', 2, 20]
         ]);
     });
 
@@ -193,23 +205,32 @@ describe('soft wrap', () => {
     test('puts the caret on the visual line a character is on', () => {
         const { layout } = layoutOf('aaa bbb ccc', 60);
         layout.syncRows(layout.rows);
-        expect(layout.caret(5)).toMatchObject({ x: 10, y: 20 });
-        expect(layout.caret(9)).toMatchObject({ x: 10, y: 40 });
+        expect(layout.caret(5)).toMatchObject({ x: 30, y: 20 });
+        expect(layout.caret(9)).toMatchObject({ x: 30, y: 40 });
     });
 
     test('hits the character under a point on a wrapped line, and the end of a visual line', () => {
         const { layout } = layoutOf('aaa bbb ccc', 60);
         layout.syncRows(layout.rows);
-        expect(layout.hitTest(14, 25)).toBe(5);
+        expect(layout.hitTest(34, 25)).toBe(5);
         expect(layout.hitTest(400, 5)).toBe(4);
         expect(layout.hitTest(400, 45)).toBe(11);
+    });
+
+    test('says a click past the end of a visual line is at its end, and draws the caret there', () => {
+        const { layout } = layoutOf('aaa bbb ccc', 60);
+        layout.syncRows(layout.rows);
+        expect(layout.hitTestRow(400, 5)).toEqual({ offset: 4, rowEnd: true });
+        expect(layout.hitTestRow(400, 45)).toEqual({ offset: 11, rowEnd: false });
+        expect(layout.caret(4)).toMatchObject({ x: 20, y: 20 });
+        expect(layout.caret(4, 'after', true)).toMatchObject({ x: 40, y: 0 });
     });
 
     test('goes down a visual line and not a document line', () => {
         const { layout } = layoutOf('aaa bbb ccc\nx', 60);
         layout.syncRows(layout.rows);
-        expect(layout.verticalOffset(5, 1, 10)).toBe(9);
-        expect(layout.verticalOffset(9, 1, 10)).toBe(13);
+        expect(layout.verticalOffset(5, 1, 30)).toBe(9);
+        expect(layout.verticalOffset(9, 1, 30)).toBe(13);
     });
 
     test('draws a selection across a wrap as a box on each visual line', () => {
@@ -217,8 +238,8 @@ describe('soft wrap', () => {
         layout.syncRows(layout.rows);
         expect(layout.rectangles(2, 9, layout.rows)).toEqual([
             { x: 20, y: 0, width: 20, height: 20 },
-            { x: 0, y: 20, width: 40, height: 20 },
-            { x: 0, y: 40, width: 10, height: 20 }
+            { x: 20, y: 20, width: 40, height: 20 },
+            { x: 20, y: 40, width: 10, height: 20 }
         ]);
     });
 });

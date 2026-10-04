@@ -27,7 +27,7 @@ The element needs a positioned box that its parent sizes, and the page needs `ed
 ## Limits
 
 - No rendered documentation blocks, and no language features yet: diagnostics, completion and hover come with `@ruimte/smart-editor-lsp`. The layout already carries inlays and widget rows for them.
-- Wrapped lines break at spaces and inside a word that does not fit. There is no wrap indent, and a click past the end of a visual line puts the caret at the start of the next one.
+- Wrapped lines break at spaces and inside a word that does not fit, and continue at the line's indentation plus two characters. A click past the end of a visual line draws the caret at its end until the caret moves; an arrow key onto that offset draws it at the start of the next line.
 - A line over 20,000 characters is not colored.
 - Every edit rebuilds the row list, which is linear in the number of lines.
 - No bidirectional text, and no screen reader testing beyond the textarea's own context.

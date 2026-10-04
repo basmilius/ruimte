@@ -1,6 +1,6 @@
 import { type DocumentChange, type DocumentModel, type EditorSnapshot, type FoldingRange, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
 import { FindController } from './find.ts';
-import { type BlockWidget, EditorLayout, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING } from './layout.ts';
+import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { paintCarets, paintGutter, paintOverlays, RowPainter } from './paint.ts';
 import { TokenCache } from './tokens.ts';
@@ -37,6 +37,11 @@ function mapOffset(offset: number, changes: readonly DocumentChange[]): number {
         delta += change.insertedLength - (change.to - change.from);
     }
     return offset + delta;
+}
+
+/* Where the delimiter that closes a range starts; indentation folds have none. */
+function closerOf(range: FoldingRange): number | undefined {
+    return range.kind === 'bracket' ? range.to - 1 : range.kind === 'comment' ? range.to - 2 : undefined;
 }
 
 /* A mark the host asked for, such as every use of the name under the caret. */
@@ -84,6 +89,8 @@ export class EditorView {
     private noticeTimer: ReturnType<typeof setTimeout> | undefined;
     private bracketCache: { revision: number; language: string | undefined; index: BracketIndex } | undefined;
     private wrapWidth: number | null = null;
+    /* The offset a click past the end of a wrapped visual line chose, which its caret is drawn at the end of that line for. */
+    private rowEndCaret: number | null = null;
     /* The first line on screen as an offset and how far into its row the scroll is, so an edit above it does not move what is read. */
     private topAnchor: { offset: number; delta: number } | undefined;
 
@@ -232,6 +239,7 @@ export class EditorView {
     private modelChanged(snapshot: EditorSnapshot): void {
         if (snapshot.revision !== this.revision) {
             this.revision = snapshot.revision;
+            this.rowEndCaret = null;
             const batches = snapshot.changes ?? [];
             for (const changes of batches) {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
@@ -254,6 +262,9 @@ export class EditorView {
             this.scheduleFolds();
             this.colorAhead(true);
         }
+        if (this.rowEndCaret !== null && this.model.getSelections()[0]!.head !== this.rowEndCaret) {
+            this.rowEndCaret = null;
+        }
         this.render();
     }
 
@@ -267,8 +278,13 @@ export class EditorView {
         this.render();
     }
 
-    private foldStates(): { startLine: number; endLine: number; collapsed: boolean }[] {
-        return this.foldRanges.map((range) => ({ startLine: range.startLine, endLine: range.endLine, collapsed: this.collapsed.has(range.from) }));
+    private foldStates(): FoldState[] {
+        return this.foldRanges.map((range) => ({
+            startLine: range.startLine,
+            endLine: range.endLine,
+            collapsed: this.collapsed.has(range.from),
+            closer: closerOf(range)
+        }));
     }
 
     /* The folds of the document, a moment after the last edit since they read all of it. */
@@ -432,7 +448,13 @@ export class EditorView {
 
     offsetAtPoint(clientX: number, clientY: number): number {
         const point = this.contentPoint(clientX, clientY);
-        return this.layout.hitTest(point.x, point.y);
+        const hit = this.layout.hitTestRow(point.x, point.y);
+        this.rowEndCaret = hit.rowEnd ? hit.offset : null;
+        return hit.offset;
+    }
+
+    private caretOf(head: number): LayoutRect {
+        return this.layout.caret(head, 'after', head === this.rowEndCaret);
     }
 
     /* Scrolls the least that brings the offset into view; `center` puts its line in the middle instead. */
@@ -626,11 +648,11 @@ export class EditorView {
         const top = this.viewport.scrollTop;
         const caretRects = focused
             ? selections
-                  .map((selection) => this.layout.caret(selection.head))
+                  .map((selection) => this.caretOf(selection.head))
                   .filter((rect) => rect.y + rect.height >= top - rect.height && rect.y <= top + this.viewportHeight)
             : [];
         paintCarets(this.carets, caretRects);
-        const caret = this.layout.caret(primary.head);
+        const caret = this.caretOf(primary.head);
         const gutterWidth = this.gutter.getBoundingClientRect?.().width || 64;
         this.input.style.left = `${gutterWidth + Math.max(0, Math.min(this.viewportWidth - 2, caret.x - this.viewport.scrollLeft))}px`;
         this.input.style.top = `${Math.max(0, Math.min(this.viewportHeight - this.layout.metrics.lineHeight, caret.y - top))}px`;
