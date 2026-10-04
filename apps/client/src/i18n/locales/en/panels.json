@@ -101,7 +101,7 @@
         },
         "menu": {
             "copy": "Copy",
-            "copyAsText": "Copy as text",
+            "copyMore": "More ways to copy",
             "copyFailed": "Could not copy the files",
             "copyPath": "Copy path",
             "copyRelativePath": "Copy relative path",

@@ -101,7 +101,7 @@
         },
         "menu": {
             "copy": "Kopiëren",
-            "copyAsText": "Als tekst kopiëren",
+            "copyMore": "Meer manieren om te kopiëren",
             "copyFailed": "Kon de bestanden niet kopiëren",
             "copyPath": "Pad kopiëren",
             "copyRelativePath": "Relatief pad kopiëren",

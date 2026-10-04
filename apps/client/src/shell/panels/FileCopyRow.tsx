@@ -8,9 +8,9 @@ import { useToasts } from '@/state/toasts';
 import { copyText, Icon, Menu } from '@basmilius/desktop-ui';
 
 /*
- * Copy in every menu of a file, a folder or a selection of them. The row copies them as files, for
- * the file manager to paste; its chevron opens what can be copied of them as text. `ContextMenu`
- * draws these parts as its own, so one row serves both kinds of menu.
+ * Copy in every menu of a file, a folder or a selection of them. The row copies them as mentions; its
+ * chevron opens the rest: the files themselves, for the file manager to paste, and their names and
+ * paths. `ContextMenu` draws these parts as its own, so one row serves both kinds of menu.
  */
 export function FileCopyRow({ targets }: { targets: readonly CopyTarget[] }) {
     const { t } = useTranslation('panels');
@@ -18,7 +18,7 @@ export function FileCopyRow({ targets }: { targets: readonly CopyTarget[] }) {
     const folder = useProject((s) => s.current?.folder ?? null);
     const files = copyableFiles(targets);
     const many = targets.length > 1;
-    const mention = copiedText(folder, targets, 'mention');
+    const mentionLabel = many ? t('files.copyMentions') : t('file.menu.copyMention');
 
     const copyFiles = (): void => {
         performAsPerson('file.copy', { paths: files }).catch((e: unknown) => {
@@ -36,17 +36,17 @@ export function FileCopyRow({ targets }: { targets: readonly CopyTarget[] }) {
     };
 
     return (
-        <Menu.Row aria-label={t('file.menu.copy')}>
-            <Menu.Item disabled={files.length === 0 || !canCopyFilesOn(endpointId)} onClick={copyFiles}>
-                <Icon icon={Copy} size={14} /> {t('file.menu.copy')}
-            </Menu.Item>
+        <Menu.Row aria-label={mentionLabel}>
+            {textItem('mention', mentionLabel, AtSign)}
             <Menu.SubmenuRoot>
-                <Menu.RowSubmenuTrigger icon={ChevronRight} label={t('file.menu.copyAsText')} />
+                <Menu.RowSubmenuTrigger icon={ChevronRight} label={t('file.menu.copyMore')} />
                 <Menu.Popup>
+                    <Menu.Item disabled={files.length === 0 || !canCopyFilesOn(endpointId)} onClick={copyFiles}>
+                        <Icon icon={Copy} size={14} /> {t('file.menu.copy')}
+                    </Menu.Item>
                     {textItem('name', many ? t('files.copyNames') : t('files.copyName'))}
                     {textItem('path', many ? t('files.copyPaths') : t('file.menu.copyPath'))}
                     {textItem('relative', many ? t('files.copyRelativePaths') : t('file.menu.copyRelativePath'))}
-                    {mention !== null && textItem('mention', many ? t('files.copyMentions') : t('file.menu.copyMention'), AtSign)}
                 </Menu.Popup>
             </Menu.SubmenuRoot>
         </Menu.Row>
