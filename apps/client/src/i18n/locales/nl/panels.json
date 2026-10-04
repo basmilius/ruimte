@@ -494,6 +494,29 @@
             "commitHint": "De commit {{hash}}"
         }
     },
+    "language": {
+        "title": "Language servers",
+        "chip": "Language servers voor dit bestand",
+        "state": {
+            "not-installed": "Niet geïnstalleerd",
+            "installing": "Installeert",
+            "stopped": "Inactief",
+            "starting": "Start op",
+            "ready": "Klaar",
+            "indexing": "Indexeert",
+            "crashed": "Gecrasht"
+        },
+        "documents_one": "{{formatted}} open bestand",
+        "documents_other": "{{formatted}} open bestanden",
+        "install": "Installeren",
+        "installDetail": "Installeert {{name}} {{version}} eenmalig op deze machine.",
+        "restart": "Herstart",
+        "restartAll": "Alles herstarten",
+        "showLog": "Toon log",
+        "logTitle": "Log van {{name}}",
+        "logEmpty": "Nog niets gelogd",
+        "failed": "De language server is niet bereikbaar: {{message}}"
+    },
     "machineNotAnswering": "Deze machine antwoordt niet.",
     "processes": {
         "anotherProject": "ander project",

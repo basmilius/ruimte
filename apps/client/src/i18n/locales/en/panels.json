@@ -494,6 +494,29 @@
             "commitHint": "The commit {{hash}}"
         }
     },
+    "language": {
+        "title": "Language servers",
+        "chip": "Language servers for this file",
+        "state": {
+            "not-installed": "Not installed",
+            "installing": "Installing",
+            "stopped": "Idle",
+            "starting": "Starting",
+            "ready": "Ready",
+            "indexing": "Indexing",
+            "crashed": "Crashed"
+        },
+        "documents_one": "{{formatted}} open file",
+        "documents_other": "{{formatted}} open files",
+        "install": "Install",
+        "installDetail": "Installs {{name}} {{version}} on this machine, once.",
+        "restart": "Restart",
+        "restartAll": "Restart all",
+        "showLog": "Show log",
+        "logTitle": "{{name}} log",
+        "logEmpty": "Nothing logged yet",
+        "failed": "Could not reach the language server: {{message}}"
+    },
     "machineNotAnswering": "This machine is not answering.",
     "processes": {
         "anotherProject": "another project",

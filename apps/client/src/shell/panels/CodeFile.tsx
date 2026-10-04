@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/smart-editor';
 import { FindBar } from '@/find/FindBar';
+import { LanguageStatusItem } from '@/language/LanguageStatusItem';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
 import { Button, ErrorBoundary, Pill, Tooltip } from '@basmilius/desktop-ui';
@@ -206,7 +207,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const find = useFind(surface, editor !== null);
     const editorFind = useEditorFind(find, editor);
     const scope = useEditorScope(editor);
-    useEditorLanguage(editor, path, plain ? undefined : read.language);
+    const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
     useChangeMarks(editor, useGitBase(path, read.text));
     const folder = useProject((s) => s.current?.folder ?? null);
 
@@ -225,6 +226,11 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     />
                 }
             >
+                {editorLanguage !== null && (
+                    <ErrorBoundary label={t('file.edit.failed')} resetKeys={[editorLanguage]}>
+                        <LanguageStatusItem language={editorLanguage} />
+                    </ErrorBoundary>
+                )}
                 {readOnlyReason !== null && (
                     <Tooltip label={readOnlyReason}>
                         <Pill>{t('file.edit.readOnly')}</Pill>
