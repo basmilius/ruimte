@@ -14,7 +14,7 @@ export interface FileEditing {
     endpointId: string;
     /* Why the file is read only here, null when it can be edited. */
     block: EditBlock | null;
-    /* The primary pointer is a finger, which Monaco does not take, so the file is drawn by the viewer. */
+    /* The primary pointer is a finger, which the editor has no touch handling for, so the file is drawn by the viewer. */
     viewer: boolean;
     /* Null while it loads; the viewer draws the file in the meantime. */
     engine: EditorEngine | null;
@@ -43,7 +43,7 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
         () => (folder === null ? [] : [folder, ...worktrees.filter((worktree) => worktree.missing !== true).map((worktree) => worktree.path)]),
         [folder, worktrees]
     );
-    const block = editBlockOf({ path, roots, large, plain, coarse: viewer, zoomedOut: gate?.zoomedOut ?? false });
+    const block = editBlockOf({ path, roots, large, plain, coarse: viewer });
 
     useEffect(() => textDrafts.hold(endpointId, path), [endpointId, path]);
 

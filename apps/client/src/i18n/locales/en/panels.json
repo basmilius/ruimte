@@ -157,7 +157,6 @@
             "large": "Over {{size}}, so it is plain text and not edited here",
             "plain": "Over {{lines}} lines, so it is plain text and not edited here",
             "touch": "Editing needs a mouse or a trackpad",
-            "zoom": "Zoom in to edit",
             "loadFailed": "The editor did not load",
             "failed": "The editor failed"
         },

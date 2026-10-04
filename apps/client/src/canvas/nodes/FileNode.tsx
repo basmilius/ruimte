@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EDIT_MIN_ZOOM, FileNodeGateContext } from '@/shell/panels/edit-gate';
+import { FileNodeGateContext } from '@/shell/panels/edit-gate';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas } from '@/state/canvas';
@@ -30,8 +30,7 @@ export function FilePlate({ id }: { id: string }) {
  */
 export function FileNode({ id, focused }: { id: string; focused: boolean }) {
     const path = useCanvas((s) => s.nodes[id]?.path ?? null);
-    const zoomedOut = useCanvas((s) => s.camera.zoom < EDIT_MIN_ZOOM);
-    const gate = useMemo(() => ({ zoomedOut, focused }), [zoomedOut, focused]);
+    const gate = useMemo(() => ({ focused }), [focused]);
     return (
         <FileNodeGateContext.Provider value={gate}>
             <FileSurface path={path} on="node" />

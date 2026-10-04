@@ -157,7 +157,6 @@
             "large": "Groter dan {{size}}, dus platte tekst die je hier niet bewerkt",
             "plain": "Meer dan {{lines}} regels, dus platte tekst die je hier niet bewerkt",
             "touch": "Bewerken vraagt om een muis of een trackpad",
-            "zoom": "Zoom in om te bewerken",
             "loadFailed": "De editor is niet geladen",
             "failed": "De editor liep vast"
         },

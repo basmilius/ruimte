@@ -36,8 +36,8 @@ const FLASH_MS = 1600;
 
 /*
  * Past this a file is plain text and read only, in the viewer and the editor alike. A generated file
- * of a hundred thousand lines is one nobody reads for its colors, and Monaco would tokenize all of it
- * in the background and hand all of it to a language service.
+ * of a hundred thousand lines is one nobody reads for its colors, and the editor would color all of it
+ * in the background.
  */
 const HIGHLIGHT_MAX_LINES = 20000;
 
@@ -154,8 +154,7 @@ const BLOCK_LABELS: Record<EditBlock, string> = {
     'ruimte-state': 'file.edit.ruimteState',
     large: 'file.edit.large',
     plain: 'file.edit.plain',
-    touch: 'file.edit.touch',
-    zoom: 'file.edit.zoom'
+    touch: 'file.edit.touch'
 };
 
 export interface CodeFileProps {
@@ -167,8 +166,8 @@ export interface CodeFileProps {
 }
 
 /*
- * Any text file, as an editor. The viewer's chunks draw the same place while Monaco loads, so nothing
- * moves when it takes over, and stay for a finger, which Monaco does not take, and for an editor that
+ * Any text file, as an editor. The viewer's chunks draw the same place while the editor loads, so nothing
+ * moves when it takes over, and stay for a finger, which the editor has no touch handling for, and for an editor that
  * did not load. Where the file cannot be written from here the editor is read only and the toolbar
  * says why.
  */
