@@ -6,6 +6,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';
 import { locationsOf } from './hover-content';
+import { rangeHolds } from './diagnostics-model';
 import { placesOfName } from './symbol-links';
 import { isShortcut } from './shortcut-keys';
 
@@ -108,6 +109,9 @@ export class NavigationFeature {
         const places = uniqueLocations(result);
         if (places.length === 0) {
             this.tell(say('none'));
+        } else if (kind === 'definition' && places.length === 1 && places[0]!.uri === uri && rangeHolds(places[0]!.range, position)) {
+            // The name is its own definition, so what a person wants to see is where it is used.
+            void this.language.peek.open(position);
         } else if (places.length === 1) {
             this.language.goTo(places[0]!);
         } else {

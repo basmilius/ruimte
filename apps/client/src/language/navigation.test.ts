@@ -94,6 +94,28 @@ describe('going to a definition', () => {
     });
 });
 
+describe('a name that is its own definition', () => {
+    test('shows where it is used instead of going nowhere', async () => {
+        const transport = new FakeLanguageTransport();
+        transport.providers = { 'textDocument/definition': {}, 'textDocument/references': {} };
+        const methods: string[] = [];
+        transport.answers.set('language.request', (payload: { method: string }) => {
+            methods.push(payload.method);
+            const result = payload.method === 'textDocument/definition' ? here : [here, there];
+            return { result, server: 'typescript', version: 1 };
+        });
+        const project = new ProjectLanguage(transport, 'p1', '/work/app');
+        const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'one\ntwo\nthree\nlet value = 1;', theme: 'light' });
+        const language = new EditorLanguage(project, editor, uri, 'typescript');
+        await language.document.ready;
+        editor.click({ position: at(3, 6), mod: true, alt: false, shift: false });
+        await settle();
+        expect(methods).toEqual(['textDocument/definition', 'textDocument/references']);
+        expect(language.popups.getState().peek?.count).toBe(2);
+        expect(editor.getCaret()).toEqual(at(0, 0));
+    });
+});
+
 describe('going to a name in a signature', () => {
     const symbol = (name: string, target: string, line: number, containerName?: string) => ({
         name,
