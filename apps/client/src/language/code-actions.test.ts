@@ -98,7 +98,8 @@ describe('the lightbulb', () => {
 describe('a problem elsewhere on the line', () => {
     const emit = (transport: FakeLanguageTransport, diagnostics: unknown[]) =>
         transport.emit('language.diagnostics', { projectId: 'p1', path: 'src/a.ts', server: 'typescript', version: 1, diagnostics: diagnostics as never });
-    const codeActionRequests = (requests: { method: string }[]) => requests.filter((request) => request.method === 'textDocument/codeAction');
+    const codeActionRequests = (requests: { method: string; params: Record<string, unknown> }[]) =>
+        requests.filter((request) => request.method === 'textDocument/codeAction');
 
     test('is asked for its quick fixes when none touches the caret, once each in the list', async () => {
         const { transport, editor, requests, language } = await setup();
