@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { actionsOf, diagnosticsAt, groupOf, isHint, previewOf } from './code-actions-model';
+import { actionsOf, diagnosticsAt, fixableOnLine, groupOf, isHint, mergeEntries, previewOf } from './code-actions-model';
 
 const range = (line: number, start: number, end: number) => ({ start: { line, character: start }, end: { line, character: end } });
 const uri = 'file:///work/a.ts';
@@ -25,6 +25,34 @@ describe('code action groups', () => {
         expect(entries.map((entry) => entry.group)).toEqual(['quickfix', 'quickfix', 'refactor', 'other']);
         expect(entries[3]!.action.command).toEqual({ title: 'Run', command: 'x.run' });
         expect(new Set(entries.map((entry) => entry.id)).size).toBe(4);
+    });
+
+    test('merges lists in the order of one answer, drops an action with the same kind and title, and numbers the rows again', () => {
+        const merged = mergeEntries([
+            actionsOf([{ title: 'Extract', kind: 'refactor.extract' }]),
+            actionsOf([
+                { title: 'Fix', kind: 'quickfix' },
+                { title: 'Extract', kind: 'refactor.extract' }
+            ])
+        ]);
+        expect(merged.map((entry) => [entry.id, entry.action.title])).toEqual([
+            ['0', 'Fix'],
+            ['1', 'Extract']
+        ]);
+    });
+
+    test('picks the errors and warnings that are on a line, errors first', () => {
+        const picked = fixableOnLine(
+            [
+                { range: range(2, 8, 9), message: 'warning', severity: 2 },
+                { range: range(2, 14, 15), message: 'error', severity: 1 },
+                { range: range(2, 0, 1), message: 'hint', severity: 4 },
+                { range: range(3, 0, 1), message: 'elsewhere', severity: 1 },
+                { range: { start: { line: 1, character: 0 }, end: { line: 4, character: 1 } }, message: 'spans the line', severity: 1 }
+            ],
+            2
+        );
+        expect(picked.map((diagnostic) => diagnostic.message)).toEqual(['spans the line', 'error', 'warning']);
     });
 
     test('hints at everything but source actions', () => {

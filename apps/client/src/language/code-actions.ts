@@ -3,7 +3,7 @@ import { StaleResultError, type CodeAction, type Diagnostic } from '@ruimte/smar
 import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { useToasts } from '@/state/toasts';
-import { ACTION_GROUPS, actionsOf, diagnosticsAt, isHint, previewOf, type ActionEntry } from './code-actions-model';
+import { ACTION_GROUPS, actionsOf, diagnosticsAt, fixableOnLine, isHint, mergeEntries, previewOf, type ActionEntry } from './code-actions-model';
 import type { Problem } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
 import type { PickGroup, PickPreview } from './popups';
@@ -16,6 +16,8 @@ const PAUSE_MS = 250;
 const INVOKED = 1;
 const AUTOMATIC = 2;
 const TOAST_ID = 'language-action';
+/* How many problems of the line are asked for their fixes besides the caret's own request. */
+const LINE_PROBLEMS = 3;
 
 interface AskOptions {
     readonly range: EditorRange;
@@ -23,6 +25,8 @@ interface AskOptions {
     readonly anchor: EditorPosition;
     /* The problems the actions are about; the ones touching the range when absent. */
     readonly diagnostics?: readonly Diagnostic[];
+    /* Also the fixes of a problem on the line when none touches the range. */
+    readonly withLine?: boolean;
 }
 
 function say(key: string, options?: Record<string, unknown>): string {
@@ -88,7 +92,7 @@ export class CodeActionsFeature {
     /* The list under the caret, or under the selection's start. */
     open(): Promise<void> {
         const range = this.language.editor.getSelection();
-        return this.ask({ range, anchor: range.start });
+        return this.ask({ range, anchor: range.start, withLine: true });
     }
 
     /* The quick fixes of one problem, under it, as the Quick fix button of its card asks. */
@@ -140,7 +144,9 @@ export class CodeActionsFeature {
         this.asking = true;
         let entries: ActionEntry[] | null;
         try {
-            entries = await this.request(options.range, options.only, INVOKED, undefined, options.diagnostics);
+            entries = options.withLine
+                ? await this.requestWithLine(options.range, INVOKED)
+                : await this.request(options.range, options.only, INVOKED, undefined, options.diagnostics);
         } finally {
             this.asking = false;
         }
@@ -202,6 +208,24 @@ export class CodeActionsFeature {
         }
     }
 
+    /*
+     * What the servers offer at the range, and when no problem touches it, the quick fixes of the problems
+     * elsewhere on its line too, since the fix of an error is wanted from anywhere on the line it is on.
+     */
+    private async requestWithLine(range: EditorRange, triggerKind: number, signal?: AbortSignal): Promise<ActionEntry[] | null> {
+        const entries = await this.request(range, undefined, triggerKind, signal);
+        if (entries === null || range.start.line !== range.end.line) {
+            return entries;
+        }
+        const all = this.language.diagnostics.problems.map((problem) => problem.diagnostic);
+        if (diagnosticsAt(all, range).length > 0) {
+            return entries;
+        }
+        const onLine = fixableOnLine(all, range.start.line).slice(0, LINE_PROBLEMS);
+        const fixes = await Promise.all(onLine.map((diagnostic) => this.request(diagnostic.range, ['quickfix'], triggerKind, signal, [diagnostic])));
+        return mergeEntries([entries, ...fixes.map((list) => list ?? [])]);
+    }
+
     private async hint(signal: AbortSignal): Promise<void> {
         const { editor } = this.language;
         if (this.asking || !this.supported) {
@@ -209,7 +233,7 @@ export class CodeActionsFeature {
             return;
         }
         const range = editor.getSelection();
-        const entries = await this.request(range, undefined, AUTOMATIC, signal);
+        const entries = await this.requestWithLine(range, AUTOMATIC, signal);
         if (signal.aborted || this.asking) {
             return;
         }

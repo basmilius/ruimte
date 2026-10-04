@@ -42,9 +42,33 @@ export function actionsOf(result: readonly (CodeAction | Command)[] | null): Act
     });
 }
 
+/* Entries from several requests as one list: the same order as a single answer, and an id of its own for each row. Two actions with a title and kind alike are one. */
+export function mergeEntries(lists: readonly (readonly ActionEntry[])[]): ActionEntry[] {
+    const seen = new Set<string>();
+    const unique = lists.flat().filter((entry) => {
+        const key = `${entry.action.kind ?? ''}\0${entry.action.title}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+    return ACTION_GROUPS.flatMap((group) => {
+        const own = unique.filter((entry) => entry.group === group);
+        return [...own.filter((entry) => entry.action.isPreferred === true), ...own.filter((entry) => entry.action.isPreferred !== true)];
+    }).map((entry, index) => ({ ...entry, id: String(index) }));
+}
+
 /* Whether the lightbulb offers it: a source action such as organizing imports is a command of its own and never a hint. */
 export function isHint(entry: ActionEntry): boolean {
     return entry.group !== 'source';
+}
+
+/* The problems of a line that are worth a fix: errors and warnings, errors first, in the order of the line. */
+export function fixableOnLine(diagnostics: readonly Diagnostic[], line: number): Diagnostic[] {
+    return diagnostics
+        .filter((diagnostic) => (diagnostic.severity ?? 1) <= 2 && diagnostic.range.start.line <= line && diagnostic.range.end.line >= line)
+        .sort((left, right) => (left.severity ?? 1) - (right.severity ?? 1) || comparePositions(left.range.start, right.range.start));
 }
 
 function touches(range: Range, target: Range): boolean {

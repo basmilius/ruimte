@@ -95,6 +95,53 @@ describe('the lightbulb', () => {
     });
 });
 
+describe('a problem elsewhere on the line', () => {
+    const emit = (transport: FakeLanguageTransport, diagnostics: unknown[]) =>
+        transport.emit('language.diagnostics', { projectId: 'p1', path: 'src/a.ts', server: 'typescript', version: 1, diagnostics: diagnostics as never });
+    const codeActionRequests = (requests: { method: string }[]) => requests.filter((request) => request.method === 'textDocument/codeAction');
+
+    test('is asked for its quick fixes when none touches the caret, once each in the list', async () => {
+        const { transport, editor, requests, language } = await setup();
+        const diagnostic = { range: range(0, 4, 10), message: 'nope', severity: 1 };
+        emit(transport, [diagnostic]);
+        editor.moveCaret(at(0, 14));
+        editor.press({ key: '.', code: 'Period', ...MOD });
+        await settle();
+        const asked = codeActionRequests(requests);
+        expect(asked).toHaveLength(2);
+        expect(asked[0]!.params).toMatchObject({ range: range(0, 14, 14), context: { diagnostics: [] } });
+        expect(asked[1]!.params).toMatchObject({ range: range(0, 4, 10), context: { diagnostics: [diagnostic], only: ['quickfix'] } });
+        const rows = language.popups.getState().pick!.groups.flatMap((group) => group.rows.map((row) => row.label));
+        expect(rows).toEqual(["Change spelling to 'salaryMin'", 'Extract to constant', 'Organize imports']);
+    });
+
+    test('lights the bulb for it', async () => {
+        const { transport, editor, timers } = await setup({ actions: [FIX] });
+        emit(transport, [{ range: range(0, 4, 10), message: 'nope', severity: 1 }]);
+        editor.moveCaret(at(0, 14));
+        timers.advance(250);
+        await settle();
+        expect(editor.gutterAction).toMatchObject({ line: 0 });
+    });
+
+    test('is left out when a problem touches the caret, is on another line, or is only a hint', async () => {
+        const { transport, editor, requests } = await setup();
+        emit(transport, [
+            { range: range(0, 4, 10), message: 'here', severity: 1 },
+            { range: range(1, 0, 3), message: 'below', severity: 1 },
+            { range: range(0, 11, 12), message: 'hint', severity: 4 }
+        ]);
+        editor.moveCaret(at(0, 5));
+        editor.press({ key: '.', code: 'Period', ...MOD });
+        await settle();
+        expect(codeActionRequests(requests)).toHaveLength(1);
+        editor.moveCaret(at(0, 14));
+        editor.press({ key: '.', code: 'Period', ...MOD });
+        await settle();
+        expect(codeActionRequests(requests)).toHaveLength(3);
+    });
+});
+
 describe('the list', () => {
     test('opens under the caret on Mod+. grouped by kind, preferred first, and shows what the active action would change', async () => {
         const { editor, timers, language } = await setup();
