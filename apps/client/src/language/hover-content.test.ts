@@ -48,16 +48,17 @@ describe('splitDocTags', () => {
         const split = splitDocTags('Returns the cost.\n\n_@since_ 04-08-2024\n\n_@author_ Bas Milius <bas@mili.us>\n\n_@package_ Passly\\Data\\Dto');
         expect(split.markdown).toBe('Returns the cost.');
         expect(split.tags).toEqual([
-            { name: 'since', markdown: '04-08-2024' },
             { name: 'author', markdown: 'Bas Milius <bas@mili.us>' },
-            { name: 'package', markdown: 'Passly\\Data\\Dto' }
+            { name: 'package', markdown: 'Passly\\Data\\Dto' },
+            { name: 'since', markdown: '04-08-2024' }
         ]);
     });
 
     test('drops the dashes the TypeScript server puts between a tag, its parameter and its text', () => {
-        const split = splitDocTags('Share.\n\n*@param* `have` — the skills\n\n*@returns* — a fraction');
+        const split = splitDocTags('Share.\n\n*@returns* — a fraction\n\n*@param* `have` — the skills\n\n*@param* `need` — the required');
         expect(split.tags).toEqual([
             { name: 'param', markdown: '`have` the skills' },
+            { name: 'param', markdown: '`need` the required' },
             { name: 'returns', markdown: 'a fraction' }
         ]);
     });

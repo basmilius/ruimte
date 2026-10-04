@@ -117,7 +117,8 @@ export function splitDocTags(markdown: string): { readonly markdown: string; rea
             tags.push({ name: names[index]!, markdown: text.trim() });
         });
     }
-    return { markdown: kept.join('\n\n').trim(), tags };
+    // By name, and in the order written within one name, so parameters keep the order of the signature.
+    return { markdown: kept.join('\n\n').trim(), tags: tags.toSorted((left, right) => left.name.localeCompare(right.name)) };
 }
 
 /* One symbol of a hover. A server can describe several at once, such as a class and its constructor. */
