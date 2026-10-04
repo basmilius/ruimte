@@ -8,10 +8,14 @@ The document model and editing logic of the smart editor, with no DOM and no dep
 
 Everything comes from the package root.
 
-- `DocumentModel`: `getText`, `getLine`, `slice`, `getSelections`, `getSnapshot`, `subscribe`, `applyEdits`, `setText`, `undo`, `redo`, `positionAt`, `offsetAt`, `find`, `findNext`, `replace`, `replaceAll`, `getFoldingRanges`, `typeText` and `execute`.
+- `DocumentModel`: `getText`, `getLine`, `slice`, `getSelections`, `getSnapshot`, `subscribe`, `applyEdits`, `setText`, `undo`, `redo`, `positionAt`, `offsetAt`, `find`, `findNext`, `replace`, `replaceAll`, `getFoldingRanges`, `typeText`, `paste` and `execute`.
 - `applyEdits` takes `expectedRevision` and refuses the batch if the text moved on. A revision only goes up.
-- `typeText` is one keystroke on every caret: it pairs brackets and quotes, types over a closer, wraps a selection and moves a `;` to the end of a call. It reads the language id (`typescript`, `php`, `python`, and so on) to tell code from comments and strings.
-- `execute` runs an `EditorCommand`: word and camel-hump movement, smart Home and End, backspace, newline, line duplicate, delete and move, comment toggle, indent, multiple carets, selection expansion and next occurrence.
+- `typeText` is one keystroke on every caret. It pairs brackets and quotes (each with its own option, and not in plain text), pairs a bracket only when the text after it has no closer for it, pairs a quote only when no identifier character follows, types over a closer, wraps a selection in a bracket, `<` or quote and swaps the quotes of a string when one of them is selected, sends a closing bracket alone on its line back to the indentation of its opener, leaves a Python docstring opener at three quotes and moves a `;` to the end of a call. It reads the language id (`typescript`, `php`, `python`, and so on) to tell code from comments and strings.
+- `paste` takes one line for each caret when the counts match, puts text copied from a bare caret (`wholeLines`) above the line of each bare caret, and moves a pasted block to the indentation of the line it lands on.
+- `execute` runs an `EditorCommand`: word and camel-hump movement, smart Home and End, backspace, Enter and its variants (start a line below or above, split a line), Tab, join lines, toggle case, auto-indent, line duplicate, delete and move, line and block comment toggles, indent, multiple carets, selection expansion and next occurrence.
+- Enter works from the lexer's state at the caret. It continues a line comment when text follows the caret, closes and continues `/*` and `/**` comments with the stars lined up under the opener's first star, splits a string literal with the language's concatenation, closes a brace nothing closes, indents after an opener, `def f():`, a YAML `key:`, a `case` label, an open tag and a statement left unfinished, and replaces the whitespace after the caret by the indentation it computes.
+- Comment toggles use a table of markers per language (`commentSyntax`), with the region of a Vue file picked by the caret's line. Line comments go in at the smallest indentation of the lines, and a lone caret moves down a line. A language with block comments only wraps each line.
+- Backspace at the start of a line also takes the whitespace that trails the line above. Tab inserts up to the next tab stop, or steps over a closer the editor added.
 - `scanBrackets` pairs brackets lexically, for code that does not parse yet.
 - `findMatches` and `replacementText` are the search the model uses.
 - `isWordBoundary`, `isHumpBoundary` and `wordBoundary` are the word predicates and the navigation on top of them.
@@ -23,12 +27,12 @@ This package comes from a proof of concept editor that ports IntelliJ's editing 
 
 The branch order, the start and end asymmetry, and the underscore, dollar and acronym rules are kept. Java's character tests are written as Unicode properties plus Java's whitespace and control ranges. Like the upstream char overloads, they look at UTF-16 code units, and a newer Unicode version in the runtime can classify a new character differently than Java does.
 
-The rest is written here: the rope, transactions and history, the commands, search, folding and the lexical scanners. Bracket matching and delimiter typing were checked against IntelliJ's documented behavior and its `TypedParenImpl` and `TypedQuoteImpl` handlers, which depend on PSI and were not copied. Navigation avoids surrogate pairs and CRLF. IntelliJ's token filters, quoted-token policies and visual-line rules are not part of this.
+The rest is written here: the rope, transactions and history, the commands, search, folding and the lexical scanners. Bracket matching and delimiter typing were checked against IntelliJ's documented behavior and its `TypedParenImpl` and `TypedQuoteImpl` handlers, which depend on PSI and were not copied. Enter, comment toggling, join lines, paste and the handlers for typing over a selection follow the behavior of the same editor's handlers, with the lexer standing in for the syntax tree and no formatter; none of their code is used. Navigation avoids surrogate pairs and CRLF. IntelliJ's token filters, quoted-token policies and visual-line rules are not part of this.
 
 ## Known limits
 
 - The scanners are lexical, not parsers. A `/` after an ambiguous construct can read as a regex or a division, and PHP heredocs, JSX text, Python triple quotes and HTML or XML tag pairs are not modeled. `scanStructure`, behind folding and selection expansion, does not know regex literals or template interpolation.
-- Language is a string id with a short fixed list of rules (script, hash comments, markup, CSS). An unknown id is treated as a C-like language.
+- Language is a string id with a short fixed list of rules for the lexer (script, hash comments, markup, CSS) and a table of comment markers. An unknown id is treated as a C-like language. Indentation is worked out from brackets, keywords and the end of the previous line, not by a formatter, so Auto-indent Lines leaves languages without braces alone.
 - Smart semicolons only cross a trailing chain of `)` and `]`, and only in TypeScript, JavaScript and PHP.
 - Search, folding and selection expansion read the whole document on request, synchronously. A regex has no timeout, so run untrusted patterns in a worker.
 - Word navigation reads what it crosses: a single 4 MiB word takes well over half a second. History keeps the last 200 steps. The rope has no size cap and was measured up to 25 MiB (`bun run benchmark`).
