@@ -56,11 +56,13 @@
 }
 .se-overlays,
 .se-code,
+.se-over,
 .se-carets {
     position: absolute;
     inset: 0;
 }
 .se-overlays,
+.se-over,
 .se-carets {
     pointer-events: none;
 }
@@ -68,8 +70,11 @@
     z-index: 1;
     user-select: none;
 }
-.se-carets {
+.se-over {
     z-index: 2;
+}
+.se-carets {
+    z-index: 3;
 }
 
 .se-line {
@@ -167,7 +172,7 @@
     right: 0;
     bottom: 0;
     z-index: 5;
-    width: 12px;
+    width: 16px;
     pointer-events: none;
 }
 .se-tick {
@@ -196,6 +201,20 @@
 }
 .se-tick-find {
     opacity: 0.6;
+}
+.se-tick-error,
+.se-tick-warning,
+.se-tick-info {
+    left: 10px;
+}
+.se-tick-error {
+    background: var(--status-error);
+}
+.se-tick-warning {
+    background: var(--status-needs-you);
+}
+.se-tick-info {
+    background: var(--status-running);
 }
 .se-fold-chip {
     position: absolute;
@@ -297,6 +316,38 @@
 .se-occurrence {
     background: var(--editor-occurrence);
     border-radius: var(--radius-sm);
+}
+.se-occurrence-write {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* The wave is a mask, so it takes the color of the problem from the tokens instead of one baked into an image. */
+.se-squiggle {
+    position: absolute;
+    background: var(--status-error);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 1.5 .5 3 2.5 4.5 .5 6 2.5' fill='none' stroke='black' stroke-width='1'/%3E%3C/svg%3E") repeat-x left bottom / 6px 3px;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 1.5 .5 3 2.5 4.5 .5 6 2.5' fill='none' stroke='black' stroke-width='1'/%3E%3C/svg%3E") repeat-x left bottom / 6px 3px;
+}
+.se-squiggle-warning {
+    background: var(--status-needs-you);
+}
+.se-squiggle-info {
+    background: var(--status-running);
+}
+.se-faded {
+    position: absolute;
+    background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+.se-struck {
+    position: absolute;
+}
+.se-struck::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--text-muted);
 }
 .se-bracket-match {
     background: var(--accent-soft);

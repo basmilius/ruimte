@@ -338,6 +338,18 @@ export function paintOverlays(container: HTMLElement, paint: OverlayPaint): void
     container.replaceChildren(fragment);
 }
 
+/* What is drawn over the text, such as the fading of code nothing uses. */
+export function paintOver(container: HTMLElement, layers: readonly { className: string; rects: readonly LayoutRect[] }[]): void {
+    const document = container.ownerDocument;
+    const fragment = document.createDocumentFragment();
+    for (const layer of layers) {
+        for (const rect of layer.rects) {
+            fragment.append(box(document, layer.className, rect));
+        }
+    }
+    container.replaceChildren(fragment);
+}
+
 /* The carets, above the text. */
 export function paintCarets(container: HTMLElement, carets: readonly LayoutRect[]): void {
     const document = container.ownerDocument;

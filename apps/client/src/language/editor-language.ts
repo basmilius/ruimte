@@ -1,4 +1,5 @@
 import type { Editor } from '@ruimte/smart-editor';
+import { DiagnosticsFeature } from './diagnostics';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
 
 /*
@@ -10,6 +11,7 @@ export class EditorLanguage {
     readonly project: ProjectLanguage;
     readonly document: LanguageDocumentHandle;
     readonly languageId: string;
+    readonly diagnostics: DiagnosticsFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -18,6 +20,7 @@ export class EditorLanguage {
         this.project = project;
         this.languageId = languageId;
         this.document = project.acquire(uri, languageId, editor);
+        this.diagnostics = new DiagnosticsFeature(this);
     }
 
     get uri(): string {

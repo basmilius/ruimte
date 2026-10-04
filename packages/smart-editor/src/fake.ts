@@ -2,12 +2,18 @@ import type {
     Editor,
     EditorBlock,
     EditorChangeMark,
+    EditorContentChange,
     EditorEngine,
     EditorFindQuery,
     EditorFindState,
+    EditorHighlight,
+    EditorHover,
     EditorIndentation,
+    EditorKeyHandler,
+    EditorMarker,
     EditorOptions,
     EditorPosition,
+    EditorRect,
     EditorTextChange,
     EditorTheme
 } from './types.ts';
@@ -225,6 +231,109 @@ export class FakeEditor implements Editor {
         this.indentation = indentation;
     }
 
+    /* What the client marked and highlighted last. */
+    markers: readonly EditorMarker[] = [];
+    highlights: readonly EditorHighlight[] = [];
+    caret: EditorPosition = { line: 0, character: 0 };
+    /* Where `rectAt` puts a position, which a test can move to simulate scrolling. */
+    origin = { left: 100, top: 100 };
+    charSize = { width: 8, height: 20 };
+    private readonly carets = new Set<(position: EditorPosition) => void>();
+    private readonly hovers = new Set<(hover: EditorHover | null) => void>();
+    private readonly views = new Set<Listener>();
+    private readonly keys = new Set<EditorKeyHandler>();
+
+    setMarkers(markers: readonly EditorMarker[]): void {
+        this.markers = markers;
+    }
+
+    setHighlights(highlights: readonly EditorHighlight[]): void {
+        this.highlights = highlights;
+    }
+
+    getCaret(): EditorPosition {
+        return this.caret;
+    }
+
+    setCaret(position: EditorPosition): void {
+        this.caret = position;
+        this.revealedLine = position.line + 1;
+        this.moveCaret(position);
+    }
+
+    /* The caret a person's click or key moved. */
+    moveCaret(position: EditorPosition): void {
+        this.caret = position;
+        for (const listener of [...this.carets]) {
+            listener(position);
+        }
+    }
+
+    onCaret(listener: (position: EditorPosition) => void): () => void {
+        this.carets.add(listener);
+        return () => {
+            this.carets.delete(listener);
+        };
+    }
+
+    onHover(listener: (hover: EditorHover | null) => void): () => void {
+        this.hovers.add(listener);
+        return () => {
+            this.hovers.delete(listener);
+        };
+    }
+
+    /* The pointer resting on a position, or leaving the text. */
+    hover(position: EditorPosition | null): void {
+        const hover = position === null ? null : { position, rect: this.rectAt(position)! };
+        for (const listener of [...this.hovers]) {
+            listener(hover);
+        }
+    }
+
+    rectAt(position: EditorPosition): EditorRect | null {
+        const left = this.origin.left + position.character * this.charSize.width;
+        const top = this.origin.top + position.line * this.charSize.height;
+        return { left, top, right: left + this.charSize.width, bottom: top + this.charSize.height };
+    }
+
+    onViewChange(listener: Listener): () => void {
+        return subscribe(this.views, listener);
+    }
+
+    /* The editor scrolling. */
+    scroll(): void {
+        emit(this.views);
+    }
+
+    onKeyDown(handler: EditorKeyHandler): () => void {
+        this.keys.add(handler);
+        return () => {
+            this.keys.delete(handler);
+        };
+    }
+
+    /* A key as the editor sees it first; true when a handler took it. */
+    press(event: Pick<KeyboardEvent, 'key'> & Partial<KeyboardEvent>): boolean {
+        const full = { ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, preventDefault: () => undefined, ...event } as KeyboardEvent;
+        return [...this.keys].some((handler) => handler(full));
+    }
+
+    applyEdits(edits: readonly EditorContentChange[]): boolean {
+        if (this.readOnly || edits.length === 0) {
+            return false;
+        }
+        let text = this.text;
+        const ordered = edits
+            .map((edit) => ({ from: this.offsetAt(edit.range.start), to: this.offsetAt(edit.range.end), text: edit.text }))
+            .sort((a, b) => b.from - a.from);
+        for (const edit of ordered) {
+            text = text.slice(0, edit.from) + edit.text + text.slice(edit.to);
+        }
+        this.type(text);
+        return true;
+    }
+
     setTheme(theme: EditorTheme): void {
         this.theme = theme;
     }
@@ -246,6 +355,10 @@ export class FakeEditor implements Editor {
         this.disposed = true;
         this.changes.clear();
         this.textChanges.clear();
+        this.carets.clear();
+        this.hovers.clear();
+        this.views.clear();
+        this.keys.clear();
         this.saves.clear();
         this.blurs.clear();
         this.finds.clear();

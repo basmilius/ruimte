@@ -5,9 +5,19 @@ import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { mapOffset } from './offsets.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
-import { paintCarets, paintGutter, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
+import { paintCarets, paintGutter, paintOver, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
 import { TokenCache } from './tokens.ts';
-import type { EditorBlock, EditorChangeKind, EditorChangeMark, EditorFindQuery, EditorFindState, LineTokenizer } from './types.ts';
+import type {
+    EditorBlock,
+    EditorChangeKind,
+    EditorChangeMark,
+    EditorFindQuery,
+    EditorFindState,
+    EditorHighlightKind,
+    EditorMarkerSeverity,
+    EditorRect,
+    LineTokenizer
+} from './types.ts';
 
 export interface ViewSettings {
     language: string | undefined;
@@ -43,6 +53,16 @@ export function outermostPerLine(ranges: readonly FoldingRange[]): FoldingRange[
 export interface Occurrence {
     from: number;
     to: number;
+    kind?: EditorHighlightKind;
+}
+
+/* A problem the host marked, anchored to offsets that follow the text through edits. */
+export interface ViewMarker {
+    severity: EditorMarkerSeverity;
+    from: number;
+    to: number;
+    unnecessary: boolean;
+    deprecated: boolean;
 }
 
 /*
@@ -60,6 +80,7 @@ export class EditorView {
     private readonly gutter: HTMLElement;
     private readonly gutterLines: HTMLElement;
     private readonly overlays: HTMLElement;
+    private readonly over: HTMLElement;
     private readonly carets: HTMLElement;
     private readonly notice: HTMLElement;
     private readonly sticky: HTMLElement;
@@ -71,6 +92,12 @@ export class EditorView {
     private readonly subscription: { dispose(): void };
     private readonly findListeners = new Set<(state: EditorFindState) => void>();
     private readonly scopeListeners = new Set<(scope: readonly EditorBlock[]) => void>();
+    private readonly viewListeners = new Set<() => void>();
+    private markers: ViewMarker[] = [];
+    private markerVersion = 0;
+    private viewKey = '';
+    private readonly hoverListeners = new Set<(offset: number | null) => void>();
+    private hoverOffset: number | null = null;
     private readonly outline = new Outline();
     private stickyEntries: StickyEntry[] = [];
     private scopeKey = '';
@@ -124,12 +151,13 @@ export class EditorView {
         this.content = make('div', 'se-content');
         this.overlays = make('div', 'se-overlays');
         const code = make('div', 'se-code');
+        this.over = make('div', 'se-over');
         this.carets = make('div', 'se-carets');
-        for (const layer of [this.overlays, this.carets]) {
+        for (const layer of [this.overlays, this.over, this.carets]) {
             layer.setAttribute('aria-hidden', 'true');
         }
         code.setAttribute('aria-hidden', 'true');
-        this.content.append(this.overlays, code, this.carets);
+        this.content.append(this.overlays, code, this.over, this.carets);
         // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
         const scroller = make('div', 'se-scroller');
         scroller.append(this.gutter, this.content);
@@ -218,6 +246,12 @@ export class EditorView {
         this.render();
     }
 
+    setMarkers(markers: readonly ViewMarker[]): void {
+        this.markers = [...markers];
+        this.markerVersion++;
+        this.render();
+    }
+
     /* What an input method has composed so far, drawn at the caret and not yet in the document. */
     setComposition(text: string | undefined): void {
         this.composition = text;
@@ -262,13 +296,16 @@ export class EditorView {
         if (snapshot.revision !== this.revision) {
             this.revision = snapshot.revision;
             this.rowEndCaret = null;
+            this.hoverOffset = null;
             const batches = snapshot.changes ?? [];
             for (const changes of batches) {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
                 this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
+                this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
             }
+            this.markerVersion++;
             const anchor = this.topAnchor;
             this.occurrences = [];
             this.outline.edited(batches);
@@ -503,6 +540,91 @@ export class EditorView {
         return hit.offset;
     }
 
+    /* The scale a canvas puts on the node the editor is in, which is 1 anywhere else. */
+    private screenScale(rect: DOMRect): { x: number; y: number } {
+        return {
+            x: this.viewport.offsetWidth > 0 ? rect.width / this.viewport.offsetWidth : 1,
+            y: this.viewport.offsetHeight > 0 ? rect.height / this.viewport.offsetHeight : 1
+        };
+    }
+
+    /* The character cell at an offset in the page's pixels, undoing nothing: a popup placed by it is right at any zoom. */
+    clientRectOf(offset: number): EditorRect | null {
+        const rect = this.viewport.getBoundingClientRect?.();
+        if (!rect) {
+            return null;
+        }
+        const scale = this.screenScale(rect);
+        const caret = this.layout.caret(offset);
+        const left = rect.left + (caret.x + this.gutterWidth - this.viewport.scrollLeft) * scale.x;
+        const top = rect.top + (caret.y - this.viewport.scrollTop) * scale.y;
+        return { left, top, right: left + this.layout.metrics.charWidth * scale.x, bottom: top + caret.height * scale.y };
+    }
+
+    /* The offset of the character under a point of the page, or null over anything that is not text. */
+    characterAtPoint(clientX: number, clientY: number, target: EventTarget | null): number | null {
+        if ((target as HTMLElement | null)?.closest?.('.se-inlay, .se-block, .se-gutter, .se-sticky, .se-fold-chip, .se-overview')) {
+            return null;
+        }
+        const point = this.contentPoint(clientX, clientY);
+        if (point.y < 0 || point.y > this.layout.height) {
+            return null;
+        }
+        const row = this.layout.rowAt(point.y);
+        if (row.kind !== 'text') {
+            return null;
+        }
+        const hit = this.layout.hitTestRow(point.x, point.y);
+        const caret = this.layout.caret(hit.offset);
+        const line = this.model.getLine(row.line);
+        const offset = point.x >= caret.x ? hit.offset : hit.offset - 1;
+        // Past the last character of a line the nearest stop is its end, which no character is under.
+        if (offset < line.start || offset >= line.end || Math.abs(point.x - caret.x) > this.layout.metrics.charWidth * 1.5) {
+            return null;
+        }
+        return offset;
+    }
+
+    onHover(listener: (offset: number | null) => void): () => void {
+        this.hoverListeners.add(listener);
+        return () => {
+            this.hoverListeners.delete(listener);
+        };
+    }
+
+    /* The pointer moved over the editor; a drag in progress is not a hover. */
+    hoverMoved(event: PointerEvent): void {
+        this.setHover(event.buttons === 0 ? this.characterAtPoint(event.clientX, event.clientY, event.target) : null);
+    }
+
+    setHover(offset: number | null): void {
+        if (offset === this.hoverOffset) {
+            return;
+        }
+        this.hoverOffset = offset;
+        for (const listener of [...this.hoverListeners]) {
+            listener(offset);
+        }
+    }
+
+    onViewChange(listener: () => void): () => void {
+        this.viewListeners.add(listener);
+        return () => {
+            this.viewListeners.delete(listener);
+        };
+    }
+
+    private announceView(): void {
+        const key = `${this.viewport.scrollTop}|${this.viewport.scrollLeft}|${this.viewport.clientWidth}|${this.viewport.clientHeight}|${this.layout.height}`;
+        if (key === this.viewKey) {
+            return;
+        }
+        this.viewKey = key;
+        for (const listener of [...this.viewListeners]) {
+            listener();
+        }
+    }
+
     private caretOf(head: number): LayoutRect {
         return this.layout.caret(head, 'after', head === this.rowEndCaret);
     }
@@ -671,6 +793,7 @@ export class EditorView {
             this.paintSticky();
             this.paintOverview();
             this.announceScope();
+            this.announceView();
             this.colorAhead();
         } finally {
             this.rendering = false;
@@ -698,7 +821,32 @@ export class EditorView {
             primary.anchor === primary.head && row.kind === 'text'
                 ? { x: 0, y: row.top, width: Math.max(this.layout.width, this.viewportWidth), height: row.height }
                 : null;
-        marks.push({ className: 'se-occurrence', rects: this.occurrences.flatMap((mark) => this.layout.rectangles(mark.from, mark.to, rows)) });
+        for (const kind of ['text', 'read', 'write'] as const) {
+            const group = this.occurrences.filter((mark) => (mark.kind ?? 'text') === kind);
+            if (group.length > 0) {
+                marks.push({
+                    className: kind === 'write' ? 'se-occurrence se-occurrence-write' : 'se-occurrence',
+                    rects: group.flatMap((mark) => this.layout.rectangles(mark.from, mark.to, rows))
+                });
+            }
+        }
+        const faded: LayoutRect[] = [];
+        const struck: LayoutRect[] = [];
+        for (const marker of this.markers) {
+            if (marker.to <= marker.from) {
+                continue;
+            }
+            const rects = this.layout.rectangles(marker.from, marker.to, rows);
+            if (marker.severity !== 'hint') {
+                marks.push({ className: `se-squiggle se-squiggle-${marker.severity}`, rects });
+            }
+            if (marker.unnecessary) {
+                faded.push(...rects);
+            }
+            if (marker.deprecated) {
+                struck.push(...rects);
+            }
+        }
         const current = this.find.currentMark;
         const textRows = rows.filter((candidate) => candidate.kind === 'text');
         const visibleFrom = textRows.length > 0 ? this.model.getLine(textRows[0]!.line).start : 0;
@@ -733,6 +881,10 @@ export class EditorView {
                 : this.layout.rectangles(Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head), rows)
         );
         paintOverlays(this.overlays, { currentLine, selections: selected, focused, marks });
+        paintOver(this.over, [
+            { className: 'se-faded', rects: faded },
+            { className: 'se-struck', rects: struck }
+        ]);
         const top = this.viewport.scrollTop;
         const caretRects = focused
             ? selections
@@ -793,7 +945,7 @@ export class EditorView {
         const trackHeight = this.viewportHeight;
         const matches = this.find.matches;
         const current = this.find.current;
-        const key = `${this.revision}|${this.changeVersion}|${this.layout.height}|${trackHeight}|${matches.length}|${current}|${matches[0]?.from}|${matches.at(-1)?.from}`;
+        const key = `${this.revision}|${this.changeVersion}|${this.markerVersion}|${this.layout.height}|${trackHeight}|${matches.length}|${current}|${matches[0]?.from}|${matches.at(-1)?.from}`;
         if (key === this.overviewKey) {
             return;
         }
@@ -807,6 +959,13 @@ export class EditorView {
         for (const mark of this.changeMarks) {
             const { start, end } = this.markedLines(mark);
             spans.push({ kind: mark.kind, top: rowTop(start), bottom: mark.kind === 'deleted' ? rowTop(start) : rowBottom(end) });
+        }
+        for (const marker of this.markers) {
+            if (marker.severity !== 'hint' && marker.to > marker.from) {
+                const start = this.model.positionAt(marker.from).line;
+                const end = this.model.positionAt(marker.to).line;
+                spans.push({ kind: marker.severity, top: rowTop(start), bottom: rowBottom(end) });
+            }
         }
         matches.forEach((match, index) => {
             const line = this.model.positionAt(match.from).line;
@@ -933,6 +1092,8 @@ export class EditorView {
         }
         this.findListeners.clear();
         this.scopeListeners.clear();
+        this.viewListeners.clear();
+        this.hoverListeners.clear();
         this.painter.clear();
         this.root.remove();
     }

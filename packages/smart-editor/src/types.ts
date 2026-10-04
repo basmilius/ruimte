@@ -67,6 +67,43 @@ export interface EditorTextChange {
     readonly changes: readonly EditorContentChange[];
 }
 
+export type EditorMarkerSeverity = 'error' | 'warning' | 'info' | 'hint';
+
+/* A range the host wants drawn as a problem: a squiggle in the text, a tick in the scroll track. It follows its text through edits until the host sets the markers again. */
+export interface EditorMarker {
+    readonly range: EditorRange;
+    readonly severity: EditorMarkerSeverity;
+    /* Drawn faded, for code nothing uses. */
+    readonly unnecessary?: boolean;
+    /* Drawn struck through. */
+    readonly deprecated?: boolean;
+}
+
+/* The kind of use a highlighted name has at the caret. */
+export type EditorHighlightKind = 'text' | 'read' | 'write';
+
+export interface EditorHighlight {
+    readonly range: EditorRange;
+    readonly kind: EditorHighlightKind;
+}
+
+/* A box on the screen, in the page's pixels, so a popup placed by it is right on a canvas at any zoom. */
+export interface EditorRect {
+    readonly left: number;
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+}
+
+/* The pointer rests on a character of the text. */
+export interface EditorHover {
+    readonly position: EditorPosition;
+    readonly rect: EditorRect;
+}
+
+/* Returns true when the key was taken; the editor then prevents its default and does nothing else with it. */
+export type EditorKeyHandler = (event: KeyboardEvent) => boolean;
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -122,6 +159,25 @@ export interface Editor {
     setBlocks(blocks: readonly EditorBlock[] | null): void;
     /* The named blocks around the caret, outermost first, said again only when they change. */
     onScope(listener: (scope: readonly EditorBlock[]) => void): () => void;
+    /* Problems to draw, replacing the ones set before. */
+    setMarkers(markers: readonly EditorMarker[]): void;
+    /* The other uses of the name at the caret, drawn as soft marks until the next edit. */
+    setHighlights(highlights: readonly EditorHighlight[]): void;
+    getCaret(): EditorPosition;
+    /* Moves the one caret and scrolls it into view. */
+    setCaret(position: EditorPosition): void;
+    /* The caret moved or the text under it changed. */
+    onCaret(listener: (position: EditorPosition) => void): () => void;
+    /* The pointer moved onto another character, or null when it left the text. */
+    onHover(listener: (hover: EditorHover | null) => void): () => void;
+    /* The character cell at a position in screen coordinates, or null where the editor has no layout. */
+    rectAt(position: EditorPosition): EditorRect | null;
+    /* The editor scrolled or changed size, so whatever is placed by `rectAt` is somewhere else. */
+    onViewChange(listener: () => void): () => void;
+    /* Handlers see a key before the editor does, the first to take it winning. */
+    onKeyDown(handler: EditorKeyHandler): () => void;
+    /* Replaces ranges of the current text at once, as one step of the undo history. */
+    applyEdits(edits: readonly EditorContentChange[]): boolean;
     setTheme(theme: EditorTheme): void;
     /* Reads the code face off the page again, after the page changed its size, family or ligatures. */
     refreshFont(): void;

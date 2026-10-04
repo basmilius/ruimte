@@ -432,3 +432,77 @@ describe('text changes', () => {
         expect(editor.offsetAt({ line: 9, character: 9 })).toBe(7);
     });
 });
+
+describe('markers', () => {
+    const range = (line: number, start: number, end: number) => ({ start: { line, character: start }, end: { line, character: end } });
+
+    test('draws a squiggle for an error, a tick in the scroll track, and none for a hint', () => {
+        const { editor, host } = setup({ text: 'let a = 1;\nlet b = 2;' });
+        editor.setMarkers([
+            { range: range(0, 4, 5), severity: 'error' },
+            { range: range(1, 4, 5), severity: 'hint', unnecessary: true }
+        ]);
+        expect(host.querySelectorAll('.se-squiggle-error')).toHaveLength(1);
+        expect(host.querySelectorAll('.se-squiggle')).toHaveLength(1);
+        expect(host.querySelectorAll('.se-faded')).toHaveLength(1);
+        expect(host.querySelectorAll('.se-tick-error')).toHaveLength(1);
+        expect(host.querySelectorAll('.se-tick-warning')).toHaveLength(0);
+    });
+
+    test('strikes through what is deprecated', () => {
+        const { editor, host } = setup({ text: 'old()' });
+        editor.setMarkers([{ range: range(0, 0, 3), severity: 'hint', deprecated: true }]);
+        expect(host.querySelectorAll('.se-struck')).toHaveLength(1);
+    });
+
+    test('keeps a marker on its text through an edit before it, and takes them away when asked', () => {
+        const { editor, host, type } = setup({ text: 'let a = 1;' });
+        editor.setMarkers([{ range: range(0, 4, 5), severity: 'warning' }]);
+        editor.setCaret({ line: 0, character: 0 });
+        type('xx');
+        const squiggle = host.querySelector('.se-squiggle-warning') as HTMLElement;
+        const before = Number.parseFloat(squiggle.style.left);
+        expect(before).toBeGreaterThan(0);
+        editor.setMarkers([]);
+        expect(host.querySelectorAll('.se-squiggle')).toHaveLength(0);
+    });
+});
+
+describe('keys and positions', () => {
+    test('lets a handler take a key before the editor does', () => {
+        const { editor, press } = setup({ text: 'abc' });
+        let seen = '';
+        const off = editor.onKeyDown((event) => {
+            seen += event.key;
+            return event.key === 'Enter';
+        });
+        expect(press('Enter')).toBe(true);
+        expect(editor.getText()).toBe('abc');
+        press('Home');
+        expect(seen).toBe('EnterHome');
+        off();
+        press('Enter');
+        expect(editor.getText()).not.toBe('abc');
+    });
+
+    test('says where the caret is and moves it', () => {
+        const { editor } = setup({ text: 'one\ntwo' });
+        const heard: unknown[] = [];
+        editor.onCaret((position) => heard.push(position));
+        editor.setCaret({ line: 1, character: 2 });
+        expect(editor.getCaret()).toEqual({ line: 1, character: 2 });
+        expect(heard).toEqual([{ line: 1, character: 2 }]);
+    });
+
+    test('applies edits in the coordinates of the current text, as one step', () => {
+        const { editor } = setup({ text: 'one\ntwo' });
+        const range = (line: number, start: number, end: number) => ({ start: { line, character: start }, end: { line, character: end } });
+        expect(
+            editor.applyEdits([
+                { range: range(0, 0, 3), text: 'uno' },
+                { range: range(1, 0, 3), text: 'dos' }
+            ])
+        ).toBe(true);
+        expect(editor.getText()).toBe('uno\ndos');
+    });
+});

@@ -3,7 +3,7 @@ import { replacementEdits } from './input.ts';
 import { chordMatches, type KeyAction, keyAction, type MoveKey } from './keymap.ts';
 import { NativeInput } from './native-input.ts';
 import { PointerSelection } from './pointer.ts';
-import type { KeyChord } from './types.ts';
+import type { EditorKeyHandler, KeyChord } from './types.ts';
 import type { EditorView } from './view.ts';
 
 export interface ControllerOptions {
@@ -46,6 +46,7 @@ export class InputController {
     private readonly native: NativeInput;
     private readonly pointer: PointerSelection;
     private readonly cleanup: (() => void)[] = [];
+    private readonly keyHandlers = new Set<EditorKeyHandler>();
     private readonly subscription: { dispose(): void };
     private historyGroup = 0;
     private lastInputAt = 0;
@@ -129,6 +130,8 @@ export class InputController {
         this.listen(input, 'copy', (event) => this.copy(event, false));
         this.listen(input, 'cut', (event) => this.copy(event, true));
         this.listen(viewport, 'scroll', () => this.view.scrolled());
+        this.listen(viewport, 'pointermove', (event) => this.view.hoverMoved(event));
+        this.listen(viewport, 'pointerleave', () => this.view.setHover(null));
         this.listen(viewport, 'wheel', (event) => this.wheel(event));
         this.listen(viewport, 'pointerdown', (event) => this.pointerDown(event));
         this.listen(this.view.gutterElement, 'pointerdown', (event) => this.gutterDown(event));
@@ -156,6 +159,7 @@ export class InputController {
             remove();
         }
         this.cleanup.length = 0;
+        this.keyHandlers.clear();
     }
 
     /* Tells a person why nothing happened, when the editor is read only and has said why. */
@@ -362,9 +366,23 @@ export class InputController {
         }
     }
 
+    /* A handler sees the key before the editor does, the page's own shortcuts included, since a list of suggestions owns the arrows while it is open. */
+    onKeyDown(handler: EditorKeyHandler): () => void {
+        this.keyHandlers.add(handler);
+        return () => {
+            this.keyHandlers.delete(handler);
+        };
+    }
+
     private keydown(event: KeyboardEvent): void {
         if (event.isComposing || this.native.composing) {
             return;
+        }
+        for (const handler of [...this.keyHandlers]) {
+            if (handler(event)) {
+                event.preventDefault();
+                return;
+            }
         }
         // The app's own shortcuts stay the app's, also where the editor has a binding for the same key.
         if (this.options.handBack.some((chord) => chordMatches(chord, event, this.options.apple))) {

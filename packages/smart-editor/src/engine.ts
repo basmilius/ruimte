@@ -5,12 +5,18 @@ import type {
     Editor,
     EditorBlock,
     EditorChangeMark,
+    EditorContentChange,
     EditorEngine,
     EditorFindQuery,
     EditorIndentation,
     EditorFindState,
+    EditorHighlight,
+    EditorHover,
+    EditorKeyHandler,
+    EditorMarker,
     EditorOptions,
     EditorPosition,
+    EditorRect,
     EditorTextChange,
     EditorTheme,
     SmartEditorEngineOptions
@@ -26,6 +32,8 @@ class SmartEditor implements Editor {
     private readonly controller: InputController;
     private readonly changes = new Set<Listener>();
     private readonly textChanges = new Set<(change: EditorTextChange) => void>();
+    private readonly carets = new Set<(position: EditorPosition) => void>();
+    private caretOffset = 0;
     private readonly saves = new Set<Listener>();
     private readonly blurs = new Set<Listener>();
     private readonly subscription: { dispose(): void };
@@ -59,7 +67,9 @@ class SmartEditor implements Editor {
             blur: () => emit(this.blurs)
         });
         this.revision = this.model.getRevision();
+        this.caretOffset = this.model.getSelections()[0]!.head;
         this.subscription = this.model.subscribe((snapshot) => {
+            this.caretMoved(snapshot.selections[0]!.head);
             if (snapshot.revision !== this.revision) {
                 this.revision = snapshot.revision;
                 if (snapshot.contentEdits !== undefined && snapshot.contentEdits.length > 0) {
@@ -143,6 +153,85 @@ class SmartEditor implements Editor {
         for (const listener of [...this.textChanges]) {
             listener(change);
         }
+    }
+
+    private caretMoved(head: number): void {
+        if (head === this.caretOffset) {
+            return;
+        }
+        this.caretOffset = head;
+        const position = this.positionAt(head);
+        for (const listener of [...this.carets]) {
+            listener(position);
+        }
+    }
+
+    getCaret(): EditorPosition {
+        return this.positionAt(this.model.getSelections()[0]!.head);
+    }
+
+    setCaret(position: EditorPosition): void {
+        const offset = this.offsetAt(position);
+        this.model.setSelections([{ anchor: offset, head: offset }]);
+        this.view.revealOffset(offset);
+    }
+
+    onCaret(listener: (position: EditorPosition) => void): () => void {
+        this.carets.add(listener);
+        return () => {
+            this.carets.delete(listener);
+        };
+    }
+
+    onHover(listener: (hover: EditorHover | null) => void): () => void {
+        return this.view.onHover((offset) => {
+            const rect = offset === null ? null : this.view.clientRectOf(offset);
+            listener(offset === null || rect === null ? null : { position: this.positionAt(offset), rect });
+        });
+    }
+
+    rectAt(position: EditorPosition): EditorRect | null {
+        return this.view.clientRectOf(this.offsetAt(position));
+    }
+
+    onViewChange(listener: Listener): () => void {
+        return this.view.onViewChange(listener);
+    }
+
+    onKeyDown(handler: EditorKeyHandler): () => void {
+        return this.controller.onKeyDown(handler);
+    }
+
+    applyEdits(edits: readonly EditorContentChange[]): boolean {
+        if (this.settings.readOnly || edits.length === 0) {
+            return false;
+        }
+        try {
+            return this.model.applyEdits(
+                edits.map((edit) => ({ from: this.offsetAt(edit.range.start), to: this.offsetAt(edit.range.end), text: edit.text })),
+                { source: 'command' }
+            );
+        } catch {
+            return false;
+        }
+    }
+
+    setMarkers(markers: readonly EditorMarker[]): void {
+        this.view.setMarkers(
+            markers.map((marker) => ({
+                severity: marker.severity,
+                from: this.offsetAt(marker.range.start),
+                to: this.offsetAt(marker.range.end),
+                unnecessary: marker.unnecessary === true,
+                deprecated: marker.deprecated === true
+            }))
+        );
+    }
+
+    setHighlights(highlights: readonly EditorHighlight[]): void {
+        this.view.setOccurrences(
+            highlights.map((highlight) => ({ from: this.offsetAt(highlight.range.start), to: this.offsetAt(highlight.range.end), kind: highlight.kind }))
+        );
     }
 
     positionAt(offset: number): EditorPosition {
@@ -297,6 +386,7 @@ class SmartEditor implements Editor {
         this.disposed = true;
         this.changes.clear();
         this.textChanges.clear();
+        this.carets.clear();
         this.saves.clear();
         this.blurs.clear();
         this.subscription.dispose();

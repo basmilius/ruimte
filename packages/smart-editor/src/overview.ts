@@ -1,4 +1,4 @@
-export type OverviewKind = 'added' | 'modified' | 'deleted' | 'find' | 'find-current';
+export type OverviewKind = 'added' | 'modified' | 'deleted' | 'find' | 'find-current' | 'info' | 'warning' | 'error';
 
 /* A stretch of the content, in the pixels the content is laid out in. */
 export interface OverviewSpan {
@@ -46,10 +46,13 @@ export function overviewTicks(spans: readonly OverviewSpan[], contentHeight: num
     return merged;
 }
 
-/* Draws the ticks, the current find match last so it stays on top. */
+/* What is painted later is on top: the current find match, and the worse a problem is the later it goes. */
+const PAINT_ORDER: Partial<Record<OverviewKind, number>> = { warning: 1, error: 2, 'find-current': 3 };
+
+/* Draws the ticks. */
 export function paintOverview(container: HTMLElement, ticks: readonly OverviewTick[]): void {
     const document = container.ownerDocument;
-    const order = (tick: OverviewTick): number => (tick.kind === 'find-current' ? 1 : 0);
+    const order = (tick: OverviewTick): number => PAINT_ORDER[tick.kind] ?? 0;
     container.replaceChildren(
         ...[...ticks]
             .sort((left, right) => order(left) - order(right))
