@@ -22,13 +22,18 @@ The element needs a positioned box that its parent sizes, and the page needs `ed
 - `outline.ts`: the blocks of the document with a header line, read from braces and indentation until the host hands over better ones with `setBlocks` (a language server's symbols). Sticky scroll pins the headers of the blocks scrolled out of sight, and `onScope` reports the named blocks around the caret for a breadcrumb.
 - `overview.ts`: the ticks in the scroll track for the host's change marks (`setChangeMarks`, also drawn in the gutter) and the find matches.
 - `find.ts`: the matches of the host's find bar. They are marked in the editor and never touch the selection until `endFind`.
+- `semantic.ts` and `theme-scopes.ts`: what a language server classified, drawn over the grammar's colors. The host hands scopes (`setSemanticTokens`), and the theme's own rules decide the color (`scopeColors`, `shikiScopeColors`), so a class is the theme's class color. A scope the theme says nothing about keeps what the grammar made.
 - `engine.ts`: the `Editor` contract over a model and a view.
+
+## What a language feature gets
+
+The editor knows no language server. It reports every change of the text as LSP content changes (`onTextChange`, with its source), says where the caret is (`getCaret`, `onCaret`) and where a character is on the screen (`rectAt`, in the page's pixels so a popup is right at any canvas zoom), and takes what a host draws or does: `setMarkers` (squiggles, faded and struck text, a lane in the scroll track), `setInlayHints`, `setSemanticTokens`, `setHighlights`, `setBlocks` and `applyEdits`. `onHover` reports the character under the pointer, `onKeyDown` lets a host take a key before the editor does, and `onViewChange` says when the screen position of a character moved.
 
 `handBack` shortcuts are not handled by the editor and not prevented, so the page's own listeners get them. Mod+S is `onSave`.
 
 ## Limits
 
-- No rendered documentation blocks, and no language features yet: diagnostics, completion and hover come with `@ruimte/smart-editor-lsp`. The layout already carries inlays and widget rows for them.
+- No rendered documentation blocks. Code lenses and widget rows are in the layout, but nothing draws them yet.
 - Wrapped lines break at spaces and inside a word that does not fit, and continue at the line's indentation plus two characters. A click past the end of a visual line draws the caret at its end until the caret moves; an arrow key onto that offset draws it at the start of the next line.
 - A line over 20,000 characters is not colored.
 - Every edit rebuilds the row list, which is linear in the number of lines.
