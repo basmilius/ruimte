@@ -1,17 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
 import { CircleX, Info, TriangleAlert } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
 import { Button, Icon, Tooltip } from '@basmilius/desktop-ui';
+import { formatNumber } from '@basmilius/desktop-ui/format';
 import { openFileLink } from '@/shell/panels/file-links';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useCodeTheme } from '@/state/code-theme';
 import { basenameOf } from '@/shell/panels/files-tree';
+import type { EditorPosition } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
 import { hoverSectionsOf, type DocTag, type HoverSection } from './hover-content';
 import type { HoverInfo } from './popups';
+import { declaredNameOf, linkTypeNames } from './symbol-links';
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
 const SEVERITY_COLORS = { error: 'text-status-error', warning: 'text-status-needs-you', info: 'text-status-running', hint: 'text-text-muted' } as const;
@@ -70,24 +73,37 @@ function ProblemSection({ problem, language }: { problem: Problem; language: Edi
 }
 
 /* Code as the viewer colors it, plain until the grammar is in so the card never changes size under the pointer by much. */
-export function Signature({ code, language }: { code: string; language: string }) {
+export function Signature({ code, language, onName }: { code: string; language: string; onName?: (name: string) => void }) {
     const theme = useCodeTheme();
     const [html, setHtml] = useState<{ key: string; html: string } | null>(null);
-    const key = `${language}\0${theme}\0${code}`;
+    const key = `${language}\0${theme}\0${code}\0${onName !== undefined}`;
+    // Only whether there are links goes into the highlighting; the handler is read when a name is pressed.
+    const linked = onName !== undefined;
 
     useEffect(() => {
         let alive = true;
         highlightCode(code, language, theme)
-            .then((result) => alive && setHtml({ key, html: result }))
+            .then((result) => alive && setHtml({ key, html: linked ? linkTypeNames(result) : result }))
             .catch(() => undefined);
         return () => {
             alive = false;
         };
-    }, [code, language, theme, key]);
+    }, [code, language, theme, key, linked]);
 
     const className =
         'font-mono text-code break-words whitespace-pre-wrap [&_.line]:block [&_pre]:m-0 [&_pre]:bg-transparent! [&_pre]:whitespace-pre-wrap [&_code]:font-mono';
-    return html?.key === key ? <div className={className} dangerouslySetInnerHTML={{ __html: html.html }} /> : <div className={className}>{code}</div>;
+    // One handler for every name, since the names are part of the highlighted HTML and not elements of ours.
+    const follow = (event: MouseEvent<HTMLDivElement>): void => {
+        const name = (event.target as HTMLElement).closest<HTMLElement>('[data-symbol]')?.dataset.symbol;
+        if (name !== undefined && onName !== undefined) {
+            onName(name);
+        }
+    };
+    return html?.key === key ? (
+        <div className={className} onClick={follow} dangerouslySetInnerHTML={{ __html: html.html }} />
+    ) : (
+        <div className={className}>{code}</div>
+    );
 }
 
 /* A docblock's tags as rows: the tag once beside each run of the same tag, so a list of parameters reads as one. */
@@ -106,12 +122,14 @@ function DocTags({ tags }: { tags: readonly DocTag[] }) {
     );
 }
 
-function SymbolSection({ section }: { section: HoverSection }) {
+function SymbolSection({ section, onName }: { section: HoverSection; onName: (name: string, declared: string | null) => void }) {
+    const declared = declaredNameOf(section.signatures[0]?.code ?? '');
+    const follow = (name: string): void => onName(name, declared);
     return (
         <div className="flex flex-col gap-1.5 px-3 py-2">
             {section.title !== null && <div className="truncate font-mono text-xs text-text-faint select-text">{section.title}</div>}
             {section.signatures.map((block, index) => (
-                <Signature key={index} code={block.code} language={block.language} />
+                <Signature key={index} code={block.code} language={block.language} onName={follow} />
             ))}
             {section.markdown !== '' && (
                 <div className="text-text-muted select-text [&_.chat-markdown]:text-xs [&_p]:my-1">
@@ -123,21 +141,40 @@ function SymbolSection({ section }: { section: HoverSection }) {
     );
 }
 
-function InfoSection({ language, info }: { language: EditorLanguage; info: HoverInfo }) {
+function InfoSection({ language, info, anchor, position }: { language: EditorLanguage; info: HoverInfo; anchor: EditorPosition; position: EditorPosition }) {
     const { t } = useTranslation('panels');
     const { text, definition } = info;
     const place = definition === null ? null : fileUriToPath(definition.uri);
 
+    // The name a signature declares is the symbol under the pointer, whose definition is known; any other name is looked up.
+    function followName(name: string, declared: string | null): void {
+        const own = name === (declared ?? info.word) ? definition : null;
+        language.hover.hide();
+        void language.navigation.goToName(name, anchor, own);
+    }
+
     return (
         <div className="flex flex-col divide-y divide-border">
             {hoverSectionsOf(text).map((section, index) => (
-                <SymbolSection key={index} section={section} />
+                <SymbolSection key={index} section={section} onName={followName} />
             ))}
             {definition !== null && (
                 <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-xs">
                     <button type="button" className="text-accent hover:underline" onClick={() => language.goTo(definition)}>
                         {t('language.hover.definition')}
                     </button>
+                    {info.references !== null && info.references > 0 && (
+                        <button
+                            type="button"
+                            className="text-accent hover:underline"
+                            onClick={() => {
+                                language.hover.hide();
+                                void language.peek.open(position);
+                            }}
+                        >
+                            {t('language.hover.references', { count: info.references, formatted: formatNumber(info.references) })}
+                        </button>
+                    )}
                     {place !== null && (
                         <span className="ml-auto font-mono text-text-faint">
                             {basenameOf(place)}:{definition.range.start.line + 1}
@@ -150,10 +187,22 @@ function InfoSection({ language, info }: { language: EditorLanguage; info: Hover
 }
 
 /* What the pointer rests on: what the servers say about the symbol, then the problems of the character, worst first. */
-export function HoverCard({ language, problems, info }: { language: EditorLanguage; problems: readonly Problem[]; info: HoverInfo | null }) {
+export function HoverCard({
+    language,
+    problems,
+    info,
+    anchor,
+    position
+}: {
+    language: EditorLanguage;
+    problems: readonly Problem[];
+    info: HoverInfo | null;
+    anchor: EditorPosition;
+    position: EditorPosition;
+}) {
     return (
         <div className="flex w-max min-w-[280px] max-w-[min(520px,calc(100vw-16px))] flex-col divide-y divide-border">
-            {info !== null && <InfoSection language={language} info={info} />}
+            {info !== null && <InfoSection language={language} info={info} anchor={anchor} position={position} />}
             {problems.map((problem, index) => (
                 <ProblemSection key={index} problem={problem} language={language} />
             ))}

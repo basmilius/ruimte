@@ -521,7 +521,9 @@
         "hover": {
             "quickFix": "Quick fix…",
             "quickFixNone": "Deze language server biedt geen quick fixes",
-            "definition": "Ga naar definitie"
+            "definition": "Ga naar definitie",
+            "references_one": "{{formatted}} referentie",
+            "references_other": "{{formatted}} referenties"
         },
         "edit": {
             "staged_one": "{{count}} bestand gewijzigd en nog niet opgeslagen",
@@ -571,8 +573,17 @@
                 "definition": "Definities",
                 "declaration": "Declaraties",
                 "typeDefinition": "Typedefinities",
-                "implementation": "Implementaties"
+                "implementation": "Implementaties",
+                "symbol": "Overeenkomsten"
             }
+        },
+        "peek": {
+            "unavailable": "Geen language server vindt referenties in dit bestand",
+            "none": "Geen referenties gevonden",
+            "failed": "Referenties opzoeken mislukt: {{message}}",
+            "references_one": "{{formatted}} referentie",
+            "references_other": "{{formatted}} referenties",
+            "close": "Sluit"
         },
         "completion": {
             "insert": "Invoegen",

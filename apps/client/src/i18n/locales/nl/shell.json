@@ -559,7 +559,8 @@
             "goToDefinition": "Ga naar definitie",
             "goToDeclaration": "Ga naar declaratie",
             "goToTypeDefinition": "Ga naar typedefinitie",
-            "goToImplementation": "Ga naar implementatie"
+            "goToImplementation": "Ga naar implementatie",
+            "peekReferences": "Referenties bekijken"
         },
         "sections": {
             "recent": "Recent",
@@ -755,6 +756,7 @@
         "goToDefinition": "Ga naar definitie",
         "goToDeclaration": "Ga naar declaratie",
         "goToTypeDefinition": "Ga naar typedefinitie",
-        "goToImplementation": "Ga naar implementatie"
+        "goToImplementation": "Ga naar implementatie",
+        "peekReferences": "Referenties bekijken"
     }
 }

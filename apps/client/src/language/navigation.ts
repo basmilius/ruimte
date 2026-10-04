@@ -6,6 +6,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';
 import { locationsOf } from './hover-content';
+import { placesOfName } from './symbol-links';
 import { isShortcut } from './shortcut-keys';
 
 export type NavigationKind = 'definition' | 'declaration' | 'typeDefinition' | 'implementation';
@@ -113,6 +114,32 @@ export class NavigationFeature {
             this.language.locations(places, position, say(`titles.${kind}`));
         }
         editor.focus();
+    }
+
+    /*
+     * A name in the signature of a hover, which is a snippet and no document a server can be asked about by position.
+     * The symbol the signature declares goes to the definition the hover already knows; any other name is looked
+     * up by name among the symbols of the project. One match goes there at once, several are listed, and none says nothing.
+     */
+    async goToName(name: string, anchor: EditorPosition, own: Location | null): Promise<void> {
+        const { project, uri, editor } = this.language;
+        if (own !== null) {
+            this.language.goTo(own);
+            return;
+        }
+        if (!project.service.supports('workspace/symbol', uri)) {
+            return;
+        }
+        try {
+            const places = placesOfName(await project.service.workspaceSymbols(uri, name), name, editor.getText());
+            if (places.length === 1) {
+                this.language.goTo(places[0]!);
+            } else if (places.length > 1) {
+                this.language.locations(places, anchor, say('titles.symbol'));
+            }
+        } catch {
+            // A name that cannot be found is a link that does nothing, not an error.
+        }
     }
 
     private tell(title: string): void {

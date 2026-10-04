@@ -559,7 +559,8 @@
             "goToDefinition": "Go to definition",
             "goToDeclaration": "Go to declaration",
             "goToTypeDefinition": "Go to type definition",
-            "goToImplementation": "Go to implementation"
+            "goToImplementation": "Go to implementation",
+            "peekReferences": "Peek references"
         },
         "sections": {
             "recent": "Recent",
@@ -755,6 +756,7 @@
         "goToDefinition": "Go to Definition",
         "goToDeclaration": "Go to Declaration",
         "goToTypeDefinition": "Go to Type Definition",
-        "goToImplementation": "Go to Implementation"
+        "goToImplementation": "Go to Implementation",
+        "peekReferences": "Peek References"
     }
 }

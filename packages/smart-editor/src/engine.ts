@@ -25,6 +25,7 @@ import type {
     EditorSemanticToken,
     EditorTextChange,
     EditorTheme,
+    EditorWidget,
     SmartEditorEngineOptions
 } from './types.ts';
 import { EditorView, type ViewSettings } from './view.ts';
@@ -390,6 +391,21 @@ class SmartEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.view.setChangeMarks(marks);
+    }
+
+    setWidgets(widgets: readonly EditorWidget[]): void {
+        this.view.setBlockWidgets(
+            widgets.map((widget) => ({
+                id: `widget:${widget.id}`,
+                at: this.offsetAt({ line: widget.line, character: 0 }),
+                placement: 'below' as const,
+                height: widget.height,
+                render: (container: HTMLElement) => {
+                    container.classList.add('se-widget');
+                    widget.render(container);
+                }
+            }))
+        );
     }
 
     setGutterAction(action: EditorGutterAction | null): void {

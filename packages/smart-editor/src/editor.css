@@ -394,6 +394,11 @@
     white-space: pre;
     cursor: default;
 }
+.se-widget {
+    padding: 0;
+    color: var(--text);
+    white-space: normal;
+}
 .se-block {
     position: absolute;
     left: 0;

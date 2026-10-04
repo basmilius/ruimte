@@ -26,7 +26,8 @@ import type {
     SignatureHelp,
     SignatureHelpContext,
     TextEdit,
-    WorkspaceEdit
+    WorkspaceEdit,
+    WorkspaceSymbolResult
 } from './protocol.ts';
 
 export interface LanguageDocument {
@@ -95,6 +96,8 @@ export interface LanguageService {
     semanticTokensRange(uri: string, range: Range, options?: LanguageRequestOptions): Promise<SemanticTokens | null>;
     inlayHints(uri: string, range: Range, options?: LanguageRequestOptions): Promise<InlayHint[] | null>;
     resolveInlayHint(uri: string, hint: InlayHint, options?: LanguageRequestOptions): Promise<InlayHint>;
+    /* The symbols of the whole project that answer to a query, asked of the server that serves the document. */
+    workspaceSymbols(uri: string, query: string, options?: LanguageRequestOptions): Promise<WorkspaceSymbolResult>;
     foldingRanges(uri: string, options?: LanguageRequestOptions): Promise<FoldingRange[] | null>;
     codeLenses(uri: string, options?: LanguageRequestOptions): Promise<CodeLens[] | null>;
     resolveCodeLens(uri: string, lens: CodeLens, options?: LanguageRequestOptions): Promise<CodeLens>;

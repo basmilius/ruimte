@@ -2,6 +2,7 @@ import { createStore, type StoreApi } from 'zustand';
 import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { Location } from '@ruimte/smart-editor-lsp';
 import type { Problem } from './diagnostics-model';
+import type { PeekFile, PeekSnippet } from './peek-model';
 import type { HoverText } from './hover-content';
 import type { SignatureViewModel } from './signature-model';
 
@@ -9,6 +10,8 @@ import type { SignatureViewModel } from './signature-model';
 export interface HoverView {
     /* The card sits under this character, or over it when there is no room below. */
     readonly anchor: EditorPosition;
+    /* The character the pointer rests on, which a count of references and a peek are asked at. */
+    readonly position: EditorPosition;
     /* While the pointer stays in this range the card stays, so moving along a word does not make it blink. */
     readonly subject: EditorRange;
     readonly problems: readonly Problem[];
@@ -19,6 +22,10 @@ export interface HoverView {
 export interface HoverInfo {
     readonly text: HoverText;
     readonly definition: Location | null;
+    /* The name under the pointer, which a signature's own symbol is told by. */
+    readonly word: string;
+    /* How many other places use the symbol, once a server has counted them. */
+    readonly references: number | null;
 }
 
 /* One line of the suggestions list. */
@@ -106,16 +113,27 @@ export interface RenameView {
     readonly files: readonly RenameFileView[];
 }
 
+/* The references of a name between the lines of the file: a list of places and the code around the one that is active. */
+export interface PeekView {
+    /* The row the editor draws it in, which the editor makes again when it scrolls back into view. */
+    readonly container: HTMLElement | null;
+    readonly files: readonly PeekFile[];
+    readonly active: string;
+    readonly count: number;
+    readonly preview: (PeekSnippet & { readonly uri: string }) | null;
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
     readonly signature: SignatureView | null;
     readonly pick: PickView | null;
     readonly rename: RenameView | null;
+    readonly peek: PeekView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null, peek: null }));
 }

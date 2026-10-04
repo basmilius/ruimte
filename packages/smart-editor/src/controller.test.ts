@@ -281,3 +281,17 @@ describe('the context menu', () => {
         expect(asked).toEqual([{ position: { line: 0, character: 3 }, inSelection: false, x: column(3) + 1, y: row(0) }]);
     });
 });
+
+describe('widgets', () => {
+    test("draws the host's own row under its line and takes it away when the widgets are set again", () => {
+        jest.useFakeTimers();
+        const { editor, page } = mountEditor({ text: 'one\ntwo\nthree' });
+        jest.runAllTimers();
+        jest.useRealTimers();
+        editor.setWidgets([{ id: 'peek', line: 0, height: 40, render: (container) => (container.textContent = 'references') }]);
+        const widget = page.host.querySelector('.se-widget') as HTMLElement;
+        expect(widget.textContent).toBe('references');
+        editor.setWidgets([]);
+        expect(page.host.querySelectorAll('.se-widget')).toHaveLength(0);
+    });
+});

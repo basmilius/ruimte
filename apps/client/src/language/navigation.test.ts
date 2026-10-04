@@ -93,3 +93,45 @@ describe('going to a definition', () => {
         expect(useToasts.getState().toasts.at(-1)?.title).toBe('No language server answers that here');
     });
 });
+
+describe('going to a name in a signature', () => {
+    const symbol = (name: string, target: string, line: number, containerName?: string) => ({
+        name,
+        kind: 5,
+        containerName,
+        location: { uri: target, range: { start: at(line, 0), end: at(line, 3) } }
+    });
+
+    test('goes to the definition the hover knows when the name is the symbol itself, without asking a server', async () => {
+        const { editor, language, methods } = await setup(null);
+        await language.navigation.goToName('Message', at(0, 0), here);
+        expect(methods).toEqual([]);
+        expect(editor.getCaret()).toEqual(at(3, 4));
+    });
+
+    test('looks any other name up among the symbols, and goes there when one matches', async () => {
+        const { editor, language, methods } = await setup([symbol('Bus', uri, 2), symbol('BusFactory', there.uri, 1)], {
+            'textDocument/definition': {},
+            'workspace/symbol': {}
+        });
+        await language.navigation.goToName('Bus', at(0, 0), null);
+        expect(methods).toEqual(['workspace/symbol']);
+        expect(editor.getCaret()).toEqual(at(2, 0));
+    });
+
+    test('lists several matches, prefers the namespace the file names, and does nothing for none', async () => {
+        const providers = { 'workspace/symbol': {} };
+        const several = await setup([symbol('Bus', uri, 2), symbol('Bus', there.uri, 1)], providers);
+        await several.language.navigation.goToName('Bus', at(0, 0), null);
+        expect(several.language.popups.getState().pick?.groups[0]!.rows).toHaveLength(2);
+        const named = await setup([symbol('Bus', uri, 2, 'one'), symbol('Bus', there.uri, 1, 'App')], providers);
+        named.editor.type('one\ntwo\nthree\nlet value = 1; // one');
+        await named.language.navigation.goToName('Bus', at(0, 0), null);
+        expect(named.language.popups.getState().pick).toBeNull();
+        expect(named.editor.getCaret()).toEqual(at(2, 0));
+        const none = await setup([], providers);
+        await none.language.navigation.goToName('Bus', at(0, 0), null);
+        expect(none.language.popups.getState().pick).toBeNull();
+        expect(useToasts.getState().toasts).toEqual([]);
+    });
+});

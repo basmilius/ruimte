@@ -521,7 +521,9 @@
         "hover": {
             "quickFix": "Quick fix…",
             "quickFixNone": "This language server offers no quick fixes",
-            "definition": "Go to definition"
+            "definition": "Go to definition",
+            "references_one": "{{formatted}} reference",
+            "references_other": "{{formatted}} references"
         },
         "edit": {
             "staged_one": "{{count}} file changed and not saved yet",
@@ -571,8 +573,17 @@
                 "definition": "Definitions",
                 "declaration": "Declarations",
                 "typeDefinition": "Type definitions",
-                "implementation": "Implementations"
+                "implementation": "Implementations",
+                "symbol": "Matches"
             }
+        },
+        "peek": {
+            "unavailable": "No language server finds references in this file",
+            "none": "No references found",
+            "failed": "Could not look up the references: {{message}}",
+            "references_one": "{{formatted}} reference",
+            "references_other": "{{formatted}} references",
+            "close": "Close"
         },
         "completion": {
             "insert": "Insert",

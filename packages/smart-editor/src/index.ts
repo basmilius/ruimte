@@ -27,6 +27,7 @@ export type {
     EditorRange,
     EditorTextChange,
     EditorTheme,
+    EditorWidget,
     KeyChord,
     LineToken,
     ScopeColorSource,

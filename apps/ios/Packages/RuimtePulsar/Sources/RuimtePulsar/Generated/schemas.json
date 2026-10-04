@@ -34114,7 +34114,8 @@
           "textDocument/semanticTokens/full/delta",
           "textDocument/semanticTokens/range",
           "textDocument/inlayHint",
-          "inlayHint/resolve"
+          "inlayHint/resolve",
+          "workspace/symbol"
         ]
       },
       "params": {},

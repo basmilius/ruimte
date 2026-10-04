@@ -38,3 +38,26 @@ const SHIKI_IDS: Record<string, string> = { typescriptreact: 'tsx', javascriptre
 export function shikiLanguageOf(lspLanguageId: string): string {
     return SHIKI_IDS[lspLanguageId] ?? lspLanguageId;
 }
+
+const PATH_IDS: Record<string, string> = {
+    ts: 'typescript',
+    mts: 'typescript',
+    cts: 'typescript',
+    tsx: 'tsx',
+    js: 'javascript',
+    mjs: 'javascript',
+    cjs: 'javascript',
+    jsx: 'jsx',
+    vue: 'vue',
+    php: 'php',
+    json: 'json',
+    css: 'css',
+    scss: 'scss',
+    html: 'html',
+    md: 'markdown'
+};
+
+/* The highlighter id for the code of a file we only know by its path, such as a place another file refers to. */
+export function shikiLanguageOfPath(path: string): string {
+    return PATH_IDS[path.slice(path.lastIndexOf('.') + 1).toLowerCase()] ?? 'text';
+}

@@ -7,6 +7,7 @@ import { DiagnosticsFeature } from './diagnostics';
 import { HighlightsFeature } from './highlights';
 import { HoverFeature } from './hover';
 import { NavigationFeature, locationRow } from './navigation';
+import { PeekFeature } from './peek';
 import { PickFeature } from './pick';
 import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
@@ -36,6 +37,7 @@ export class EditorLanguage {
     readonly codeActions: CodeActionsFeature;
     readonly rename: RenameFeature;
     readonly navigation: NavigationFeature;
+    readonly peek: PeekFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -56,6 +58,7 @@ export class EditorLanguage {
         this.codeActions = new CodeActionsFeature(this, timers);
         this.rename = new RenameFeature(this);
         this.navigation = new NavigationFeature(this);
+        this.peek = new PeekFeature(this);
     }
 
     get uri(): string {

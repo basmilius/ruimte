@@ -2,6 +2,7 @@ import type { EditorHover, EditorRange } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { rangeHolds } from './diagnostics-model';
 import { hoverTextOf, isEmptyHover, locationsOf } from './hover-content';
+import { wordRangeAt } from './rename-model';
 import type { HoverInfo } from './popups';
 import { realTimers, type Timers } from './timers';
 
@@ -112,7 +113,18 @@ export class HoverFeature {
         if (hover === null || text === null || isEmptyHover(text)) {
             return { info: null, range: null };
         }
-        return { info: { text, definition: locationsOf(definition)[0] ?? null }, range: hover.range ?? null };
+        const { editor } = this.language;
+        const line = editor.textInRange({ start: { line: position.line, character: 0 }, end: { line: position.line, character: Number.MAX_SAFE_INTEGER } });
+        const word = wordRangeAt(line, position);
+        return {
+            info: {
+                text,
+                definition: locationsOf(definition)[0] ?? null,
+                word: word === null ? '' : line.slice(word.start.character, word.end.character),
+                references: null
+            },
+            range: hover.range ?? null
+        };
     }
 
     private async show(hover: EditorHover, request: number): Promise<void> {
@@ -133,10 +145,28 @@ export class HoverFeature {
         this.language.popups.setState({
             hover: {
                 anchor: subject.start.line === hover.position.line ? subject.start : hover.position,
+                position: hover.position,
                 subject,
                 problems,
                 info
             }
         });
+        if (info !== null) {
+            void this.count(hover.position, request, controller.signal);
+        }
+    }
+
+    /* How many places use the symbol, which can take a while in a large project and so arrives after the card does. */
+    private async count(position: EditorHover['position'], request: number, signal: AbortSignal): Promise<void> {
+        const { service } = this.language.project;
+        if (!service.supports('textDocument/references', this.language.uri)) {
+            return;
+        }
+        const found = await service.references(this.language.uri, position, false, { signal }).catch(() => null);
+        const shown = this.language.popups.getState().hover;
+        if (found === null || request !== this.request || shown?.info == null) {
+            return;
+        }
+        this.language.popups.setState({ hover: { ...shown, info: { ...shown.info, references: found.length } } });
     }
 }

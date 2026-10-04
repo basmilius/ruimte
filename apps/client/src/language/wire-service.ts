@@ -37,7 +37,8 @@ import {
     type SignatureHelp,
     type SignatureHelpContext,
     type TextEdit,
-    type WorkspaceEdit
+    type WorkspaceEdit,
+    type WorkspaceSymbolResult
 } from '@ruimte/smart-editor-lsp';
 import { TransportError, type Transport } from '@/transport/transport';
 
@@ -379,6 +380,10 @@ export class WireLanguageService implements LanguageService {
 
     resolveInlayHint(uri: string, hint: InlayHint, options?: LanguageRequestOptions): Promise<InlayHint> {
         return this.call(uri, 'inlayHint/resolve', hint, options);
+    }
+
+    workspaceSymbols(uri: string, query: string, options?: LanguageRequestOptions): Promise<WorkspaceSymbolResult> {
+        return this.call(uri, 'workspace/symbol', { query }, options);
     }
 
     foldingRanges(uri: string, options?: LanguageRequestOptions): Promise<FoldingRange[] | null> {

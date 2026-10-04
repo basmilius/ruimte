@@ -22,7 +22,8 @@ import type {
     EditorRect,
     EditorSemanticToken,
     EditorTextChange,
-    EditorTheme
+    EditorTheme,
+    EditorWidget
 } from './types.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import { changedSpan } from '@ruimte/smart-editor-core';
@@ -223,6 +224,13 @@ export class FakeEditor implements Editor {
 
     setChangeMarks(marks: readonly EditorChangeMark[]): void {
         this.changeMarks = marks;
+    }
+
+    /* What the client put under lines of the text last. */
+    widgets: readonly EditorWidget[] = [];
+
+    setWidgets(widgets: readonly EditorWidget[]): void {
+        this.widgets = widgets;
     }
 
     /* The button the client set in the gutter last. */

@@ -542,7 +542,8 @@ export class InputController {
      * would show a frame before the script that draws them. A pinch, which zooms, is left alone.
      */
     private wheel(event: WheelEvent): void {
-        if (event.ctrlKey || event.deltaMode === 2) {
+        // A row of the host's own has lists of its own to scroll.
+        if (event.ctrlKey || event.deltaMode === 2 || (event.target as HTMLElement | null)?.closest?.('.se-widget')) {
             return;
         }
         const { viewport, layout } = this.view;

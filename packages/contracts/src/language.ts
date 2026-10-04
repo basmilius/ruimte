@@ -159,7 +159,9 @@ export const LANGUAGE_METHODS = [
     'textDocument/semanticTokens/full/delta',
     'textDocument/semanticTokens/range',
     'textDocument/inlayHint',
-    'inlayHint/resolve'
+    'inlayHint/resolve',
+    // Asked of the server that serves the document, for a name in a snippet that is no document of its own.
+    'workspace/symbol'
 ] as const;
 export const LanguageMethodSchema = z.enum(LANGUAGE_METHODS);
 export type LanguageMethod = z.infer<typeof LanguageMethodSchema>;

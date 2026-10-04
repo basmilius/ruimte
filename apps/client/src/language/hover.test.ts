@@ -152,4 +152,23 @@ describe('hover information', () => {
         expect(shown?.subject).toEqual(range(0, 8, 17));
         expect(shown?.anchor).toEqual({ line: 0, character: 8 });
     });
+
+    test('counts the references after the card is up, and says which word the pointer is on', async () => {
+        const { transport, language, editor, timers } = await setup({ 'textDocument/hover': {}, 'textDocument/references': {} });
+        transport.answers.set('language.request', (payload: { method: string }) => {
+            const result =
+                payload.method === 'textDocument/hover'
+                    ? { contents: { kind: 'markdown', value: '```typescript\nfunction salaryFit(): number\n```' }, range: range(0, 8, 17) }
+                    : [
+                          { uri, range: range(0, 8, 17) },
+                          { uri, range: range(1, 0, 3) }
+                      ];
+            return { result, server: 'typescript', version: 1 };
+        });
+        editor.hover({ line: 0, character: 10 });
+        timers.advance(300);
+        await settle();
+        expect(language.popups.getState().hover?.info).toMatchObject({ word: 'salaryFit', references: 2 });
+        expect(language.popups.getState().hover?.position).toEqual({ line: 0, character: 10 });
+    });
 });

@@ -4,6 +4,7 @@ import type { EditorLanguage } from './editor-language';
 import { AnchoredPopup } from './AnchoredPopup';
 import { CompletionPopup } from './CompletionPopup';
 import { HoverCard } from './HoverCard';
+import { PeekPanel } from './PeekPanel';
 import { PickPopup } from './PickPopup';
 import { RenameCard } from './RenameCard';
 import { SignatureCard } from './SignatureCard';
@@ -20,6 +21,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const signature = useStore(language.popups, (state) => state.signature);
     const pick = useStore(language.popups, (state) => state.pick);
     const rename = useStore(language.popups, (state) => state.rename);
+    const peek = useStore(language.popups, (state) => state.peek);
 
     useEffect(() => language.editor.onViewChange(redraw), [language]);
 
@@ -33,7 +35,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
         <>
             {hover !== null && hoverRect !== null && (
                 <AnchoredPopup rect={hoverRect} onPointerEnter={() => language.hover.holdCard(true)} onPointerLeave={() => language.hover.holdCard(false)}>
-                    <HoverCard language={language} problems={hover.problems} info={hover.info} />
+                    <HoverCard language={language} problems={hover.problems} info={hover.info} anchor={hover.anchor} position={hover.position} />
                 </AnchoredPopup>
             )}
             {signature !== null && signatureRect !== null && (
@@ -43,6 +45,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
             )}
             {completion !== null && completionRect !== null && <CompletionPopup language={language} view={completion} rect={completionRect} />}
             {pick !== null && pickRect !== null && <PickPopup language={language} view={pick} rect={pickRect} />}
+            {peek !== null && <PeekPanel language={language} view={peek} />}
             {rename !== null && renameRect !== null && <RenameCard language={language} view={rename} rect={renameRect} endRect={renameEnd} />}
         </>
     );

@@ -126,6 +126,17 @@ export interface EditorContextMenu {
     readonly y: number;
 }
 
+/* A row of the host's own DOM under a line of the text, such as the references of a name. It is not part of the document. */
+export interface EditorWidget {
+    readonly id: string;
+    /* Zero-based; the widget sits under this line and stays there only as long as the host does not set the widgets again. */
+    readonly line: number;
+    /* The height the row has until it has been measured. */
+    readonly height?: number;
+    /* Fills the element the row is drawn in, which the editor makes again whenever the row scrolls back into view. */
+    render(container: HTMLElement): void;
+}
+
 /* Returns true when the key was taken; the editor then prevents its default and does nothing else with it. */
 export type EditorKeyHandler = (event: KeyboardEvent) => boolean;
 
@@ -246,6 +257,8 @@ export interface Editor {
     rectAt(position: EditorPosition): EditorRect | null;
     /* The editor scrolled or changed size, so whatever is placed by `rectAt` is somewhere else. */
     onViewChange(listener: () => void): () => void;
+    /* Rows of the host's own DOM under lines of the text, replacing the ones set before. */
+    setWidgets(widgets: readonly EditorWidget[]): void;
     /* Handlers see a press of the primary button before the editor does, the first to take it winning. */
     onClick(handler: EditorClickHandler): () => void;
     /* The context menu was asked for. The editor draws none of its own and does not move the caret. */

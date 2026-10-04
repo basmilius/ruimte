@@ -20,6 +20,7 @@ const TABLE = {
     'go-to-definition': { menu: 'go', key: 'goToDefinition', shortcut: CANVAS_SHORTCUTS.goToDefinition },
     'go-to-declaration': { menu: 'go', key: 'goToDeclaration' },
     'go-to-type-definition': { menu: 'go', key: 'goToTypeDefinition', shortcut: CANVAS_SHORTCUTS.goToTypeDefinition },
+    'peek-references': { menu: 'go', key: 'peekReferences', shortcut: CANVAS_SHORTCUTS.peekReferences },
     'go-to-implementation': { menu: 'go', key: 'goToImplementation', shortcut: CANVAS_SHORTCUTS.goToImplementation }
 } satisfies Record<string, LanguageCommandSpec>;
 

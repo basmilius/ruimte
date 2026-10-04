@@ -11,6 +11,7 @@ const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'go-to-declaration': (language) => void language.navigation.go('declaration'),
     'go-to-type-definition': (language) => void language.navigation.go('typeDefinition'),
     'go-to-implementation': (language) => void language.navigation.go('implementation'),
+    'peek-references': (language) => void language.peek.open(),
     'organize-imports': (language) => void language.codeActions.organizeImports(),
     'format-document': (language) => void language.codeActions.formatDocument()
 };
