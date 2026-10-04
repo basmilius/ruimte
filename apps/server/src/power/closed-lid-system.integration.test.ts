@@ -99,10 +99,10 @@ describe('the closed-lid watchdog', () => {
     });
 });
 
-/* A Mac without a power source of its own, such as a virtual one in CI, never names where its power comes from. */
-const namesPowerSource = process.platform === 'darwin' && /Now drawing from '/.test(Bun.spawnSync([PMSET, '-g', 'ps']).stdout.toString());
+/* Only a Mac with a battery of its own reports its power source in a stream; a virtual one in CI stays silent. */
+const hasBattery = process.platform === 'darwin' && /-InternalBattery-/.test(Bun.spawnSync([PMSET, '-g', 'ps']).stdout.toString());
 
-describe.skipIf(!namesPowerSource)('the power source stream', () => {
+describe.skipIf(!hasBattery)('the power source stream', () => {
     test('says where the power comes from as soon as it starts', async () => {
         const readings: (PowerState | null)[] = [];
         const stream = streamPower((power) => readings.push(power));
