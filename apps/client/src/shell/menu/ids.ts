@@ -44,6 +44,8 @@ export const PALETTE_IDS = [
     'reveal',
     'find',
     'find-replace',
+    'next-problem',
+    'previous-problem',
     'find-in-files',
     'view-new',
     'view-new-drawing',

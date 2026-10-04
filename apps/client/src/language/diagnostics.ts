@@ -30,7 +30,16 @@ export class DiagnosticsFeature {
             }
         });
         const edits = editor.onTextChange((change) => this.shift(change.changes));
+        // F8 and Shift+F8 are the editor's while it has the keyboard; elsewhere the menu's commands answer.
+        const keys = editor.onKeyDown((event) => {
+            if (event.key !== 'F8' || event.metaKey || event.ctrlKey || event.altKey) {
+                return false;
+            }
+            this.step(event.shiftKey ? -1 : 1);
+            return true;
+        });
         language.onDispose(() => {
+            keys();
             reports.dispose();
             edits();
             this.listeners.clear();

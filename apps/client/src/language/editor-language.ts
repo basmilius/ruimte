@@ -1,5 +1,7 @@
 import type { Editor } from '@ruimte/smart-editor';
 import { DiagnosticsFeature } from './diagnostics';
+import type { Problem } from './diagnostics-model';
+import { HoverFeature } from './hover';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
 
 /*
@@ -12,6 +14,9 @@ export class EditorLanguage {
     readonly document: LanguageDocumentHandle;
     readonly languageId: string;
     readonly diagnostics: DiagnosticsFeature;
+    readonly hover: HoverFeature;
+    /* What the Quick fix button of a problem calls; the code actions fill it in, and the button stays off until they do. */
+    quickFix: ((problem: Problem) => void) | null = null;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -21,6 +26,7 @@ export class EditorLanguage {
         this.languageId = languageId;
         this.document = project.acquire(uri, languageId, editor);
         this.diagnostics = new DiagnosticsFeature(this);
+        this.hover = new HoverFeature(this);
     }
 
     get uri(): string {

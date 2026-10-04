@@ -16,6 +16,7 @@ import {
     toggleFlagAction
 } from '@/actions/client-actions';
 import { toWorld } from '@/canvas/math';
+import { focusedLanguage } from '@/language/focused-language';
 import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
@@ -235,6 +236,31 @@ export function appCommands(): Command[] {
                       run: () => {
                           requestAnimationFrame(() => {
                               openFocusedFind({ replace: true });
+                          });
+                      }
+                  }
+              ]
+            : []),
+        ...(inWorkspace
+            ? [
+                  {
+                      id: 'next-problem',
+                      label: i18next.t('shell:palette.commands.nextProblem'),
+                      shortcut: CANVAS_SHORTCUTS.nextProblem,
+                      // After the palette has handed the focus back, which is what says which editor is meant.
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              focusedLanguage()?.diagnostics.step(1);
+                          });
+                      }
+                  },
+                  {
+                      id: 'previous-problem',
+                      label: i18next.t('shell:palette.commands.previousProblem'),
+                      shortcut: CANVAS_SHORTCUTS.previousProblem,
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              focusedLanguage()?.diagnostics.step(-1);
                           });
                       }
                   }

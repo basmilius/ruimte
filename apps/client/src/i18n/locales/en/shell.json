@@ -547,7 +547,9 @@
             "newWindow": "Open a new window",
             "moveToNewWindow": "Move this project to a new window",
             "onboarding": "Set up Ruimte",
-            "findReplace": "Find and replace in file"
+            "findReplace": "Find and replace in file",
+            "nextProblem": "Go to next problem",
+            "previousProblem": "Go to previous problem"
         },
         "sections": {
             "recent": "Recent",
@@ -730,6 +732,8 @@
         "newChat": "New Chat",
         "moveToNewWindow": "Move to New Window",
         "onboarding": "Set Up Ruimte…",
-        "findReplace": "Find and Replace"
+        "findReplace": "Find and Replace",
+        "nextProblem": "Next Problem",
+        "previousProblem": "Previous Problem"
     }
 }

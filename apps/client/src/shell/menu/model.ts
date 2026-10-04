@@ -299,6 +299,13 @@ export function menuModel(context: MenuContext): MenuSpec {
             separator,
             ...only(workspace && !context.settingsOpen, command('find', t('find'), { shortcut: CANVAS_SHORTCUTS.find })),
             ...only(workspace && !context.settingsOpen, command('find-replace', t('findReplace'), { shortcut: CANVAS_SHORTCUTS.findReplace })),
+            ...only(
+                workspace && !context.settingsOpen,
+                separator,
+                command('next-problem', t('nextProblem'), { shortcut: CANVAS_SHORTCUTS.nextProblem }),
+                command('previous-problem', t('previousProblem'), { shortcut: CANVAS_SHORTCUTS.previousProblem }),
+                separator
+            ),
             ...only(context.settingsOpen, command('settings-search', t('searchSettings'), { shortcut: APP_SHORTCUTS.settingsSearch })),
             ...only(workspace && context.folder, command('find-in-files', t('findInFiles'), { shortcut: APP_SHORTCUTS.findInFiles }))
         ]

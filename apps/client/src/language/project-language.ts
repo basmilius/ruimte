@@ -79,9 +79,12 @@ interface Holder {
 export class ProjectLanguage {
     readonly service: WireLanguageService;
     readonly status: LanguageStatusTracker;
+    /* The project folder on the machine of the daemon. */
+    readonly folder: string;
     private readonly holders = new Map<string, Holder>();
 
     constructor(transport: Transport, projectId: string, folder: string) {
+        this.folder = folder;
         this.status = new LanguageStatusTracker(transport, projectId);
         this.service = new WireLanguageService({
             transport,

@@ -517,7 +517,11 @@
         "logEmpty": "Nothing logged yet",
         "failed": "Could not reach the language server: {{message}}",
         "none": "No language server serves this file",
-        "logs": "Logs"
+        "logs": "Logs",
+        "hover": {
+            "quickFix": "Quick fix…",
+            "quickFixSoon": "Quick fixes are not available yet"
+        }
     },
     "machineNotAnswering": "This machine is not answering.",
     "processes": {

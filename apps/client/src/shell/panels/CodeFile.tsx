@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/smart-editor';
 import { FindBar } from '@/find/FindBar';
+import { registerFocusedLanguage } from '@/language/focused-language';
+import { LanguagePopups } from '@/language/LanguagePopups';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
 import { Button, ErrorBoundary, Pill, Tooltip } from '@basmilius/desktop-ui';
@@ -209,6 +211,10 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const editorFind = useEditorFind(find, editor);
     const scope = useEditorScope(editor);
     const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
+    useEffect(() => {
+        const element = surface.current;
+        return editorLanguage === null || element === null ? undefined : registerFocusedLanguage(editorLanguage, element);
+    }, [editorLanguage]);
     useChangeMarks(editor, useGitBase(path, read.text));
     const folder = useProject((s) => s.current?.folder ?? null);
 
@@ -290,6 +296,11 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </FileScroll>
                 )}
             </div>
+            {editorLanguage !== null && (
+                <ErrorBoundary label={t('file.edit.failed')} resetKeys={[editorLanguage]}>
+                    <LanguagePopups language={editorLanguage} />
+                </ErrorBoundary>
+            )}
             {editor !== null && editing.indentation !== null && (
                 <EditorStatusBar
                     editor={editor}

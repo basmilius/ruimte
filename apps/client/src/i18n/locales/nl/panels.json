@@ -517,7 +517,11 @@
         "logEmpty": "Nog niets gelogd",
         "failed": "De language server is niet bereikbaar: {{message}}",
         "none": "Geen language server voor dit bestand",
-        "logs": "Logs"
+        "logs": "Logs",
+        "hover": {
+            "quickFix": "Quick fix…",
+            "quickFixSoon": "Quick fixes zijn er nog niet"
+        }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",
     "processes": {

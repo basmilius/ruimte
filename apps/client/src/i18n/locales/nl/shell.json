@@ -547,7 +547,9 @@
             "newWindow": "Een nieuw venster openen",
             "moveToNewWindow": "Dit project naar een nieuw venster verplaatsen",
             "onboarding": "Ruimte instellen",
-            "findReplace": "Zoeken en vervangen in bestand"
+            "findReplace": "Zoeken en vervangen in bestand",
+            "nextProblem": "Ga naar volgend probleem",
+            "previousProblem": "Ga naar vorig probleem"
         },
         "sections": {
             "recent": "Recent",
@@ -730,6 +732,8 @@
         "newChat": "Nieuwe chat",
         "moveToNewWindow": "Naar nieuw venster verplaatsen",
         "onboarding": "Ruimte instellen…",
-        "findReplace": "Zoeken en vervangen"
+        "findReplace": "Zoeken en vervangen",
+        "nextProblem": "Volgend probleem",
+        "previousProblem": "Vorig probleem"
     }
 }
