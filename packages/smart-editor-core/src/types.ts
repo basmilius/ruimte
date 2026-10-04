@@ -1,0 +1,100 @@
+/** Offsets are UTF-16 code units from the start of the document. */
+export interface Selection {
+    anchor: number;
+    head: number;
+}
+
+/** A replacement of `[from, to)`. A batch of edits is simultaneous, in the coordinates of the document before it. */
+export interface TextEdit {
+    from: number;
+    to: number;
+    text: string;
+}
+
+/** A replaced range in the coordinates of the document before the change, with the length that took its place. */
+export interface DocumentChange {
+    from: number;
+    to: number;
+    insertedLength: number;
+}
+
+/** Zero-based line and UTF-16 column. */
+export interface Position {
+    line: number;
+    column: number;
+}
+
+export interface Disposable {
+    dispose(): void;
+}
+
+export type ChangeSource = 'input' | 'command' | 'external';
+
+export interface EditorSnapshot {
+    /** Flattened on first read, so a listener that only needs the selection never pays for it. */
+    text: string;
+    selections: readonly Selection[];
+    revision: number;
+    canUndo: boolean;
+    canRedo: boolean;
+    /** One entry per transaction, present when the text changed. */
+    changes?: readonly (readonly DocumentChange[])[];
+    source?: ChangeSource;
+}
+
+export interface EditOptions {
+    /** Selections after the edit. Without them the current ones are mapped through the edits. */
+    selections?: readonly Selection[];
+    source?: ChangeSource;
+    /** Edits with the same group join one undo step until a selection change or an undo closes it. */
+    historyGroup?: string;
+}
+
+export type EditorCommand =
+    | 'undo'
+    | 'redo'
+    | 'selectAll'
+    | 'smartHome'
+    | 'smartEnd'
+    | 'selectSmartHome'
+    | 'selectSmartEnd'
+    | 'wordLeft'
+    | 'wordRight'
+    | 'selectWordLeft'
+    | 'selectWordRight'
+    | 'deleteWordLeft'
+    | 'deleteWordRight'
+    | 'camelLeft'
+    | 'camelRight'
+    | 'selectCamelLeft'
+    | 'selectCamelRight'
+    | 'deleteCamelLeft'
+    | 'deleteCamelRight'
+    | 'expandSelection'
+    | 'shrinkSelection'
+    | 'smartBackspace'
+    | 'deleteForward'
+    | 'duplicateLine'
+    | 'deleteLine'
+    | 'moveLineUp'
+    | 'moveLineDown'
+    | 'toggleLineComment'
+    | 'indent'
+    | 'outdent'
+    | 'insertNewline'
+    | 'addCaretAbove'
+    | 'addCaretBelow'
+    | 'selectNextOccurrence';
+
+export interface CommandOptions {
+    /** Clamped to 1 through 16. */
+    tabSize?: number;
+    insertSpaces?: boolean;
+    commentToken?: string;
+    /** Whether the plain word commands stop at camel humps. The explicit camel commands always do. */
+    camelCase?: boolean;
+    autoClosingPairs?: boolean;
+    /** A language id such as `typescript` or `php`; it decides what counts as a comment or a string. */
+    language?: string;
+    smartSemicolon?: boolean;
+}
