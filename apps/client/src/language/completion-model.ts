@@ -1,6 +1,7 @@
 import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { CompletionItem, CompletionList, CompletionResult, InsertReplaceEdit, MarkupContent, TextEdit } from '@ruimte/smart-editor-lsp';
 import { comparePositions } from './diagnostics-model';
+import { parseSnippet, tabOrder, type SnippetStop } from './snippet';
 
 const IDENTIFIER_CHARACTER = /[\p{L}\p{N}\p{M}_$]/u;
 
@@ -146,49 +147,46 @@ export function rankCompletions(items: readonly CompletionItem[], prefixOf: (ite
 
 /* A snippet as the plain text it would insert: tab stops and variables vanish, placeholders and choices become their text, and the escapes of the format are undone. */
 export function snippetToText(snippet: string): string {
-    let out = '';
-    let depth = 0;
-    for (let at = 0; at < snippet.length; at++) {
-        const character = snippet[at]!;
-        if (character === '\\' && /[\\$}]/.test(snippet[at + 1] ?? '')) {
-            out += snippet[++at];
-        } else if (character === '$') {
-            const rest = snippet.slice(at);
-            const placeholder = /^\$\{(?:\d+|[A-Za-z_]\w*):/.exec(rest);
-            const choice = /^\$\{\d+\|([^,|}]*)[^}]*\|\}/.exec(rest);
-            const bare = /^\$(?:\{(?:\d+|[A-Za-z_]\w*)\}|\d+|[A-Za-z_]\w*)/.exec(rest);
-            if (placeholder !== null) {
-                depth++;
-                at += placeholder[0].length - 1;
-            } else if (choice !== null) {
-                out += choice[1];
-                at += choice[0].length - 1;
-            } else if (bare !== null) {
-                at += bare[0].length - 1;
-            } else {
-                out += character;
-            }
-        } else if (character === '}' && depth > 0) {
-            depth--;
-        } else {
-            out += character;
-        }
-    }
-    return out;
+    return parseSnippet(snippet).text;
 }
 
-/* What goes into the text for an item and the range it takes the place of, given the caret. */
-export function insertionOf(item: CompletionItem, caret: EditorPosition, lineBefore: string, replace: boolean): { range: EditorRange; text: string } {
+const METHOD_KIND = 2;
+const FUNCTION_KIND = 3;
+const CONSTRUCTOR_KIND = 4;
+const SNIPPET_FORMAT = 2;
+
+/* A call snippet with the call cut off, for a name that already has its parentheses: `log(${1:value})$0` becomes `log`. */
+function withoutCall(snippet: string): string {
+    const open = snippet.search(/(?<!\\)\(/);
+    return open > 0 ? snippet.slice(0, open) : snippet;
+}
+
+export interface Insertion {
+    readonly range: EditorRange;
+    readonly text: string;
+    /* Where Tab goes in the inserted text, in order; empty for plain text and for a snippet without stops. */
+    readonly stops: readonly SnippetStop[];
+}
+
+/*
+ * What goes into the text for an item and the range it takes the place of, given the caret. `lineAfter` is
+ * the rest of the line after the caret: an item that would add a call does not when a parenthesis follows.
+ */
+export function insertionOf(item: CompletionItem, caret: EditorPosition, lineBefore: string, replace: boolean, lineAfter = ''): Insertion {
     const raw = item.textEdit?.newText ?? item.insertText ?? item.label;
-    const text = item.insertTextFormat === 2 ? snippetToText(raw) : raw;
-    const range = editRangeOf(item, replace);
-    if (range === null) {
-        const prefix = identifierPrefix(lineBefore);
-        return { range: { start: { line: caret.line, character: caret.character - prefix.length }, end: caret }, text };
+    const edit = editRangeOf(item, replace);
+    const range =
+        edit === null
+            ? { start: { line: caret.line, character: caret.character - identifierPrefix(lineBefore).length }, end: caret }
+            : // The word grew since the answer came, so what was typed since belongs to what is replaced.
+              { start: edit.start, end: comparePositions(edit.end, caret) < 0 && edit.end.line === caret.line ? caret : edit.end };
+    if (item.insertTextFormat !== SNIPPET_FORMAT) {
+        return { range, text: raw, stops: [] };
     }
-    // The word grew since the answer came, so what was typed since belongs to what is replaced.
-    const end = comparePositions(range.end, caret) < 0 && range.end.line === caret.line ? caret : range.end;
-    return { range: { start: range.start, end }, text };
+    const followed = range.end.line === caret.line && lineAfter.slice(Math.max(0, range.end.character - caret.character)).startsWith('(');
+    const callable = item.kind === METHOD_KIND || item.kind === FUNCTION_KIND || item.kind === CONSTRUCTOR_KIND;
+    const parsed = parseSnippet(followed && callable ? withoutCall(raw) : raw);
+    return { range, text: parsed.text, stops: tabOrder(parsed) };
 }
 
 export function documentationText(documentation: string | MarkupContent | undefined): string {

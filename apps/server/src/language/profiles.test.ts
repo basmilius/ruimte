@@ -23,6 +23,7 @@ describe('server profiles', () => {
             disableAutomaticTypingAcquisition: true,
             tsserver: { path: '/work/app/node_modules/typescript/lib/tsserver.js', useSyntaxServer: 'never' },
             preferences: {
+                includeCompletionsForModuleExports: true,
                 includeInlayParameterNameHints: 'all',
                 includeInlayVariableTypeHints: true,
                 includeInlayFunctionLikeReturnTypeHints: true,
@@ -30,6 +31,11 @@ describe('server profiles', () => {
             }
         });
         expect(typescript.args(context)).toEqual(['--stdio']);
+    });
+
+    it('has the TypeScript server complete a function as a call', () => {
+        expect(KIND_PROFILES.typescript.components[0]!.configuration).toEqual({ completions: { completeFunctionCalls: true } });
+        expect(KIND_PROFILES.vue.components[0]!.configuration).toEqual({ completions: { completeFunctionCalls: true } });
     });
 
     it('pairs Vue with a TypeScript server that loads the plugin, started first', () => {

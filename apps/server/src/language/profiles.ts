@@ -20,6 +20,8 @@ export interface ComponentProfile {
     entry: string;
     args(context: LaunchContext): string[];
     initializationOptions(context: LaunchContext): unknown;
+    /* Settings the server reads through `workspace/didChangeConfiguration` and `workspace/configuration`, which are not initialization options. */
+    configuration?: Record<string, unknown>;
     env?: Record<string, string>;
 }
 
@@ -32,6 +34,7 @@ export interface KindProfile {
 const SCRIPT_LANGUAGES = ['typescript', 'typescriptreact', 'javascript', 'javascriptreact'] as const;
 
 const TYPESCRIPT_PREFERENCES = {
+    includeCompletionsForModuleExports: true,
     includeInlayParameterNameHints: 'all',
     includeInlayVariableTypeHints: true,
     includeInlayFunctionLikeReturnTypeHints: true,
@@ -44,6 +47,8 @@ function typescriptComponent(languages: readonly string[], withVuePlugin: boolea
         languages,
         entry: 'typescript-language-server/lib/cli.mjs',
         args: () => ['--stdio'],
+        // A function or method completes as a call with its parameters as tab stops.
+        configuration: { completions: { completeFunctionCalls: true } },
         initializationOptions: (context) => ({
             hostInfo: 'ruimte',
             // Fetching typings is the project's own package manager's job, and the daemon makes no request nobody asked for.

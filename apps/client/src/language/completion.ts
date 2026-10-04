@@ -1,6 +1,6 @@
 import { StaleResultError, type CompletionContext, type CompletionItem } from '@ruimte/smart-editor-lsp';
 import type { EditorContentChange, EditorPosition, EditorRange, EditorTextChange } from '@ruimte/smart-editor';
-import { comparePositions } from './diagnostics-model';
+import { comparePositions, shiftPosition } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
 import { documentationText, identifierPrefix, insertionOf, isIdentifierCharacter, itemsOf, prefixFor, rankCompletions, type Ranked } from './completion-model';
 import { shikiLanguageOf } from './language-ids';
@@ -93,10 +93,16 @@ export class CompletionFeature {
         }
         const caret = editor.getCaret();
         const lineBefore = editor.textInRange({ start: { line: caret.line, character: 0 }, end: caret });
-        const main = insertionOf(item, caret, lineBefore, replace);
-        const extras: EditorContentChange[] = (item.additionalTextEdits ?? []).map((edit) => ({ range: edit.range, text: edit.newText }));
-        // The caret is mapped through the edits, which puts it behind the inserted text.
+        const lineAfter = editor.textInRange({ start: caret, end: { line: caret.line, character: Number.MAX_SAFE_INTEGER } });
+        const main = insertionOf(item, caret, lineBefore, replace, lineAfter);
+        const extras = (item.additionalTextEdits ?? []).map((edit): EditorContentChange => ({ range: edit.range, text: edit.newText }));
+        // An import above the insertion moves it, and the tab stops are measured from where it ends up.
+        const start = extras
+            .filter((extra) => comparePositions(extra.range.end, main.range.start) <= 0)
+            .sort((left, right) => comparePositions(right.range.start, left.range.start))
+            .reduce((place, extra) => shiftPosition(place, extra), main.range.start);
         editor.applyEdits([{ range: main.range, text: main.text }, ...extras]);
+        this.language.snippets.begin(start, main.text, main.stops);
         editor.focus();
     }
 

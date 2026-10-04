@@ -81,7 +81,7 @@ On-device model (Apple Foundation Models), code never leaves the Mac:
 
 - Remove `packages/editor` and its dependency once Bas confirms parity.
 - Known limits:
-  - Snippets are inserted as plain text without tab stops.
+  - Snippets have tab stops (Tab and Shift+Tab, Escape ends them), but a mirror of a stop is not edited along, a multi-line snippet is not re-indented and accepting a suggestion inside a stop ends the outer snippet.
   - The status bar shows no progress percentage (the servers send none).
   - Semantic tokens go without deltas.
   - Workspace edits refuse creating, renaming and deleting files.

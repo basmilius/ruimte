@@ -17,6 +17,7 @@ import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
 import { SemanticTokensFeature } from './semantic-tokens';
 import { SignatureFeature } from './signature';
+import { SnippetFeature } from './snippet-session';
 import { SymbolsFeature } from './symbols';
 import type { Place } from './navigation-history';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
@@ -35,6 +36,7 @@ export class EditorLanguage {
     readonly diagnostics: DiagnosticsFeature;
     readonly hover: HoverFeature;
     readonly completion: CompletionFeature;
+    readonly snippets: SnippetFeature;
     readonly highlights: HighlightsFeature;
     readonly pick: PickFeature;
     readonly codeActions: CodeActionsFeature;
@@ -56,6 +58,7 @@ export class EditorLanguage {
         this.diagnostics = new DiagnosticsFeature(this);
         this.hover = new HoverFeature(this, timers);
         this.completion = new CompletionFeature(this, timers);
+        this.snippets = new SnippetFeature(this);
         new SignatureFeature(this, timers);
         this.highlights = new HighlightsFeature(this, timers);
         new SymbolsFeature(this, timers);

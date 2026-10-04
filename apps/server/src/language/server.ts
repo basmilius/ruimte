@@ -328,6 +328,8 @@ export class LanguageServer {
             workspaceFolders: [{ uri: rootUri, name: basename(this.options.folder) }],
             initializationOptions: profile.initializationOptions(context),
             clientInfo: { name: 'ruimte' },
+            snippetSupport: true,
+            ...(profile.configuration === undefined ? {} : { configuration: profile.configuration }),
             onApplyEdit: (params) => this.options.hooks.applyEdit(this, params),
             timeoutMs: 0
         });

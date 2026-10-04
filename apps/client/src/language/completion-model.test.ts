@@ -69,7 +69,7 @@ describe('prefixFor', () => {
 
 describe('insertionOf', () => {
     test("replaces the word typed so far, and takes the item's text", () => {
-        expect(insertionOf(item('filter'), at(0, 11), 'thisArg.fil', false)).toEqual({ range: { start: at(0, 8), end: at(0, 11) }, text: 'filter' });
+        expect(insertionOf(item('filter'), at(0, 11), 'thisArg.fil', false)).toEqual({ range: { start: at(0, 8), end: at(0, 11) }, text: 'filter', stops: [] });
     });
 
     test('takes the insert range for Enter and the replace range for Tab', () => {
@@ -85,10 +85,31 @@ describe('insertionOf', () => {
         expect(insertionOf(stale, at(0, 12), 'thisArg.fill', false).range).toEqual({ start: at(0, 8), end: at(0, 12) });
     });
 
-    test('inserts a snippet as plain text', () => {
-        expect(insertionOf(item('log', { insertText: 'console.log(${1:value})$0', insertTextFormat: 2 }), at(0, 3), 'log', false).text).toBe(
-            'console.log(value)'
-        );
+    test('inserts a snippet as its text, with the stops Tab goes through', () => {
+        const insertion = insertionOf(item('log', { insertText: 'console.log(${1:value})$0', insertTextFormat: 2 }), at(0, 3), 'log', false);
+        expect(insertion.text).toBe('console.log(value)');
+        expect(insertion.stops).toEqual([
+            { index: 1, start: 12, end: 17 },
+            { index: 0, start: 18, end: 18 }
+        ]);
+    });
+
+    test('leaves the call off a function that already has its parentheses', () => {
+        const call = item('log', { kind: 3, insertText: 'log(${1:value})$0', insertTextFormat: 2 });
+        expect(insertionOf(call, at(0, 3), 'log', false, '(1)').text).toBe('log');
+        expect(insertionOf(call, at(0, 3), 'log', false, ' + 1').text).toBe('log(value)');
+        const variable = item('log', { kind: 6, insertText: 'log(${1:value})$0', insertTextFormat: 2 });
+        expect(insertionOf(variable, at(0, 3), 'log', false, '(1)').text).toBe('log(value)');
+    });
+
+    test('looks for the parenthesis past the range a Tab replaces', () => {
+        const call = item('log', {
+            kind: 2,
+            textEdit: { newText: 'log(${1:a})$0', insert: { start: at(0, 0), end: at(0, 2) }, replace: { start: at(0, 0), end: at(0, 3) } },
+            insertTextFormat: 2
+        });
+        expect(insertionOf(call, at(0, 2), 'lo', true, 'g(x)').text).toBe('log');
+        expect(insertionOf(call, at(0, 2), 'lo', false, 'g(x)').text).toBe('log(a)');
     });
 });
 
