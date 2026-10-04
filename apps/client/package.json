@@ -35,6 +35,7 @@
     "@ruimte/plan": "workspace:*",
     "@ruimte/pulsar": "workspace:*",
     "@ruimte/smart-editor": "workspace:*",
+    "@ruimte/smart-editor-lsp": "workspace:*",
     "@tanstack/react-virtual": "^3.14.13",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
