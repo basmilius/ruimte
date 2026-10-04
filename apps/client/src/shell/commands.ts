@@ -19,6 +19,8 @@ import { toWorld } from '@/canvas/math';
 import { focusedLanguage } from '@/language/focused-language';
 import { languageCommandRows } from '@/language/language-commands';
 import { editorCommandRows } from '@/shell/editor-commands';
+import { editorShortcut } from '@/shell/editor-keymap';
+import { stepFocusedEditorFind } from '@/shell/panels/use-editor-find';
 import { keepAwakeAvailable, setKeepAwake } from '@/state/keep-awake';
 import { newChat, newChatMachine, offersNewChat, useNewChat } from '@/project/new-chat';
 import { canMoveToNewWindow, canOpenWindows, moveToNewWindow, openNewWindow } from '@/project/windows';
@@ -241,6 +243,31 @@ export function appCommands(): Command[] {
                       run: () => {
                           requestAnimationFrame(() => {
                               openFocusedFind({ replace: true });
+                          });
+                      }
+                  }
+              ]
+            : []),
+        ...(inWorkspace
+            ? [
+                  {
+                      id: 'find-next',
+                      label: i18next.t('shell:palette.commands.findNext'),
+                      shortcut: editorShortcut('findNext'),
+                      // A frame later: the palette hands the focus back as it closes, and that focus says which editor is meant.
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              stepFocusedEditorFind(1);
+                          });
+                      }
+                  },
+                  {
+                      id: 'find-previous',
+                      label: i18next.t('shell:palette.commands.findPrevious'),
+                      shortcut: editorShortcut('findPrevious'),
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              stepFocusedEditorFind(-1);
                           });
                       }
                   }

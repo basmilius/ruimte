@@ -302,6 +302,8 @@ export function menuModel(context: MenuContext): MenuSpec {
             separator,
             ...only(workspace && !context.settingsOpen, command('find', t('find'), { shortcut: CANVAS_SHORTCUTS.find })),
             ...only(workspace && !context.settingsOpen, command('find-replace', t('findReplace'), { shortcut: CANVAS_SHORTCUTS.findReplace })),
+            // No accelerator: the menu's group command holds Cmd+G, and the editor answers the key itself.
+            ...only(workspace && !context.settingsOpen, command('find-next', t('findNext')), command('find-previous', t('findPrevious'))),
             ...only(
                 workspace && !context.settingsOpen,
                 separator,

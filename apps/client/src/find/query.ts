@@ -11,6 +11,8 @@ export interface FindOptions {
 
 export interface FindQuery extends FindOptions {
     text: string;
+    /* A surface that can search a selection only: just the text selected when this turned on. */
+    inSelection?: boolean;
 }
 
 export const EMPTY_FIND_QUERY: FindQuery = { text: '', caseSensitive: false, wholeWord: false, regex: false };

@@ -97,6 +97,9 @@
         "caseSensitive": "Match case",
         "wholeWord": "Match whole word",
         "regex": "Use regular expression",
+        "inSelection": "Search in selection",
+        "noSelection": "No selection",
+        "selectAll": "Select all matches",
         "previous": "Previous match",
         "next": "Next match",
         "close": "Close",
@@ -105,6 +108,7 @@
             "one": "Replace",
             "all": "All",
             "allLabel": "Replace all",
+            "preserveCase": "Preserve case",
             "toggle": "Show replace",
             "hide": "Hide replace"
         }

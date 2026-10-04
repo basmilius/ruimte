@@ -10,6 +10,7 @@ import type {
     EditorEngine,
     EditorFindQuery,
     EditorFindState,
+    EditorReplaceOptions,
     EditorGutterAction,
     EditorHighlight,
     EditorHover,
@@ -184,16 +185,39 @@ export class FakeEditor implements Editor {
 
     /* What the client asked to replace, one match at a time and all at once. */
     replacements: string[] = [];
+    replaceOptions: EditorReplaceOptions[] = [];
+    /* What the client last asked to show under the match. */
+    replacePreview: string | null = null;
+    /* What the client asked to select all matches of, and how many it was told there were. */
+    selectedMatches = 0;
+    lastFindFromCursor: { query: EditorFindQuery; direction: 1 | -1 } | null = null;
     replacementsOfAll: string[] = [];
 
-    replace(replacement: string): boolean {
+    replace(replacement: string, options: EditorReplaceOptions = {}): boolean {
         this.replacements.push(replacement);
+        this.replaceOptions.push(options);
         return !this.readOnly && this.findState.count > 0;
     }
 
-    replaceAll(replacement: string): number {
+    replaceAll(replacement: string, options: EditorReplaceOptions = {}): number {
         this.replacementsOfAll.push(replacement);
+        this.replaceOptions.push(options);
         return this.readOnly ? 0 : this.findState.count;
+    }
+
+    setReplacePreview(replacement: string | null): void {
+        this.replacePreview = replacement;
+    }
+
+    selectFindMatches(): number {
+        this.selectedMatches = this.findState.count;
+        this.find(null);
+        return this.selectedMatches;
+    }
+
+    findFromCursor(query: EditorFindQuery, direction: 1 | -1): boolean {
+        this.lastFindFromCursor = { query, direction };
+        return true;
     }
 
     findStep(direction: 1 | -1): void {

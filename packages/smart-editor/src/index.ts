@@ -13,6 +13,7 @@ export type {
     EditorEngine,
     EditorFindQuery,
     EditorFindState,
+    EditorReplaceOptions,
     EditorGutterAction,
     EditorIndentation,
     EditorContentChange,

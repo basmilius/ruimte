@@ -212,12 +212,21 @@ export interface EditorFindQuery {
     readonly caseSensitive: boolean;
     readonly wholeWord: boolean;
     readonly regex: boolean;
+    /* Only the text that was selected when this turned on is searched, however the selection moves after. */
+    readonly inSelection?: boolean;
 }
 
 export interface EditorFindState {
     readonly count: number;
     /* Zero-based; null without a match. */
     readonly current: number | null;
+    /* The search is in the selection and nothing was selected. */
+    readonly noSelection?: boolean;
+}
+
+export interface EditorReplaceOptions {
+    /* The replacement takes the case of the text it replaces: `Foo` becomes `Bar`, `FOO` becomes `BAR`. */
+    readonly preserveCase?: boolean;
 }
 
 export interface Editor {
@@ -243,9 +252,15 @@ export interface Editor {
     find(query: EditorFindQuery | null): void;
     findStep(direction: 1 | -1): void;
     /* Replaces the match the find is on, with `$1` and the like expanded for a regular expression, and moves to the next one. False when there is none or the editor is read only. */
-    replace(replacement: string): boolean;
+    replace(replacement: string, options?: EditorReplaceOptions): boolean;
     /* Replaces every match in one undo step, and says how many there were. */
-    replaceAll(replacement: string): number;
+    replaceAll(replacement: string, options?: EditorReplaceOptions): number;
+    /* What a regular expression replacement writes for the match the find is on, drawn under it while the find is open; null takes it away. */
+    setReplacePreview(replacement: string | null, options?: EditorReplaceOptions): void;
+    /* Ends the find with a caret on every match, the one the find was on last, and says how many there were. */
+    selectFindMatches(): number;
+    /* Selects the next match of a query from the cursor, or the one before, going round at the ends, without a find bar. False when there is none. */
+    findFromCursor(query: EditorFindQuery, direction: 1 | -1): boolean;
     onFind(listener: (state: EditorFindState) => void): () => void;
     /* Takes the marks away and selects the match the find was on, so the cursor is where it stopped. */
     endFind(): void;

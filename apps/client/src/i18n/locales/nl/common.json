@@ -97,6 +97,9 @@
         "caseSensitive": "Hoofdlettergevoelig",
         "wholeWord": "Heel woord",
         "regex": "Reguliere expressie gebruiken",
+        "inSelection": "Zoeken in selectie",
+        "noSelection": "Geen selectie",
+        "selectAll": "Alle treffers selecteren",
         "previous": "Vorige treffer",
         "next": "Volgende treffer",
         "close": "Sluiten",
@@ -105,6 +108,7 @@
             "one": "Vervang",
             "all": "Alles",
             "allLabel": "Alles vervangen",
+            "preserveCase": "Hoofdletters behouden",
             "toggle": "Vervangen tonen",
             "hide": "Vervangen verbergen"
         }

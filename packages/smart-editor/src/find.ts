@@ -1,4 +1,5 @@
-import type { DocumentModel } from '@ruimte/smart-editor-core';
+import type { DocumentChange, DocumentModel } from '@ruimte/smart-editor-core';
+import { mapOffset } from './offsets.ts';
 import type { EditorFindQuery, EditorFindState } from './types.ts';
 
 export interface FindMark {
@@ -17,6 +18,8 @@ export class FindController {
     private query: EditorFindQuery | null = null;
     private marks: FindMark[] = [];
     private index: number | null = null;
+    /* The text a search in the selection is held to, which follows the text through edits; null when nothing was selected. */
+    private bounds: { from: number; to: number } | null = null;
     /* Where the next refresh looks for the current match from, once: right after what a replace wrote. */
     pendingAnchor: number | undefined;
 
@@ -43,7 +46,12 @@ export class FindController {
     }
 
     get state(): EditorFindState {
-        return { count: this.marks.length, current: this.index };
+        return { count: this.marks.length, current: this.index, ...(this.query?.inSelection === true && this.bounds === null ? { noSelection: true } : {}) };
+    }
+
+    /* The range a search in the selection is held to. */
+    get scope(): { from: number; to: number } | null {
+        return this.query?.inSelection === true ? this.bounds : null;
     }
 
     get currentMark(): FindMark | null {
@@ -52,8 +60,25 @@ export class FindController {
 
     /* A new query, or null to end the find. */
     set(query: EditorFindQuery | null): void {
+        const wasInSelection = this.query?.inSelection === true;
         this.query = query === null || query.text === '' ? null : query;
+        if (this.query?.inSelection !== true) {
+            this.bounds = null;
+        } else if (!wasInSelection) {
+            const selection = this.model.getPrimary();
+            this.bounds =
+                selection.anchor === selection.head
+                    ? null
+                    : { from: Math.min(selection.anchor, selection.head), to: Math.max(selection.anchor, selection.head) };
+        }
         this.refresh();
+    }
+
+    /* The text of a search in the selection moved with an edit. */
+    mapBounds(changes: readonly DocumentChange[]): void {
+        if (this.bounds !== null) {
+            this.bounds = { from: mapOffset(this.bounds.from, changes), to: mapOffset(this.bounds.to, changes) };
+        }
     }
 
     /*
@@ -70,9 +95,18 @@ export class FindController {
         }
         let found: FindMark[] = [];
         try {
-            found = this.model
-                .find(query.text, { caseSensitive: query.caseSensitive, wholeWord: query.wholeWord, regex: query.regex, maxResults: FIND_LIMIT })
-                .map((match) => ({ from: match.from, to: match.to }));
+            const inSelection = query.inSelection === true;
+            if (!inSelection || this.bounds !== null) {
+                found = this.model
+                    .find(query.text, {
+                        caseSensitive: query.caseSensitive,
+                        wholeWord: query.wholeWord,
+                        regex: query.regex,
+                        maxResults: FIND_LIMIT,
+                        ...(inSelection ? this.bounds : {})
+                    })
+                    .map((match) => ({ from: match.from, to: match.to }));
+            }
         } catch {
             // A pattern that does not parse finds nothing; the find bar says it is invalid.
         }

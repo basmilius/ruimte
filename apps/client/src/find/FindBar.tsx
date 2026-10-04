@@ -1,8 +1,23 @@
 import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { CaseSensitive, ChevronDown, ChevronRight, ChevronUp, CornerDownLeft, Regex, Search, WholeWord, X, type LucideIcon } from 'lucide-react';
+import {
+    ALargeSmall,
+    CaseSensitive,
+    ChevronDown,
+    ChevronRight,
+    ChevronUp,
+    CornerDownLeft,
+    ListChecks,
+    Regex,
+    Search,
+    TextSelect,
+    WholeWord,
+    X,
+    type LucideIcon
+} from 'lucide-react';
 import { isApplePlatform } from '@/desktop/bridge';
+import { requiredShortcut } from '@/shell/editor-keymap';
 import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
@@ -36,6 +51,10 @@ export interface FindBarProps {
     disabledReason?: string | null;
     /* Gives the bar a replace row, behind the arrow at its left. */
     replacement?: FindReplacement;
+    /* Lets a search be held to the selection, and says when that was asked with nothing selected. */
+    selectionScope?: { noSelection: boolean };
+    /* Puts a caret on every match and closes the bar. */
+    onSelectAll?: () => void;
     className?: string;
 }
 
@@ -44,7 +63,19 @@ export interface FindBarProps {
  * toggles, how many it found and the way through them, and under it, where the surface can replace,
  * what to write in place. What a match is and where it is drawn is the surface's.
  */
-export function FindBar({ find, total, current, invalid = false, onStep, unsupported = {}, disabledReason = null, replacement, className }: FindBarProps) {
+export function FindBar({
+    find,
+    total,
+    current,
+    invalid = false,
+    onStep,
+    unsupported = {},
+    disabledReason = null,
+    replacement,
+    selectionScope,
+    onSelectAll,
+    className
+}: FindBarProps) {
     const { t } = useTranslation('common');
     const input = useRef<HTMLInputElement>(null);
     const { query, setQuery, summons } = find;
@@ -57,14 +88,26 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
         input.current?.select();
     }, [summons]);
 
+    /* The bar's own keys, and the platform's find next, find previous and select all occurrences, which do the same from the field. */
     const keys = (event: ReactKeyboardEvent<HTMLInputElement>): Shortcut | null => {
         if (event.nativeEvent.isComposing) {
             return null;
         }
         const apple = isApplePlatform();
+        const platform = (id: 'findNext' | 'findPrevious' | 'selectAllOccurrences'): boolean => matchesShortcut(requiredShortcut(id), event.nativeEvent, apple);
+        if (platform('findNext')) {
+            return FIND_SHORTCUTS.next;
+        }
+        if (platform('findPrevious')) {
+            return FIND_SHORTCUTS.previous;
+        }
+        if (platform('selectAllOccurrences')) {
+            return FIND_SHORTCUTS.selectAll;
+        }
         return (
-            (['close', 'next', 'previous'] as const).map((name) => FIND_SHORTCUTS[name]).find((target) => matchesShortcut(target, event.nativeEvent, apple)) ??
-            null
+            (['close', 'next', 'previous', 'selectAll'] as const)
+                .map((name) => FIND_SHORTCUTS[name])
+                .find((target) => matchesShortcut(target, event.nativeEvent, apple)) ?? null
         );
     };
 
@@ -79,6 +122,11 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
             e.preventDefault();
             if (!disabled) {
                 onStep(key === FIND_SHORTCUTS.previous ? -1 : 1);
+            }
+        } else if (key === FIND_SHORTCUTS.selectAll) {
+            e.preventDefault();
+            if (!disabled && total > 0) {
+                onSelectAll?.();
             }
         }
     };
@@ -106,7 +154,9 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
     };
 
     const count =
-        query.text === '' || disabled ? null : invalid ? (
+        query.text === '' || disabled ? null : query.inSelection === true && selectionScope?.noSelection === true ? (
+            t('find.noSelection')
+        ) : invalid ? (
             <span className="text-status-error" role="alert">
                 {t('find.invalid')}
             </span>
@@ -174,6 +224,21 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
                                 />
                             );
                         })}
+                        {selectionScope !== undefined && (
+                            <IconButton
+                                icon={TextSelect}
+                                size="xs"
+                                label={t('find.inSelection')}
+                                tooltip={disabledReason ?? undefined}
+                                aria-pressed={!disabled && query.inSelection === true}
+                                aria-disabled={disabled}
+                                onClick={() => {
+                                    if (!disabled) {
+                                        setQuery({ ...query, inSelection: query.inSelection !== true });
+                                    }
+                                }}
+                            />
+                        )}
                     </ButtonGroup>
                 </div>
                 {count !== null && <span className="shrink-0 text-xs whitespace-nowrap text-text-muted tabular-nums">{count}</span>}
@@ -194,6 +259,16 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
                         disabled={disabled || total === 0}
                         onClick={() => onStep(1)}
                     />
+                    {onSelectAll !== undefined && (
+                        <IconButton
+                            icon={ListChecks}
+                            size="sm"
+                            label={t('find.selectAll')}
+                            kbd={requiredShortcut('selectAllOccurrences')}
+                            disabled={disabled || total === 0}
+                            onClick={onSelectAll}
+                        />
+                    )}
                     <IconButton icon={X} size="sm" label={t('find.close')} kbd={FIND_SHORTCUTS.close} onClick={find.close} />
                 </ButtonGroup>
             </div>
@@ -215,6 +290,13 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
                             className="h-full min-w-0 flex-1 bg-transparent text-xs text-text outline-none placeholder:text-text-faint"
                         />
                     </div>
+                    <IconButton
+                        icon={ALargeSmall}
+                        size="sm"
+                        label={t('find.replace.preserveCase')}
+                        aria-pressed={find.preserveCase}
+                        onClick={() => find.setPreserveCase(!find.preserveCase)}
+                    />
                     <Tooltip label={replacement?.disabledReason ?? t('find.replace.one')}>
                         <Button variant="secondary" size="sm" aria-disabled={cannotReplace} onClick={() => !cannotReplace && replacement?.onReplace()}>
                             {t('find.replace.one')}

@@ -436,6 +436,95 @@ describe('replace', () => {
     });
 });
 
+describe('find in the selection and the rest of the find', () => {
+    const query = (text: string, options: Partial<EditorFindQuery> = {}): EditorFindQuery => ({
+        text,
+        caseSensitive: false,
+        wholeWord: false,
+        regex: false,
+        ...options
+    });
+
+    test('searches only the text that was selected when it turned on, and follows it through edits', () => {
+        const { editor } = setup({ text: 'a\na\na\na' });
+        const states: EditorFindState[] = [];
+        editor.onFind((state) => states.push(state));
+        editor.setSelection({ start: { line: 1, character: 0 }, end: { line: 2, character: 1 } });
+        editor.find(query('a', { inSelection: true }));
+        expect(states.at(-1)).toMatchObject({ count: 2 });
+        editor.setCaret({ line: 0, character: 0 });
+        editor.find(query('a', { inSelection: true, caseSensitive: true }));
+        expect(states.at(-1)).toMatchObject({ count: 2 });
+        editor.applyEdits([{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, text: 'a\n' }]);
+        editor.find(query('a', { inSelection: true, caseSensitive: true, wholeWord: true }));
+        expect(states.at(-1)).toMatchObject({ count: 2 });
+    });
+
+    test('says when nothing was selected', () => {
+        const { editor } = setup({ text: 'a a' });
+        const states: EditorFindState[] = [];
+        editor.onFind((state) => states.push(state));
+        editor.find(query('a', { inSelection: true }));
+        expect(states.at(-1)).toEqual({ count: 0, current: null, noSelection: true });
+    });
+
+    test('replaces all only inside the selection', () => {
+        const { editor } = setup({ text: 'a\na\na' });
+        editor.setSelection({ start: { line: 0, character: 0 }, end: { line: 1, character: 1 } });
+        editor.find(query('a', { inSelection: true }));
+        expect(editor.replaceAll('b')).toBe(2);
+        expect(editor.getText()).toBe('b\nb\na');
+    });
+
+    test('gives a replacement the case of the match when asked', () => {
+        const { editor } = setup({ text: 'foo Foo FOO' });
+        editor.find(query('foo'));
+        expect(editor.replaceAll('bar', { preserveCase: true })).toBe(3);
+        expect(editor.getText()).toBe('bar Bar BAR');
+    });
+
+    test('puts a caret on every match, the current one last, and ends the find', () => {
+        const { editor, type } = setup({ text: 'a b a b a' });
+        editor.setCaret({ line: 0, character: 3 });
+        editor.find(query('a'));
+        expect(editor.selectFindMatches()).toBe(3);
+        expect(editor.getCaret()).toEqual({ line: 0, character: 5 });
+        type('x');
+        expect(editor.getText()).toBe('x b x b x');
+    });
+
+    test('draws what a regular expression writes under the current match, and only when it differs from the replacement', () => {
+        const { editor, host } = setup({ text: 'ab1 cd2' });
+        editor.find(query('([a-z]+)(\\d)', { regex: true }));
+        editor.setReplacePreview('$2$1');
+        expect(host.querySelector('.se-preview')!.textContent).toBe('1ab');
+        expect(host.querySelector('.se-preview')!.hasAttribute('hidden')).toBe(false);
+        editor.setReplacePreview('x');
+        expect(host.querySelector('.se-preview')!.hasAttribute('hidden')).toBe(true);
+        editor.setReplacePreview('$2$1');
+        editor.find(query('ab', { regex: false }));
+        expect(host.querySelector('.se-preview')!.hasAttribute('hidden')).toBe(true);
+        editor.setReplacePreview(null);
+        expect(host.querySelector('.se-preview')!.hasAttribute('hidden')).toBe(true);
+    });
+
+    test('finds the next and the previous match from the cursor without a find, going round at the ends', () => {
+        const { editor } = setup({ text: 'foo bar foo bar foo' });
+        editor.setCaret({ line: 0, character: 5 });
+        expect(editor.findFromCursor(query('foo'), 1)).toBe(true);
+        expect(editor.getSelection()).toEqual({ start: { line: 0, character: 8 }, end: { line: 0, character: 11 } });
+        editor.findFromCursor(query('foo'), 1);
+        expect(editor.getSelection().start.character).toBe(16);
+        editor.findFromCursor(query('foo'), 1);
+        expect(editor.getSelection().start.character).toBe(0);
+        editor.findFromCursor(query('foo'), -1);
+        expect(editor.getSelection().start.character).toBe(16);
+        editor.findFromCursor(query('foo'), -1);
+        expect(editor.getSelection().start.character).toBe(8);
+        expect(editor.findFromCursor(query('zzz'), 1)).toBe(false);
+    });
+});
+
 describe('text changes', () => {
     test('reports every change as a language server wants it, an outside setText and an undo included', () => {
         const { editor, type, press } = setup({ text: 'one\ntwo' });

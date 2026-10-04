@@ -19,7 +19,7 @@ import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { FileBreadcrumb } from '@/shell/panels/FileBreadcrumb';
 import { highlightCode } from '@/shell/panels/highlight';
 import { lineEndingOf } from '@/shell/panels/status-bar-model';
-import { useEditorFind } from '@/shell/panels/use-editor-find';
+import { editorSeed, useEditorFind } from '@/shell/panels/use-editor-find';
 import { useEditorLanguage } from '@/shell/panels/use-editor-language';
 import { useChangeMarks } from '@/shell/panels/use-change-marks';
 import { useEditorScope } from '@/shell/panels/use-editor-scope';
@@ -209,7 +209,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
     const [editor, setEditor] = useState<Editor | null>(null);
     const surface = useRef<HTMLDivElement>(null);
     // Only the editor can be searched; the viewer that stands in while it loads, and for a finger, cannot.
-    const find = useFind(surface, editor !== null);
+    const find = useFind(surface, editor !== null, editorSeed(editor));
     const editorFind = useEditorFind(find, editor);
     const scope = useEditorScope(editor);
     useEffect(() => {
@@ -270,6 +270,8 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                         current={editorFind.current}
                         invalid={editorFind.invalid}
                         onStep={editorFind.step}
+                        onSelectAll={editorFind.selectAll}
+                        selectionScope={{ noSelection: editorFind.noSelection }}
                         replacement={{ onReplace: editorFind.replace, onReplaceAll: editorFind.replaceAll, disabledReason: readOnlyReason }}
                     />
                 )}

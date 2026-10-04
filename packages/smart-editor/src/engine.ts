@@ -13,6 +13,7 @@ import type {
     EditorFindQuery,
     EditorIndentation,
     EditorFindState,
+    EditorReplaceOptions,
     EditorGutterAction,
     EditorHighlight,
     EditorHover,
@@ -340,7 +341,7 @@ class SmartEditor implements Editor {
         this.view.stepFind(direction);
     }
 
-    replace(replacement: string): boolean {
+    replace(replacement: string, replaceOptions: EditorReplaceOptions = {}): boolean {
         const { find } = this.view;
         const mark = find.currentMark;
         const query = find.activeQuery;
@@ -354,8 +355,8 @@ class SmartEditor implements Editor {
                 return false;
             }
             // The next match is looked for after what was written, or a replacement that holds the query would find itself again.
-            find.pendingAnchor = mark.from + replacementText(this.model.getText(), match, replacement).length;
-            if (!this.model.replace(match, replacement)) {
+            find.pendingAnchor = mark.from + replacementText(this.model.getText(), match, replacement, false, replaceOptions.preserveCase).length;
+            if (!this.model.replace(match, replacement, { preserveCase: replaceOptions.preserveCase })) {
                 find.pendingAnchor = undefined;
                 return false;
             }
@@ -368,16 +369,67 @@ class SmartEditor implements Editor {
         return true;
     }
 
-    replaceAll(replacement: string): number {
+    replaceAll(replacement: string, options: EditorReplaceOptions = {}): number {
         const query = this.view.find.activeQuery;
         if (query === null || this.blockedByReadOnly()) {
             return 0;
         }
         try {
-            return this.model.replaceAll(query.text, replacement, { caseSensitive: query.caseSensitive, wholeWord: query.wholeWord, regex: query.regex });
+            return this.model.replaceAll(query.text, replacement, {
+                caseSensitive: query.caseSensitive,
+                wholeWord: query.wholeWord,
+                regex: query.regex,
+                preserveCase: options.preserveCase,
+                ...this.view.find.scope
+            });
         } catch {
             return 0;
         }
+    }
+
+    setReplacePreview(replacement: string | null, options: EditorReplaceOptions = {}): void {
+        this.view.setReplacePreview(replacement, options.preserveCase === true);
+    }
+
+    selectFindMatches(): number {
+        const { find } = this.view;
+        const marks = find.matches;
+        if (marks.length === 0) {
+            return 0;
+        }
+        const current = find.current ?? marks.length - 1;
+        const ordered = [...marks.slice(0, current), ...marks.slice(current + 1), marks[current]!];
+        this.view.setFind(null, false);
+        for (const mark of ordered) {
+            this.view.ensureVisible(mark.from);
+        }
+        this.model.setSelections(ordered.map((mark) => ({ anchor: mark.from, head: mark.to })));
+        this.view.revealCaret();
+        return ordered.length;
+    }
+
+    findFromCursor(query: EditorFindQuery, direction: 1 | -1): boolean {
+        if (query.text === '') {
+            return false;
+        }
+        let matches;
+        try {
+            matches = this.model.find(query.text, { caseSensitive: query.caseSensitive, wholeWord: query.wholeWord, regex: query.regex });
+        } catch {
+            return false;
+        }
+        if (matches.length === 0) {
+            return false;
+        }
+        const { anchor, head } = this.model.getPrimary();
+        const from = Math.min(anchor, head);
+        const to = Math.max(anchor, head);
+        const target =
+            direction === 1 ? (matches.find((match) => match.from >= to) ?? matches[0]!) : (matches.findLast((match) => match.to <= from) ?? matches.at(-1)!);
+        this.view.ensureVisible(target.from);
+        this.model.setSelections([direction === 1 ? { anchor: target.from, head: target.to } : { anchor: target.to, head: target.from }]);
+        this.view.revealCaret();
+        return true;
     }
 
     private blockedByReadOnly(): boolean {

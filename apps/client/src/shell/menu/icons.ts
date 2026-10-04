@@ -157,6 +157,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'edit-redo': Redo2,
     find: TextSearch,
     'find-replace': Replace,
+    'find-next': ArrowDown,
+    'find-previous': ArrowUp,
     'next-problem': ArrowDown,
     'previous-problem': ArrowUp,
     'code-actions': Lightbulb,

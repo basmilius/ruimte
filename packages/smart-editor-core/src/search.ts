@@ -1,3 +1,5 @@
+import { replaceWithCaseRespect } from './preserve-case.ts';
+
 export interface FindOptions {
     caseSensitive?: boolean;
     wholeWord?: boolean;
@@ -81,11 +83,13 @@ export function findMatches(text: string, query: string, revision: number, optio
     return matches;
 }
 
-/* Expands the JavaScript `$` patterns of a regex replacement. Literal replacements are returned as they are. */
-export function replacementText(text: string, match: FindMatch, replacement: string, literal = false): string {
-    if (literal || !match.regex) {
-        return replacement;
-    }
+/* Expands the JavaScript `$` patterns of a regex replacement, and gives it the case of the match when asked. Literal replacements are returned as they are. */
+export function replacementText(text: string, match: FindMatch, replacement: string, literal = false, preserveCase = false): string {
+    const expanded = literal || !match.regex ? replacement : expandPatterns(text, match, replacement);
+    return preserveCase ? replaceWithCaseRespect(expanded, match.text) : expanded;
+}
+
+function expandPatterns(text: string, match: FindMatch, replacement: string): string {
     return replacement.replace(/\$(\$|&|`|'|\d{1,2}|<[^>]*>)/g, (token: string, group: string) => {
         if (group === '$') {
             return '$';

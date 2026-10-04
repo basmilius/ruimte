@@ -49,6 +49,8 @@ export interface TypeTextOptions extends CommandOptions {
 export interface ReplaceOptions extends DocumentEditOptions {
     /* Insert the replacement as it is, without expanding `$1` and the like. */
     literal?: boolean;
+    /* The replacement takes the case of the text it replaces. */
+    preserveCase?: boolean;
 }
 
 export interface ReplaceAllOptions extends FindOptions, ReplaceOptions {}
@@ -531,11 +533,14 @@ export class DocumentModel {
         if (this.slice(match.from, match.to) !== match.text) {
             return false;
         }
-        return this.applyEdits([{ from: match.from, to: match.to, text: replacementText(this.getText(), match, replacement, options.literal) }], {
-            source: 'command',
-            ...options,
-            expectedRevision: match.revision
-        });
+        return this.applyEdits(
+            [{ from: match.from, to: match.to, text: replacementText(this.getText(), match, replacement, options.literal, options.preserveCase) }],
+            {
+                source: 'command',
+                ...options,
+                expectedRevision: match.revision
+            }
+        );
     }
 
     /* One undo step. Returns the number of replacements, 0 when nothing changed. */
@@ -545,7 +550,11 @@ export class DocumentModel {
         }
         const matches = this.find(query, options);
         const text = this.getText();
-        const edits = matches.map((match) => ({ from: match.from, to: match.to, text: replacementText(text, match, replacement, options.literal) }));
+        const edits = matches.map((match) => ({
+            from: match.from,
+            to: match.to,
+            text: replacementText(text, match, replacement, options.literal, options.preserveCase)
+        }));
         return this.applyEdits(edits, { source: 'command', ...options }) ? matches.length : 0;
     }
 

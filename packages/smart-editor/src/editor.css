@@ -75,6 +75,22 @@
 .se-carets {
     z-index: 3;
 }
+.se-preview {
+    position: absolute;
+    z-index: 4;
+    max-width: 360px;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 1px var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    white-space: pre-wrap;
+    pointer-events: none;
+    transform: translate(-50%, 4px);
+}
 
 .se-line {
     position: absolute;

@@ -1,4 +1,4 @@
-import { type DocumentModel, type EditorSnapshot, type FoldingRange, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
+import { type DocumentModel, type EditorSnapshot, type FoldingRange, replacementText, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
 import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
@@ -96,6 +96,7 @@ export class EditorView {
     private readonly overlays: HTMLElement;
     private readonly over: HTMLElement;
     private readonly carets: HTMLElement;
+    private readonly preview: HTMLElement;
     private readonly notice: HTMLElement;
     private readonly sticky: HTMLElement;
     private readonly overview: HTMLElement;
@@ -139,6 +140,7 @@ export class EditorView {
     private inlays: Inlay[] = [];
     private blocks: BlockWidget[] = [];
     private occurrences: Occurrence[] = [];
+    private replacePreview: { text: string; preserveCase: boolean } | null = null;
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
     private foldRanges: FoldingRange[] = [];
@@ -176,11 +178,14 @@ export class EditorView {
         const code = make('div', 'se-code');
         this.over = make('div', 'se-over');
         this.carets = make('div', 'se-carets');
+        this.preview = make('div', 'se-preview');
+        this.preview.setAttribute('aria-hidden', 'true');
+        this.preview.hidden = true;
         for (const layer of [this.overlays, this.over, this.carets]) {
             layer.setAttribute('aria-hidden', 'true');
         }
         code.setAttribute('aria-hidden', 'true');
-        this.content.append(this.overlays, code, this.over, this.carets);
+        this.content.append(this.overlays, code, this.over, this.carets, this.preview);
         // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
         const scroller = make('div', 'se-scroller');
         // The pinned headers stick to the corner the same way, which keeps them still against the text while the browser scrolls.
@@ -410,6 +415,7 @@ export class EditorView {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
                 this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
+                this.find.mapBounds(changes);
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
                 this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
@@ -775,6 +781,45 @@ export class EditorView {
         this.revealOffset(this.model.getPrimary().head);
     }
 
+    /* What a regular expression replacement writes for the match the find is on, drawn under that match; null takes it away. */
+    setReplacePreview(replacement: string | null, preserveCase = false): void {
+        this.replacePreview = replacement === null ? null : { text: replacement, preserveCase };
+        this.paintPreview();
+    }
+
+    /* Shown only when it says something the replacement text does not, as a regular expression's does. */
+    private paintPreview(): void {
+        const mark = this.find.currentMark;
+        const query = this.find.activeQuery;
+        const wanted = this.replacePreview;
+        let shown: string | null = null;
+        if (wanted !== null && mark !== null && query?.regex === true) {
+            try {
+                const match = this.model.find(query.text, {
+                    caseSensitive: query.caseSensitive,
+                    wholeWord: query.wholeWord,
+                    regex: true,
+                    from: mark.from,
+                    to: mark.to,
+                    maxResults: 1
+                })[0];
+                const text = match === undefined ? wanted.text : replacementText(this.model.getText(), match, wanted.text, false, wanted.preserveCase);
+                shown = text === wanted.text ? null : text;
+            } catch {
+                shown = null;
+            }
+        }
+        this.preview.hidden = shown === null;
+        if (shown === null || mark === null) {
+            return;
+        }
+        const start = this.layout.caret(mark.from);
+        const end = this.layout.caret(mark.to);
+        this.preview.textContent = shown;
+        this.preview.style.left = `${(start.x + end.x) / 2}px`;
+        this.preview.style.top = `${end.y + end.height}px`;
+    }
+
     setFind(query: EditorFindQuery | null, reveal: boolean): void {
         this.find.set(query);
         this.announceFind();
@@ -910,6 +955,7 @@ export class EditorView {
             this.content.style.width = `${Math.max(this.layout.width, this.viewportWidth)}px`;
             this.renderedScroll = { top: this.viewport.scrollTop, left: this.viewport.scrollLeft };
             this.paintDecorations(rows);
+            this.paintPreview();
             this.paintSticky();
             this.paintOverview();
             this.announceScope();

@@ -51,6 +51,8 @@ export const PALETTE_IDS = [
     'reveal',
     'find',
     'find-replace',
+    'find-next',
+    'find-previous',
     'next-problem',
     'previous-problem',
     'next-highlight',
