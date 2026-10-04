@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { mountEditor } from './testing.ts';
-import type { EditorFindState, EditorOptions, KeyChord, LineTokenizer, SmartEditorEngineOptions } from './types.ts';
+import type { EditorFindQuery, EditorFindState, EditorOptions, KeyChord, LineTokenizer, SmartEditorEngineOptions } from './types.ts';
 
 function setup(options: Partial<EditorOptions> = {}, engineOptions: Partial<SmartEditorEngineOptions> = {}) {
     const mounted = mountEditor(options, engineOptions);
@@ -345,5 +345,68 @@ describe('disposing', () => {
         key('s', { ctrlKey: true });
         expect(saves).toBe(0);
         editor.dispose();
+    });
+});
+
+describe('replace', () => {
+    const query = (text: string, options: Partial<EditorFindQuery> = {}): EditorFindQuery => ({
+        text,
+        caseSensitive: false,
+        wholeWord: false,
+        regex: false,
+        ...options
+    });
+
+    test('replaces the current match and moves on to the next', () => {
+        const { editor } = setup({ text: 'a one a two a three' });
+        const states: EditorFindState[] = [];
+        editor.onFind((state) => states.push(state));
+        editor.find(query('a'));
+        expect(editor.replace('X')).toBe(true);
+        expect(editor.getText()).toBe('X one a two a three');
+        expect(states.at(-1)).toEqual({ count: 2, current: 0 });
+        editor.replace('Y');
+        expect(editor.getText()).toBe('X one Y two a three');
+    });
+
+    test('looks for the next match after what it wrote when the replacement holds the query', () => {
+        const { editor } = setup({ text: 'a a' });
+        editor.find(query('a'));
+        editor.replace('aa');
+        expect(editor.getText()).toBe('aa a');
+        editor.replace('aa');
+        expect(editor.getText()).toBe('aa aa');
+    });
+
+    test('expands the groups of a regular expression and replaces every match as one undo step', () => {
+        const { editor, press } = setup({ text: 'ab1 cd2' });
+        editor.find(query('([a-z]+)(\\d)', { regex: true }));
+        expect(editor.replaceAll('$2$1')).toBe(2);
+        expect(editor.getText()).toBe('1ab 2cd');
+        press('z', { metaKey: true, ctrlKey: true });
+        expect(editor.getText()).toBe('ab1 cd2');
+    });
+
+    test('does nothing without a match, with a pattern that does not parse or in a read-only editor', () => {
+        const { editor } = setup({ text: 'abc', readOnly: true, readOnlyReason: 'Read only' });
+        editor.find(query('b'));
+        expect(editor.replace('x')).toBe(false);
+        expect(editor.replaceAll('x')).toBe(0);
+        expect(editor.getText()).toBe('abc');
+        const writable = setup({ text: 'abc' }).editor;
+        writable.find(query('('));
+        expect(writable.replace('x')).toBe(false);
+        expect(writable.replaceAll('x')).toBe(0);
+        writable.find(query('zzz'));
+        expect(writable.replace('x')).toBe(false);
+    });
+
+    test('reports the edit as a change', () => {
+        const { editor } = setup({ text: 'a a' });
+        let changes = 0;
+        editor.onChange(() => changes++);
+        editor.find(query('a'));
+        editor.replaceAll('b');
+        expect(changes).toBe(1);
     });
 });

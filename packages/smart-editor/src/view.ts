@@ -568,7 +568,7 @@ export class EditorView {
         }
     }
 
-    private revealFind(): void {
+    revealFind(): void {
         const mark = this.find.currentMark;
         if (!mark) {
             return;

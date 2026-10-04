@@ -546,7 +546,8 @@
             "toggleFlag": "Vlag zetten of weghalen",
             "newWindow": "Een nieuw venster openen",
             "moveToNewWindow": "Dit project naar een nieuw venster verplaatsen",
-            "onboarding": "Ruimte instellen"
+            "onboarding": "Ruimte instellen",
+            "findReplace": "Zoeken en vervangen in bestand"
         },
         "sections": {
             "recent": "Recent",
@@ -728,6 +729,7 @@
         "newWindow": "Nieuw venster",
         "newChat": "Nieuwe chat",
         "moveToNewWindow": "Naar nieuw venster verplaatsen",
-        "onboarding": "Ruimte instellen…"
+        "onboarding": "Ruimte instellen…",
+        "findReplace": "Zoeken en vervangen"
     }
 }

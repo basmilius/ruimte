@@ -43,6 +43,7 @@ export const PALETTE_IDS = [
     'chat-new',
     'reveal',
     'find',
+    'find-replace',
     'find-in-files',
     'view-new',
     'view-new-drawing',

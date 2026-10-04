@@ -109,6 +109,20 @@ export class FakeEditor implements Editor {
         this.announceFind({ count, current: count === 0 ? null : 0 });
     }
 
+    /* What the client asked to replace, one match at a time and all at once. */
+    replacements: string[] = [];
+    replacementsOfAll: string[] = [];
+
+    replace(replacement: string): boolean {
+        this.replacements.push(replacement);
+        return !this.readOnly && this.findState.count > 0;
+    }
+
+    replaceAll(replacement: string): number {
+        this.replacementsOfAll.push(replacement);
+        return this.readOnly ? 0 : this.findState.count;
+    }
+
     findStep(direction: 1 | -1): void {
         const { count, current } = this.findState;
         if (count > 0) {

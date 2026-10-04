@@ -184,6 +184,12 @@ export function useCanvasShortcuts(): void {
                 }
                 return;
             }
+            if (is(CANVAS_SHORTCUTS.findReplace)) {
+                if (!isInFloatingLayer(e.target) && !useUi.getState().settings.open && openFocusedFind({ replace: true })) {
+                    e.preventDefault();
+                }
+                return;
+            }
             /* The grid answers from anywhere, a focused node or a text field included: splitting,
                closing and stepping between cells are about the window, not about what is in a cell. */
             if (is(CANVAS_SHORTCUTS.splitRight) || is(CANVAS_SHORTCUTS.splitDown)) {

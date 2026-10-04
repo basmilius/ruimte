@@ -99,6 +99,14 @@
         "regex": "Reguliere expressie gebruiken",
         "previous": "Vorige treffer",
         "next": "Volgende treffer",
-        "close": "Sluiten"
+        "close": "Sluiten",
+        "replace": {
+            "label": "Vervangen door",
+            "one": "Vervang",
+            "all": "Alles",
+            "allLabel": "Alles vervangen",
+            "toggle": "Vervangen tonen",
+            "hide": "Vervangen verbergen"
+        }
     }
 }

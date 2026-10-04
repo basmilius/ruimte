@@ -79,6 +79,10 @@ export interface Editor {
        count comes back through `onFind`, and again whenever an edit changes it. */
     find(query: EditorFindQuery | null): void;
     findStep(direction: 1 | -1): void;
+    /* Replaces the match the find is on, with `$1` and the like expanded for a regular expression, and moves to the next one. False when there is none or the editor is read only. */
+    replace(replacement: string): boolean;
+    /* Replaces every match in one undo step, and says how many there were. */
+    replaceAll(replacement: string): number;
     onFind(listener: (state: EditorFindState) => void): () => void;
     /* Takes the marks away and selects the match the find was on, so the cursor is where it stopped. */
     endFind(): void;

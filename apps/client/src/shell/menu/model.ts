@@ -298,6 +298,7 @@ export function menuModel(context: MenuContext): MenuSpec {
             ),
             separator,
             ...only(workspace && !context.settingsOpen, command('find', t('find'), { shortcut: CANVAS_SHORTCUTS.find })),
+            ...only(workspace && !context.settingsOpen, command('find-replace', t('findReplace'), { shortcut: CANVAS_SHORTCUTS.findReplace })),
             ...only(context.settingsOpen, command('settings-search', t('searchSettings'), { shortcut: APP_SHORTCUTS.settingsSearch })),
             ...only(workspace && context.folder, command('find-in-files', t('findInFiles'), { shortcut: APP_SHORTCUTS.findInFiles }))
         ]

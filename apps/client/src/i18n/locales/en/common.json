@@ -99,6 +99,14 @@
         "regex": "Use regular expression",
         "previous": "Previous match",
         "next": "Next match",
-        "close": "Close"
+        "close": "Close",
+        "replace": {
+            "label": "Replace with",
+            "one": "Replace",
+            "all": "All",
+            "allLabel": "Replace all",
+            "toggle": "Show replace",
+            "hide": "Hide replace"
+        }
     }
 }

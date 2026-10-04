@@ -4,5 +4,7 @@ import { shortcut } from '@basmilius/desktop-ui';
 export const FIND_SHORTCUTS = {
     next: shortcut('Enter'),
     previous: shortcut('Shift+Enter'),
-    close: shortcut('Escape')
+    close: shortcut('Escape'),
+    /* In the replace field, where Enter replaces one. */
+    replaceAll: shortcut('Mod+Enter')
 } as const;

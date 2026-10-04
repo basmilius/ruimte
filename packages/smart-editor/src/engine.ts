@@ -1,4 +1,4 @@
-import { DocumentModel } from '@ruimte/smart-editor-core';
+import { DocumentModel, replacementText } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import { changedSpan } from './text-span.ts';
@@ -141,6 +141,56 @@ class SmartEditor implements Editor {
 
     findStep(direction: 1 | -1): void {
         this.view.stepFind(direction);
+    }
+
+    replace(replacement: string): boolean {
+        const { find } = this.view;
+        const mark = find.currentMark;
+        const query = find.activeQuery;
+        if (mark === null || query === null || this.blockedByReadOnly()) {
+            return false;
+        }
+        try {
+            const options = { caseSensitive: query.caseSensitive, wholeWord: query.wholeWord, regex: query.regex, from: mark.from, to: mark.to, maxResults: 1 };
+            const match = this.model.find(query.text, options)[0];
+            if (match === undefined) {
+                return false;
+            }
+            // The next match is looked for after what was written, or a replacement that holds the query would find itself again.
+            find.pendingAnchor = mark.from + replacementText(this.model.getText(), match, replacement).length;
+            if (!this.model.replace(match, replacement)) {
+                find.pendingAnchor = undefined;
+                return false;
+            }
+        } catch {
+            find.pendingAnchor = undefined;
+            return false;
+        }
+        this.view.revealFind();
+        this.view.render();
+        return true;
+    }
+
+    replaceAll(replacement: string): number {
+        const query = this.view.find.activeQuery;
+        if (query === null || this.blockedByReadOnly()) {
+            return 0;
+        }
+        try {
+            return this.model.replaceAll(query.text, replacement, { caseSensitive: query.caseSensitive, wholeWord: query.wholeWord, regex: query.regex });
+        } catch {
+            return 0;
+        }
+    }
+
+    private blockedByReadOnly(): boolean {
+        if (!this.settings.readOnly) {
+            return false;
+        }
+        if (this.settings.readOnlyReason) {
+            this.view.notify(this.settings.readOnlyReason);
+        }
+        return true;
     }
 
     onFind(listener: (state: EditorFindState) => void): () => void {

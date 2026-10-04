@@ -17,11 +17,17 @@ export class FindController {
     private query: EditorFindQuery | null = null;
     private marks: FindMark[] = [];
     private index: number | null = null;
+    /* Where the next refresh looks for the current match from, once: right after what a replace wrote. */
+    pendingAnchor: number | undefined;
 
     private readonly model: DocumentModel;
 
     constructor(model: DocumentModel) {
         this.model = model;
+    }
+
+    get activeQuery(): EditorFindQuery | null {
+        return this.query;
     }
 
     get active(): boolean {
@@ -72,7 +78,8 @@ export class FindController {
         }
         this.marks = found;
         const selection = this.model.getSelections()[0]!;
-        const anchor = previous?.from ?? Math.min(selection.anchor, selection.head);
+        const anchor = this.pendingAnchor ?? previous?.from ?? Math.min(selection.anchor, selection.head);
+        this.pendingAnchor = undefined;
         const next = found.findIndex((mark) => mark.from >= anchor);
         this.index = found.length === 0 ? null : Math.max(0, next);
     }

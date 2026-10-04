@@ -7,6 +7,11 @@ export interface FindState {
     query: FindQuery;
     /* Counts every time the bar is asked for, so a bar that is already open takes the keyboard again. */
     summons: number;
+    /* The replace row of the bar and what it will write; only a surface that can replace draws it. */
+    replaceOpen: boolean;
+    replaceText: string;
+    setReplaceOpen(open: boolean): void;
+    setReplaceText(text: string): void;
     setQuery(query: FindQuery): void;
     close(): void;
 }
@@ -23,6 +28,8 @@ export function useFind(surface: RefObject<HTMLElement | null>, enabled = true):
     const [open, setOpen] = useState(false);
     const [query, setQueryState] = useState<FindQuery>(EMPTY_FIND_QUERY);
     const [summons, setSummons] = useState(0);
+    const [replaceOpen, setReplaceOpen] = useState(false);
+    const [replaceText, setReplaceText] = useState('');
     const openRef = useRef(false);
     const returnTo = useRef<HTMLElement | null>(null);
 
@@ -33,7 +40,7 @@ export function useFind(surface: RefObject<HTMLElement | null>, enabled = true):
         }
         return registerFindHost({
             element,
-            open: () => {
+            open: (options) => {
                 const active = document.activeElement;
                 if (active instanceof HTMLElement && active.closest('[data-find-bar]') === null) {
                     returnTo.current = active;
@@ -42,6 +49,9 @@ export function useFind(surface: RefObject<HTMLElement | null>, enabled = true):
                     openRef.current = true;
                     setOpen(true);
                     setQueryState(lastQuery);
+                }
+                if (options?.replace === true) {
+                    setReplaceOpen(true);
                 }
                 setSummons((count) => count + 1);
             }
@@ -71,5 +81,5 @@ export function useFind(surface: RefObject<HTMLElement | null>, enabled = true):
         }
     }, [enabled]);
 
-    return { open, query, summons, setQuery, close };
+    return { open, query, summons, replaceOpen, replaceText, setReplaceOpen, setReplaceText, setQuery, close };
 }

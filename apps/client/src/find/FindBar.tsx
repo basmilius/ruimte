@@ -1,19 +1,27 @@
 import { useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { CaseSensitive, ChevronDown, ChevronUp, Regex, Search, WholeWord, X, type LucideIcon } from 'lucide-react';
+import { CaseSensitive, ChevronDown, ChevronRight, ChevronUp, CornerDownLeft, Regex, Search, WholeWord, X, type LucideIcon } from 'lucide-react';
 import { isApplePlatform } from '@/desktop/bridge';
 import type { FindOptions } from '@/find/query';
 import { FIND_SHORTCUTS } from '@/find/shortcuts';
 import type { FindState } from '@/find/use-find';
 import { formatNumber } from '@basmilius/desktop-ui/format';
-import { ButtonGroup, Icon, IconButton, Separator, Surface, matchesShortcut, type Shortcut, Tooltip } from '@basmilius/desktop-ui';
+import { Button, ButtonGroup, Icon, IconButton, Surface, matchesShortcut, type Shortcut, Tooltip } from '@basmilius/desktop-ui';
 
 const OPTIONS: readonly { key: keyof FindOptions; icon: LucideIcon; label: string }[] = [
     { key: 'caseSensitive', icon: CaseSensitive, label: 'find.caseSensitive' },
     { key: 'wholeWord', icon: WholeWord, label: 'find.wholeWord' },
     { key: 'regex', icon: Regex, label: 'find.regex' }
 ];
+
+/* What a surface that can replace hands the bar: what to do, and why it cannot while it cannot. */
+export interface FindReplacement {
+    onReplace(): void;
+    onReplaceAll(): void;
+    /* Why this surface cannot be written to right now, such as a file that is read only. */
+    disabledReason?: string | null;
+}
 
 export interface FindBarProps {
     find: FindState;
@@ -26,39 +34,73 @@ export interface FindBarProps {
     unsupported?: Partial<Record<keyof FindOptions, string>>;
     /* Why this surface cannot be searched at all; the bar still opens, to say so. */
     disabledReason?: string | null;
+    /* Gives the bar a replace row, behind the arrow at its left. */
+    replacement?: FindReplacement;
     className?: string;
 }
 
 /*
- * The one find bar, at the top right of the surface it searches: the field, how many it found, the
- * three toggles, and the way through them. What a match is and where it is drawn is the surface's.
+ * The one find bar, a panel at the top right of the surface it searches: the field with its three
+ * toggles, how many it found and the way through them, and under it, where the surface can replace,
+ * what to write in place. What a match is and where it is drawn is the surface's.
  */
-export function FindBar({ find, total, current, invalid = false, onStep, unsupported = {}, disabledReason = null, className }: FindBarProps) {
+export function FindBar({ find, total, current, invalid = false, onStep, unsupported = {}, disabledReason = null, replacement, className }: FindBarProps) {
     const { t } = useTranslation('common');
     const input = useRef<HTMLInputElement>(null);
     const { query, setQuery, summons } = find;
     const disabled = disabledReason !== null;
+    const replacing = replacement !== undefined && find.replaceOpen;
+    const cannotReplace = disabled || total === 0 || (replacement?.disabledReason ?? null) !== null;
 
     useLayoutEffect(() => {
         input.current?.focus();
         input.current?.select();
     }, [summons]);
 
-    const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>): void => {
-        if (e.nativeEvent.isComposing) {
-            return;
+    const keys = (event: ReactKeyboardEvent<HTMLInputElement>): Shortcut | null => {
+        if (event.nativeEvent.isComposing) {
+            return null;
         }
         const apple = isApplePlatform();
-        const is = (target: Shortcut): boolean => matchesShortcut(target, e.nativeEvent, apple);
-        if (is(FIND_SHORTCUTS.close)) {
+        return (
+            (['close', 'next', 'previous'] as const).map((name) => FIND_SHORTCUTS[name]).find((target) => matchesShortcut(target, event.nativeEvent, apple)) ??
+            null
+        );
+    };
+
+    const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>): void => {
+        const key = keys(e);
+        if (key === FIND_SHORTCUTS.close) {
             // The surface around the bar keeps the keyboard; Escape there would step out of it.
             e.preventDefault();
             e.stopPropagation();
             find.close();
-        } else if (is(FIND_SHORTCUTS.next) || is(FIND_SHORTCUTS.previous)) {
+        } else if (key === FIND_SHORTCUTS.next || key === FIND_SHORTCUTS.previous) {
             e.preventDefault();
             if (!disabled) {
-                onStep(is(FIND_SHORTCUTS.previous) ? -1 : 1);
+                onStep(key === FIND_SHORTCUTS.previous ? -1 : 1);
+            }
+        }
+    };
+
+    /* Enter writes the replacement and moves on, and Mod+Enter writes it everywhere. */
+    const onReplaceKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>): void => {
+        if (e.nativeEvent.isComposing) {
+            return;
+        }
+        if (matchesShortcut(FIND_SHORTCUTS.replaceAll, e.nativeEvent, isApplePlatform())) {
+            e.preventDefault();
+            if (!cannotReplace) {
+                replacement?.onReplaceAll();
+            }
+        } else if (keys(e) === FIND_SHORTCUTS.close) {
+            e.preventDefault();
+            e.stopPropagation();
+            find.close();
+        } else if (matchesShortcut(FIND_SHORTCUTS.next, e.nativeEvent, isApplePlatform())) {
+            e.preventDefault();
+            if (!cannotReplace) {
+                replacement?.onReplace();
             }
         }
     };
@@ -89,7 +131,7 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
             value={disabled ? '' : query.text}
             onChange={(e) => setQuery({ ...query, text: e.target.value })}
             onKeyDown={onKeyDown}
-            className="h-7 w-40 min-w-0 bg-transparent text-sm text-text outline-none placeholder:text-text-faint aria-disabled:cursor-default"
+            className="h-full min-w-0 flex-1 bg-transparent text-xs text-text outline-none placeholder:text-text-faint aria-disabled:cursor-default"
         />
     );
 
@@ -97,52 +139,100 @@ export function FindBar({ find, total, current, invalid = false, onStep, unsuppo
         <Surface
             data-find-bar
             role="search"
-            className={clsx('absolute top-2 right-3 z-20 flex h-10 max-w-[calc(100%-24px)] items-center gap-2 rounded-lg pr-1 pl-3', className)}
+            className={clsx('absolute top-2 right-3 z-20 flex w-[440px] max-w-[calc(100%-24px)] flex-col gap-1.5 rounded-lg p-1.5', className)}
         >
-            <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
-            {disabled ? <Tooltip label={disabledReason}>{field}</Tooltip> : field}
-            {count !== null && <span className="shrink-0 text-xs whitespace-nowrap text-text-muted tabular-nums">{count}</span>}
-            <ButtonGroup>
-                {OPTIONS.map((option) => {
-                    const reason = disabled ? disabledReason : (unsupported[option.key] ?? null);
-                    return (
-                        <IconButton
-                            key={option.key}
-                            icon={option.icon}
-                            size="sm"
-                            label={t(option.label)}
-                            tooltip={reason ?? undefined}
-                            aria-pressed={reason === null && query[option.key]}
-                            aria-disabled={reason !== null}
-                            onClick={() => {
-                                if (reason === null) {
-                                    setQuery({ ...query, [option.key]: !query[option.key] });
-                                }
-                            }}
+            <div className="flex items-center gap-1.5">
+                {replacement !== undefined && (
+                    <IconButton
+                        icon={find.replaceOpen ? ChevronDown : ChevronRight}
+                        size="sm"
+                        label={find.replaceOpen ? t('find.replace.hide') : t('find.replace.toggle')}
+                        aria-expanded={find.replaceOpen}
+                        onClick={() => find.setReplaceOpen(!find.replaceOpen)}
+                    />
+                )}
+                <div className="field field-sm flex min-w-0 grow items-center gap-1.5 pr-0.5">
+                    <Icon icon={Search} size={12} className="shrink-0 text-text-faint" />
+                    {disabled ? <Tooltip label={disabledReason}>{field}</Tooltip> : field}
+                    <ButtonGroup>
+                        {OPTIONS.map((option) => {
+                            const reason = disabled ? disabledReason : (unsupported[option.key] ?? null);
+                            return (
+                                <IconButton
+                                    key={option.key}
+                                    icon={option.icon}
+                                    size="xs"
+                                    label={t(option.label)}
+                                    tooltip={reason ?? undefined}
+                                    aria-pressed={reason === null && query[option.key]}
+                                    aria-disabled={reason !== null}
+                                    onClick={() => {
+                                        if (reason === null) {
+                                            setQuery({ ...query, [option.key]: !query[option.key] });
+                                        }
+                                    }}
+                                />
+                            );
+                        })}
+                    </ButtonGroup>
+                </div>
+                {count !== null && <span className="shrink-0 text-xs whitespace-nowrap text-text-muted tabular-nums">{count}</span>}
+                <ButtonGroup>
+                    <IconButton
+                        icon={ChevronUp}
+                        size="sm"
+                        label={t('find.previous')}
+                        kbd={FIND_SHORTCUTS.previous}
+                        disabled={disabled || total === 0}
+                        onClick={() => onStep(-1)}
+                    />
+                    <IconButton
+                        icon={ChevronDown}
+                        size="sm"
+                        label={t('find.next')}
+                        kbd={FIND_SHORTCUTS.next}
+                        disabled={disabled || total === 0}
+                        onClick={() => onStep(1)}
+                    />
+                    <IconButton icon={X} size="sm" label={t('find.close')} kbd={FIND_SHORTCUTS.close} onClick={find.close} />
+                </ButtonGroup>
+            </div>
+            {replacing && (
+                <div className="flex items-center gap-1.5">
+                    {/* The width of the arrow above, so the two fields start on the same line. */}
+                    <span className="w-7 shrink-0" />
+                    <div className="field field-sm flex min-w-0 grow items-center gap-1.5">
+                        <Icon icon={CornerDownLeft} size={12} className="shrink-0 text-text-faint" />
+                        <input
+                            type="text"
+                            spellCheck={false}
+                            autoComplete="off"
+                            aria-label={t('find.replace.label')}
+                            placeholder={t('find.replace.label')}
+                            value={find.replaceText}
+                            onChange={(e) => find.setReplaceText(e.target.value)}
+                            onKeyDown={onReplaceKeyDown}
+                            className="h-full min-w-0 flex-1 bg-transparent text-xs text-text outline-none placeholder:text-text-faint"
                         />
-                    );
-                })}
-            </ButtonGroup>
-            <Separator />
-            <ButtonGroup>
-                <IconButton
-                    icon={ChevronUp}
-                    size="sm"
-                    label={t('find.previous')}
-                    kbd={FIND_SHORTCUTS.previous}
-                    disabled={disabled || total === 0}
-                    onClick={() => onStep(-1)}
-                />
-                <IconButton
-                    icon={ChevronDown}
-                    size="sm"
-                    label={t('find.next')}
-                    kbd={FIND_SHORTCUTS.next}
-                    disabled={disabled || total === 0}
-                    onClick={() => onStep(1)}
-                />
-                <IconButton icon={X} size="sm" label={t('find.close')} kbd={FIND_SHORTCUTS.close} onClick={find.close} />
-            </ButtonGroup>
+                    </div>
+                    <Tooltip label={replacement?.disabledReason ?? t('find.replace.one')}>
+                        <Button variant="secondary" size="sm" aria-disabled={cannotReplace} onClick={() => !cannotReplace && replacement?.onReplace()}>
+                            {t('find.replace.one')}
+                        </Button>
+                    </Tooltip>
+                    <Tooltip label={replacement?.disabledReason ?? t('find.replace.allLabel')}>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            aria-disabled={cannotReplace}
+                            aria-label={t('find.replace.allLabel')}
+                            onClick={() => !cannotReplace && replacement?.onReplaceAll()}
+                        >
+                            {t('find.replace.all')}
+                        </Button>
+                    </Tooltip>
+                </div>
+            )}
         </Surface>
     );
 }

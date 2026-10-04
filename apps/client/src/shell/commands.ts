@@ -226,6 +226,20 @@ export function appCommands(): Command[] {
                   }
               ]
             : []),
+        ...(inWorkspace
+            ? [
+                  {
+                      id: 'find-replace',
+                      label: i18next.t('shell:palette.commands.findReplace'),
+                      shortcut: CANVAS_SHORTCUTS.findReplace,
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              openFocusedFind({ replace: true });
+                          });
+                      }
+                  }
+              ]
+            : []),
         ...(folder
             ? [
                   {

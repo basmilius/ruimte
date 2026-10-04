@@ -546,7 +546,8 @@
             "toggleFlag": "Flag or unflag",
             "newWindow": "Open a new window",
             "moveToNewWindow": "Move this project to a new window",
-            "onboarding": "Set up Ruimte"
+            "onboarding": "Set up Ruimte",
+            "findReplace": "Find and replace in file"
         },
         "sections": {
             "recent": "Recent",
@@ -728,6 +729,7 @@
         "newWindow": "New Window",
         "newChat": "New Chat",
         "moveToNewWindow": "Move to New Window",
-        "onboarding": "Set Up Ruimte…"
+        "onboarding": "Set Up Ruimte…",
+        "findReplace": "Find and Replace"
     }
 }

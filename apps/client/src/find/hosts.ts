@@ -6,7 +6,12 @@ import { activeViewOf, useDocument } from '@/state/document';
 /* A surface that can be searched: the element it draws in, and what opens its bar. */
 export interface FindHost {
     element: HTMLElement;
-    open(): void;
+    /* `replace` asks for the bar with its replace row, which a surface that cannot replace draws without. */
+    open(options?: FindOpenOptions): void;
+}
+
+export interface FindOpenOptions {
+    replace?: boolean;
 }
 
 const hosts = new Set<FindHost>();
@@ -73,8 +78,8 @@ export function focusedFindHost(): FindHost | null {
 }
 
 /* False when nothing with the focus can be searched, so the key goes on to whatever else wants it. */
-export function openFocusedFind(): boolean {
+export function openFocusedFind(options?: FindOpenOptions): boolean {
     const host = focusedFindHost();
-    host?.open();
+    host?.open(options);
     return host !== null;
 }

@@ -241,7 +241,14 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
             )}
             <div ref={surface} className="relative flex min-h-0 min-w-0 grow flex-col">
                 {find.open && (
-                    <FindBar find={find} total={editorFind.total} current={editorFind.current} invalid={editorFind.invalid} onStep={editorFind.step} />
+                    <FindBar
+                        find={find}
+                        total={editorFind.total}
+                        current={editorFind.current}
+                        invalid={editorFind.invalid}
+                        onStep={editorFind.step}
+                        replacement={{ onReplace: editorFind.replace, onReplaceAll: editorFind.replaceAll, disabledReason: readOnlyReason }}
+                    />
                 )}
                 {!editing.viewer && editing.engine !== null && editing.indentation !== null ? (
                     <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">

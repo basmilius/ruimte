@@ -10,6 +10,9 @@ export interface EditorFind {
     current: number | null;
     invalid: boolean;
     step(direction: 1 | -1): void;
+    /* Writes `find.replaceText` in place of the match the find is on, or of every match. */
+    replace(): void;
+    replaceAll(): void;
 }
 
 /*
@@ -41,6 +44,8 @@ export function useEditorFind(find: FindState, editor: Editor | null): EditorFin
         total: find.open ? state.count : 0,
         current: find.open ? state.current : null,
         invalid: find.open && compiled.kind === 'invalid',
-        step: (direction) => editor?.findStep(direction)
+        step: (direction) => editor?.findStep(direction),
+        replace: () => void editor?.replace(find.replaceText),
+        replaceAll: () => void editor?.replaceAll(find.replaceText)
     };
 }
