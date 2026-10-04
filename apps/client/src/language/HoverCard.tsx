@@ -10,7 +10,7 @@ import { useCodeTheme } from '@/state/code-theme';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { EditorLanguage } from './editor-language';
 import { codeLabelOf, severityOf, type Problem } from './diagnostics-model';
-import { splitDocTags, type DocTag } from './hover-content';
+import { hoverSectionsOf, type DocTag, type HoverSection } from './hover-content';
 import type { HoverInfo } from './popups';
 
 const SEVERITY_ICONS = { error: CircleX, warning: TriangleAlert, info: Info, hint: Info } as const;
@@ -96,7 +96,7 @@ function DocTags({ tags }: { tags: readonly DocTag[] }) {
             {tags.map((tag, index) => (
                 <div key={index} className="contents">
                     <span className="font-mono text-text-faint">{tags[index - 1]?.name === tag.name ? '' : `@${tag.name}`}</span>
-                    <div className="min-w-0 break-words text-text-muted [&_.chat-markdown]:text-xs [&_p]:m-0">
+                    <div className="min-w-0 break-words text-text-muted [&_.chat-markdown]:text-xs [&_code]:bg-transparent! [&_code]:p-0! [&_p]:m-0">
                         <Markdown text={tag.markdown} fileLinks={false} />
                     </div>
                 </div>
@@ -105,31 +105,33 @@ function DocTags({ tags }: { tags: readonly DocTag[] }) {
     );
 }
 
+function SymbolSection({ section }: { section: HoverSection }) {
+    return (
+        <div className="flex flex-col gap-1.5 px-3 py-2">
+            {section.title !== null && <div className="truncate font-mono text-xs text-text-faint select-text">{section.title}</div>}
+            {section.signatures.map((block, index) => (
+                <Signature key={index} code={block.code} language={block.language} />
+            ))}
+            {section.markdown !== '' && (
+                <div className="text-text-muted select-text [&_.chat-markdown]:text-xs [&_p]:my-1">
+                    <Markdown text={section.markdown} fileLinks={false} />
+                </div>
+            )}
+            {section.tags.length > 0 && <DocTags tags={section.tags} />}
+        </div>
+    );
+}
+
 function InfoSection({ language, info }: { language: EditorLanguage; info: HoverInfo }) {
     const { t } = useTranslation('panels');
     const { text, definition } = info;
     const place = definition === null ? null : fileUriToPath(definition.uri);
-    const doc = splitDocTags(text.markdown);
 
     return (
-        <div className="flex flex-col">
-            {text.signatures.length > 0 && (
-                <div className="flex flex-col gap-1 px-3 py-2.5">
-                    {text.signatures.map((block, index) => (
-                        <Signature key={index} code={block.code} language={block.language} />
-                    ))}
-                </div>
-            )}
-            {text.markdown !== '' && (
-                <div className={`flex flex-col gap-2 px-3 py-2.5 ${text.signatures.length > 0 ? 'border-t border-border' : ''}`}>
-                    {doc.markdown !== '' && (
-                        <div className="text-text-muted select-text [&_.chat-markdown]:text-xs">
-                            <Markdown text={doc.markdown} fileLinks={false} />
-                        </div>
-                    )}
-                    {doc.tags.length > 0 && <DocTags tags={doc.tags} />}
-                </div>
-            )}
+        <div className="flex flex-col divide-y divide-border">
+            {hoverSectionsOf(text).map((section, index) => (
+                <SymbolSection key={index} section={section} />
+            ))}
             {definition !== null && (
                 <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-xs">
                     <button type="button" className="text-accent hover:underline" onClick={() => language.goTo(definition)}>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hoverTextOf, isEmptyHover, locationsOf, splitDocTags, splitSignatures } from './hover-content';
+import { hoverSectionsOf, hoverTextOf, isEmptyHover, locationsOf, splitDocTags, splitSignatures } from './hover-content';
 
 describe('splitSignatures', () => {
     test('takes the leading code as the signature and the prose after the rule as the documentation', () => {
@@ -65,5 +65,36 @@ describe('splitDocTags', () => {
     test('leaves prose that mentions an @ and an example as they are', () => {
         const text = 'Mail @bas about it.\n\n*@example*\n```ts\nshare()\n```';
         expect(splitDocTags(text)).toEqual({ markdown: text, tags: [] });
+    });
+});
+
+describe('hoverSectionsOf', () => {
+    const php =
+        '__Passly\\Message\\IssueTicketsMessage__\n\nClass IssueTicketsMessage\n\n```php\n<?php\nfinal class IssueTicketsMessage {\n```\n\n---\n\n' +
+        '__Passly\\Message\\IssueTicketsMessage::__construct__\n\nIssueTicketsMessage constructor.\n\n```php\n<?php\npublic function __construct(string $id) {\n```\n\n_@param_ `string $id`\n\n---\n\n' +
+        '__Passly\\Message\\IssueTicketsMessage::__construct__\n\nIssueTicketsMessage constructor.\n\n```php\n<?php\npublic function __construct(string $id) {\n```\n\n_@param_ `string $id`';
+
+    test("splits the PHP server's symbols at its rules, with the snippet as the signature and the tags apart", () => {
+        const sections = hoverSectionsOf(hoverTextOf({ contents: { kind: 'markdown', value: php } }));
+        expect(sections).toHaveLength(2);
+        expect(sections[0]).toEqual({
+            title: 'Passly\\Message\\IssueTicketsMessage',
+            signatures: [{ language: 'php', code: 'final class IssueTicketsMessage {' }],
+            markdown: 'Class IssueTicketsMessage',
+            tags: []
+        });
+        expect(sections[1]!.tags).toEqual([{ name: 'param', markdown: '`string $id`' }]);
+    });
+
+    test("keeps the TypeScript server's leading signature with the prose after its rule", () => {
+        const sections = hoverSectionsOf(splitSignatures('```ts\nfunction share(): number\n```\n---\nShare.\n\n*@returns* — a fraction'));
+        expect(sections).toEqual([
+            {
+                title: null,
+                signatures: [{ language: 'ts', code: 'function share(): number' }],
+                markdown: 'Share.',
+                tags: [{ name: 'returns', markdown: 'a fraction' }]
+            }
+        ]);
     });
 });

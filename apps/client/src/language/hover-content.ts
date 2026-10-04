@@ -119,3 +119,59 @@ export function splitDocTags(markdown: string): { readonly markdown: string; rea
     }
     return { markdown: kept.join('\n\n').trim(), tags };
 }
+
+/* One symbol of a hover. A server can describe several at once, such as a class and its constructor. */
+export interface HoverSection {
+    /* The qualified name a server heads the section with, when it gives one. */
+    readonly title: string | null;
+    readonly signatures: readonly SignatureBlock[];
+    readonly markdown: string;
+    readonly tags: readonly DocTag[];
+}
+
+const RULE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/m;
+const TITLE = /^(?:__(.+)__|\*\*(.+)\*\*)\s*(?:\n|$)/;
+const ANY_FENCE = /```([\w+#.-]*)[^\n]*\n([\s\S]*?)\n```[ \t]*(?:\n|$)/;
+
+/* The PHP server opens every snippet with a tag the reader does not need to see. */
+function withoutOpenTag(block: SignatureBlock): SignatureBlock {
+    return { language: block.language, code: block.code.replace(/^<\?php\s*\n/, '') };
+}
+
+function sectionOf(chunk: string, leading: readonly SignatureBlock[]): HoverSection {
+    let rest = chunk.trim();
+    const title = TITLE.exec(rest);
+    if (title !== null) {
+        rest = rest.slice(title[0].length).trim();
+    }
+    const signatures = [...leading];
+    // A section's own snippet is its first block; one further down after the prose, such as an example, stays prose.
+    const fence = ANY_FENCE.exec(rest);
+    if (fence !== null && !/@example/.test(rest.slice(0, fence.index))) {
+        signatures.push({ language: fence[1] || 'text', code: fence[2]! });
+        rest = (rest.slice(0, fence.index) + rest.slice(fence.index + fence[0].length)).trim();
+    }
+    const doc = splitDocTags(rest);
+    return {
+        title: title === null ? null : (title[1] ?? title[2])!.trim(),
+        signatures: signatures.map(withoutOpenTag),
+        markdown: doc.markdown,
+        tags: doc.tags
+    };
+}
+
+/* The symbols of a hover apart, split where a server draws a rule between them, each described once. */
+export function hoverSectionsOf(text: HoverText): HoverSection[] {
+    const chunks = text.markdown === '' ? [''] : text.markdown.split(RULE);
+    const sections = chunks.map((chunk, index) => sectionOf(chunk, index === 0 ? text.signatures : []));
+    const seen = new Set<string>();
+    return sections.filter((section) => {
+        const empty = section.title === null && section.signatures.length === 0 && section.markdown === '' && section.tags.length === 0;
+        const key = JSON.stringify([section.title, section.signatures, section.markdown]);
+        if (empty || seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+}
