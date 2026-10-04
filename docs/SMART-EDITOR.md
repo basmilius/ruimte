@@ -12,6 +12,9 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 
 ## Decisions
 
+- The keymap follows the platform's macOS keymap wherever it does not collide with Ruimte's own shortcuts; every shortcut keeps a modifier.
+- Camel-hump word movement is off by default and a setting.
+
 - The daemon is the brain. A client never talks to a language server itself.
 - Language servers are installed only when a person asks, pinned, under `$RUIMTE_HOME/language-servers`, and run on the daemon's own Bun. A project's own `typescript` comes first.
 - A Vue project runs one TypeScript server with the Vue plugin for every script, so a `.ts` file sees the types of a `.vue` file.
@@ -33,6 +36,7 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 | 4a | Binding, status bar, diagnostics, semantic tokens, inlay hints, hover, completion, signature help, highlights, symbols, Vue | Done |
 | 4b | Workspace edits and commands, code actions, rename, go to definition, peek references, go to symbol, Problems, context menu, clickable names in the hover | Done |
 | Test round | A round of testing the editor without AI before building on it | Now |
+| Platform parity | The gaps a comparison with the platform's sources found: typing and editing (A), code insight (C), then carets, mouse and view (B) with the keymap | Now |
 | 5 | AI in the editor | After the test round |
 | 6 | On the device | After 5 |
 | Cleanup | Remove the previous engine, close the known limits | When parity is confirmed |
