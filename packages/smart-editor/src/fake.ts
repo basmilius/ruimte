@@ -1,4 +1,4 @@
-import type { Editor, EditorEngine, EditorFindQuery, EditorFindState, EditorIndentation, EditorOptions, EditorTheme } from './types.ts';
+import type { Editor, EditorBlock, EditorEngine, EditorFindQuery, EditorFindState, EditorIndentation, EditorOptions, EditorTheme } from './types.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 
 /* An editor without a DOM, for tests: `type`, `save` and `blur` do what a person would, the rest says what the client asked of it. */
@@ -121,6 +121,28 @@ export class FakeEditor implements Editor {
         this.wrap = wrap;
     }
 
+    /* What the client handed it last; null while it reads the structure itself. */
+    blocks: readonly EditorBlock[] | null = null;
+    private readonly scopes = new Set<(scope: readonly EditorBlock[]) => void>();
+
+    setBlocks(blocks: readonly EditorBlock[] | null): void {
+        this.blocks = blocks;
+    }
+
+    onScope(listener: (scope: readonly EditorBlock[]) => void): () => void {
+        this.scopes.add(listener);
+        return () => {
+            this.scopes.delete(listener);
+        };
+    }
+
+    /* The caret moving into blocks, for a test of what the client draws from it. */
+    enterScope(scope: readonly EditorBlock[]): void {
+        for (const listener of [...this.scopes]) {
+            listener(scope);
+        }
+    }
+
     setIndentation(indentation: EditorIndentation): void {
         this.indentation = indentation;
     }
@@ -148,6 +170,7 @@ export class FakeEditor implements Editor {
         this.saves.clear();
         this.blurs.clear();
         this.finds.clear();
+        this.scopes.clear();
     }
 
     private announceFind(state: EditorFindState): void {

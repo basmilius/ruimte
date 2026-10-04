@@ -131,6 +131,8 @@
     /* What the editor (`@ruimte/smart-editor`) marks beyond a find: a selection weak enough that code keeps its colors under it, and the other uses of a name. */
     --editor-selection: color-mix(in srgb, var(--accent) 16%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 7%, transparent);
+    /* The soft edge under the headers sticky scroll pins over the code. */
+    --editor-sticky-shadow: rgb(0 0 0 / 0.12);
     --note-yellow: #fff3bf;
     --note-green: #dcf5e3;
     --note-blue: #dbe9ff;
@@ -220,6 +222,7 @@
     --find-current-text: #18181b;
     --editor-selection: color-mix(in srgb, var(--accent) 28%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 9%, transparent);
+    --editor-sticky-shadow: rgb(0 0 0 / 0.6);
     --note-yellow: #3b3416;
     --note-green: #173a25;
     --note-blue: #182f4b;

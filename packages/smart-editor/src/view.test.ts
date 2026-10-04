@@ -146,3 +146,80 @@ describe('the notice', () => {
         expect(host.querySelector('.se-editor')).toBeNull();
     });
 });
+
+describe('sticky scroll', () => {
+    const body = Array.from({ length: 40 }, (_, i) => `    call(${i});`).join('\n');
+    const text = `export function outer() {\n  function inner() {\n${body}\n  }\n}\nconst after = 1;`;
+
+    test('pins the headers of the blocks scrolled out of sight', () => {
+        const { host, view } = mount(text);
+        const viewport = view.viewport;
+        view.refreshFolds();
+        expect(host.querySelector('.se-sticky')!.hasAttribute('hidden')).toBe(true);
+        viewport.scrollTop = 20 * 20;
+        view.render();
+        const rows = [...host.querySelectorAll('.se-sticky-row')];
+        expect(rows.map((row) => (row as HTMLElement).dataset.line)).toEqual(['0', '1']);
+        expect(rows[0]!.querySelector('.se-sticky-number')!.textContent).toBe('1');
+        expect(rows[1]!.querySelector('.se-run')!.textContent).toBe('  function inner() {');
+    });
+
+    test('goes away again at the top and past the end of the block', () => {
+        const { host, view } = mount(text);
+        const viewport = view.viewport;
+        view.refreshFolds();
+        viewport.scrollTop = 20 * 20;
+        view.render();
+        viewport.scrollTop = 0;
+        view.render();
+        expect(host.querySelectorAll('.se-sticky-row').length).toBe(0);
+        viewport.scrollTop = 20 * 45;
+        view.render();
+        expect(host.querySelectorAll('.se-sticky-row').length).toBe(0);
+    });
+
+    test('takes the blocks the host hands it over its own reading', () => {
+        const { host, view } = mount(text);
+        const viewport = view.viewport;
+        view.refreshFolds();
+        view.setBlocks([{ startLine: 2, endLine: 30, name: 'host' }]);
+        viewport.scrollTop = 20 * 20;
+        view.render();
+        expect([...host.querySelectorAll('.se-sticky-row')].map((row) => (row as HTMLElement).dataset.line)).toEqual(['1']);
+    });
+
+    test('jumps to a header and puts the caret on it', () => {
+        const { model, view } = mount(text);
+        const viewport = view.viewport;
+        view.refreshFolds();
+        viewport.scrollTop = 20 * 20;
+        view.render();
+        view.jumpToHeader(1, 1);
+        expect(model.positionAt(model.getSelections()[0]!.head)).toMatchObject({ line: 1, column: 2 });
+        expect(viewport.scrollTop).toBe(0);
+    });
+
+    test('keeps a caret moved up from under the pinned headers', () => {
+        const { view, model } = mount(text);
+        const viewport = view.viewport;
+        view.refreshFolds();
+        viewport.scrollTop = 20 * 20;
+        view.render();
+        const target = model.getLine(21).start;
+        view.revealOffset(target);
+        expect(viewport.scrollTop).toBeLessThanOrEqual(20 * (21 - 2));
+    });
+});
+
+describe('scope', () => {
+    test('reports the named blocks around the caret when they change', () => {
+        const { model, view } = mount('class A {\n  run() {\n    one();\n  }\n}\nconst x = 1;');
+        const seen: string[][] = [];
+        view.onScope((scope) => seen.push(scope.map((block) => block.name ?? '')));
+        view.refreshFolds();
+        model.setSelections([{ anchor: model.getLine(2).start, head: model.getLine(2).start }]);
+        model.setSelections([{ anchor: model.getLine(2).start + 1, head: model.getLine(2).start + 1 }]);
+        model.setSelections([{ anchor: model.getLine(5).start, head: model.getLine(5).start }]);
+        expect(seen).toEqual([['A'], ['A', 'run'], []]);
+    });
+});

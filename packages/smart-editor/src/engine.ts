@@ -4,6 +4,7 @@ import { emit, type Listener, subscribe } from './listeners.ts';
 import { changedSpan } from './text-span.ts';
 import type {
     Editor,
+    EditorBlock,
     EditorEngine,
     EditorFindQuery,
     EditorIndentation,
@@ -161,6 +162,14 @@ class SmartEditor implements Editor {
             this.view.viewport.scrollLeft = 0;
         }
         this.view.applySettings();
+    }
+
+    setBlocks(blocks: readonly EditorBlock[] | null): void {
+        this.view.setBlocks(blocks);
+    }
+
+    onScope(listener: (scope: readonly EditorBlock[]) => void): () => void {
+        return this.view.onScope(listener);
     }
 
     setIndentation(indentation: EditorIndentation): void {

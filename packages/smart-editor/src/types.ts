@@ -22,6 +22,18 @@ export interface EditorOptions {
     readonly scrollTop?: number;
 }
 
+/* A part of the document with a header line, such as a function, a class or a method. */
+export interface EditorBlock {
+    /* One-based, the line its header is on. */
+    readonly startLine: number;
+    /* One-based, the last line, inclusive. */
+    readonly endLine: number;
+    /* What a breadcrumb calls it; without one the header's own text stands in. */
+    readonly name?: string;
+    /* A hint for the icon beside the name, such as `function`, `class` or `method`. */
+    readonly kind?: string;
+}
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -61,6 +73,11 @@ export interface Editor {
     endFind(): void;
     setWrap(wrap: boolean): void;
     setIndentation(indentation: EditorIndentation): void;
+    /* The blocks sticky scroll and the breadcrumb go by. The editor reads them from brackets and
+       indentation until the host has better, such as a language server's symbols; null goes back. */
+    setBlocks(blocks: readonly EditorBlock[] | null): void;
+    /* The named blocks around the caret, outermost first, said again only when they change. */
+    onScope(listener: (scope: readonly EditorBlock[]) => void): () => void;
     setTheme(theme: EditorTheme): void;
     /* Reads the code face off the page again, after the page changed its size, family or ligatures. */
     refreshFont(): void;

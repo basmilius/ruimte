@@ -146,6 +146,42 @@
     cursor: pointer;
 }
 
+.se-sticky {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: var(--se-scrollbar, 0px);
+    z-index: 4;
+    background: var(--surface);
+    box-shadow:
+        0 1px 0 var(--border),
+        0 8px 12px -8px var(--editor-sticky-shadow);
+    cursor: pointer;
+}
+.se-sticky-row {
+    display: grid;
+    grid-template-columns: var(--se-gutter-width) minmax(0, 1fr);
+    height: var(--code-line-height, 20px);
+}
+.se-sticky-row:hover {
+    background: var(--surface-hover);
+}
+.se-sticky-number {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 16px;
+    color: var(--text-faint);
+    user-select: none;
+}
+.se-sticky-code {
+    position: relative;
+    overflow: hidden;
+}
+.se-sticky-code .se-line {
+    transform: translateX(calc(var(--se-scroll-left, 0px) * -1));
+}
+
 .se-current-line {
     position: absolute;
     background: var(--surface-hover);

@@ -2,6 +2,7 @@ export { createSmartEditorEngine } from './engine.ts';
 export { shikiTokenizers } from './shiki.ts';
 export type {
     Editor,
+    EditorBlock,
     EditorEngine,
     EditorFindQuery,
     EditorFindState,

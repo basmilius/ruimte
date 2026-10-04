@@ -1,10 +1,12 @@
-import { type DocumentChange, type DocumentModel, type EditorSnapshot, type FoldingRange, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
+import { type DocumentModel, type EditorSnapshot, type FoldingRange, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
 import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
-import { paintCarets, paintGutter, paintOverlays, RowPainter } from './paint.ts';
+import { mapOffset } from './offsets.ts';
+import { Outline, scopeChain, stickyChain, structuralEntries } from './outline.ts';
+import { paintCarets, paintGutter, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
 import { TokenCache } from './tokens.ts';
-import type { EditorFindQuery, EditorFindState, LineTokenizer } from './types.ts';
+import type { EditorBlock, EditorFindQuery, EditorFindState, LineTokenizer } from './types.ts';
 
 export interface ViewSettings {
     language: string | undefined;
@@ -24,20 +26,9 @@ const NOTICE_MS = 3000;
 const DEFAULT_HEIGHT = 400;
 const DEFAULT_WIDTH = 800;
 const FOLD_LIMIT = 2_000_000;
-
-function mapOffset(offset: number, changes: readonly DocumentChange[]): number {
-    let delta = 0;
-    for (const change of changes) {
-        if (offset < change.from) {
-            break;
-        }
-        if (offset < change.to || (offset === change.from && change.from === change.to)) {
-            return change.from + delta + change.insertedLength;
-        }
-        delta += change.insertedLength - (change.to - change.from);
-    }
-    return offset + delta;
-}
+const STICKY_MAX_LINES = 5;
+/* A view shows at most this share of its rows as sticky headers, so a small node keeps most of its text. */
+const STICKY_ROW_SHARE = 4;
 
 /* Where the delimiter that closes a range starts; indentation folds have none. */
 function closerOf(range: FoldingRange): number | undefined {
@@ -67,12 +58,17 @@ export class EditorView {
     private readonly overlays: HTMLElement;
     private readonly carets: HTMLElement;
     private readonly notice: HTMLElement;
+    private readonly sticky: HTMLElement;
     private readonly painter: RowPainter;
     private readonly document: Document;
     private readonly resizeObserver: ResizeObserver | undefined;
     private readonly blockObserver: ResizeObserver | undefined;
     private readonly subscription: { dispose(): void };
     private readonly findListeners = new Set<(state: EditorFindState) => void>();
+    private readonly scopeListeners = new Set<(scope: readonly EditorBlock[]) => void>();
+    private readonly outline = new Outline();
+    private stickyEntries: StickyEntry[] = [];
+    private scopeKey = '';
     private font: EditorFont;
     private layoutVersion = 0;
     private revision: number;
@@ -130,10 +126,13 @@ export class EditorView {
         }
         this.input.setAttribute('aria-multiline', 'true');
         this.input.setAttribute('aria-label', 'Code editor');
+        this.sticky = make('div', 'se-sticky');
+        this.sticky.setAttribute('aria-hidden', 'true');
+        this.sticky.hidden = true;
         this.notice = make('div', 'se-notice');
         this.notice.setAttribute('role', 'status');
         this.notice.hidden = true;
-        this.root.append(this.gutter, this.viewport, this.input, this.notice);
+        this.root.append(this.gutter, this.viewport, this.sticky, this.input, this.notice);
         container.append(this.root);
 
         this.font = readEditorFont(this.root);
@@ -220,6 +219,10 @@ export class EditorView {
         return this.gutter;
     }
 
+    get stickyElement(): HTMLElement {
+        return this.sticky;
+    }
+
     focus(): void {
         this.input.focus({ preventScroll: true });
     }
@@ -248,6 +251,7 @@ export class EditorView {
             }
             const anchor = this.topAnchor;
             this.occurrences = [];
+            this.outline.edited(batches);
             this.tokens.edited(batches, (offset) => this.model.positionAt(offset).line);
             this.layout.configure({ textChanged: true, inlays: this.displayedInlays(), blocks: this.blocks, folds: this.foldStates() });
             if (anchor && this.viewport.scrollTop > 0) {
@@ -302,6 +306,14 @@ export class EditorView {
             this.model.getLength() > FOLD_LIMIT
                 ? []
                 : this.model.getFoldingRanges({ indentation: /^(python|py|yaml|yml)$/.test(this.settings.language ?? ''), tabSize: this.settings.tabSize });
+        this.outline.setStructure(
+            structuralEntries(
+                this.foldRanges,
+                this.model,
+                (from, to) => this.model.slice(from, to),
+                (offset) => this.brackets().pairs.get(offset)
+            )
+        );
         const anchors = new Set(this.foldRanges.map((range) => range.from));
         this.collapsed = new Set([...this.collapsed].filter((anchor) => anchors.has(anchor)));
         this.anchorScroll(() => this.layout.configure({ folds: this.foldStates() }));
@@ -464,12 +476,14 @@ export class EditorView {
         const caret = this.layout.caret(offset);
         const height = this.viewportHeight;
         const width = this.viewportWidth;
+        const cover = this.stickyHeightAt(this.viewport.scrollTop);
         this.content.style.height = `${this.layout.height}px`;
         this.content.style.width = `${Math.max(this.layout.width, width)}px`;
         if (center) {
             this.viewport.scrollTop = Math.max(0, caret.y - (height - caret.height) / 2);
-        } else if (caret.y < this.viewport.scrollTop) {
-            this.viewport.scrollTop = Math.max(0, caret.y);
+        } else if (caret.y < this.viewport.scrollTop + cover) {
+            // The headers pinned at the top would cover it, so it stops under them.
+            this.viewport.scrollTop = Math.max(0, caret.y - this.stickyHeightAt(Math.max(0, caret.y - cover)));
         } else if (caret.y + caret.height > this.viewport.scrollTop + height) {
             this.viewport.scrollTop = caret.y + caret.height - height;
         }
@@ -583,6 +597,8 @@ export class EditorView {
             const digits = String(this.model.getLineCount()).length;
             this.root.style.setProperty('--se-gutter-width', `${Math.max(64, Math.ceil(digits * this.layout.metrics.charWidth) + 40)}px`);
             this.paintDecorations(rows);
+            this.paintSticky();
+            this.announceScope();
             this.colorAhead();
         } finally {
             this.rendering = false;
@@ -660,6 +676,82 @@ export class EditorView {
         this.root.dataset.carets = String(selections.length);
     }
 
+    /* The blocks sticky scroll and the breadcrumb go by; null goes back to the editor's own reading. */
+    setBlocks(blocks: readonly EditorBlock[] | null): void {
+        this.outline.setProvided(blocks, this.model);
+        this.render();
+    }
+
+    onScope(listener: (scope: readonly EditorBlock[]) => void): () => void {
+        this.scopeListeners.add(listener);
+        return () => {
+            this.scopeListeners.delete(listener);
+        };
+    }
+
+    private announceScope(): void {
+        const line = this.model.positionAt(this.model.getSelections()[0]!.head).line;
+        const scope = scopeChain(this.outline.blocks(this.model), line).map((block): EditorBlock => ({
+            startLine: block.startLine + 1,
+            endLine: block.endLine + 1,
+            name: block.name!,
+            ...(block.kind === undefined ? {} : { kind: block.kind })
+        }));
+        const key = scope.map((block) => `${block.startLine}:${block.endLine}:${block.name}:${block.kind ?? ''}`).join('|');
+        if (key === this.scopeKey) {
+            return;
+        }
+        this.scopeKey = key;
+        for (const listener of [...this.scopeListeners]) {
+            listener(scope);
+        }
+    }
+
+    private stickyLimit(): number {
+        return Math.min(STICKY_MAX_LINES, Math.floor(this.viewportHeight / this.layout.metrics.lineHeight / STICKY_ROW_SHARE));
+    }
+
+    private stickyAt(scrollTop: number): ReturnType<typeof stickyChain> {
+        return stickyChain(this.outline.blocks(this.model), scrollTop, this.layout.metrics.lineHeight, this.stickyLimit(), (y) => this.layout.rowAt(y).line);
+    }
+
+    private stickyHeightAt(scrollTop: number): number {
+        return scrollTop <= 0 ? 0 : this.stickyAt(scrollTop).length * this.layout.metrics.lineHeight;
+    }
+
+    /* Pins the headers of the blocks that have scrolled out of sight above the first visible line. */
+    private paintSticky(): void {
+        const chain = this.viewport.scrollTop <= 0 ? [] : this.stickyAt(this.viewport.scrollTop);
+        const entries = chain.flatMap((block): StickyEntry[] => {
+            const row = this.layout.rowForLine(block.startLine);
+            return row.kind === 'text' && row.line === block.startLine
+                ? [{ line: block.startLine, geometry: this.layout.geometry(row), tokens: this.tokens.tokensOf(block.startLine) }]
+                : [];
+        });
+        const changed =
+            entries.length !== this.stickyEntries.length ||
+            entries.some((entry, index) => {
+                const before = this.stickyEntries[index]!;
+                return entry.line !== before.line || entry.geometry !== before.geometry || entry.tokens !== before.tokens;
+            });
+        this.sticky.hidden = entries.length === 0;
+        this.sticky.style.setProperty('--se-scroll-left', `${this.viewport.scrollLeft}px`);
+        this.sticky.style.setProperty('--se-scrollbar', `${Math.max(0, this.viewport.offsetWidth - this.viewport.clientWidth)}px`);
+        if (changed) {
+            this.stickyEntries = entries;
+            paintSticky(this.sticky, entries, this.layout.metrics.lineHeight);
+        }
+    }
+
+    /* A click on a pinned header: the caret goes to it and it scrolls into place under the headers of the blocks around it. */
+    jumpToHeader(line: number, depth: number): void {
+        const bounds = this.model.getLine(line);
+        const indent = bounds.text.length - bounds.text.trimStart().length;
+        this.model.setSelections([{ anchor: bounds.start + indent, head: bounds.start + indent }]);
+        this.viewport.scrollTop = Math.max(0, this.layout.rowForLine(line).top - depth * this.layout.metrics.lineHeight);
+        this.render();
+    }
+
     /* Whether a click at this point of the gutter is on a fold control, and which line it folds. */
     foldLineOf(target: EventTarget | null): number | null {
         const button = (target as HTMLElement | null)?.closest?.('[data-fold-line]');
@@ -678,6 +770,7 @@ export class EditorView {
         clearTimeout(this.colorTimer);
         clearTimeout(this.noticeTimer);
         this.findListeners.clear();
+        this.scopeListeners.clear();
         this.painter.clear();
         this.root.remove();
     }

@@ -70,6 +70,44 @@ function fillRun(run: HTMLElement, geometry: LineGeometry, from: number, to: num
     }
 }
 
+/* One line of text as absolutely placed runs and inlays. `firstRowOnly` leaves out what a wrapped line carries onto later visual lines. */
+export function lineElement(
+    document: Document,
+    geometry: LineGeometry,
+    tokens: readonly LineToken[] | null,
+    lineHeight: number,
+    firstRowOnly: boolean
+): HTMLElement {
+    const element = document.createElement('div');
+    element.className = 'se-line';
+    element.style.width = `${geometry.width}px`;
+    for (const run of geometry.runs) {
+        if (firstRowOnly && run.subRow > 0) {
+            continue;
+        }
+        const span = document.createElement('span');
+        span.className = 'se-run';
+        span.style.left = `${run.x}px`;
+        span.style.top = `${run.subRow * lineHeight}px`;
+        fillRun(span, geometry, run.from, run.to, tokens);
+        element.append(span);
+    }
+    for (const box of geometry.inlays) {
+        if (firstRowOnly && box.subRow > 0) {
+            continue;
+        }
+        const span = document.createElement('span');
+        span.className = 'se-inlay';
+        span.dataset.inlayId = box.inlay.id;
+        span.textContent = box.inlay.text;
+        span.style.left = `${box.x}px`;
+        span.style.top = `${box.subRow * lineHeight}px`;
+        span.style.width = `${box.width}px`;
+        element.append(span);
+    }
+    return element;
+}
+
 /*
  * The text layer: one element per visible row, kept while what it shows stays the same. A line is
  * drawn as absolutely placed runs of text, so the layout alone decides where each character is and
@@ -148,28 +186,8 @@ export class RowPainter {
         tailTokens: readonly LineToken[] | null
     ): HTMLElement {
         const document = this.code.ownerDocument;
-        const element = document.createElement('div');
-        element.className = 'se-line';
-        element.style.width = `${geometry.width}px`;
         const lineHeight = this.layout.metrics.lineHeight;
-        for (const run of geometry.runs) {
-            const span = document.createElement('span');
-            span.className = 'se-run';
-            span.style.left = `${run.x}px`;
-            span.style.top = `${run.subRow * lineHeight}px`;
-            fillRun(span, geometry, run.from, run.to, tokens);
-            element.append(span);
-        }
-        for (const box of geometry.inlays) {
-            const span = document.createElement('span');
-            span.className = 'se-inlay';
-            span.dataset.inlayId = box.inlay.id;
-            span.textContent = box.inlay.text;
-            span.style.left = `${box.x}px`;
-            span.style.top = `${box.subRow * lineHeight}px`;
-            span.style.width = `${box.width}px`;
-            element.append(span);
-        }
+        const element = lineElement(document, geometry, tokens, lineHeight, false);
         if (row.lastLine > row.line) {
             const chip = document.createElement('button');
             chip.type = 'button';
@@ -314,4 +332,31 @@ export function paintOverlays(container: HTMLElement, paint: OverlayPaint): void
 export function paintCarets(container: HTMLElement, carets: readonly LayoutRect[]): void {
     const document = container.ownerDocument;
     container.replaceChildren(...carets.map((rect, index) => box(document, index === 0 ? 'se-caret se-primary-caret' : 'se-caret', { ...rect, width: 2 })));
+}
+
+export interface StickyEntry {
+    line: number;
+    geometry: LineGeometry;
+    tokens: readonly LineToken[] | null;
+}
+
+/* The headers pinned at the top: a line number in the gutter's column, then the header's own text. */
+export function paintSticky(container: HTMLElement, entries: readonly StickyEntry[], lineHeight: number): void {
+    const document = container.ownerDocument;
+    container.replaceChildren(
+        ...entries.map((entry, depth) => {
+            const row = document.createElement('div');
+            row.className = 'se-sticky-row';
+            row.dataset.line = String(entry.line);
+            row.dataset.depth = String(depth);
+            const number = document.createElement('span');
+            number.className = 'se-sticky-number';
+            number.textContent = String(entry.line + 1);
+            const code = document.createElement('div');
+            code.className = 'se-sticky-code';
+            code.append(lineElement(document, entry.geometry, entry.tokens, lineHeight, true));
+            row.append(number, code);
+            return row;
+        })
+    );
 }

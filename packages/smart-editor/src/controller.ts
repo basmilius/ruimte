@@ -131,6 +131,8 @@ export class InputController {
         this.listen(viewport, 'scroll', () => this.view.render());
         this.listen(viewport, 'pointerdown', (event) => this.pointerDown(event));
         this.listen(this.view.gutterElement, 'pointerdown', (event) => this.gutterDown(event));
+        this.listen(this.view.stickyElement, 'pointerdown', (event) => this.stickyDown(event));
+        this.listen(this.view.stickyElement, 'wheel', (event) => this.stickyWheel(event));
         this.listen(this.view.gutterElement, 'click', (event) => {
             const line = this.view.foldLineOf(event.target);
             if (line !== null) {
@@ -450,6 +452,26 @@ export class InputController {
         }
         event.preventDefault();
         this.pointer.start(event);
+    }
+
+    /* A press on a pinned header goes to that header. */
+    private stickyDown(event: PointerEvent): void {
+        const row = (event.target as HTMLElement | null)?.closest?.<HTMLElement>('.se-sticky-row');
+        if (event.button !== 0 || !row) {
+            return;
+        }
+        event.preventDefault();
+        this.view.jumpToHeader(Number(row.dataset.line), Number(row.dataset.depth));
+        this.view.focus();
+    }
+
+    /* The pinned headers sit over the scroll area, so the wheel over them scrolls it all the same. */
+    private stickyWheel(event: WheelEvent): void {
+        const { viewport, layout } = this.view;
+        const unit = event.deltaMode === 1 ? layout.metrics.lineHeight : 1;
+        viewport.scrollTop += event.deltaY * unit;
+        viewport.scrollLeft += event.deltaX * unit;
+        event.preventDefault();
     }
 
     /* A press on a line number selects the line. */
