@@ -548,6 +548,21 @@
                 "other": "Other"
             }
         },
+        "rename": {
+            "unavailable": "No language server renames in this file",
+            "nothing": "There is nothing to rename here",
+            "refused": "The language server refused the new name",
+            "stale": "The text changed while the rename was being asked for",
+            "failed": "Could not rename: {{message}}",
+            "occurrences_one": "{{formatted}} occurrence",
+            "occurrences_other": "{{formatted}} occurrences",
+            "occurrencesFiles_one": "{{formatted}} occurrence in {{files}} files",
+            "occurrencesFiles_other": "{{formatted}} occurrences in {{files}} files",
+            "rename": "Rename",
+            "preview": "Preview",
+            "cancel": "Cancel",
+            "apply": "Rename"
+        },
         "completion": {
             "insert": "Insert",
             "replace": "Replace",

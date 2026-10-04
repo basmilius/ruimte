@@ -41,6 +41,7 @@ export const CANVAS_SHORTCUTS = {
     nextHighlight: shortcut('Alt+F3'),
     previousHighlight: shortcut('Alt+Shift+F3'),
     codeActions: shortcut('Mod+.'),
+    rename: shortcut('Alt+Shift+R'),
     organizeImports: shortcut('Alt+Shift+O'),
     formatDocument: shortcut('Alt+Shift+F'),
     previousMessage: shortcut('Alt+ArrowUp'),

@@ -1,4 +1,4 @@
-import type { ApplyWorkspaceEditResult, ContentChange, LanguageService, WorkspaceEdit } from '@ruimte/smart-editor-lsp';
+import { fileUriToPath, type ApplyWorkspaceEditResult, type ContentChange, type LanguageService, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
 import type { Editor } from '@ruimte/smart-editor';
 import type { Transport } from '@/transport/transport';
 import { LanguageStatusTracker } from './status';
@@ -102,6 +102,16 @@ export class ProjectLanguage {
     /* Makes an edit of a language server: an open document takes it as one undo step and any other file gets an unsaved draft. */
     applyWorkspaceEdit(edit: WorkspaceEdit): Promise<ApplyWorkspaceEditResult> {
         return applyWorkspaceEdit(edit, { editorOf: (uri) => this.holders.get(uri)?.editors[0], files: this.files });
+    }
+
+    /* The text of a file as it stands now: an open document's, else a draft's or the machine's; null when it is no text file. */
+    async readText(uri: string): Promise<string | null> {
+        const open = this.holders.get(uri)?.sync.text;
+        if (open !== undefined) {
+            return open;
+        }
+        const path = fileUriToPath(uri);
+        return path === null || this.files === null ? null : ((await this.files.read(path))?.text ?? null);
     }
 
     /* Opens `uri` for the editor, or joins the editors that already hold it. */

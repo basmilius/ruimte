@@ -8,6 +8,7 @@ import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
  */
 export const LANGUAGE_COMMANDS = {
     'code-actions': { key: 'codeActions', shortcut: CANVAS_SHORTCUTS.codeActions },
+    'rename-symbol': { key: 'renameSymbol', shortcut: CANVAS_SHORTCUTS.rename },
     'organize-imports': { key: 'organizeImports', shortcut: CANVAS_SHORTCUTS.organizeImports },
     'format-document': { key: 'formatDocument', shortcut: CANVAS_SHORTCUTS.formatDocument }
 } as const satisfies Record<string, { key: string; shortcut?: Shortcut }>;

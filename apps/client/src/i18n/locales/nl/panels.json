@@ -548,6 +548,21 @@
                 "other": "Overig"
             }
         },
+        "rename": {
+            "unavailable": "Geen language server hernoemt in dit bestand",
+            "nothing": "Hier is niets om te hernoemen",
+            "refused": "De language server weigerde de nieuwe naam",
+            "stale": "De tekst veranderde terwijl de hernoeming werd opgevraagd",
+            "failed": "Hernoemen mislukt: {{message}}",
+            "occurrences_one": "{{formatted}} voorkomen",
+            "occurrences_other": "{{formatted}} voorkomens",
+            "occurrencesFiles_one": "{{formatted}} voorkomen in {{files}} bestanden",
+            "occurrencesFiles_other": "{{formatted}} voorkomens in {{files}} bestanden",
+            "rename": "Hernoem",
+            "preview": "Voorbeeld",
+            "cancel": "Annuleer",
+            "apply": "Hernoem"
+        },
         "completion": {
             "insert": "Invoegen",
             "replace": "Vervangen",

@@ -7,6 +7,7 @@ import { DiagnosticsFeature } from './diagnostics';
 import { HighlightsFeature } from './highlights';
 import { HoverFeature } from './hover';
 import { PickFeature } from './pick';
+import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
@@ -32,6 +33,7 @@ export class EditorLanguage {
     readonly highlights: HighlightsFeature;
     readonly pick: PickFeature;
     readonly codeActions: CodeActionsFeature;
+    readonly rename: RenameFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -50,6 +52,7 @@ export class EditorLanguage {
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
         this.codeActions = new CodeActionsFeature(this, timers);
+        this.rename = new RenameFeature(this);
     }
 
     get uri(): string {

@@ -554,7 +554,8 @@
             "previousHighlight": "Go to previous use of the name",
             "codeActions": "Show code actions",
             "organizeImports": "Organize imports",
-            "formatDocument": "Format document"
+            "formatDocument": "Format document",
+            "renameSymbol": "Rename symbol"
         },
         "sections": {
             "recent": "Recent",
@@ -745,6 +746,7 @@
         "code": "Code",
         "codeActions": "Show Code Actions",
         "organizeImports": "Organize Imports",
-        "formatDocument": "Format Document"
+        "formatDocument": "Format Document",
+        "renameSymbol": "Rename Symbol…"
     }
 }

@@ -5,6 +5,7 @@ import { AnchoredPopup } from './AnchoredPopup';
 import { CompletionPopup } from './CompletionPopup';
 import { HoverCard } from './HoverCard';
 import { PickPopup } from './PickPopup';
+import { RenameCard } from './RenameCard';
 import { SignatureCard } from './SignatureCard';
 
 /*
@@ -18,6 +19,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const completion = useStore(language.popups, (state) => state.completion);
     const signature = useStore(language.popups, (state) => state.signature);
     const pick = useStore(language.popups, (state) => state.pick);
+    const rename = useStore(language.popups, (state) => state.rename);
 
     useEffect(() => language.editor.onViewChange(redraw), [language]);
 
@@ -25,6 +27,8 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const completionRect = completion === null ? null : language.editor.rectAt(completion.anchor);
     const signatureRect = signature === null ? null : language.editor.rectAt(signature.anchor);
     const pickRect = pick === null ? null : language.editor.rectAt(pick.anchor);
+    const renameRect = rename === null ? null : language.editor.rectAt(rename.range.start);
+    const renameEnd = rename === null ? null : language.editor.rectAt(rename.range.end);
     return (
         <>
             {hover !== null && hoverRect !== null && (
@@ -39,6 +43,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
             )}
             {completion !== null && completionRect !== null && <CompletionPopup language={language} view={completion} rect={completionRect} />}
             {pick !== null && pickRect !== null && <PickPopup language={language} view={pick} rect={pickRect} />}
+            {rename !== null && renameRect !== null && <RenameCard language={language} view={rename} rect={renameRect} endRect={renameEnd} />}
         </>
     );
 }

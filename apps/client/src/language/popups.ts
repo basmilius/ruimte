@@ -82,15 +82,40 @@ export interface PickView {
     readonly title: string | null;
 }
 
+/* One file of a rename in the preview: the lines it changes. */
+export interface RenameFileView {
+    readonly uri: string;
+    readonly rows: readonly { readonly line: number; readonly before: string; readonly after: string }[];
+}
+
+/*
+ * The input over the symbol being renamed. In the preview phase the new name stays in the input,
+ * read only, and the lines the rename changes are listed under it until Enter applies them.
+ */
+export interface RenameView {
+    readonly phase: 'input' | 'preview';
+    readonly range: EditorRange;
+    /* The name in the text, and the one the input starts with. */
+    readonly original: string;
+    readonly placeholder: string;
+    /* How many places the name has, once the servers said. */
+    readonly occurrences: { readonly count: number; readonly files: number } | null;
+    /* A request is out, so the input waits. */
+    readonly busy: boolean;
+    readonly name: string;
+    readonly files: readonly RenameFileView[];
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
     readonly signature: SignatureView | null;
     readonly pick: PickView | null;
+    readonly rename: RenameView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null }));
 }
