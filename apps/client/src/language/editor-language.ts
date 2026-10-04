@@ -3,6 +3,7 @@ import type { Location } from '@ruimte/smart-editor-lsp';
 import { CodeActionsFeature } from './code-actions';
 import { CompletionFeature } from './completion';
 import { ContextMenuFeature } from './context-menu';
+import { DefinitionLinkFeature } from './definition-link';
 import { DiagnosticsFeature } from './diagnostics';
 import { HighlightsFeature } from './highlights';
 import { HistoryFeature } from './history';
@@ -46,6 +47,7 @@ export class EditorLanguage {
     readonly symbolPicker: SymbolPickerFeature;
     readonly contextMenu: ContextMenuFeature;
     readonly history: HistoryFeature;
+    readonly definitionLink: DefinitionLinkFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -71,6 +73,7 @@ export class EditorLanguage {
         this.symbolPicker = new SymbolPickerFeature(this);
         this.contextMenu = new ContextMenuFeature(this);
         this.history = new HistoryFeature(this);
+        this.definitionLink = new DefinitionLinkFeature(this);
         this.placeOpenedCaret(editor.getCaret());
         this.onDispose(editor.onCaret((position) => this.placeOpenedCaret(position)));
     }
