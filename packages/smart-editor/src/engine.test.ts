@@ -628,3 +628,29 @@ describe('line commands', () => {
         expect(editor.getText()).toBe('one two\nx\nthree');
     });
 });
+
+describe('typed handlers', () => {
+    test('wraps the selection in a typed bracket or angle bracket', () => {
+        const { editor, press: key, type } = setup({ text: 'foo', language: 'typescript' });
+        key('a', { ctrlKey: true });
+        type('<');
+        expect(editor.getText()).toBe('<foo>');
+        expect(editor.getSelection()).toEqual({ start: { line: 0, character: 1 }, end: { line: 0, character: 4 } });
+    });
+
+    test('puts a closing brace typed on a line of its own under its opener', () => {
+        const { editor, press: key, type } = setup({ text: 'if (x) {\n    foo();\n    ', language: 'typescript' });
+        key('End', { ctrlKey: true });
+        type('}');
+        expect(editor.getText()).toBe('if (x) {\n    foo();\n}');
+    });
+
+    test('takes the whitespace of the line above along when Backspace joins two lines', () => {
+        const { editor, press: key } = setup({ text: 'foo   \nbar' });
+        key('ArrowDown');
+        key('Home');
+        key('Home');
+        key('Backspace');
+        expect(editor.getText()).toBe('foobar');
+    });
+});

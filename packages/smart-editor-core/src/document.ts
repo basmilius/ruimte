@@ -6,7 +6,8 @@ import { mapOffset } from './offsets.ts';
 import { planPaste } from './paste.ts';
 import type { EnterOptions, EnterPlan } from './enter.ts';
 import type { EditPlan, EditSource } from './edit-source.ts';
-import { vueRegionAt } from './languages.ts';
+import { isPlainText, vueRegionAt } from './languages.ts';
+import { isQuote, replacesComparison, surround, swapQuotes } from './typing-handlers.ts';
 import { scanBrackets } from './brackets.ts';
 import type { BracketIndex } from './brackets.ts';
 import { hasSmartSemicolon } from './lexical.ts';
@@ -91,12 +92,19 @@ interface LineBlock {
 interface TypingInput {
     text: string;
     language: string;
-    pairing: boolean;
+    /* Whether a typed bracket or quote pairs, types over its closer and goes in pairs. */
+    brackets: boolean;
+    quotes: boolean;
+    surround: boolean;
     smartSemicolon: boolean;
+    /* A closing bracket typed on a line of its own goes back to the indentation of its opener. */
+    dedent: boolean;
 }
 
 const historyLimit = 200;
 const bracketScanLimit = 2_000_000;
+/* Typing a bracket reads the document once to see whether it already has a closer, so a very large one is not read. */
+const matchScanLimit = 400_000;
 const pairs: Readonly<Record<string, string>> = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
 const identifier = /[\p{L}\p{N}\p{M}\p{Pc}$]/u;
 const wordCommand = /^(select|delete)?(word|camel)(Left|Right)$/i;
@@ -547,11 +555,16 @@ export class DocumentModel {
             return false;
         }
         const language = options.language ?? 'typescript';
+        const single = text.length === 1;
+        const pairing = options.autoClosingPairs !== false && single && !isPlainText(language);
         const input: TypingInput = {
             text,
             language,
-            pairing: options.autoClosingPairs !== false && text.length === 1,
-            smartSemicolon: options.smartSemicolon !== false && hasSmartSemicolon(language)
+            brackets: pairing && options.autoClosingBrackets !== false,
+            quotes: pairing && options.autoClosingQuotes !== false,
+            surround: options.surroundSelection !== false && single,
+            smartSemicolon: options.smartSemicolon !== false && hasSmartSemicolon(language),
+            dedent: options.smartEnter !== false
         };
         const plans = this.selections.map((selection) => this.planTyping(selection, input));
         const transaction = selectionTransaction(plans);
@@ -619,7 +632,13 @@ export class DocumentModel {
         const tabSize = tabWidth(options);
         const language = options.language ?? 'typescript';
         if (command === 'smartBackspace' || command === 'deleteForward') {
-            return this.deleteCharacter(command === 'smartBackspace', tabSize, options.autoClosingPairs !== false, language);
+            const pairing = options.autoClosingPairs !== false && !isPlainText(language);
+            return this.deleteCharacter(
+                command === 'smartBackspace',
+                tabSize,
+                { brackets: pairing && options.autoClosingBrackets !== false, quotes: pairing && options.autoClosingQuotes !== false },
+                language
+            );
         }
         const unit = options.insertSpaces === false ? '\t' : ' '.repeat(tabSize);
         const enter = { language, unit, tabSize, smart: options.smartEnter !== false, reach: true };
@@ -681,17 +700,18 @@ export class DocumentModel {
     }
 
     private planTyping(selection: Selection, input: TypingInput): SelectionEdit {
-        const { text, language, pairing, smartSemicolon } = input;
+        const { text, language, smartSemicolon } = input;
         const { from, to } = rangeOf(selection);
         const after = this.rope.charAt(to);
+        const quote = isQuote(text);
+        const pairing = quote ? input.quotes : input.brackets;
         const pendingClosers = this.statementClosers.get(from);
-        if (pairing && smartSemicolon && from === to && pendingClosers?.language === language && pendingClosers.text.startsWith(text)) {
+        if (input.brackets && smartSemicolon && from === to && pendingClosers?.language === language && pendingClosers.text.startsWith(text)) {
             return { from, to, text: '', anchor: 0, head: 0, skip: true, consumed: true, completedClosers: pendingClosers.text.slice(1) };
         }
 
-        const needsContext = text.length === 1 && ((pairing && /[()[\]{}'"`]/.test(text)) || (text === ';' && smartSemicolon));
+        const needsContext = text.length === 1 && (/[()[\]{}'"`<]/.test(text) || (text === ';' && smartSemicolon));
         const context = needsContext ? this.typingContext(from, language) : undefined;
-        const quote = text === '"' || text === "'" || text === '`';
         const insideQuote = context && (context.mode === 'quote' || context.mode === 'template') && context.quote === text && !context.escaped;
         if (pairing && from === to && after === text && (quote ? insideQuote : context?.mode === 'code' && context.bracket?.close === text)) {
             return { from, to, text: '', anchor: 1, head: 1, skip: true };
@@ -713,30 +733,97 @@ export class DocumentModel {
             }
         }
 
-        if (pairing && pairs[text]) {
-            if (from !== to) {
-                const content = this.slice(from, to);
-                return { from, to, text: text + content + pairs[text], anchor: selection.anchor - from + 1, head: selection.head - from + 1 };
+        if (from !== to && input.surround && (pairs[text] !== undefined || text === '<')) {
+            const wrapped = this.surroundSelection(selection, input, context);
+            if (wrapped) {
+                return wrapped;
             }
-            if (this.shouldClosePair(from, text, after, context)) {
-                return { from, to, text: text + pairs[text], anchor: 1, head: 1, paired: true };
+        }
+
+        if (pairing && pairs[text] !== undefined && from === to && this.shouldClosePair(from, text, after, context, input)) {
+            return { from, to, text: text + pairs[text], anchor: 1, head: 1, paired: true };
+        }
+
+        if (input.dedent && from === to && /[)\]}]/.test(text) && context?.mode === 'code' && context.bracket?.close === text) {
+            const dedented = this.dedentCloser(from, text, context.bracket.at);
+            if (dedented) {
+                return dedented;
             }
         }
         return { from, to, text, anchor: text.length, head: text.length };
     }
 
-    private shouldClosePair(offset: number, opener: string, after: string, context: TypingContext | undefined): boolean {
+    /* A delimiter over a selection wraps it, or swaps the quotes of the string it is the quote of. */
+    private surroundSelection(selection: Selection, input: TypingInput, context: TypingContext | undefined): SelectionEdit | null {
+        const { text, language } = input;
+        const { from, to } = rangeOf(selection);
+        const selected = this.slice(from, to);
+        if (input.quotes && isQuote(text) && selected.length === 1) {
+            const swapped = swapQuotes(this.editSource(language), from, text);
+            if (swapped) {
+                return { from: swapped.from, to: swapped.to, text: swapped.text, anchor: swapped.caret, head: swapped.caret };
+            }
+        }
+        const inCommentOrString = context !== undefined && context.mode !== 'code';
+        if (replacesComparison(text, selected, inCommentOrString)) {
+            return null;
+        }
+        const wrapped = surround(selected, text);
+        const reversed = selection.anchor > selection.head;
+        const start = 1;
+        const end = 1 + wrapped.inner.length;
+        return { from, to, text: wrapped.text, anchor: reversed ? end : start, head: reversed ? start : end };
+    }
+
+    /* A closer alone on its line goes back to the indentation of the line its opener is on. */
+    private dedentCloser(offset: number, closer: string, opener: number): SelectionEdit | null {
+        const index = this.rope.lineAt(offset);
+        const line = this.rope.lineBounds(index);
+        const before = this.slice(line.start, offset);
+        if (!/^[\t ]*$/.test(before)) {
+            return null;
+        }
+        const indent = this.getLine(this.rope.lineAt(opener)).text.match(/^[\t ]*/)?.[0] ?? '';
+        if (indent === before) {
+            return null;
+        }
+        return { from: line.start, to: offset, text: indent + closer, anchor: indent.length + 1, head: indent.length + 1 };
+    }
+
+    private shouldClosePair(offset: number, opener: string, after: string, context: TypingContext | undefined, input: TypingInput): boolean {
         const interpolation = this.isInterpolation(offset, opener, context);
-        const followedByTerminator = !after || /[\s)\]}>,;:]/u.test(after);
-        const quote = opener === '"' || opener === "'" || opener === '`';
+        const quote = isQuote(opener);
+        const followedByTerminator = quote ? !identifier.test(after) && after !== opener : !after || /[\s)\]}>,;:]/u.test(after);
         if (context?.mode !== 'code' && !interpolation) {
             return false;
         }
         if (!followedByTerminator && !(interpolation && after === '`')) {
             return false;
         }
-        // A quote after a word is an apostrophe or the end of a string, not the start of one.
-        return !quote || (!identifier.test(this.slice(step(this.rope, offset, -1), offset)) && !this.escaped(offset));
+        if (quote) {
+            // A quote after a word is an apostrophe or the end of a string, not the start of one.
+            return (
+                !identifier.test(this.slice(step(this.rope, offset, -1), offset)) &&
+                !this.escaped(offset) &&
+                !this.completesTripleQuote(offset, opener, input.language)
+            );
+        }
+        return !this.hasMatch(offset, opener, input.language);
+    }
+
+    /* The third quote of a Python docstring opener is typed as it is, since the pair that came before it is the empty string. */
+    private completesTripleQuote(offset: number, quote: string, language: string): boolean {
+        return /^(python|py)$/i.test(language) && quote !== '`' && this.slice(offset - 2, offset) === quote + quote;
+    }
+
+    /* Whether the bracket just typed at `offset` would find its closer in the text that already follows it. */
+    private hasMatch(offset: number, opener: string, language: string): boolean {
+        if (this.rope.length > matchScanLimit) {
+            return false;
+        }
+        const text = this.getText();
+        const scanned = scanBrackets(text.slice(0, offset) + opener + text.slice(offset), language);
+        return scanned.pairs.has(offset);
     }
 
     /* Remembers the closers a smart semicolon stepped over for the caret that did it, so typing them again is absorbed. */
@@ -1104,14 +1191,14 @@ export class DocumentModel {
         return index;
     }
 
-    private deleteCharacter(backwards: boolean, tabSize: number, pairing: boolean, language: string): boolean {
+    private deleteCharacter(backwards: boolean, tabSize: number, pairing: { brackets: boolean; quotes: boolean }, language: string): boolean {
         return this.deleteRanges(
             this.selections.map((selection) => {
                 let { from, to } = rangeOf(selection);
                 if (from === to) {
                     if (!backwards) {
                         to = deletionStep(this.rope, to, 1);
-                    } else if (pairing && this.isEmptyPair(from, language)) {
+                    } else if ((isQuote(this.rope.charAt(from - 1)) ? pairing.quotes : pairing.brackets) && this.isEmptyPair(from, language)) {
                         from--;
                         to++;
                     } else {
@@ -1134,9 +1221,14 @@ export class DocumentModel {
         return context.mode === 'code' || this.isInterpolation(offset - 1, opener, context);
     }
 
-    /* Backspace inside the indentation of a line goes back to the previous tab stop. */
+    /* Backspace inside the indentation of a line goes back to the previous tab stop, and at the start of a line joins it with the one above. */
     private backspaceStart(offset: number, tabSize: number): number {
         const line = this.rope.lineBounds(this.rope.lineAt(offset));
+        if (offset === line.start && line.start > 0) {
+            // Joining with the line above also takes the whitespace that trails it.
+            const previous = this.getLine(this.rope.lineAt(offset) - 1);
+            return previous.end - trailingBlankLength(previous.text);
+        }
         const prefix = this.slice(line.start, offset);
         if (prefix.length > 0 && /^[\t ]+$/.test(prefix)) {
             return line.start + indentStopLength(prefix, tabSize);

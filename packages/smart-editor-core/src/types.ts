@@ -111,7 +111,12 @@ export interface CommandOptions {
     commentToken?: string;
     /* Whether the plain word commands stop at camel humps. The explicit camel commands always do. */
     camelCase?: boolean;
+    /* Turns pairing off for brackets and quotes at once; the two below turn off one of them. */
     autoClosingPairs?: boolean;
+    autoClosingBrackets?: boolean;
+    autoClosingQuotes?: boolean;
+    /* A bracket or quote typed over a selection wraps it. On unless false. */
+    surroundSelection?: boolean;
     /* A language id such as `typescript` or `php`; it decides what counts as a comment or a string. */
     language?: string;
     smartSemicolon?: boolean;
