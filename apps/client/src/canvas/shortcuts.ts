@@ -34,7 +34,7 @@ export const CANVAS_SHORTCUTS = {
     zoomIn: shortcut('+'),
     zoomOut: shortcut('-'),
     find: shortcut('Mod+F'),
-    findReplace: shortcut('Mod+Alt+F'),
+    findReplace: shortcut('Mod+Shift+H'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;
