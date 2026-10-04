@@ -15,8 +15,9 @@ async function settle(): Promise<void> {
     }
 }
 
-async function setup() {
+async function setup(providers: Record<string, unknown> = {}) {
     const transport = new FakeLanguageTransport();
+    transport.providers = providers;
     const project = new ProjectLanguage(transport, 'p1', '/work/app');
     const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'let a = salaryFit(1);\nlet b = 2;', theme: 'light' });
     const language = new EditorLanguage(project, editor, uri, 'typescript');
@@ -26,7 +27,7 @@ async function setup() {
     const report = (diagnostics: unknown[]) => {
         transport.emit('language.diagnostics', { projectId: 'p1', path: 'src/a.ts', server: 'typescript', version: 1, diagnostics });
     };
-    return { transport, editor, language, hover, timers, report };
+    return { transport, editor, language, hover, timers, report, project };
 }
 
 describe('diagnostics', () => {
@@ -123,5 +124,33 @@ describe('hover card', () => {
         expect(editor.press({ key: 'Escape' })).toBe(true);
         expect(hover.store.getState().hover).toBeNull();
         expect(editor.press({ key: 'Escape' })).toBe(false);
+    });
+});
+
+describe('hover information', () => {
+    test('shows the signature, the documentation and the definition the servers give for the symbol', async () => {
+        const { transport, hover, editor, timers } = await setup({ 'textDocument/hover': {}, 'textDocument/definition': {} });
+        const asked: string[] = [];
+        transport.answers.set('language.request', (payload: { method: string }) => {
+            asked.push(payload.method);
+            const result =
+                payload.method === 'textDocument/hover'
+                    ? {
+                          contents: { kind: 'markdown', value: '```typescript\nfunction salaryFit(): number\n```\n---\nHow well it fits.' },
+                          range: range(0, 8, 17)
+                      }
+                    : [{ uri: 'file:///work/app/src/b.ts', range: range(3, 0, 9) }];
+            return { result, server: 'typescript', version: 1 };
+        });
+        editor.hover({ line: 0, character: 10 });
+        timers.advance(300);
+        await settle();
+        const shown = hover.store.getState().hover;
+        expect(asked.sort()).toEqual(['textDocument/definition', 'textDocument/hover']);
+        expect(shown?.info?.text.signatures[0]).toEqual({ language: 'typescript', code: 'function salaryFit(): number' });
+        expect(shown?.info?.text.markdown).toBe('How well it fits.');
+        expect(shown?.info?.definition?.uri).toBe('file:///work/app/src/b.ts');
+        expect(shown?.subject).toEqual(range(0, 8, 17));
+        expect(shown?.anchor).toEqual({ line: 0, character: 8 });
     });
 });

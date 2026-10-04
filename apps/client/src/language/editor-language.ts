@@ -1,4 +1,6 @@
 import type { Editor } from '@ruimte/smart-editor';
+import { fileUriToPath, type Location } from '@ruimte/smart-editor-lsp';
+import { openFileLink } from '@/shell/panels/file-links';
 import { DiagnosticsFeature } from './diagnostics';
 import type { Problem } from './diagnostics-model';
 import { HoverFeature } from './hover';
@@ -39,6 +41,19 @@ export class EditorLanguage {
 
     get isDisposed(): boolean {
         return this.disposed;
+    }
+
+    /* Takes the caret to a place the servers named, in this file or in another one that opens beside it. */
+    goTo(location: Location): void {
+        if (location.uri === this.uri) {
+            this.editor.setCaret(location.range.start);
+            this.editor.focus();
+            return;
+        }
+        const path = fileUriToPath(location.uri);
+        if (path !== null) {
+            void openFileLink(this.project.folder, { path, line: location.range.start.line + 1, directory: false });
+        }
     }
 
     /* Runs `dispose` when the editor lets go of its document. */

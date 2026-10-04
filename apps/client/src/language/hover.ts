@@ -1,7 +1,8 @@
-import type { EditorHover } from '@ruimte/smart-editor';
+import type { EditorHover, EditorRange } from '@ruimte/smart-editor';
 import type { EditorLanguage } from './editor-language';
 import { rangeHolds } from './diagnostics-model';
-import { createPopupStore } from './popups';
+import { hoverTextOf, isEmptyHover, locationsOf } from './hover-content';
+import { createPopupStore, type HoverInfo } from './popups';
 import { realTimers, type Timers } from './timers';
 
 const SHOW_DELAY_MS = 300;
@@ -21,6 +22,7 @@ export class HoverFeature {
     private inCard = false;
     /* Counts every request, so an answer that arrives after the pointer moved on is dropped. */
     private request = 0;
+    private lookup: AbortController | null = null;
 
     constructor(language: EditorLanguage, timers: Timers = realTimers) {
         this.language = language;
@@ -58,6 +60,7 @@ export class HoverFeature {
 
     hide(): void {
         this.request++;
+        this.lookup?.abort();
         this.timers.clear(this.showTimer);
         this.timers.clear(this.hideTimer);
         this.inCard = false;
@@ -95,22 +98,45 @@ export class HoverFeature {
         }, HIDE_DELAY_MS);
     }
 
+    /* What the servers say at a position: the hover text and the definition, each of which may be missing without the other. */
+    private async ask(position: EditorHover['position'], signal: AbortSignal): Promise<{ info: HoverInfo | null; range: EditorRange | null }> {
+        const { service } = this.language.project;
+        const { uri } = this.language;
+        if (!service.supports('textDocument/hover', uri)) {
+            return { info: null, range: null };
+        }
+        const [hover, definition] = await Promise.all([
+            service.hover(uri, position, { signal }).catch(() => null),
+            service.supports('textDocument/definition', uri) ? service.definition(uri, position, { signal }).catch(() => null) : null
+        ]);
+        const text = hover === null ? null : hoverTextOf(hover);
+        if (hover === null || text === null || isEmptyHover(text)) {
+            return { info: null, range: null };
+        }
+        return { info: { text, definition: locationsOf(definition)[0] ?? null }, range: hover.range ?? null };
+    }
+
     private async show(hover: EditorHover, request: number): Promise<void> {
         const problems = this.language.diagnostics.at(hover.position);
+        this.lookup?.abort();
+        const controller = new AbortController();
+        this.lookup = controller;
+        const { info, range } = await this.ask(hover.position, controller.signal);
         if (request !== this.request) {
             return;
         }
-        if (problems.length === 0) {
+        if (problems.length === 0 && info === null) {
             this.hide();
             return;
         }
-        const first = problems[0]!.diagnostic.range;
+        const subject = problems[0]?.diagnostic.range ?? range ?? { start: hover.position, end: hover.position };
         this.timers.clear(this.hideTimer);
         this.store.setState({
             hover: {
-                anchor: first.start.line === hover.position.line ? first.start : hover.position,
-                subject: first,
-                problems
+                anchor: subject.start.line === hover.position.line ? subject.start : hover.position,
+                subject,
+                problems,
+                info
             }
         });
     }

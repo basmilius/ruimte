@@ -520,7 +520,8 @@
         "logs": "Logs",
         "hover": {
             "quickFix": "Quick fix…",
-            "quickFixSoon": "Quick fixes zijn er nog niet"
+            "quickFixSoon": "Quick fixes zijn er nog niet",
+            "definition": "Ga naar definitie"
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",

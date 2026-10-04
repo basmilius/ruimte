@@ -18,7 +18,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const hoverRect = hover === null ? null : language.editor.rectAt(hover.anchor);
     return hover !== null && hoverRect !== null ? (
         <AnchoredPopup rect={hoverRect} onPointerEnter={() => language.hover.holdCard(true)} onPointerLeave={() => language.hover.holdCard(false)}>
-            <HoverCard language={language} problems={hover.problems} />
+            <HoverCard language={language} problems={hover.problems} info={hover.info} />
         </AnchoredPopup>
     ) : null;
 }
