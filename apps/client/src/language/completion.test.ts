@@ -109,6 +109,43 @@ describe('opening', () => {
     });
 });
 
+describe('the active row', () => {
+    const items: CompletionItem[] = [
+        { label: 'fooBar', kind: 2, sortText: '0' },
+        { label: 'bar', kind: 2, sortText: '1' },
+        { label: 'baz', kind: 2, sortText: '2' }
+    ];
+
+    test('follows the best match while the person has not moved in the list', async () => {
+        const { editor, timers, view } = await setup('', items);
+        editor.type('b');
+        timers.advance(100);
+        await settle();
+        expect(view()?.rows.map((row) => row.label)).toEqual(['bar', 'baz', 'fooBar']);
+        expect(view()?.active).toBe(0);
+        editor.type('ba');
+        await settle();
+        expect(view()?.active).toBe(0);
+    });
+
+    test('stays on the row the person moved to, wherever the typing puts it', async () => {
+        const { editor, timers, view } = await setup('', items);
+        editor.type('b');
+        timers.advance(100);
+        await settle();
+        editor.press({ key: 'ArrowDown' });
+        editor.press({ key: 'ArrowDown' });
+        expect(view()?.rows[view()!.active]!.label).toBe('fooBar');
+        editor.type('ba');
+        await settle();
+        expect(view()?.rows[view()!.active]!.label).toBe('fooBar');
+        editor.type('baz');
+        await settle();
+        expect(view()?.rows.map((row) => row.label)).toEqual(['baz']);
+        expect(view()?.active).toBe(0);
+    });
+});
+
 describe('keys', () => {
     test("arrows move, Escape closes, and the keys are the list's only while it is open", async () => {
         const { editor, timers, view } = await setup('items.');
@@ -120,7 +157,10 @@ describe('keys', () => {
         expect(editor.press({ key: 'ArrowDown' })).toBe(true);
         expect(view()?.active).toBe(1);
         expect(editor.press({ key: 'ArrowUp' })).toBe(true);
+        expect(view()?.active).toBe(0);
         expect(editor.press({ key: 'ArrowUp' })).toBe(true);
+        expect(view()?.active).toBe(2);
+        expect(editor.press({ key: 'ArrowDown' })).toBe(true);
         expect(view()?.active).toBe(0);
         expect(editor.press({ key: 'Escape' })).toBe(true);
         expect(view()).toBeNull();

@@ -14,7 +14,7 @@ import {
     rankCompletions,
     type Ranked
 } from './completion-model';
-import { recentChoicesOf } from './recent-choices';
+import { RecentChoices, recentChoicesOf } from './recent-choices';
 import { shikiLanguageOf } from './language-ids';
 import type { CompletionRow, CompletionView } from './popups';
 import { realTimers, type Timers } from './timers';
@@ -42,7 +42,9 @@ export class CompletionFeature {
     private incomplete = false;
     private ranked: readonly Ranked[] = [];
     private active = 0;
-    private activeLabel: string | null = null;
+    /* Whether the person moved in the list; until then the active row is the best match, whatever the typing does to the list. */
+    private touched = false;
+    private activeKey: string | null = null;
     private detailsOpen = true;
     private start: EditorPosition | null = null;
     private server = '';
@@ -84,7 +86,10 @@ export class CompletionFeature {
         if (this.ranked.length === 0) {
             return;
         }
-        this.active = Math.max(0, Math.min(this.ranked.length - 1, this.active + delta));
+        const last = this.ranked.length - 1;
+        // One step past either end goes round, a page does not.
+        this.active = Math.abs(delta) === 1 ? (this.active + delta + last + 1) % (last + 1) : Math.max(0, Math.min(last, this.active + delta));
+        this.touched = true;
         this.publish();
         this.scheduleResolve();
     }
@@ -151,6 +156,8 @@ export class CompletionFeature {
         this.timers.clear(this.resolveTimer);
         this.pool = [];
         this.ranked = [];
+        this.touched = false;
+        this.activeKey = null;
         this.start = null;
         this.resolved.clear();
         if (this.language.popups.getState().completion !== null) {
@@ -289,9 +296,10 @@ export class CompletionFeature {
             const prefix = context.triggerKind === 2 ? '' : identifierPrefix(lineBefore);
             this.start = { line: caret.line, character: caret.character - prefix.length };
             this.active = 0;
-        } else if (this.ranked[this.active] !== undefined) {
+            this.touched = false;
+        } else if (this.touched && this.ranked[this.active] !== undefined) {
             // The list is made again, so the row that was chosen is found again by what it says.
-            this.activeLabel = this.ranked[this.active]!.item.label;
+            this.activeKey = RecentChoices.keyOf(this.ranked[this.active]!.item);
         }
         this.refilter();
     }
@@ -319,10 +327,11 @@ export class CompletionFeature {
             this.close();
             return;
         }
-        const label = this.activeLabel ?? before?.label;
-        this.activeLabel = null;
-        const kept = label === undefined ? -1 : this.ranked.findIndex((entry) => entry.item.label === label);
+        const key = this.activeKey ?? (this.touched && before !== undefined ? RecentChoices.keyOf(before) : null);
+        this.activeKey = null;
+        const kept = key === null ? -1 : this.ranked.findIndex((entry) => RecentChoices.keyOf(entry.item) === key);
         this.active = kept >= 0 ? kept : 0;
+        this.touched = this.touched && kept >= 0;
         this.publish();
         this.scheduleResolve();
         if (this.incomplete) {
