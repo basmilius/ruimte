@@ -84,6 +84,21 @@ export function keyAction(event: KeyLike, apple: boolean): KeyAction | null {
     if (mod && shift && key === 'k') {
         return command('deleteLine');
     }
+    if (mod && !alt && !shift && key === 'enter') {
+        return command('splitLine');
+    }
+    if (mod && alt && !shift && key === 'enter') {
+        return command('startNewLineBefore');
+    }
+    if (mod && shift && !alt && key === 'u') {
+        return command('toggleCase');
+    }
+    if (ctrl && shift && !alt && key === 'j') {
+        return command('joinLines');
+    }
+    if (ctrl && alt && !shift && key === 'i') {
+        return command('autoIndentLines');
+    }
     if (ctrl && key === 'w') {
         return command(shift ? 'shrinkSelection' : 'expandSelection');
     }
@@ -130,7 +145,7 @@ export function keyAction(event: KeyLike, apple: boolean): KeyAction | null {
         return command(shift ? 'outdent' : 'insertTab');
     }
     if (key === 'enter') {
-        return command('insertNewline');
+        return command(shift ? 'startNewLine' : 'insertNewline');
     }
     if (key === 'backspace') {
         return command('smartBackspace');

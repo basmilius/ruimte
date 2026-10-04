@@ -1,4 +1,4 @@
-import type { EditSource } from './edit-source.ts';
+import type { EditPlan, EditSource } from './edit-source.ts';
 import { mapOffset } from './offsets.ts';
 import { indentationColumn } from './structure.ts';
 import type { Selection, TextEdit } from './types.ts';
@@ -10,11 +10,6 @@ export interface PasteOptions {
     wholeLines: boolean;
     /* Moves a pasted block to the indentation of the place it lands on. */
     reindent: boolean;
-}
-
-export interface PastePlan {
-    edits: TextEdit[];
-    selections: Selection[];
 }
 
 function whitespaceOf(text: string): string {
@@ -95,7 +90,7 @@ function reindent(source: EditSource, from: number, text: string, options: Paste
  * copied from a bare caret as lines above the caret's own, and a block moved to the indentation of
  * the line it lands on.
  */
-export function planPaste(source: EditSource, selections: readonly Selection[], text: string, options: PasteOptions): PastePlan {
+export function planPaste(source: EditSource, selections: readonly Selection[], text: string, options: PasteOptions): EditPlan {
     const ordered = selections.map((selection, index) => ({
         from: Math.min(selection.anchor, selection.head),
         to: Math.max(selection.anchor, selection.head),

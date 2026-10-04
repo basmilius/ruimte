@@ -4,6 +4,7 @@ import type {
     EditorChangeMark,
     EditorClick,
     EditorClickHandler,
+    EditorCommand,
     EditorContextMenu,
     EditorContentChange,
     EditorEngine,
@@ -468,6 +469,14 @@ export class FakeEditor implements Editor {
     setReadOnly(readOnly: boolean, reason?: string): void {
         this.readOnly = readOnly;
         this.readOnlyReason = reason;
+    }
+
+    /* The commands run, in order; the fake has no commands of its own to carry out. */
+    readonly commands: EditorCommand[] = [];
+
+    runCommand(command: EditorCommand): boolean {
+        this.commands.push(command);
+        return false;
     }
 
     focus(): void {

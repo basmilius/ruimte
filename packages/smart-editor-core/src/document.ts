@@ -1,10 +1,11 @@
 import { CloserTracker } from './closer-tracker.ts';
 import { planBlockComment, planLineComments } from './comments.ts';
-import type { CommentPlan } from './comments.ts';
 import { planEnter } from './enter.ts';
+import { planAutoIndent, planJoinLines, planToggleCase } from './line-commands.ts';
+import { mapOffset } from './offsets.ts';
 import { planPaste } from './paste.ts';
 import type { EnterOptions, EnterPlan } from './enter.ts';
-import type { EditSource } from './edit-source.ts';
+import type { EditPlan, EditSource } from './edit-source.ts';
 import { vueRegionAt } from './languages.ts';
 import { scanBrackets } from './brackets.ts';
 import type { BracketIndex } from './brackets.ts';
@@ -200,21 +201,6 @@ function normalizeSelections(rope: TextRope, selections: readonly Selection[]): 
         result.push(selection);
     }
     return result;
-}
-
-/* Maps an offset through simultaneous edits. One inside a replaced range lands after the new text. */
-function mapOffset(offset: number, edits: readonly TextEdit[]): number {
-    let delta = 0;
-    for (const edit of edits) {
-        if (offset < edit.from) {
-            break;
-        }
-        if (offset < edit.to) {
-            return edit.from + delta + edit.text.length;
-        }
-        delta += edit.text.length - (edit.to - edit.from);
-    }
-    return offset + delta;
 }
 
 function inverseChanges(changes: readonly DocumentChange[]): DocumentChange[] {
@@ -635,14 +621,16 @@ export class DocumentModel {
         if (command === 'smartBackspace' || command === 'deleteForward') {
             return this.deleteCharacter(command === 'smartBackspace', tabSize, options.autoClosingPairs !== false, language);
         }
-        if (command === 'insertNewline') {
-            return this.insertNewline({
-                language,
-                unit: options.insertSpaces === false ? '\t' : ' '.repeat(tabSize),
-                tabSize,
-                smart: options.smartEnter !== false,
-                reach: true
-            });
+        const unit = options.insertSpaces === false ? '\t' : ' '.repeat(tabSize);
+        const enter = { language, unit, tabSize, smart: options.smartEnter !== false, reach: true };
+        if (command === 'insertNewline' || command === 'startNewLine' || command === 'splitLine') {
+            return this.insertNewline(enter, command === 'insertNewline' ? 'enter' : command === 'startNewLine' ? 'below' : 'split');
+        }
+        if (command === 'startNewLineBefore') {
+            return this.startNewLineBefore(unit);
+        }
+        if (command === 'joinLines' || command === 'toggleCase' || command === 'autoIndentLines') {
+            return this.editLines(command, { language, unit });
         }
         if (command === 'insertTab') {
             return this.insertTab(tabSize, options);
@@ -861,7 +849,7 @@ export class DocumentModel {
     private toggleComment(command: 'toggleLineComment' | 'toggleBlockComment', tabSize: number, options: CommandOptions, language: string): boolean {
         const commentOptions = { language, tabSize, insertSpaces: options.insertSpaces !== false, lineToken: options.commentToken };
         const source = this.editSource(language);
-        const plan: CommentPlan | null =
+        const plan: EditPlan | null =
             command === 'toggleLineComment'
                 ? planLineComments(source, this.selections, commentOptions)
                 : planBlockComment(source, this.selections, commentOptions);
@@ -1020,12 +1008,23 @@ export class DocumentModel {
         return this.applyEdits(edits, { source: 'command', selections });
     }
 
-    private insertNewline(options: EnterOptions): boolean {
+    /* Enter, or the same Enter from the end of the line (`below`) or with the caret left in front of the break (`split`). */
+    private insertNewline(options: EnterOptions, mode: 'enter' | 'below' | 'split'): boolean {
         const source = this.editSource(options.language);
         const plan = (reach: boolean): EnterPlan[] =>
             this.selections.map((selection) => {
                 const { from, to } = rangeOf(selection);
-                return planEnter(source, from, to, { ...options, reach });
+                if (mode === 'below') {
+                    const end = this.rope.lineBounds(this.rope.lineAt(selection.head)).end;
+                    return planEnter(source, end, end, { ...options, reach });
+                }
+                const before = this.slice(this.rope.lineBounds(this.rope.lineAt(from)).start, from);
+                if (mode === 'split' && /^[\t ]*$/.test(before)) {
+                    const start = from - before.length;
+                    return { from: start, to: start, text: before + this.newlineAt(this.rope.lineAt(from)), caret: before.length };
+                }
+                const planned = planEnter(source, from, to, { ...options, reach });
+                return mode === 'split' ? { ...planned, caret: from - planned.from } : planned;
             });
         let plans = plan(true);
         const sorted = [...plans].sort((left, right) => left.from - right.from);
@@ -1036,6 +1035,45 @@ export class DocumentModel {
             plans.map((entry) => ({ from: entry.from, to: entry.to, text: entry.text, anchor: entry.caret, head: entry.caret })),
             { source: 'command' }
         );
+    }
+
+    /* A line of its own above each caret's line, at the indentation of its text. */
+    private startNewLineBefore(unit: string): boolean {
+        return this.applySelectionEdits(
+            this.selections.map((selection) => {
+                const index = this.rope.lineAt(selection.head);
+                const line = this.rope.lineBounds(index);
+                const text = this.getLine(index).text;
+                const indent = (text.match(/^[\t ]*/)?.[0] ?? '') + (/^[\t ]*[)\]}]/.test(text) ? unit : '');
+                return { from: line.start, to: line.start, text: indent + this.newlineAt(index), anchor: indent.length, head: indent.length };
+            }),
+            { source: 'command' }
+        );
+    }
+
+    private editLines(command: 'joinLines' | 'toggleCase' | 'autoIndentLines', options: { language: string; unit: string }): boolean {
+        const source = this.editSource(options.language);
+        const plan: EditPlan | null =
+            command === 'joinLines'
+                ? planJoinLines(source, this.selections, options)
+                : command === 'toggleCase'
+                  ? planToggleCase(source, this.selections)
+                  : planAutoIndent(source, this.selectedLines(), options);
+        if (plan === null) {
+            return false;
+        }
+        const edits = [...plan.edits].sort((left, right) => left.from - right.from);
+        // Without a plan of its own the selections keep their start in front of the indentation that goes in at it.
+        const selections =
+            plan.selections.length > 0
+                ? plan.selections
+                : this.selections.map((selection) => {
+                      const { from, to } = rangeOf(selection);
+                      const start = mapOffset(from, edits, from !== to);
+                      const end = mapOffset(to, edits);
+                      return selection.anchor <= selection.head ? { anchor: start, head: end } : { anchor: end, head: start };
+                  });
+        return this.applyEdits(plan.edits, { source: 'command', selections });
     }
 
     private editSource(language: string): EditSource {

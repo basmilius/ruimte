@@ -54,7 +54,7 @@ function escapeForPattern(text: string): string {
  * Whether the code before `end` leaves its statement open: after the parenthesis of a braceless
  * `if` or `for`, after `else`, `=>` or a binary operator. Languages with braces only.
  */
-function continues(text: string, context: TypingContext, language: string): boolean {
+export function continues(text: string, context: TypingContext, language: string): boolean {
     if (!hasSlashComments(language) || context.mode !== 'code') {
         return false;
     }

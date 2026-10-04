@@ -7,6 +7,7 @@ export type {
     EditorChangeMark,
     EditorClick,
     EditorClickHandler,
+    EditorCommand,
     EditorContextMenu,
     EditorEngine,
     EditorFindQuery,

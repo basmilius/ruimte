@@ -93,6 +93,12 @@ export type EditorCommand =
     | 'indent'
     | 'outdent'
     | 'insertNewline'
+    | 'startNewLine'
+    | 'startNewLineBefore'
+    | 'splitLine'
+    | 'joinLines'
+    | 'toggleCase'
+    | 'autoIndentLines'
     | 'addCaretAbove'
     | 'addCaretBelow'
     | 'selectNextOccurrence';

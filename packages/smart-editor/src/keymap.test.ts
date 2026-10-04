@@ -52,6 +52,15 @@ describe('keyAction', () => {
         expect(keyAction(key('/', { ctrlKey: true }), false)).toEqual({ type: 'command', command: 'toggleLineComment' });
     });
 
+    test('maps the line commands that have a key', () => {
+        expect(keyAction(key('Enter', { shiftKey: true }), true)).toEqual({ type: 'command', command: 'startNewLine' });
+        expect(keyAction(key('Enter', { metaKey: true }), true)).toEqual({ type: 'command', command: 'splitLine' });
+        expect(keyAction(key('Enter', { metaKey: true, altKey: true }), true)).toEqual({ type: 'command', command: 'startNewLineBefore' });
+        expect(keyAction(key('U', { metaKey: true, shiftKey: true }), true)).toEqual({ type: 'command', command: 'toggleCase' });
+        expect(keyAction(key('J', { ctrlKey: true, shiftKey: true }), true)).toEqual({ type: 'command', command: 'joinLines' });
+        expect(keyAction(key('i', { ctrlKey: true, altKey: true }), false)).toEqual({ type: 'command', command: 'autoIndentLines' });
+    });
+
     test('moves by word with Option on macOS and Ctrl elsewhere, and to a line end with Cmd', () => {
         expect(keyAction(key('ArrowLeft', { altKey: true }), true)).toEqual({ type: 'command', command: 'wordLeft' });
         expect(keyAction(key('ArrowRight', { ctrlKey: true, shiftKey: true }), false)).toEqual({ type: 'command', command: 'selectWordRight' });
@@ -77,6 +86,5 @@ describe('keyAction', () => {
     test('ignores what is the page`s or the textarea`s', () => {
         expect(keyAction(key('a'), true)).toBeNull();
         expect(keyAction(key('c', { metaKey: true }), true)).toBeNull();
-        expect(keyAction(key('Enter', { metaKey: true }), true)).toBeNull();
     });
 });

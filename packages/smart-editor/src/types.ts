@@ -1,3 +1,7 @@
+import type { EditorCommand } from '@ruimte/smart-editor-core';
+
+export type { EditorCommand };
+
 /* A Shiki theme id, the one the viewer draws the same file in. */
 export type EditorTheme = string;
 
@@ -277,6 +281,8 @@ export interface Editor {
     /* Reads the code face off the page again, after the page changed its size, family or ligatures. */
     refreshFont(): void;
     setReadOnly(readOnly: boolean, reason?: string): void;
+    /* Runs an editing command on every caret, as its key would. False when it changed nothing. */
+    runCommand(command: EditorCommand): boolean;
     focus(): void;
     dispose(): void;
 }

@@ -1,4 +1,4 @@
-import type { EditSource } from './edit-source.ts';
+import type { EditPlan, EditSource } from './edit-source.ts';
 import { type BlockComment, type CommentSyntax, commentSyntax } from './languages.ts';
 import { mapOffset } from './offsets.ts';
 import { indentationColumn } from './structure.ts';
@@ -10,12 +10,6 @@ export interface CommentOptions {
     insertSpaces: boolean;
     /* Replaces the language's own line marker. */
     lineToken?: string;
-}
-
-/* The edits and the selections that stand after them. */
-export interface CommentPlan {
-    edits: TextEdit[];
-    selections: Selection[];
 }
 
 interface Block {
@@ -106,7 +100,7 @@ function geometryOf(source: EditSource, edits: readonly TextEdit[], index: numbe
  * Comments the lines the selections touch, or takes the comment off when every non-blank one has it.
  * The markers go in at the smallest indentation of the lines, and a lone caret moves to the next line.
  */
-export function planLineComments(source: EditSource, selections: readonly Selection[], options: CommentOptions): CommentPlan | null {
+export function planLineComments(source: EditSource, selections: readonly Selection[], options: CommentOptions): EditPlan | null {
     const blocks = blocksOf(source, selections);
     const syntaxes = blocks.map((block) => syntaxOf(source, options, block.first));
     if (syntaxes.some((syntax) => syntax.line === null && syntax.block === null)) {
@@ -336,7 +330,7 @@ function commentOf(source: EditSource, from: number, to: number, block: BlockCom
  * Wraps each selection in the block markers, or takes them off a comment the selection is or sits in.
  * With nothing selected it opens an empty comment around the caret.
  */
-export function planBlockComment(source: EditSource, selections: readonly Selection[], options: CommentOptions): CommentPlan | null {
+export function planBlockComment(source: EditSource, selections: readonly Selection[], options: CommentOptions): EditPlan | null {
     const edits: TextEdit[] = [];
     const result: Selection[] = [];
     let offsetDelta = 0;

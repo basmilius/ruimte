@@ -1,4 +1,4 @@
-import { changedSpan, DocumentModel, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
+import { changedSpan, DocumentModel, type EditorCommand, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 import type {
@@ -462,6 +462,10 @@ class SmartEditor implements Editor {
         this.settings.readOnly = readOnly;
         this.settings.readOnlyReason = reason;
         this.view.applySettings();
+    }
+
+    runCommand(command: EditorCommand): boolean {
+        return this.controller.command(command);
     }
 
     focus(): void {

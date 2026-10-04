@@ -611,3 +611,20 @@ describe('the clipboard', () => {
         expect(editor.getText()).toBe('function f() {\n    if (x) {\n        y;\n    }\n}');
     });
 });
+
+describe('line commands', () => {
+    test('runs a command on the editor by name', () => {
+        const { editor } = setup({ text: 'a\nb', language: 'typescript' });
+        expect(editor.runCommand('joinLines')).toBe(true);
+        expect(editor.getText()).toBe('a b');
+        expect(editor.runCommand('joinLines')).toBe(false);
+    });
+
+    test('starts a new line with Shift+Enter from anywhere on the line', () => {
+        const { editor, press: key, type } = setup({ text: 'one two\nthree', language: 'typescript' });
+        key('ArrowRight');
+        key('Enter', { shiftKey: true });
+        type('x');
+        expect(editor.getText()).toBe('one two\nx\nthree');
+    });
+});
