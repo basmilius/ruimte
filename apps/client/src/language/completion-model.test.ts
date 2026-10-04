@@ -8,6 +8,7 @@ import {
     matchDetail,
     matchedCharacters,
     matchScore,
+    mirroredInsertions,
     prefixFor,
     qualifierOf,
     qualifiersOf,
@@ -186,6 +187,36 @@ describe('insertionOf', () => {
         });
         expect(insertionOf(call, at(0, 2), 'lo', true, 'g(x)').text).toBe('log');
         expect(insertionOf(call, at(0, 2), 'lo', false, 'g(x)').text).toBe('log(a)');
+    });
+});
+
+describe('mirroredInsertions', () => {
+    const lines = ['fo + 1', 'xfo + 2', 'fo;', 'fo + fo'];
+    const text = (range: { start: { line: number; character: number }; end: { line: number; character: number } }): string =>
+        lines[range.start.line]!.slice(range.start.character, range.end.line === range.start.line ? range.end.character : undefined);
+    const caret = (line: number, character: number) => ({ start: at(line, character), end: at(line, character) });
+    const insertion = { range: { start: at(0, 0), end: at(0, 2) }, text: 'foo()', stops: [] };
+
+    test('inserts the same text at each other caret that has the same word before it', () => {
+        const edits = mirroredInsertions([caret(2, 2), caret(3, 2), caret(0, 2)], caret(0, 2), at(0, 2), text, insertion);
+        expect(edits).toEqual([
+            { range: { start: at(2, 0), end: at(2, 2) }, text: 'foo()' },
+            { range: { start: at(3, 0), end: at(3, 2) }, text: 'foo()' }
+        ]);
+    });
+
+    test('leaves a caret with another word before it, a selection and the primary caret alone', () => {
+        const other = { start: at(1, 1), end: at(1, 3) };
+        expect(mirroredInsertions([caret(1, 3), other, caret(0, 2)], caret(0, 2), at(0, 2), text, insertion)).toEqual([]);
+    });
+
+    test('takes what the primary replaces after its caret along, where the other has the same', () => {
+        const replacing = { range: { start: at(0, 0), end: at(0, 5) }, text: 'foo', stops: [] };
+        const rows = ['fo + 1', 'fo + 2', 'fo;'];
+        const read = (range: { start: { line: number; character: number }; end: { line: number; character: number } }): string =>
+            rows[range.start.line]!.slice(range.start.character, range.end.character);
+        const edits = mirroredInsertions([caret(1, 2), caret(2, 2), caret(0, 2)], caret(0, 2), at(0, 2), read, replacing);
+        expect(edits).toEqual([{ range: { start: at(1, 0), end: at(1, 5) }, text: 'foo' }]);
     });
 });
 

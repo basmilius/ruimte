@@ -35,6 +35,9 @@ const TABLE = {
     'select-next-occurrence': { key: 'selectNextOccurrence', command: 'selectNextOccurrence', shortcut: editorShortcut('selectNextOccurrence') },
     'unselect-occurrence': { key: 'unselectOccurrence', command: 'unselectOccurrence', shortcut: editorShortcut('unselectOccurrence') },
     'select-all-occurrences': { key: 'selectAllOccurrences', command: 'selectAllOccurrences', shortcut: editorShortcut('selectAllOccurrences') },
+    'add-caret-above': { key: 'addCaretAbove', command: 'addCaretAbove', shortcut: editorShortcut('addCaretAbove') },
+    'add-caret-below': { key: 'addCaretBelow', command: 'addCaretBelow', shortcut: editorShortcut('addCaretBelow') },
+    'toggle-column-mode': { key: 'toggleColumnMode', command: 'toggleColumnMode', shortcut: editorShortcut('toggleColumnMode') },
     'add-caret-per-selected-line': { key: 'addCaretPerSelectedLine', command: 'addCaretPerSelectedLine', shortcut: editorShortcut('addCaretPerSelectedLine') }
 } satisfies Record<string, EditorCommandSpec>;
 

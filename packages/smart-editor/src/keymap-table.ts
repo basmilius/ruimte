@@ -69,6 +69,9 @@ export const KEYMAP = {
     unselectOccurrence: bind('Ctrl+Shift+G', 'Alt+Shift+J'),
     selectAllOccurrences: bind('Meta+Ctrl+G', 'Ctrl+Alt+Shift+J'),
     addCaretPerSelectedLine: bind('Alt+Shift+G'),
+    // Tap the modifier twice, hold it and press an arrow: Option on macOS, Ctrl elsewhere (`modifier-gesture.ts`). It has no chord to print.
+    addCaretAbove: bind(null),
+    addCaretBelow: bind(null),
     toggleColumnMode: bind('Mod+Shift+8'),
 
     wordLeft: bind('Alt+ArrowLeft', 'Ctrl+ArrowLeft'),

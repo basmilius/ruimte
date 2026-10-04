@@ -75,7 +75,8 @@ const ACTIONS: Partial<Record<KeymapId, KeyAction>> = {
     expandAll: { type: 'view', command: 'expandAllRegions' },
     collapseRecursively: { type: 'view', command: 'collapseRegionRecursively' },
     expandRecursively: { type: 'view', command: 'expandRegionRecursively' },
-    foldSelection: { type: 'view', command: 'foldSelection' }
+    foldSelection: { type: 'view', command: 'foldSelection' },
+    toggleColumnMode: { type: 'view', command: 'toggleColumnMode' }
 };
 
 const PUNCTUATION_CODES: Readonly<Record<string, string>> = {

@@ -279,6 +279,17 @@ describe('accepting', () => {
         expect(view()).toBeNull();
     });
 
+    test('completes at every other caret that has the same word before it', async () => {
+        const { editor, language, timers } = await setup('a.fi\nb.fi');
+        editor.moveCaret(at(1, 4));
+        editor.otherCarets = [at(0, 4)];
+        language.completion.invoke();
+        timers.advance(10);
+        await settle();
+        await language.completion.accept(false, 0);
+        expect(editor.getText()).toBe("import 'x';\na.fill\nb.fill");
+    });
+
     test('shows the documentation the server resolves for the active row', async () => {
         const { editor, timers, view } = await setup('items');
         editor.type('items.');

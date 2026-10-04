@@ -209,6 +209,13 @@ class SmartEditor implements Editor {
         return { start: this.positionAt(Math.min(anchor, head)), end: this.positionAt(Math.max(anchor, head)) };
     }
 
+    getSelections(): EditorRange[] {
+        return this.model.getSelections().map(({ anchor, head }) => ({
+            start: this.positionAt(Math.min(anchor, head)),
+            end: this.positionAt(Math.max(anchor, head))
+        }));
+    }
+
     getIndentation(): EditorIndentation {
         return { tabSize: this.settings.tabSize, insertSpaces: this.settings.insertSpaces };
     }

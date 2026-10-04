@@ -107,6 +107,14 @@ interface TypingInput {
 /* The row of the screen an offset is on: where it starts and where it ends, which is where the next one starts when the line wraps. */
 export type VisualLineOf = (offset: number) => { start: number; end: number };
 
+/* A caret made by cloning another, with the columns it keeps wherever the lines it crosses are short. */
+interface CaretClone {
+    selection: Selection;
+    caretColumn: number;
+    startColumn: number;
+    endColumn: number;
+}
+
 /* Where a word move may stop: at the start of words, at their end, or both. */
 type CaretStopAt = 'start' | 'end' | 'both';
 
@@ -340,6 +348,7 @@ export class DocumentModel {
     private selectionHistory: Selection[][] = [];
     private typingContexts = new TypingContexts((line) => this.getLine(line));
     private statementClosers = new Map<number, { text: string; language: string }>();
+    private cloneSession: { signature: string; frames: { direction: -1 | 1; carets: CaretClone[] }[] } | undefined;
     private occurrenceSession: { wholeWord: boolean; notFound: boolean; signature: string } | undefined;
     /* The last select next occurrence found no more, which a host may say. */
     occurrencesExhausted = false;
@@ -416,6 +425,7 @@ export class DocumentModel {
         const normalized = normalizeSelections(this.rope, selections);
         this.groupOpen = false;
         this.occurrenceSession = undefined;
+        this.cloneSession = undefined;
         this.selectionHistory = [];
         this.statementClosers.clear();
         if (sameSelections(this.selections, normalized)) {
@@ -1104,17 +1114,80 @@ export class DocumentModel {
         return stop === 'start' ? this.rope.lineBounds(line - 1).start : this.rope.lineBounds(line - 1).end;
     }
 
+    /*
+     * A caret, and the selection with it, on the line above or below each caret, at the column the caret
+     * came from even when a line in between is shorter. Pressed again the other way it takes back the carets
+     * it added, one step at a time, before it adds any on that side.
+     */
     private addCaret(direction: -1 | 1): boolean {
-        const additions = this.selections.flatMap((selection) => {
-            const position = this.positionAt(selection.head);
-            const targetLine = position.line + direction;
-            if (targetLine < 0 || targetLine >= this.getLineCount()) {
-                return [];
+        const session = this.cloneSession;
+        const frames = session !== undefined && session.signature === this.occurrenceSignature() ? session.frames : [];
+        const top = frames.at(-1);
+        if (top !== undefined && top.direction !== direction) {
+            const taken = new Set(top.carets.map((clone) => `${clone.selection.anchor}:${clone.selection.head}`));
+            const kept = this.selections.filter((selection) => !taken.has(`${selection.anchor}:${selection.head}`));
+            frames.pop();
+            const changed = this.changeSelections(kept.length > 0 ? kept : this.selections.slice(0, 1));
+            this.cloneSession = { signature: this.occurrenceSignature(), frames };
+            return changed;
+        }
+        const sources = top === undefined ? this.selections.map((selection) => this.cloneSource(selection)) : top.carets;
+        const clones: CaretClone[] = [];
+        for (const source of sources) {
+            const clone = this.cloneOnto(source, direction, [...this.selections, ...clones.map((added) => added.selection)]);
+            if (clone !== null) {
+                clones.push(clone);
             }
-            const head = this.offsetAt({ line: targetLine, column: position.column });
-            return [{ anchor: head, head }];
-        });
-        return this.changeSelections([...this.selections, ...additions]);
+        }
+        if (clones.length === 0) {
+            return false;
+        }
+        const changed = this.changeSelections([...this.selections, ...clones.map((clone) => clone.selection)]);
+        frames.push({ direction, carets: clones });
+        this.cloneSession = { signature: this.occurrenceSignature(), frames };
+        return changed;
+    }
+
+    private cloneSource(selection: Selection): CaretClone {
+        const { from, to } = rangeOf(selection);
+        return {
+            selection,
+            caretColumn: this.positionAt(selection.head).column,
+            startColumn: this.positionAt(from).column,
+            endColumn: this.positionAt(to).column
+        };
+    }
+
+    /* The clone of a caret on a neighboring line, or on the next one that can hold its selection; null at the end of the text or on top of another caret. */
+    private cloneOnto(source: CaretClone, direction: -1 | 1, existing: readonly Selection[]): CaretClone | null {
+        const { selection } = source;
+        const { from, to } = rangeOf(selection);
+        const startLine = this.rope.lineAt(from);
+        const endLine = this.rope.lineAt(to);
+        const caretLine = this.rope.lineAt(selection.head);
+        for (let shift = direction; ; shift += direction) {
+            const line = caretLine + shift;
+            if (line < 0 || line >= this.getLineCount()) {
+                return null;
+            }
+            const start = this.offsetAt({ line: startLine + shift, column: source.startColumn });
+            const end = this.offsetAt({ line: endLine + shift, column: source.endColumn });
+            if (from !== to && start === end) {
+                continue;
+            }
+            const caret = this.offsetAt({ line, column: source.caretColumn });
+            const cloned = from === to ? { anchor: caret, head: caret } : selection.head === to ? { anchor: start, head: end } : { anchor: end, head: start };
+            const range = rangeOf(cloned);
+            if (
+                existing.some((other) => {
+                    const taken = rangeOf(other);
+                    return range.from === range.to && taken.from === taken.to ? range.from === taken.from : range.from < taken.to && range.to > taken.from;
+                })
+            ) {
+                return null;
+            }
+            return { ...source, selection: cloned };
+        }
     }
 
     private changeLineIndentation(command: 'indent' | 'outdent', tabSize: number, options: CommandOptions): boolean {

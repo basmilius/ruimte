@@ -228,6 +228,24 @@ describe('the mouse', () => {
         expect(editor.getText()).toBe('a-b\nc-d');
     });
 
+    test('takes a caret away with alt on it and adds a dragged box with alt and shift', () => {
+        const mounted = mountEditor({ text: 'abc\ndef\nghi' });
+        mounted.click(column(1), row(0));
+        mounted.click(column(1), row(1), { altKey: true });
+        mounted.click(column(1), row(2), { altKey: true });
+        mounted.click(column(1), row(1), { altKey: true });
+        mounted.type('-');
+        expect(mounted.editor.getText()).toBe('a-bc\ndef\ng-hi');
+        const keep = mountEditor({ text: 'abcd\nefgh\nijkl' });
+        keep.click(column(1), row(0));
+        const target = keep.page.document.documentElement;
+        pointer(keep.page.window, keep.viewport, 'pointerdown', column(2), row(1), { altKey: true, shiftKey: true });
+        pointer(keep.page.window, target, 'pointermove', column(2), row(2), { altKey: true, shiftKey: true });
+        pointer(keep.page.window, target, 'pointerup', column(2), row(2));
+        keep.type('-');
+        expect(keep.editor.getText()).toBe('a-bcd\nef-gh\nij-kl');
+    });
+
     test('drags out a selection', () => {
         const { editor, page, viewport, type } = mountEditor({ text: 'abcdef' });
         pointer(page.window, viewport, 'pointerdown', column(1), row(0));
@@ -459,6 +477,64 @@ describe('the keyboard', () => {
         press('g', { altKey: true, shiftKey: true });
         type('!');
         expect(editor.getText()).toBe('ab!\ncd!\nef!');
+    });
+
+    test('adds a caret with the double modifier gesture and takes it back the other way', () => {
+        const { editor, press, release, type } = mountEditor({ text: 'abc\ndef\nghi', line: 1, column: 2 });
+        press('Control', { ctrlKey: true });
+        release('Control');
+        press('Control', { ctrlKey: true });
+        press('ArrowDown', { ctrlKey: true });
+        press('ArrowDown', { ctrlKey: true });
+        press('ArrowUp', { ctrlKey: true });
+        type('!');
+        expect(editor.getText()).toBe('a!bc\nd!ef\nghi');
+        release('Control');
+        press('ArrowDown');
+        expect(editor.getCaret().line).toBe(2);
+    });
+
+    test('moves a selection to its edge first on Up and Down', () => {
+        const { editor, press } = mountEditor({ text: 'abcd\nefgh\nijkl' });
+        editor.setSelection({ start: { line: 1, character: 1 }, end: { line: 1, character: 3 } });
+        press('ArrowUp');
+        expect(editor.getCaret()).toEqual({ line: 0, character: 1 });
+        editor.setSelection({ start: { line: 1, character: 1 }, end: { line: 1, character: 3 } });
+        press('ArrowDown');
+        expect(editor.getCaret()).toEqual({ line: 2, character: 3 });
+    });
+
+    describe('column mode', () => {
+        const toggle = (press: ReturnType<typeof mountEditor>['press']): boolean => press('8', { ctrlKey: true, shiftKey: true });
+
+        test('makes a drag a box of columns and Shift with the arrows grows one', () => {
+            const dragged = mountEditor({ text: 'abcdef\nghijkl\nmnopqr' });
+            expect(toggle(dragged.press)).toBe(true);
+            const target = dragged.page.document.documentElement;
+            pointer(dragged.page.window, dragged.viewport, 'pointerdown', column(1), row(0));
+            pointer(dragged.page.window, target, 'pointermove', column(3), row(2));
+            pointer(dragged.page.window, target, 'pointerup', column(3), row(2));
+            dragged.type('-');
+            expect(dragged.editor.getText()).toBe('a-def\ng-jkl\nm-pqr');
+            const keys = mountEditor({ text: 'abcdef\nghijkl\nmnopqr' });
+            toggle(keys.press);
+            keys.click(column(1), row(0));
+            keys.press('ArrowDown', { shiftKey: true });
+            keys.press('ArrowDown', { shiftKey: true });
+            keys.press('ArrowRight', { shiftKey: true });
+            keys.type('-');
+            expect(keys.editor.getText()).toBe('a-cdef\ng-ijkl\nm-opqr');
+        });
+
+        test('keeps a selection as a box when it turns on and makes one selection of the box when it turns off', () => {
+            const mounted = mountEditor({ text: 'abcdef\nghijkl\nmnopqr' });
+            mounted.editor.setSelection({ start: { line: 0, character: 1 }, end: { line: 2, character: 3 } });
+            toggle(mounted.press);
+            expect(mounted.editor.getSelections()).toHaveLength(3);
+            toggle(mounted.press);
+            expect(mounted.editor.getSelections()).toHaveLength(1);
+            expect(mounted.editor.getSelection()).toEqual({ start: { line: 0, character: 1 }, end: { line: 2, character: 3 } });
+        });
     });
 
     test('collapses several carets and a selection on Escape, and leaves a lone caret to the page', () => {

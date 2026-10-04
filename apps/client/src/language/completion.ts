@@ -11,6 +11,7 @@ import {
     isIdentifierCharacter,
     itemsOf,
     matchedCharacters,
+    mirroredInsertions,
     prefixFor,
     qualifiersOf,
     rankCompletions,
@@ -128,7 +129,9 @@ export class CompletionFeature {
             .filter((extra) => comparePositions(extra.range.end, main.range.start) <= 0)
             .sort((left, right) => comparePositions(right.range.start, left.range.start))
             .reduce((place, extra) => shiftPosition(place, extra), main.range.start);
-        editor.applyEdits([{ range: main.range, text: main.text }, ...extras]);
+        // A name typed at several carets is completed at every one that has the same word before it.
+        const mirrored = mirroredInsertions(editor.getSelections(), editor.getSelection(), caret, (range) => editor.textInRange(range), main);
+        editor.applyEdits([{ range: main.range, text: main.text }, ...mirrored, ...extras]);
         if (commit === undefined) {
             this.language.snippets.begin(start, main.text, main.stops);
         } else {

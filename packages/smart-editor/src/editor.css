@@ -463,6 +463,9 @@
 .se-content-link {
     cursor: pointer;
 }
+.se-editor[data-column='true'] .se-content {
+    cursor: crosshair;
+}
 .se-over-selection {
     cursor: default;
 }

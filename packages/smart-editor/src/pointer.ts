@@ -21,6 +21,8 @@ export interface PointerHost {
     lineAt(offset: number): { from: number; to: number };
     /* Whether a double click selects a camel hump and not the whole name. */
     camelHumps(): boolean;
+    /* Whether a drag selects a box of columns without alt held. */
+    columnMode(): boolean;
     /* The selection a point of the screen is on, for a press that may begin dragging it; null on anything else or when the text cannot be edited. */
     selectionAt(clientX: number, clientY: number): Selection | null;
     /* The place a drop would land, drawn as a caret; null takes it away. */
@@ -58,6 +60,10 @@ interface Drag {
     /* The word or the lines the press selected, which a drag never gives back. */
     saved: { from: number; to: number };
     carry?: Carry;
+    /* With shift and alt a dragged box is added to the carets that are there, not put in their place. */
+    keep: boolean;
+    /* Whether a drag so far makes a box of columns. */
+    box: boolean;
     /* Where the press landed in the content, which a scroll leaves in place. */
     anchorPoint: ContentPoint;
     x: number;
@@ -95,10 +101,12 @@ export class PointerSelection {
         const base = event.altKey && area === 'text' ? selections : [];
         this.drag = {
             id: event.pointerId,
-            anchor: event.shiftKey ? model.getPrimary().anchor : head,
+            anchor: event.shiftKey && !event.altKey ? model.getPrimary().anchor : head,
             selections,
             add: event.altKey && area === 'text',
             unit: 'character',
+            keep: event.altKey && event.shiftKey,
+            box: area === 'text' && (event.altKey || this.host.columnMode()),
             saved: { from: head, to: head },
             anchorPoint: this.host.contentPoint(event.clientX, event.clientY),
             x: event.clientX,
@@ -106,6 +114,12 @@ export class PointerSelection {
         };
         this.host.focus();
         viewport.setPointerCapture?.(event.pointerId);
+        // Alt on a caret that is there takes it away; there is no selection to drag after that.
+        if (area === 'text' && event.altKey && count === 1 && selections.length > 1 && selections.some((selection) => selection.head === head)) {
+            model.setSelections(selections.filter((selection) => selection.head !== head));
+            this.drag = undefined;
+            return;
+        }
         const selected = count === 1 && area === 'text' && !event.shiftKey && !event.altKey ? this.host.selectionAt(event.clientX, event.clientY) : null;
         if (selected !== null) {
             this.drag.unit = 'drop';
@@ -262,10 +276,10 @@ export class PointerSelection {
             this.updateCarry(this.drag, this.drag.carry);
             return;
         }
-        if (this.drag.add && this.drag.unit === 'character') {
+        if (this.drag.box && this.drag.unit === 'character') {
             const box = this.host.columnSelections(this.drag.anchorPoint, this.host.contentPoint(this.drag.x, this.drag.y));
             if (box) {
-                this.host.model.setSelections(box);
+                this.host.model.setSelections(this.drag.keep ? [...this.drag.selections, ...box] : box);
                 return;
             }
         }

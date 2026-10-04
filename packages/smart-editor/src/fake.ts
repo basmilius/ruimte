@@ -397,6 +397,13 @@ export class FakeEditor implements Editor {
         return this.selection ?? { start: this.caret, end: this.caret };
     }
 
+    /* The other carets of the editor, which a test sets; the primary one is always last. */
+    otherCarets: EditorPosition[] = [];
+
+    getSelections(): EditorRange[] {
+        return [...this.otherCarets.map((position) => ({ start: position, end: position })), this.getSelection()];
+    }
+
     getIndentation(): EditorIndentation {
         return this.indentation;
     }

@@ -1,6 +1,9 @@
 import type { AgentKind } from '@ruimte/contracts';
 import {
     Activity,
+    ArrowDownToLine,
+    ArrowUpToLine,
+    Columns3,
     BoxSelect,
     ScanSearch,
     TextCursor,
@@ -205,6 +208,9 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'unselect-occurrence': BoxSelect,
     'select-all-occurrences': ListChecks,
     'add-caret-per-selected-line': TextCursor,
+    'add-caret-above': ArrowUpToLine,
+    'add-caret-below': ArrowDownToLine,
+    'toggle-column-mode': Columns3,
     'organize-imports': ListOrdered,
     'format-document': AlignLeft,
     'next-highlight': ArrowDown,

@@ -10,7 +10,8 @@ export type EditorViewCommand =
     | 'expandAllRegions'
     | 'collapseRegionRecursively'
     | 'expandRegionRecursively'
-    | 'foldSelection';
+    | 'foldSelection'
+    | 'toggleColumnMode';
 
 /* Everything `runCommand` runs. */
 export type EditorRunCommand = EditorCommand | EditorViewCommand;
@@ -354,6 +355,8 @@ export interface Editor {
     getFolds(): EditorFolds;
     /* The primary selection, start before end; empty at the caret. */
     getSelection(): EditorRange;
+    /* Every selection, the primary one last. */
+    getSelections(): EditorRange[];
     getIndentation(): EditorIndentation;
     /* Moves the one caret and scrolls it into view. */
     setCaret(position: EditorPosition, reveal?: EditorReveal): void;

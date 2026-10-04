@@ -171,6 +171,8 @@ export class EditorView {
     private occurrences: Occurrence[] = [];
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
     private dropCaret: number | null = null;
+    /* Column mode: a drag or Shift with the arrows selects a box of columns, as Alt does for a drag. */
+    columnMode = false;
     private selectionOccurrenceCache: { key: string; ranges: readonly { from: number; to: number }[] } = { key: '', ranges: [] };
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
@@ -1120,6 +1122,11 @@ export class EditorView {
                 );
             }) ?? null
         );
+    }
+
+    setColumnMode(on: boolean): void {
+        this.columnMode = on;
+        this.root.dataset.column = String(on);
     }
 
     /* Where text being carried would land, drawn as a caret of its own. */

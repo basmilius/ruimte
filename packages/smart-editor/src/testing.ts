@@ -58,6 +58,13 @@ export function press(window: Window, target: Element, key: string, options: Key
     return event.defaultPrevented;
 }
 
+/* Fires a keyup at the element, the other half of `press`. */
+export function release(window: Window, target: Element, key: string, options: KeyOptions = {}): void {
+    const event = new (window as unknown as { Event: typeof Event }).Event('keyup', { bubbles: true, cancelable: true });
+    Object.assign(event, { key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, isComposing: false, ...options });
+    target.dispatchEvent(event);
+}
+
 /* What a browser sends before it puts text in a textarea. */
 export function typeInto(window: Window, target: Element, text: string): void {
     const event = new (window as unknown as { Event: typeof Event }).Event('beforeinput', { bubbles: true, cancelable: true });
@@ -116,6 +123,7 @@ export interface MountedEditor {
     input: HTMLTextAreaElement;
     viewport: HTMLElement;
     press(key: string, modifiers?: KeyOptions): boolean;
+    release(key: string, modifiers?: KeyOptions): void;
     type(text: string): void;
     /* Copies, cuts or pastes through the clipboard; the text a copy or cut left comes back. */
     clip(type: 'copy' | 'cut' | 'paste', text?: string): string;
@@ -138,6 +146,7 @@ export function mountEditor(options: Partial<EditorOptions> = {}, engineOptions:
         input,
         viewport,
         press: (key, modifiers = {}) => press(page.window, input, key, modifiers),
+        release: (key, modifiers = {}) => release(page.window, input, key, modifiers),
         type: (text) => typeInto(page.window, input, text),
         clip: (type, text = '') => clipboard(page.window, input, type, { text }).text,
         click: (x, y, modifiers = {}) => {

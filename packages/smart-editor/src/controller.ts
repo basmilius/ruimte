@@ -1,6 +1,7 @@
 import type { CommandOptions, EditorCommand, Selection, TextEdit } from '@ruimte/smart-editor-core';
 import { replacementEdits } from './input.ts';
 import { chordMatches, type KeyAction, keyAction, type MoveKey } from './keymap.ts';
+import { DoubleModifierGesture } from './modifier-gesture.ts';
 import { NativeInput } from './native-input.ts';
 import { columnSelections, sameCell } from './column-selection.ts';
 import { PointerSelection } from './pointer.ts';
@@ -57,7 +58,8 @@ const VIEW_COMMANDS = new Set<EditorViewCommand>([
     'expandAllRegions',
     'collapseRegionRecursively',
     'expandRegionRecursively',
-    'foldSelection'
+    'foldSelection',
+    'toggleColumnMode'
 ]);
 
 /* Typing in the same stretch is one undo step until a pause this long. */
@@ -73,12 +75,15 @@ export class InputController {
     private readonly pointer: PointerSelection;
     private readonly cleanup: (() => void)[] = [];
     private readonly keyHandlers = new Set<EditorKeyHandler>();
+    private readonly gesture: DoubleModifierGesture;
     private readonly clickHandlers = new Set<EditorClickHandler>();
     private readonly contextListeners = new Set<(menu: EditorContextMenu) => void>();
     private readonly subscription: { dispose(): void };
     private historyGroup = 0;
     /* The clipboard text of the last copy or cut of a bare caret, which pastes back as whole lines. */
     private lineClip: string | null = null;
+    /* The two corners of a box being grown with the keys, and the selections it made, which say whether it is still the one on screen. */
+    private block: { anchor: { x: number; y: number }; head: { x: number; y: number }; signature: string } | null = null;
     private lastInputAt = 0;
     private desiredXs: number[] = [];
     private keepDesiredXs = false;
@@ -88,6 +93,7 @@ export class InputController {
     constructor(view: EditorView, options: ControllerOptions) {
         this.view = view;
         this.options = options;
+        this.gesture = new DoubleModifierGesture(options.apple ? 'Alt' : 'Control');
         const { model, input, viewport } = view;
         this.native = new NativeInput(input, model, {
             readOnly: () => view.settings.readOnly,
@@ -116,6 +122,7 @@ export class InputController {
                 return row.kind === 'text' ? { from: model.getLine(row.line).start, to: model.getLine(row.lastLine).next } : { from: offset, to: offset };
             },
             camelHumps: () => view.settings.smartKeys.camelHumps,
+            columnMode: () => view.columnMode,
             selectionAt: (x, y) => (view.settings.readOnly ? null : view.selectionAtPoint(x, y)),
             setDropCaret: (offset) => view.setDropCaret(offset),
             drop: (from, to, offset, copy) => this.dropText(from, to, offset, copy),
@@ -155,7 +162,11 @@ export class InputController {
         });
         this.listen(input, 'select', () => this.native.readSelection());
         this.listen(input, 'focus', () => this.view.requestRender());
-        this.listen(input, 'blur', () => this.view.requestRender());
+        this.listen(input, 'blur', () => {
+            this.gesture.reset();
+            this.view.requestRender();
+        });
+        this.listen(input, 'keyup', (event) => this.gesture.keyup(event));
         this.listen(root, 'focusout', (event) => {
             if (!(event.relatedTarget instanceof Node) || !root.contains(event.relatedTarget)) {
                 this.options.blur();
@@ -282,7 +293,8 @@ export class InputController {
             expandAllRegions: () => view.foldAll(false),
             collapseRegionRecursively: () => view.collapseRecursively(),
             expandRegionRecursively: () => view.expandRecursively(),
-            foldSelection: () => view.foldSelection()
+            foldSelection: () => view.foldSelection(),
+            toggleColumnMode: () => this.toggleColumnMode()
         };
         run[name]();
         return true;
@@ -297,24 +309,12 @@ export class InputController {
     }
 
     private modelCommand(name: EditorCommand): boolean {
-        const { model, layout } = this.view;
+        const { model } = this.view;
         const modifies = MODIFYING.has(name) && name !== 'undo' && name !== 'redo';
         if ((modifies || name === 'undo' || name === 'redo') && this.blockedByReadOnly()) {
             return false;
         }
         this.historyGroup++;
-        if (name === 'addCaretAbove' || name === 'addCaretBelow') {
-            const selections = model.getSelections();
-            model.setSelections([
-                ...selections,
-                ...selections.map((selection) => {
-                    const head = layout.verticalOffset(selection.head, name === 'addCaretAbove' ? -1 : 1, layout.caret(selection.head).x);
-                    return { anchor: head, head };
-                })
-            ]);
-            this.view.revealCaret();
-            return true;
-        }
         if (modifies) {
             for (const selection of model.getSelections()) {
                 this.view.ensureVisible(selection.head);
@@ -375,7 +375,62 @@ export class InputController {
         this.view.revealCaret();
     }
 
+    /* Column mode on drops every caret but the first and keeps a selection as a box; off it makes one selection of the box. */
+    private toggleColumnMode(): void {
+        const { view } = this;
+        const { model, layout } = view;
+        this.block = null;
+        if (view.columnMode) {
+            const first = model.getSelections()[0]!;
+            const last = model.getPrimary();
+            view.setColumnMode(false);
+            model.setSelections([{ anchor: first.anchor, head: last.head }]);
+            return;
+        }
+        view.setColumnMode(true);
+        const primary = model.getPrimary();
+        model.setSelections([primary]);
+        if (primary.anchor !== primary.head) {
+            const anchor = layout.caret(primary.anchor);
+            const head = layout.caret(primary.head);
+            this.block = { anchor: { x: anchor.x, y: anchor.y }, head: { x: head.x, y: head.y }, signature: '' };
+            this.extendBlock({ x: 0, y: 0 });
+        }
+    }
+
+    /* Moves the corner of the box by a step and selects the columns between it and the other corner. */
+    private extendBlock(step: { x: number; y: number }): void {
+        const { model, layout } = this.view;
+        const selections = model.getSelections();
+        const signature = selections.map((selection) => `${selection.anchor}:${selection.head}`).join(',');
+        if (this.block === null || (this.block.signature !== '' && this.block.signature !== signature)) {
+            const primary = model.getPrimary();
+            const anchor = layout.caret(primary.anchor);
+            const head = layout.caret(primary.head);
+            this.block = { anchor: { x: anchor.x, y: anchor.y }, head: { x: head.x, y: head.y }, signature };
+        }
+        const block = this.block;
+        block.head = {
+            x: Math.max(0, block.head.x + step.x),
+            y: Math.max(0, Math.min(layout.height - layout.metrics.lineHeight, block.head.y + step.y))
+        };
+        model.setSelections(columnSelections(layout, block.anchor, block.head));
+        block.signature = model
+            .getSelections()
+            .map((selection) => `${selection.anchor}:${selection.head}`)
+            .join(',');
+    }
+
     private moveCarets(key: MoveKey, extend: boolean): void {
+        if (this.view.columnMode && extend && (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight')) {
+            const { lineHeight, charWidth } = this.view.layout.metrics;
+            this.extendBlock({
+                x: key === 'ArrowLeft' ? -charWidth : key === 'ArrowRight' ? charWidth : 0,
+                y: key === 'ArrowUp' ? -lineHeight : key === 'ArrowDown' ? lineHeight : 0
+            });
+            this.view.revealCaret();
+            return;
+        }
         if (key === 'PageUp' || key === 'PageDown') {
             this.movePages(key === 'PageUp' ? -1 : 1, extend);
             return;
@@ -388,8 +443,18 @@ export class InputController {
             if (!vertical && !extend && selection.anchor !== selection.head) {
                 head = direction < 0 ? Math.min(selection.anchor, selection.head) : Math.max(selection.anchor, selection.head);
             } else if (vertical) {
-                this.desiredXs[index] ??= layout.caret(selection.head).x;
-                head = layout.verticalOffset(selection.head, direction, this.desiredXs[index]!);
+                // A selection first gives way to the edge in the direction of the move, as the platform's Up and Down do.
+                const hasSelection = !extend && selection.anchor !== selection.head;
+                const from = hasSelection
+                    ? direction < 0
+                        ? Math.min(selection.anchor, selection.head)
+                        : Math.max(selection.anchor, selection.head)
+                    : selection.head;
+                if (hasSelection) {
+                    delete this.desiredXs[index];
+                }
+                this.desiredXs[index] ??= layout.caret(from).x;
+                head = layout.verticalOffset(from, direction, this.desiredXs[index]!);
             } else {
                 head = layout.horizontalOffset(selection.head, direction);
             }
@@ -520,6 +585,12 @@ export class InputController {
 
     private keydown(event: KeyboardEvent): void {
         if (event.isComposing || this.native.composing) {
+            return;
+        }
+        const added = this.gesture.keydown(event);
+        if (added !== null) {
+            event.preventDefault();
+            this.command(added === 'above' ? 'addCaretAbove' : 'addCaretBelow');
             return;
         }
         for (const handler of [...this.keyHandlers]) {

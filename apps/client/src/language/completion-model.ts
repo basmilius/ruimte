@@ -1,4 +1,4 @@
-import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import type { EditorContentChange, EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { CompletionItem, CompletionList, CompletionResult, InsertReplaceEdit, MarkupContent, TextEdit } from '@ruimte/smart-editor-lsp';
 import { comparePositions } from './diagnostics-model';
 import { isEmptyHover, splitSignatures, type HoverText } from './hover-content';
@@ -257,6 +257,40 @@ export function insertionOf(item: CompletionItem, caret: EditorPosition, lineBef
     const callable = item.kind === METHOD_KIND || item.kind === FUNCTION_KIND || item.kind === CONSTRUCTOR_KIND;
     const parsed = parseSnippet(followed && callable ? withoutCall(raw) : raw);
     return { range, text: parsed.text, stops: tabOrder(parsed) };
+}
+
+/*
+ * The same insertion at every other caret that has the word the primary caret has before it, so a name typed at
+ * several carets is completed at all of them. A caret that is inside a selection, or after other text, is left alone.
+ */
+export function mirroredInsertions(
+    carets: readonly EditorRange[],
+    primary: EditorRange,
+    caret: EditorPosition,
+    text: (range: EditorRange) => string,
+    insertion: Insertion
+): EditorContentChange[] {
+    const before = insertion.range.start.line === caret.line ? caret.character - insertion.range.start.character : -1;
+    const after = insertion.range.end.line === caret.line ? insertion.range.end.character - caret.character : -1;
+    if (before < 0 || after < 0) {
+        return [];
+    }
+    const typed = text({ start: insertion.range.start, end: caret });
+    const replaced = text({ start: caret, end: insertion.range.end });
+    return carets.flatMap((other): EditorContentChange[] => {
+        const at = other.start;
+        if (comparePositions(other.start, primary.start) === 0 && comparePositions(other.end, primary.end) === 0) {
+            return [];
+        }
+        if (comparePositions(other.start, other.end) !== 0 || at.character < before) {
+            return [];
+        }
+        const range = { start: { line: at.line, character: at.character - before }, end: { line: at.line, character: at.character + after } };
+        const preceding = range.start.character > 0 ? text({ start: { line: at.line, character: range.start.character - 1 }, end: range.start }) : '';
+        const startsWord = preceding === '' || !isIdentifierCharacter(preceding);
+        const matches = startsWord && text({ start: range.start, end: at }) === typed && text({ start: at, end: range.end }) === replaced;
+        return matches ? [{ range, text: insertion.text }] : [];
+    });
 }
 
 export function documentationText(documentation: string | MarkupContent | undefined): string {
