@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { FileTreeRowDecoration, FileTreeRowDecorationContext } from '@pierre/trees';
-import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
+import { FileTree, useFileTree } from '@pierre/trees/react';
 import type { GitDiffFile } from '@ruimte/contracts';
 import { diffFileParts, firstFile, folderParts } from '@/shell/panels/commit-tree';
 import { decorationOfParts, dirPathOf, mergeCollapsedPaths } from '@/shell/panels/git-tree';
@@ -72,7 +72,6 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
         unsafeCSS: CHANGE_TREE_CSS
     });
 
-    const rowCount = useFileTreeSelector(model, (current) => current.getVisibleCount());
     const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(model);
 
     /* Before the paint, so a tab that opens draws its first file at once and not a frame later. */
@@ -155,7 +154,7 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
     };
 
     return (
-        <div ref={attachShift} style={{ height: rowCount * model.getItemHeight() }} onKeyDownCapture={onKeyDownCapture}>
+        <div ref={attachShift} className="min-h-0 grow overflow-hidden" onKeyDownCapture={onKeyDownCapture}>
             <FileTree model={model} className="panel-tree" />
             {shiftBar}
         </div>

@@ -292,7 +292,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                         <div className="flex min-h-0 grow flex-col @xl:flex-row">
                             <aside
                                 ref={treeRef}
-                                className="relative flex max-h-72 shrink-0 flex-col border-b bg-surface border-border @xl:max-h-none @xl:w-(--commit-tree-width) @xl:max-w-1/2 @xl:border-r @xl:border-b-0"
+                                className="relative flex h-72 min-h-0 max-h-1/2 shrink-0 flex-col border-b bg-surface border-border @xl:h-auto @xl:max-h-none @xl:w-(--commit-tree-width) @xl:max-w-1/2 @xl:border-r @xl:border-b-0"
                                 style={{ '--commit-tree-width': `${treeWidth}px` } as CSSProperties}
                             >
                                 <div className="shrink-0 border-b border-border px-3 py-2">
@@ -309,9 +309,9 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                                         </>
                                     )}
                                 </div>
-                                <div className="min-h-0 grow overflow-y-auto py-1">
+                                <div className="flex min-h-0 grow flex-col overflow-hidden py-1">
                                     {files.length > 0 && <CommitFileTree files={files} shown={shown?.path ?? null} onPick={pick} />}
-                                    {ready.truncated === true && <p className="px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
+                                    {ready.truncated === true && <p className="shrink-0 px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
                                 </div>
                                 <ColumnResizeHandle from="left" className="hidden @xl:block" onPointerDown={startResize} />
                             </aside>

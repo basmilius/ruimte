@@ -168,8 +168,6 @@ export function usePanelTreeShift(model: FileTree, resetKey?: string): { attach(
         };
     }, [frame, track, thumb, model, resetKey]);
 
-    /* Sticky, so a tree that is as tall as its rows and scrolls in a frame further out keeps the bar
-       at the bottom of what shows of it. */
     const bar = (
         <div aria-hidden className="pointer-events-none sticky bottom-0 h-0">
             <div
