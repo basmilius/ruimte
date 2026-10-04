@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { waitFor } from '../sessions/test-helpers.ts';
-import { watchdogCommand, type PowerState } from './closed-lid.ts';
+import { PMSET, watchdogCommand, type PowerState } from './closed-lid.ts';
 import { spawnWatchdog, streamPower } from './closed-lid-system.ts';
 
 /*
@@ -99,7 +99,10 @@ describe('the closed-lid watchdog', () => {
     });
 });
 
-describe.skipIf(process.platform !== 'darwin')('the power source stream', () => {
+/* A Mac without a power source of its own, such as a virtual one in CI, never names where its power comes from. */
+const namesPowerSource = process.platform === 'darwin' && /Now drawing from '/.test(Bun.spawnSync([PMSET, '-g', 'ps']).stdout.toString());
+
+describe.skipIf(!namesPowerSource)('the power source stream', () => {
     test('says where the power comes from as soon as it starts', async () => {
         const readings: (PowerState | null)[] = [];
         const stream = streamPower((power) => readings.push(power));
