@@ -12,12 +12,19 @@ export interface EditorOptions {
     /* What a person is told on typing into a read-only editor. */
     readonly readOnlyReason?: string;
     readonly wrap?: boolean;
+    /* The width of a tab stop, and whether Tab inserts spaces; 4 and spaces without them. */
+    readonly indentation?: EditorIndentation;
     /* One-based, the line the cursor opens on. */
     readonly line?: number;
     /* One-based, where on that line. */
     readonly column?: number;
     /* In pixels, where the view opens; without it the cursor's line is brought into view. */
     readonly scrollTop?: number;
+}
+
+export interface EditorIndentation {
+    readonly tabSize: number;
+    readonly insertSpaces: boolean;
 }
 
 /* What a find bar asks the editor; the editor's own matcher reads it. */
@@ -53,6 +60,7 @@ export interface Editor {
     /* Takes the marks away and selects the match the find was on, so the cursor is where it stopped. */
     endFind(): void;
     setWrap(wrap: boolean): void;
+    setIndentation(indentation: EditorIndentation): void;
     setTheme(theme: EditorTheme): void;
     /* Reads the code face off the page again, after the page changed its size, family or ligatures. */
     refreshFont(): void;

@@ -40,6 +40,17 @@ describe('mounting', () => {
     });
 });
 
+describe('indentation', () => {
+    test('takes the tab size and style it is given, at mount and later', () => {
+        const { editor, press } = setup({ text: 'a', indentation: { tabSize: 2, insertSpaces: true } });
+        press('Tab');
+        expect(editor.getText()).toBe('  a');
+        editor.setIndentation({ tabSize: 4, insertSpaces: false });
+        press('Tab');
+        expect(editor.getText()).toBe('\t  a');
+    });
+});
+
 describe('typing', () => {
     test('puts typed text in the document and tells the listeners once per edit', () => {
         const { editor, type } = setup();

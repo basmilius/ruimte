@@ -1,26 +1,20 @@
 import { DocumentModel } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
+import { emit, type Listener, subscribe } from './listeners.ts';
 import { changedSpan } from './text-span.ts';
-import type { Editor, EditorEngine, EditorFindQuery, EditorFindState, EditorOptions, EditorTheme, SmartEditorEngineOptions } from './types.ts';
+import type {
+    Editor,
+    EditorEngine,
+    EditorFindQuery,
+    EditorIndentation,
+    EditorFindState,
+    EditorOptions,
+    EditorTheme,
+    SmartEditorEngineOptions
+} from './types.ts';
 import { EditorView, type ViewSettings } from './view.ts';
 
 const DEFAULT_TAB_SIZE = 4;
-
-type Listener = () => void;
-
-function subscribe<Callback>(listeners: Set<Callback>, listener: Callback): () => void {
-    listeners.add(listener);
-    return () => {
-        listeners.delete(listener);
-    };
-}
-
-/* Over a copy, so a listener that unsubscribes itself does not skip the next one. */
-function emit(listeners: Set<Listener>): void {
-    for (const listener of [...listeners]) {
-        listener();
-    }
-}
 
 class SmartEditor implements Editor {
     private readonly model: DocumentModel;
@@ -47,8 +41,8 @@ class SmartEditor implements Editor {
         this.theme = options.theme;
         this.settings = {
             language: options.language,
-            tabSize: DEFAULT_TAB_SIZE,
-            insertSpaces: true,
+            tabSize: options.indentation?.tabSize ?? DEFAULT_TAB_SIZE,
+            insertSpaces: options.indentation?.insertSpaces ?? true,
             readOnly: options.readOnly ?? false,
             readOnlyReason: options.readOnlyReason,
             wrap: options.wrap ?? false
@@ -166,6 +160,15 @@ class SmartEditor implements Editor {
         if (wrap) {
             this.view.viewport.scrollLeft = 0;
         }
+        this.view.applySettings();
+    }
+
+    setIndentation(indentation: EditorIndentation): void {
+        if (indentation.tabSize === this.settings.tabSize && indentation.insertSpaces === this.settings.insertSpaces) {
+            return;
+        }
+        this.settings.tabSize = indentation.tabSize;
+        this.settings.insertSpaces = indentation.insertSpaces;
         this.view.applySettings();
     }
 

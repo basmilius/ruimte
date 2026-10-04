@@ -1,5 +1,5 @@
 import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
-import type { Editor, EditorEngine } from '@ruimte/editor';
+import type { Editor, EditorEngine, EditorIndentation } from '@ruimte/smart-editor';
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
@@ -16,6 +16,7 @@ interface FileEditorProps {
     /* Undefined for plain text, which is also every file too long to color. */
     language: string | undefined;
     wrap: boolean;
+    indentation: EditorIndentation;
     /* Why the file cannot be edited here, null when it can. */
     readOnlyReason: string | null;
     /* Where the placeholder was scrolled to when the editor took over, so nothing moves. */
@@ -31,7 +32,20 @@ interface FileEditorProps {
  * The file as an editor. Its text is the file's one draft, so another surface on the same file types
  * into the same text, and leaving it saves.
  */
-export function FileEditor({ engine, endpointId, path, disk, language, wrap, readOnlyReason, placeholderScroll, focused, reveal, onEditor }: FileEditorProps) {
+export function FileEditor({
+    engine,
+    endpointId,
+    path,
+    disk,
+    language,
+    wrap,
+    indentation,
+    readOnlyReason,
+    placeholderScroll,
+    focused,
+    reveal,
+    onEditor
+}: FileEditorProps) {
     const host = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Editor | null>(null);
     const theme = useCodeTheme();
@@ -39,7 +53,7 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
     const font = useSettings((s) => s.font);
     const codeLigatures = useSettings((s) => s.codeLigatures);
     // What the editor mounts with; every later change reaches it through the effects below.
-    const initial = useRef({ disk, language, wrap, readOnlyReason, theme, reveal });
+    const initial = useRef({ disk, language, wrap, indentation, readOnlyReason, theme, reveal });
     const revealed = useRef<number | null>(null);
     const readOnly = readOnlyReason !== null;
 
@@ -59,6 +73,7 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
                 theme: first.theme,
                 ...(first.readOnlyReason === null ? {} : { readOnly: true, readOnlyReason: first.readOnlyReason }),
                 wrap: first.wrap,
+                indentation: first.indentation,
                 ...(first.reveal === null ? { scrollTop: placeholderScroll.current } : { line: first.reveal.line })
             }
         );
@@ -84,6 +99,10 @@ export function FileEditor({ engine, endpointId, path, disk, language, wrap, rea
     useEffect(() => {
         editorRef.current?.setWrap(wrap);
     }, [wrap]);
+
+    useEffect(() => {
+        editorRef.current?.setIndentation(indentation);
+    }, [indentation]);
 
     useEffect(() => {
         editorRef.current?.setReadOnly(readOnly, readOnlyReason ?? undefined);

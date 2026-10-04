@@ -1,4 +1,4 @@
-import type { EditorEngine } from '@ruimte/editor';
+import type { EditorEngine } from '@ruimte/smart-editor';
 import { isApplePlatform } from '@/desktop/bridge';
 import { CODE_THEMES } from '@/shell/panels/code-themes';
 import { shellShortcuts } from '@/terminal/keymap';

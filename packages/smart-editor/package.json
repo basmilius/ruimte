@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./editor.css": "./src/editor.css"
+    "./editor.css": "./src/editor.css",
+    "./fake": "./src/fake.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

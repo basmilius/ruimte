@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
-import type { Editor } from '@ruimte/editor';
+import type { Editor } from '@ruimte/smart-editor';
 import { FindBar } from '@/find/FindBar';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
@@ -223,7 +223,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                 {find.open && (
                     <FindBar find={find} total={editorFind.total} current={editorFind.current} invalid={editorFind.invalid} onStep={editorFind.step} />
                 )}
-                {!editing.viewer && editing.engine !== null ? (
+                {!editing.viewer && editing.engine !== null && editing.indentation !== null ? (
                     <ErrorBoundary label={t('file.edit.failed')} resetKeys={[path, editing.engine]} className="min-h-0 grow">
                         <FileEditor
                             engine={editing.engine}
@@ -232,6 +232,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                             disk={disk}
                             language={plain ? undefined : read.language}
                             wrap={wrap}
+                            indentation={editing.indentation}
                             readOnlyReason={readOnlyReason}
                             placeholderScroll={viewerScroll}
                             focused={editing.focused}

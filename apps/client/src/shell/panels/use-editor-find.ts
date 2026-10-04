@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Editor, EditorFindState } from '@ruimte/editor';
+import type { Editor, EditorFindState } from '@ruimte/smart-editor';
 import { compileFind } from '@/find/query';
 import type { FindState } from '@/find/use-find';
 

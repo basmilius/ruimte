@@ -5,6 +5,7 @@ export type {
     EditorEngine,
     EditorFindQuery,
     EditorFindState,
+    EditorIndentation,
     EditorOptions,
     EditorTheme,
     KeyChord,
