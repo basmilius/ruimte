@@ -69,6 +69,7 @@ export class DiagnosticsFeature {
         }
         editor.setCaret(target.diagnostic.range.start);
         editor.focus();
+        this.language.hover.showProblemsAt(editor.getCaret());
         return true;
     }
 
@@ -81,6 +82,7 @@ export class DiagnosticsFeature {
         }
         editor.setCaret(target.diagnostic.range.start);
         editor.focus();
+        this.language.hover.showProblemsAt(editor.getCaret());
         return true;
     }
 

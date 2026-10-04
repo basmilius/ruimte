@@ -41,6 +41,27 @@ describe('problem navigation', () => {
         expect(editor.getCaret()).toEqual(at(0, 0));
     });
 
+    test('shows the card of the problem it lands on, and drops it when the caret moves on', async () => {
+        const transport = new FakeLanguageTransport();
+        const project = new ProjectLanguage(transport, 'p1', '/work/app');
+        const editor = new FakeEditorEngine().mount({} as HTMLElement, { text: 'one\ntwo\nthree', theme: 'light' });
+        const language = new EditorLanguage(project, editor, uri, 'typescript');
+        await language.document.ready;
+        transport.emit('language.diagnostics', {
+            projectId: 'p1',
+            path: 'src/a.ts',
+            server: 'typescript',
+            version: 1,
+            diagnostics: [{ range: range(2, 0, 5), message: 'second', severity: 2 }]
+        });
+        editor.press({ key: 'F8', altKey: true });
+        expect(language.popups.getState().hover?.problems[0]?.diagnostic.message).toBe('second');
+        editor.scroll();
+        expect(language.popups.getState().hover).not.toBeNull();
+        editor.moveCaret(at(0, 0));
+        expect(language.popups.getState().hover).toBeNull();
+    });
+
     test('leaves a bare F8 alone', async () => {
         const { editor } = await setup();
         editor.moveCaret(at(1, 1));

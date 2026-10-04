@@ -551,7 +551,8 @@
             "quickFixNone": "Deze language server biedt geen quick fixes",
             "definition": "Ga naar definitie",
             "references_one": "{{formatted}} referentie",
-            "references_other": "{{formatted}} referenties"
+            "references_other": "{{formatted}} referenties",
+            "none": "Geen informatie voor deze plek"
         },
         "edit": {
             "staged_one": "{{count}} bestand gewijzigd en nog niet opgeslagen",

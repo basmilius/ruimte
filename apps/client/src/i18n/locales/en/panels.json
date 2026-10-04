@@ -551,7 +551,8 @@
             "quickFixNone": "This language server offers no quick fixes",
             "definition": "Go to definition",
             "references_one": "{{formatted}} reference",
-            "references_other": "{{formatted}} references"
+            "references_other": "{{formatted}} references",
+            "none": "No information for this position"
         },
         "edit": {
             "staged_one": "{{count}} file changed and not saved yet",

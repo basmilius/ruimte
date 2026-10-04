@@ -1,13 +1,18 @@
-import type { EditorHover, EditorRange } from '@ruimte/smart-editor';
+import i18next from 'i18next';
+import type { EditorHover, EditorPosition, EditorRange } from '@ruimte/smart-editor';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { useToasts } from '@/state/toasts';
 import type { EditorLanguage } from './editor-language';
-import { rangeHolds } from './diagnostics-model';
+import { rangeHolds, type Problem } from './diagnostics-model';
 import { hoverTextOf, isEmptyHover, locationsOf } from './hover-content';
 import { wordRangeAt } from './rename-model';
 import type { HoverInfo } from './popups';
+import { isShortcut } from './shortcut-keys';
 import { realTimers, type Timers } from './timers';
 
 const SHOW_DELAY_MS = 300;
 const HIDE_DELAY_MS = 250;
+const TOAST_ID = 'language-hover';
 
 /*
  * The card under a character the pointer rests on: the problems there, and what the language servers
@@ -23,6 +28,8 @@ export class HoverFeature {
     /* Counts every request, so an answer that arrives after the pointer moved on is dropped. */
     private request = 0;
     private lookup: AbortController | null = null;
+    /* A card the keyboard opened: scrolling does not take it away, since it was never under a pointer. Moving the caret does. */
+    private pinned = false;
 
     constructor(language: EditorLanguage, timers: Timers = realTimers) {
         this.language = language;
@@ -31,8 +38,21 @@ export class HoverFeature {
         const offs = [
             editor.onHover((hover) => this.moved(hover)),
             editor.onTextChange(() => this.hide()),
-            editor.onViewChange(() => this.hide()),
+            editor.onViewChange(() => {
+                if (!this.pinned) {
+                    this.hide();
+                }
+            }),
+            editor.onCaret(() => {
+                if (this.pinned) {
+                    this.hide();
+                }
+            }),
             editor.onKeyDown((event) => {
+                if (isShortcut(CANVAS_SHORTCUTS.quickInfo, event)) {
+                    this.quickInfo();
+                    return true;
+                }
                 if (event.key === 'Escape' && this.language.popups.getState().hover !== null) {
                     this.hide();
                     return true;
@@ -58,7 +78,27 @@ export class HoverFeature {
         }
     }
 
+    /* The card for the caret, as a pointer resting there would open it. */
+    quickInfo(): void {
+        const request = ++this.request;
+        this.timers.clear(this.showTimer);
+        void this.show(this.language.editor.getCaret(), request, true);
+    }
+
+    /* The problems at a position as a card, at once; what the servers say about the symbol is left for the pointer and Quick Info. */
+    showProblemsAt(position: EditorPosition): boolean {
+        const problems = this.language.diagnostics.at(position);
+        if (problems.length === 0) {
+            return false;
+        }
+        this.hide();
+        this.pinned = true;
+        this.present(position, problems, null, problems[0]!.diagnostic.range);
+        return true;
+    }
+
     hide(): void {
+        this.pinned = false;
         this.request++;
         this.lookup?.abort();
         this.timers.clear(this.showTimer);
@@ -83,7 +123,7 @@ export class HoverFeature {
         }
         this.scheduleHide();
         const request = ++this.request;
-        this.showTimer = this.timers.set(() => void this.show(hover, request), SHOW_DELAY_MS);
+        this.showTimer = this.timers.set(() => void this.show(hover.position, request, false), SHOW_DELAY_MS);
     }
 
     private scheduleHide(): void {
@@ -127,33 +167,41 @@ export class HoverFeature {
         };
     }
 
-    private async show(hover: EditorHover, request: number): Promise<void> {
-        const problems = this.language.diagnostics.at(hover.position);
+    private async show(position: EditorPosition, request: number, pinned: boolean): Promise<void> {
+        const problems = this.language.diagnostics.at(position);
         this.lookup?.abort();
         const controller = new AbortController();
         this.lookup = controller;
-        const { info, range } = await this.ask(hover.position, controller.signal);
+        const { info, range } = await this.ask(position, controller.signal);
         if (request !== this.request) {
             return;
         }
         if (problems.length === 0 && info === null) {
             this.hide();
+            if (pinned) {
+                useToasts.getState().show({ id: TOAST_ID, kind: 'error', title: i18next.t('panels:language.hover.none') });
+            }
             return;
         }
-        const subject = problems[0]?.diagnostic.range ?? range ?? { start: hover.position, end: hover.position };
+        this.pinned = pinned;
+        this.present(position, problems, info, problems[0]?.diagnostic.range ?? range);
+        if (info !== null) {
+            void this.count(position, request, controller.signal);
+        }
+    }
+
+    private present(position: EditorPosition, problems: readonly Problem[], info: HoverInfo | null, range: EditorRange | null): void {
+        const subject = range ?? { start: position, end: position };
         this.timers.clear(this.hideTimer);
         this.language.popups.setState({
             hover: {
-                anchor: subject.start.line === hover.position.line ? subject.start : hover.position,
-                position: hover.position,
+                anchor: subject.start.line === position.line ? subject.start : position,
+                position,
                 subject,
                 problems,
                 info
             }
         });
-        if (info !== null) {
-            void this.count(hover.position, request, controller.signal);
-        }
     }
 
     /* How many places use the symbol, which can take a while in a large project and so arrives after the card does. */
