@@ -67,7 +67,6 @@
     pointer-events: none;
 }
 .se-code {
-    z-index: 1;
     user-select: none;
 }
 .se-over {
@@ -256,7 +255,7 @@
     position: sticky;
     top: 0;
     left: 0;
-    z-index: 4;
+    z-index: 5;
     flex: none;
     align-self: flex-start;
     width: 0;
@@ -409,11 +408,6 @@
     text-decoration: underline;
     text-underline-offset: 2px;
 }
-.se-widget {
-    padding: 0;
-    color: var(--text);
-    white-space: normal;
-}
 .se-block {
     position: absolute;
     left: 0;
@@ -424,6 +418,13 @@
     line-height: var(--text-xs--line-height);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+/* The host's own row runs the width of the editor over the gutter and under the pinned headers, so the code layer has no stacking of its own. */
+.se-block.se-widget {
+    z-index: 4;
+    padding: 0;
+    color: var(--text);
+    white-space: normal;
 }
 
 .se-input {

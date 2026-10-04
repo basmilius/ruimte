@@ -881,6 +881,8 @@ export class EditorView {
                 layoutVersion: this.layoutVersion,
                 tokensOf: (line: number) => this.styledTokensOf(line),
                 viewportWidth: this.viewportWidth - RIGHT_PADDING,
+                hostLeft: this.viewport.scrollLeft - this.gutterWidth,
+                hostWidth: this.viewportWidth + this.gutterWidth,
                 onUnfold: (line: number) => this.toggleFold(line, false)
             };
             if (this.painter.paint(rows, paint)) {

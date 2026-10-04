@@ -129,6 +129,14 @@ describe('inlays and widgets', () => {
         expect(view.layout.rows.map((row) => row.key)).toEqual(['line:0', 'block:w', 'line:1']);
     });
 
+    test('draws a row of the host as wide as the editor, over the gutter', () => {
+        const { host, view } = mount('a\nb');
+        view.setBlockWidgets([{ id: 'w', at: 2, placement: 'below', height: 30, render: (container) => (container.textContent = 'peek') }]);
+        const block = host.querySelector('.se-block') as HTMLElement;
+        expect(block.style.left).toBe('-64px');
+        expect(block.style.width).toBe('800px');
+    });
+
     test('marks occurrences the host asks for and drops them on an edit', () => {
         const { host, model, view } = mount('ab ab');
         view.setOccurrences([

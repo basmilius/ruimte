@@ -26,6 +26,9 @@ export interface RowPaint {
     layoutVersion: number;
     tokensOf(line: number): readonly LineToken[] | null;
     viewportWidth: number;
+    /* Where a row of the host's own DOM starts and how wide it is: the whole width of the editor, over the gutter, wherever the text is scrolled to. */
+    hostLeft: number;
+    hostWidth: number;
     /* A collapsed fold's row draws a chip after its line. */
     onUnfold(line: number): void;
 }
@@ -242,7 +245,12 @@ export class RowPainter {
             this.rows.set(row.key, entry);
         }
         entry.element.style.top = `${row.top}px`;
-        entry.element.style.width = `${Math.max(80, paint.viewportWidth)}px`;
+        if (row.widget.render) {
+            entry.element.style.left = `${paint.hostLeft}px`;
+            entry.element.style.width = `${paint.hostWidth}px`;
+        } else {
+            entry.element.style.width = `${Math.max(80, paint.viewportWidth)}px`;
+        }
         const height = entry.element.getBoundingClientRect?.().height ?? 0;
         return height > 0 && this.layout.setMeasuredHeight(row.key, height);
     }
