@@ -2,10 +2,12 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
+import { Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, DESKTOP_APP_ORIGIN, DESKTOP_APP_SCHEME, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { registerAppScheme, serveAppScheme } from './app-protocol';
+import { LAUNCHER_PIPE_VARIABLE } from './launcher-pipe';
 import { moveLegacyStorage } from './legacy-storage';
 import {
     createMenuCommands,
@@ -532,6 +534,25 @@ const dropWindowShares = (windowId: number): void => {
 let quitConfirmed = false;
 /* While the question is out, another quit waits for its answer. */
 let quitAsked = false;
+
+/*
+ * Under `bun dev` the launcher hands down a pipe (`scripts/launch.ts`). When it closes, because the terminal
+ * stopped `bun dev` or the launcher died, the app goes with it and skips the question nobody is there to
+ * answer. A signal is no way to tell: Chromium takes SIGINT itself and turns the first one into a quit
+ * that the question holds up.
+ */
+const launcherPipe = process.env[LAUNCHER_PIPE_VARIABLE];
+delete process.env[LAUNCHER_PIPE_VARIABLE];
+if (launcherPipe !== undefined) {
+    const pipe = new Socket({ fd: Number(launcherPipe), readable: true, writable: false });
+    pipe.on('close', () => {
+        quitConfirmed = true;
+        app.quit();
+    });
+    pipe.on('error', () => undefined);
+    pipe.resume();
+    pipe.unref();
+}
 
 /*
  * Whether to go ahead with a quit. The machine is asked what runs on it only when the quit ends it,
