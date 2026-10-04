@@ -372,6 +372,7 @@ export const diffCommit = async (cwd: string, commit: string): Promise<GitDiffRe
     const meta = await readCommit(top, hash);
     const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
         path: file.path,
+        kind: file.kind,
         diff: file.diff,
         added: file.added,
         deleted: file.deleted,
@@ -417,6 +418,7 @@ export const diffCheckout = async (cwd: string, from: string | null): Promise<Gi
         const diff = await diffTrees(top, start || EMPTY_TREE, tree);
         const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
             path: file.path,
+            kind: file.kind,
             diff: file.diff,
             added: file.added,
             deleted: file.deleted,

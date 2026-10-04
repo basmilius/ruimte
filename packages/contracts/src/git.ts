@@ -179,7 +179,9 @@ export const GitDiffFileSchema = z.object({
     added: z.number().int().nonnegative(),
     deleted: z.number().int().nonnegative(),
     binary: z.boolean(),
-    omitted: z.enum(['binary', 'too-large']).optional()
+    omitted: z.enum(['binary', 'too-large']).optional(),
+    // What the file went through, which a file the patch leaves out cannot say. A daemon from before it leaves it out.
+    kind: z.enum(['add', 'update', 'delete']).optional()
 });
 export type GitDiffFile = z.infer<typeof GitDiffFileSchema>;
 

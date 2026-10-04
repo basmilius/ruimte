@@ -84,6 +84,7 @@ describe('a commit as a diff', () => {
         expect(diff.files?.map((file) => file.path)).toEqual(['file-5.txt']);
         expect(diff.added).toBe(1);
         expect(diff.files?.[0]?.diff).toContain('+body 5');
+        expect(diff.files?.[0]?.kind).toBe('add');
     });
 
     test('the first commit is read against the empty tree', async () => {

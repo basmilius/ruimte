@@ -35522,6 +35522,14 @@
           "too-large"
         ]
       },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "add",
+          "update",
+          "delete"
+        ]
+      },
       "files": {
         "type": "array",
         "items": {
@@ -35551,6 +35559,14 @@
               "enum": [
                 "binary",
                 "too-large"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "add",
+                "update",
+                "delete"
               ]
             }
           },
