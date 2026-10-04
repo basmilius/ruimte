@@ -122,7 +122,7 @@ export function keyAction(event: KeyLike, apple: boolean): KeyAction | null {
         return command(shift ? 'selectSmartEnd' : 'smartEnd');
     }
     if (key === 'tab') {
-        return command(shift ? 'outdent' : 'indent');
+        return command(shift ? 'outdent' : 'insertTab');
     }
     if (key === 'enter') {
         return command('insertNewline');

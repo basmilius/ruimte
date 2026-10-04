@@ -47,7 +47,7 @@ describe('indentation', () => {
         expect(editor.getText()).toBe('  a');
         editor.setIndentation({ tabSize: 4, insertSpaces: false });
         press('Tab');
-        expect(editor.getText()).toBe('\t  a');
+        expect(editor.getText()).toBe('  \ta');
     });
 });
 
@@ -79,7 +79,7 @@ describe('typing', () => {
         expect(editor.getText()).toBe('a');
     });
 
-    test('indents on Tab and breaks the line on Enter', () => {
+    test('breaks the line on Enter', () => {
         const { editor, press: key } = setup({ text: 'a' });
         key('Enter');
         expect(editor.getText()).toBe('\na');
@@ -529,5 +529,30 @@ describe('keys and positions', () => {
             ])
         ).toBe(true);
         expect(editor.getText()).toBe('uno\ndos');
+    });
+});
+
+describe('Tab', () => {
+    test('inserts at the caret, indents a selection and unindents with Shift', () => {
+        const { editor, press: key, type } = setup({ text: 'ab\ncd', indentation: { tabSize: 4, insertSpaces: true } });
+        key('ArrowRight');
+        key('Tab');
+        expect(editor.getText()).toBe('a   b\ncd');
+        key('ArrowDown', { shiftKey: true });
+        key('Tab');
+        expect(editor.getText()).toBe('    a   b\n    cd');
+        key('Tab', { shiftKey: true });
+        expect(editor.getText()).toBe('a   b\ncd');
+        type('x');
+    });
+
+    test('steps over a closer the editor typed', () => {
+        const { editor, press: key, type } = setup({ text: '', language: 'typescript' });
+        type('f');
+        type('(');
+        type('1');
+        key('Tab');
+        type('x');
+        expect(editor.getText()).toBe('f(1)x');
     });
 });

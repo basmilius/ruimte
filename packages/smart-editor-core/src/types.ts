@@ -88,6 +88,7 @@ export type EditorCommand =
     | 'moveLineUp'
     | 'moveLineDown'
     | 'toggleLineComment'
+    | 'insertTab'
     | 'indent'
     | 'outdent'
     | 'insertNewline'
@@ -106,4 +107,6 @@ export interface CommandOptions {
     /* A language id such as `typescript` or `php`; it decides what counts as a comment or a string. */
     language?: string;
     smartSemicolon?: boolean;
+    /* Tab steps over a closer the editor inserted. On unless false. */
+    tabOutOfClosers?: boolean;
 }

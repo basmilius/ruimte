@@ -277,3 +277,86 @@ describe('selection expansion and line blocks', () => {
         ]);
     });
 });
+
+describe('Tab', () => {
+    it('inserts up to the next tab stop at the caret', () => {
+        const model = new DocumentModel('ab\n  cd');
+        caret(model, 2);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('ab  \n  cd');
+        expect(model.getSelections()[0]!.head).toBe(4);
+        caret(model, 6);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('ab  \n     cd');
+        model.setText('a');
+        caret(model, 1);
+        model.execute('insertTab', { insertSpaces: false });
+        expect(model.getText()).toBe('a\t');
+    });
+
+    it('counts a tab in the line before the caret as reaching its own stop', () => {
+        const model = new DocumentModel('\tx');
+        caret(model, 2);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('\tx   ');
+    });
+
+    it('inserts at every caret and indents the lines when there is a selection', () => {
+        const model = new DocumentModel('a\nbc');
+        model.setSelections([
+            { anchor: 1, head: 1 },
+            { anchor: 4, head: 4 }
+        ]);
+        model.execute('insertTab', { tabSize: 2 });
+        expect(model.getText()).toBe('a \nbc  ');
+        model.setText('one\ntwo');
+        model.setSelections([{ anchor: 1, head: 6 }]);
+        model.execute('insertTab', { tabSize: 2 });
+        expect(model.getText()).toBe('  one\n  two');
+    });
+
+    it('steps over a closer the editor inserted', () => {
+        const model = new DocumentModel();
+        model.typeText('f');
+        model.typeText('(');
+        model.typeText('a');
+        model.execute('insertTab');
+        expect(model.getText()).toBe('f(a)');
+        expect(model.getSelections()[0]!.head).toBe(4);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('f(a)    ');
+    });
+
+    it('steps out through nested closers one at a time and out of a quote', () => {
+        const model = new DocumentModel();
+        model.typeText('[');
+        model.typeText('{');
+        model.typeText('"');
+        model.typeText('x');
+        model.execute('insertTab');
+        model.execute('insertTab');
+        model.execute('insertTab');
+        expect(model.getText()).toBe('[{"x"}]');
+        expect(model.getSelections()[0]!.head).toBe(7);
+    });
+
+    it('forgets a closer once the caret left, and when the option is off', () => {
+        const model = new DocumentModel();
+        model.typeText('(');
+        model.setSelections([{ anchor: 0, head: 0 }]);
+        model.setSelections([{ anchor: 1, head: 1 }]);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('(   )');
+        const off = new DocumentModel();
+        off.typeText('(');
+        off.execute('insertTab', { tabSize: 4, tabOutOfClosers: false });
+        expect(off.getText()).toBe('(   )');
+    });
+
+    it('does not step over a closer typed by hand', () => {
+        const model = new DocumentModel('(a)');
+        caret(model, 2);
+        model.execute('insertTab', { tabSize: 4 });
+        expect(model.getText()).toBe('(a  )');
+    });
+});

@@ -1,3 +1,4 @@
+import { CloserTracker } from './closer-tracker.ts';
 import { hasSmartSemicolon } from './lexical.ts';
 import { clampInteger, TextRope } from './rope.ts';
 import type { DocumentLine } from './rope.ts';
@@ -63,6 +64,8 @@ interface SelectionEdit extends TextEdit {
     /* The `)` and `]` a smart semicolon just stepped over, which the next keystroke may still type over. */
     completedClosers?: string;
     consumed?: boolean;
+    /* An opener and the closer the editor added with it, with the caret between them. */
+    paired?: boolean;
 }
 
 interface SelectionTransaction {
@@ -302,6 +305,7 @@ export class DocumentModel {
     private selectionHistory: Selection[][] = [];
     private typingContexts = new TypingContexts((line) => this.getLine(line));
     private statementClosers = new Map<number, { text: string; language: string }>();
+    private closers = new CloserTracker();
 
     constructor(text = '') {
         this.rope = TextRope.from(text);
@@ -369,6 +373,7 @@ export class DocumentModel {
             return;
         }
         this.selections = normalized;
+        this.closers.prune(this.selections);
         this.emit();
     }
 
@@ -416,6 +421,8 @@ export class DocumentModel {
         this.invalidate();
         this.typingContexts.invalidate(firstLine);
         this.selections = normalizeSelections(this.rope, nextSelections);
+        this.closers.map(changed);
+        this.closers.prune(this.selections);
         this.revision++;
         const after = this.state();
         const changes = changed.map((edit) => ({ from: edit.from, to: edit.to, insertedLength: edit.text.length }));
@@ -561,6 +568,7 @@ export class DocumentModel {
         this.statementClosers.clear();
         if (this.revision === appliedRevision) {
             this.rememberStatementClosers(plans, transaction, language);
+            this.rememberPairs(plans, transaction);
         }
         return changed || plans.some((plan) => plan.consumed);
     }
@@ -603,6 +611,9 @@ export class DocumentModel {
         }
         if (command === 'insertNewline') {
             return this.insertNewline(options.insertSpaces === false ? '\t' : ' '.repeat(tabSize), language);
+        }
+        if (command === 'insertTab') {
+            return this.insertTab(tabSize, options);
         }
         if (command === 'indent' || command === 'outdent' || command === 'toggleLineComment') {
             return this.changeLineIndentation(command, tabSize, options);
@@ -685,7 +696,7 @@ export class DocumentModel {
                 return { from, to, text: text + content + pairs[text], anchor: selection.anchor - from + 1, head: selection.head - from + 1 };
             }
             if (this.shouldClosePair(from, text, after, context)) {
-                return { from, to, text: text + pairs[text], anchor: 1, head: 1 };
+                return { from, to, text: text + pairs[text], anchor: 1, head: 1, paired: true };
             }
         }
         return { from, to, text, anchor: text.length, head: text.length };
@@ -717,6 +728,41 @@ export class DocumentModel {
                 this.statementClosers.set(selection.head, { text: closers, language });
             }
         }
+    }
+
+    private rememberPairs(plans: readonly SelectionEdit[], transaction: SelectionTransaction): void {
+        for (const [index, selection] of transaction.selections.entries()) {
+            if (plans[index]?.paired) {
+                this.closers.add(selection.head - 1, selection.head);
+            }
+        }
+    }
+
+    /*
+     * Tab without a selection: up to the next tab stop, or over a closer the editor inserted. With a
+     * selection it indents the lines, as it does in front of other text.
+     */
+    private insertTab(tabSize: number, options: CommandOptions): boolean {
+        if (this.selections.some((selection) => selection.anchor !== selection.head)) {
+            return this.changeLineIndentation('indent', tabSize, options);
+        }
+        const tabOut = options.tabOutOfClosers !== false;
+        return this.applySelectionEdits(
+            this.selections.map((selection) => {
+                const offset = selection.head;
+                if (tabOut && this.closers.isCloserAt(offset)) {
+                    return { from: offset, to: offset, text: '', anchor: 1, head: 1, skip: true };
+                }
+                const text = options.insertSpaces === false ? '\t' : ' '.repeat(tabSize - (this.columnOf(offset, tabSize) % tabSize));
+                return { from: offset, to: offset, text, anchor: text.length, head: text.length };
+            }),
+            { source: 'command' }
+        );
+    }
+
+    /* The visual column of an offset, with tabs going to the next tab stop. */
+    private columnOf(offset: number, tabSize: number): number {
+        return indentationColumn(this.slice(this.rope.lineBounds(this.rope.lineAt(offset)).start, offset), tabSize);
     }
 
     private moveToLineEdge(command: 'smartHome' | 'smartEnd' | 'selectSmartHome' | 'selectSmartEnd'): boolean {
@@ -1152,6 +1198,7 @@ export class DocumentModel {
         const previous = this.rope;
         this.rope = state.rope;
         this.invalidate();
+        this.closers.clear();
         this.typingContexts.invalidate();
         this.selections = state.selections.map((selection) => ({ ...selection }));
         this.revision++;

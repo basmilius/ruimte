@@ -26,6 +26,7 @@ const MODIFYING = new Set<EditorCommand>([
     'moveLineUp',
     'moveLineDown',
     'toggleLineComment',
+    'insertTab',
     'indent',
     'outdent',
     'insertNewline',
