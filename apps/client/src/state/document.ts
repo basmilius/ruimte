@@ -22,6 +22,7 @@ import {
     type NodeAccent,
     type NodeTitleSource,
     type ProjectDocument,
+    type ProjectFileView,
     type ProjectFlags,
     type ProjectIconChoice,
     type ProjectLocal,
@@ -66,6 +67,8 @@ import { CellViewContext, storeHook } from '@/state/workspace-stores';
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here, since the canvas store is the editor of that one. */
     views: ProjectView[];
+    /* Files dropped into the grid live only as long as their cell does. */
+    temporaryFileViews: ProjectFileView[];
     /*
      * The view of the cell that has the focus. It is derived from the layout and kept beside it,
      * because it is what the sidebar marks, what a shortcut acts on and what everything outside the
@@ -137,6 +140,7 @@ export interface DocumentState {
     dismissNotice(): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
+    dropFileAt(name: string, path: string, at: CellAt, zone: SplitZone): string | null;
     /* The files in place of the focused cell, the way any view opens; the focus when they already stand somewhere. */
     showFiles(): void;
     /* Takes that cell off the grid again, which is what closing the last tab does. */
@@ -169,7 +173,6 @@ export interface DocumentState {
     /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
     addDrawingView(name: string): string;
     addDiagramView(name: string): string;
-    /* One file on disk, read and never written. The path is all it holds. */
     /* A file as a view of its own. `opens` is false for a caller that places it on the grid itself:
        opening it first would take the cell that has the focus, and the view standing there is gone
        by the time that caller says where this one really goes. */
@@ -342,10 +345,10 @@ function settledOn(
     views: ProjectView[],
     viewLocal: Record<string, ProjectViewLocal>,
     layout: SplitLayout | null,
-    was: Pick<DocumentState, 'lastCanvasViewId'>
+    was: Pick<DocumentState, 'lastCanvasViewId'> & Partial<Pick<DocumentState, 'temporaryFileViews'>>
 ): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'activeViewId' | 'lastCanvasViewId' | 'bodyFocused'> {
     const activeViewId = layout === null ? null : focusedViewId(layout);
-    const active = views.find((view) => view.id === activeViewId) ?? null;
+    const active = cellViewOf({ views, temporaryFileViews: was.temporaryFileViews }, activeViewId);
     const canvas = active !== null && isCanvasView(active);
     return {
         views,
@@ -354,14 +357,15 @@ function settledOn(
         activeViewId,
         lastCanvasViewId: canvas ? activeViewId : was.lastCanvasViewId,
         /* A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
-           The files are in no document, hence the id rather than the view. */
+           The files tab strip has no view object, hence its id. */
         bodyFocused: activeViewId === FILES_VIEW_ID || (active !== null && !canvas)
     };
 }
 
-/* Whether an id may stand in a cell: an openable view of the document, or the files of this client. */
-function canStandInCell(views: readonly ProjectView[], id: string): boolean {
-    return id === FILES_VIEW_ID || views.some((view) => view.id === id && isOpenableView(view));
+/* Temporary file cells and the files tab strip are openable without belonging to the document. */
+function canStandInCell(state: Pick<DocumentState, 'views' | 'temporaryFileViews'>, id: string): boolean {
+    const view = cellViewOf(state, id);
+    return id === FILES_VIEW_ID || (view !== null && isOpenableView(view));
 }
 
 /* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
@@ -404,12 +408,13 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
          * cell that is about to close may be holding edits and a camera that are only in that editor;
          * then the layout moves and the editors are opened and let go of to match it.
          */
-        const commit = (layout: SplitLayout | null): void => {
+        const commit = (layout: SplitLayout | null, files = get().temporaryFileViews): void => {
             const state = get();
             const views = state.exportViews();
             const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
-            const settled = settledOn(views, viewLocal, layout, state);
-            set({ ...settled, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
+            const temporaryFileViews = files.filter((view) => layout !== null && locateView(layout, view.id) !== null);
+            const settled = settledOn(views, viewLocal, layout, { ...state, temporaryFileViews });
+            set({ ...settled, temporaryFileViews, maximized: null, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
             openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), layout === null ? null : focusedViewId(layout), peers);
         };
 
@@ -462,6 +467,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
 
         return {
             views: [],
+            temporaryFileViews: [],
             activeViewId: null,
             layout: null,
             maximized: null,
@@ -480,14 +486,23 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             load(document, local) {
                 const kept = splitTrash(document?.views ?? [], get().trashed);
                 const views = kept.views;
+                const state = get();
+                const files = state.reloading ? state.temporaryFileViews : [];
                 // A view deleted since the local state was written has nothing left to stand for.
                 const viewLocal = Object.fromEntries(Object.entries(local?.views ?? {}).filter(([viewId]) => views.some((view) => view.id === viewId)));
                 // A file written before views could stand side by side reads as one cell on the view it named.
-                const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
-                const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
+                const layout = layoutOf(
+                    state.reloading && files.length > 0
+                        ? { activeViewId: state.activeViewId, layout: state.layout ?? undefined }
+                        : (local ?? { activeViewId: null, layout: undefined }),
+                    [...views, ...files]
+                );
+                const temporaryFileViews = files.filter((view) => layout !== null && locateView(layout, view.id) !== null);
+                const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null, temporaryFileViews });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
                 set({
                     ...settled,
+                    temporaryFileViews,
                     maximized: null,
                     viewNotice: null,
                     loading: true,
@@ -537,7 +552,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
 
             setActiveView(id) {
                 const state = get();
-                if (!canStandInCell(state.views, id) || state.activeViewId === id) {
+                if (!canStandInCell(state, id) || state.activeViewId === id) {
                     return;
                 }
                 if (state.layout === null) {
@@ -552,7 +567,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
 
             showView(id) {
                 const state = get();
-                if (!canStandInCell(state.views, id)) {
+                if (!canStandInCell(state, id)) {
                     return null;
                 }
                 if (state.layout === null) {
@@ -597,10 +612,20 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
 
             dropViewAt(viewId, at, zone) {
                 const state = get();
-                if (state.layout === null || !canStandInCell(state.views, viewId) || !canSplit(state.layout, at, zone, viewId)) {
+                if (state.layout === null || !canStandInCell(state, viewId) || !canSplit(state.layout, at, zone, viewId)) {
                     return;
                 }
                 commit(dropView(state.layout, viewId, at, zone));
+            },
+
+            dropFileAt(name, path, at, zone) {
+                const state = get();
+                if (state.layout === null || !canSplit(state.layout, at, zone)) {
+                    return null;
+                }
+                const view: ProjectFileView = { kind: 'file', id: nextId('view'), name, path };
+                commit(dropView(state.layout, view.id, at, zone), [...state.temporaryFileViews, view]);
+                return view.id;
             },
 
             showFiles() {
@@ -941,7 +966,7 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             exportLocal() {
-                const { activeViewId, viewLocal, views } = get();
+                const { activeViewId, viewLocal, views, layout, temporaryFileViews } = get();
                 const open = new Set([
                     ...peers.canvases.live().map(([viewId]) => viewId),
                     ...peers.drawings.live().map(([viewId]) => viewId),
@@ -954,7 +979,12 @@ export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentStat
                         peers
                     );
                 }
-                return { activeViewId, views: next, ...(get().layout === null ? {} : { layout: get().layout! }) };
+                const savedLayout = temporaryFileViews.length === 0 ? layout : layoutOf({ activeViewId, layout: layout ?? undefined }, views);
+                return {
+                    activeViewId: savedLayout === null ? null : focusedViewId(savedLayout),
+                    views: next,
+                    ...(savedLayout === null ? {} : { layout: savedLayout })
+                };
             }
         };
     });
@@ -978,8 +1008,12 @@ export function viewOfNode(views: ProjectView[], nodeId: string): ProjectView | 
     return views.find((view) => (isCanvasView(view) ? view.nodes.some((node) => node.id === nodeId) : view.id === nodeId)) ?? null;
 }
 
-export function activeViewOf(state: Pick<DocumentState, 'views' | 'activeViewId'>): ProjectView | null {
-    return state.views.find((view) => view.id === state.activeViewId) ?? null;
+export function cellViewOf(state: Pick<DocumentState, 'views'> & Partial<Pick<DocumentState, 'temporaryFileViews'>>, id: string | null): ProjectView | null {
+    return state.views.find((view) => view.id === id) ?? state.temporaryFileViews?.find((view) => view.id === id) ?? null;
+}
+
+export function activeViewOf(state: Pick<DocumentState, 'views' | 'activeViewId'> & Partial<Pick<DocumentState, 'temporaryFileViews'>>): ProjectView | null {
+    return cellViewOf(state, state.activeViewId);
 }
 
 export function hasActiveCanvas(state: Pick<DocumentState, 'views' | 'activeViewId'>): boolean {

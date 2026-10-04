@@ -84,7 +84,7 @@ import { SidebarToggle } from '@/shell/SidebarToggle';
 import { StationMenu } from '@/shell/menu/StationMenu';
 import { IS_STATION } from '@/station';
 import { NewViewItems } from '@/shell/ViewMenu';
-import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
+import { draggedViewId, dragging as draggedView, setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@ruimte/agents-react/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
@@ -941,12 +941,13 @@ export function Sidebar() {
     /* A file dragged onto the list becomes a view of its own, in the gap it was let go of. */
     const dropFilesAt = (index: number, transfer: DataTransfer): void => {
         setInsertAt(null);
+        const { views, temporaryFileViews } = useDocument.getState();
+        const temporary = temporaryFileViews.find((view) => view.id === draggedViewId(transfer));
         // A drag out of the file manager is named by the shell of the machine the project runs on.
-        const paths = carriesPaths(transfer.types) ? droppedPaths(transfer) : finderPaths(transfer, endpointId);
+        const paths = temporary ? [temporary.path] : carriesPaths(transfer.types) ? droppedPaths(transfer) : finderPaths(transfer, endpointId);
         if (paths.length === 0) {
             return;
         }
-        const { views } = useDocument.getState();
         const after = index === 0 ? null : (views[Math.min(index, views.length) - 1]?.id ?? null);
         void newFileViewsAfter(paths, after);
     };
@@ -1039,7 +1040,13 @@ export function Sidebar() {
                                     onDragOver={
                                         takesDrop
                                             ? (e) => {
-                                                  if (!reorderable && !carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types)) {
+                                                  const temporary = useDocument.getState().temporaryFileViews.some((view) => view.id === draggedView());
+                                                  if (
+                                                      !reorderable &&
+                                                      !temporary &&
+                                                      !carriesPaths(e.dataTransfer.types) &&
+                                                      !carriesFiles(e.dataTransfer.types)
+                                                  ) {
                                                       return;
                                                   }
                                                   e.preventDefault();

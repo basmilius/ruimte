@@ -1,7 +1,7 @@
 import type { ProjectView } from '@ruimte/contracts';
 
 /*
- * The cell that holds the open files. It is the one view the project document does not have: which
+ * The cell that holds the open files. The project document does not hold it: which
  * files a person has open is theirs and this machine's, the way the tabs themselves always were
  * (`state/files.ts`). The id is reserved rather than generated, so the layout of a client that
  * never opened a file reads the same, and a hand-written `project.json` can never name a view this

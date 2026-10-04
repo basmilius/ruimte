@@ -70,7 +70,7 @@ import { sightOf, visibleNodes } from '@/state/attention';
 import { defaultCanvases, focusedCanvas, liveCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type Locks, type NodeKind } from '@/state/canvas';
 import { useChats } from '@ruimte/agents-react/state/chats';
 import { liveDiagram } from '@/state/diagram';
-import { activeViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
+import { activeViewOf, cellViewOf, useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { liveDrawing } from '@/state/drawing';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -226,7 +226,7 @@ function lastCanvasOf(state: DocumentState): (ProjectView & { kind: 'canvas' }) 
 
 /* What stands in a cell: a view of the project, or this client's files, which the document does not have. */
 function cellName(state: DocumentState, viewId: string): string {
-    return viewId === FILES_VIEW_ID ? 'Files' : (state.views.find((view) => view.id === viewId)?.name ?? viewId);
+    return viewId === FILES_VIEW_ID ? 'Files' : (cellViewOf(state, viewId)?.name ?? viewId);
 }
 
 /* The cells of the grid column by column, each named by the view standing in it. */
@@ -1274,21 +1274,31 @@ export function createClientActionRegistry(document: StoreApi<DocumentState>, ma
                 throw new ActionRefusal('view-not-shown', `“${cellName(state, cellViewId ?? '')}” does not stand in a cell.`);
             }
             if (viewId !== null) {
-                const view = state.views.find((candidate) => candidate.id === viewId);
+                const view = cellViewOf(state, viewId);
                 if (viewId !== FILES_VIEW_ID && (!view || !isOpenableView(view))) {
                     throw unknownView(viewId);
                 }
             }
             const folder = useProject.getState().current?.folder ?? null;
-            // Every path is checked before the first view is made, so a refusal leaves the sidebar as it was.
+            // Validate every path before changing the grid.
             const stored = (paths ?? []).map((path) => storedPathOf(folder, projectPathOf(folder, path, call.actor.kind)));
             if (!canSplit(layout, at, zone, viewId)) {
                 throw new ActionRefusal('no-room', 'The grid has no room there, or the view already stands in that cell.');
             }
-            // A file of its own, not a tab: every path becomes a view the sidebar lists, and the first takes the place.
-            const created = stored.map((path) => state.addFileView(basenameOf(path), path, false));
+            const created: string[] = [];
+            let fileAt = at;
+            for (const path of stored) {
+                const id = document.getState().dropFileAt(basenameOf(path), path, fileAt, created.length > 0 && zone === 'center' ? 'down' : zone);
+                if (id === null) {
+                    break;
+                }
+                created.push(id);
+                fileAt = locateView(document.getState().layout!, id)!;
+            }
             const target = viewId ?? created[0]!;
-            document.getState().dropViewAt(target, at, zone);
+            if (viewId !== null) {
+                document.getState().dropViewAt(target, at, zone);
+            }
             return { output: { viewId: target, view: cellName(document.getState(), target), cellViewId: standing.viewId, zone, created } };
         },
         'terminal.clear': ({ terminalId }, { confirmed }) => {

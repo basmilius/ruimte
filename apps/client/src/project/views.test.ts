@@ -106,11 +106,23 @@ describe('files dropped on the list', () => {
         const views = useDocument.getState().views;
         expect(views.map((view) => view.name)).toEqual(['Main', 'a.md', 'b.md', 'Flow']);
         expect(views[1]).toMatchObject({ kind: 'file', path: '/elsewhere/a.md' });
+        expect(useDocument.getState().fileViews()).toEqual(views);
+        expect(useDocument.getState().temporaryFileViews).toEqual([]);
     });
 
     test('go to the very top from the gap above the first row', async () => {
         useDocument.getState().load(document, { activeViewId: 'main', views: {} });
         await newFileViewsAfter(['/elsewhere/a.md'], null);
         expect(useDocument.getState().views.map((view) => view.name)).toEqual(['a.md', 'Main', 'Flow']);
+    });
+
+    test('a file from a temporary cell becomes a saved view when dropped on the list', async () => {
+        useDocument.getState().load(document, { activeViewId: 'main', views: {} });
+        const id = useDocument.getState().dropFileAt('a.md', '/elsewhere/a.md', { column: 0, cell: 0 }, 'right')!;
+        const temporary = useDocument.getState().temporaryFileViews.find((view) => view.id === id)!;
+        await newFileViewsAfter([temporary.path], 'main');
+        expect(useDocument.getState().views[1]).toMatchObject({ kind: 'file', name: 'a.md', path: '/elsewhere/a.md' });
+        expect(useDocument.getState().temporaryFileViews).toEqual([]);
+        expect(useDocument.getState().fileViews()).toEqual(useDocument.getState().views);
     });
 });

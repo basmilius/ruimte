@@ -291,9 +291,7 @@ function Cell({
                         }
                         return;
                     }
-                    /* A file of its own, not a tab: the cell beside this one shows that one file and
-                       keeps showing it. The files cell is for looking through a folder; this is for
-                       keeping a file in sight while working next to it. */
+                    // Keep the file beside this cell without adding it to the sidebar.
                     placeFilesAction(paths, viewId, here);
                 }}
             >

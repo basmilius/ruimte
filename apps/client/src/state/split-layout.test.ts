@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, SplitLayout } from '@ruimte/contracts';
 import { focusedCanvas, liveCanvases } from './canvas';
-import { useDocument } from './document';
+import { activeViewOf, cellViewOf, useDocument } from './document';
 
 function view(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView {
     return {
@@ -181,6 +181,48 @@ describe('closing a cell', () => {
         useDocument.getState().closeCellAt({ column: 1, cell: 0 });
         const saved = useDocument.getState().views.find((each) => each.id === 'b') as ProjectCanvasView;
         expect(saved.texts).toHaveLength(1);
+    });
+});
+
+describe('temporary file cells', () => {
+    test('resolve as the focused view but stay out of the saved project and layout', () => {
+        const id = useDocument.getState().dropFileAt('notes.md', 'notes.md', { column: 0, cell: 0 }, 'right')!;
+        const state = useDocument.getState();
+        expect(shape()).toEqual([['a'], [id]]);
+        expect(activeViewOf(state)).toMatchObject({ id, kind: 'file', path: 'notes.md' });
+        expect(state.bodyFocused).toBe(true);
+        expect(state.exportViews().map((view) => view.id)).toEqual(['a', 'b', 'c', 'd']);
+        expect(state.exportLocal()).toMatchObject({ activeViewId: 'a', layout: { columns: [{ cells: [{ viewId: 'a' }] }] } });
+        expect(JSON.stringify(state.exportLocal())).not.toContain(id);
+    });
+
+    test('are released when their cell closes or is replaced', () => {
+        const id = useDocument.getState().dropFileAt('notes.md', 'notes.md', { column: 0, cell: 0 }, 'right')!;
+        useDocument.getState().setActiveView('b');
+        expect(shape()).toEqual([['a'], ['b']]);
+        expect(cellViewOf(useDocument.getState(), id)).toBeNull();
+        const next = useDocument.getState().dropFileAt('other.md', 'other.md', { column: 1, cell: 0 }, 'down')!;
+        useDocument.getState().closeCellAt({ column: 1, cell: 1 });
+        expect(cellViewOf(useDocument.getState(), next)).toBeNull();
+    });
+
+    test('survive a reload of the same project and leave when another project loads', () => {
+        const id = useDocument.getState().dropFileAt('notes.md', 'notes.md', { column: 0, cell: 0 }, 'right')!;
+        const changed = document([view('a'), view('b')]);
+        useDocument.getState().reload(changed, useDocument.getState().exportLocal());
+        expect(shape()).toEqual([['a'], [id]]);
+        expect(activeViewOf(useDocument.getState())).toMatchObject({ id, kind: 'file' });
+        useDocument.getState().load(changed, useDocument.getState().exportLocal());
+        expect(shape()).toEqual([['a']]);
+        expect(useDocument.getState().temporaryFileViews).toEqual([]);
+    });
+
+    test('a full grid creates no temporary file or document edit', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        useDocument.getState().splitFocused('right', 'c');
+        expect(useDocument.getState().dropFileAt('notes.md', 'notes.md', { column: 0, cell: 0 }, 'right')).toBeNull();
+        expect(useDocument.getState().temporaryFileViews).toEqual([]);
+        expect(useDocument.getState().edits).toBe(0);
     });
 });
 

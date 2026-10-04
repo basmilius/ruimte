@@ -29,7 +29,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { canSplit, cellAt, cellCount, cellsRightOf, freeViewFor, maximizedCell, type CellAt } from '@/shell/split';
 import { useChatRow } from '@ruimte/agents-react/state/chats';
-import { hasActiveCanvas, useDocument } from '@/state/document';
+import { cellViewOf, hasActiveCanvas, useDocument } from '@/state/document';
 import { isScratchProject, useProject } from '@/state/project';
 import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useSessionRow } from '@/state/sessions';
@@ -61,7 +61,8 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
        which opening a menu has no business doing, and sharing without one only writes a file nobody
        pulls yet. Left out for a view that cannot travel, and for a divider, which goes where the
        group under it goes and is nobody's to share. */
-    const view = useDocument((state) => state.views.find((candidate) => candidate.id === viewId));
+    const saved = useDocument((state) => state.views.some((candidate) => candidate.id === viewId));
+    const view = useDocument((state) => cellViewOf(state, viewId) ?? undefined);
     /* A canvas to land on. Without one the rows that put a view on a canvas would do nothing at all,
        so they are left out rather than greyed, which a menu has no room to explain. */
     const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
@@ -102,6 +103,9 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const offerPut = offers.putOnCanvas;
     const offerShow = offers.showOnCanvas;
     const place = offerPut || offerShow || filePath !== null || workingFolder !== null;
+    if (!saved && filePath !== null) {
+        return <FileActionItems path={filePath} on="view" />;
+    }
     return (
         <>
             <Menu.Item onClick={() => askViewSettings(viewId)}>
