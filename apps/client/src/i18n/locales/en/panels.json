@@ -585,6 +585,31 @@
             "references_other": "{{formatted}} references",
             "close": "Close"
         },
+        "symbols": {
+            "unavailable": "No language server knows the symbols of this file",
+            "failed": "Could not read the symbols: {{message}}",
+            "placeholder": "Go to symbol in {{file}}",
+            "navigate": "Navigate",
+            "open": "Open",
+            "workspace": "Workspace symbols",
+            "line": "Go to line",
+            "none": "No matching symbols",
+            "workspaceHint": "Type the name of a symbol in the project",
+            "lineHint": "Type a line number",
+            "goToLine": "Go to line {{line}}",
+            "groups": {
+                "namespaces": "Namespaces",
+                "classes": "Classes",
+                "interfaces": "Interfaces",
+                "enums": "Enums",
+                "functions": "Functions",
+                "methods": "Methods",
+                "properties": "Properties",
+                "variables": "Variables",
+                "constants": "Constants",
+                "other": "Other"
+            }
+        },
         "completion": {
             "insert": "Insert",
             "replace": "Replace",

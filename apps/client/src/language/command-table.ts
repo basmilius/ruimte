@@ -17,6 +17,7 @@ const TABLE = {
     'rename-symbol': { menu: 'code', key: 'renameSymbol', shortcut: CANVAS_SHORTCUTS.rename },
     'organize-imports': { menu: 'code', key: 'organizeImports', shortcut: CANVAS_SHORTCUTS.organizeImports },
     'format-document': { menu: 'code', key: 'formatDocument', shortcut: CANVAS_SHORTCUTS.formatDocument },
+    'go-to-symbol': { menu: 'go', key: 'goToSymbol', shortcut: CANVAS_SHORTCUTS.goToSymbol },
     'go-to-definition': { menu: 'go', key: 'goToDefinition', shortcut: CANVAS_SHORTCUTS.goToDefinition },
     'go-to-declaration': { menu: 'go', key: 'goToDeclaration' },
     'go-to-type-definition': { menu: 'go', key: 'goToTypeDefinition', shortcut: CANVAS_SHORTCUTS.goToTypeDefinition },

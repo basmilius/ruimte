@@ -7,6 +7,7 @@ import { focusedLanguage } from './focused-language';
 const RUNNERS: Record<LanguageCommandId, (language: EditorLanguage) => void> = {
     'code-actions': (language) => void language.codeActions.open(),
     'rename-symbol': (language) => void language.rename.start(),
+    'go-to-symbol': (language) => void language.symbolPicker.open(),
     'go-to-definition': (language) => void language.navigation.go('definition'),
     'go-to-declaration': (language) => void language.navigation.go('declaration'),
     'go-to-type-definition': (language) => void language.navigation.go('typeDefinition'),

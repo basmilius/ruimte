@@ -585,6 +585,31 @@
             "references_other": "{{formatted}} referenties",
             "close": "Sluit"
         },
+        "symbols": {
+            "unavailable": "Geen language server kent de symbolen van dit bestand",
+            "failed": "De symbolen konden niet worden gelezen: {{message}}",
+            "placeholder": "Ga naar symbool in {{file}}",
+            "navigate": "Navigeer",
+            "open": "Open",
+            "workspace": "Symbolen in het project",
+            "line": "Ga naar regel",
+            "none": "Geen symbolen gevonden",
+            "workspaceHint": "Typ de naam van een symbool in het project",
+            "lineHint": "Typ een regelnummer",
+            "goToLine": "Ga naar regel {{line}}",
+            "groups": {
+                "namespaces": "Namespaces",
+                "classes": "Classes",
+                "interfaces": "Interfaces",
+                "enums": "Enums",
+                "functions": "Functies",
+                "methods": "Methoden",
+                "properties": "Properties",
+                "variables": "Variabelen",
+                "constants": "Constanten",
+                "other": "Overig"
+            }
+        },
         "completion": {
             "insert": "Invoegen",
             "replace": "Vervangen",

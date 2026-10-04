@@ -9,6 +9,7 @@ import { HoverFeature } from './hover';
 import { NavigationFeature, locationRow } from './navigation';
 import { PeekFeature } from './peek';
 import { PickFeature } from './pick';
+import { SymbolPickerFeature } from './symbol-picker';
 import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
@@ -38,6 +39,7 @@ export class EditorLanguage {
     readonly rename: RenameFeature;
     readonly navigation: NavigationFeature;
     readonly peek: PeekFeature;
+    readonly symbolPicker: SymbolPickerFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -59,6 +61,7 @@ export class EditorLanguage {
         this.rename = new RenameFeature(this);
         this.navigation = new NavigationFeature(this);
         this.peek = new PeekFeature(this);
+        this.symbolPicker = new SymbolPickerFeature(this);
     }
 
     get uri(): string {

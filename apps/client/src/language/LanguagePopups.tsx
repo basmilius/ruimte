@@ -7,6 +7,7 @@ import { HoverCard } from './HoverCard';
 import { PeekPanel } from './PeekPanel';
 import { PickPopup } from './PickPopup';
 import { RenameCard } from './RenameCard';
+import { SymbolPicker } from './SymbolPicker';
 import { SignatureCard } from './SignatureCard';
 
 /*
@@ -22,6 +23,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const pick = useStore(language.popups, (state) => state.pick);
     const rename = useStore(language.popups, (state) => state.rename);
     const peek = useStore(language.popups, (state) => state.peek);
+    const symbols = useStore(language.popups, (state) => state.symbols);
 
     useEffect(() => language.editor.onViewChange(redraw), [language]);
 
@@ -45,6 +47,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
             )}
             {completion !== null && completionRect !== null && <CompletionPopup language={language} view={completion} rect={completionRect} />}
             {pick !== null && pickRect !== null && <PickPopup language={language} view={pick} rect={pickRect} />}
+            {symbols !== null && <SymbolPicker language={language} view={symbols} />}
             {peek !== null && <PeekPanel language={language} view={peek} />}
             {rename !== null && renameRect !== null && <RenameCard language={language} view={rename} rect={renameRect} endRect={renameEnd} />}
         </>

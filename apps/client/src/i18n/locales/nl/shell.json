@@ -560,7 +560,8 @@
             "goToDeclaration": "Ga naar declaratie",
             "goToTypeDefinition": "Ga naar typedefinitie",
             "goToImplementation": "Ga naar implementatie",
-            "peekReferences": "Referenties bekijken"
+            "peekReferences": "Referenties bekijken",
+            "goToSymbol": "Ga naar symbool"
         },
         "sections": {
             "recent": "Recent",
@@ -757,6 +758,7 @@
         "goToDeclaration": "Ga naar declaratie",
         "goToTypeDefinition": "Ga naar typedefinitie",
         "goToImplementation": "Ga naar implementatie",
-        "peekReferences": "Referenties bekijken"
+        "peekReferences": "Referenties bekijken",
+        "goToSymbol": "Ga naar symbool…"
     }
 }

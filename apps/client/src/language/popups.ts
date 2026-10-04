@@ -3,6 +3,7 @@ import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { Location } from '@ruimte/smart-editor-lsp';
 import type { Problem } from './diagnostics-model';
 import type { PeekFile, PeekSnippet } from './peek-model';
+import type { SymbolEntry } from './symbol-picker-model';
 import type { HoverText } from './hover-content';
 import type { SignatureViewModel } from './signature-model';
 
@@ -123,6 +124,13 @@ export interface PeekView {
     readonly preview: (PeekSnippet & { readonly uri: string }) | null;
 }
 
+/* The picker that jumps to a symbol of the file, over the symbols the servers know in it. */
+export interface SymbolsView {
+    /* The file's name, for the placeholder. */
+    readonly file: string;
+    readonly entries: readonly SymbolEntry[];
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
@@ -130,10 +138,11 @@ export interface PopupState {
     readonly pick: PickView | null;
     readonly rename: RenameView | null;
     readonly peek: PeekView | null;
+    readonly symbols: SymbolsView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null, peek: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null, peek: null, symbols: null }));
 }

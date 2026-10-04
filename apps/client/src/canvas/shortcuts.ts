@@ -44,6 +44,7 @@ export const CANVAS_SHORTCUTS = {
     goToDefinition: shortcut('Alt+Shift+D'),
     goToTypeDefinition: shortcut('Alt+Shift+T'),
     goToImplementation: shortcut('Alt+Shift+I'),
+    goToSymbol: shortcut('Mod+Shift+O'),
     peekReferences: shortcut('Alt+F7'),
     rename: shortcut('Alt+Shift+R'),
     organizeImports: shortcut('Alt+Shift+O'),
