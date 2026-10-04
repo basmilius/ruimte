@@ -247,12 +247,12 @@ describe('selection expansion and line blocks', () => {
         expect(model.execute('shrinkSelection')).toBe(false);
     });
 
-    it('duplicates reversed whole-line selections ending on the next line start', () => {
+    it('duplicates a reversed selection in place and selects the copy forward', () => {
         const model = new DocumentModel('a\r\nb\r\nc');
         model.setSelections([{ anchor: 6, head: 0 }]);
         model.execute('duplicateLine');
         expect(model.getText()).toBe('a\r\nb\r\na\r\nb\r\nc');
-        expect(model.getSelections()).toEqual([{ anchor: 12, head: 6 }]);
+        expect(model.getSelections()).toEqual([{ anchor: 6, head: 12 }]);
         model.undo();
         expect(model.getSelections()).toEqual([{ anchor: 6, head: 0 }]);
     });
@@ -358,5 +358,77 @@ describe('Tab', () => {
         caret(model, 2);
         model.execute('insertTab', { tabSize: 4 });
         expect(model.getText()).toBe('(a  )');
+    });
+});
+
+describe('delete line and duplicate', () => {
+    it('keeps the column of the caret on the line that follows', () => {
+        const model = new DocumentModel('one\ntwo three\nfour');
+        caret(model, 8);
+        model.execute('deleteLine');
+        expect(model.getText()).toBe('one\nfour');
+        expect(model.getSelections()).toEqual([{ anchor: 8, head: 8 }]);
+        model.undo();
+        caret(model, 11);
+        model.execute('deleteLine');
+        expect(model.getSelections()).toEqual([{ anchor: 8, head: 8 }]);
+    });
+
+    it('clamps to a shorter line and moves up from the last line', () => {
+        const model = new DocumentModel('abcdef\nxy\nlonger');
+        caret(model, 5);
+        model.execute('deleteLine');
+        expect(model.getText()).toBe('xy\nlonger');
+        expect(model.getSelections()).toEqual([{ anchor: 2, head: 2 }]);
+        caret(model, 6);
+        model.execute('deleteLine');
+        expect(model.getText()).toBe('xy');
+        expect(model.getSelections()).toEqual([{ anchor: 2, head: 2 }]);
+    });
+
+    it('deletes the lines of every caret and puts each on the line after its block', () => {
+        const model = new DocumentModel('a1\nb2\nc3\nd4\ne5');
+        model.setSelections([
+            { anchor: 1, head: 1 },
+            { anchor: 10, head: 10 }
+        ]);
+        model.execute('deleteLine');
+        expect(model.getText()).toBe('b2\nc3\ne5');
+        expect(model.getSelections()).toEqual([
+            { anchor: 1, head: 1 },
+            { anchor: 7, head: 7 }
+        ]);
+    });
+
+    it('duplicates the selection in place and selects the copy', () => {
+        const model = new DocumentModel('foo bar baz');
+        model.setSelections([{ anchor: 4, head: 7 }]);
+        model.execute('duplicateLine');
+        expect(model.getText()).toBe('foo barbar baz');
+        expect(model.getSelections()).toEqual([{ anchor: 7, head: 10 }]);
+        model.execute('duplicateLine');
+        expect(model.getText()).toBe('foo barbarbar baz');
+    });
+
+    it('duplicates the selection of every caret and the line of a caret without one', () => {
+        const model = new DocumentModel('ab cd\nef');
+        model.setSelections([
+            { anchor: 0, head: 2 },
+            { anchor: 6, head: 6 }
+        ]);
+        model.execute('duplicateLine');
+        expect(model.getText()).toBe('abab cd\nef\nef');
+        expect(model.getSelections()).toEqual([
+            { anchor: 2, head: 4 },
+            { anchor: 11, head: 11 }
+        ]);
+    });
+
+    it('still duplicates the line at a bare caret', () => {
+        const model = new DocumentModel('one\ntwo');
+        caret(model, 5);
+        model.execute('duplicateLine');
+        expect(model.getText()).toBe('one\ntwo\ntwo');
+        expect(model.getSelections()).toEqual([{ anchor: 9, head: 9 }]);
     });
 });

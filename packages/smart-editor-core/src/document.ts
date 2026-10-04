@@ -639,7 +639,7 @@ export class DocumentModel {
         }
         const selectedLines = this.selectedLines();
         if (command === 'duplicateLine') {
-            return this.duplicateLines(selectedLines);
+            return this.duplicate();
         }
         if (command === 'deleteLine') {
             return this.deleteLines(selectedLines);
@@ -869,36 +869,92 @@ export class DocumentModel {
         return [...indices].sort((left, right) => left - right);
     }
 
-    private duplicateLines(indices: readonly number[]): boolean {
-        const groups = blocks(indices);
-        const edits = groups.map((block) => {
-            const first = this.rope.lineBounds(block.first);
-            const last = this.rope.lineBounds(block.last);
-            const text = last.next > last.end ? this.slice(first.start, last.next) : this.newlineAt(block.last) + this.slice(first.start, last.end);
-            return { from: last.next, to: last.next, text };
-        });
-        const selections = this.selections.map((selection) => {
-            const line = this.rope.lineAt(Math.min(selection.anchor, selection.head));
-            const group = groups.findIndex((candidate) => line >= candidate.first && line <= candidate.last);
-            const priorDelta = edits.slice(0, group).reduce((sum, edit) => sum + edit.text.length, 0);
-            const shift = edits[group]!.text.length + priorDelta;
-            return { anchor: selection.anchor + shift, head: selection.head + shift };
-        });
+    /* A selection is copied in place, its copy selected; a caret duplicates its line and moves down with it. */
+    private duplicate(): boolean {
+        const carets = this.selections.filter((selection) => selection.anchor === selection.head);
+        const lines = new Set<number>();
+        for (const caret of carets) {
+            lines.add(this.rope.lineAt(caret.head));
+        }
+        const groups = blocks([...lines].sort((left, right) => left - right));
+        interface Copy {
+            at: number;
+            text: string;
+            /* Where each selection that rides on this copy stands once `shift` characters went in before it. */
+            select(shift: number): Selection[];
+        }
+        const copies: Copy[] = [];
+        for (const selection of this.selections) {
+            const { from, to } = rangeOf(selection);
+            if (from !== to) {
+                const text = this.slice(from, to);
+                copies.push({ at: to, text, select: (shift) => [{ anchor: to + shift, head: to + shift + text.length }] });
+            }
+        }
+        for (const group of groups) {
+            const first = this.rope.lineBounds(group.first);
+            const last = this.rope.lineBounds(group.last);
+            const text = last.next > last.end ? this.slice(first.start, last.next) : this.newlineAt(group.last) + this.slice(first.start, last.end);
+            const riders = carets.filter((caret) => {
+                const line = this.rope.lineAt(caret.head);
+                return line >= group.first && line <= group.last;
+            });
+            copies.push({
+                at: last.next,
+                text,
+                select: (shift) => riders.map((caret) => ({ anchor: caret.anchor + shift + text.length, head: caret.head + shift + text.length }))
+            });
+        }
+        copies.sort((left, right) => left.at - right.at);
+        const edits: TextEdit[] = [];
+        const selections: Selection[] = [];
+        let shift = 0;
+        for (const copy of copies) {
+            selections.push(...copy.select(shift));
+            const previous = edits.at(-1);
+            if (previous?.from === copy.at) {
+                previous.text += copy.text;
+            } else {
+                edits.push({ from: copy.at, to: copy.at, text: copy.text });
+            }
+            shift += copy.text.length;
+        }
         return this.applyEdits(edits, { source: 'command', selections });
     }
 
+    /* The next line takes the caret in at the same column, or the one above when there is none. */
     private deleteLines(indices: readonly number[]): boolean {
-        return this.deleteRanges(
-            blocks(indices).map((block) => {
-                let from = this.rope.lineBounds(block.first).start;
-                const to = this.rope.lineBounds(block.last).next;
-                // The last line has no break of its own, so the one before it goes too.
-                if (block.last === this.getLineCount() - 1 && block.first > 0) {
-                    from = this.rope.lineBounds(block.first - 1).end;
-                }
-                return { from, to, text: '' };
-            })
-        );
+        const groups = blocks(indices);
+        const columns = new Map<number, number>();
+        for (const selection of this.selections) {
+            columns.set(this.rope.lineAt(selection.head), this.positionAt(selection.head).column);
+        }
+        const edits = groups.map((block) => {
+            let from = this.rope.lineBounds(block.first).start;
+            const to = this.rope.lineBounds(block.last).next;
+            // The last line has no break of its own, so the one before it goes too.
+            if (block.last === this.getLineCount() - 1 && block.first > 0) {
+                from = this.rope.lineBounds(block.first - 1).end;
+            }
+            return { from, to, text: '' };
+        });
+        const selections: Selection[] = [];
+        let removed = 0;
+        for (const [position, block] of groups.entries()) {
+            const edit = edits[position]!;
+            const column = Math.max(0, ...[...columns].filter(([line]) => line >= block.first && line <= block.last).map(([, value]) => value));
+            const target = block.last + 1 < this.getLineCount() ? block.last + 1 : block.first - 1;
+            if (target >= 0) {
+                const bounds = this.rope.lineBounds(target);
+                const start = bounds.start - (block.last + 1 < this.getLineCount() ? edit.to - edit.from : 0) - removed;
+                const caret = start + Math.min(column, bounds.end - bounds.start);
+                selections.push({ anchor: caret, head: caret });
+            } else {
+                selections.push({ anchor: 0, head: 0 });
+            }
+            removed += edit.to - edit.from;
+        }
+        return this.applyEdits(edits, { source: 'command', selections });
     }
 
     private moveLines(indices: readonly number[], direction: -1 | 1): boolean {
