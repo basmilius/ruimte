@@ -1963,7 +1963,10 @@ describe('the identity migration', () => {
 });
 
 describe('cors', () => {
-    test('a loopback page and a listed origin may read the answers, another page may not', async () => {
+    test('the desktop app, a loopback page and a listed origin may read the answers, another page may not', async () => {
+        const desktop = await dispatch('/v1/me', { method: 'OPTIONS', headers: { origin: 'app://ruimte' } });
+        expect(desktop.headers.get('access-control-allow-origin')).toBe('app://ruimte');
+
         const loopback = await dispatch('/v1/machines', { method: 'OPTIONS', headers: { origin: 'http://127.0.0.1:4210' } });
         expect(loopback.status).toBe(204);
         expect(loopback.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:4210');

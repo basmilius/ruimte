@@ -64,17 +64,19 @@ export async function readBody<T>(request: Request, schema: z.ZodType<T>, maxByt
 
 const LOOPBACK_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?$/;
 
+/* `DESKTOP_APP_ORIGIN` in `@ruimte/contracts`, which the worker does not depend on. */
+const DESKTOP_APP_ORIGIN = 'app://ruimte';
+
 /*
- * The client runs from the daemon it came with (`http://127.0.0.1:<port>` in the desktop app) or from
- * Vite in dev, so loopback is what a page needs. Tokens are bearer and never cookies, so this is about
- * which pages may read the answers, not about forged requests.
+ * The desktop app serves the client on its own scheme, Vite serves it on loopback in dev. Tokens are
+ * bearer and never cookies, so this is about which pages may read the answers, not about forged requests.
  */
 export function allowedOrigin(request: Request, env: Env): string | null {
     const origin = request.headers.get('origin');
     if (!origin) {
         return null;
     }
-    if (LOOPBACK_ORIGIN.test(origin)) {
+    if (origin === DESKTOP_APP_ORIGIN || LOOPBACK_ORIGIN.test(origin)) {
         return origin;
     }
     const extra = (env.ALLOWED_ORIGINS ?? '')
