@@ -33,6 +33,7 @@ export interface ViewSettings {
 
 /* The lines past the visible ones that are colored ahead of the scroll, and how long one slice of that work may take. */
 const COLOR_MARGIN = 80;
+const MIN_OVERSCAN = 400;
 const COLOR_SLICE_MS = 8;
 const FIRST_PAINT_MS = 12;
 const FOLD_DELAY_MS = 300;
@@ -177,7 +178,11 @@ export class EditorView {
         this.content.append(this.overlays, code, this.over, this.carets);
         // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
         const scroller = make('div', 'se-scroller');
-        scroller.append(this.gutter, this.content);
+        // The pinned headers stick to the corner the same way, which keeps them still against the text while the browser scrolls.
+        const stickyAnchor = make('div', 'se-sticky-anchor');
+        this.sticky = make('div', 'se-sticky');
+        stickyAnchor.append(this.sticky);
+        scroller.append(stickyAnchor, this.gutter, this.content);
         this.viewport.append(scroller);
         this.input = make('textarea', 'se-input');
         this.input.wrap = 'off';
@@ -187,7 +192,6 @@ export class EditorView {
         }
         this.input.setAttribute('aria-multiline', 'true');
         this.input.setAttribute('aria-label', 'Code editor');
-        this.sticky = make('div', 'se-sticky');
         this.sticky.setAttribute('aria-hidden', 'true');
         this.sticky.hidden = true;
         this.overview = make('div', 'se-overview');
@@ -195,7 +199,7 @@ export class EditorView {
         this.notice = make('div', 'se-notice');
         this.notice.setAttribute('role', 'status');
         this.notice.hidden = true;
-        this.root.append(this.viewport, this.sticky, this.overview, this.input, this.notice);
+        this.root.append(this.viewport, this.overview, this.input, this.notice);
         container.append(this.root);
 
         this.font = readEditorFont(this.root);
@@ -369,6 +373,11 @@ export class EditorView {
 
     private get viewportHeight(): number {
         return this.viewport.clientHeight || DEFAULT_HEIGHT;
+    }
+
+    /* A viewport of rows on each side, so a fling the compositor runs ahead of this thread still lands on drawn rows. */
+    private get overscan(): number {
+        return Math.max(MIN_OVERSCAN, this.viewportHeight);
     }
 
     /* The width the text has, which is what the viewport has left of the gutter. */
@@ -839,10 +848,14 @@ export class EditorView {
         });
     }
 
-    /* The viewport scrolled, by the wheel, a scroll bar or the browser; what is drawn follows unless it already did. */
+    /*
+     * The viewport scrolled, by the wheel, a scroll bar or the browser. A scroll event comes before the
+     * frame's paint, so drawing here puts the rows, the pinned headers and the overlays in the frame the
+     * scroll shows in; a render already queued for this frame follows right after.
+     */
     scrolled(): void {
-        if (this.viewport.scrollTop !== this.renderedScroll.top || this.viewport.scrollLeft !== this.renderedScroll.left) {
-            this.requestRender();
+        if (this.frame === undefined && (this.viewport.scrollTop !== this.renderedScroll.top || this.viewport.scrollLeft !== this.renderedScroll.left)) {
+            this.render();
         }
     }
 
@@ -854,9 +867,9 @@ export class EditorView {
         try {
             this.syncGutter();
             this.syncWrap();
-            let rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight);
+            let rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, this.overscan);
             if (this.layout.syncRows(rows)) {
-                rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight);
+                rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, this.overscan);
             }
             const lastLine = rows.at(-1)?.line ?? 0;
             const firstRow = this.layout.rowAt(this.viewport.scrollTop);
@@ -871,7 +884,7 @@ export class EditorView {
                 onUnfold: (line: number) => this.toggleFold(line, false)
             };
             if (this.painter.paint(rows, paint)) {
-                rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight);
+                rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, this.overscan);
                 this.painter.paint(rows, paint);
             }
             this.content.style.height = `${this.layout.height}px`;
@@ -1134,7 +1147,7 @@ export class EditorView {
             });
         this.sticky.hidden = entries.length === 0;
         this.sticky.style.setProperty('--se-scroll-left', `${this.viewport.scrollLeft}px`);
-        this.sticky.style.setProperty('--se-scrollbar', `${Math.max(0, this.viewport.offsetWidth - this.viewport.clientWidth)}px`);
+        this.sticky.style.width = `${this.viewport.clientWidth}px`;
         if (changed) {
             this.stickyEntries = entries;
             paintSticky(this.sticky, entries, lineHeight);

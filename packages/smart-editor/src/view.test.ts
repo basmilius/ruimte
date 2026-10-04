@@ -165,6 +165,33 @@ describe('the notice', () => {
     });
 });
 
+describe('scrolling', () => {
+    const text = Array.from({ length: 400 }, (_, i) => `line ${i}`).join('\n');
+
+    test('draws the rows and the pinned headers in the scroll event itself', () => {
+        const { host, view } = mount(`function outer() {\n${text}\n}`);
+        view.refreshFolds();
+        view.viewport.scrollTop = 20 * 100;
+        view.scrolled();
+        expect(rendered(host)).toContain('105');
+        expect(host.querySelectorAll('.se-sticky-row').length).toBe(1);
+    });
+
+    test('keeps a viewport of rows drawn on each side', () => {
+        const { host, view } = mount(text);
+        view.viewport.scrollTop = 20 * 200;
+        view.scrolled();
+        const lines = rendered(host).map(Number);
+        expect(lines[0]!).toBeLessThanOrEqual(200 - 20);
+        expect(lines.at(-1)!).toBeGreaterThanOrEqual(200 + 30);
+    });
+
+    test('keeps the pinned headers in the scroll container, where the browser holds them still', () => {
+        const { view } = mount(text);
+        expect(view.viewport.contains(view.stickyElement)).toBe(true);
+    });
+});
+
 describe('sticky scroll', () => {
     const body = Array.from({ length: 40 }, (_, i) => `    call(${i});`).join('\n');
     const text = `export function outer() {\n  function inner() {\n${body}\n  }\n}\nconst after = 1;`;

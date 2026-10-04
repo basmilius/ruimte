@@ -252,11 +252,20 @@
     cursor: pointer;
 }
 
+.se-sticky-anchor {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    flex: none;
+    align-self: flex-start;
+    width: 0;
+    height: 0;
+}
 .se-sticky {
     position: absolute;
     top: 0;
     left: 0;
-    right: var(--se-scrollbar, 0px);
     z-index: 4;
     background: var(--surface);
     box-shadow:

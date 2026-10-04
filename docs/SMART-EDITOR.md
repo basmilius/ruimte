@@ -42,7 +42,7 @@ The plan for the code editor that replaces the previous engine (`packages/editor
 Bas tests the editor without AI features. Findings are fixed before phase 5 starts. Areas:
 
 - Typing, IME and dead keys, copy, cut and paste, undo and redo, multiple carets.
-- Scrolling with a trackpad (the wheel is scripted, not native; go back to native scrolling if it feels worse), sticky scroll, folding, soft wrap.
+- Scrolling with a trackpad (native again, with the gutter and the pinned headers stuck to the scroll container's corner), sticky scroll, folding, soft wrap.
 - Nodes on the canvas below 100% zoom (the zoom limit for editing was removed).
 - Every language feature on TypeScript, Vue and PHP projects, including install, restart and a crashed server.
 - Edits across files through rename and code actions, and saving the drafts they leave.
