@@ -88,5 +88,4 @@ On-device model (Apple Foundation Models), code never leaves the Mac:
   - Problems lists only open files, since servers report only on documents they were given.
   - A link to another file opens on its line, not its column (`file.preview` knows only a line).
   - Peek marks the line of a reference, not the match, and reads at most 30 files.
-  - Mod plus hover does not underline names in the editor itself yet.
   - The code lens above functions ("N references") is not built.
