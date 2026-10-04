@@ -329,6 +329,9 @@ export class InputController {
             }
         }
         const result = model.execute(name, this.commandOptions());
+        if (name === 'selectNextOccurrence' && model.occurrencesExhausted && this.view.settings.messages.noMoreOccurrences !== undefined) {
+            this.view.notify(this.view.settings.messages.noMoreOccurrences);
+        }
         if (name === 'smartEnd' || name === 'selectSmartEnd') {
             this.view.markRowEnd(model.getPrimary().head);
         }

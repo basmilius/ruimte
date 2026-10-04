@@ -429,6 +429,38 @@ describe('the keyboard', () => {
         expect(editor.getText()).toBe('-ab\n-cd');
     });
 
+    test('selects occurrences with the platform keys: next, unselect, all, and a caret on each selected line', () => {
+        const { editor, press, type } = mountEditor({ text: 'foo bar foo\nbaz foo' });
+        press('j', { altKey: true });
+        expect(editor.getSelection()).toEqual({ start: { line: 0, character: 0 }, end: { line: 0, character: 3 } });
+        press('j', { altKey: true });
+        press('j', { altKey: true });
+        type('X');
+        expect(editor.getText()).toBe('X bar X\nbaz X');
+        press('z', { ctrlKey: true });
+        press('j', { altKey: true, shiftKey: true });
+        expect(editor.getCaret()).toEqual({ line: 0, character: 11 });
+        press('Escape');
+        press('j', { ctrlKey: true, altKey: true, shiftKey: true });
+        type('Y');
+        expect(editor.getText()).toBe('Y bar Y\nbaz Y');
+    });
+
+    test('says when select next occurrence has no more', () => {
+        const mounted = mountEditor({ text: 'foo bar foo', messages: { noMoreOccurrences: 'No more' } });
+        mounted.editor.setSelection({ start: { line: 0, character: 8 }, end: { line: 0, character: 11 } });
+        mounted.press('j', { altKey: true });
+        expect(mounted.page.host.querySelector('.se-notice')!.textContent).toBe('No more');
+    });
+
+    test('puts a caret at the end of each selected line', () => {
+        const { editor, press, type } = mountEditor({ text: 'ab\ncd\nef' });
+        editor.setSelection({ start: { line: 0, character: 1 }, end: { line: 2, character: 1 } });
+        press('g', { altKey: true, shiftKey: true });
+        type('!');
+        expect(editor.getText()).toBe('ab!\ncd!\nef!');
+    });
+
     test('collapses several carets and a selection on Escape, and leaves a lone caret to the page', () => {
         const { editor, press, type } = mountEditor({ text: 'ab\ncd' });
         editor.runCommand('addCaretBelow');

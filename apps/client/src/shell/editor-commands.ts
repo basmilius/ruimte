@@ -31,7 +31,11 @@ const TABLE = {
     'expand-region-recursively': { key: 'expandRegionRecursively', command: 'expandRegionRecursively', shortcut: editorShortcut('expandRecursively') },
     'collapse-all-regions': { key: 'collapseAllRegions', command: 'collapseAllRegions', shortcut: editorShortcut('collapseAll') },
     'expand-all-regions': { key: 'expandAllRegions', command: 'expandAllRegions', shortcut: editorShortcut('expandAll') },
-    'fold-selection': { key: 'foldSelection', command: 'foldSelection', shortcut: editorShortcut('foldSelection') }
+    'fold-selection': { key: 'foldSelection', command: 'foldSelection', shortcut: editorShortcut('foldSelection') },
+    'select-next-occurrence': { key: 'selectNextOccurrence', command: 'selectNextOccurrence', shortcut: editorShortcut('selectNextOccurrence') },
+    'unselect-occurrence': { key: 'unselectOccurrence', command: 'unselectOccurrence', shortcut: editorShortcut('unselectOccurrence') },
+    'select-all-occurrences': { key: 'selectAllOccurrences', command: 'selectAllOccurrences', shortcut: editorShortcut('selectAllOccurrences') },
+    'add-caret-per-selected-line': { key: 'addCaretPerSelectedLine', command: 'addCaretPerSelectedLine', shortcut: editorShortcut('addCaretPerSelectedLine') }
 } satisfies Record<string, EditorCommandSpec>;
 
 export type EditorCommandId = keyof typeof TABLE;

@@ -25,6 +25,7 @@ export type {
     EditorInlayHint,
     EditorKeyHandler,
     EditorMarker,
+    EditorMessages,
     EditorMarkerSeverity,
     EditorReveal,
     EditorRect,

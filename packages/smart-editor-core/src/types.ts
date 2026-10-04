@@ -101,7 +101,10 @@ export type EditorCommand =
     | 'autoIndentLines'
     | 'addCaretAbove'
     | 'addCaretBelow'
-    | 'selectNextOccurrence';
+    | 'selectNextOccurrence'
+    | 'unselectOccurrence'
+    | 'selectAllOccurrences'
+    | 'addCaretPerSelectedLine';
 
 export interface CommandOptions {
     /* Clamped to 1 through 16. */

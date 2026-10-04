@@ -158,6 +158,7 @@
             "plain": "Meer dan {{lines}} regels, dus platte tekst die je hier niet bewerkt",
             "touch": "Bewerken vraagt om een muis of een trackpad",
             "loadFailed": "De editor is niet geladen",
+            "noMoreOccurrences": "Geen treffers meer",
             "failed": "De editor liep vast"
         },
         "draft": {

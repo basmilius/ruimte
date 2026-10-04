@@ -47,6 +47,8 @@ export interface EditorOptions {
     readonly indentation?: EditorIndentation;
     /* What it does as a person types; whatever is left out is on, except the camel humps. */
     readonly smartKeys?: Partial<EditorSmartKeys>;
+    /* What the editor says to a person itself, in the host's words. */
+    readonly messages?: Partial<EditorMessages>;
     /* The folds a host kept when the file was last open. */
     readonly folds?: EditorFolds;
     /* Without remembered folds, the import list folds, as it does the first time a file opens. */
@@ -57,6 +59,12 @@ export interface EditorOptions {
     readonly column?: number;
     /* In pixels, where the view opens; without it the cursor's line is brought into view. */
     readonly scrollTop?: number;
+}
+
+/* The few sentences the editor says on its own. */
+export interface EditorMessages {
+    /* Select next occurrence went past the last one. */
+    readonly noMoreOccurrences: string;
 }
 
 /* What the editor does by itself as a person types. Every one is on, except the camel humps. */

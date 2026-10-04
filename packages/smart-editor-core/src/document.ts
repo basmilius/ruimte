@@ -340,6 +340,9 @@ export class DocumentModel {
     private selectionHistory: Selection[][] = [];
     private typingContexts = new TypingContexts((line) => this.getLine(line));
     private statementClosers = new Map<number, { text: string; language: string }>();
+    private occurrenceSession: { wholeWord: boolean; notFound: boolean; signature: string } | undefined;
+    /* The last select next occurrence found no more, which a host may say. */
+    occurrencesExhausted = false;
     private closers = new CloserTracker();
     private bracketCache?: { revision: number; language: string; index: BracketIndex };
 
@@ -412,6 +415,7 @@ export class DocumentModel {
     setSelections(selections: readonly Selection[]): void {
         const normalized = normalizeSelections(this.rope, selections);
         this.groupOpen = false;
+        this.occurrenceSession = undefined;
         this.selectionHistory = [];
         this.statementClosers.clear();
         if (sameSelections(this.selections, normalized)) {
@@ -685,6 +689,15 @@ export class DocumentModel {
         }
         if (command === 'selectNextOccurrence') {
             return this.selectNextOccurrence();
+        }
+        if (command === 'unselectOccurrence') {
+            return this.unselectOccurrence();
+        }
+        if (command === 'selectAllOccurrences') {
+            return this.selectAllOccurrences();
+        }
+        if (command === 'addCaretPerSelectedLine') {
+            return this.addCaretPerSelectedLine();
         }
         const tabSize = tabWidth(options);
         const language = options.language ?? 'typescript';
@@ -1673,22 +1686,127 @@ export class DocumentModel {
         return true;
     }
 
+    /* Whether the selections are as the last occurrence command left them, which makes the next one a repeat of it. */
+    private occurrenceSignature(): string {
+        return this.selections.map((selection) => `${selection.anchor}:${selection.head}`).join(',');
+    }
+
+    private repeatedOccurrence(): { wholeWord: boolean; notFound: boolean } | null {
+        const session = this.occurrenceSession;
+        return session !== undefined && session.signature === this.occurrenceSignature() ? session : null;
+    }
+
+    private rememberOccurrence(wholeWord: boolean, notFound: boolean): void {
+        this.occurrenceSession = { wholeWord, notFound, signature: this.occurrenceSignature() };
+        this.occurrencesExhausted = notFound;
+    }
+
+    /* Whether a range touches a selection that is already there. */
+    private overlapsSelection(from: number, to: number): boolean {
+        return this.selections.some((selection) => {
+            const range = rangeOf(selection);
+            return from === to && range.from === range.to ? from === range.from : from < range.to && to > range.from;
+        });
+    }
+
+    /*
+     * A caret on the next occurrence of what is selected, a word to begin with, whose later occurrences have to be
+     * whole words too. An occurrence that is already a selection is left, and so is the end of the text: the next
+     * press starts again from its beginning.
+     */
     private selectNextOccurrence(): boolean {
-        const { from, to } = rangeOf(this.selections.at(-1)!);
+        const repeated = this.repeatedOccurrence();
+        const notFoundBefore = repeated?.notFound === true;
+        const wholeWord = repeated?.wholeWord === true;
+        const primary = this.selections.at(-1)!;
+        const { from, to } = rangeOf(primary);
         if (from === to) {
-            const word = this.wordRange(from);
-            return word.from === word.to ? false : this.changeSelections([{ anchor: word.from, head: word.to }]);
+            const word = this.identifierRunAt(primary.head, false);
+            if (word === null) {
+                return false;
+            }
+            const changed = this.changeSelections([...this.selections.slice(0, -1), { anchor: word.from, head: word.to }]);
+            this.rememberOccurrence(true, false);
+            return changed;
         }
         const needle = this.slice(from, to);
-        const after = rangeOf(this.selections.at(-1)!).to;
-        const matches = this.find(needle, { caseSensitive: true });
-        const candidates = [...matches.filter((match) => match.from >= after), ...matches.filter((match) => match.from < after)];
-        const next = candidates.find((match) =>
-            this.selections.every(
-                (selection) => match.to <= Math.min(selection.anchor, selection.head) || match.from >= Math.max(selection.anchor, selection.head)
-            )
+        const start = notFoundBefore ? 0 : to;
+        const match = this.find(needle, { caseSensitive: true, wholeWord }).find((candidate) => candidate.from >= start);
+        if (match === undefined) {
+            this.rememberOccurrence(wholeWord, true);
+            return false;
+        }
+        if (this.overlapsSelection(match.from, match.to)) {
+            this.rememberOccurrence(wholeWord, notFoundBefore);
+            return false;
+        }
+        const shift = primary.head - from;
+        const caret = Math.min(match.from + shift, match.to);
+        const added = shift === 0 ? { anchor: match.to, head: match.from } : { anchor: caret === match.to ? match.from : match.to, head: caret };
+        const changed = this.changeSelections([...this.selections, added]);
+        this.rememberOccurrence(wholeWord, false);
+        return changed;
+    }
+
+    /* Takes the newest caret away, or the selection when there is one caret. */
+    private unselectOccurrence(): boolean {
+        const changed =
+            this.selections.length > 1
+                ? this.changeSelections(this.selections.slice(0, -1))
+                : this.changeSelections([{ anchor: this.selections[0]!.head, head: this.selections[0]!.head }]);
+        this.occurrenceSession = undefined;
+        this.occurrencesExhausted = false;
+        return changed;
+    }
+
+    /* A caret on every occurrence of the selected text, or of the word at the caret as a whole word, the last one primary. */
+    private selectAllOccurrences(): boolean {
+        const primary = this.selections.at(-1)!;
+        let { from, to } = rangeOf(primary);
+        let wholeWord = false;
+        if (from === to) {
+            const word = this.identifierRunAt(primary.head, false);
+            if (word === null) {
+                return false;
+            }
+            ({ from, to } = word);
+            wholeWord = true;
+        }
+        // The word that was only a caret gets selected forward, so its caret is at its end.
+        const shift = wholeWord ? to - from : primary.head - from;
+        const matches = this.find(this.slice(from, to), { caseSensitive: true, wholeWord });
+        if (matches.length === 0) {
+            return false;
+        }
+        const changed = this.changeSelections(
+            matches.map((match) => {
+                const caret = Math.min(match.from + shift, match.to);
+                return shift === 0 ? { anchor: match.to, head: match.from } : { anchor: caret === match.to ? match.from : match.to, head: caret };
+            })
         );
-        return next === undefined ? false : this.changeSelections([...this.selections, { anchor: next.from, head: next.to }]);
+        this.rememberOccurrence(wholeWord, false);
+        return changed;
+    }
+
+    /* The selected lines become a caret at the end of each, which is where the platform puts them. */
+    private addCaretPerSelectedLine(): boolean {
+        const forward = this.selections.at(-1)!.head >= this.selections.at(-1)!.anchor;
+        const carets: Selection[] = [];
+        for (const selection of this.selections) {
+            const { from, to } = rangeOf(selection);
+            const first = this.rope.lineAt(from);
+            let last = this.rope.lineAt(to);
+            if (last > first && to === this.rope.lineBounds(last).start) {
+                last--;
+            }
+            for (let line = first; line <= last; line++) {
+                const end = this.rope.lineBounds(line).end;
+                carets.push({ anchor: end, head: end });
+            }
+        }
+        // The primary caret is the one at the end the selection was dragged to.
+        const primary = forward ? carets.pop() : carets.shift();
+        return this.changeSelections(primary === undefined ? carets : [...carets, primary]);
     }
 
     private changeSelections(selections: readonly Selection[]): boolean {

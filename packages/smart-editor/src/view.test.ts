@@ -11,7 +11,8 @@ const SETTINGS: ViewSettings = {
     readOnly: false,
     readOnlyReason: undefined,
     wrap: false,
-    smartKeys: DEFAULT_SMART_KEYS
+    smartKeys: DEFAULT_SMART_KEYS,
+    messages: {}
 };
 
 function mount(text: string, settings: Partial<ViewSettings> = {}) {

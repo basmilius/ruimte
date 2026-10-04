@@ -71,7 +71,8 @@ class SmartEditor implements Editor {
             readOnly: options.readOnly ?? false,
             readOnlyReason: options.readOnlyReason,
             wrap: options.wrap ?? false,
-            smartKeys: resolveSmartKeys(options.smartKeys)
+            smartKeys: resolveSmartKeys(options.smartKeys),
+            messages: options.messages ?? {}
         };
         this.view = new EditorView(element, this.model, this.settings);
         this.controller = new InputController(this.view, {

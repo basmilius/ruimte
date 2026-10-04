@@ -158,6 +158,7 @@
             "plain": "Over {{lines}} lines, so it is plain text and not edited here",
             "touch": "Editing needs a mouse or a trackpad",
             "loadFailed": "The editor did not load",
+            "noMoreOccurrences": "No more occurrences",
             "failed": "The editor failed"
         },
         "draft": {

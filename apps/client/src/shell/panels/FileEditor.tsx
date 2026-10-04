@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { type RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor, EditorEngine, EditorIndentation } from '@ruimte/smart-editor';
 import { mountDraftEditor } from '@/shell/panels/draft-editor';
@@ -79,6 +80,7 @@ export function FileEditor({
                 wrap: first.wrap,
                 indentation: first.indentation,
                 smartKeys: first.smartKeys,
+                messages: { noMoreOccurrences: i18next.t('panels:file.edit.noMoreOccurrences') },
                 ...openingPlace(first.reveal, viewStates.get(key), placeholderScroll.current)
             }
         );
