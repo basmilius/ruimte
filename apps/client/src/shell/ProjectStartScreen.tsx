@@ -12,7 +12,7 @@ export function ProjectStartScreen() {
     }
     const folder = shownFolderOf(project);
     return (
-        <div className="absolute inset-0 flex overflow-auto bg-surface-sunken p-6">
+        <div className="absolute inset-0 flex overflow-auto bg-surface p-6">
             <section className="m-auto flex w-full max-w-lg flex-col gap-6" aria-labelledby="project-start-title">
                 <div className="flex flex-col items-center gap-3 text-center">
                     <ProjectGlyph
