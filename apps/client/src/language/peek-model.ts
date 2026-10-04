@@ -68,3 +68,27 @@ export function snippetOf(text: string, line: number): PeekSnippet {
     const end = Math.min(lines.length, line + AFTER + 1);
     return { startLine, text: lines.slice(startLine, end).join('\n'), active: line - startLine };
 }
+
+/*
+ * For each path, the trailing folders that tell it from the other paths with the same file name, as few
+ * as it takes; empty for a file whose name is its own.
+ */
+export function distinguishingFolders(paths: readonly string[]): string[] {
+    const folders = paths.map((path) => path.split('/').slice(0, -1));
+    const names = paths.map((path) => path.slice(path.lastIndexOf('/') + 1));
+    return paths.map((path, index) => {
+        const same = paths.map((_, other) => other).filter((other) => names[other] === names[index] && paths[other] !== path);
+        if (same.length === 0) {
+            return '';
+        }
+        const rivals = [...new Set(same.map((other) => paths[other]!))].map((other) => folders[paths.indexOf(other)]!);
+        const mine = folders[index]!;
+        for (let depth = 1; depth <= mine.length; depth++) {
+            const tail = mine.slice(-depth).join('/');
+            if (rivals.every((rival) => rival.slice(-depth).join('/') !== tail)) {
+                return tail;
+            }
+        }
+        return mine.join('/');
+    });
+}

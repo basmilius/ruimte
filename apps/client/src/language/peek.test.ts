@@ -3,6 +3,7 @@ import { FakeEditorEngine } from '@ruimte/smart-editor/fake';
 import { useToasts } from '@/state/toasts';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
+import { distinguishingFolders } from './peek-model';
 import { ProjectLanguage } from './project-language';
 
 const uri = 'file:///work/app/src/a.ts';
@@ -54,6 +55,32 @@ describe('peek references', () => {
         expect(editor.getCaret()).toEqual(at(1, 4));
     });
 
+    test('takes the keyboard when it opens, so the arrows work without a click and leave the caret alone', async () => {
+        const { editor, language } = await setup([place(uri, 1), place(otherUri, 2)]);
+        editor.moveCaret(at(0, 5));
+        editor.blur();
+        await language.peek.open();
+        expect(editor.focused).toBe(true);
+        editor.press({ key: 'ArrowDown' });
+        editor.press({ key: 'ArrowUp' });
+        expect(editor.getCaret()).toEqual(at(0, 5));
+        expect(language.popups.getState().peek).not.toBeNull();
+    });
+
+    test('stops at the ends of the list and gives the keyboard back to the caret on Escape', async () => {
+        const { editor, language } = await setup([place(uri, 1), place(otherUri, 2)]);
+        editor.moveCaret(at(0, 5));
+        await language.peek.open();
+        editor.press({ key: 'ArrowDown' });
+        editor.press({ key: 'ArrowDown' });
+        expect(language.popups.getState().peek!.active).toBe('1:0');
+        editor.blur();
+        editor.press({ key: 'Escape' });
+        expect(language.popups.getState().peek).toBeNull();
+        expect(editor.focused).toBe(true);
+        expect(editor.getCaret()).toEqual(at(0, 5));
+    });
+
     test('closes on Escape and when the text changes, and says so when there is nothing', async () => {
         const { editor, language } = await setup([place(uri, 1)]);
         await language.peek.open();
@@ -65,5 +92,23 @@ describe('peek references', () => {
         const none = await setup(null);
         await none.language.peek.open();
         expect(useToasts.getState().toasts.at(-1)?.title).toBe('No references found');
+    });
+});
+
+describe('files with the same name in the list', () => {
+    test('shows the folders that tell them apart, and nothing for a name of its own', () => {
+        expect(distinguishingFolders(['src/a/TestData.php', 'src/b/TestData.php', 'src/Other.php'])).toEqual(['a', 'b', '']);
+    });
+
+    test('goes up as many folders as it takes', () => {
+        expect(distinguishingFolders(['tests/one/Fixtures/Data.php', 'tests/two/Fixtures/Data.php', 'tests/one/Data.php'])).toEqual([
+            'one/Fixtures',
+            'two/Fixtures',
+            'one'
+        ]);
+    });
+
+    test('tells a file in the root from one in a folder', () => {
+        expect(distinguishingFolders(['a.ts', 'src/a.ts'])).toEqual(['', 'src']);
     });
 });

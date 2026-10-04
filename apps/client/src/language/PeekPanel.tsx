@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { fileUriToPath } from '@ruimte/smart-editor-lsp';
-import { IconButton } from '@basmilius/desktop-ui';
+import { IconButton, Tooltip } from '@basmilius/desktop-ui';
 import { formatNumber } from '@basmilius/desktop-ui/format';
 import { highlightCode } from '@/shell/panels/highlight';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useCodeTheme } from '@/state/code-theme';
 import type { EditorLanguage } from './editor-language';
 import { shikiLanguageOfPath } from './language-ids';
+import { PathText } from './PathText';
 import { PEEK_HEIGHT } from './peek';
+import { distinguishingFolders } from './peek-model';
 import type { PeekView } from './popups';
 
 const LINE = 20;
@@ -63,32 +65,46 @@ function Preview({ view }: { view: PeekView }) {
     );
 }
 
+function relativeTo(path: string, folder: string): string {
+    return path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : path;
+}
+
 function Places({ language, view }: { language: EditorLanguage; view: PeekView }) {
+    const activeRow = useRef<HTMLButtonElement>(null);
+    const folder = language.project.folder;
+    const paths = useMemo(() => view.files.map((file) => relativeTo(fileUriToPath(file.uri) ?? file.uri, folder)), [view.files, folder]);
+    const folders = useMemo(() => distinguishingFolders(paths), [paths]);
+
+    useEffect(() => {
+        activeRow.current?.scrollIntoView({ block: 'nearest' });
+    }, [view.active]);
+
     return (
         <div className="w-[320px] shrink-0 overflow-y-auto border-l border-border py-1">
-            {view.files.map((file) => {
-                const path = fileUriToPath(file.uri);
-                return (
-                    <div key={file.uri}>
+            {view.files.map((file, fileIndex) => (
+                <div key={file.uri}>
+                    <Tooltip label={paths[fileIndex]!} side="left">
                         <div className="flex items-center gap-2 px-3 pt-1.5 pb-0.5 text-xs">
-                            <span className="min-w-0 truncate font-medium">{path === null ? file.uri : basenameOf(path)}</span>
-                            <span className="text-text-faint">{formatNumber(file.places.length)}</span>
+                            <span className="max-w-full shrink-0 truncate font-medium">{basenameOf(paths[fileIndex]!)}</span>
+                            {folders[fileIndex] !== '' && <span className="min-w-0 flex-1 truncate text-text-faint">{folders[fileIndex]}</span>}
+                            <span className="ml-auto shrink-0 text-text-faint">{formatNumber(file.places.length)}</span>
                         </div>
-                        {file.places.map((place) => (
-                            <button
-                                key={place.id}
-                                type="button"
-                                data-active={place.id === view.active}
-                                className="flex h-6 w-full items-center gap-2 px-3 text-left font-mono text-code cursor-row"
-                                onClick={() => (place.id === view.active ? language.peek.go(place.id) : language.peek.select(place.id))}
-                                onDoubleClick={() => language.peek.go(place.id)}
-                            >
-                                <span className="min-w-0 truncate text-text-muted">{place.text === '' ? `:${place.line + 1}` : place.text}</span>
-                            </button>
-                        ))}
-                    </div>
-                );
-            })}
+                    </Tooltip>
+                    {file.places.map((place) => (
+                        <button
+                            key={place.id}
+                            ref={place.id === view.active ? activeRow : undefined}
+                            type="button"
+                            data-active={place.id === view.active}
+                            className="flex h-6 w-full items-center gap-2 px-3 text-left font-mono text-code cursor-row"
+                            onClick={() => (place.id === view.active ? language.peek.go(place.id) : language.peek.select(place.id))}
+                            onDoubleClick={() => language.peek.go(place.id)}
+                        >
+                            <span className="min-w-0 truncate text-text-muted">{place.text === '' ? `:${place.line + 1}` : place.text}</span>
+                        </button>
+                    ))}
+                </div>
+            ))}
         </div>
     );
 }
@@ -103,7 +119,7 @@ export function PeekPanel({ language, view }: { language: EditorLanguage; view: 
     const active = view.files.flatMap((file) => file.places).find((place) => place.id === view.active);
     const path = active === undefined ? null : fileUriToPath(active.location.uri);
     const folder = language.project.folder;
-    const shown = path === null ? '' : path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : path;
+    const shown = path === null ? '' : relativeTo(path, folder);
     if (view.container === null) {
         return null;
     }
@@ -114,8 +130,8 @@ export function PeekPanel({ language, view }: { language: EditorLanguage; view: 
             onPointerDown={(event) => event.preventDefault()}
         >
             <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-3">
-                <span className="font-medium">{path === null ? '' : basenameOf(path)}</span>
-                <span className="min-w-0 truncate text-text-faint">{shown}</span>
+                <span className="shrink-0 font-medium">{path === null ? '' : basenameOf(path)}</span>
+                <PathText path={shown} className="text-text-faint" />
                 <span className="ml-auto shrink-0 text-text-muted">
                     {t('language.peek.references', { count: view.count, formatted: formatNumber(view.count) })}
                 </span>

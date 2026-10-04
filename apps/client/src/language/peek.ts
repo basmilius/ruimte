@@ -110,6 +110,8 @@ export class PeekFeature {
         this.language.popups.setState({ peek: { container: null, files, active: first.id, count: unique.length, preview: null } });
         this.select(first.id);
         editor.setWidgets([{ id: 'peek', line: this.line, height: PEEK_HEIGHT, render: (container) => this.mounted(container) }]);
+        // The keys come through the editor, which a click on the hover's link or a menu command has taken the focus from.
+        editor.focus();
     }
 
     close(): void {
