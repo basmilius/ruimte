@@ -53,6 +53,15 @@ describe('messageTextOf', () => {
         expect(messageTextOf(row)).toBe('ok');
     });
 
+    test('copies colored tool output as plain text for settled, live and grouped calls', () => {
+        const colored = '\x1b[32;1mPASS\x1b[0m\n';
+        const settled = tool({ output: colored });
+        const running = tool({ output: null, state: 'running', progress: { startedAt: 0, description: null, output: colored } });
+        expect(messageTextOf({ kind: 'work', id: 'settled', tool: settled })).toBe('PASS\n');
+        expect(messageTextOf({ kind: 'work-live', id: 'live', tool: running })).toBe('PASS\n');
+        expect(messageTextOf({ kind: 'work-group', id: 'group', tools: [settled, running], summary: '2 calls', expanded: false })).toBe('PASS\n\n\nPASS\n');
+    });
+
     test('a row that is a divider or a fold carries no message', () => {
         expect(messageTextOf({ kind: 'compaction', id: 'r6', preTokens: 10 })).toBeNull();
         expect(messageTextOf({ kind: 'working', id: 'r7', startedAt: 0 })).toBeNull();

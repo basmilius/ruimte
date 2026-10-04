@@ -13,6 +13,7 @@ import { useCurrentItem } from '../../../state/chats';
 import { formatClockDuration, formatElapsedShort } from '@basmilius/desktop-ui/format';
 import { Icon, Spinner, useTickingText } from '@basmilius/desktop-ui';
 import { ROW_GUTTER, toolIcon } from '../icons';
+import { AnsiOutput } from '../AnsiOutput';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
 const EditDiff = lazyNamed(() => import('../EditDiff'), 'default');
@@ -103,7 +104,7 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
                         tool.state === 'error' ? 'text-term-red' : 'text-term-fg'
                     )}
                 >
-                    {clip(tool.output)}
+                    <AnsiOutput text={tool.output} limit={OUTPUT_LIMIT} />
                 </pre>
             )}
         </div>
@@ -159,7 +160,7 @@ export function WorkLiveRow({ chatId, tool: derived }: { chatId: string; tool: C
             {open && <ToolBody tool={tool} />}
             {tail !== null && !open && (
                 <pre className="mt-1.5 mb-2 ml-6 max-h-48 overflow-auto rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-code whitespace-pre-wrap text-term-fg select-text">
-                    {tail}
+                    <AnsiOutput text={tail} tailLines={12} />
                 </pre>
             )}
         </div>

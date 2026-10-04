@@ -4,6 +4,7 @@ import { handbackReportOf } from '@ruimte/agents-react/chat/logic/handback';
 import type { TimelineRow } from '@ruimte/agents-react/chat/logic/timeline';
 import { toolSummary } from '@ruimte/agents-react/chat/logic/tools';
 import type { ChatFindField } from '@ruimte/agents-react/chat/ui/find-reveal';
+import { stripAnsi } from '@ruimte/agents-react/chat/logic/ansi';
 
 /*
  * Find in a chat, over the thread's data and not its DOM: the timeline only draws the rows on screen,
@@ -47,7 +48,7 @@ export function findableFields(item: ChatItem): { field: ChatFindField; text: st
             }
             return [
                 { field: 'summary', text: toolSummary(item.name, item.input) },
-                { field: 'output', text: item.output ?? '' }
+                { field: 'output', text: stripAnsi(item.output ?? '') }
             ];
         }
         case 'note': {

@@ -1,4 +1,5 @@
 import type { TimelineRow } from './timeline';
+import { stripAnsi } from './ansi';
 
 /*
  * What a row of the thread puts on the clipboard. An answer is markdown on the wire and rendered
@@ -26,7 +27,8 @@ export function stripMarkdown(text: string): string {
 
 /* What a tool call has to show for itself: what it answered, or what it has answered so far. */
 function outputOf(tool: { output: string | null; progress?: { output: string | null } }): string | null {
-    return tool.output ?? tool.progress?.output ?? null;
+    const output = tool.output ?? tool.progress?.output ?? null;
+    return output === null ? null : stripAnsi(output);
 }
 
 /* The whole item under the pointer as plain text, or null for a row that carries no message. */

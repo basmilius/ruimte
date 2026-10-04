@@ -96,15 +96,7 @@ export function toolStartedAt(tool: ChatToolItem): number {
     return tool.progress?.startedAt ?? tool.createdAt;
 }
 
-// Partial output is a tail: what the command says now matters more than what it said first.
-const LIVE_OUTPUT_LINES = 12;
-
-/* The last lines of a running call's output, or null when the provider streams none. */
+// Keep the full buffer so the renderer can carry ANSI state into the visible tail.
 export function liveOutput(tool: ChatToolItem): string | null {
-    const output = tool.progress?.output;
-    if (!output) {
-        return null;
-    }
-    const lines = output.replace(/\n$/, '').split('\n');
-    return lines.slice(-LIVE_OUTPUT_LINES).join('\n');
+    return tool.progress?.output || null;
 }

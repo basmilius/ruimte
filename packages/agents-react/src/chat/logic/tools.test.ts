@@ -34,13 +34,11 @@ describe('live tool helpers', () => {
         expect(toolStartedAt(running({ startedAt: 2000, description: null, output: null }))).toBe(2000);
     });
 
-    test('partial output shows as its tail, and not at all when nothing streamed', () => {
+    test('partial output keeps its history for ANSI state, and is absent when nothing streamed', () => {
         expect(liveOutput(running())).toBeNull();
         expect(liveOutput(running({ startedAt: null, description: null, output: '' }))).toBeNull();
         const lines = Array.from({ length: 20 }, (_, i) => `line ${i}`).join('\n');
-        expect(liveOutput(running({ startedAt: null, description: null, output: `${lines}\n` }))).toBe(
-            Array.from({ length: 12 }, (_, i) => `line ${i + 8}`).join('\n')
-        );
+        expect(liveOutput(running({ startedAt: null, description: null, output: `${lines}\n` }))).toBe(`${lines}\n`);
     });
 });
 

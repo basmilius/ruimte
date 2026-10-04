@@ -111,7 +111,7 @@ function Chat({ chatId }: { chatId: string }) {
 </UIProvider>;
 ```
 
-The stylesheet goes right after the theme of `@basmilius/desktop-ui`, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines:
+The stylesheet goes right after the theme of `@basmilius/desktop-ui`, and Tailwind scans the `dist` of both packages, which is what npm ships. The markdown of a thread builds on the typography plugin, and a few rules read the terminal colors (`--term-bg`, `--term-fg`, `--term-green`, `--term-red`) and the find colors (`--find-current`) an app defines. Colored tool output also reads the ANSI palette, `--term-ansi-black` through `--term-ansi-white` and their `--term-ansi-bright-*` variants:
 
 ```css
 @import "tailwindcss";

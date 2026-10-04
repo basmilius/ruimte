@@ -45,6 +45,14 @@ describe('searchChat', () => {
         expect(keys(thread, query('Sidebar', { caseSensitive: true }))).toEqual(['u1:text:0', 'b1:output:0']);
     });
 
+    test('finds visible output across color boundaries and skips terminal control contents', () => {
+        const items = [tool('colored', {}, '\x1b[32mPA\x1b[1mSS\x1b[0m\n\x1b[31mPASS\x1b[0m\x1b]0;hidden title\x07')];
+        expect(keys(items, query('PASS'))).toEqual(['colored:output:0', 'colored:output:1']);
+        expect(keys(items, query('PASS', { wholeWord: true }))).toEqual(['colored:output:0', 'colored:output:1']);
+        expect(keys(items, query('32m'))).toEqual([]);
+        expect(keys(items, query('hidden title'))).toEqual([]);
+    });
+
     test('a whole word stops at letters and digits, not at a dash or a dot', () => {
         expect(keys(thread, query('sidebar', { wholeWord: true }))).toEqual([
             'u1:text:0',
