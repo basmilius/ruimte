@@ -600,6 +600,27 @@ export class EditorLayout {
         return { x: TEXT_PADDING + geometry[affinity][stop]!, y: row.top + subRow * this.metrics.lineHeight, width: 1, height: this.metrics.lineHeight };
     }
 
+    /*
+     * The visual line an offset is on, as the platform counts it: a wrapped line is as many as it has
+     * rows and a collapsed fold is one. `end` is where its text stops and `next` where the line after it starts.
+     */
+    visualLine(offset: number): { start: number; end: number; next: number; y: number } {
+        const position = this.document.positionAt(offset);
+        const row = this.rowForLine(position.line);
+        const line = this.document.getLine(row.kind === 'text' ? row.line : position.line);
+        if (row.kind !== 'text') {
+            return { start: line.start, end: line.end, next: line.next, y: row.top };
+        }
+        const geometry = this.geometry(row);
+        const lastLine = this.document.getLine(row.lastLine);
+        const hidden = position.line > row.line;
+        const subRow = hidden ? geometry.subRows - 1 : geometry.rowOf[this.stopOf(geometry, offset)]!;
+        const last = subRow + 1 >= geometry.subRows;
+        const start = line.start + geometry.offsets[geometry.rowStarts[subRow]!]!;
+        const end = last ? lastLine.end : line.start + geometry.offsets[geometry.rowStarts[subRow + 1]!]!;
+        return { start, end, next: last ? lastLine.next : end, y: row.top + subRow * this.metrics.lineHeight };
+    }
+
     hitTest(x: number, y: number): number {
         return this.hitTestRow(x, y).offset;
     }

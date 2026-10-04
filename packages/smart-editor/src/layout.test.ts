@@ -249,3 +249,20 @@ describe('soft wrap', () => {
         ]);
     });
 });
+
+describe('visual lines', () => {
+    test('are the rows of a wrapped line, each with where the next one starts', () => {
+        const { layout } = layoutOf('aaaa bbbb cccc\nz', 100);
+        expect(layout.visualLine(0)).toMatchObject({ start: 0, end: 10, next: 10 });
+        expect(layout.visualLine(7)).toMatchObject({ start: 0, end: 10, next: 10 });
+        expect(layout.visualLine(12)).toMatchObject({ start: 10, end: 14, next: 15 });
+        expect(layout.visualLine(15)).toMatchObject({ start: 15, end: 16, next: 16 });
+    });
+
+    test('take a collapsed fold as one line that ends where the fold does', () => {
+        const { layout } = layoutOf('a\nb\nc\nd');
+        layout.configure({ folds: [{ startLine: 1, endLine: 2, collapsed: true }] });
+        expect(layout.visualLine(3)).toMatchObject({ start: 2, end: 5, next: 6 });
+        expect(layout.visualLine(4)).toMatchObject({ start: 2, end: 5, next: 6 });
+    });
+});

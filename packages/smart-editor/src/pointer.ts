@@ -1,6 +1,14 @@
 import type { DocumentModel, Selection } from '@ruimte/smart-editor-core';
 import type { ContentPoint } from './column-selection.ts';
 
+/* A visual line as the layout knows it: a wrapped line is as many as it has rows and a collapsed fold is one. */
+export interface VisualLine {
+    start: number;
+    end: number;
+    next: number;
+    y: number;
+}
+
 export interface PointerHost {
     readonly model: DocumentModel;
     readonly viewport: HTMLElement;
@@ -8,29 +16,39 @@ export interface PointerHost {
     contentPoint(clientX: number, clientY: number): ContentPoint;
     /* The box between two points, or null while they are in the same cell, so a press with alt is still a click. */
     columnSelections(from: ContentPoint, to: ContentPoint): Selection[] | null;
+    visualLine(offset: number): VisualLine;
+    /* The lines a triple click or a press on a line number selects, whole: wrapped rows and a collapsed fold are one line. */
+    lineAt(offset: number): { from: number; to: number };
+    /* Whether a double click selects a camel hump and not the whole name. */
+    camelHumps(): boolean;
     focus(): void;
     /* The view scrolled by itself while the pointer was held at an edge. */
     scrolled(): void;
 }
+
+/* What a drag selects by: characters, or the words or lines the press started on. */
+type DragUnit = 'character' | 'word' | 'line';
 
 interface Drag {
     id: number;
     anchor: number;
     selections: readonly Selection[];
     add: boolean;
+    unit: DragUnit;
+    /* The word or the lines the press selected, which a drag never gives back. */
+    saved: { from: number; to: number };
     /* Where the press landed in the content, which a scroll leaves in place. */
     anchorPoint: ContentPoint;
     x: number;
     y: number;
 }
 
-const WORDS = new Intl.Segmenter(undefined, { granularity: 'word' });
 const SCROLL_STEP = 40;
 /* A press this soon after the last one, this close to it, is the next click of a double or triple click. */
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_DISTANCE = 4;
 
-/* The selection a mouse makes: a click, a drag, shift to extend, alt to add a caret or, dragged, a column, a double click for a word and a triple for a line. */
+/* The selection a mouse makes: a click, a drag, shift to extend, alt to add a caret or, dragged, a column, a double click for a word and a triple for a line, which a drag then grows by words and lines. */
 export class PointerSelection {
     private drag: Drag | undefined;
     private frame: number | undefined;
@@ -45,39 +63,90 @@ export class PointerSelection {
         return this.drag !== undefined;
     }
 
-    start(event: PointerEvent): void {
+    /* A press in the text, or on a line number, which selects the line and drags by lines. */
+    start(event: PointerEvent, area: 'text' | 'gutter' = 'text'): void {
         const { model, viewport } = this.host;
-        const count = this.countClick(event);
+        const count = area === 'gutter' ? 1 : this.countClick(event);
         const head = this.host.offsetAt(event.clientX, event.clientY);
         const selections = model.getSelections();
+        const base = event.altKey && area === 'text' ? selections : [];
         this.drag = {
             id: event.pointerId,
             anchor: event.shiftKey ? model.getPrimary().anchor : head,
             selections,
-            add: event.altKey,
+            add: event.altKey && area === 'text',
+            unit: 'character',
+            saved: { from: head, to: head },
             anchorPoint: this.host.contentPoint(event.clientX, event.clientY),
             x: event.clientX,
             y: event.clientY
         };
         this.host.focus();
-        this.update();
         viewport.setPointerCapture?.(event.pointerId);
-        if (count >= 3) {
-            const line = model.getLine(model.positionAt(head).line);
-            model.setSelections([{ anchor: line.start, head: line.next }]);
-            this.drag = undefined;
+        if (area === 'gutter') {
+            this.pressLineNumber(event, head);
+        } else if (count >= 3) {
+            this.selectUnit('line', this.host.lineAt(head), base);
         } else if (count === 2) {
-            const line = model.getLine(model.positionAt(head).line);
-            const offset = head - line.start;
-            const word = [...WORDS.segment(line.text)].find((part) => part.index <= offset && part.index + part.segment.length > offset);
-            if (word) {
-                model.setSelections([{ anchor: line.start + word.index, head: line.start + word.index + word.segment.length }]);
+            const word = model.wordSelectionAt(head, this.host.camelHumps());
+            if (word === null) {
+                this.update();
+            } else {
+                this.selectUnit('word', word, base);
             }
-            this.drag = undefined;
+        } else {
+            this.update();
         }
         if (this.drag && this.frame === undefined) {
             this.frame = viewport.ownerDocument.defaultView?.requestAnimationFrame?.(() => this.autoScroll());
         }
+    }
+
+    /* A line number selects its line, and with shift grows or shrinks the selection by lines. */
+    private pressLineNumber(event: PointerEvent, offset: number): void {
+        const { model } = this.host;
+        const primary = model.getPrimary();
+        if (event.shiftKey && primary.anchor !== primary.head) {
+            model.setSelections([this.tweakedByLines(primary, offset)]);
+            this.drag = undefined;
+            return;
+        }
+        this.selectUnit('line', this.host.lineAt(offset), []);
+    }
+
+    private selectUnit(unit: DragUnit, saved: { from: number; to: number }, base: readonly Selection[]): void {
+        if (this.drag === undefined) {
+            return;
+        }
+        this.drag.unit = unit;
+        this.drag.saved = saved;
+        this.drag.selections = base;
+        this.host.model.setSelections([...base, { anchor: saved.from, head: saved.to }]);
+    }
+
+    /* The selection after a shift press on a line number: the clicked line comes in, or goes out when it is inside. */
+    private tweakedByLines(selection: Selection, offset: number): Selection {
+        const { host } = this;
+        const from = Math.min(selection.anchor, selection.head);
+        const to = Math.max(selection.anchor, selection.head);
+        const first = host.visualLine(from);
+        const last = host.visualLine(to - 1);
+        const clicked = host.visualLine(offset);
+        if (clicked.y < first.y) {
+            return { anchor: to, head: clicked.start };
+        }
+        if (clicked.y > last.y) {
+            return { anchor: from, head: clicked.end };
+        }
+        if (first.y === last.y) {
+            return { anchor: selection.head, head: selection.head };
+        }
+        if (selection.anchor === to) {
+            const line = clicked.y === first.y ? host.visualLine(first.next) : clicked;
+            return { anchor: to, head: line.start };
+        }
+        const line = clicked.y === last.y ? host.visualLine(last.start - 1) : clicked;
+        return { anchor: from, head: line.end };
     }
 
     /* Pointer events carry no click count, so the presses are counted here. */
@@ -127,7 +196,7 @@ export class PointerSelection {
         if (!this.drag) {
             return;
         }
-        if (this.drag.add) {
+        if (this.drag.add && this.drag.unit === 'character') {
             const box = this.host.columnSelections(this.drag.anchorPoint, this.host.contentPoint(this.drag.x, this.drag.y));
             if (box) {
                 this.host.model.setSelections(box);
@@ -135,7 +204,25 @@ export class PointerSelection {
             }
         }
         const head = this.host.offsetAt(this.drag.x, this.drag.y);
-        this.host.model.setSelections([...(this.drag.add ? this.drag.selections : []), { anchor: this.drag.anchor, head }]);
+        const { anchor, target } = this.reach(this.drag, head);
+        this.host.model.setSelections([...(this.drag.add ? this.drag.selections : []), { anchor, head: target }]);
+    }
+
+    /* Where a drag that has got to `head` selects from and to, by the unit the press began with. */
+    private reach(drag: Drag, head: number): { anchor: number; target: number } {
+        const { model } = this.host;
+        const backwards = head < drag.saved.from;
+        if (drag.unit === 'word') {
+            const camel = this.host.camelHumps();
+            return backwards
+                ? { anchor: drag.saved.to, target: model.wordStartBefore(head, camel) }
+                : { anchor: drag.saved.from, target: model.wordEndAfter(head, camel) };
+        }
+        if (drag.unit === 'line') {
+            const line = this.host.visualLine(head);
+            return backwards ? { anchor: drag.saved.to, target: line.start } : { anchor: drag.saved.from, target: line.next };
+        }
+        return { anchor: drag.anchor, target: head };
     }
 
     /* Holding the pointer past an edge of the view keeps scrolling that way. */

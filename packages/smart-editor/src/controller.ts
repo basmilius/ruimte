@@ -91,6 +91,12 @@ export class InputController {
             offsetAt: (x, y) => view.offsetAtPoint(x, y),
             contentPoint: (x, y) => view.contentPoint(x, y),
             columnSelections: (from, to) => (sameCell(view.layout, from, to) ? null : columnSelections(view.layout, from, to)),
+            visualLine: (offset) => view.layout.visualLine(offset),
+            lineAt: (offset) => {
+                const row = view.layout.rowForLine(model.positionAt(offset).line);
+                return row.kind === 'text' ? { from: model.getLine(row.line).start, to: model.getLine(row.lastLine).next } : { from: offset, to: offset };
+            },
+            camelHumps: () => view.settings.smartKeys.camelHumps,
             focus: () => view.focus(),
             scrolled: () => view.requestRender()
         });
@@ -575,12 +581,7 @@ export class InputController {
             this.view.focus();
             return;
         }
-        const { model, layout } = this.view;
-        const row = layout.rowAt(this.view.contentPoint(event.clientX, event.clientY).y);
-        if (row.kind === 'text') {
-            const line = model.getLine(row.line);
-            model.setSelections([{ anchor: line.start, head: line.next }]);
-        }
+        this.pointer.start(event, 'gutter');
         this.view.focus();
     }
 }

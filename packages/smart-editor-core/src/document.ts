@@ -31,7 +31,7 @@ import type {
 } from './types.ts';
 import { TypingContexts } from './typing-context.ts';
 import type { TypingContext } from './typing-context.ts';
-import { wordBoundary } from './words.ts';
+import { isHumpBoundary, isWordBoundary, wordBoundary } from './words.ts';
 
 export type { DocumentLine, FindMatch, FindNextOptions, FindOptions, FoldingOptions, FoldingRange };
 
@@ -1349,6 +1349,95 @@ export class DocumentModel {
             }
         }
         return target;
+    }
+
+    /*
+     * What a double click selects at an offset: the identifier around it, a hump of it when `camel`,
+     * and on anything else the text of its line. On an empty line it is the whole document, as the
+     * platform's select-word action has it.
+     */
+    wordSelectionAt(offset: number, camel = false): { from: number; to: number } | null {
+        const length = this.rope.length;
+        const at = offset >= length ? length - 1 : offset;
+        if (at < 0) {
+            return null;
+        }
+        const word = this.identifierRunAt(at, camel);
+        if (word !== null) {
+            return word;
+        }
+        const line = this.getLine(this.rope.lineAt(at));
+        return line.start === line.end ? { from: 0, to: length } : { from: line.start, to: line.end };
+    }
+
+    /* The identifier, or its camel hump, that an offset is in or at the end of; null when it is on something else. */
+    private identifierRunAt(offset: number, camel: boolean): { from: number; to: number } | null {
+        const length = this.rope.length;
+        const isWord = (at: number): boolean => at >= 0 && at < length && identifier.test(this.slice(at, step(this.rope, at, 1)));
+        let at = offset;
+        if (at > 0 && !isWord(at) && isWord(at - 1)) {
+            at--;
+        }
+        if (!isWord(at)) {
+            return null;
+        }
+        if (camel) {
+            let start = at;
+            let end = at + 1;
+            while (start > 0 && isWord(start - 1) && !isHumpBoundary(this.rope, start, true)) {
+                start--;
+            }
+            while (end < length && isWord(end) && !isHumpBoundary(this.rope, end, false)) {
+                end++;
+            }
+            if (start + 1 < end) {
+                return { from: start, to: end };
+            }
+        }
+        const word = this.wordRange(at);
+        return word.from === word.to ? null : word;
+    }
+
+    /* Where the word before an offset starts on this line or the one above, as a drag over words follows it. */
+    wordStartBefore(offset: number, camel = false): number {
+        if (offset === 0) {
+            return 0;
+        }
+        const line = this.rope.lineAt(offset);
+        const minimum = line > 0 ? this.rope.lineBounds(line - 1).end : 0;
+        let found = offset - 1;
+        for (; found > minimum; found--) {
+            if (isWordBoundary(this.rope, found, camel, true) || this.isBetweenBrackets(found)) {
+                break;
+            }
+        }
+        return found;
+    }
+
+    /* Where the word after an offset ends on this line or the one below. */
+    wordEndAfter(offset: number, camel = false): number {
+        if (offset >= this.rope.length - 1) {
+            return offset;
+        }
+        const line = this.rope.lineAt(offset);
+        let found = offset + 1;
+        let maximum = this.rope.lineBounds(line).end;
+        if (found > maximum) {
+            if (line + 1 >= this.rope.lineCount) {
+                return offset;
+            }
+            maximum = this.rope.lineBounds(line + 1).end;
+        }
+        for (; found < maximum; found++) {
+            if (isWordBoundary(this.rope, found, camel, false) || this.isBetweenBrackets(found)) {
+                break;
+            }
+        }
+        return found;
+    }
+
+    private isBetweenBrackets(offset: number): boolean {
+        return offset > 0 && offset < this.rope.length && /[()[\]<>{}]/.test(this.rope.charAt(offset)) && /[()[\]<>{}]/.test(this.rope.charAt(offset - 1));
     }
 
     private wordRange(offset: number): { from: number; to: number } {
