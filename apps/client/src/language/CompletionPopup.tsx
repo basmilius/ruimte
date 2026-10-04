@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '@ruimte/agents-react/chat/ui/Markdown';
@@ -51,6 +51,8 @@ function MarkedLabel({ label, matches }: { label: string; matches: readonly numb
 const CARD = 'fixed top-0 left-0 z-(--z-popup) overflow-hidden rounded-lg border border-border bg-surface-raised text-text shadow-(--float-shadow)';
 const ROW_HEIGHT = 24;
 const VISIBLE_ROWS = 8;
+/* What a row takes besides its name and namespace: padding, the kind badge and the gaps. */
+const ROW_CHROME = 72;
 
 /*
  * The suggestions under the word being typed: a narrow list with the parameters of each, and the
@@ -62,6 +64,12 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
     const list = useRef<HTMLDivElement>(null);
     const docs = useRef<HTMLDivElement>(null);
     const activeRow = useRef<HTMLButtonElement>(null);
+    // The widest row so far in characters, which only grows, so the list never narrows or jumps while it is typed into.
+    const [widest, setWidest] = useState(0);
+    const need = Math.max(0, ...view.rows.slice(0, VISIBLE_ROWS * 2).map((row) => row.label.length + 2 + row.description.length));
+    if (need > widest) {
+        setWidest(need);
+    }
 
     // Every render: the word moves when the editor scrolls, and the list and the documentation change size with what they hold.
     useLayoutEffect(() => {
@@ -91,8 +99,15 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
 
     return createPortal(
         <>
-            <div ref={list} className={`${CARD} flex w-[340px] flex-col`} style={{ visibility: 'hidden' }} onPointerDown={(event) => event.preventDefault()}>
-                <div role="listbox" className="overflow-y-auto p-1" style={{ maxHeight: ROW_HEIGHT * VISIBLE_ROWS + 8 }}>
+            <div
+                ref={list}
+                className={`${CARD} flex w-max max-w-[min(560px,calc(100vw-16px))] min-w-[340px] flex-col`}
+                style={{ visibility: 'hidden' }}
+                onPointerDown={(event) => event.preventDefault()}
+            >
+                {/* Sizes the list to the widest rows in the face the rows use; the rows themselves fill that width and truncate inside it. */}
+                <div aria-hidden className="h-0 overflow-hidden font-mono text-code" style={{ width: `calc(${Math.max(widest, need)}ch + ${ROW_CHROME}px)` }} />
+                <div role="listbox" className="w-0 min-w-full overflow-y-auto p-1" style={{ maxHeight: ROW_HEIGHT * VISIBLE_ROWS + 8 }}>
                     {view.rows.map((row, index) => (
                         <button
                             key={`${index}:${row.label}`}
@@ -101,7 +116,7 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                             role="option"
                             aria-selected={index === view.active}
                             data-active={index === view.active}
-                            className="flex h-6 w-full items-center gap-2 rounded-md px-1.5 text-left text-xs cursor-row"
+                            className="flex h-6 w-full items-center gap-2 overflow-hidden rounded-md px-1.5 text-left text-xs cursor-row"
                             onClick={() => void language.completion.accept(false, index)}
                         >
                             <span
@@ -109,11 +124,11 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                             >
                                 {kindLetterOf(row.kind)}
                             </span>
-                            <span className={`shrink-0 font-mono text-code ${row.deprecated ? 'line-through' : ''}`}>
+                            <span className={`max-w-full shrink-0 truncate font-mono text-code ${row.deprecated ? 'line-through' : ''}`}>
                                 <MarkedLabel label={row.label} matches={row.matches} />
                             </span>
                             <span className="min-w-0 grow truncate font-mono text-text-faint">{row.detail}</span>
-                            <PathText path={row.description} className="max-w-[55%] shrink-0 font-mono text-text-faint" />
+                            <PathText path={row.description} className="max-w-[60%] font-mono text-text-faint" />
                         </button>
                     ))}
                 </div>
