@@ -12,16 +12,17 @@ type Target = Resolved['found'][number];
 type Scope = NonNullable<ActionInput<'target.resolve'>['scope']>;
 type Match = { status: 'found'; value: Target } | { status: 'missing' } | { status: 'ambiguous'; candidates: Target[] };
 
-const normalized = (value: string): string =>
-    value
+function normalized(value: string): string {
+    return value
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLocaleLowerCase()
         .replace(/[^a-z0-9]+/g, ' ')
         .trim();
+}
 
 /* An exact name wins over a partial one, and more than one of either is the person's to choose. */
-const named = (name: string, targets: readonly Target[], label: (target: Target) => string = (target) => target.name): Match => {
+function named(name: string, targets: readonly Target[], label: (target: Target) => string = (target) => target.name): Match {
     const wanted = normalized(name);
     const exact = targets.filter((target) => normalized(label(target)) === wanted);
     if (exact.length === 1) {
@@ -38,9 +39,9 @@ const named = (name: string, targets: readonly Target[], label: (target: Target)
         return { status: 'found', value: partial[0]! };
     }
     return partial.length > 1 ? { status: 'ambiguous', candidates: partial } : { status: 'missing' };
-};
+}
 
-const byName = (target: Resolved['target'], names: readonly string[], match: (name: string) => Match): Resolved => {
+function byName(target: Resolved['target'], names: readonly string[], match: (name: string) => Match): Resolved {
     const found = new Map<string, Target>();
     const ambiguous: Resolved['ambiguous'] = [];
     const missing: string[] = [];
@@ -55,31 +56,37 @@ const byName = (target: Resolved['target'], names: readonly string[], match: (na
         }
     }
     return { target, found: [...found.values()], ambiguous, missing };
-};
+}
 
-const current = (target: Resolved['target'], found: Target[]): Resolved => ({ target, found, ambiguous: [], missing: [] });
+function current(target: Resolved['target'], found: Target[]): Resolved {
+    return { target, found, ambiguous: [], missing: [] };
+}
 
 const placed = { endpointId: null, machine: null };
 
-const viewTarget = (view: ProjectView): Target => ({
-    id: view.id,
-    name: view.name ?? view.id,
-    kind: isUnknownView(view) ? 'unknown' : view.kind,
-    viewId: null,
-    view: null,
-    ...placed
-});
+function viewTarget(view: ProjectView): Target {
+    return {
+        id: view.id,
+        name: view.name ?? view.id,
+        kind: isUnknownView(view) ? 'unknown' : view.kind,
+        viewId: null,
+        view: null,
+        ...placed
+    };
+}
 
-const nodeTarget = (node: ProjectNode, view: ProjectView): Target => ({
-    id: node.id,
-    name: node.title,
-    kind: isUnknownNode(node) ? 'unknown' : node.kind,
-    viewId: view.id,
-    view: view.name ?? view.id,
-    ...placed
-});
+function nodeTarget(node: ProjectNode, view: ProjectView): Target {
+    return {
+        id: node.id,
+        name: node.title,
+        kind: isUnknownNode(node) ? 'unknown' : node.kind,
+        viewId: view.id,
+        view: view.name ?? view.id,
+        ...placed
+    };
+}
 
-const nodesInScope = (canvas: CanvasState, scope: Scope): ProjectNode[] => {
+function nodesInScope(canvas: CanvasState, scope: Scope): ProjectNode[] {
     if (scope === 'selected') {
         return canvas.selection.map((id) => canvas.nodes[id]).filter((node): node is ProjectNode => node !== undefined);
     }
@@ -89,9 +96,9 @@ const nodesInScope = (canvas: CanvasState, scope: Scope): ProjectNode[] => {
     }
     const inSight = new Set(visibleNodes(sightOf(canvas), { readable: false }));
     return shown.filter((node) => inSight.has(node.id));
-};
+}
 
-export const resolveTarget = (document: StoreApi<DocumentState>, input: ActionInput<'target.resolve'>): Resolved => {
+export function resolveTarget(document: StoreApi<DocumentState>, input: ActionInput<'target.resolve'>): Resolved {
     const { target, names, nodeKind, scope, machine } = input;
     const state = document.getState();
     const active = activeViewOf(state);
@@ -190,4 +197,4 @@ export const resolveTarget = (document: StoreApi<DocumentState>, input: ActionIn
         };
     }
     return byName(target, names, inUseFirst(projects.filter((row) => row.endpointId === matched.value.id)));
-};
+}

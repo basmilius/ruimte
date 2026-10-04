@@ -11,7 +11,7 @@ import {
     splitFrame
 } from './direct.ts';
 
-const reassemble = (pieces: string[], maxChars = Number.MAX_SAFE_INTEGER): string[] => {
+function reassemble(pieces: string[], maxChars = Number.MAX_SAFE_INTEGER): string[] {
     const assembler = new FrameAssembler();
     const frames: string[] = [];
     for (const piece of pieces) {
@@ -21,7 +21,7 @@ const reassemble = (pieces: string[], maxChars = Number.MAX_SAFE_INTEGER): strin
         }
     }
     return frames;
-};
+}
 
 describe('splitFrame', () => {
     test('a small frame is one piece', () => {

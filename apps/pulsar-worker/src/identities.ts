@@ -20,16 +20,25 @@ export const LINK_REQUEST_LIFETIME_MS = 5 * 60_000;
 // The app trades the code the moment the redirect lands, as with a login code.
 const LINK_CODE_LIFETIME_MS = 60_000;
 
-const signInAgain = (): Response => failure('unauthorized', 'Sign in again');
+function signInAgain(): Response {
+    return failure('unauthorized', 'Sign in again');
+}
 
 // What a person calls the identity in a sentence: a GitHub account, an Apple ID.
-const identityNoun = (provider: ProviderId): string => (provider === 'apple' ? 'Apple ID' : `${PROVIDER_NAMES[provider]} account`);
+function identityNoun(provider: ProviderId): string {
+    return provider === 'apple' ? 'Apple ID' : `${PROVIDER_NAMES[provider]} account`;
+}
 
-const identityTaken = (provider: ProviderId): Response =>
-    failure('identity-taken', `This ${identityNoun(provider)} already belongs to another Ruimte account, so it was not added. Accounts are never merged.`);
+function identityTaken(provider: ProviderId): Response {
+    return failure(
+        'identity-taken',
+        `This ${identityNoun(provider)} already belongs to another Ruimte account, so it was not added. Accounts are never merged.`
+    );
+}
 
-const providerLinked = (provider: ProviderId): Response =>
-    failure('provider-linked', `This account already signs in with ${PROVIDER_NAMES[provider]}. Remove that one first to add another.`);
+function providerLinked(provider: ProviderId): Response {
+    return failure('provider-linked', `This account already signs in with ${PROVIDER_NAMES[provider]}. Remove that one first to add another.`);
+}
 
 /*
  * The account an identity opens, made on its first sign-in. A lookup by identity first; then an account
@@ -38,7 +47,7 @@ const providerLinked = (provider: ProviderId): Response =>
  * identity fails the batch on the primary key and reads what the first one made. A known identity takes
  * the login and any name the provider sent this time.
  */
-export const resolveAccount = async (db: D1Database, provider: ProviderId, identity: ProviderIdentity, now = Date.now()): Promise<string | null> => {
+export async function resolveAccount(db: D1Database, provider: ProviderId, identity: ProviderIdentity, now = Date.now()): Promise<string | null> {
     const known = await db
         .prepare('UPDATE identity SET login = ?3, display_name = COALESCE(?4, display_name) WHERE provider = ?1 AND subject = ?2 RETURNING account_id')
         .bind(provider, identity.subject, identity.login, identity.displayName)
@@ -81,9 +90,9 @@ export const resolveAccount = async (db: D1Database, provider: ProviderId, ident
         .bind(provider, identity.subject)
         .first<{ account_id: string }>();
     return row?.account_id ?? null;
-};
+}
 
-export const accountResult = async (db: D1Database, accountId: string): Promise<AccountResult | null> => {
+export async function accountResult(db: D1Database, accountId: string): Promise<AccountResult | null> {
     const [accountRows, identityRows] = await db.batch([
         db
             .prepare(
@@ -107,21 +116,21 @@ export const accountResult = async (db: D1Database, accountId: string): Promise<
         createdAt: row.created_at
     }));
     return { account: { id: account.id, provider: account.provider, login: account.login, displayName: account.display_name }, identities };
-};
+}
 
-const answerAccount = async (db: D1Database, session: SessionContext): Promise<Response> => {
+async function answerAccount(db: D1Database, session: SessionContext): Promise<Response> {
     const result = await accountResult(db, session.account.id);
     return result ? json(result) : signInAgain();
-};
+}
 
 // `GET /v1/account`
-export const getAccount = async (request: Request, env: Env): Promise<Response> => {
+export async function getAccount(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     return session ? answerAccount(env.DB, session) : signInAgain();
-};
+}
 
 // `POST /v1/account/link`: a token for the start URL of the provider to add, bound to this session.
-export const startIdentityLink = async (request: Request, env: Env): Promise<Response> => {
+export async function startIdentityLink(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
@@ -153,7 +162,7 @@ export const startIdentityLink = async (request: Request, env: Env): Promise<Res
         .bind(await sha256(linkToken), session.account.id, session.id, provider, expiresAt)
         .run();
     return json({ linkToken, expiresAt });
-};
+}
 
 export interface LinkStart {
     accountId: string;
@@ -164,7 +173,7 @@ export interface LinkStart {
  * Spends a link token at the start of a login. Refused unless it is fresh, for this provider, and the
  * session that asked for it is still signed in: a person who signed out in between adds nothing.
  */
-export const spendLinkToken = async (db: D1Database, linkToken: string, provider: ProviderId): Promise<LinkStart | null> => {
+export async function spendLinkToken(db: D1Database, linkToken: string, provider: ProviderId): Promise<LinkStart | null> {
     const now = Date.now();
     const row = await db
         .prepare(
@@ -177,13 +186,13 @@ export const spendLinkToken = async (db: D1Database, linkToken: string, provider
         return null;
     }
     return { accountId: row.account_id, sessionId: row.session_id };
-};
+}
 
 // The callback of a link login: the identity waits under a code for the session that started it.
-export const storeLinkCode = async (
+export async function storeLinkCode(
     db: D1Database,
     input: { link: LinkStart; provider: ProviderId; identity: ProviderIdentity; appRedirectUri: string; appCodeChallenge: string }
-): Promise<string> => {
+): Promise<string> {
     const code = randomToken();
     await db
         .prepare(
@@ -204,7 +213,7 @@ export const storeLinkCode = async (
         )
         .run();
     return code;
-};
+}
 
 interface LinkCodeRow {
     account_id: string;
@@ -223,7 +232,7 @@ interface LinkCodeRow {
  * the link presents the code with the PKCE verifier of that login. The access token proves the session,
  * the verifier proves the login came back to the app that started it.
  */
-export const completeIdentityLink = async (request: Request, env: Env): Promise<Response> => {
+export async function completeIdentityLink(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
@@ -275,14 +284,14 @@ export const completeIdentityLink = async (request: Request, env: Env): Promise<
         }
     }
     return answerAccount(env.DB, session);
-};
+}
 
 /*
  * `DELETE /v1/account/identities/<provider>`. Refused for the last identity, in the statement itself, so
  * two removals at once cannot both pass a count read before either wrote. The account's own provider and
  * subject are rewritten when they name the identity, so signing in with it later makes a new account.
  */
-export const unlinkIdentity = async (request: Request, env: Env, rawProvider: string): Promise<Response> => {
+export async function unlinkIdentity(request: Request, env: Env, rawProvider: string): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
@@ -311,12 +320,13 @@ export const unlinkIdentity = async (request: Request, env: Env, rawProvider: st
         .bind(accountId, provider, removed.subject)
         .run();
     return answerAccount(env.DB, session);
-};
+}
 
 // `GET /v1/providers`: what a client may offer, so a provider without its secrets is never a button.
-export const listProviders = (env: Env): Response =>
-    json({
+export function listProviders(env: Env): Response {
+    return json({
         providers: Object.values(PROVIDERS)
             .filter((provider) => provider.configured(env))
             .map((provider) => provider.id)
     });
+}

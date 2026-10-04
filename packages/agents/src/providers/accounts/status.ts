@@ -16,12 +16,16 @@ export interface AccountReading {
 
 export type AskAccount = (kind: AgentKind, command: readonly string[], env: Record<string, string | undefined>) => Promise<AccountReading>;
 
-const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+function text(value: unknown): string | null {
+    return typeof value === 'string' && value !== '' ? value : null;
+}
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /* `claude auth status --json`, as Claude Code 2.1.282 prints it: `loggedIn`, `email`, `orgName`, `subscriptionType`. */
-export const readClaudeAuthStatus = (output: string): AccountReading => {
+export function readClaudeAuthStatus(output: string): AccountReading {
     let status: unknown;
     try {
         status = JSON.parse(output);
@@ -37,14 +41,14 @@ export const readClaudeAuthStatus = (output: string): AccountReading => {
         plan: text(status.subscriptionType),
         organization: text(status.orgName)
     };
-};
+}
 
 /*
  * The app-server's `account/read`, as Codex 0.157 answers it: `account` is null while nobody signed in,
  * `{ type: 'chatgpt', email, planType }` for a plan and `{ type: 'apiKey' }` for a key. A model
  * provider without OpenAI's login needs no account at all, which `requiresOpenaiAuth` says.
  */
-export const readCodexAccount = (answer: unknown): AccountReading => {
+export function readCodexAccount(answer: unknown): AccountReading {
     if (!isRecord(answer)) {
         throw new Error('Codex did not say who is signed in');
     }
@@ -53,9 +57,9 @@ export const readCodexAccount = (answer: unknown): AccountReading => {
         return { signedIn: answer.requiresOpenaiAuth === false, email: null, plan: null, organization: null };
     }
     return { signedIn: true, email: text(account.email), plan: text(account.planType), organization: null };
-};
+}
 
-const askClaude = async (command: readonly string[], env: Record<string, string | undefined>): Promise<AccountReading> => {
+async function askClaude(command: readonly string[], env: Record<string, string | undefined>): Promise<AccountReading> {
     const { stdout } = await runProcess([...command, 'auth', 'status', '--json'], {
         env,
         timeoutMs: ASK_TIMEOUT_MS,
@@ -63,9 +67,9 @@ const askClaude = async (command: readonly string[], env: Record<string, string 
     });
     // Signed out exits 1 and still prints the status, so the output decides and the exit code does not.
     return readClaudeAuthStatus(stdout);
-};
+}
 
-const askCodex = async (command: readonly string[], env: Record<string, string | undefined>, client: CodexClientInfo): Promise<AccountReading> => {
+async function askCodex(command: readonly string[], env: Record<string, string | undefined>, client: CodexClientInfo): Promise<AccountReading> {
     const transport = new CodexTransport({
         command: [...command],
         cwd: process.cwd(),
@@ -86,12 +90,11 @@ const askCodex = async (command: readonly string[], env: Record<string, string |
         transport.end();
         transport.kill();
     }
-};
+}
 
 /* Starts the CLI in the account's environment and asks it; only Claude Code and Codex can say. */
-export const askAccountAs =
-    (client: CodexClientInfo): AskAccount =>
-    (kind, command, env) => {
+export function askAccountAs(client: CodexClientInfo): AskAccount {
+    return (kind, command, env) => {
         if (kind === 'claude') {
             return askClaude(command, env);
         }
@@ -100,3 +103,4 @@ export const askAccountAs =
         }
         return Promise.reject(new Error(`${kind} cannot say who is signed in`));
     };
+}

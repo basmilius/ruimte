@@ -65,8 +65,9 @@ import { useTransport } from '@/transport/context';
 import { FILE_TREE_ICONS, Icon, PanelEmpty, ContextMenu } from '@basmilius/desktop-ui';
 
 /* The marks of a checkbox, drawn in the color of its part. */
-const svgMask = (path: string): string =>
-    `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='0.875' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='${path}'/%3E%3C/svg%3E")`;
+function svgMask(path: string): string {
+    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='0.875' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='${path}'/%3E%3C/svg%3E")`;
+}
 const CHECK_MASK = svgMask('M2.5 6.25 4.75 8.5 9.5 3.5');
 const MIXED_MASK = svgMask('M3 6h6');
 
@@ -133,22 +134,30 @@ const GIT_TREE_CSS = `
 `;
 
 /* A file git no longer has on disk: opening it or revealing it would point at nothing. */
-const isGone = (entry: GitEntry): boolean => [entry.staged, entry.worktree].some((file) => file?.status.startsWith('D') === true);
+function isGone(entry: GitEntry): boolean {
+    return [entry.staged, entry.worktree].some((file) => file?.status.startsWith('D') === true);
+}
 
 /* What moving a new file to the trash names: the index side first, so it is taken out of the index too. */
-const newFileOf = (entry: GitEntry): GitFile => (entry.staged ?? entry.worktree)!;
+function newFileOf(entry: GitEntry): GitFile {
+    return (entry.staged ?? entry.worktree)!;
+}
 
 /* Whether a click landed on a row's checkbox, which lives in the tree's shadow root. */
-const onCheckbox = (event: { nativeEvent: Event }): boolean =>
-    event.nativeEvent.composedPath().some((node) => node instanceof HTMLElement && node.style.color.startsWith('var(--git-check-'));
+function onCheckbox(event: { nativeEvent: Event }): boolean {
+    return event.nativeEvent.composedPath().some((node) => node instanceof HTMLElement && node.style.color.startsWith('var(--git-check-'));
+}
 
 /* The decoration of one row: its box, unless it is a conflict, and what follows the name. */
-const decorationOf = (box: CheckState | null, parts: DecorationPart[]): FileTreeRowDecoration =>
-    decorationOfParts(box === null ? parts : [checkPart(box), ...parts]);
+function decorationOf(box: CheckState | null, parts: DecorationPart[]): FileTreeRowDecoration {
+    return decorationOfParts(box === null ? parts : [checkPart(box), ...parts]);
+}
 
 type FileNode = Extract<GitTreeNode, { kind: 'file' }>;
 
-const isFile = (node: GitTreeNode | undefined): node is FileNode => node?.kind === 'file';
+function isFile(node: GitTreeNode | undefined): node is FileNode {
+    return node?.kind === 'file';
+}
 
 /* What a dialog over a selection acts on: the files of each checkout it touches. */
 export interface GitWork {
@@ -157,8 +166,9 @@ export interface GitWork {
 }
 
 /* The items of a selection as the work of each checkout, with the file each one names. */
-const workOf = (items: readonly GitItem[], fileOf: (entry: GitEntry) => GitFile): GitWork[] =>
-    byCheckout(items).map(([cwd, entries]) => ({ cwd, files: entries.map(fileOf) }));
+function workOf(items: readonly GitItem[], fileOf: (entry: GitEntry) => GitFile): GitWork[] {
+    return byCheckout(items).map(([cwd, entries]) => ({ cwd, files: entries.map(fileOf) }));
+}
 
 interface ListProps {
     checkouts: readonly GitCheckout[];

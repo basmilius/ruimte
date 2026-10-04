@@ -25,7 +25,7 @@ export interface Aggregation {
  * another zone than the person looking, so the zone travels with the request and every boundary
  * here is local wall clock, never UTC.
  */
-const slotFormatter = (timeZone: string, resolution: UsageResolution): Intl.DateTimeFormat => {
+function slotFormatter(timeZone: string, resolution: UsageResolution): Intl.DateTimeFormat {
     const options: Intl.DateTimeFormatOptions =
         resolution === 'hour'
             ? { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }
@@ -36,17 +36,19 @@ const slotFormatter = (timeZone: string, resolution: UsageResolution): Intl.Date
         // A zone this machine does not know degrades to UTC rather than failing the whole request.
         return new Intl.DateTimeFormat('en-CA', { ...options, timeZone: 'UTC' });
     }
-};
+}
 
 /* `2026-09-10` for a day, `2026-09-10T14` for an hour: the day is always the first ten characters. */
-const slotOf = (format: Intl.DateTimeFormat, timestampMs: number, resolution: UsageResolution): string => {
+function slotOf(format: Intl.DateTimeFormat, timestampMs: number, resolution: UsageResolution): string {
     const parts = format.formatToParts(new Date(timestampMs));
     const at = (type: Intl.DateTimeFormatPartTypes): string => parts.find((part) => part.type === type)?.value ?? '';
     const day = `${at('year')}-${at('month')}-${at('day')}`;
     return resolution === 'hour' ? `${day}T${at('hour')}` : day;
-};
+}
 
-const emptyTotals = (): UsageTotals => ({ ...EMPTY_TOTALS });
+function emptyTotals(): UsageTotals {
+    return { ...EMPTY_TOTALS };
+}
 
 interface BucketAccumulator {
     slot: string;
@@ -79,19 +81,21 @@ interface ProjectAccumulator {
 }
 
 /* The account a record was made under, the default one under its CLI's kind. */
-export const accountOfRecord = (record: UsageRecord): string => record.account ?? record.provider;
+export function accountOfRecord(record: UsageRecord): string {
+    return record.account ?? record.provider;
+}
 
 /*
  * Every record of the period folded three ways at once: per slot for the chart, per model for the
  * breakdown and its price basis, and per folder for the projects. The three cannot be derived from
  * one another without a bucket per slot times model times project, which is a table nobody reads.
  */
-export const aggregate = async (
+export async function aggregate(
     records: readonly UsageRecord[],
     payload: UsageSummaryPayload,
     prices: PriceBook,
     known: readonly KnownProject[]
-): Promise<Aggregation> => {
+): Promise<Aggregation> {
     const format = slotFormatter(payload.timeZone, payload.resolution);
     const buckets = new Map<string, BucketAccumulator>();
     const models = new Map<string, ModelAccumulator>();
@@ -213,4 +217,4 @@ export const aggregate = async (
             .sort((a, b) => b.costUsd - a.costUsd),
         sessions: sessions.size
     };
-};
+}

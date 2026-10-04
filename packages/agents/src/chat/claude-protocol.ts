@@ -13,14 +13,20 @@ import type { ApprovalDecision, BackendEvent } from './backend.ts';
 
 type Frame = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is Frame => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Frame {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+function str(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
 
-const num = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+function num(value: unknown): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
 
 // A tool result is a string or a list of content blocks; only the text is worth showing.
-const resultText = (content: unknown): string => {
+function resultText(content: unknown): string {
     if (typeof content === 'string') {
         return content;
     }
@@ -31,14 +37,16 @@ const resultText = (content: unknown): string => {
         .map((block) => (isRecord(block) && block.type === 'text' ? str(block.text) : null))
         .filter((text): text is string => text !== null)
         .join('\n');
-};
+}
 
 // What a subagent spent, as `task_progress` and `task_notification` report it.
-const taskUsage = (usage: unknown): ChatSubagentUsage | null =>
-    isRecord(usage) ? { totalTokens: num(usage.total_tokens), toolUses: num(usage.tool_uses), durationMs: num(usage.duration_ms) } : null;
+function taskUsage(usage: unknown): ChatSubagentUsage | null {
+    return isRecord(usage) ? { totalTokens: num(usage.total_tokens), toolUses: num(usage.tool_uses), durationMs: num(usage.duration_ms) } : null;
+}
 
-const contextTokens = (usage: unknown): number =>
-    isRecord(usage) ? num(usage.input_tokens) + num(usage.cache_creation_input_tokens) + num(usage.cache_read_input_tokens) : 0;
+function contextTokens(usage: unknown): number {
+    return isRecord(usage) ? num(usage.input_tokens) + num(usage.cache_creation_input_tokens) + num(usage.cache_read_input_tokens) : 0;
+}
 
 // The kinds of task Claude Code keeps beside its turns that are a command or a monitor; a subagent has a row of its own.
 const BACKGROUND_TASK_TYPES = new Set(['local_bash', 'monitor_mcp', 'monitor_ws']);
@@ -49,14 +57,16 @@ const WORKFLOW_LAUNCHED = /^Workflow launched in background\. Task ID: (\S+)/;
 
 const WORKFLOW_AGENT_STATUS: Record<string, ChatSubagentStatus> = { done: 'done', error: 'failed' };
 
-const intOrNull = (value: unknown): number | null => (typeof value === 'number' && Number.isInteger(value) ? value : null);
+function intOrNull(value: unknown): number | null {
+    return typeof value === 'number' && Number.isInteger(value) ? value : null;
+}
 
 /*
  * A workflow's `workflow_progress` (Claude Code 2.1.282): every phase the script announced and every
  * agent it started so far, one entry per index, beside log lines the thread does not show. An agent
  * reads `start` while it waits and while it works, `done` or `error` once it stopped.
  */
-const parseWorkflowProgress = (entries: unknown[]): Pick<ChatWorkflow, 'phases' | 'agents'> => {
+function parseWorkflowProgress(entries: unknown[]): Pick<ChatWorkflow, 'phases' | 'agents'> {
     const phases = new Map<number, ChatWorkflowPhase>();
     const agents = new Map<number, ChatWorkflowAgent>();
     for (const entry of entries) {
@@ -85,10 +95,10 @@ const parseWorkflowProgress = (entries: unknown[]): Pick<ChatWorkflow, 'phases' 
     }
     const byIndex = (a: { index: number }, b: { index: number }): number => a.index - b.index;
     return { phases: [...phases.values()].sort(byIndex), agents: [...agents.values()].sort(byIndex) };
-};
+}
 
 // The CLI's AskUserQuestion input, as far as the person needs to see it.
-const parseQuestions = (input: unknown): ChatQuestion[] => {
+function parseQuestions(input: unknown): ChatQuestion[] {
     if (!isRecord(input) || !Array.isArray(input.questions)) {
         return [];
     }
@@ -101,7 +111,7 @@ const parseQuestions = (input: unknown): ChatQuestion[] => {
             : [],
         multiSelect: question.multiSelect === true
     }));
-};
+}
 
 // What the CLI waits for on stdin, kept until `chat.approve` or `chat.answer` names the request.
 type Pending =

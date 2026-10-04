@@ -13,7 +13,7 @@ const STATUS: MachineStatus = {
     keepAwake: { mode: 'working', onBattery: false, holding: false, lid: { on: false, rule: true, holding: false } }
 };
 
-const run = async (patch: Partial<ClosedLidCliOptions> = {}) => {
+async function run(patch: Partial<ClosedLidCliOptions> = {}) {
     const out: string[] = [];
     const err: string[] = [];
     const ran: string[][] = [];
@@ -33,7 +33,7 @@ const run = async (patch: Partial<ClosedLidCliOptions> = {}) => {
         ...patch
     });
     return { code, out, err, ran };
-};
+}
 
 describe('ruimte closed-lid', () => {
     test('install prints the rule it installs, word for word, before sudo asks for the password', async () => {

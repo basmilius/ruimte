@@ -25,19 +25,21 @@ const routing = { machineId: 'machine-1', handle: key, id: otherKey, issuedAt: 0
 const alert: PushEnvelope = { ...routing, pushType: 'alert', ephemeralKey: key, nonce: 'n'.repeat(16), ciphertext: 'c'.repeat(22), signature: 's'.repeat(86) };
 
 // One call per purpose over the same values, so only the purpose can make two of them differ.
-const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
-    brokerHello: brokerHelloMessage('machine-1', 'machine', key, nonce),
-    signal: signalMessage(key, otherKey, { connectionId: 'machine-1', signal: { kind: 'close', reason: 'done' } }),
-    machineRegistration: machineRegistrationMessage('machine-1', 'machine-1', key, 'machine', 0),
-    accessRequest: accessRequestMessage('machine-1', key, nonce),
-    accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000),
-    accessStatementV2: accessStatementV2Message('machine-1', key, 'account-1', otherKey, nonce, 0, 120_000),
-    sessionKey: sessionKeyMessage(nonce, key),
-    sessionRefresh: sessionRefreshMessage(nonce, 0),
-    deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0),
-    push: pushMessage(alert),
-    lanDoor: lanDoorMessage(nonce, 'machine-1', key)
-});
+function everyPurpose(): Record<keyof typeof SIGNING_PURPOSES, string> {
+    return {
+        brokerHello: brokerHelloMessage('machine-1', 'machine', key, nonce),
+        signal: signalMessage(key, otherKey, { connectionId: 'machine-1', signal: { kind: 'close', reason: 'done' } }),
+        machineRegistration: machineRegistrationMessage('machine-1', 'machine-1', key, 'machine', 0),
+        accessRequest: accessRequestMessage('machine-1', key, nonce),
+        accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000),
+        accessStatementV2: accessStatementV2Message('machine-1', key, 'account-1', otherKey, nonce, 0, 120_000),
+        sessionKey: sessionKeyMessage(nonce, key),
+        sessionRefresh: sessionRefreshMessage(nonce, 0),
+        deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0),
+        push: pushMessage(alert),
+        lanDoor: lanDoorMessage(nonce, 'machine-1', key)
+    };
+}
 
 describe('signed bytes', () => {
     test('every purpose opens with its own prefix line', () => {

@@ -62,7 +62,7 @@ const PERSON_CHAT_ACTIONS: ChatActions = {
  * first render. What only a workspace draws is handed over by the workspace (`workspace-host.ts`), so
  * none of it reaches the first chunk.
  */
-export const connectChatHost = (): void => {
+export function connectChatHost(): void {
     setLazyPrefetch((load) => prefetcher.register(load));
     setChatHost({
         accents: {
@@ -126,4 +126,4 @@ export const connectChatHost = (): void => {
         // A chat of the Chats project is a conversation of its own, so it opens the way one does.
         useWelcome: () => useProject((s) => isScratchProject(s.current))
     });
-};
+}

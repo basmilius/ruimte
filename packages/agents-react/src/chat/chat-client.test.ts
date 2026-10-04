@@ -6,21 +6,23 @@ import { ChatClient } from './chat-client';
 
 type Call = { type: AgentRequestType; payload: unknown };
 
-const info = (chatId: string): ChatInfo => ({
-    chatId,
-    provider: 'claude',
-    cwd: '/',
-    agentSessionId: null,
-    model: null,
-    selection: { model: 'claude-sonnet-5', options: {} },
-    runtimeMode: 'full-access',
-    status: 'idle',
-    running: false,
-    activeTurnId: null,
-    slashCommands: [],
-    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
-    createdAt: 0
-});
+function info(chatId: string): ChatInfo {
+    return {
+        chatId,
+        provider: 'claude',
+        cwd: '/',
+        agentSessionId: null,
+        model: null,
+        selection: { model: 'claude-sonnet-5', options: {} },
+        runtimeMode: 'full-access',
+        status: 'idle',
+        running: false,
+        activeTurnId: null,
+        slashCommands: [],
+        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+        createdAt: 0
+    };
+}
 
 class FakeTransport implements ChatTransport {
     status: ChatTransportStatus = 'open';
@@ -145,15 +147,17 @@ class FakeSink implements ChatSink {
     }
 }
 
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function flush(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
-const setup = () => {
+function setup() {
     const transport = new FakeTransport();
     const sink = new FakeSink();
     const providers: ProviderInfo[][] = [];
     const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) });
     return { transport, sink, client, providers };
-};
+}
 
 describe('ChatClient', () => {
     test('inspecting a hidden chat neither creates it nor keeps it attached', async () => {

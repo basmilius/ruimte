@@ -66,7 +66,7 @@ class Interner {
     }
 }
 
-export const encodeIndex = (index: UsageIndex): string => {
+export function encodeIndex(index: UsageIndex): string {
     const models = new Interner();
     const sessions = new Interner();
     const folders = new Interner();
@@ -99,20 +99,23 @@ export const encodeIndex = (index: UsageIndex): string => {
         files
     };
     return JSON.stringify(document);
-};
+}
 
-const isRow = (row: unknown, version: number): row is RecordRow =>
-    Array.isArray(row) &&
-    row.length === (version === ACCOUNTLESS_VERSION ? 12 : 13) &&
-    row.slice(0, 11).every((value) => typeof value === 'number') &&
-    (typeof row[11] === 'string' || row[11] === 0) &&
-    (version === ACCOUNTLESS_VERSION || typeof row[12] === 'number');
+function isRow(row: unknown, version: number): row is RecordRow {
+    return (
+        Array.isArray(row) &&
+        row.length === (version === ACCOUNTLESS_VERSION ? 12 : 13) &&
+        row.slice(0, 11).every((value) => typeof value === 'number') &&
+        (typeof row[11] === 'string' || row[11] === 0) &&
+        (version === ACCOUNTLESS_VERSION || typeof row[12] === 'number')
+    );
+}
 
 /*
  * A row that does not read back costs a cold parse of the file it belonged to, never a wrong total,
  * so anything unexpected drops that file's entry rather than being repaired.
  */
-export const decodeIndex = (text: string): UsageIndex => {
+export function decodeIndex(text: string): UsageIndex {
     const index: UsageIndex = new Map();
     let document: IndexFile;
     try {
@@ -172,4 +175,4 @@ export const decodeIndex = (text: string): UsageIndex => {
         }
     }
     return index;
-};
+}

@@ -11,17 +11,21 @@ import { useSettings } from '@/state/settings';
 import { snoozeOf, useSnoozes } from '@/state/snooze';
 
 /* Whether this window may raise anything at all. What a person is looking at is asked per node. */
-const mayNotify = (): boolean => 'Notification' in window && Notification.permission === 'granted';
+function mayNotify(): boolean {
+    return 'Notification' in window && Notification.permission === 'granted';
+}
 
 /*
  * Nothing is announced about a node somebody is already looking at: it says it there itself. A
  * window has held several views since the grid, so the question is about the node and not about the
  * window: a chat on a view behind the one you are reading is as unseen as one in a window behind it.
  */
-const canNotify = (nodeId: string, seen: ReadonlySet<string>): boolean => mayNotify() && !seen.has(nodeId);
+function canNotify(nodeId: string, seen: ReadonlySet<string>): boolean {
+    return mayNotify() && !seen.has(nodeId);
+}
 
 /* Clicking any of these brings the window up and goes to the node, in whichever view it lives. */
-const notify = (nodeId: string, title: string, body: string, tag: string, silent: boolean, reveal?: () => void): Notification => {
+function notify(nodeId: string, title: string, body: string, tag: string, silent: boolean, reveal?: () => void): Notification {
     const notification = new Notification(title, { body, tag, silent });
     notification.onclick = () => {
         window.focus();
@@ -34,16 +38,16 @@ const notify = (nodeId: string, title: string, body: string, tag: string, silent
         notification.close();
     };
     return notification;
-};
+}
 
-export const notifyRequested = (endpointId: string, alert: EventMap['push.notification']): void => {
+export function notifyRequested(endpointId: string, alert: EventMap['push.notification']): void {
     if (!mayNotify() || (endpointId === currentEndpointId() && seenNodeIds().has(alert.nodeId))) {
         return;
     }
     notify(alert.nodeId, alert.title, alert.body, `ruimte-requested-${endpointId}-${alert.nodeId}`, !useSettings.getState().agentsTurnSound, () => {
         void openSidebarTarget({ endpointId, projectId: alert.projectId, viewId: alert.viewId, nodeId: alert.nodeId });
     });
-};
+}
 
 /* A machine that keeps the snoozes may end one by its own clock a little before this one gets there. */
 const CLOCK_SLACK_MS = 5_000;
@@ -53,7 +57,7 @@ const CLOCK_SLACK_MS = 5_000;
  * wait, so a snooze that runs out is a new one and announces itself; one that ended before its time was
  * a person's own doing (here or on another client), and stays quiet.
  */
-export const startAgentNotifications = (now: () => number = Date.now): (() => void) => {
+export function startAgentNotifications(now: () => number = Date.now): () => void {
     const shown = new Map<string, Notification>();
     let previous = new Map<string, string | undefined>();
     /* When the snooze on each node that was snoozed at the last pass runs out. */
@@ -110,4 +114,4 @@ export const startAgentNotifications = (now: () => number = Date.now): (() => vo
         offSettings();
         offSnoozes();
     };
-};
+}

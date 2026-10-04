@@ -7,7 +7,7 @@ export interface ForkOrigin {
     title: string;
 }
 
-export const forkOriginIn = (views: readonly ProjectView[], chatId: string): ForkOrigin | null => {
+export function forkOriginIn(views: readonly ProjectView[], chatId: string): ForkOrigin | null {
     for (const view of views) {
         if (view.kind === 'chat' && view.id === chatId) {
             return { shape: 'view', title: view.name };
@@ -20,4 +20,4 @@ export const forkOriginIn = (views: readonly ProjectView[], chatId: string): For
         }
     }
     return null;
-};
+}

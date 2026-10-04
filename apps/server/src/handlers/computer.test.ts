@@ -6,7 +6,9 @@ import { computerSetup } from '../computer/computer-test-helpers.ts';
 import { Dispatcher, type ClientConnection } from '../dispatcher.ts';
 import { registerComputerHandlers } from './computer.ts';
 
-const request = (type: string, payload: unknown = {}): string => JSON.stringify({ id: type, type, payload });
+function request(type: string, payload: unknown = {}): string {
+    return JSON.stringify({ id: type, type, payload });
+}
 
 describe('computer handlers', () => {
     test('a press and a restart answer with the status after them', async () => {

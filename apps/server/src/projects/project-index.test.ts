@@ -2,33 +2,37 @@ import { describe, expect, test } from 'bun:test';
 import type { ProjectNode, ProjectView } from '@ruimte/contracts';
 import { ProjectIndex } from './project-index.ts';
 
-const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode => ({
-    id,
-    kind,
-    title: id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 100,
-    ...extra
-});
+function node(id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode {
+    return {
+        id,
+        kind,
+        title: id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        ...extra
+    };
+}
 
-const views = (noteBody: string): ProjectView[] => [
-    {
-        kind: 'canvas',
-        id: 'main',
-        name: 'Canvas',
-        nodes: [node('agent', 'terminal'), node('note', 'note', { title: 'Plan', body: noteBody }), node('readme', 'file', { path: 'README.md' })],
-        texts: [],
-        edges: [
-            { id: 'e1', from: 'note', to: 'agent' },
-            { id: 'e2', from: 'readme', to: 'agent' }
-        ],
-        layouts: []
-    },
-    { kind: 'chat', id: 'solo-chat', name: 'Chat', node: {} },
-    { kind: 'drawing', id: 'sketch', name: 'Sketch' }
-];
+function views(noteBody: string): ProjectView[] {
+    return [
+        {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Canvas',
+            nodes: [node('agent', 'terminal'), node('note', 'note', { title: 'Plan', body: noteBody }), node('readme', 'file', { path: 'README.md' })],
+            texts: [],
+            edges: [
+                { id: 'e1', from: 'note', to: 'agent' },
+                { id: 'e2', from: 'readme', to: 'agent' }
+            ],
+            layouts: []
+        },
+        { kind: 'chat', id: 'solo-chat', name: 'Chat', node: {} },
+        { kind: 'drawing', id: 'sketch', name: 'Sketch' }
+    ];
+}
 
 describe('ProjectIndex', () => {
     test('derives what an agent may read from the document, with file paths resolved against the folder', () => {

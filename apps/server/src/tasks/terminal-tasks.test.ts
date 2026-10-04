@@ -39,7 +39,9 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const open = (): Promise<Task> => tasks.open({ projectId: 'p', parentId: 'chat-lead', childId: 'terminal-child', title: 'Lexer', prompt: 'go' }, 1);
+function open(): Promise<Task> {
+    return tasks.open({ projectId: 'p', parentId: 'chat-lead', childId: 'terminal-child', title: 'Lexer', prompt: 'go' }, 1);
+}
 
 test('a terminal agent that says goodbye without done fails its task, saying how a terminal reports back', async () => {
     const task = await open();

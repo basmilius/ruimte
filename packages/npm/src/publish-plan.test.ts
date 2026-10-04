@@ -7,7 +7,7 @@ const PACKAGES: PackageToPublish[] = [
     { name: '@ruimte/linux-x64', dir: '/out/linux-x64' }
 ];
 
-const registry = (...entries: string[]) => {
+function registry(...entries: string[]) {
     const asked: string[] = [];
     const lookup = {
         published: async (name: string, version: string): Promise<boolean> => {
@@ -24,7 +24,7 @@ const registry = (...entries: string[]) => {
         }
     };
     return { asked, lookup };
-};
+}
 
 describe('planPublish', () => {
     test('platform packages first and the launcher last', async () => {

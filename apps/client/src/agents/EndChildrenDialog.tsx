@@ -10,7 +10,7 @@ import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { worktreeLists } from '@/state/worktrees';
 
-const warningOf = (pending: PendingEnd | null): string | null => {
+function warningOf(pending: PendingEnd | null): string | null {
     const agents = pending?.agents ?? 0;
     if (pending?.action === 'stop') {
         return stopsTaskWarning(agents);
@@ -19,7 +19,7 @@ const warningOf = (pending: PendingEnd | null): string | null => {
         return stopsSubagentsWarning(agents);
     }
     return agents === 0 ? null : endsAgentsWarning(agents);
-};
+}
 
 /*
  * Asked before a delete that also ends the agents the deleted nodes opened, and before a stop that ends
@@ -83,7 +83,7 @@ export function EndChildrenDialog() {
 }
 
 /* Without force, so a worktree that gained work since the question was asked is refused by the machine and stays. */
-const removeClean = async (worktrees: readonly PendingEndWorktree[]): Promise<void> => {
+async function removeClean(worktrees: readonly PendingEndWorktree[]): Promise<void> {
     for (const worktree of worktrees) {
         try {
             const result = await performAsPerson('worktree.remove', { branch: worktree.branch, force: false });
@@ -99,6 +99,6 @@ const removeClean = async (worktrees: readonly PendingEndWorktree[]): Promise<vo
                 .show({ title: i18next.t('agents:dialog.worktreeStays', { branch: worktree.branch }), description: message, kind: 'error', output: message });
         }
     }
-};
+}
 
 type PendingEndWorktree = NonNullable<PendingEnd['worktrees']>['worktrees'][number];

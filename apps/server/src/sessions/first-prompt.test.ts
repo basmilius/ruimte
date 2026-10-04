@@ -20,8 +20,9 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const start = (sessionId: string) =>
-    harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent: { kind: 'claude', runtimeMode: 'supervised' } });
+function start(sessionId: string) {
+    return harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent: { kind: 'claude', runtimeMode: 'supervised' } });
+}
 
 test('the prompt an agent node was made with lands on the line its CLI is started with', async () => {
     await prompts!.put('project', 'terminal-a', 'say hello');

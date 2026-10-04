@@ -20,24 +20,24 @@ const info: ChatInfo = {
     createdAt: 0
 };
 
-const setup = (generation = 1) => {
+function setup(generation = 1) {
     const thread = new ChatThread(info);
     thread.upsert({ id: 'turn-1', kind: 'turn', createdAt: 0, turnId: 'turn-1', state: 'running', origin: 'user', endedAt: null, costUsd: 0 });
     let clock = 1;
     const projector = new ThreadProjector(thread, { providerName: 'Test CLI', now: () => clock++ });
     const project = (...events: BackendEvent[]) => events.flatMap((event) => projector.project(generation, event));
     return { thread, projector, project };
-};
+}
 
 // A chat between turns: the CLI is alive, nobody asked it anything, and no turn is open.
-const idleSetup = () => {
+function idleSetup() {
     const thread = new ChatThread({ ...info, status: 'idle', activeTurnId: null });
     let clock = 1;
     const projector = new ThreadProjector(thread, { providerName: 'Test CLI', now: () => clock++ });
     const project = (...events: BackendEvent[]) => events.flatMap((event) => projector.project(1, event));
     const openTurn = () => thread.list().find((item) => item.kind === 'turn');
     return { thread, project, openTurn };
-};
+}
 
 describe('ThreadProjector', () => {
     test('keeps a model snapshot that arrives before its subagent row', () => {

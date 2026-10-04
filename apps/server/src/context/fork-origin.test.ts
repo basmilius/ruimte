@@ -3,12 +3,14 @@ import type { ContextSource } from '@ruimte/contracts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { withForkOrigin } from './fork-origin.ts';
 
-const readers = (places: Record<string, string | null>, forks: Record<string, string> = { fork: 'lead' }) => ({
-    forkedFrom: (id: string) => forks[id] ?? null,
-    forksOf: (id: string) => Object.keys(forks).filter((fork) => forks[fork] === id),
-    locate: (id: string): IndexedPlace | null => (id in places ? { projectId: 'p1', folder: '/work', canvasId: places[id]! } : null),
-    titleFor: (id: string) => (id === 'lead' ? 'Lexer' : id === 'fork' ? 'Lexer (fork)' : null)
-});
+function readers(places: Record<string, string | null>, forks: Record<string, string> = { fork: 'lead' }) {
+    return {
+        forkedFrom: (id: string) => forks[id] ?? null,
+        forksOf: (id: string) => Object.keys(forks).filter((fork) => forks[fork] === id),
+        locate: (id: string): IndexedPlace | null => (id in places ? { projectId: 'p1', folder: '/work', canvasId: places[id]! } : null),
+        titleFor: (id: string) => (id === 'lead' ? 'Lexer' : id === 'fork' ? 'Lexer (fork)' : null)
+    };
+}
 
 const text: ContextSource = { id: 'text-1', kind: 'text', title: 'Plan', text: 'plan' };
 

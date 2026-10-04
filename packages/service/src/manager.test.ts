@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { launchdManager, systemdManager, type CommandResult, type ServiceFiles } from './manager';
 
-const ok = (stdout = ''): CommandResult => ({ code: 0, stdout, stderr: '' });
+function ok(stdout = ''): CommandResult {
+    return { code: 0, stdout, stderr: '' };
+}
 
-const fakeRunner = (answers: Record<string, CommandResult | CommandResult[]> = {}) => {
+function fakeRunner(answers: Record<string, CommandResult | CommandResult[]> = {}) {
     const calls: string[] = [];
     const run = (command: string, args: string[]): CommandResult => {
         const line = [command, ...args].join(' ');
@@ -15,9 +17,9 @@ const fakeRunner = (answers: Record<string, CommandResult | CommandResult[]> = {
         return answer ?? ok();
     };
     return { calls, run };
-};
+}
 
-const memoryFiles = () => {
+function memoryFiles() {
     const files = new Map<string, string>();
     const directories = new Set<string>();
     const api: ServiceFiles = {
@@ -27,9 +29,9 @@ const memoryFiles = () => {
         makeDirectory: (path) => void directories.add(path)
     };
     return { files, directories, api };
-};
+}
 
-const noSleep = async (): Promise<void> => {};
+async function noSleep(): Promise<void> {}
 
 describe('launchdManager', () => {
     const PLIST = '/Users/bas/Library/LaunchAgents/app.ruimte.daemon.plist';

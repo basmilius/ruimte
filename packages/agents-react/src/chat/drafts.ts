@@ -23,11 +23,17 @@ type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; chats
 
 const storage = persistedJson<Record<string, DraftRecord>>(STORAGE_KEY, (raw) => (raw ? (JSON.parse(raw) as Record<string, DraftRecord>) : {}), {});
 
-const readAll = (): Record<string, DraftRecord> => storage.read();
+function readAll(): Record<string, DraftRecord> {
+    return storage.read();
+}
 
-const store = (drafts: Record<string, DraftRecord>): boolean => storage.write(drafts);
+function store(drafts: Record<string, DraftRecord>): boolean {
+    return storage.write(drafts);
+}
 
-export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() === '' && draft.attachments.length === 0 && draft.quote === '';
+export function isEmptyDraft(draft: ChatDraft): boolean {
+    return draft.text.trim() === '' && draft.attachments.length === 0 && draft.quote === '';
+}
 
 /*
  * Which chats hold an unsent prompt, for a dot beside them in a list of chats. The drafts themselves
@@ -35,18 +41,20 @@ export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() ===
  */
 export const useDrafts = create<{ ids: string[] }>(() => ({ ids: Object.keys(readAll()) }));
 
-export const useHasDraft = (chatId: string): boolean => useDrafts((s) => s.ids.includes(chatId));
+export function useHasDraft(chatId: string): boolean {
+    return useDrafts((s) => s.ids.includes(chatId));
+}
 
-const trackDraft = (chatId: string, held: boolean): void => {
+function trackDraft(chatId: string, held: boolean): void {
     const { ids } = useDrafts.getState();
     if (ids.includes(chatId) === held) {
         return;
     }
     useDrafts.setState({ ids: held ? [...ids, chatId] : ids.filter((id) => id !== chatId) });
-};
+}
 
 /* An unsent prompt per chat node, kept across reloads so a half-written message is never lost. */
-export const readDraft = (chatId: string): ChatDraft => {
+export function readDraft(chatId: string): ChatDraft {
     const record = readAll()[chatId];
     return record
         ? {
@@ -58,9 +66,9 @@ export const readDraft = (chatId: string): ChatDraft => {
               quote: record.quote ?? ''
           }
         : EMPTY_DRAFT;
-};
+}
 
-export const writeDraft = (chatId: string, draft: ChatDraft): void => {
+export function writeDraft(chatId: string, draft: ChatDraft): void {
     const drafts = readAll();
     trackDraft(chatId, !isEmptyDraft(draft));
     if (isEmptyDraft(draft)) {
@@ -82,22 +90,26 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
     // A file can outgrow the storage quota; the text is the part worth keeping then.
     drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, chats: draft.chats, quote: draft.quote };
     store(drafts);
-};
+}
 
 /* Text handed to a draft from outside the composer goes under what was already typed, never over it. */
-export const joinDraftText = (current: string, added: string): string => (current.trim() === '' ? added : `${current.replace(/\s+$/, '')}\n\n${added}`);
+export function joinDraftText(current: string, added: string): string {
+    return current.trim() === '' ? added : `${current.replace(/\s+$/, '')}\n\n${added}`;
+}
 
-const union = (first: readonly string[], second: readonly string[]): string[] => [...first, ...second.filter((entry) => !first.includes(entry))];
+function union(first: readonly string[], second: readonly string[]): string[] {
+    return [...first, ...second.filter((entry) => !first.includes(entry))];
+}
 
 /*
  * A queued message taken back to edit goes above what was typed since. Its files join the draft's as
  * far as the limits let them, and the rest come back rejected, the way a dropped file would. A quote
  * it was sent with is part of its text; the draft keeps the one it holds.
  */
-export const takeBackIntoDraft = (
+export function takeBackIntoDraft(
     current: ChatDraft,
     taken: Omit<ChatDraft, 'quote'>
-): { draft: ChatDraft; rejected: Array<{ name: string; reason: string }> } => {
+): { draft: ChatDraft; rejected: Array<{ name: string; reason: string }> } {
     const checked = checkAttachmentLimits(
         current.attachments.length,
         taken.attachments.map((upload) => ({ name: upload.name, mime: upload.mime, bytes: uploadBytes(upload), upload })),
@@ -114,27 +126,27 @@ export const takeBackIntoDraft = (
         },
         rejected: checked.rejected
     };
-};
+}
 
 type DraftTaker = (text: string) => void;
 
 /* The composers on screen, by chat. One that is not mounted reads what was offered from storage when it is. */
 const takers = new Map<string, DraftTaker>();
 
-export const takeDraftOffers = (chatId: string, take: DraftTaker): (() => void) => {
+export function takeDraftOffers(chatId: string, take: DraftTaker): () => void {
     takers.set(chatId, take);
     return () => {
         if (takers.get(chatId) === take) {
             takers.delete(chatId);
         }
     };
-};
+}
 
 /*
  * Puts text in a chat's prompt without sending it: the person reads it and presses Enter. A mounted
  * composer owns its draft and writes it back to storage itself, so it has to be the one to take it.
  */
-export const offerDraft = (chatId: string, text: string): void => {
+export function offerDraft(chatId: string, text: string): void {
     const take = takers.get(chatId);
     if (take) {
         take(text);
@@ -142,4 +154,4 @@ export const offerDraft = (chatId: string, text: string): void => {
     }
     const current = readDraft(chatId);
     writeDraft(chatId, { ...current, text: joinDraftText(current.text, text) });
-};
+}

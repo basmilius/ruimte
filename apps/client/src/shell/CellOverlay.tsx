@@ -20,18 +20,18 @@ type Slot = 'view' | 'cell';
 const hosts = new Map<string, Record<Slot, HTMLElement>>();
 const listeners = new Set<() => void>();
 
-const announce = (): void => {
+function announce(): void {
     for (const listener of [...listeners]) {
         listener();
     }
-};
+}
 
-const subscribeHosts = (listener: () => void): (() => void) => {
+function subscribeHosts(listener: () => void): () => void {
     listeners.add(listener);
     return () => {
         listeners.delete(listener);
     };
-};
+}
 
 /* Draws its children over the pages, in the cell around it. Outside a cell they stay where they are. */
 export function CellOverlay({ slot, children }: { readonly slot: Slot; readonly children: ReactNode }) {

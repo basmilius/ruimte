@@ -17,13 +17,14 @@ let env: Env;
 let delivered: PushEnvelope[];
 let seams: PushDeliverySeams;
 
-const request = (body: unknown, method = 'POST', token = access): Request =>
-    new Request('https://pulsar.test/v1/push', {
+function request(body: unknown, method = 'POST', token = access): Request {
+    return new Request('https://pulsar.test/v1/push', {
         method,
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         ...(method === 'DELETE' ? {} : { body: JSON.stringify(body) })
     });
-const signed = (changes: Partial<PushEnvelope> = {}): PushEnvelope => {
+}
+function signed(changes: Partial<PushEnvelope> = {}): PushEnvelope {
     const push: PushEnvelope = {
         machineId: 'machine',
         handle,
@@ -40,7 +41,7 @@ const signed = (changes: Partial<PushEnvelope> = {}): PushEnvelope => {
     } as PushEnvelope;
     push.signature = sign(null, Buffer.from(pushMessage(push)), machineKey.privateKey).toString('base64url');
     return push;
-};
+}
 
 beforeEach(() => {
     sqlite = migratedDatabase();

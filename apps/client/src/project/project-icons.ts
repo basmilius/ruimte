@@ -415,7 +415,9 @@ export const PROJECT_ICON_GLYPHS = Object.fromEntries(PROJECT_ICON_GROUPS.flatMa
 >;
 
 /* The glyph of a picked name, or null for one a newer Ruimte offers that this version cannot draw. */
-export const projectIconGlyphOf = (name: string): LucideIcon | null => (isProjectIconName(name) ? PROJECT_ICON_GLYPHS[name] : null);
+export function projectIconGlyphOf(name: string): LucideIcon | null {
+    return isProjectIconName(name) ? PROJECT_ICON_GLYPHS[name] : null;
+}
 
 // The words a search finds an icon by beyond its own name.
 export const PROJECT_ICON_KEYWORDS: Partial<Record<ProjectIconName, readonly string[]>> = {

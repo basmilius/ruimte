@@ -6,7 +6,7 @@ import { SectionLabel, useMeasuredWidth } from '@basmilius/desktop-ui';
 const HEIGHT = 44;
 
 /* Runs of points with a value, so a stretch that could not be measured is a gap and not a line to zero. */
-const runs = (points: readonly ProcessPoint[], read: (point: ProcessPoint) => number | null): ProcessPoint[][] => {
+function runs(points: readonly ProcessPoint[], read: (point: ProcessPoint) => number | null): ProcessPoint[][] {
     const out: ProcessPoint[][] = [];
     let current: ProcessPoint[] = [];
     for (const point of points) {
@@ -23,7 +23,7 @@ const runs = (points: readonly ProcessPoint[], read: (point: ProcessPoint) => nu
         out.push(current);
     }
     return out;
-};
+}
 
 interface ProcessChartProps {
     label: ReactNode;

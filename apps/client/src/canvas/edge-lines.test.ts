@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { Edge } from '@/state/canvas';
 import { canLink, edgeLines, textRect } from './edge-lines';
 
-const edge = (id: string, from: string, to: string, label?: string): Edge => ({ id, from, to, ...(label === undefined ? {} : { label }) });
+function edge(id: string, from: string, to: string, label?: string): Edge {
+    return { id, from, to, ...(label === undefined ? {} : { label }) };
+}
 
 describe('edgeLines', () => {
     test('two edges between the same nodes are one line with both of their ids', () => {

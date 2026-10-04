@@ -6,7 +6,7 @@ import { isCanvasView, type ProjectView } from '@ruimte/contracts';
  * the name of the view when it is a session of its own. The event carries an id and never a title,
  * so this is the client's own lookup and it answers null for an id it has not heard of yet.
  */
-export const callerName = (views: readonly ProjectView[], by: string): string | null => {
+export function callerName(views: readonly ProjectView[], by: string): string | null {
     for (const view of views) {
         if (view.id === by) {
             return view.name ?? null;
@@ -19,7 +19,7 @@ export const callerName = (views: readonly ProjectView[], by: string): string | 
         }
     }
     return null;
-};
+}
 
 export interface ShowViewNotice {
     /* One line, because the banner is one row. The buttons already say the rest. */
@@ -34,7 +34,7 @@ export interface ShowViewNotice {
  * that changes place with a setting is two features to learn instead of one. `alreadyThere` is asked
  * before anything moves, since offering a way back to where the person is standing reads as a bug.
  */
-export const showViewNotice = (input: { agent: string | null; view: string; follow: boolean; alreadyThere: boolean }): ShowViewNotice => {
+export function showViewNotice(input: { agent: string | null; view: string; follow: boolean; alreadyThere: boolean }): ShowViewNotice {
     // What a toast calls an agent whose node this client cannot find in the document it holds.
     const agent = input.agent ?? i18next.t('project:showView.someone');
     if (input.alreadyThere) {
@@ -44,4 +44,4 @@ export const showViewNotice = (input: { agent: string | null; view: string; foll
         return { message: i18next.t('project:showView.follow', { agent, view: input.view }), action: 'back' };
     }
     return { message: i18next.t('project:showView.go', { agent, view: input.view }), action: 'go' };
-};
+}

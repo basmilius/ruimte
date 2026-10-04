@@ -35,11 +35,13 @@ export const USAGE_SECTION: AgentsSettingsSection = {
  * itself, a lazy one, or a wrapper that gives the pane what only the app knows. Built when the dialog
  * draws, since the words follow the language.
  */
-export const settingsSection = (section: AgentsSettingsSection, pane: ComponentType): SettingsSectionEntry => ({
-    id: section.id,
-    icon: section.icon,
-    label: section.label(),
-    description: section.description(),
-    pane,
-    split: section.split
-});
+export function settingsSection(section: AgentsSettingsSection, pane: ComponentType): SettingsSectionEntry {
+    return {
+        id: section.id,
+        icon: section.icon,
+        label: section.label(),
+        description: section.description(),
+        pane,
+        split: section.split
+    };
+}

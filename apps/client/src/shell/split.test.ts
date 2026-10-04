@@ -27,26 +27,31 @@ import {
 } from './split';
 
 /* A layout the way a test reads it: columns of view ids, every share even. */
-const gridOf = (columns: string[][], focus: CellAt = { column: 0, cell: 0 }): SplitLayout => ({
-    columns: columns.map((cells) => ({
-        size: 1 / columns.length,
-        cells: cells.map((viewId) => ({ viewId, size: 1 / cells.length }))
-    })),
-    focus
-});
+function gridOf(columns: string[][], focus: CellAt = { column: 0, cell: 0 }): SplitLayout {
+    return {
+        columns: columns.map((cells) => ({
+            size: 1 / columns.length,
+            cells: cells.map((viewId) => ({ viewId, size: 1 / cells.length }))
+        })),
+        focus
+    };
+}
 
-const shapeOf = (layout: SplitLayout): string[][] => layout.columns.map((column) => column.cells.map((cell) => cell.viewId));
+function shapeOf(layout: SplitLayout): string[][] {
+    return layout.columns.map((column) => column.cells.map((cell) => cell.viewId));
+}
 
 /* Shares are only meaningful if they add up, so every operation is checked on both axes. */
-const sums = (layout: SplitLayout): void => {
+function sums(layout: SplitLayout): void {
     expect(layout.columns.reduce((total, column) => total + column.size, 0)).toBeCloseTo(1, 10);
     for (const column of layout.columns) {
         expect(column.cells.reduce((total, cell) => total + cell.size, 0)).toBeCloseTo(1, 10);
     }
-};
+}
 
-const viewOf = (id: string, kind: ProjectView['kind'] = 'canvas'): ProjectView =>
-    (kind === 'separator' ? { kind, id } : { kind: 'canvas', id, name: id, nodes: [], texts: [], edges: [], layouts: [] }) as ProjectView;
+function viewOf(id: string, kind: ProjectView['kind'] = 'canvas'): ProjectView {
+    return (kind === 'separator' ? { kind, id } : { kind: 'canvas', id, name: id, nodes: [], texts: [], edges: [], layouts: [] }) as ProjectView;
+}
 
 describe('singleLayout', () => {
     test('one column with one cell is where every project stands until it is split', () => {

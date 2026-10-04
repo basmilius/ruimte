@@ -99,27 +99,31 @@ describe('browseStart', () => {
 
 const KEY = 'A'.repeat(43);
 
-const opened = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id,
-    label: `Row ${id}`,
-    httpBaseUrl: '',
-    wsBaseUrl: '',
-    reachability: 'public',
-    daemonId: id,
-    daemonPublicKey: KEY,
-    pairedBy: 'statement',
-    ...overrides
-});
+function opened(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: `Row ${id}`,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        reachability: 'public',
+        daemonId: id,
+        daemonPublicKey: KEY,
+        pairedBy: 'statement',
+        ...overrides
+    };
+}
 
-const record = (id: string, overrides: Partial<Machine> = {}): Machine => ({
-    id,
-    name: `Account ${id}`,
-    icon: null,
-    publicKey: KEY,
-    brokerUrl: 'wss://broker.example.com',
-    lastSeenAt: null,
-    ...overrides
-});
+function record(id: string, overrides: Partial<Machine> = {}): Machine {
+    return {
+        id,
+        name: `Account ${id}`,
+        icon: null,
+        publicKey: KEY,
+        brokerUrl: 'wss://broker.example.com',
+        lastSeenAt: null,
+        ...overrides
+    };
+}
 
 const localRow = opened('local', {
     label: 'This machine',

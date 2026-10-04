@@ -45,10 +45,12 @@ const FIND_CURRENT: monaco.editor.IModelDecorationOptions = {
 };
 
 /* Without a reason Monaco answers typing in a read-only editor with a sentence of its own, in English. */
-const readOnlyOptions = (readOnly: boolean, reason: string | undefined): monaco.editor.IEditorOptions => ({
-    readOnly,
-    ...(reason === undefined ? {} : { readOnlyMessage: { value: reason } })
-});
+function readOnlyOptions(readOnly: boolean, reason: string | undefined): monaco.editor.IEditorOptions {
+    return {
+        readOnly,
+        ...(reason === undefined ? {} : { readOnlyMessage: { value: reason } })
+    };
+}
 
 class MonacoEngine implements EditorEngine {
     private readonly highlighter: Highlighter;
@@ -328,7 +330,7 @@ class MonacoEditor implements Editor {
 }
 
 /* A rule without a command makes Monaco pass the key on, where the window's own listeners hear it. */
-const handBackKeys = ({ handBack = [], apple = false }: MonacoEngineOptions): void => {
+function handBackKeys({ handBack = [], apple = false }: MonacoEngineOptions): void {
     monaco.editor.addKeybindingRules(
         handBack.flatMap((chord) => {
             const key = monacoKeyOf(chord, apple);
@@ -338,13 +340,13 @@ const handBackKeys = ({ handBack = [], apple = false }: MonacoEngineOptions): vo
             return [{ keybinding: key.modifiers.reduce((sum, modifier) => sum | monaco.KeyMod[modifier], monaco.KeyCode[key.code]), command: null }];
         })
     );
-};
+}
 
-export const createMonacoEngine = async (options: MonacoEngineOptions): Promise<EditorEngine> => {
+export async function createMonacoEngine(options: MonacoEngineOptions): Promise<EditorEngine> {
     const highlighter = await options.highlighter();
     // Monaco would otherwise resolve its workers by paths of its own, which no bundler follows.
     globalThis.MonacoEnvironment = { getWorker: (_workerId: string, label: string) => WORKERS[workerFor(label)]() };
     configureLanguageServices();
     handBackKeys(options);
     return new MonacoEngine(highlighter);
-};
+}

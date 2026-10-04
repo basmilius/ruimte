@@ -21,14 +21,20 @@ const FIVE_HOURS_MS = 5 * 60 * MINUTE_MS;
 const WEEK_MS = 7 * 24 * 60 * MINUTE_MS;
 const MONTH_MS = 30 * 24 * 60 * MINUTE_MS;
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const num = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+function num(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
-const fraction = (value: number): number => Math.min(1, Math.max(0, value));
+function fraction(value: number): number {
+    return Math.min(1, Math.max(0, value));
+}
 
 /* A window is named after how long it lasts, never after the position it came in. */
-export const kindOfDuration = (durationMs: number | null): UsageWindow['kind'] => {
+export function kindOfDuration(durationMs: number | null): UsageWindow['kind'] {
     if (durationMs === null) {
         return 'other';
     }
@@ -39,7 +45,7 @@ export const kindOfDuration = (durationMs: number | null): UsageWindow['kind'] =
         return 'weekly';
     }
     return 'session';
-};
+}
 
 const CLAUDE_WINDOWS: { key: string; id: string; label: string; kind: UsageWindow['kind']; durationMs: number }[] = [
     { key: 'five_hour', id: 'five_hour', label: 'Session', kind: 'session', durationMs: FIVE_HOURS_MS },
@@ -48,18 +54,19 @@ const CLAUDE_WINDOWS: { key: string; id: string; label: string; kind: UsageWindo
     { key: 'seven_day_sonnet', id: 'seven_day_sonnet', label: 'Weekly · Sonnet', kind: 'weekly', durationMs: WEEK_MS }
 ];
 
-const slug = (value: string): string =>
-    value
+function slug(value: string): string {
+    return value
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_|_$/g, '');
+}
 
 /*
  * What `get_usage` answers. Claude reports a percent and an ISO moment there, while the event a
  * running turn sends reports a fraction and epoch seconds; both are turned into a fraction and epoch
  * milliseconds here, so nothing past this file has to remember which of the two it is holding.
  */
-export const readClaudeUsage = (response: unknown): ProviderReading | { unavailable: UsageLimitsProvider['unavailable'] } => {
+export function readClaudeUsage(response: unknown): ProviderReading | { unavailable: UsageLimitsProvider['unavailable'] } {
     if (!isRecord(response)) {
         return { unavailable: { reason: 'failed', message: 'Claude Code returned no readable usage' } };
     }
@@ -91,10 +98,10 @@ export const readClaudeUsage = (response: unknown): ProviderReading | { unavaila
     const session = isRecord(response.session) ? response.session : null;
     const sessionUsd = session === null ? null : num(session.total_cost_usd);
     return { plan, windows, cost: sessionUsd === null ? null : { sessionUsd } };
-};
+}
 
 /* The `rate_limit_event` a turn streams: one window, a fraction, and seconds where the read had ISO. */
-export const readClaudeEvent = (info: unknown): LimitsUpdate | null => {
+export function readClaudeEvent(info: unknown): LimitsUpdate | null {
     const event = isRecord(info) ? info : null;
     const type = event !== null && typeof event.rateLimitType === 'string' ? event.rateLimitType : null;
     const utilization = event === null ? null : num(event.utilization);
@@ -114,13 +121,13 @@ export const readClaudeEvent = (info: unknown): LimitsUpdate | null => {
             }
         ]
     };
-};
+}
 
 /*
  * A Codex rate limit snapshot, from a read or from the notification a turn sends. Only the main
  * allowance counts: the other ids are one model's own budget and read as a second plan.
  */
-export const readCodexLimits = (snapshot: unknown): ProviderReading | null => {
+export function readCodexLimits(snapshot: unknown): ProviderReading | null {
     const limits = isRecord(snapshot) ? snapshot : null;
     if (limits === null || (typeof limits.limitId === 'string' && limits.limitId !== 'codex')) {
         return null;
@@ -150,14 +157,14 @@ export const readCodexLimits = (snapshot: unknown): ProviderReading | null => {
         });
     }
     return { plan, windows, cost: null };
-};
+}
 
 /*
  * A sparse update folded onto what a full read drew. The row keeps its label, its reset and its
  * length when the event leaves them out, which is what makes a mid-turn number land on the bar it
  * belongs to instead of drawing a second one beside it.
  */
-export const mergeWindows = (known: readonly UsageWindow[], updates: readonly Partial<UsageWindow>[]): UsageWindow[] => {
+export function mergeWindows(known: readonly UsageWindow[], updates: readonly Partial<UsageWindow>[]): UsageWindow[] {
     const merged = known.map((window) => ({ ...window }));
     for (const update of updates) {
         if (update.id === undefined || update.used === undefined) {
@@ -178,4 +185,4 @@ export const mergeWindows = (known: readonly UsageWindow[], updates: readonly Pa
         merged[at] = { ...merged[at]!, ...update } as UsageWindow;
     }
     return merged;
-};
+}

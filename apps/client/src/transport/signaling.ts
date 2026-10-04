@@ -25,15 +25,16 @@ export interface Signaling {
  */
 export type SignalingOpener = (connectionId: string, events: SignalingEvents) => Signaling;
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 /*
  * The signals over a socket to the machine: `direct.signal` one way and `direct.signaled` the other.
  * The address is the socket URL the transport resolved for this attempt, ticket and all.
  */
-export const socketSignaling =
-    (url: string, createSocket: (url: string) => WebSocket = (address) => new WebSocket(address)): SignalingOpener =>
-    (connectionId, events) => {
+export function socketSignaling(url: string, createSocket: (url: string) => WebSocket = (address) => new WebSocket(address)): SignalingOpener {
+    return (connectionId, events) => {
         let socket: WebSocket | null = null;
         let nextSignal = 1;
         let done = false;
@@ -100,3 +101,4 @@ export const socketSignaling =
             }
         };
     };
+}

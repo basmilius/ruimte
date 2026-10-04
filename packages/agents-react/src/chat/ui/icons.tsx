@@ -15,10 +15,10 @@ export const DOCK_ICON_SIZE = 14;
 export const ROW_GUTTER = 'grid h-5 w-4 shrink-0 place-items-center';
 
 /* The icon that says what a tool call is about; unknown tools get the wrench. */
-export const toolIcon = (name: string, size: number = SIZE): ReactNode => {
+export function toolIcon(name: string, size: number = SIZE): ReactNode {
     const known = toolEntry(name);
     if (known !== undefined) {
         return <Icon icon={known.icon} size={size} />;
     }
     return name.startsWith('mcp__') ? <Icon icon={Hammer} size={size} /> : <Icon icon={Wrench} size={size} />;
-};
+}

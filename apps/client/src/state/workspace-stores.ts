@@ -34,20 +34,20 @@ export interface StoreHook<T> extends StoreApi<T> {
 }
 
 /* A vanilla store as a hook that is also the store. */
-export const storeHook = <T>(store: StoreApi<T>): StoreHook<T> => {
+export function storeHook<T>(store: StoreApi<T>): StoreHook<T> {
     const hook = (<U>(selector?: (state: T) => U): T | U => useStore(store, selector as (state: T) => U)) as StoreHook<T>;
     hook.getState = store.getState;
     hook.getInitialState = store.getInitialState;
     hook.setState = store.setState;
     hook.subscribe = store.subscribe;
     return hook;
-};
+}
 
 /* One editor out of a registry: the cell that was asked for, else the one with the focus, else blank. */
-export const resolveEditor = <T>(registry: EditorRegistry<T>, cell: string | null): StoreApi<T> => {
+export function resolveEditor<T>(registry: EditorRegistry<T>, cell: string | null): StoreApi<T> {
     const viewId = cell ?? registry.focused();
     return (viewId === null ? null : registry.peek(viewId)) ?? registry.blank;
-};
+}
 
 /*
  * The editor a subtree resolves to, as the store itself: the cell the component is drawn in, else
@@ -55,11 +55,11 @@ export const resolveEditor = <T>(registry: EditorRegistry<T>, cell: string | nul
  * when it subscribes or writes rather than reads, since `getState()` would land on the focused cell
  * even while the component sits in one beside it.
  */
-export const useEditorStoreOf = <T>(registry: EditorRegistry<T>): StoreApi<T> => {
+export function useEditorStoreOf<T>(registry: EditorRegistry<T>): StoreApi<T> {
     const cell = useContext(CellViewContext);
     // The shape rather than the contents. Which editor this is changes far less often than what is in it.
     return useSyncExternalStore(registry.subscribeShape, () => resolveEditor(registry, cell));
-};
+}
 
 /*
  * A hook over one editor and nothing else. It is deliberately not a store. `useCanvas.getState()`
@@ -78,12 +78,15 @@ export interface EditorHook<T> {
  * canvas is asked for) reads the blank one, which is what the single editor held back when a view
  * that was not a canvas left it empty.
  */
-export const editorHook = <T>(registry: EditorRegistry<T>): EditorHook<T> =>
-    (<U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(registry), selector as (state: T) => U)) as EditorHook<T>;
+export function editorHook<T>(registry: EditorRegistry<T>): EditorHook<T> {
+    return (<U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(registry), selector as (state: T) => U)) as EditorHook<T>;
+}
 
 /*
  * The editor of the cell that has the focus, for code with no cell of its own: a shortcut, a menu of the
  * window, a palette row, a watcher. Anything drawn inside a cell means its own editor and asks for it
  * with `useCanvasStore` or `useDrawingStore`.
  */
-export const focusedEditor = <T>(registry: EditorRegistry<T>): StoreApi<T> => resolveEditor(registry, null);
+export function focusedEditor<T>(registry: EditorRegistry<T>): StoreApi<T> {
+    return resolveEditor(registry, null);
+}

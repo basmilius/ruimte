@@ -7,19 +7,21 @@ const user: ChatUserItem = { id: 'u1', kind: 'user', createdAt: 0, turnId: null,
 
 const assistant: ChatAssistantItem = { id: 'a1', kind: 'assistant', createdAt: 0, turnId: null, text: '## Done\n\nI fixed **the build**.', streaming: false };
 
-const tool = (patch: Partial<ChatToolItem>): ChatToolItem => ({
-    id: 't1',
-    kind: 'tool',
-    createdAt: 0,
-    turnId: null,
-    toolUseId: 'call-1',
-    name: 'Bash',
-    input: {},
-    output: 'ok',
-    state: 'done',
-    parentToolUseId: null,
-    ...patch
-});
+function tool(patch: Partial<ChatToolItem>): ChatToolItem {
+    return {
+        id: 't1',
+        kind: 'tool',
+        createdAt: 0,
+        turnId: null,
+        toolUseId: 'call-1',
+        name: 'Bash',
+        input: {},
+        output: 'ok',
+        state: 'done',
+        parentToolUseId: null,
+        ...patch
+    };
+}
 
 describe('stripMarkdown', () => {
     test('drops the marks and keeps what they marked', () => {

@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { approximateMeasure, linesOf, wrapLines, writingFrameOf } from './text.ts';
 
 /* Every glyph is ten wide, so the numbers below read as glyph counts. */
-const tens = (line: string): number => line.length * 10;
+function tens(line: string): number {
+    return line.length * 10;
+}
 
 describe('wrapLines', () => {
     test('breaks between words where the width runs out', () => {

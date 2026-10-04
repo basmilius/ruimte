@@ -1,13 +1,15 @@
 import { browserStorage, type LastProjectStorage } from './last-project';
 
-const keyOf = (endpointId: string, projectId: string): string => `ruimte.deletedViews.${JSON.stringify([endpointId, projectId])}`;
+function keyOf(endpointId: string, projectId: string): string {
+    return `ruimte.deletedViews.${JSON.stringify([endpointId, projectId])}`;
+}
 
 /*
  * The views a person deleted from a project whose deletion may not have reached its file yet: still
  * waiting on the undo, or purged by a save that has not landed. A page can go before either ends,
  * and the next open finishes the deletion from here.
  */
-export const readDeletedViews = (endpointId: string, projectId: string, storage: LastProjectStorage | null = browserStorage()): string[] => {
+export function readDeletedViews(endpointId: string, projectId: string, storage: LastProjectStorage | null = browserStorage()): string[] {
     const raw = storage?.getItem(keyOf(endpointId, projectId)) ?? null;
     if (raw === null) {
         return [];
@@ -18,17 +20,17 @@ export const readDeletedViews = (endpointId: string, projectId: string, storage:
     } catch {
         return [];
     }
-};
+}
 
-export const writeDeletedViews = (
+export function writeDeletedViews(
     endpointId: string,
     projectId: string,
     viewIds: readonly string[],
     storage: LastProjectStorage | null = browserStorage()
-): void => {
+): void {
     if (viewIds.length === 0) {
         storage?.removeItem(keyOf(endpointId, projectId));
         return;
     }
     storage?.setItem(keyOf(endpointId, projectId), JSON.stringify(viewIds));
-};
+}

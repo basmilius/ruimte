@@ -19,14 +19,16 @@ export interface PortHint {
     strength: number;
 }
 
-export const portKey = (nodeId: string, side: Side): string => `${nodeId}:${side}`;
+export function portKey(nodeId: string, side: Side): string {
+    return `${nodeId}:${side}`;
+}
 
 /*
  * The ports to show for a pointer at `point`: the nearest side of every node within reach, one per
  * node, so walking along a row of nodes lights one dot at a time. A side a line already leaves from
  * is offered too, or the line there would be the only thing a press could land on.
  */
-export const portHints = (nodes: readonly (Rect & { id: string })[], point: Point, reach: number): PortHint[] => {
+export function portHints(nodes: readonly (Rect & { id: string })[], point: Point, reach: number): PortHint[] {
     const hints: PortHint[] = [];
     for (const node of nodes) {
         let nearest: PortHint | null = null;
@@ -43,17 +45,17 @@ export const portHints = (nodes: readonly (Rect & { id: string })[], point: Poin
         }
     }
     return hints;
-};
+}
 
 /*
  * The sides a line already leaves from or lands on, which is where a node draws no dot of its own.
  * The route decides that, so this walks the same routes the canvas draws.
  */
-export const takenPorts = (
+export function takenPorts(
     edges: readonly { from: string; to: string; fromSide?: Side; toSide?: Side }[],
     rectOf: (id: string) => Rect | null,
     obstacles: readonly Obstacle[] = []
-): Set<string> => {
+): Set<string> {
     const taken = new Set<string>();
     for (const edge of edges) {
         const from = rectOf(edge.from);
@@ -76,4 +78,4 @@ export const takenPorts = (
         taken.add(portKey(edge.to, route.toSide));
     }
     return taken;
-};
+}

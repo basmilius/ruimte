@@ -3,7 +3,9 @@ import { PROJECT_VERSION, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, Pro
 import { duplicateIdIn, migrateLocal, migrateSharedFile, newerVersionIn, withoutCrossViewEdges } from './project-migrate.ts';
 
 /* The shared file a value migrates to, which is what every case here is about; the rev beside it has its own test. */
-const migratedFile = (value: unknown) => migrateSharedFile(value)?.file ?? null;
+function migratedFile(value: unknown) {
+    return migrateSharedFile(value)?.file ?? null;
+}
 
 /* A copy of `.ruimte/project.json` of this repository, the way version 1 wrote it. */
 const V1_FILE = {
@@ -21,12 +23,12 @@ const V1_FILE = {
     layouts: []
 };
 
-const canvasOf = (view: ProjectCanvasView | undefined): ProjectCanvasView => {
+function canvasOf(view: ProjectCanvasView | undefined): ProjectCanvasView {
     if (!view || view.kind !== 'canvas') {
         throw new Error('the migrated view is not a canvas');
     }
     return view;
-};
+}
 
 describe('migrateSharedFile', () => {
     test('the rev of an older file comes back beside it, and a version-3 file has none', () => {

@@ -44,35 +44,39 @@ export interface DiagramState extends CameraSlice {
     applyDocument(document: DiagramDocument): void;
 }
 
-export const contentOf = (document: DiagramDocument): DiagramContent => ({
-    meta: document.meta,
-    nodes: document.nodes,
-    groups: document.groups,
-    edges: document.edges
-});
+export function contentOf(document: DiagramDocument): DiagramContent {
+    return {
+        meta: document.meta,
+        nodes: document.nodes,
+        groups: document.groups,
+        edges: document.edges
+    };
+}
 
 const EMPTY_CONTENT = contentOf(EMPTY_DIAGRAM);
 
 export const DIAGRAM_HISTORY_LIMIT = 100;
 
 /* Every change to the content is an edit; the client saves on the counter. */
-const changed = (state: DiagramState, content: DiagramContent, first = true): Partial<DiagramState> => ({
-    content,
-    edits: state.edits + 1,
-    ...(first ? { past: [...state.past.slice(-(DIAGRAM_HISTORY_LIMIT - 1)), state.content], future: [] } : {})
-});
+function changed(state: DiagramState, content: DiagramContent, first = true): Partial<DiagramState> {
+    return {
+        content,
+        edits: state.edits + 1,
+        ...(first ? { past: [...state.past.slice(-(DIAGRAM_HISTORY_LIMIT - 1)), state.content], future: [] } : {})
+    };
+}
 
 /* The next frame on screen; without one, as in a test, at once. */
-const nextFrame = (callback: () => void): void => {
+function nextFrame(callback: () => void): void {
     if (typeof requestAnimationFrame === 'function') {
         requestAnimationFrame(() => callback());
     } else {
         callback();
     }
-};
+}
 
 /* The content with one node rewritten, or null when there is no such node or nothing would change. */
-const withNode = (content: DiagramContent, id: string, rewrite: (node: DiagramNode) => DiagramNode): DiagramContent | null => {
+function withNode(content: DiagramContent, id: string, rewrite: (node: DiagramNode) => DiagramNode): DiagramContent | null {
     const node = content.nodes.find((candidate) => candidate.id === id);
     if (!node) {
         return null;
@@ -82,15 +86,15 @@ const withNode = (content: DiagramContent, id: string, rewrite: (node: DiagramNo
         return null;
     }
     return { ...content, nodes: content.nodes.map((candidate) => (candidate.id === id ? next : candidate)) };
-};
+}
 
 /*
  * The diagram on screen: the graph, its layout and where the camera is. Shaped after the drawing
  * store, without tools or a selection, because a diagram is written rather than drawn: a person only
  * moves, renames and colors what an agent or the file put there.
  */
-export const createDiagramStore = (frame: (callback: () => void) => void = nextFrame): StoreApi<DiagramState> =>
-    createStore<DiagramState>((set, get) => {
+export function createDiagramStore(frame: (callback: () => void) => void = nextFrame): StoreApi<DiagramState> {
+    return createStore<DiagramState>((set, get) => {
         // The content the layout was computed from. A drag lays out once a frame at most, since a
         // layout takes long enough to drop the frames of a pointer that moves every few milliseconds.
         let laidOut = EMPTY_CONTENT;
@@ -251,6 +255,7 @@ export const createDiagramStore = (frame: (callback: () => void) => void = nextF
             }
         };
     });
+}
 
 export const defaultDiagramStore = createDiagramStore();
 

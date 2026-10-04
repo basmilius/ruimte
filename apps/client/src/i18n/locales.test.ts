@@ -5,22 +5,24 @@ import { APP_LANGUAGES, FALLBACK_LANGUAGE } from '@/i18n/languages';
 import { NAMESPACES } from '@/i18n/namespaces';
 
 const HERE = new URL('.', import.meta.url).pathname;
-const localeDir = (language: string): string => join(HERE, 'locales', language);
+function localeDir(language: string): string {
+    return join(HERE, 'locales', language);
+}
 
-const read = async (language: string, namespace: string): Promise<Record<string, unknown>> => {
+async function read(language: string, namespace: string): Promise<Record<string, unknown>> {
     const file = Bun.file(join(localeDir(language), `${namespace}.json`));
     return (await file.json()) as Record<string, unknown>;
-};
+}
 
 /* Every key a file holds, flattened, so two languages compare as two lists and not as two trees. */
-const keysOf = (value: unknown, prefix = ''): string[] => {
+function keysOf(value: unknown, prefix = ''): string[] {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         return [prefix];
     }
     return Object.entries(value).flatMap(([key, child]) => keysOf(child, prefix === '' ? key : `${prefix}.${key}`));
-};
+}
 
-const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
+function strings(value: unknown, prefix = ''): Array<[string, string]> {
     if (typeof value === 'string') {
         return [[prefix, value]];
     }
@@ -28,13 +30,13 @@ const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
         return [];
     }
     return Object.entries(value).flatMap(([key, child]) => strings(child, prefix === '' ? key : `${prefix}.${key}`));
-};
+}
 
 /*
  * The keys an object in the file names twice. A parser keeps the last and drops the first without a
  * word, so a block of words disappears while the file still reads as valid.
  */
-const repeatedKeys = (text: string): string[] => {
+function repeatedKeys(text: string): string[] {
     const open: Array<Set<string>> = [];
     const repeated: string[] = [];
     // A whole string is one match, so a brace inside a value ("{{count}}") never opens an object.
@@ -53,13 +55,14 @@ const repeatedKeys = (text: string): string[] => {
         }
     }
     return repeated;
-};
+}
 
-const namespacesOn = (language: string): string[] =>
-    readdirSync(localeDir(language))
+function namespacesOn(language: string): string[] {
+    return readdirSync(localeDir(language))
         .filter((name) => name.endsWith('.json'))
         .map((name) => name.slice(0, -'.json'.length))
         .sort();
+}
 
 describe('the translation files', () => {
     test('are named after a namespace the app knows', () => {

@@ -10,7 +10,7 @@ let loaded: EditorEngine | null = null;
  * sits on (`highlight.ts`), so a grammar loads once for both, and it hands back the shortcuts any text
  * field does, so the palette opens from a file the way it does from the composer.
  */
-export const loadEditorEngine = (): Promise<EditorEngine> => {
+export function loadEditorEngine(): Promise<EditorEngine> {
     const apple = isApplePlatform();
     return loadMonacoEngine({
         // Ours go in up front, since the editor loads a theme it has not seen by a bundled id.
@@ -26,7 +26,9 @@ export const loadEditorEngine = (): Promise<EditorEngine> => {
         loaded = engine;
         return engine;
     });
-};
+}
 
 /* The engine once it is in, so a file opened after the first draws the editor from its first frame and not the placeholder. */
-export const loadedEditorEngine = (): EditorEngine | null => loaded;
+export function loadedEditorEngine(): EditorEngine | null {
+    return loaded;
+}

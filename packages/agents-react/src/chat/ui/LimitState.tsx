@@ -26,7 +26,7 @@ const refreshedAt = new Map<string, number>();
  * The host reads the plan of an account other than a CLI's default one only while it is in use, so
  * an account that could take the chat over may have no numbers yet. The dock asks for them.
  */
-const readUnreadAccounts = (scope: ChatScope): void => {
+function readUnreadAccounts(scope: ChatScope): void {
     const last = refreshedAt.get(scope.id);
     if (last !== undefined && Date.now() - last < UNREAD_REFRESH_MS) {
         return;
@@ -36,7 +36,7 @@ const readUnreadAccounts = (scope: ChatScope): void => {
         .request('usage.refreshLimits', {})
         .then((snapshot) => useUsageStore.getState().setLimits(scope.id, snapshot))
         .catch(() => undefined);
-};
+}
 
 /*
  * The chat's own "Resume at reset". It only counts while the host allows it, so with the host's

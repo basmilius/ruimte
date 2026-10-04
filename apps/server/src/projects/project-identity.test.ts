@@ -12,12 +12,12 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0
 const SVG = Buffer.from('<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg"><rect width="8" height="8" /></svg>');
 const GIF = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00]);
 
-const put = async (relative: string, bytes: Uint8Array | string): Promise<string> => {
+async function put(relative: string, bytes: Uint8Array | string): Promise<string> {
     const path = join(folder, relative);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, bytes);
     return path;
-};
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-identity-'));

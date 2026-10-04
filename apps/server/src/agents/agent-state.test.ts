@@ -2,13 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import type { AgentStatus, ChatTurnItem } from '@ruimte/contracts';
 import { agentStates, type AgentStateSources } from './agent-state.ts';
 
-const sources = (
+function sources(
     statuses: Record<string, AgentStatus>,
     cancelled: string[],
     turns: Record<string, ChatTurnItem['state']> = {},
     stored: readonly string[] = []
-): AgentStateSources =>
-    ({
+): AgentStateSources {
+    return {
         outbox: { list: () => [] },
         lineage: { endedAt: () => null, startedBy: () => null },
         chats: {
@@ -20,7 +20,8 @@ const sources = (
             lastTurn: async (id: string) => (turns[id] === undefined ? null : { kind: 'turn', state: turns[id] })
         },
         sessions: { get: () => undefined }
-    }) as unknown as AgentStateSources;
+    } as unknown as AgentStateSources;
+}
 
 describe('agentStates', () => {
     test('cancels the turn of a chat that works or waits on a person, and nothing else', () => {

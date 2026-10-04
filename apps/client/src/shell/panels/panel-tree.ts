@@ -58,21 +58,23 @@ export const CHANGE_TREE_CSS = `
 export const PANEL_TREE_ROW_HEIGHT = 25;
 
 /* The tree's own handle type is a union whose two halves TypeScript cannot tell apart by method. */
-export const directoryHandle = (model: FileTree, path: string): FileTreeDirectoryHandle | null => {
+export function directoryHandle(model: FileTree, path: string): FileTreeDirectoryHandle | null {
     const item = model.getItem(path);
     return item?.isDirectory() ? (item as FileTreeDirectoryHandle) : null;
-};
+}
 
 /* A chain of folders nothing branches in is one row, which stands for the deepest of them. */
-export const pathOfRow = (row: FileTreeVisibleRow): string =>
-    row.isFlattened ? (row.flattenedSegments?.findLast((segment) => segment.isTerminal)?.path ?? row.path) : row.path;
+export function pathOfRow(row: FileTreeVisibleRow): string {
+    return row.isFlattened ? (row.flattenedSegments?.findLast((segment) => segment.isTerminal)?.path ?? row.path) : row.path;
+}
 
 /* Every row the tree shows, which is every row but the ones a folded folder holds. */
-export const visibleRows = (model: FileTree): GitTreeRow[] =>
-    model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
+export function visibleRows(model: FileTree): GitTreeRow[] {
+    return model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
+}
 
 /* Folds the tree the way the collapse set says. */
-export const applyExpansion = (model: FileTree, collapsed: ReadonlySet<string>, keyOf?: FoldKeyOf): void => {
+export function applyExpansion(model: FileTree, collapsed: ReadonlySet<string>, keyOf?: FoldKeyOf): void {
     for (let pass = 0; pass < EXPANSION_PASSES; pass++) {
         const { collapse, expand } = expansionChanges(visibleRows(model), collapsed, keyOf);
         if (collapse.length === 0 && expand.length === 0) {
@@ -85,19 +87,19 @@ export const applyExpansion = (model: FileTree, collapsed: ReadonlySet<string>, 
             directoryHandle(model, path)?.expand();
         }
     }
-};
+}
 
-export const resetExpandedPaths = (model: FileTree, paths: readonly string[], expanded: ReadonlySet<string>): void => {
+export function resetExpandedPaths(model: FileTree, paths: readonly string[], expanded: ReadonlySet<string>): void {
     model.resetPaths(paths, { initialExpandedPaths: [...expanded] });
     // @pierre/trees beta.6 restores expansion with its default sort, so custom sorting needs a second pass.
     for (const path of expanded) {
         directoryHandle(model, path)?.expand();
     }
-};
+}
 
 /* The row a composed event came out of. The rows live in a shadow root, so the path is somewhere on
    the way up and never on the target React hands over. */
-export const rowPathOf = (event: { nativeEvent: Event }): string | null => {
+export function rowPathOf(event: { nativeEvent: Event }): string | null {
     for (const node of event.nativeEvent.composedPath()) {
         const path = node instanceof HTMLElement ? node.dataset.itemPath : undefined;
         if (path) {
@@ -105,21 +107,26 @@ export const rowPathOf = (event: { nativeEvent: Event }): string | null => {
         }
     }
     return null;
-};
+}
 
 /* The rows a context menu acts on: the whole selection when the row is part of one, else the row. */
-export const menuTargetsOf = (row: string, selected: readonly string[]): string[] => (selected.includes(row) && selected.length > 1 ? [...selected] : [row]);
+export function menuTargetsOf(row: string, selected: readonly string[]): string[] {
+    return selected.includes(row) && selected.length > 1 ? [...selected] : [row];
+}
 
 /* A click that extends the selection, which the tree handles and a panel must not read as "open this". */
-export const extendsSelection = (event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): boolean => event.shiftKey || event.metaKey || event.ctrlKey;
+export function extendsSelection(event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): boolean {
+    return event.shiftKey || event.metaKey || event.ctrlKey;
+}
 
 /* The keys that move the tree's focus without extending the selection. */
 const FOCUS_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
-export const movesFocus = (event: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean }): boolean =>
-    FOCUS_KEYS.has(event.key) && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+export function movesFocus(event: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean }): boolean {
+    return FOCUS_KEYS.has(event.key) && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+}
 
-export const selectOnly = (model: FileTree, path: string | null): void => {
+export function selectOnly(model: FileTree, path: string | null): void {
     for (const selected of model.getSelectedPaths()) {
         if (selected !== path) {
             model.getItem(selected)?.deselect();
@@ -129,7 +136,7 @@ export const selectOnly = (model: FileTree, path: string | null): void => {
     if (item && !item.isSelected()) {
         item.select();
     }
-};
+}
 
 /*
  * The tree moves its focus and leaves the selection where it was, so the selection catches up, the
@@ -137,7 +144,7 @@ export const selectOnly = (model: FileTree, path: string | null): void => {
  * the tree's own handler, which moves the focus and stops the key, so it would select the row the
  * focus is leaving. `onMoved` hears the row the focus landed on, once it is another one.
  */
-export const followFocus = (model: FileTree, onMoved?: (path: string) => void): void => {
+export function followFocus(model: FileTree, onMoved?: (path: string) => void): void {
     const from = model.getFocusedPath();
     window.setTimeout(() => {
         const path = model.getFocusedPath();
@@ -146,13 +153,13 @@ export const followFocus = (model: FileTree, onMoved?: (path: string) => void): 
             onMoved?.(path);
         }
     }, 0);
-};
+}
 
 /* Gives one row the keyboard. A row that takes the focus tells the tree itself, so the tree's own
    arrows go on from there. */
-export const focusRow = (model: FileTree, path: string): boolean => {
+export function focusRow(model: FileTree, path: string): boolean {
     const selector = `[data-type="item"][data-item-path="${CSS.escape(path)}"]:not([data-item-parked="true"])`;
     const row = model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
     row?.focus();
     return row !== null;
-};
+}

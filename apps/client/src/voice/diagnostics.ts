@@ -61,17 +61,17 @@ const END_STATUSES: Readonly<Record<string, VoiceResponseStatus>> = {
 /* A code is kept only when it looks like one, so a message can never pass for it. */
 const CODE = /^[a-z][a-z0-9_-]{0,47}$/;
 
-const parsedArguments = (raw: string): Record<string, unknown> | null => {
+function parsedArguments(raw: string): Record<string, unknown> | null {
     try {
         const parsed: unknown = JSON.parse(raw);
         return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
     } catch {
         return null;
     }
-};
+}
 
 /* Only a name from the catalog is kept; whatever else the model put in `action` is dropped. */
-export const voiceActionOf = (tool: string, rawArguments: string): string | null => {
+export function voiceActionOf(tool: string, rawArguments: string): string | null {
     const action = parsedArguments(rawArguments)?.action;
     if (typeof action !== 'string') {
         return null;
@@ -80,9 +80,9 @@ export const voiceActionOf = (tool: string, rawArguments: string): string | null
         return action === 'confirm' || action === 'cancel' ? action : null;
     }
     return VOICE_TOOL_ACTIONS.get(tool)?.find((name) => name === action) ?? null;
-};
+}
 
-export const voiceResultOf = (output: Record<string, unknown>): string => {
+export function voiceResultOf(output: Record<string, unknown>): string {
     if (output.ok === true) {
         return 'ok';
     }
@@ -90,20 +90,24 @@ export const voiceResultOf = (output: Record<string, unknown>): string => {
         return 'needs_confirmation';
     }
     return typeof output.code === 'string' && CODE.test(output.code) ? output.code : 'failed';
-};
+}
 
-const lengthOf = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
+function lengthOf(value: unknown): number {
+    return Array.isArray(value) ? value.length : 0;
+}
 
-export const voiceTargetOf = (output: Record<string, unknown>): VoiceTargetCounts => ({
-    found: lengthOf(output.found),
-    ambiguous: lengthOf(output.ambiguous),
-    missing: lengthOf(output.missing)
-});
+export function voiceTargetOf(output: Record<string, unknown>): VoiceTargetCounts {
+    return {
+        found: lengthOf(output.found),
+        ambiguous: lengthOf(output.ambiguous),
+        missing: lengthOf(output.missing)
+    };
+}
 
-export const voiceToolBytes = (domains: readonly ActionDomain[]): { count: number; bytes: number } => {
+export function voiceToolBytes(domains: readonly ActionDomain[]): { count: number; bytes: number } {
     const tools = voiceToolsFor(domains);
     return { count: tools.length, bytes: new TextEncoder().encode(JSON.stringify(tools)).length };
-};
+}
 
 interface OpenRequest {
     record: VoiceRequestRecord;

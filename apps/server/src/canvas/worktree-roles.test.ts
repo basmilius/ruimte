@@ -9,21 +9,23 @@ import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let template: RepoTemplate;
 let root: string;
@@ -56,11 +58,12 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const firstTurn = (chatId: string): ChatTurnItem | undefined =>
-    daemon.chats
+function firstTurn(chatId: string): ChatTurnItem | undefined {
+    return daemon.chats
         .get(chatId)
         ?.thread.list()
         .find((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 test('two roles that change the same file each work in a worktree of their own, and each turn diff holds only its own change', async () => {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });

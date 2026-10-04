@@ -9,11 +9,17 @@ let template: RepoTemplate;
 let root: string;
 let repo: string;
 
-const git = (args: string[]): Promise<string> => gitIn(repo, args);
+function git(args: string[]): Promise<string> {
+    return gitIn(repo, args);
+}
 
-const write = (name: string, body: string): Promise<void> => writeFile(join(repo, name), body);
+function write(name: string, body: string): Promise<void> {
+    return writeFile(join(repo, name), body);
+}
 
-const statesOf = async (): Promise<string[]> => (await readStatus(repo)).files.map((file) => `${file.path} ${file.state}`);
+async function statesOf(): Promise<string[]> {
+    return (await readStatus(repo)).files.map((file) => `${file.path} ${file.state}`);
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-stage', (dir) => initRepo(join(dir, 'repo'), { 'tracked.txt': 'one\n' }));

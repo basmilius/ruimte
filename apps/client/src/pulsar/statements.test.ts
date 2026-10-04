@@ -4,10 +4,10 @@ import { createClientKeyLoader, type KeyStore } from '@/endpoint/client-key';
 import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { requestSignalAccess } from './statements';
 
-const memoryStore = (): KeyStore => {
+function memoryStore(): KeyStore {
     let held: CryptoKeyPair | null = null;
     return { read: async () => held, write: async (pair) => void (held = pair) };
-};
+}
 
 describe('requestSignalAccess', () => {
     test('asks with a fresh nonce signed by this client key, and carries the statement with the label', async () => {

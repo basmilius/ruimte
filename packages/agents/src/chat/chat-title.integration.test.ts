@@ -4,13 +4,16 @@ import type { ChatProvider } from '../providers/provider.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { suggestChatTitle } from './chat-title.ts';
 
-const scripted = (script: string): ChatProvider => ({ ...codexProvider, command: ['bun'], oneShotArgs: () => ['-e', script] });
+function scripted(script: string): ChatProvider {
+    return { ...codexProvider, command: ['bun'], oneShotArgs: () => ['-e', script] };
+}
 
-const registryWith = (installed: string[], providers: ChatProvider[]): ProviderRegistry =>
-    new ProviderRegistry({
+function registryWith(installed: string[], providers: ChatProvider[]): ProviderRegistry {
+    return new ProviderRegistry({
         providers,
         detect: async (command) => ({ installed: installed.includes(command), version: installed.includes(command) ? '1.0.0' : null })
     });
+}
 
 describe('suggestChatTitle', () => {
     const input = { cwd: process.cwd(), prompt: 'Why does the build fail?', answer: 'The lockfile is stale.' };

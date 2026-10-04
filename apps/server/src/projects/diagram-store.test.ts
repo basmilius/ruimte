@@ -19,39 +19,49 @@ let diagrams: DiagramStore;
 let events: SessionEvent[];
 let projectId: string;
 
-const node = (id: string, label = id): DiagramNode => ({ id, label });
+function node(id: string, label = id): DiagramNode {
+    return { id, label };
+}
 
-const graph = (nodes: DiagramNode[], edges: [string, string][] = []): DiagramContent => ({
-    meta: { title: 'Wire', direction: 'right' },
-    nodes,
-    groups: [],
-    edges: edges.map(([from, to]) => ({ from, to }))
-});
+function graph(nodes: DiagramNode[], edges: [string, string][] = []): DiagramContent {
+    return {
+        meta: { title: 'Wire', direction: 'right' },
+        nodes,
+        groups: [],
+        edges: edges.map(([from, to]) => ({ from, to }))
+    };
+}
 
 /* A project with one canvas, one drawing and the diagram views the test asks for. */
-const content = (...diagramIds: string[]): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] },
-        { kind: 'drawing', id: 'sketch', name: 'Sketch' },
-        ...diagramIds.map((id) => ({ kind: 'diagram' as const, id, name: id }))
-    ]
-});
+function content(...diagramIds: string[]): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] },
+            { kind: 'drawing', id: 'sketch', name: 'Sketch' },
+            ...diagramIds.map((id) => ({ kind: 'diagram' as const, id, name: id }))
+        ]
+    };
+}
 
 /* Nothing here is shared, so every diagram sits on the private side of the folder; sharing its view moves it, which DrawingStore covers. */
-const diagramsDir = (): string => join(folder, '.ruimte', 'private', 'diagrams');
+function diagramsDir(): string {
+    return join(folder, '.ruimte', 'private', 'diagrams');
+}
 
-const diagramFile = (viewId: string): string => join(diagramsDir(), `${viewId}.json`);
+function diagramFile(viewId: string): string {
+    return join(diagramsDir(), `${viewId}.json`);
+}
 
-const exists = async (path: string): Promise<boolean> => {
+async function exists(path: string): Promise<boolean> {
     try {
         await stat(path);
         return true;
     } catch {
         return false;
     }
-};
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-diagrams-'));

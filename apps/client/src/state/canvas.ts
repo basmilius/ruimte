@@ -65,10 +65,12 @@ export type Edge = ProjectEdge;
 export type EdgeSides = Pick<Edge, 'fromSide' | 'toSide'>;
 
 /* The same two ports the other way round, so the line back is held where the line out is drawn. */
-const mirroredSides = (sides: EdgeSides | undefined): EdgeSides => ({
-    ...(sides?.toSide === undefined ? {} : { fromSide: sides.toSide }),
-    ...(sides?.fromSide === undefined ? {} : { toSide: sides.fromSide })
-});
+function mirroredSides(sides: EdgeSides | undefined): EdgeSides {
+    return {
+        ...(sides?.toSide === undefined ? {} : { fromSide: sides.toSide }),
+        ...(sides?.fromSide === undefined ? {} : { toSide: sides.fromSide })
+    };
+}
 
 /*
  * An edge being drawn: from a node or text to wherever the pointer is, in world units. Started from
@@ -223,12 +225,16 @@ export interface CanvasState extends CameraSlice {
 
 export { DEFAULT_TITLES, NODE_SIZE, isAgentKind };
 
-const center = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
+function center(rect: Rect): Point {
+    return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+}
 
-const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+function contains(rect: Rect, point: Point): boolean {
+    return point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+}
 
 /* What one group holds: its remembered members when collapsed, else whatever has its center inside the frame. */
-export const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] => {
+export function membersOf(group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] {
     if (group.collapsed) {
         return group.memberIds ?? [];
     }
@@ -244,10 +250,10 @@ export const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, 
         }
     }
     return members;
-};
+}
 
 /* A group carries what sits inside it, and a group inside it carries its own members in turn. */
-export const carriedByGroups = (nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>, selection: string[]): Set<string> => {
+export function carriedByGroups(nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>, selection: string[]): Set<string> {
     const carried = new Set<string>();
     const visit = (groupId: string): void => {
         const group = nodes[groupId];
@@ -266,9 +272,9 @@ export const carriedByGroups = (nodes: Record<string, CanvasNode>, texts: Record
         visit(id);
     }
     return carried;
-};
+}
 
-const hiddenIn = (nodes: Record<string, CanvasNode>): Set<string> => {
+function hiddenIn(nodes: Record<string, CanvasNode>): Set<string> {
     const hidden = new Set<string>();
     for (const node of Object.values(nodes)) {
         if (node.kind === 'group' && node.collapsed) {
@@ -278,18 +284,22 @@ const hiddenIn = (nodes: Record<string, CanvasNode>): Set<string> => {
         }
     }
     return hidden;
-};
+}
 
 // Ids double as daemon session ids and end up in a shared file, so they must not repeat across machines.
-export const nextId = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+export function nextId(prefix: string): string {
+    return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
-const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' | 'layouts'>): Snapshot => ({
-    nodes: s.nodes,
-    order: s.order,
-    texts: s.texts,
-    edges: s.edges,
-    layouts: s.layouts
-});
+function snapshotOf(s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' | 'layouts'>): Snapshot {
+    return {
+        nodes: s.nodes,
+        order: s.order,
+        texts: s.texts,
+        edges: s.edges,
+        layouts: s.layouts
+    };
+}
 
 /*
  * Takes another writer's additions and deletions into one step of the history, so an undo neither
@@ -297,7 +307,7 @@ const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' |
  * holds stay as they are: an undo still puts a person's own move back. `patch` names only what is new
  * to this editor, since a node that is merely changed there may be one the step is from before.
  */
-export const patchSnapshot = (snapshot: Snapshot, patch: CanvasPatch): Snapshot => {
+export function patchSnapshot(snapshot: Snapshot, patch: CanvasPatch): Snapshot {
     const nodes = { ...snapshot.nodes };
     for (const id of patch.removed.nodes) {
         delete nodes[id];
@@ -322,14 +332,16 @@ export const patchSnapshot = (snapshot: Snapshot, patch: CanvasPatch): Snapshot 
     const present = new Set(edges.map((edge) => edge.id));
     edges.push(...patch.edges.filter((edge) => !present.has(edge.id)));
     return { ...snapshot, nodes, order, texts, edges: edges.filter((edge) => holds(edge.from) && holds(edge.to)) };
-};
+}
 
 /* Remembers the placement before a change; called by every action that changes it. */
-const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] });
+function remember(s: CanvasState): Pick<CanvasState, 'past' | 'future'> {
+    return { past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] };
+}
 
 /* One canvas editor, for one view on screen. */
-export const createCanvasStore = (): StoreApi<CanvasState> =>
-    createStore<CanvasState>((set, get) => ({
+export function createCanvasStore(): StoreApi<CanvasState> {
+    return createStore<CanvasState>((set, get) => ({
         ...createCameraSlice<CanvasState>(set, get, {
             boundsOfAll: (state) => unionOf([...Object.values(state.nodes), ...Object.values(state.texts).map(textRect)]),
             boundsOfSelection: (state) =>
@@ -845,6 +857,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             });
         }
     }));
+}
 
 /* The blank canvas of the window: what a view that is not a canvas reads, and what a unit test reads. */
 export const defaultCanvasStore = createCanvasStore();
@@ -870,14 +883,15 @@ export const {
  * (a title from its CLI, a close, a page's url) is about that node's own view, which in a split is
  * not always the one with the focus.
  */
-export const canvasOfNode = (nodeId: string): StoreApi<CanvasState> | null =>
-    defaultCanvases.live().find(([, store]) => store.getState().nodes[nodeId] !== undefined)?.[1] ?? null;
+export function canvasOfNode(nodeId: string): StoreApi<CanvasState> | null {
+    return defaultCanvases.live().find(([, store]) => store.getState().nodes[nodeId] !== undefined)?.[1] ?? null;
+}
 
 /*
  * Selects a node and brings the camera to it once it is on its canvas, for a node the machine writes
  * (a fork) and that arrives with the next `project.changed`. Nothing happens for a canvas not on screen.
  */
-export const revealWhenItLands = (viewId: string, nodeId: string): void => {
+export function revealWhenItLands(viewId: string, nodeId: string): void {
     const store = defaultCanvases.peek(viewId);
     if (!store) {
         return;
@@ -893,20 +907,23 @@ export const revealWhenItLands = (viewId: string, nodeId: string): void => {
             state.goToNode(nodeId);
         }
     });
-};
+}
 
 /* Every canvas on screen, which is what a watcher about the whole project walks over. */
-export const liveCanvases = (): [string, CanvasState][] => defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
+export function liveCanvases(): [string, CanvasState][] {
+    return defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
+}
 
 /* The maximized node, while it is still on the canvas and not folded away in a group. */
-export const maximizedNodeOf = (s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden'>): string | null =>
-    s.maximizedId !== null && s.nodes[s.maximizedId] !== undefined && !s.hidden.has(s.maximizedId) ? s.maximizedId : null;
+export function maximizedNodeOf(s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden'>): string | null {
+    return s.maximizedId !== null && s.nodes[s.maximizedId] !== undefined && !s.hidden.has(s.maximizedId) ? s.maximizedId : null;
+}
 
 /*
  * The node the maximize shortcut acts on: the maximized one, else the one with the keyboard, else the
  * one selected alone. A group has no content to fill the canvas with. Null leaves the key to the grid.
  */
-export const maximizeTargetOf = (s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden' | 'bodyFocusId' | 'selection'>): string | null => {
+export function maximizeTargetOf(s: Pick<CanvasState, 'maximizedId' | 'nodes' | 'hidden' | 'bodyFocusId' | 'selection'>): string | null {
     const maximized = maximizedNodeOf(s);
     if (maximized !== null) {
         return maximized;
@@ -914,7 +931,9 @@ export const maximizeTargetOf = (s: Pick<CanvasState, 'maximizedId' | 'nodes' | 
     const id = s.bodyFocusId ?? (s.selection.length === 1 ? s.selection[0]! : null);
     const node = id === null ? undefined : s.nodes[id];
     return node !== undefined && node.kind !== 'group' && !s.hidden.has(node.id) ? node.id : null;
-};
+}
 
 /* A node's content has the keyboard, which is what a page, a terminal and the wheel all read. */
-export const isNodeActive = (bodyFocusId: string | null, id: string): boolean => bodyFocusId === id;
+export function isNodeActive(bodyFocusId: string | null, id: string): boolean {
+    return bodyFocusId === id;
+}

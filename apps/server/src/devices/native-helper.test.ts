@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage } from './helper-protocol.ts';
 import { runDeviceHelper, type DeviceNativeAddon } from './native-helper.ts';
 
-const join = (...chunks: Uint8Array[]): Uint8Array => {
+function join(...chunks: Uint8Array[]): Uint8Array {
     const result = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.byteLength, 0));
     let offset = 0;
     for (const chunk of chunks) {
@@ -10,7 +10,7 @@ const join = (...chunks: Uint8Array[]): Uint8Array => {
         offset += chunk.byteLength;
     }
     return result;
-};
+}
 
 describe('runDeviceHelper', () => {
     test('streams MJPEG frames and translates protocol input into native HID calls', async () => {

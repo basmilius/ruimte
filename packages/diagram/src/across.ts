@@ -3,7 +3,9 @@ import { BAND_MARGIN, bandOfCode, type Layering } from './graph.ts';
 /* Rounds that pull every unit towards the units it is joined to, alternating the direction of the sweep. */
 const ROUNDS = 8;
 
-const clamp = (value: number, low: number, high: number): number => Math.min(high, Math.max(low, value));
+function clamp(value: number, low: number, high: number): number {
+    return Math.min(high, Math.max(low, value));
+}
 
 /*
  * Where every unit sits across the flow, as the top of its box, with the order of `orderLayers` kept.
@@ -12,7 +14,7 @@ const clamp = (value: number, low: number, high: number): number => Math.min(hig
  * moves every unit towards the median of its neighbors as far as its own neighbors in the layer let
  * it, so a chain lines up straight. Every step is clamped to whole numbers.
  */
-export const placeAcross = (layering: Layering): number[] => {
+export function placeAcross(layering: Layering): number[] {
     const { units, bands, lines, items } = layering;
     const unitCount = units.length;
     const variableCount = unitCount + bands.length;
@@ -208,4 +210,4 @@ export const placeAcross = (layering: Layering): number[] => {
         band.top = top[unitCount + index]!;
     });
     return units.map((_, unit) => absoluteTop(unit));
-};
+}

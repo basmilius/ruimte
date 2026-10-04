@@ -11,9 +11,13 @@ import { VerbRefusal, field, orNote, type CanvasHost, type VerbCall } from './ve
 export const AGENT_KINDS = AgentKindSchema.options;
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
-export const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
+export function chatKinds(): AgentKind[] {
+    return AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
+}
 
-export const nameOf = (kind: AgentKind): string => providerFor(kind).name;
+export function nameOf(kind: AgentKind): string {
+    return providerFor(kind).name;
+}
 
 export interface AgentNodeSpec {
     id: string;
@@ -30,42 +34,46 @@ export interface AgentNodeSpec {
 
 /* The node a person's own click would have made: titled after the CLI, and a chat fixed to it, so
    its composer shows a badge instead of a model picker (`addAgentNode` in the client). */
-export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
-    id: spec.id,
-    kind: spec.chat ? 'chat' : 'terminal',
-    title: spec.title ?? nameOf(spec.kind),
-    // A title the agent chose is not one the session may rename, the rule a person's typing follows.
-    ...(spec.title === undefined ? {} : { titleSource: 'user' as const }),
-    ...spec.rect,
-    provider: spec.kind,
-    ...(spec.chat ? { providerFixed: true } : {}),
-    ...(spec.cwd === undefined ? {} : { cwd: spec.cwd }),
-    ...(spec.account === undefined ? {} : { account: spec.account }),
-    ...(spec.chat || spec.runtimeMode === undefined ? {} : { runtimeMode: spec.runtimeMode })
-});
+export function agentNode(spec: AgentNodeSpec): ProjectNode {
+    return {
+        id: spec.id,
+        kind: spec.chat ? 'chat' : 'terminal',
+        title: spec.title ?? nameOf(spec.kind),
+        // A title the agent chose is not one the session may rename, the rule a person's typing follows.
+        ...(spec.title === undefined ? {} : { titleSource: 'user' as const }),
+        ...spec.rect,
+        provider: spec.kind,
+        ...(spec.chat ? { providerFixed: true } : {}),
+        ...(spec.cwd === undefined ? {} : { cwd: spec.cwd }),
+        ...(spec.account === undefined ? {} : { account: spec.account }),
+        ...(spec.chat || spec.runtimeMode === undefined ? {} : { runtimeMode: spec.runtimeMode })
+    };
+}
 
 /*
  * The account a child starts under: its opener's when it runs the same CLI, named even when that is
  * the default one so the person's pick for new agents does not replace it; else none, which starts
  * it under that pick. Never one the agent picks, since an account is someone's costs.
  */
-export const inheritedAccount = (call: VerbCall, kind: AgentKind): string | undefined => {
+export function inheritedAccount(call: VerbCall, kind: AgentKind): string | undefined {
     const opener = call.host.accountOf?.(call.caller) ?? null;
     return opener !== null && opener.kind === kind ? (opener.account ?? kind) : undefined;
-};
+}
 
 /* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */
-export const terminalMode = (call: VerbCall, requested: RuntimeMode | undefined, ceiling: RuntimeMode): RuntimeMode =>
-    requested ?? narrowerMode(call.host.terminalModePreference() ?? DEFAULT_RUNTIME_MODE, ceiling);
+export function terminalMode(call: VerbCall, requested: RuntimeMode | undefined, ceiling: RuntimeMode): RuntimeMode {
+    return requested ?? narrowerMode(call.host.terminalModePreference() ?? DEFAULT_RUNTIME_MODE, ceiling);
+}
 
-export const groupLines = (canvas: ProjectCanvasView): string[] =>
-    orNote(
+export function groupLines(canvas: ProjectCanvasView): string[] {
+    return orNote(
         canvas.nodes.filter((node) => node.kind === 'group').map((node) => `group\t${node.id}\t${field(node.title)}`),
         `${canvas.id} has no groups on it yet; team opens one of its own, and a person groups nodes on the canvas`
     );
+}
 
 /* The group as it has to become: big enough for what was put in it, and naming it while it is collapsed. */
-export const grownGroup = (group: ProjectNode, placement: ReturnType<typeof placeInGroup> | null, memberId: string): ProjectNode => {
+export function grownGroup(group: ProjectNode, placement: ReturnType<typeof placeInGroup> | null, memberId: string): ProjectNode {
     if (!placement) {
         return group;
     }
@@ -77,19 +85,19 @@ export const grownGroup = (group: ProjectNode, placement: ReturnType<typeof plac
         ...(collapsed ? { expandedHeight: placement.grown.h } : { h: placement.grown.h }),
         ...(collapsed ? { memberIds: [...(group.memberIds ?? []), memberId] } : {})
     };
-};
+}
 
 /* The nodes a new agent reads from its first turn, held to the count one call may link at once. */
-export const readsOf = (ids: readonly string[] | null): string[] => {
+export function readsOf(ids: readonly string[] | null): string[] {
     const reads = [...new Set(ids ?? [])];
     if (reads.length > MAX_LINKS) {
         throw new VerbRefusal('too-many-links', `--reads names ${reads.length} nodes and at most ${MAX_LINKS} may be linked at once`);
     }
     return reads;
-};
+}
 
 /* Refuses a CLI this machine does not have; `role` names the role of a team it belongs to. */
-export const requireInstalled = (installed: readonly AgentKind[], kind: AgentKind, role?: string): void => {
+export function requireInstalled(installed: readonly AgentKind[], kind: AgentKind, role?: string): void {
     if (installed.includes(kind)) {
         return;
     }
@@ -98,10 +106,10 @@ export const requireInstalled = (installed: readonly AgentKind[], kind: AgentKin
         `${role === undefined ? '' : `${role}: `}${nameOf(kind)} is not installed on this machine`,
         installed.length === 0 ? ['note\tNo agent CLI is installed on this machine'] : installed.map((candidate) => `cli\t${candidate}\t${nameOf(candidate)}`)
     );
-};
+}
 
 /* The first prompt, from whichever field carried it, checked against the one length a line into a shell survives. */
-export const startPrompt = async (prompt: string | null, promptFile: string | null, host: CanvasHost, folder: string): Promise<string | null> => {
+export async function startPrompt(prompt: string | null, promptFile: string | null, host: CanvasHost, folder: string): Promise<string | null> {
     if (prompt !== null && promptFile !== null) {
         throw new VerbRefusal('prompt-twice', '--prompt and --prompt-file both say what to start on; give one of them');
     }
@@ -123,4 +131,4 @@ export const startPrompt = async (prompt: string | null, promptFile: string | nu
         );
     }
     return text;
-};
+}

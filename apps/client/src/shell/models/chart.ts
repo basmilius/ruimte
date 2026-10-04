@@ -14,14 +14,15 @@ type Measured = Pick<BenchmarkPoint, 'costPerTask' | 'intelligence'>;
 const PROVIDERS: readonly string[] = ['claude', 'codex'] satisfies UsageProvider[];
 
 /* The address book may know a provider this client does not; it has no color here, so it is left out. */
-export const chartModels = (models: readonly BenchmarkModel[]): ChartModel[] =>
-    models.filter((model): model is ChartModel => PROVIDERS.includes(model.provider));
+export function chartModels(models: readonly BenchmarkModel[]): ChartModel[] {
+    return models.filter((model): model is ChartModel => PROVIDERS.includes(model.provider));
+}
 
 /*
  * The points no other point beats on both axes: none is at least as cheap and at least as good, and
  * better on one of the two. In order of cost, which is the order the band runs through them.
  */
-export const frontier = <T extends Measured>(points: readonly T[]): T[] => {
+export function frontier<T extends Measured>(points: readonly T[]): T[] {
     const sorted = [...points].sort((one, other) => one.costPerTask - other.costPerTask || other.intelligence - one.intelligence);
     const kept: T[] = [];
     let best = -Infinity;
@@ -32,7 +33,7 @@ export const frontier = <T extends Measured>(points: readonly T[]): T[] => {
         }
     }
     return kept;
-};
+}
 
 /* Current models take the first shapes, so the ones shown by default are the easiest to tell apart. */
 export const MARK_SHAPES = ['circle', 'square', 'triangle', 'diamond', 'star', 'triangle-down', 'hexagon', 'cross'] as const;
@@ -49,7 +50,7 @@ export interface ModelMark {
  * models first. Past eight models of one provider a shape comes round again; the label at the end of
  * its line still tells them apart.
  */
-export const modelMarks = (models: readonly ChartModel[]): Map<string, ModelMark> => {
+export function modelMarks(models: readonly ChartModel[]): Map<string, ModelMark> {
     const marks = new Map<string, ModelMark>();
     const used: Partial<Record<UsageProvider, number>> = {};
     for (const model of [...models.filter((entry) => !entry.legacy), ...models.filter((entry) => entry.legacy)]) {
@@ -58,23 +59,28 @@ export const modelMarks = (models: readonly ChartModel[]): Map<string, ModelMark
         marks.set(model.id, { color: `var(--chart-${model.provider})`, shape: MARK_SHAPES[index % MARK_SHAPES.length]! });
     }
     return marks;
-};
+}
 
-const round = (value: number): number => Math.round(value * 100) / 100;
+function round(value: number): number {
+    return Math.round(value * 100) / 100;
+}
 
 /* The corners of a shape around (x, y), the first one straight up; `radii` alternate for a star. */
-const polygon = (x: number, y: number, corners: number, radii: readonly number[], turn = 0): string =>
-    Array.from({ length: corners }, (_, index) => {
-        const angle = turn + (index / corners) * 2 * Math.PI;
-        const radius = radii[index % radii.length]!;
-        return `${index === 0 ? 'M' : 'L'}${round(x + radius * Math.sin(angle))} ${round(y - radius * Math.cos(angle))}`;
-    }).join(' ') + ' Z';
+function polygon(x: number, y: number, corners: number, radii: readonly number[], turn = 0): string {
+    return (
+        Array.from({ length: corners }, (_, index) => {
+            const angle = turn + (index / corners) * 2 * Math.PI;
+            const radius = radii[index % radii.length]!;
+            return `${index === 0 ? 'M' : 'L'}${round(x + radius * Math.sin(angle))} ${round(y - radius * Math.cos(angle))}`;
+        }).join(' ') + ' Z'
+    );
+}
 
 /*
  * The SVG path of a mark centered on (x, y). `size` is the radius of the circle; the other shapes are
  * scaled to about the same area, so no model looks heavier than another.
  */
-export const markPath = (shape: MarkShape, x: number, y: number, size: number): string => {
+export function markPath(shape: MarkShape, x: number, y: number, size: number): string {
     switch (shape) {
         case 'circle':
             return `M${round(x - size)} ${y} a${size} ${size} 0 1 0 ${size * 2} 0 a${size} ${size} 0 1 0 ${-size * 2} 0 Z`;
@@ -110,7 +116,7 @@ export const markPath = (shape: MarkShape, x: number, y: number, size: number): 
             return corners.map(([dx, dy], index) => `${index === 0 ? 'M' : 'L'}${round(x + dx!)} ${round(y + dy!)}`).join(' ') + ' Z';
         }
     }
-};
+}
 
 export interface Axis {
     ticks: number[];
@@ -119,7 +125,7 @@ export interface Axis {
 }
 
 /* Decades on a log axis, since the cheapest effort and the dearest lie three of them apart. */
-export const costAxis = (costs: readonly number[], scale: CostScale): Axis => {
+export function costAxis(costs: readonly number[], scale: CostScale): Axis {
     if (scale === 'linear') {
         const { max, step } = niceScale(Math.max(0, ...costs));
         return { ticks: Array.from({ length: Math.round(max / step) + 1 }, (_, index) => index * step), at: (value) => value / max };
@@ -132,9 +138,9 @@ export const costAxis = (costs: readonly number[], scale: CostScale): Axis => {
         ticks: Array.from({ length: high - low + 1 }, (_, index) => 10 ** (low + index)),
         at: (value) => (Math.log10(value) - low) / (high - low)
     };
-};
+}
 
-export const intelligenceAxis = (values: readonly number[]): Axis => {
+export function intelligenceAxis(values: readonly number[]): Axis {
     const step = 10;
     const low = values.length === 0 ? 0 : Math.floor(Math.min(...values) / step) * step;
     const ceiling = values.length === 0 ? 60 : Math.ceil(Math.max(...values) / step) * step;
@@ -143,7 +149,7 @@ export const intelligenceAxis = (values: readonly number[]): Axis => {
         ticks: Array.from({ length: (high - low) / step + 1 }, (_, index) => low + index * step),
         at: (value) => (value - low) / (high - low)
     };
-};
+}
 
 export interface Spot {
     x: number;
@@ -182,23 +188,28 @@ const LABEL_OFFSETS: readonly [dx: number, dy: number, anchor: LabelAnchor][] = 
 /* Every so many pixels along a line, a sample a label is scored against. */
 const SAMPLE_STEP = 4;
 
-export const boxOf = (x: number, y: number, anchor: LabelAnchor, width: number): Box => {
+export function boxOf(x: number, y: number, anchor: LabelAnchor, width: number): Box {
     const left = anchor === 'start' ? x : anchor === 'end' ? x - width : x - width / 2;
     return { left, top: y - LABEL_HEIGHT / 2, right: left + width, bottom: y + LABEL_HEIGHT / 2 };
-};
+}
 
-export const overlaps = (one: Box, other: Box): boolean => one.left < other.right && other.left < one.right && one.top < other.bottom && other.top < one.bottom;
+export function overlaps(one: Box, other: Box): boolean {
+    return one.left < other.right && other.left < one.right && one.top < other.bottom && other.top < one.bottom;
+}
 
-const overlapArea = (one: Box, other: Box): number =>
-    Math.max(0, Math.min(one.right, other.right) - Math.max(one.left, other.left)) *
-    Math.max(0, Math.min(one.bottom, other.bottom) - Math.max(one.top, other.top));
+function overlapArea(one: Box, other: Box): number {
+    return (
+        Math.max(0, Math.min(one.right, other.right) - Math.max(one.left, other.left)) *
+        Math.max(0, Math.min(one.bottom, other.bottom) - Math.max(one.top, other.top))
+    );
+}
 
 /*
  * A spot for the name of every line: around one of its points, the last one preferred, where it crosses
  * the fewest lines and points and no label placed before it. The lines that end furthest right choose
  * first, since that is where they crowd. `widths` is the width of every name; a line without points gets `null`.
  */
-export const placeLabels = (lines: readonly (readonly Spot[])[], widths: readonly number[], bounds: Box): (LabelPlace | null)[] => {
+export function placeLabels(lines: readonly (readonly Spot[])[], widths: readonly number[], bounds: Box): (LabelPlace | null)[] {
     const samples: { x: number; y: number; line: number; dot: boolean }[] = [];
     lines.forEach((points, line) => {
         points.forEach((point, index) => {
@@ -255,10 +266,10 @@ export const placeLabels = (lines: readonly (readonly Spot[])[], widths: readonl
         }
     }
     return result;
-};
+}
 
 /* The point closest to (x, y) within `reach` pixels, so the pointer need not land on a mark exactly. */
-export const nearestPoint = (lines: readonly (readonly Spot[])[], x: number, y: number, reach: number): PointAt | null => {
+export function nearestPoint(lines: readonly (readonly Spot[])[], x: number, y: number, reach: number): PointAt | null {
     let nearest: PointAt | null = null;
     let distance = reach;
     lines.forEach((points, line) => {
@@ -271,7 +282,7 @@ export const nearestPoint = (lines: readonly (readonly Spot[])[], x: number, y: 
         });
     });
     return nearest;
-};
+}
 
 export interface PointAt {
     line: number;
@@ -283,7 +294,7 @@ export interface PointAt {
  * the line before or after it that has points, at the same effort or the last one it has.
  * `counts` is the number of points of every line in the order they are listed.
  */
-export const movePoint = (counts: readonly number[], from: PointAt, key: string): PointAt | null => {
+export function movePoint(counts: readonly number[], from: PointAt, key: string): PointAt | null {
     if (key === 'ArrowLeft' || key === 'ArrowRight') {
         const index = from.index + (key === 'ArrowRight' ? 1 : -1);
         return index >= 0 && index < (counts[from.line] ?? 0) ? { line: from.line, index } : null;
@@ -298,4 +309,4 @@ export const movePoint = (counts: readonly number[], from: PointAt, key: string)
         }
     }
     return null;
-};
+}

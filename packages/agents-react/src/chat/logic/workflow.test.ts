@@ -2,26 +2,30 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatWorkflow, ChatWorkflowAgent } from '@ruimte/agent-contracts';
 import { workflowAgentState, workflowAgentTime, workflowPhases } from './workflow';
 
-const agent = (index: number, patch: Partial<ChatWorkflowAgent> = {}): ChatWorkflowAgent => ({
-    index,
-    label: `agent-${index}`,
-    phaseIndex: 1,
-    agentId: `a${index}`,
-    status: 'running',
-    startedAt: 1000,
-    durationMs: null,
-    lastTool: null,
-    ...patch
-});
+function agent(index: number, patch: Partial<ChatWorkflowAgent> = {}): ChatWorkflowAgent {
+    return {
+        index,
+        label: `agent-${index}`,
+        phaseIndex: 1,
+        agentId: `a${index}`,
+        status: 'running',
+        startedAt: 1000,
+        durationMs: null,
+        lastTool: null,
+        ...patch
+    };
+}
 
-const workflow = (agents: ChatWorkflowAgent[]): ChatWorkflow => ({
-    name: 'write-and-read',
-    phases: [
-        { index: 1, title: 'Write' },
-        { index: 2, title: 'Read' }
-    ],
-    agents
-});
+function workflow(agents: ChatWorkflowAgent[]): ChatWorkflow {
+    return {
+        name: 'write-and-read',
+        phases: [
+            { index: 1, title: 'Write' },
+            { index: 2, title: 'Read' }
+        ],
+        agents
+    };
+}
 
 describe('workflowPhases', () => {
     test('every announced phase is there in order with its agents, one of no known phase first and untitled', () => {

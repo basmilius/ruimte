@@ -27,7 +27,7 @@ const SYSTEM_PACE: PaceSeams = {
  * moves the status many times a second; a panel that followed every one of them would be unreadable,
  * and one that only drew after the writing stopped would sit still through a long turn.
  */
-export const paced = <T>(window: number, apply: (value: T) => void, seams: PaceSeams = SYSTEM_PACE): Pace<T> => {
+export function paced<T>(window: number, apply: (value: T) => void, seams: PaceSeams = SYSTEM_PACE): Pace<T> {
     let opened = -Infinity;
     let cancel: (() => void) | null = null;
     let waiting: { value: T } | null = null;
@@ -66,4 +66,4 @@ export const paced = <T>(window: number, apply: (value: T) => void, seams: PaceS
             waiting = null;
         }
     };
-};
+}

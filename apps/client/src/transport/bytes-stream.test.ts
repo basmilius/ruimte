@@ -6,7 +6,7 @@ import { STREAM_PIECE_BYTES, answerRange, bytesStreamUrl, parseRange, type Piece
 const MTIME = 1_700_000_000_123;
 
 /* A machine that serves `bytes` the way `bytes.read` does, with the mtime truncated where the viewer rounded it, and counts what it was asked. */
-const machine = (size: number, mime = 'video/mp4') => {
+function machine(size: number, mime = 'video/mp4') {
     const bytes = new Uint8Array(size);
     for (let i = 0; i < size; i += 1) {
         bytes[i] = i % 251;
@@ -29,17 +29,21 @@ const machine = (size: number, mime = 'video/mp4') => {
             version = `${MTIME + 5000}-${size}`;
         }
     };
-};
+}
 
-const request = (size: number, range: string | null, extra: Partial<RangeRequest> = {}): RangeRequest => ({
-    url: `https://app.test${bytesStreamUrl({ machine: 'm1', path: '/videos/long.mp4', mtime: MTIME, size })}`,
-    method: 'GET',
-    mode: 'no-cors',
-    range,
-    ...extra
-});
+function request(size: number, range: string | null, extra: Partial<RangeRequest> = {}): RangeRequest {
+    return {
+        url: `https://app.test${bytesStreamUrl({ machine: 'm1', path: '/videos/long.mp4', mtime: MTIME, size })}`,
+        method: 'GET',
+        mode: 'no-cors',
+        range,
+        ...extra
+    };
+}
 
-const bodyOf = async (response: Response): Promise<Uint8Array> => new Uint8Array(await response.arrayBuffer());
+async function bodyOf(response: Response): Promise<Uint8Array> {
+    return new Uint8Array(await response.arrayBuffer());
+}
 
 describe('parseRange', () => {
     test('reads the two forms a player sends and nothing else', () => {

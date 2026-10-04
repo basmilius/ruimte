@@ -110,17 +110,21 @@ const givenName = z.string().trim().min(1).max(MAX_TITLE_LENGTH);
  * A field only these actors may fill: what one executor honors and another would drop. Voice's tools
  * leave it out and the registry refuses a value in it from anyone else. Absent reads as null.
  */
-const forActors = <Schema extends z.ZodType>(actors: readonly ActionActorKind[], schema: Schema) => schema.nullish().meta({ actors: [...actors] });
-const agentField = <Schema extends z.ZodType>(schema: Schema) => forActors(['agent'], schema);
+function forActors<Schema extends z.ZodType>(actors: readonly ActionActorKind[], schema: Schema) {
+    return schema.nullish().meta({ actors: [...actors] });
+}
+function agentField<Schema extends z.ZodType>(schema: Schema) {
+    return forActors(['agent'], schema);
+}
 
 /* The actors a field or a member of a union is kept for; null when every actor of its action may fill it. */
-export const fieldActors = (schema: z.ZodType): readonly ActionActorKind[] | null => {
+export function fieldActors(schema: z.ZodType): readonly ActionActorKind[] | null {
     const actors = (schema.meta() as { actors?: unknown } | undefined)?.actors;
     return Array.isArray(actors) ? (actors as ActionActorKind[]) : null;
-};
+}
 
 /* What a field says about itself, looked up under the wrappers that make it optional or nullable. */
-export const fieldDescription = (schema: z.ZodType): string | undefined => {
+export function fieldDescription(schema: z.ZodType): string | undefined {
     let current: z.ZodType | undefined = schema;
     while (current !== undefined) {
         if (current.description !== undefined) {
@@ -129,7 +133,7 @@ export const fieldDescription = (schema: z.ZodType): string | undefined => {
         current = 'unwrap' in current && typeof current.unwrap === 'function' ? (current.unwrap() as z.ZodType) : undefined;
     }
     return undefined;
-};
+}
 
 export const ARRANGE_LAYOUTS = ['grid', 'row', 'column'] as const;
 
@@ -3293,7 +3297,7 @@ export type ActionActorKind = z.infer<typeof ActionActorKindSchema>;
 export type ActionEffect = (typeof ACTION_DEFINITIONS)[ActionName]['effect'];
 
 /* What an action does, in the words for this actor: an agent reaches the daemon's executor, whose rules differ. */
-export const actionDescription = (name: ActionName, actor: ActionActorKind): string => {
+export function actionDescription(name: ActionName, actor: ActionActorKind): string {
     const definition = ACTION_DEFINITIONS[name];
     return actor === 'agent' && 'agentDescription' in definition ? definition.agentDescription : definition.description;
-};
+}

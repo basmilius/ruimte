@@ -3,29 +3,33 @@ import type { GitRepo } from '@ruimte/contracts';
 import type { GitFile, GitStatus } from '@ruimte/contracts';
 import { headMoved, soleRepo, visibleRepos, withoutNestedRepos } from './git-repos.ts';
 
-const file = (path: string, state: GitFile['state']): GitFile => ({
-    path,
-    state,
-    status: state === 'untracked' ? '?' : 'M',
-    added: 1,
-    deleted: 0,
-    binary: false
-});
+function file(path: string, state: GitFile['state']): GitFile {
+    return {
+        path,
+        state,
+        status: state === 'untracked' ? '?' : 'M',
+        added: 1,
+        deleted: 0,
+        binary: false
+    };
+}
 
-const status = (files: GitFile[]): GitStatus => ({
-    repo: true,
-    root: '/work/app',
-    branch: 'main',
-    detached: false,
-    upstream: null,
-    ahead: 0,
-    behind: 0,
-    base: null,
-    mergeBase: null,
-    files,
-    truncated: false,
-    live: true
-});
+function status(files: GitFile[]): GitStatus {
+    return {
+        repo: true,
+        root: '/work/app',
+        branch: 'main',
+        detached: false,
+        upstream: null,
+        ahead: 0,
+        behind: 0,
+        base: null,
+        mergeBase: null,
+        files,
+        truncated: false,
+        live: true
+    };
+}
 
 const repos: GitRepo[] = [
     { path: '/work/app', label: 'app', kind: 'root' },

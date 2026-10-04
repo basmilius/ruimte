@@ -124,49 +124,57 @@ export interface VerbRegistry<Call extends VerbCallBase> {
     dryRunLine(): string;
 }
 
-const flagsOf = <Call extends VerbCallBase>(spec: ArgsSpec<z.ZodType, z.ZodObject, Call>): { values: string[]; switches: string[] } => ({
-    values: [...Object.keys(spec.flags.shape), ...(spec.revision === true ? [REVISION_FLAG] : [])],
-    switches: [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])]
-});
+function flagsOf<Call extends VerbCallBase>(spec: ArgsSpec<z.ZodType, z.ZodObject, Call>): { values: string[]; switches: string[] } {
+    return {
+        values: [...Object.keys(spec.flags.shape), ...(spec.revision === true ? [REVISION_FLAG] : [])],
+        switches: [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])]
+    };
+}
 
-const flagSpelled = (usage: string, flag: string): boolean => new RegExp(`(^|[^\\w-])${flag}(?![\\w-])`).test(usage);
+function flagSpelled(usage: string, flag: string): boolean {
+    return new RegExp(`(^|[^\\w-])${flag}(?![\\w-])`).test(usage);
+}
 
 /*
  * The synopsis with every flag the detail documents: what the hand-written one leaves out is added
  * from its detail line, bracketed unless that line says it is required, so the two never drift.
  */
-const usageWithFlags = (usage: string, detail: readonly string[]): string => {
+function usageWithFlags(usage: string, detail: readonly string[]): string {
     const missing = detail
         .filter((line) => line.startsWith('flag\t--'))
         .map((line) => line.split('\t'))
         .filter(([, syntax]) => !flagSpelled(usage, syntax!.split(' ')[0]!))
         .map(([, syntax, need]) => (need === 'required' ? syntax! : `[${syntax}]`));
     return [usage, ...missing].filter((part) => part !== '').join(' ');
-};
+}
 
 /*
  * Every schema in the registry carries a sentence of its own, because zod's default ("Too small:
  * expected array to have >=1 items") names neither what is missing nor what may go there.
  */
-const issueMessage = (error: z.ZodError, what: 'argument' | 'flag'): string => error.issues[0]?.message ?? `Bad ${what}`;
+function issueMessage(error: z.ZodError, what: 'argument' | 'flag'): string {
+    return error.issues[0]?.message ?? `Bad ${what}`;
+}
 
 /*
  * Every row says what it is in its first field, so the lines under the list are never read as verbs.
  * A noun names its actions and not their arguments, which keeps the root short; `help <noun>` has those.
  */
-export const summaryLines = <Call extends VerbCallBase>(entries: readonly VerbEntry<Call>[]): string[] =>
-    entries.map((entry) =>
+export function summaryLines<Call extends VerbCallBase>(entries: readonly VerbEntry<Call>[]): string[] {
+    return entries.map((entry) =>
         entry.served === 'noun'
             ? `noun\t${entry.name}\t${entry.actions.map((action) => action.word).join('|')}\t${entry.summary}`
             : `verb\t${entry.name}\t${entry.usage}\t${entry.summary}`
     );
+}
 
 /* The signatures of every action of a noun, for `help <noun>` and a refusal about one. */
-const actionLines = <Call extends VerbCallBase>(noun: Noun<Call>): string[] =>
-    noun.actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`);
+function actionLines<Call extends VerbCallBase>(noun: Noun<Call>): string[] {
+    return noun.actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`);
+}
 
 /* `cli` is the command an agent runs, such as `ruimte-context`, which every pointer to `help` names. */
-export const createVerbRegistry = <Call extends VerbCallBase>(options: { cli: string }): VerbRegistry<Call> => {
+export function createVerbRegistry<Call extends VerbCallBase>(options: { cli: string }): VerbRegistry<Call> {
     const { cli } = options;
     /*
      * What takes `--dry-run`, filled as each is defined. Everything else refuses the flag by name and
@@ -358,23 +366,27 @@ export const createVerbRegistry = <Call extends VerbCallBase>(options: { cli: st
         `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbs.join(', ')}\tsame checks, nothing made; ${DRY_RUN_PREVIEW}; every other verb refuses the flag`;
 
     return { defineVerb, defineAction, defineNoun, defineHelp, dryRunVerbNames, dryRunLine };
-};
+}
 
 /* How much came in, for a refusal that counts: zod hands its error function the input it rejected. */
-export const lengthOf = (input: unknown): number => {
+export function lengthOf(input: unknown): number {
     if (typeof input === 'string' || Array.isArray(input)) {
         return input.length;
     }
     return 0;
-};
+}
 
 /* A flag a verb cannot do without: the same sentence whether it was left out or left empty, since
    zod's own ("expected string, received undefined") names neither the flag nor what goes in it. */
-export const requiredField = (needs: string): z.ZodString => z.string({ error: needs }).min(1, needs);
+export function requiredField(needs: string): z.ZodString {
+    return z.string({ error: needs }).min(1, needs);
+}
 
 /*
  * What a refusal lists, or one line saying the set is empty. A refusal that promises the groups of a
  * canvas and then prints nothing reads as a daemon that lost them, where the truth is that there are
  * none, which is a different thing to do something about.
  */
-export const orNote = (lines: string[], note: string): string[] => (lines.length === 0 ? [`note\t${note}`] : lines);
+export function orNote(lines: string[], note: string): string[] {
+    return lines.length === 0 ? [`note\t${note}`] : lines;
+}

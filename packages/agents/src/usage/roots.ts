@@ -14,16 +14,16 @@ const TRANSCRIPTS: Record<UsageProvider, string> = { claude: 'projects', codex: 
 
 /* Where each CLI leaves its transcripts. The same environment variables the hooks installer reads,
    so the scanner and the installer never disagree about where a CLI keeps its things. */
-export const usageRoots = (env: Record<string, string | undefined> = process.env): UsageRootPath[] => {
+export function usageRoots(env: Record<string, string | undefined> = process.env): UsageRootPath[] {
     const home = env.HOME ?? homedir();
     return [
         { provider: 'claude', path: join(env.CLAUDE_CONFIG_DIR ?? join(home, '.claude'), TRANSCRIPTS.claude) },
         { provider: 'codex', path: join(env.CODEX_HOME ?? join(home, '.codex'), TRANSCRIPTS.codex) }
     ];
-};
+}
 
 /* The transcripts of every account, once per folder: Codex accounts over one home share its sessions. */
-export const accountRoots = (folders: ReadonlyArray<{ id: string; kind: UsageProvider; folder: string }>): UsageRootPath[] => {
+export function accountRoots(folders: ReadonlyArray<{ id: string; kind: UsageProvider; folder: string }>): UsageRootPath[] {
     const roots = new Map<string, UsageRootPath & { accounts: string[] }>();
     for (const { id, kind, folder } of folders) {
         const path = join(folder, TRANSCRIPTS[kind]);
@@ -36,4 +36,4 @@ export const accountRoots = (folders: ReadonlyArray<{ id: string; kind: UsagePro
         }
     }
     return [...roots.values()];
-};
+}

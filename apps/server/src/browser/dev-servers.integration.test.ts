@@ -10,7 +10,9 @@ const page = Bun.serve({
 const moved = Bun.serve({ port: 0, fetch: () => new Response(null, { status: 302, headers: { location: '/login' } }) });
 
 /* A server told to take any port answers with the one it got, and only its url is typed as having one. */
-const portOf = (server: { url: URL }): number => Number(server.url.port);
+function portOf(server: { url: URL }): number {
+    return Number(server.url.port);
+}
 
 afterAll(async () => {
     await page.stop(true);

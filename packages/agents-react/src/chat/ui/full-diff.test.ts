@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { fullFileDiff } from './full-diff';
 
-const lines = (count: number): string => Array.from({ length: count }, (_, i) => `line ${i + 1}\n`).join('');
+function lines(count: number): string {
+    return Array.from({ length: count }, (_, i) => `line ${i + 1}\n`).join('');
+}
 
 const OLD = lines(40);
 const NEW = OLD.replace('line 5\n', 'LINE 5\n').replace('line 35\n', 'LINE 35\n');

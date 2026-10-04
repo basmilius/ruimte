@@ -12,13 +12,15 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const create = (sessionId: string, cols = 80, rows = 24) => harness.manager.create({ sessionId, cols, rows, shell: '/bin/sh', args: [], cwd: harness.home });
+function create(sessionId: string, cols = 80, rows = 24) {
+    return harness.manager.create({ sessionId, cols, rows, shell: '/bin/sh', args: [], cwd: harness.home });
+}
 
 /* Output from the program in a session's PTY, delivered to every attached client right away instead of on the next tick. */
-const print = (sessionId: string, text: string): void => {
+function print(sessionId: string, text: string): void {
     harness.adapter.forSession(sessionId).emit(text);
     harness.manager.get(sessionId)!.flush();
-};
+}
 
 describe('SessionManager', () => {
     test('a permission request only says the node needs a person; its CLI asks on its own screen', async () => {

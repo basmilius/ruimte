@@ -90,7 +90,7 @@ const DALTONIZER: Record<Exclude<DeviceColorFilter, 'none'>, string> = { graysca
 const ANIMATION_SCALES = ['window_animation_scale', 'transition_animation_scale', 'animator_duration_scale'];
 
 /* The runtime permissions that stand for each permission a person picks, by the API level that introduced them. */
-const permissionsFor = (permission: DevicePermission, apiLevel: number): string[] => {
+function permissionsFor(permission: DevicePermission, apiLevel: number): string[] {
     const mediaSplit = apiLevel >= 33;
     switch (permission) {
         case 'camera':
@@ -113,7 +113,7 @@ const permissionsFor = (permission: DevicePermission, apiLevel: number): string[
         case 'faceid':
             return [];
     }
-};
+}
 
 const PERMISSIONS: DevicePermission[] = ['camera', 'microphone', 'photos', 'contacts', 'calendar', 'location', 'motion', 'media-library'];
 
@@ -127,19 +127,21 @@ const EMULATOR_SERIAL = /^emulator-(\d+)$/;
 const TREE_DUMP = '/data/local/tmp/ruimte-window.xml';
 
 /* One argument for the device's `sh`, which is what `adb shell` hands a command line to. */
-export const shellQuote = (argument: string): string => (/^[A-Za-z0-9_./:=@%+-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", "'\\''")}'`);
+export function shellQuote(argument: string): string {
+    return /^[A-Za-z0-9_./:=@%+-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", "'\\''")}'`;
+}
 
 /* `input text` reads %s as a space and nothing else specially, so a literal %s goes in two calls that split it. */
-const textCommands = (part: string): string[] => {
+function textCommands(part: string): string[] {
     const pieces = part.split('%s');
     return pieces
         .map((piece, index) => `${index > 0 ? 's' : ''}${piece}${index < pieces.length - 1 ? '%' : ''}`)
         .filter((piece) => piece !== '')
         .map((piece) => `input text ${shellQuote(piece.replaceAll(' ', '%s'))}`);
-};
+}
 
 /* The device shell line that types this text, a newline as Enter and a tab as Tab; `input` knows no character past ASCII. */
-export const typingScript = (text: string): string => {
+export function typingScript(text: string): string {
     const normalized = text.replace(/\r\n?/g, '\n');
     if (!/^[\x20-\x7e\n\t]*$/.test(normalized)) {
         throw new DeviceError(
@@ -151,10 +153,10 @@ export const typingScript = (text: string): string => {
         .split(/(\n|\t)/)
         .flatMap((part) => (part === '\n' ? ['input keyevent 66'] : part === '\t' ? ['input keyevent 61'] : textCommands(part)))
         .join(' && ');
-};
+}
 
-export const parseAdbDevices = (output: string): AdbEntry[] =>
-    output
+export function parseAdbDevices(output: string): AdbEntry[] {
+    return output
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line.length > 0 && !line.startsWith('List of devices') && !line.startsWith('*'))
@@ -169,17 +171,19 @@ export const parseAdbDevices = (output: string): AdbEntry[] =>
             const model = /\bmodel:(\S+)/.exec(rest)?.[1]?.replaceAll('_', ' ') ?? null;
             return [{ serial: match[1]!, state, model }];
         });
+}
 
-const parseIni = (text: string): Record<string, string> =>
-    Object.fromEntries(
+function parseIni(text: string): Record<string, string> {
+    return Object.fromEntries(
         text.split('\n').flatMap((line) => {
             const index = line.indexOf('=');
             return index > 0 ? [[line.slice(0, index).trim(), line.slice(index + 1).trim()]] : [];
         })
     );
+}
 
 /* An API level from `android-35` in a target or a system image folder; a preview names itself instead. */
-const apiLevelOf = (config: Record<string, string>): string | null => {
+function apiLevelOf(config: Record<string, string>): string | null {
     for (const value of [config['image.sysdir.1'], config.target]) {
         const match = value ? /android-([^/]+)/.exec(value) : null;
         if (match) {
@@ -187,9 +191,9 @@ const apiLevelOf = (config: Record<string, string>): string | null => {
         }
     }
     return null;
-};
+}
 
-export const readAvdFolder = async (avdHome: string): Promise<AvdInfo[]> => {
+export async function readAvdFolder(avdHome: string): Promise<AvdInfo[]> {
     let entries: string[];
     try {
         entries = await readdir(avdHome);
@@ -216,25 +220,25 @@ export const readAvdFolder = async (avdHome: string): Promise<AvdInfo[]> => {
             })
     );
     return avds.filter((avd): avd is AvdInfo => avd !== null);
-};
+}
 
-const defaultRunner: AndroidRunner = async (command, arguments_) => {
+async function defaultRunner(command: string, arguments_: string[]): Promise<CommandResult> {
     const child = Bun.spawn([command, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
     const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     return { exitCode, stdout, stderr };
-};
+}
 
-const defaultBytesRunner: AndroidBytesRunner = async (command, arguments_) => {
+async function defaultBytesRunner(command: string, arguments_: string[]): Promise<{ exitCode: number; stdout: Uint8Array; stderr: string }> {
     const child = Bun.spawn([command, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
     const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).bytes(), new Response(child.stderr).text()]);
     return { exitCode, stdout, stderr };
-};
+}
 
 /*
  * Starts an emulator in its own session with its output in a file, so it outlives a daemon restart and
  * a closed pipe cannot take it down, while a start that fails still says why.
  */
-const defaultLaunch: EmulatorLauncher = (emulator, arguments_, avd) => {
+function defaultLaunch(emulator: string, arguments_: string[], avd: string): EmulatorProcess {
     const log = join(tmpdir(), `ruimte-emulator-${avd}.log`);
     const descriptor = openSync(log, 'w');
     const child = spawn(emulator, arguments_, { detached: true, stdio: ['ignore', descriptor, descriptor] });
@@ -254,7 +258,7 @@ const defaultLaunch: EmulatorLauncher = (emulator, arguments_, avd) => {
             }
         }
     };
-};
+}
 
 /*
  * Android emulators and phones through adb. An emulator is known by its AVD name whether it runs or
@@ -764,22 +768,23 @@ export class AndroidBackend implements DeviceBackend {
     }
 }
 
-const nearestTextSize = (scale: number): DeviceTextSize =>
-    (Object.entries(FONT_SCALES) as Array<[DeviceTextSize, number]>).reduce((best, candidate) =>
+function nearestTextSize(scale: number): DeviceTextSize {
+    return (Object.entries(FONT_SCALES) as Array<[DeviceTextSize, number]>).reduce((best, candidate) =>
         Math.abs(candidate[1] - scale) < Math.abs(best[1] - scale) ? candidate : best
     )[0];
+}
 
-const colorFilterOf = (enabled: string, value: string): DeviceColorFilter | undefined => {
+function colorFilterOf(enabled: string, value: string): DeviceColorFilter | undefined {
     if (enabled !== '1') {
         return 'none';
     }
     const match = (Object.entries(DALTONIZER) as Array<[Exclude<DeviceColorFilter, 'none'>, string]>).find(([, code]) => code === value);
     return match?.[0];
-};
+}
 
-const requirePackage = (appId: string): string => {
+function requirePackage(appId: string): string {
     if (!PACKAGE_NAME.test(appId)) {
         throw new DeviceError('device-action-unavailable', `${appId} is not an Android package name`);
     }
     return appId;
-};
+}

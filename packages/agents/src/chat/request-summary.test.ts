@@ -19,32 +19,36 @@ const info: ChatInfo = {
     createdAt: 0
 };
 
-const approval = (toolName: string, input: unknown, extra: Partial<ChatApprovalItem> = {}): ChatApprovalItem => ({
-    id: 'approval-req-1',
-    kind: 'approval',
-    createdAt: 5,
-    turnId: 'turn-1',
-    requestId: 'req-1',
-    toolUseId: 'toolu_1',
-    toolName,
-    input,
-    description: null,
-    canAllowAlways: false,
-    decision: 'pending',
-    ...extra
-});
+function approval(toolName: string, input: unknown, extra: Partial<ChatApprovalItem> = {}): ChatApprovalItem {
+    return {
+        id: 'approval-req-1',
+        kind: 'approval',
+        createdAt: 5,
+        turnId: 'turn-1',
+        requestId: 'req-1',
+        toolUseId: 'toolu_1',
+        toolName,
+        input,
+        description: null,
+        canAllowAlways: false,
+        decision: 'pending',
+        ...extra
+    };
+}
 
-const question = (extra: Partial<ChatQuestionItem> = {}): ChatQuestionItem => ({
-    id: 'question-req-q',
-    kind: 'question',
-    createdAt: 7,
-    turnId: 'turn-1',
-    requestId: 'req-q',
-    questions: [{ id: '0', header: 'Choice', question: 'Which color?', choices: [{ label: 'Red', description: 'Warm' }], multiSelect: false }],
-    answers: null,
-    state: 'pending',
-    ...extra
-});
+function question(extra: Partial<ChatQuestionItem> = {}): ChatQuestionItem {
+    return {
+        id: 'question-req-q',
+        kind: 'question',
+        createdAt: 7,
+        turnId: 'turn-1',
+        requestId: 'req-q',
+        questions: [{ id: '0', header: 'Choice', question: 'Which color?', choices: [{ label: 'Red', description: 'Warm' }], multiSelect: false }],
+        answers: null,
+        state: 'pending',
+        ...extra
+    };
+}
 
 describe('approvalSummary', () => {
     test("an edit becomes the lines it takes out and puts in, under the file's path", () => {

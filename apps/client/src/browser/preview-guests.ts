@@ -8,15 +8,15 @@ interface GuestElement extends HTMLElement {
 const previews = new Set<GuestElement>();
 
 /* Answers the way to forget the preview again. */
-export const registerPreviewGuest = (element: HTMLElement): (() => void) => {
+export function registerPreviewGuest(element: HTMLElement): () => void {
     const guest = element as GuestElement;
     previews.add(guest);
     return () => {
         previews.delete(guest);
     };
-};
+}
 
-export const previewGuestOf = (webContentsId: number): HTMLElement | undefined => {
+export function previewGuestOf(webContentsId: number): HTMLElement | undefined {
     for (const element of previews) {
         try {
             if (element.getWebContentsId() === webContentsId) {
@@ -27,4 +27,4 @@ export const previewGuestOf = (webContentsId: number): HTMLElement | undefined =
         }
     }
     return undefined;
-};
+}

@@ -13,13 +13,13 @@ import { binaryPathOf, exitCodeOf, LauncherError, type Libc } from './launcher';
 const require = createRequire(import.meta.url);
 
 /* glibc reports its version in a process report and musl does not, which is how npm tells the two apart as well. */
-const libc = (): Libc => {
+function libc(): Libc {
     if (process.platform !== 'linux') {
         return null;
     }
     const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } } | undefined;
     return report?.header?.glibcVersionRuntime ? 'glibc' : 'musl';
-};
+}
 
 let binary: string;
 try {
@@ -61,7 +61,7 @@ const child = spawn(binary, args, { stdio: 'inherit' });
  * manager or `kill` sends to the launcher alone.
  */
 const FORWARDED = ['SIGTERM', 'SIGHUP', 'SIGQUIT'] as const;
-const ignoreInterrupt = (): void => {};
+function ignoreInterrupt(): void {}
 process.on('SIGINT', ignoreInterrupt);
 const forwarders = FORWARDED.map((signal) => {
     const forward = (): void => {

@@ -2,32 +2,38 @@ import { describe, expect, test } from 'bun:test';
 import type { ProcessAlert, ProcessGroup, ProcessPoint } from '@ruimte/contracts';
 import { alertActions, alertPlacement, alertText, chartSeries, formatBytes, formatPercent, formatRate, groupTitle } from './format.ts';
 
-const alert = (overrides: Partial<ProcessAlert>): ProcessAlert => ({
-    id: 'a',
-    kind: 'silent',
-    nodeId: 'node-1',
-    pid: 201,
-    startTime: 5,
-    name: 'vitest',
-    since: 0,
-    value: null,
-    ...overrides
-});
+function alert(overrides: Partial<ProcessAlert>): ProcessAlert {
+    return {
+        id: 'a',
+        kind: 'silent',
+        nodeId: 'node-1',
+        pid: 201,
+        startTime: 5,
+        name: 'vitest',
+        since: 0,
+        value: null,
+        ...overrides
+    };
+}
 
-const group = (overrides: Partial<ProcessGroup>): ProcessGroup => ({
-    id: 'terminal:node-1',
-    kind: 'terminal',
-    nodeId: 'node-1',
-    cpu: 0,
-    memory: 0,
-    diskRead: 0,
-    diskWrite: 0,
-    processes: [],
-    hidden: 0,
-    ...overrides
-});
+function group(overrides: Partial<ProcessGroup>): ProcessGroup {
+    return {
+        id: 'terminal:node-1',
+        kind: 'terminal',
+        nodeId: 'node-1',
+        cpu: 0,
+        memory: 0,
+        diskRead: 0,
+        diskWrite: 0,
+        processes: [],
+        hidden: 0,
+        ...overrides
+    };
+}
 
-const point = (at: number): ProcessPoint => ({ at, cpu: 1, cpuRuimte: 1, memory: 1, memoryRuimte: 1, disk: 0, diskRuimte: 0 });
+function point(at: number): ProcessPoint {
+    return { at, cpu: 1, cpuRuimte: 1, memory: 1, memoryRuimte: 1, disk: 0, diskRuimte: 0 };
+}
 
 describe('the numbers', () => {
     test('an unreadable number is a dash, never a zero', () => {

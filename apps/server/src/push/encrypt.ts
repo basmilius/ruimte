@@ -14,12 +14,12 @@ import {
 } from '@ruimte/pulsar';
 import { clipText } from '@ruimte/contracts';
 
-export const encryptPush = (
+export function encryptPush(
     routing: PushRouting,
     publicKey: string,
     content: PushAlertContent | PushReadContent,
     sign: (message: string) => string
-): PushEnvelope => {
+): PushEnvelope {
     const ephemeral = generateKeyPairSync('x25519');
     const recipient = createPublicKey({ key: { kty: 'OKP', crv: 'X25519', x: publicKey }, format: 'jwk' });
     const shared = diffieHellman({ privateKey: ephemeral.privateKey, publicKey: recipient });
@@ -44,4 +44,4 @@ export const encryptPush = (
         signature: ''
     };
     return PushEnvelopeSchema.parse({ ...push, signature: sign(pushMessage(push)) });
-};
+}

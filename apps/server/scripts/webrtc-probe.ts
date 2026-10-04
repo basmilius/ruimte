@@ -45,18 +45,27 @@ const burstBytes = Number(values['burst-mb']) * 1024 * 1024;
 const PIECE = 16_000;
 
 const started = Date.now();
-const stamp = (): string => `[${((Date.now() - started) / 1000).toFixed(1).padStart(7)}s]`;
-const log = (line: string): void => console.log(`${stamp()} ${line}`);
+function stamp(): string {
+    return `[${((Date.now() - started) / 1000).toFixed(1).padStart(7)}s]`;
+}
+function log(line: string): void {
+    return console.log(`${stamp()} ${line}`);
+}
 
-const encode = (sdp: string): string => Buffer.from(JSON.stringify({ sdp })).toString('base64url');
-const decode = (line: string): string => (JSON.parse(Buffer.from(line.trim(), 'base64url').toString()) as { sdp: string }).sdp;
+function encode(sdp: string): string {
+    return Buffer.from(JSON.stringify({ sdp })).toString('base64url');
+}
+function decode(line: string): string {
+    return (JSON.parse(Buffer.from(line.trim(), 'base64url').toString()) as { sdp: string }).sdp;
+}
 
 const lines = createInterface({ input: process.stdin });
-const nextLine = (prompt: string): Promise<string> =>
-    new Promise((resolve) => {
+function nextLine(prompt: string): Promise<string> {
+    return new Promise((resolve) => {
         console.log(prompt);
         lines.once('line', resolve);
     });
+}
 
 const turn = values.turn === undefined ? [] : [{ urls: values.turn, username: values['turn-user'], credential: values['turn-pass'] }];
 
@@ -66,17 +75,17 @@ const peer = new RTCPeerConnection({
     iceTransportPolicy: values['relay-only'] ? 'relay' : 'all'
 });
 
-const gathered = async (): Promise<void> => {
+async function gathered(): Promise<void> {
     const deadline = Date.now() + 8_000;
     while (peer.iceGatheringState !== 'complete' && Date.now() < deadline) {
         await Bun.sleep(50);
     }
-};
+}
 
-const candidateTypes = (sdp: string): string => {
+function candidateTypes(sdp: string): string {
     const types = [...sdp.matchAll(/typ (\w+)/g)].map((match) => match[1]);
     return types.length === 0 ? 'none' : [...new Set(types)].join(', ');
-};
+}
 
 peer.iceConnectionStateChange.subscribe((state) => log(`ice ${state}`));
 peer.connectionStateChange.subscribe((state) => {
@@ -94,7 +103,7 @@ const rtts: number[] = [];
 let burstStarted = 0;
 let burstExpected = 0;
 
-const onChannel = (opened: RTCDataChannel): void => {
+function onChannel(opened: RTCDataChannel): void {
     channel = opened;
     opened.stateChanged.subscribe((state) => {
         log(`channel ${state}`);
@@ -134,9 +143,9 @@ const onChannel = (opened: RTCDataChannel): void => {
             );
         }
     });
-};
+}
 
-const burst = (opened: RTCDataChannel): void => {
+function burst(opened: RTCDataChannel): void {
     const piece = 'b'.repeat(PIECE);
     burstStarted = Date.now();
     burstExpected = Math.ceil(burstBytes / PIECE) * PIECE;
@@ -144,9 +153,9 @@ const burst = (opened: RTCDataChannel): void => {
         opened.send(piece);
     }
     opened.send('burst-done');
-};
+}
 
-const startClient = (opened: RTCDataChannel): void => {
+function startClient(opened: RTCDataChannel): void {
     setInterval(() => {
         if (opened.readyState === 'open') {
             pings += 1;
@@ -155,7 +164,7 @@ const startClient = (opened: RTCDataChannel): void => {
     }, 1_000);
     burst(opened);
     setInterval(() => burst(opened), 60_000);
-};
+}
 
 setInterval(() => {
     const recent = rtts.splice(0);
@@ -173,14 +182,14 @@ setTimeout(() => {
 }, minutes * 60_000);
 
 let finished = false;
-const finish = (code: number): void => {
+function finish(code: number): void {
     if (finished) {
         return;
     }
     finished = true;
     log(code === 0 ? 'done' : 'the connection is gone');
     void peer.close().finally(() => process.exit(code));
-};
+}
 
 log(`probe as ${role}, STUN ${stun.length === 0 ? 'off' : stun.join(' ')}, TURN ${values.turn ?? 'off'}${values['relay-only'] ? ', relay only' : ''}`);
 if (role === 'offer') {

@@ -9,7 +9,7 @@ interface MdastNode {
 // Parents whose children are blocks, where a bare text node would stand outside any paragraph.
 const FLOW_PARENTS = new Set(['root', 'blockquote', 'listItem', 'footnoteDefinition']);
 
-const literal = (parent: MdastNode): void => {
+function literal(parent: MdastNode): void {
     if (parent.children === undefined) {
         return;
     }
@@ -22,13 +22,15 @@ const literal = (parent: MdastNode): void => {
         const text = { ...child, type: 'text' };
         return flow ? { type: 'paragraph', position: child.position, children: [text] } : text;
     });
-};
+}
 
 /*
  * Raw HTML in a message as the characters a person typed. react-markdown drops an `html` node, so
  * "the <span> element" without backticks would lose the tag. Runs before `remark-breaks`, so the
  * newlines of an HTML block still become line breaks.
  */
-export const remarkHtmlAsText = () => (tree: MdastNode) => {
-    literal(tree);
-};
+export function remarkHtmlAsText() {
+    return (tree: MdastNode) => {
+        literal(tree);
+    };
+}

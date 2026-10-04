@@ -17,20 +17,22 @@ export interface MicrophoneDevice {
     label: string;
 }
 
-export const microphoneConstraints = (deviceId: string): MediaStreamConstraints => ({
-    audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        ...(deviceId === DEFAULT_MICROPHONE_ID ? {} : { deviceId: { exact: deviceId } })
-    }
-});
+export function microphoneConstraints(deviceId: string): MediaStreamConstraints {
+    return {
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            ...(deviceId === DEFAULT_MICROPHONE_ID ? {} : { deviceId: { exact: deviceId } })
+        }
+    };
+}
 
 type GetUserMedia = (constraints: MediaStreamConstraints) => Promise<MediaStream>;
 
-export const openMicrophoneStream = async (
+export async function openMicrophoneStream(
     deviceId: string,
     getUserMedia: GetUserMedia = (constraints) => navigator.mediaDevices.getUserMedia(constraints)
-): Promise<MediaStream> => {
+): Promise<MediaStream> {
     try {
         return await getUserMedia(microphoneConstraints(deviceId));
     } catch (error) {
@@ -40,16 +42,16 @@ export const openMicrophoneStream = async (
         }
         return getUserMedia(microphoneConstraints(DEFAULT_MICROPHONE_ID));
     }
-};
+}
 
 /* The desktop shell asks macOS, which keeps the permission and shows its own prompt; a browser asks when the stream opens. */
-export const ensureMicrophoneAccess = async (request: () => Promise<boolean> | undefined = () => desktop()?.requestMicrophoneAccess?.()): Promise<void> => {
+export async function ensureMicrophoneAccess(request: () => Promise<boolean> | undefined = () => desktop()?.requestMicrophoneAccess?.()): Promise<void> {
     if ((await request()) === false) {
         throw new DOMException(i18next.t('common:microphone.error.disabled'), 'NotAllowedError');
     }
-};
+}
 
-export const listMicrophones = async (): Promise<MicrophoneDevice[]> => {
+export async function listMicrophones(): Promise<MicrophoneDevice[]> {
     const devices = await navigator.mediaDevices.enumerateDevices();
     let unnamed = 0;
     return devices
@@ -58,7 +60,7 @@ export const listMicrophones = async (): Promise<MicrophoneDevice[]> => {
             id: device.deviceId,
             label: device.label || `Microphone ${++unnamed}`
         }));
-};
+}
 
 export class WaveformMonitor {
     readonly #onBands: (bands: number[]) => void;

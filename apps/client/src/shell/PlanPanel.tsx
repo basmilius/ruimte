@@ -45,7 +45,9 @@ const MIN_GRID_WIDTH = 360;
 /* Only the ids; the words a person reads are `planPanel.filters.<id>`, read inside the menu. */
 const FILTERS: readonly PlanFilter[] = ['all', 'open', 'issues'];
 
-const hasLockedStep = (plan: Plan): boolean => allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');
+function hasLockedStep(plan: Plan): boolean {
+    return allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');
+}
 
 /*
  * The plan of one chat, between the grid and the panels. A column of width 0 and inert while

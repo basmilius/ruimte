@@ -8,30 +8,34 @@
 const cells = new Map<string, HTMLElement>();
 const listeners = new Set<() => void>();
 
-const announce = (): void => {
+function announce(): void {
     for (const listener of [...listeners]) {
         listener();
     }
-};
+}
 
 /* The cell's body, which is the box under its toolbar and the box a camera is measured against. */
-export const registerCell = (viewId: string, element: HTMLElement | null): void => {
+export function registerCell(viewId: string, element: HTMLElement | null): void {
     if (element === null) {
         cells.delete(viewId);
     } else {
         cells.set(viewId, element);
     }
     announce();
-};
+}
 
-export const cellElement = (viewId: string): HTMLElement | null => cells.get(viewId) ?? null;
+export function cellElement(viewId: string): HTMLElement | null {
+    return cells.get(viewId) ?? null;
+}
 
 /* Fires when a cell arrives, leaves or changes size, which a splitter drag does without any state. */
-export const subscribeCells = (listener: () => void): (() => void) => {
+export function subscribeCells(listener: () => void): () => void {
     listeners.add(listener);
     return () => {
         listeners.delete(listener);
     };
-};
+}
 
-export const cellsMoved = (): void => announce();
+export function cellsMoved(): void {
+    return announce();
+}

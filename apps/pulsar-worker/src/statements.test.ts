@@ -21,12 +21,14 @@ interface Pair {
     privateKey: KeyObject;
 }
 
-const newPair = (): Pair => {
+function newPair(): Pair {
     const keys = generateKeyPairSync('ed25519');
     return { publicKey: keys.publicKey.export({ format: 'jwk' }).x!, privateKey: keys.privateKey };
-};
+}
 
-const signWith = (pair: Pair, message: string): string => sign(null, Buffer.from(message), pair.privateKey).toString('base64url');
+function signWith(pair: Pair, message: string): string {
+    return sign(null, Buffer.from(message), pair.privateKey).toString('base64url');
+}
 
 const statementKey = generateKeyPairSync('ed25519');
 const statementPublicKey = statementKey.publicKey;
@@ -34,21 +36,22 @@ const statementPublicKey = statementKey.publicKey;
 let sqlite: Database;
 let env: Env;
 
-const signIn = async (accountId: string): Promise<string> => {
+async function signIn(accountId: string): Promise<string> {
     sqlite.query('INSERT INTO account (id, provider, subject, created_at) VALUES (?, ?, ?, ?)').run(accountId, 'github', accountId, Date.now());
     const session = await createSession(env.DB, { id: accountId, provider: 'github', login: accountId, displayName: null }, 'laptop', newPair().publicKey);
     return session.accessToken;
-};
+}
 
-const post = (token: string, body: unknown): Request =>
-    new Request('https://pulsar.test/v1', {
+function post(token: string, body: unknown): Request {
+    return new Request('https://pulsar.test/v1', {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'cf-connecting-ip': '192.0.2.1' },
         body: JSON.stringify(body)
     });
+}
 
 // What a daemon signs for one account: `endpoint.signRegistration`, or any account a daemon from before this fix was asked for.
-const registration = (machine: Pair, machineId: string, accountId: string): RegisterMachinePayload => {
+function registration(machine: Pair, machineId: string, accountId: string): RegisterMachinePayload {
     const issuedAt = Date.now();
     return {
         id: machineId,
@@ -59,9 +62,9 @@ const registration = (machine: Pair, machineId: string, accountId: string): Regi
         issuedAt,
         signature: signWith(machine, machineRegistrationMessage(accountId, machineId, machine.publicKey, 'Studio', issuedAt))
     };
-};
+}
 
-const askStatement = async (token: string, machineId: string): Promise<{ status: number; statement: AccessStatement; client: Pair }> => {
+async function askStatement(token: string, machineId: string): Promise<{ status: number; statement: AccessStatement; client: Pair }> {
     const client = newPair();
     const nonce = randomToken(18);
     const response = await issueStatement(
@@ -74,12 +77,15 @@ const askStatement = async (token: string, machineId: string): Promise<{ status:
         env
     );
     return { status: response.status, statement: (await response.json()) as AccessStatement, client };
-};
+}
 
-const errorCode = async (response: Response): Promise<string> => ((await response.json()) as { error: { code: string } }).error.code;
+async function errorCode(response: Response): Promise<string> {
+    return ((await response.json()) as { error: { code: string } }).error.code;
+}
 
-const signedByAddressBook = (message: string, signature: string | undefined): boolean =>
-    signature !== undefined && verify(null, Buffer.from(message), statementPublicKey, Buffer.from(signature, 'base64url'));
+function signedByAddressBook(message: string, signature: string | undefined): boolean {
+    return signature !== undefined && verify(null, Buffer.from(message), statementPublicKey, Buffer.from(signature, 'base64url'));
+}
 
 beforeEach(() => {
     sqlite = migratedDatabase();

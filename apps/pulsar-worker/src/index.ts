@@ -30,7 +30,7 @@ const DEVICE_ROUTES: Record<string, (request: Request, env: Env) => Promise<Resp
     deny: denyDeviceLink
 };
 
-const health = async (env: Env): Promise<Response> => {
+async function health(env: Env): Promise<Response> {
     let statementKey: string | null = null;
     if (env.STATEMENT_PRIVATE_KEY) {
         statementKey = await statementKeyOf(env.STATEMENT_PRIVATE_KEY)
@@ -39,9 +39,9 @@ const health = async (env: Env): Promise<Response> => {
     }
     const providers = Object.fromEntries(Object.values(PROVIDERS).map((provider) => [provider.id, provider.configured(env)]));
     return json({ ok: true, statementKey, providers });
-};
+}
 
-const api = async (request: Request, env: Env, path: string): Promise<Response> => {
+async function api(request: Request, env: Env, path: string): Promise<Response> {
     const method = request.method;
     if (path === '/v1/apple/start' && method === 'POST') {
         return startNativeApple(request, env);
@@ -120,9 +120,9 @@ const api = async (request: Request, env: Env, path: string): Promise<Response> 
         return refreshSession(request, env);
     }
     return failure('not-found', 'No such route');
-};
+}
 
-const route = async (request: Request, env: Env): Promise<Response> => {
+async function route(request: Request, env: Env): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (path === '/health' && request.method === 'GET') {
         return health(env);
@@ -158,7 +158,7 @@ const route = async (request: Request, env: Env): Promise<Response> => {
         return new Response(response.body, { status: response.status, headers });
     }
     return failure('not-found', 'No such route');
-};
+}
 
 export default {
     async fetch(request, env) {

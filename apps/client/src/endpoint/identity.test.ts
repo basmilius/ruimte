@@ -4,31 +4,38 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { useToasts } from '@/state/toasts';
 import { noteDaemonIdentity } from './identity';
 
-const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: id,
-    daemonPublicKey: null,
-    ...overrides
-});
+function row(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: id,
+        daemonPublicKey: null,
+        ...overrides
+    };
+}
 
-const local = (daemonId: string | null): Endpoint =>
-    row(LOCAL_ENDPOINT_ID, {
+function local(daemonId: string | null): Endpoint {
+    return row(LOCAL_ENDPOINT_ID, {
         label: 'This machine',
         httpBaseUrl: 'http://127.0.0.1:4210',
         wsBaseUrl: 'ws://127.0.0.1:4210',
         reachability: 'loopback',
         daemonId
     });
+}
 
 // Merging a row awaits nothing but promises that are already settled, and no timer of the code under test is due this soon.
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 /* What a daemon answers `endpoint.info` with, without a public key. Nothing here is about pinning. */
-const answers = (id: string): EndpointInfo => ({ id, label: id, platform: 'linux', version: '0.0.0', reachability: 'lan', authenticated: true });
+function answers(id: string): EndpointInfo {
+    return { id, label: id, platform: 'linux', version: '0.0.0', reachability: 'lan', authenticated: true };
+}
 
 describe('a row that turns out to be a machine already in the list', () => {
     beforeEach(() => {

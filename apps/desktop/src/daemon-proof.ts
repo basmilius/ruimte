@@ -14,7 +14,7 @@ export interface DaemonPort {
  * container can take the port first and answer `/health` as a daemon does, so the shell sends the
  * secret, or loads a page that asks the bridge for it, only after this.
  */
-const provenSecret = async (daemon: DaemonPort): Promise<string | null> => {
+async function provenSecret(daemon: DaemonPort): Promise<string | null> {
     try {
         const secret = await daemon.readSecret();
         if (secret === null) {
@@ -31,12 +31,14 @@ const provenSecret = async (daemon: DaemonPort): Promise<string | null> => {
     } catch {
         return null;
     }
-};
+}
 
-export const proveDaemon = async (daemon: DaemonPort): Promise<boolean> => (await provenSecret(daemon)) !== null;
+export async function proveDaemon(daemon: DaemonPort): Promise<boolean> {
+    return (await provenSecret(daemon)) !== null;
+}
 
 /* What a restart would end; null for a daemon that cannot prove the secret, one from before the route, or one that does not answer. */
-export const askDaemonWork = async (daemon: DaemonPort): Promise<MachineWork | null> => {
+export async function askDaemonWork(daemon: DaemonPort): Promise<MachineWork | null> {
     const secret = await provenSecret(daemon);
     if (secret === null) {
         return null;
@@ -50,4 +52,4 @@ export const askDaemonWork = async (daemon: DaemonPort): Promise<MachineWork | n
     } catch {
         return null;
     }
-};
+}

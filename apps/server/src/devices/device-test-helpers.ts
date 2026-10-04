@@ -3,14 +3,14 @@ import type { DeviceTree, DeviceTreeNode } from './device-tree.ts';
 import type { DeviceBackend, DeviceKeyboard, DeviceSource } from './manager.ts';
 
 /* The first bytes of a png of this size: the signature and a header chunk, which is all a size is read from. */
-export const pngOf = (width: number, height: number): Uint8Array => {
+export function pngOf(width: number, height: number): Uint8Array {
     const bytes = new Uint8Array(33);
     bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
     const view = new DataView(bytes.buffer);
     view.setUint32(16, width);
     view.setUint32(20, height);
     return bytes;
-};
+}
 
 export const SIMULATOR: DeviceInfo = {
     deviceId: 'sim-1',
@@ -107,16 +107,18 @@ export class RecordingBackend implements DeviceBackend {
     }
 }
 
-const node = (role: string, label: string | null, frame: [number, number, number, number], children: DeviceTreeNode[] = []): DeviceTreeNode => ({
-    role,
-    subrole: null,
-    label,
-    value: null,
-    identifier: null,
-    frame: { x: frame[0], y: frame[1], width: frame[2], height: frame[3] },
-    enabled: true,
-    children
-});
+function node(role: string, label: string | null, frame: [number, number, number, number], children: DeviceTreeNode[] = []): DeviceTreeNode {
+    return {
+        role,
+        subrole: null,
+        label,
+        value: null,
+        identifier: null,
+        frame: { x: frame[0], y: frame[1], width: frame[2], height: frame[3] },
+        enabled: true,
+        children
+    };
+}
 
 /* A screen of 1000x2000 pixels: an app with a heading, a list holding two rows and a row scrolled off the bottom, and a disabled button. */
 export const SAMPLE_TREE: DeviceTree = {

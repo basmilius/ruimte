@@ -7,7 +7,7 @@ import { forgetSearchCache } from './search.ts';
 
 let root = '';
 
-const seed = async (): Promise<void> => {
+async function seed(): Promise<void> {
     await mkdir(join(root, 'src'), { recursive: true });
     await writeFile(
         join(root, 'src', 'session.ts'),
@@ -16,7 +16,7 @@ const seed = async (): Promise<void> => {
     await writeFile(join(root, 'src', 'notes.md'), ['# Notes', '', 'A session is keyed by an id.', ''].join('\n'));
     await writeFile(join(root, 'src', 'unicode.ts'), ['const tree = "🌱 seedling";', 'const after = 1;', ''].join('\n'));
     await writeFile(join(root, 'src', 'binary.bin'), new Uint8Array([0, 115, 101, 115, 115, 105, 111, 110, 0]));
-};
+}
 
 beforeEach(async () => {
     forgetSearchCache();
@@ -29,9 +29,9 @@ afterEach(async () => {
 });
 
 /* A hit and the line above it, each with an emoji across the 500th and 501st unit, where a line is cut. */
-const longLines = async (): Promise<void> => {
+async function longLines(): Promise<void> {
     await writeFile(join(root, 'src', 'long.ts'), [`${'c'.repeat(499)}😀 above`, `${'a'.repeat(499)}😀 needle`, ''].join('\n'));
-};
+}
 
 describe('grepFiles', () => {
     test('finds a literal across files and reads the lines around it', async () => {

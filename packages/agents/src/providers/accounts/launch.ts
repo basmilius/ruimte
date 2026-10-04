@@ -23,13 +23,17 @@ export interface AccountLaunches {
     launched?(kind: AgentKind, account: string | undefined): void;
 }
 
-export const isDefaultAccountOf = (kind: AgentKind, account: string | undefined): boolean => account === undefined || account === kind;
+export function isDefaultAccountOf(kind: AgentKind, account: string | undefined): boolean {
+    return account === undefined || account === kind;
+}
 
 /* The id a record or a node keeps: none for the default account, so nothing without accounts changes on disk. */
-export const storedAccount = (kind: AgentKind, account: string | undefined): string | undefined => (isDefaultAccountOf(kind, account) ? undefined : account);
+export function storedAccount(kind: AgentKind, account: string | undefined): string | undefined {
+    return isDefaultAccountOf(kind, account) ? undefined : account;
+}
 
 /* The environment of a launch; without accounts wired only the default account can start, with no variables of its own. */
-export const launchEnv = (accounts: AccountLaunches | null, kind: AgentKind, account: string | undefined, baseEnv: Env): Env => {
+export function launchEnv(accounts: AccountLaunches | null, kind: AgentKind, account: string | undefined, baseEnv: Env): Env {
     if (accounts !== null) {
         return accounts.envFor(kind, account, baseEnv);
     }
@@ -37,10 +41,10 @@ export const launchEnv = (accounts: AccountLaunches | null, kind: AgentKind, acc
         return baseEnv;
     }
     throw new AccountError('account-unavailable', `The account '${account}' is not available on this machine: it keeps no accounts.`);
-};
+}
 
 /* An environment without its unset variables, which is what a spawned process is given. */
-export const definedEnv = (env: Env): Record<string, string> => {
+export function definedEnv(env: Env): Record<string, string> {
     const defined: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
         if (value !== undefined) {
@@ -48,4 +52,4 @@ export const definedEnv = (env: Env): Record<string, string> => {
         }
     }
     return defined;
-};
+}

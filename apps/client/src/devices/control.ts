@@ -8,7 +8,7 @@ export interface DeviceControl {
 }
 
 /* Starts or shuts down a device. A refusal goes to a toast, since the row has nowhere else to say it; the answer says whether it went through. */
-export const controlDevice = async (client: DeviceControl | null | undefined, device: DeviceInfo, action: 'boot' | 'shutdown'): Promise<boolean> => {
+export async function controlDevice(client: DeviceControl | null | undefined, device: DeviceInfo, action: 'boot' | 'shutdown'): Promise<boolean> {
     if (!client) {
         return false;
     }
@@ -23,4 +23,4 @@ export const controlDevice = async (client: DeviceControl | null | undefined, de
         });
         return false;
     }
-};
+}

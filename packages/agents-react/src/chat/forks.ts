@@ -14,18 +14,20 @@ function* forkInfosOn(byKey: ChatsById, owns: (key: string) => boolean): Generat
 }
 
 /* Selectors answer a joined string, never a new array or set, and split it again in a memo. */
-const splitIds = (joined: string): string[] => (joined === '' ? [] : joined.split('\n'));
+function splitIds(joined: string): string[] {
+    return joined === '' ? [] : joined.split('\n');
+}
 
 /* The turns of this chat a fork went on after, for the thread to put a line under. */
-export const useForkedTurns = (chatId: string): ReadonlySet<string> => {
+export function useForkedTurns(chatId: string): ReadonlySet<string> {
     const { owns } = useChatScope();
     const joined = useChats((s) => [...forkedTurnIds(forkInfosOn(s.byKey, owns), chatId)].join('\n'));
     return useMemo(() => new Set(splitIds(joined)), [joined]);
-};
+}
 
 /* The forks that went on after this turn of this chat. */
-export const useForkIdsAfter = (chatId: string, turnId: string): string[] => {
+export function useForkIdsAfter(chatId: string, turnId: string): string[] {
     const { owns } = useChatScope();
     const joined = useChats((s) => forkIdsAfter(forkInfosOn(s.byKey, owns), chatId, turnId).join('\n'));
     return useMemo(() => splitIds(joined), [joined]);
-};
+}

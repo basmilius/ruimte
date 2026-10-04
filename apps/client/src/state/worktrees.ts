@@ -144,7 +144,7 @@ export class WorktreeLists {
 export const worktreeLists = new WorktreeLists();
 
 /* The worktrees of the repository a folder is in, kept fresh while the component is mounted. */
-export const useWorktrees = (transport: Transport | null, endpointId: string, folder: string | null, inspect = false): readonly Worktree[] => {
+export function useWorktrees(transport: Transport | null, endpointId: string, folder: string | null, inspect = false): readonly Worktree[] {
     const key = folder === null ? null : endpointKey(endpointId, folder);
     useEffect(() => {
         if (transport === null || folder === null) {
@@ -153,20 +153,20 @@ export const useWorktrees = (transport: Transport | null, endpointId: string, fo
         return worktreeLists.hold(transport, endpointId, folder, inspect);
     }, [transport, endpointId, folder, inspect]);
     return useWorktreeRows((s) => (key === null ? NONE : (s.rows[key] ?? NONE)));
-};
+}
 
 /*
  * The worktree a node works in, read from the one list of its project's repository. A node without
  * a folder of its own, or in the project folder itself, asks for nothing.
  */
-export const useWorktreeOf = (cwd: string | undefined): Worktree | null => {
+export function useWorktreeOf(cwd: string | undefined): Worktree | null {
     const connection = useOptionalConnection();
     const endpointId = useEndpointId();
     const folder = useProject((s) => s.current?.folder ?? null);
     const wanted = cwd !== undefined && folder !== null && cwd !== folder;
     const worktrees = useWorktrees(wanted ? (connection?.transport ?? null) : null, endpointId, wanted ? folder : null);
     return useMemo(() => (wanted ? worktreeOfPath(worktrees, cwd) : null), [wanted, worktrees, cwd]);
-};
+}
 
 /* A node of the project as the worktree list names it. */
 export interface WorktreeNode {
@@ -177,7 +177,7 @@ export interface WorktreeNode {
 }
 
 /* The nodes of every canvas of the project, with the canvas on screen as it is now rather than as last saved. */
-export const useProjectNodes = (): WorktreeNode[] => {
+export function useProjectNodes(): WorktreeNode[] {
     const nodes = useCanvas((s) => s.nodes);
     const views = useDocument((s) => s.views);
     return useMemo<WorktreeNode[]>(() => {
@@ -186,13 +186,13 @@ export const useProjectNodes = (): WorktreeNode[] => {
         const saved = views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => !liveIds.has(node.id)) : []));
         return [...live, ...saved];
     }, [nodes, views]);
-};
+}
 
 /*
  * The worktrees a group carries: the one it is bound to, and every worktree one of its members works
  * in, in the order of its members. A team's group has no worktree of its own but a member in each.
  */
-export const useGroupWorktrees = (groupId: string | null): readonly Worktree[] => {
+export function useGroupWorktrees(groupId: string | null): readonly Worktree[] {
     const connection = useOptionalConnection();
     const endpointId = useEndpointId();
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -220,4 +220,4 @@ export const useGroupWorktrees = (groupId: string | null): readonly Worktree[] =
         }
         return found.length === 0 ? NONE : found;
     }, [wanted, group, worktrees, nodes, texts]);
-};
+}

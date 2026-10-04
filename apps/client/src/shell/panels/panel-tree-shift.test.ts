@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { clampShift, maxShift, shiftNeed, shiftThumb, sidewaysDelta, type WheelStep } from './panel-tree-shift.ts';
 
-const step = (extra: Partial<WheelStep>): WheelStep => ({ deltaX: 0, deltaY: 0, deltaMode: 0, shiftKey: false, ...extra });
+function step(extra: Partial<WheelStep>): WheelStep {
+    return { deltaX: 0, deltaY: 0, deltaMode: 0, shiftKey: false, ...extra };
+}
 
 describe('the shift of a panel tree', () => {
     test('stays between nothing and what the widest row needs', () => {

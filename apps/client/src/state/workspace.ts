@@ -11,12 +11,12 @@ import type { WorkspaceStores } from '@/state/workspace-stores';
  * and reads back what those editors hold. The app uses the module's set below; a test makes one of
  * these when it wants to be left alone by the others.
  */
-export const createWorkspaceStores = (): WorkspaceStores => {
+export function createWorkspaceStores(): WorkspaceStores {
     const canvases = createEditorRegistry(createCanvasStore);
     const drawings = createEditorRegistry(createDrawingStore);
     const diagrams = createEditorRegistry(createDiagramStore);
     return { canvases, drawings, diagrams, document: createDocumentStore({ canvases, drawings, diagrams }), project: createProjectStore() };
-};
+}
 
 /*
  * The set every store module made on its own, which is the set of the window. A workspace fills it when

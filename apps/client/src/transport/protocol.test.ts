@@ -4,7 +4,7 @@ import { protocolGate, protocolRefusal, withProtocol } from './protocol';
 const OLDER = 'This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.';
 const NEWER = 'This machine runs a newer Ruimte than this app. Update this app.';
 
-const gateWith = (client = 2) => {
+function gateWith(client = 2) {
     const log: string[] = [];
     const gate = protocolGate(
         {
@@ -16,9 +16,11 @@ const gateWith = (client = 2) => {
         client
     );
     return { gate, log };
-};
+}
 
-const answer = (result: Record<string, unknown>, ok = true): string => JSON.stringify({ id: 'protocol', ok, result });
+function answer(result: Record<string, unknown>, ok = true): string {
+    return JSON.stringify({ id: 'protocol', ok, result });
+}
 
 describe('protocolRefusal', () => {
     test('says which side has to update', () => {

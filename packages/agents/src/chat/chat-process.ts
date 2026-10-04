@@ -32,7 +32,7 @@ export type SpawnChatProcess = (options: ChatSpawnOptions) => ChatProcess;
 // How long an exit waits for the rest of stdout; a process the CLI started may hold the pipe open.
 const STDOUT_DRAIN_MS = 250;
 
-export const spawnChatProcess: SpawnChatProcess = (options) => {
+export function spawnChatProcess(options: ChatSpawnOptions): ChatProcess {
     const [command, ...args] = options.command;
     if (command === undefined) {
         throw new Error('No command to start');
@@ -82,7 +82,7 @@ export const spawnChatProcess: SpawnChatProcess = (options) => {
             }
         }
     };
-};
+}
 
 // After stdin closed, a CLI that is still around is not going to say more.
 const EXIT_GRACE_MS = 3000;

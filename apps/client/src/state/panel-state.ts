@@ -19,15 +19,15 @@ export interface PanelsState extends PanelDefaults {
 }
 
 /* A width from the file is a whole positive number of pixels or it is nothing at all. */
-const width = (stored: number | undefined, fallback: number | null): number | null => {
+function width(stored: number | undefined, fallback: number | null): number | null {
     return stored !== undefined && Number.isFinite(stored) && stored > 0 ? Math.round(stored) : fallback;
-};
+}
 
 /*
  * What the project's local file says, with the app's defaults filling in for whatever it leaves
  * out. A file written before the panels lived here says nothing, so it opens on the defaults.
  */
-export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsState): PanelsState => {
+export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsState): PanelsState {
     const tabs: FileTab[] = (stored?.tabs ?? []).map((tab) => ({
         key: tabKey(tab.path, tab.view),
         path: tab.path,
@@ -51,27 +51,29 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
         sidebarExpanded: stored?.sidebarExpanded ?? null,
         favicons: stored?.favicons ?? {}
     };
-};
+}
 
 /* The other way, for the machine-local file. A width nobody dragged stays out of it. */
-export const serializePanels = (state: PanelsState): ProjectPanels => ({
-    // A client from before launches reads the files panel in its place.
-    panel: state.panel.kind === 'launches' ? { open: state.panel.open, kind: 'files' } : { open: state.panel.open, kind: state.panel.kind },
-    ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
-    ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
-    ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
-    ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
-    tabs: state.tabs.map((tab) => ({ path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}) })),
-    activeTab: state.active,
-    expandedDirs: state.expandedDirs,
-    git: {
-        scope: state.gitScope,
-        collapsedDirs: state.gitCollapsedDirs,
-        logHeight: Math.round(state.gitLogHeight),
-        ...(state.gitHiddenRepos.length === 0 ? {} : { hiddenRepos: state.gitHiddenRepos })
-    },
-    /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
-    ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
-    /* A project with no page open writes no map at all. */
-    ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons })
-});
+export function serializePanels(state: PanelsState): ProjectPanels {
+    return {
+        // A client from before launches reads the files panel in its place.
+        panel: state.panel.kind === 'launches' ? { open: state.panel.open, kind: 'files' } : { open: state.panel.open, kind: state.panel.kind },
+        ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
+        ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
+        ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
+        ...(state.planWidth === null ? {} : { planWidth: Math.round(state.planWidth) }),
+        tabs: state.tabs.map((tab) => ({ path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}) })),
+        activeTab: state.active,
+        expandedDirs: state.expandedDirs,
+        git: {
+            scope: state.gitScope,
+            collapsedDirs: state.gitCollapsedDirs,
+            logHeight: Math.round(state.gitLogHeight),
+            ...(state.gitHiddenRepos.length === 0 ? {} : { hiddenRepos: state.gitHiddenRepos })
+        },
+        /* A list nobody has folded stays out of the file, so the next open still seeds itself. */
+        ...(state.sidebarExpanded === null ? {} : { sidebarExpanded: state.sidebarExpanded }),
+        /* A project with no page open writes no map at all. */
+        ...(Object.keys(state.favicons).length === 0 ? {} : { favicons: state.favicons })
+    };
+}

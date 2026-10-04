@@ -15,28 +15,32 @@ import {
     type SubagentStep
 } from './subagent-view';
 
-const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
-    id,
-    kind: 'subagent',
-    createdAt: 0,
-    turnId: null,
-    toolUseId: `toolu_${id}`,
-    description: `Agent ${id}`,
-    subagentType: null,
-    prompt: null,
-    background: false,
-    status: 'running',
-    startedAt: 0,
-    finishedAt: null,
-    summary: null,
-    result: null,
-    usage: null,
-    lastTool: null,
-    itemsTruncated: false,
-    ...patch
-});
+function subagent(id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem {
+    return {
+        id,
+        kind: 'subagent',
+        createdAt: 0,
+        turnId: null,
+        toolUseId: `toolu_${id}`,
+        description: `Agent ${id}`,
+        subagentType: null,
+        prompt: null,
+        background: false,
+        status: 'running',
+        startedAt: 0,
+        finishedAt: null,
+        summary: null,
+        result: null,
+        usage: null,
+        lastTool: null,
+        itemsTruncated: false,
+        ...patch
+    };
+}
 
-const note = (id: string): ChatItem => ({ id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text: id });
+function note(id: string): ChatItem {
+    return { id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text: id };
+}
 
 const survey: SubagentStep = { toolUseId: 'toolu_1', description: 'Survey' };
 const count: SubagentStep = { toolUseId: 'toolu_2', description: 'Count' };

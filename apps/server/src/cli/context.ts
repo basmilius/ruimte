@@ -2,7 +2,7 @@ import { escapeText } from '../canvas/text-escapes.ts';
 import { parseRefusalBody, refusalBody, type ParsedRefusal } from '@ruimte/agents/context/refusal';
 
 // Exit codes distinguish daemon failures, stale sessions and command refusals for callers that script this CLI.
-export const runContext = async (args: string[], env: Environment = process.env, stdin: () => Promise<string> = () => Bun.stdin.text()): Promise<number> => {
+export async function runContext(args: string[], env: Environment = process.env, stdin: () => Promise<string> = () => Bun.stdin.text()): Promise<number> {
     const url = env.RUIMTE_CONTEXT_URL;
     const token = env.RUIMTE_CONTEXT_TOKEN ?? env.RUIMTE_HOOK_TOKEN;
     if (!url || !token) {
@@ -88,25 +88,25 @@ export const runContext = async (args: string[], env: Environment = process.env,
               ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
               : await withStdinText(args.slice(1), stdin);
     return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers, env);
-};
+}
 
 /*
  * `view diagram` takes its document on stdin, which the daemon never sees, so it travels as `--document`.
  * Not escaped the way `--text` is: the daemon parses JSON here and reads no escapes of its own. A
  * `--document` already given means stdin is not the source, so it is left unread.
  */
-const withStdinDocument = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
+async function withStdinDocument(argv: string[], stdin: () => Promise<string>): Promise<string[]> {
     if (argv.some((word) => word === '--document' || word.startsWith('--document='))) {
         return argv;
     }
     return [...argv, `--document=${await stdin()}`];
-};
+}
 
 /*
  * `plan new` takes its plan on stdin like `view diagram`: JSON as `--document`, or a Markdown list as
  * `--markdown -`. Both arrive untouched, since the daemon parses them and reads no escapes.
  */
-const withStdinPlan = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
+async function withStdinPlan(argv: string[], stdin: () => Promise<string>): Promise<string[]> {
     for (let i = 0; i < argv.length; i++) {
         const pair = argv[i] === '--markdown' && argv[i + 1] === '-';
         if (pair || argv[i] === '--markdown=-') {
@@ -117,7 +117,7 @@ const withStdinPlan = async (argv: string[], stdin: () => Promise<string>): Prom
         return argv;
     }
     return [...argv, `--document=${await stdin()}`];
-};
+}
 
 interface ContextRow {
     id: string;
@@ -129,21 +129,21 @@ interface ContextRow {
 const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T]';
 
 /* What follows `--name` or `--name=`: null when the flag is not there, empty when it has no value. */
-const flagValue = (argv: readonly string[], name: string): string | null => {
+function flagValue(argv: readonly string[], name: string): string | null {
     const index = argv.findIndex((word) => word === `--${name}` || word.startsWith(`--${name}=`));
     if (index === -1) {
         return null;
     }
     const word = argv[index]!;
     return (word === `--${name}` ? argv[index + 1] : word.slice(`--${name}=`.length)) ?? '';
-};
+}
 
 /*
  * The `--tail N` of a read: the number, null when it was not asked for, and 'bad' for anything that
  * is not a positive whole number. The daemon does the counting, so this only has to be sure it is
  * sending a number at all rather than letting `--tail two` arrive as a query nobody can read.
  */
-const tailOf = (argv: readonly string[]): number | null | 'bad' => {
+function tailOf(argv: readonly string[]): number | null | 'bad' {
     const value = flagValue(argv, 'tail');
     if (value === null) {
         return null;
@@ -153,9 +153,9 @@ const tailOf = (argv: readonly string[]): number | null | 'bad' => {
         return 'bad';
     }
     return count;
-};
+}
 
-const fetchSources = async (url: string, headers: Record<string, string>, env: Environment): Promise<ContextRow[]> => {
+async function fetchSources(url: string, headers: Record<string, string>, env: Environment): Promise<ContextRow[]> {
     let response: Response;
     try {
         response = await fetch(url, { headers });
@@ -170,14 +170,14 @@ const fetchSources = async (url: string, headers: Record<string, string>, env: E
     }
     const { sources } = (await response.json()) as { sources: ContextRow[] };
     return sources;
-};
+}
 
 /*
  * What `list` would have printed, under a refusal about a source. A daemon that cannot answer this
  * second question leaves the refusal without a list rather than turning it into a failure: the first
  * answer already said what the refusal is.
  */
-const linkedLines = async (url: string, headers: Record<string, string>, env: Environment): Promise<string[]> => {
+async function linkedLines(url: string, headers: Record<string, string>, env: Environment): Promise<string[]> {
     const sources = await fetchSources(url, headers, env).catch(() => null);
     if (sources === null) {
         return [];
@@ -186,14 +186,14 @@ const linkedLines = async (url: string, headers: Record<string, string>, env: En
         return ['note\tNothing is linked to this session'];
     }
     return sources.map((source) => `${source.id}\t${source.kind}\t${source.title}`);
-};
+}
 
 /*
  * A refused read, as the daemon wrote it: its code and sentence on the first line, what to do about
  * it under that. A daemon that answers something else leaves the sentence this side has always
  * written, so an older one still refuses a read rather than printing a body nobody can read.
  */
-const readRefusal = (body: string, id: string): ParsedRefusal => {
+function readRefusal(body: string, id: string): ParsedRefusal {
     const parsed = parseRefusalBody(body);
     if (parsed) {
         return parsed;
@@ -202,18 +202,20 @@ const readRefusal = (body: string, id: string): ParsedRefusal => {
     const said = body.trim();
     const message = said === '' ? `${id} is not linked to this session` : `${id} could not be read: ${said}`;
     return { code: 'unknown-source', message, lines: [] };
-};
+}
 
 /* `list` and `read` are the CLI's own, so it writes the refusal the daemon would have written for a verb. */
-const refuse = (code: string, message: string, lines: string[]): number => {
+function refuse(code: string, message: string, lines: string[]): number {
     process.stderr.write(`${refusalBody(code, message, lines)}\n`);
     return 3;
-};
+}
 
 /* A daemon that does not know the token: the session it was minted for is gone, so this is no session at all. */
 class StaleToken extends Error {}
 
-const staleToken = (body: string): string => `Not inside a live Ruimte session: the daemon answered 401${body.trim() ? ` ${body.trim()}` : ''}`;
+function staleToken(body: string): string {
+    return `Not inside a live Ruimte session: the daemon answered 401${body.trim() ? ` ${body.trim()}` : ''}`;
+}
 
 type Environment = Record<string, string | undefined>;
 
@@ -222,7 +224,7 @@ type Environment = Record<string, string | undefined>;
  * to run the same command with network access. Codex sets CODEX_SANDBOX in its sandbox and
  * CODEX_SANDBOX_NETWORK_DISABLED=1 when that sandbox has no network; other sandboxes say nothing.
  */
-const unreachable = (e: unknown, env: Environment): string => {
+function unreachable(e: unknown, env: Environment): string {
     const reason = `Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`;
     const retry = 'run the same command again with network access or escalated permissions';
     if (env.CODEX_SANDBOX_NETWORK_DISABLED === '1') {
@@ -232,7 +234,7 @@ const unreachable = (e: unknown, env: Environment): string => {
         return `${reason}. This command runs in a sandbox, which may block the daemon's local address; if so, ${retry}.`;
     }
     return `${reason}. A sandbox without network access is a common cause; if this command runs in one, ${retry}.`;
-};
+}
 
 // The flags whose value `-` stands for stdin: a message, and the result of a task.
 const STDIN_FLAGS = ['--text', '--result'];
@@ -242,7 +244,7 @@ const STDIN_FLAGS = ['--text', '--result'];
  * heredoc gives a body with newlines and quotes in it. Escaped on the way out, because the daemon
  * reads `\n` in such a flag, and these bytes have to arrive as they were typed.
  */
-const withStdinText = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
+async function withStdinText(argv: string[], stdin: () => Promise<string>): Promise<string[]> {
     const words: string[] = [];
     for (let i = 0; i < argv.length; i++) {
         const word = argv[i]!;
@@ -258,9 +260,9 @@ const withStdinText = async (argv: string[], stdin: () => Promise<string>): Prom
         }
     }
     return words;
-};
+}
 
-const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers: Record<string, string>, env: Environment): Promise<number> => {
+async function runVerb(canvasUrl: string, verb: string, argv: string[], headers: Record<string, string>, env: Environment): Promise<number> {
     let response: Response;
     let body: string;
     try {
@@ -289,4 +291,4 @@ const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers:
     }
     console.error(`The daemon answered ${response.status}${body ? `: ${body.trim()}` : ''}`);
     return 1;
-};
+}

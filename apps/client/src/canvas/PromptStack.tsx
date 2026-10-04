@@ -23,7 +23,9 @@ import { useProviders } from '@ruimte/agents-react/state/providers';
 import { useTransportStatus } from '@/transport/status';
 import { ButtonGroup, ErrorBoundary, IconButton, Tooltip } from '@basmilius/desktop-ui';
 
-const idOf = (prompt: CanvasPrompt): string => prompt.id;
+function idOf(prompt: CanvasPrompt): string {
+    return prompt.id;
+}
 
 /* Which node is asking, and the way through the stack. Drawn only in the stack, never in a chat. */
 function SourceRow({

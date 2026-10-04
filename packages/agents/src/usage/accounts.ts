@@ -4,7 +4,9 @@ import type { ProviderAccountsService } from '../providers/accounts/service.ts';
 import type { LimitAccount, LimitAccounts } from './limits/monitor.ts';
 import { accountRoots, type UsageRootPath } from './roots.ts';
 
-const isUsageProvider = (kind: string): kind is UsageProvider => (USAGE_PROVIDERS as readonly string[]).includes(kind);
+function isUsageProvider(kind: string): kind is UsageProvider {
+    return (USAGE_PROVIDERS as readonly string[]).includes(kind);
+}
 
 interface MachineAccount extends UsageAccount {
     isDefault: boolean;
@@ -13,8 +15,8 @@ interface MachineAccount extends UsageAccount {
 }
 
 /* The accounts of the CLIs whose usage the host reads; a default account nobody named is called after its CLI. */
-export const machineAccounts = (snapshot: ProviderAccounts, nameOf: (kind: UsageProvider) => string): MachineAccount[] =>
-    Object.entries(snapshot.accounts).flatMap(([id, account]) => {
+export function machineAccounts(snapshot: ProviderAccounts, nameOf: (kind: UsageProvider) => string): MachineAccount[] {
+    return Object.entries(snapshot.accounts).flatMap(([id, account]) => {
         if (!isUsageProvider(account.kind)) {
             return [];
         }
@@ -32,16 +34,20 @@ export const machineAccounts = (snapshot: ProviderAccounts, nameOf: (kind: Usage
             }
         ];
     });
+}
 
-const usageAccount = ({ id, kind, label, color }: MachineAccount): UsageAccount => ({ id, kind, label, ...(color === undefined ? {} : { color }) });
+function usageAccount({ id, kind, label, color }: MachineAccount): UsageAccount {
+    return { id, kind, label, ...(color === undefined ? {} : { color }) };
+}
 
 /* What the usage page may filter by: every account, whether it is on or signed in or not, since what it spent still counts. */
-export const usageAccountsOf = (service: ProviderAccountsService, nameOf: (kind: UsageProvider) => string): UsageAccount[] =>
-    machineAccounts(service.snapshot(), nameOf).map(usageAccount);
+export function usageAccountsOf(service: ProviderAccountsService, nameOf: (kind: UsageProvider) => string): UsageAccount[] {
+    return machineAccounts(service.snapshot(), nameOf).map(usageAccount);
+}
 
 /* The transcripts of every account the machine has. */
-export const usageRootsOf = (service: ProviderAccountsService): UsageRootPath[] =>
-    accountRoots(
+export function usageRootsOf(service: ProviderAccountsService): UsageRootPath[] {
+    return accountRoots(
         Object.entries(service.snapshot().accounts).flatMap(([id, { kind }]) => {
             if (!isUsageProvider(kind)) {
                 return [];
@@ -50,23 +56,26 @@ export const usageRootsOf = (service: ProviderAccountsService): UsageRootPath[] 
             return folder === null || folder === '' ? [] : [{ id, kind, folder }];
         })
     );
+}
 
 /* The plans the limits monitor reads: the default account of every CLI, and every other one that is on and signed in. */
-export const limitAccountsOf = (
+export function limitAccountsOf(
     service: ProviderAccountsService,
     nameOf: (kind: UsageProvider) => string,
     baseEnv: Record<string, string | undefined>
-): LimitAccounts => ({
-    list: () =>
-        machineAccounts(service.snapshot(), nameOf)
-            .filter((account) => account.isDefault || (account.enabled && account.signedIn))
-            .map((account): LimitAccount => ({ ...usageAccount(account), isDefault: account.isDefault })),
-    envFor: (kind, id) => definedEnv(service.envFor(kind, id, baseEnv)),
-    lastUsedAt: (id) => service.lastLaunchAt(id)
-});
+): LimitAccounts {
+    return {
+        list: () =>
+            machineAccounts(service.snapshot(), nameOf)
+                .filter((account) => account.isDefault || (account.enabled && account.signedIn))
+                .map((account): LimitAccount => ({ ...usageAccount(account), isDefault: account.isDefault })),
+        envFor: (kind, id) => definedEnv(service.envFor(kind, id, baseEnv)),
+        lastUsedAt: (id) => service.lastLaunchAt(id)
+    };
+}
 
 /* The account every CLI session a chat here ran was under, by `<provider>\0<sessionId>`, for the transcripts accounts share. */
-export const chatSessionAccounts = (chats: ReadonlyArray<Pick<ChatInfo, 'provider' | 'agentSessionId' | 'account'>>): Map<string, string> => {
+export function chatSessionAccounts(chats: ReadonlyArray<Pick<ChatInfo, 'provider' | 'agentSessionId' | 'account'>>): Map<string, string> {
     const known = new Map<string, string>();
     for (const chat of chats) {
         if (chat.agentSessionId !== null) {
@@ -74,4 +83,4 @@ export const chatSessionAccounts = (chats: ReadonlyArray<Pick<ChatInfo, 'provide
         }
     }
     return known;
-};
+}

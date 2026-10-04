@@ -8,16 +8,18 @@ import { MAX_COLUMNS, type CellAt, type SplitDirection, type SplitZone } from '@
 export const VIEW_DRAG_TYPE = 'application/x-ruimte-view';
 
 /* The id of the view being dragged, or null for a drag that is about something else. */
-export const draggedViewId = (transfer: Pick<DataTransfer, 'types' | 'getData'>): string | null => {
+export function draggedViewId(transfer: Pick<DataTransfer, 'types' | 'getData'>): string | null {
     if (!transfer.types.includes(VIEW_DRAG_TYPE)) {
         return null;
     }
     const id = transfer.getData(VIEW_DRAG_TYPE);
     return id === '' ? null : id;
-};
+}
 
 /* Whether a drag carries a view at all. `getData` is empty during dragover, so the types decide. */
-export const carriesView = (transfer: Pick<DataTransfer, 'types'>): boolean => transfer.types.includes(VIEW_DRAG_TYPE);
+export function carriesView(transfer: Pick<DataTransfer, 'types'>): boolean {
+    return transfer.types.includes(VIEW_DRAG_TYPE);
+}
 
 let held: string | null = null;
 
@@ -27,11 +29,13 @@ let held: string | null = null;
  * it. There is one pointer, so one drag: this is that drag, set where it starts and cleared where it
  * ends. Null for a drag that started outside this window, which the grid then simply refuses.
  */
-export const dragging = (): string | null => held;
+export function dragging(): string | null {
+    return held;
+}
 
-export const setDragging = (viewId: string | null): void => {
+export function setDragging(viewId: string | null): void {
     held = viewId;
-};
+}
 
 /*
  * A <webview> eats the drag events of the page around it, so a drag passing over a cell holding one
@@ -44,7 +48,7 @@ export const setDragging = (viewId: string | null): void => {
  * Watched on the window and not set by each source, since a source that forgets it leaves a drag
  * that works everywhere except over a page, which is the hardest kind of gap to find.
  */
-export const watchDrags = (): (() => void) => {
+export function watchDrags(): () => void {
     const mark = (dragging: boolean) => (): void => {
         document.body.toggleAttribute('data-dragging', dragging);
     };
@@ -68,7 +72,7 @@ export const watchDrags = (): (() => void) => {
         }
         end();
     };
-};
+}
 
 let gridTakes = false;
 
@@ -82,11 +86,13 @@ let gridTakes = false;
  * and clears it on the way out. Nothing here stops the event: a drop on a page mid-drag is decided
  * by the browser, and a handler that cuts the propagation short takes that decision away from it.
  */
-export const gridTakesPath = (): boolean => gridTakes;
+export function gridTakesPath(): boolean {
+    return gridTakes;
+}
 
-export const setGridTakesPath = (takes: boolean): void => {
+export function setGridTakesPath(takes: boolean): void {
     gridTakes = takes;
-};
+}
 
 /*
  * How wide the edge zones are: a quarter of the axis keeps them usable in a narrow cell, and the
@@ -111,7 +117,7 @@ export interface Spot {
  * the view standing there, which is the point most apps leave out: opening a view where you want it
  * without making a cell for it.
  */
-export const zoneAt = (box: Box, spot: Spot): SplitZone => {
+export function zoneAt(box: Box, spot: Spot): SplitZone {
     const edgeX = Math.min(box.width * EDGE_SHARE, EDGE_MAX);
     const edgeY = Math.min(box.height * EDGE_SHARE, EDGE_MAX);
     const left = spot.x;
@@ -129,7 +135,7 @@ export const zoneAt = (box: Box, spot: Spot): SplitZone => {
         return left <= right ? 'left' : 'right';
     }
     return top <= bottom ? 'up' : 'down';
-};
+}
 
 /*
  * The same points minus the middle: whichever edge is nearest, measured as a share of the cell's own
@@ -137,7 +143,7 @@ export const zoneAt = (box: Box, spot: Spot): SplitZone => {
  * sideways everywhere. For a cell whose contents do nothing with what is being dragged, which has
  * no reason to keep a middle free, so the whole of it splits and the drag always has an answer.
  */
-export const edgeZoneAt = (box: Box, spot: Spot): SplitDirection => {
+export function edgeZoneAt(box: Box, spot: Spot): SplitDirection {
     const width = box.width || 1;
     const height = box.height || 1;
     const left = spot.x / width;
@@ -151,7 +157,7 @@ export const edgeZoneAt = (box: Box, spot: Spot): SplitDirection => {
         return 'right';
     }
     return nearest === top ? 'up' : 'down';
-};
+}
 
 /*
  * The rectangle the view would take, as shares of the cell it is dropped on, with `column` saying
@@ -168,7 +174,7 @@ export interface DropShape {
     column: boolean;
 }
 
-export const shapeOf = (zone: SplitZone): DropShape => {
+export function shapeOf(zone: SplitZone): DropShape {
     switch (zone) {
         case 'left':
             return { x: 0, y: 0, width: 0.5, height: 1, column: true };
@@ -181,11 +187,12 @@ export const shapeOf = (zone: SplitZone): DropShape => {
         default:
             return { x: 0, y: 0, width: 1, height: 1, column: false };
     }
-};
+}
 
 /* A drop that lands on the cell the view already stands in, alone in the grid, changes nothing. */
-export const isNowhereDrop = (from: CellAt | null, at: CellAt, zone: SplitZone): boolean =>
-    from !== null && from.column === at.column && from.cell === at.cell && zone === 'center';
+export function isNowhereDrop(from: CellAt | null, at: CellAt, zone: SplitZone): boolean {
+    return from !== null && from.column === at.column && from.cell === at.cell && zone === 'center';
+}
 
 /* The most columns there can be, for a caller that draws a hint about the limit. */
 export { MAX_COLUMNS };

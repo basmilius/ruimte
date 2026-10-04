@@ -20,7 +20,7 @@ const GrantsSchema = z.object({
 });
 type Grants = z.infer<typeof GrantsSchema>;
 
-const readJson = async <Schema extends z.ZodType>(path: string, schema: Schema, fallback: z.infer<Schema>): Promise<z.infer<Schema>> => {
+async function readJson<Schema extends z.ZodType>(path: string, schema: Schema, fallback: z.infer<Schema>): Promise<z.infer<Schema>> {
     try {
         const parsed = schema.safeParse(JSON.parse(await readFile(path, 'utf8')));
         return parsed.success ? parsed.data : fallback;
@@ -30,7 +30,7 @@ const readJson = async <Schema extends z.ZodType>(path: string, schema: Schema, 
         }
         throw error;
     }
-};
+}
 
 /*
  * What a person decided about computer use on this machine: whether it is on, and which apps an

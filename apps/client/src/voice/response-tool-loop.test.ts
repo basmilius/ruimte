@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { LiveEvent } from '@/voice/live-session';
 import { ResponseToolLoop, type ToolLoopObserver } from '@/voice/response-tool-loop';
 
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function flush(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('ResponseToolLoop', () => {
     test('executes a completed function call and continues after its response completes', async () => {

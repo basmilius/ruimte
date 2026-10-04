@@ -7,29 +7,31 @@ import { socketAddressFor } from './handshake';
 
 const DAEMON_ID = 'daemon-xyz';
 
-const row = (overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id: DAEMON_ID,
-    label: 'the box',
-    httpBaseUrl: 'http://box:4210',
-    wsBaseUrl: 'ws://box:4210',
-    reachability: 'lan',
-    daemonId: DAEMON_ID,
-    daemonPublicKey: null,
-    ...overrides
-});
+function row(overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id: DAEMON_ID,
+        label: 'the box',
+        httpBaseUrl: 'http://box:4210',
+        wsBaseUrl: 'ws://box:4210',
+        reachability: 'lan',
+        daemonId: DAEMON_ID,
+        daemonPublicKey: null,
+        ...overrides
+    };
+}
 
 let asked: string[];
 const realFetch = globalThis.fetch;
 
 /* Answers the routes it is given and records what was asked, so a test can say which the client reached. */
-const serve = (routes: Record<string, () => Promise<Response> | Response>): void => {
+function serve(routes: Record<string, () => Promise<Response> | Response>): void {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
         const url = String(input);
         asked.push(url);
         const route = Object.entries(routes).find(([path]) => url.endsWith(path));
         return route ? route[1]() : new Response('Not found', { status: 404 });
     }) as typeof fetch;
-};
+}
 
 beforeEach(() => {
     asked = [];

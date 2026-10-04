@@ -5,7 +5,7 @@ import { portTransport } from './port-transport';
 import { errorCode, isConnectionError } from './transport';
 
 /* The window's end of a port, with what it sent kept for the test and a way to hand it a frame from the host. */
-const fakePort = () => {
+function fakePort() {
     const sent: Array<Request | ServerFrame> = [];
     const listeners = new Set<(frame: unknown) => void>();
     const port: FramePort = {
@@ -23,9 +23,11 @@ const fakePort = () => {
         }
     };
     return { port, sent, deliver, listening: () => listeners.size };
-};
+}
 
-const lastId = (sent: Array<Request | ServerFrame>): string => (sent.at(-1) as Request).id;
+function lastId(sent: Array<Request | ServerFrame>): string {
+    return (sent.at(-1) as Request).id;
+}
 
 describe('portTransport', () => {
     test('sends a request with an id of its own and resolves the answer to that id', async () => {

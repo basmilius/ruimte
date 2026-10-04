@@ -5,8 +5,9 @@ import { accountName } from '@/pulsar/account-name';
 import { Icon } from '@basmilius/desktop-ui';
 
 /* GitHub serves every login's profile picture at this address; no other provider hands out a picture. */
-const pictureOf = (account: Account): string | null =>
-    account.provider === 'github' && account.login !== null ? `https://github.com/${encodeURIComponent(account.login)}.png?size=64` : null;
+function pictureOf(account: Account): string | null {
+    return account.provider === 'github' && account.login !== null ? `https://github.com/${encodeURIComponent(account.login)}.png?size=64` : null;
+}
 
 /* The round mark of a Ruimte account: its GitHub picture, else its first letter, else a person when signed out. */
 export function AccountAvatar({ account }: { readonly account: Account | null }) {

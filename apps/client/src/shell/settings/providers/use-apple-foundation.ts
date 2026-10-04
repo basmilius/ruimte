@@ -20,7 +20,7 @@ export interface AppleFoundation {
  * The model a Mac runs on its own, behind the one switch of its machine. Flipping it saves the machine's
  * identity and asks for its providers again, since turning the model on or off changes that list.
  */
-export const useAppleFoundation = (endpointId: string, provider: ProviderInfo | null): AppleFoundation => {
+export function useAppleFoundation(endpointId: string, provider: ProviderInfo | null): AppleFoundation {
     const { t } = useTranslation('settings');
     const info = useServers((state) => state.byEndpoint[endpointId]);
     const connection = useEndpointConnection(endpointId);
@@ -81,4 +81,4 @@ export const useAppleFoundation = (endpointId: string, provider: ProviderInfo | 
         status,
         setEnabled: (checked) => void setEnabled(checked)
     };
-};
+}

@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { ModelInfo } from '@ruimte/agent-contracts';
 import { modelName, modelNameFromSlug, sharedModelPrefix, shortModelName } from './model-name.ts';
 
-const model = (slug: string, name: string): ModelInfo => ({ slug, name, legacy: false, isDefault: false, options: [] });
+function model(slug: string, name: string): ModelInfo {
+    return { slug, name, legacy: false, isDefault: false, options: [] };
+}
 
 describe('a model with no catalog behind it', () => {
     test('drops the vendor and the date and puts the version back together', () => {
@@ -27,7 +29,9 @@ describe('a model the CLI offers', () => {
     });
 });
 
-const catalog = (...names: string[]): ModelInfo[] => names.map((name) => model(name.toLowerCase(), name));
+function catalog(...names: string[]): ModelInfo[] {
+    return names.map((name) => model(name.toLowerCase(), name));
+}
 
 describe('shortModelName', () => {
     test('drops the words every model shares', () => {

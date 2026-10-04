@@ -51,74 +51,76 @@ interface CameraSurface<TState extends CameraSlice> {
  * The camera of a canvas, a drawing and a diagram: the same pan, the same zoom, the same wait for a
  * first size. A surface spreads this into its store and says what its bounds are.
  */
-export const createCameraSlice = <TState extends CameraSlice>(
+export function createCameraSlice<TState extends CameraSlice>(
     set: (partial: Partial<CameraFields>) => void,
     get: () => TState,
     surface: CameraSurface<TState>
-): CameraSlice => ({
-    camera: { x: 0, y: 0, zoom: 1 },
-    viewport: { w: 0, h: 0 },
-    pendingCamera: null,
+): CameraSlice {
+    return {
+        camera: { x: 0, y: 0, zoom: 1 },
+        viewport: { w: 0, h: 0 },
+        pendingCamera: null,
 
-    setViewport(viewport) {
-        // The size is the answer to whatever was waiting for one, so the wait ends here.
-        const waiting = isMeasured(viewport) ? get().pendingCamera : null;
-        set({ viewport });
-        if (waiting === null) {
-            return;
+        setViewport(viewport) {
+            // The size is the answer to whatever was waiting for one, so the wait ends here.
+            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
+            set({ viewport });
+            if (waiting === null) {
+                return;
+            }
+            if (waiting.kind === 'fit') {
+                get().fitAll();
+            } else if (waiting.kind === 'view') {
+                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
+            } else {
+                surface.resume?.(get(), waiting);
+            }
+        },
+        setCamera(camera) {
+            set({ camera });
+        },
+        panBy(dx, dy) {
+            const { camera } = get();
+            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
+        },
+        zoomAt(factor, anchor) {
+            const { camera } = get();
+            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
+        },
+        settleZoom(anchor) {
+            const { camera } = get();
+            const target = snapZoom(camera.zoom);
+            if (target !== camera.zoom) {
+                set({ camera: zoomAround(camera, target, anchor) });
+            }
+        },
+        zoomTo(zoom, anchor) {
+            const { camera, viewport } = get();
+            set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
+        },
+        fitAll() {
+            const state = get();
+            const bounds = surface.boundsOfAll(state);
+            // An empty surface has nothing to fit, so the wait ends rather than standing forever.
+            if (bounds === null) {
+                set({ pendingCamera: null });
+                return;
+            }
+            const camera = cameraToFit(bounds, state.viewport);
+            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
+        },
+        zoomToSelection() {
+            const state = get();
+            const bounds = surface.boundsOfSelection(state);
+            const camera = bounds === null ? null : cameraToFit(bounds, state.viewport, 96, 1.5);
+            // A shortcut on a surface nobody can see yet is worth nothing later, so this one does not wait.
+            if (camera !== null) {
+                set({ camera, pendingCamera: null });
+            }
+        },
+        viewCamera() {
+            const { camera, viewport, pendingCamera } = get();
+            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
         }
-        if (waiting.kind === 'fit') {
-            get().fitAll();
-        } else if (waiting.kind === 'view') {
-            set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
-        } else {
-            surface.resume?.(get(), waiting);
-        }
-    },
-    setCamera(camera) {
-        set({ camera });
-    },
-    panBy(dx, dy) {
-        const { camera } = get();
-        set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
-    },
-    zoomAt(factor, anchor) {
-        const { camera } = get();
-        set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
-    },
-    settleZoom(anchor) {
-        const { camera } = get();
-        const target = snapZoom(camera.zoom);
-        if (target !== camera.zoom) {
-            set({ camera: zoomAround(camera, target, anchor) });
-        }
-    },
-    zoomTo(zoom, anchor) {
-        const { camera, viewport } = get();
-        set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
-    },
-    fitAll() {
-        const state = get();
-        const bounds = surface.boundsOfAll(state);
-        // An empty surface has nothing to fit, so the wait ends rather than standing forever.
-        if (bounds === null) {
-            set({ pendingCamera: null });
-            return;
-        }
-        const camera = cameraToFit(bounds, state.viewport);
-        set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
-    },
-    zoomToSelection() {
-        const state = get();
-        const bounds = surface.boundsOfSelection(state);
-        const camera = bounds === null ? null : cameraToFit(bounds, state.viewport, 96, 1.5);
-        // A shortcut on a surface nobody can see yet is worth nothing later, so this one does not wait.
-        if (camera !== null) {
-            set({ camera, pendingCamera: null });
-        }
-    },
-    viewCamera() {
-        const { camera, viewport, pendingCamera } = get();
-        return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
-    }
-});
+    };
+}

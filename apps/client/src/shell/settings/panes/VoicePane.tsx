@@ -14,9 +14,11 @@ import { useVoice } from '@/voice/state';
 import { closeVoicePanel, stopVoice } from '@/voice/controller';
 import { VoiceInputSection } from './VoiceInputSection';
 
-const titleCase = (value: string): string => value[0]!.toUpperCase() + value.slice(1);
+function titleCase(value: string): string {
+    return value[0]!.toUpperCase() + value.slice(1);
+}
 
-const descriptionFor = (status: OpenAiCredentialStatus): string => {
+function descriptionFor(status: OpenAiCredentialStatus): string {
     if (status.configured && status.persistent) {
         return i18next.t('settings:voice.key.persistent');
     }
@@ -24,7 +26,7 @@ const descriptionFor = (status: OpenAiCredentialStatus): string => {
         return i18next.t('settings:voice.key.session');
     }
     return i18next.t('settings:voice.key.missing');
-};
+}
 
 export function VoicePane() {
     const { t } = useTranslation('settings');

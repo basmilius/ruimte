@@ -6,8 +6,8 @@ import { watchPool } from '@/transport/pool-watch';
  * what puts a dot on a node and on its sidebar row. The daemon pushes a change to every socket; a
  * socket that opens asks once, since what changed while it was closed was pushed to nobody.
  */
-export const startProcessWarnings = (): (() => void) =>
-    watchPool((link, endpointId) => ({
+export function startProcessWarnings(): () => void {
+    return watchPool((link, endpointId) => ({
         onOpen: () => {
             // A daemon older than the panel does not know the request; it simply has no warnings.
             link.request('processes.listAlerts', {})
@@ -16,3 +16,4 @@ export const startProcessWarnings = (): (() => void) =>
         },
         subscriptions: [link.on('processes.alerts', (payload) => useProcessWarnings.getState().setAlerts(endpointId, payload.alerts))]
     }));
+}

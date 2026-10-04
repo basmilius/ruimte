@@ -33,13 +33,19 @@ export const NODE_ACCENTS: readonly { id: AccentId; color: string }[] = NODE_ACC
 
 /* Asked for when a menu draws one, never held: this list is built before i18next has any words, so
    a name taken at import would stay in whichever language loaded first. */
-export const accentLabel = (id: AccentId): string => i18next.t(`canvas:accents.${id}`);
+export function accentLabel(id: AccentId): string {
+    return i18next.t(`canvas:accents.${id}`);
+}
 
 /* The five a settings row shows in the open, blue (the one Ruimte carries) first and the others
    spread around the wheel. The rest sits behind the overflow beside them, which wears the accent
    itself once one is picked. */
 export const FEATURED_ACCENTS: readonly AccentId[] = ['blue', 'orange', 'lime', 'indigo', 'pink'];
 
-export const accentColor = (id: string | null | undefined): string | undefined => NODE_ACCENTS.find((entry) => entry.id === id)?.color;
+export function accentColor(id: string | null | undefined): string | undefined {
+    return NODE_ACCENTS.find((entry) => entry.id === id)?.color;
+}
 
-export const isFeatured = (id: string): boolean => FEATURED_ACCENTS.some((featured) => featured === id);
+export function isFeatured(id: string): boolean {
+    return FEATURED_ACCENTS.some((featured) => featured === id);
+}

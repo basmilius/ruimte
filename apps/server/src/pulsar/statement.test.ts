@@ -20,7 +20,7 @@ const NOW = 1_800_000_000_000;
 // A stand-in for the address book, with a key of its own and nothing to do with the pinned one.
 const addressBook = generateKeyPair();
 
-const statementFor = (clientPublicKey: string, overrides: Partial<AccessStatement> = {}, signer = addressBook): AccessStatement => {
+function statementFor(clientPublicKey: string, overrides: Partial<AccessStatement> = {}, signer = addressBook): AccessStatement {
     const base = {
         machineId: MACHINE_ID,
         clientPublicKey,
@@ -33,19 +33,19 @@ const statementFor = (clientPublicKey: string, overrides: Partial<AccessStatemen
         ...base,
         signature: signMessage(signer.privateKey, accessStatementMessage(base.machineId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt))
     };
-};
+}
 
 // This machine's own key, which a statement v2 has to name.
 const machine = generateKeyPair();
 
 /* A statement as the address book signs it now: the v1 signature, and the v2 one over the key its row lists and the account. */
-const statementV2For = (
+function statementV2For(
     clientPublicKey: string,
     accountId: string,
     machinePublicKey = machine.publicKey,
     overrides: Partial<AccessStatement> = {},
     signer = addressBook
-): AccessStatement => {
+): AccessStatement {
     const v1 = statementFor(clientPublicKey, overrides, signer);
     return {
         ...v1,
@@ -56,7 +56,7 @@ const statementV2For = (
             accessStatementV2Message(v1.machineId, machinePublicKey, accountId, v1.clientPublicKey, v1.nonce, v1.issuedAt, v1.expiresAt)
         )
     };
-};
+}
 
 describe('checkStatement', () => {
     const client = generateKeyPair();

@@ -30,9 +30,11 @@ export const CLOUDFLARE_RANGES = [
     '2c0f:f248::/32'
 ] as const;
 
-const ipv4Bits = (address: string): bigint => address.split('.').reduce((bits, part) => (bits << 8n) | BigInt(Number(part)), 0n);
+function ipv4Bits(address: string): bigint {
+    return address.split('.').reduce((bits, part) => (bits << 8n) | BigInt(Number(part)), 0n);
+}
 
-const ipv6Bits = (address: string): bigint => {
+function ipv6Bits(address: string): bigint {
     let text = address;
     // A trailing dotted quad (`::ffff:1.2.3.4`) is two groups written the IPv4 way.
     const dotted = text.match(/(\d+\.\d+\.\d+\.\d+)$/);
@@ -45,7 +47,7 @@ const ipv6Bits = (address: string): bigint => {
     const tailGroups = tail === undefined || tail === '' ? [] : tail.split(':');
     const groups = tail === undefined ? headGroups : [...headGroups, ...new Array<string>(8 - headGroups.length - tailGroups.length).fill('0'), ...tailGroups];
     return groups.reduce((bits, group) => (bits << 16n) | BigInt(parseInt(group, 16)), 0n);
-};
+}
 
 interface Range {
     family: 4 | 6;
@@ -53,7 +55,7 @@ interface Range {
     mask: bigint;
 }
 
-const rangeOf = (cidr: string): Range => {
+function rangeOf(cidr: string): Range {
     const [address = '', prefixText = ''] = cidr.split('/');
     const family = isIPv4(address) ? 4 : 6;
     const width = family === 4 ? 32n : 128n;
@@ -61,12 +63,12 @@ const rangeOf = (cidr: string): Range => {
     const mask = ((1n << prefix) - 1n) << (width - prefix);
     const bits = family === 4 ? ipv4Bits(address) : ipv6Bits(address);
     return { family, network: bits & mask, mask };
-};
+}
 
 const RANGES = CLOUDFLARE_RANGES.map(rangeOf);
 
 /* Whether an address belongs to Cloudflare's edge; an IPv4-mapped IPv6 address counts as its IPv4 half. */
-export const isCloudflareAddress = (address: string): boolean => {
+export function isCloudflareAddress(address: string): boolean {
     const plain = address.startsWith('::ffff:') && isIPv4(address.slice('::ffff:'.length)) ? address.slice('::ffff:'.length) : address;
     if (isIPv4(plain)) {
         const bits = ipv4Bits(plain);
@@ -77,4 +79,4 @@ export const isCloudflareAddress = (address: string): boolean => {
         return RANGES.some((range) => range.family === 6 && (bits & range.mask) === range.network);
     }
     return false;
-};
+}

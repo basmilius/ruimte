@@ -18,35 +18,47 @@ let drawings: DrawingStore;
 let events: SessionEvent[];
 let projectId: string;
 
-const element = (id: string, x = 0): DrawingElement => ({ kind: 'rect', id, x, y: 0, w: 160, h: 96, stroke: 'ink', strokeWidth: 2, seed: 12 });
+function element(id: string, x = 0): DrawingElement {
+    return { kind: 'rect', id, x, y: 0, w: 160, h: 96, stroke: 'ink', strokeWidth: 2, seed: 12 };
+}
 
-const drawn = (...elements: DrawingElement[]): DrawingContent => ({ elements });
+function drawn(...elements: DrawingElement[]): DrawingContent {
+    return { elements };
+}
 
 /* A project with one canvas and the drawing views the test asks for. */
-const content = (...drawingIds: string[]): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] },
-        ...drawingIds.map((id) => ({ kind: 'drawing' as const, id, name: id }))
-    ]
-});
+function content(...drawingIds: string[]): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] },
+            ...drawingIds.map((id) => ({ kind: 'drawing' as const, id, name: id }))
+        ]
+    };
+}
 
 /* Nothing here is shared, so every drawing sits on the private side of the folder. */
-const drawingsDir = (): string => join(folder, '.ruimte', 'private', 'drawings');
+function drawingsDir(): string {
+    return join(folder, '.ruimte', 'private', 'drawings');
+}
 
-const sharedDrawingsDir = (): string => join(folder, '.ruimte', 'drawings');
+function sharedDrawingsDir(): string {
+    return join(folder, '.ruimte', 'drawings');
+}
 
-const drawingFile = (viewId: string): string => join(drawingsDir(), `${viewId}.json`);
+function drawingFile(viewId: string): string {
+    return join(drawingsDir(), `${viewId}.json`);
+}
 
-const exists = async (path: string): Promise<boolean> => {
+async function exists(path: string): Promise<boolean> {
     try {
         await stat(path);
         return true;
     } catch {
         return false;
     }
-};
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-drawings-'));

@@ -57,7 +57,7 @@ export interface EndChildren {
  * turn is aborted (so no parent is woken by an agent that was stopped), and the leaves stop before
  * the nodes that opened them. Every step is safe to run twice.
  */
-export const endChildren = (deps: EndChildrenDeps): EndChildren => {
+export function endChildren(deps: EndChildrenDeps): EndChildren {
     const { lineage, tasks, outbox } = deps;
     const now = deps.now ?? Date.now;
     const reviving = new Set([...TASK_REVIVING, ...(deps.reviving ?? [])]);
@@ -97,4 +97,4 @@ export const endChildren = (deps: EndChildrenDeps): EndChildren => {
         handler: (entry) => end([...new Set([...entry.payload.nodeIds, ...lineage.descendants(entry.target)])], deps.reason),
         end
     };
-};
+}

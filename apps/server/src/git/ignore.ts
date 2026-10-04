@@ -6,10 +6,10 @@ import { runGit } from './run.ts';
  * which is what the split reads it as; outside a repository the answer is no, and so is every
  * failure, because the safe reading of "I cannot tell" is that nothing travels.
  */
-export const isTrackedPath = async (path: string): Promise<boolean> => {
+export async function isTrackedPath(path: string): Promise<boolean> {
     const { code, stdout } = await runGit(['ls-files', '-z', '--error-unmatch', '--', path], dirname(path));
     return code === 0 && stdout !== '';
-};
+}
 
 /*
  * Which of these paths git would ignore, in one call. `check-ignore` answers 0 when something
@@ -17,7 +17,7 @@ export const isTrackedPath = async (path: string): Promise<boolean> => {
  * question could not be asked; every path is then unignored. Paths go in NUL separated and come
  * back the same way, which is the only form a name with a newline in it survives.
  */
-export const ignoredPaths = async (paths: readonly string[], cwd: string): Promise<Set<string>> => {
+export async function ignoredPaths(paths: readonly string[], cwd: string): Promise<Set<string>> {
     if (paths.length === 0) {
         return new Set();
     }
@@ -26,4 +26,4 @@ export const ignoredPaths = async (paths: readonly string[], cwd: string): Promi
         return new Set();
     }
     return new Set(stdout.split('\0').filter((path) => path !== ''));
-};
+}

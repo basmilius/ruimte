@@ -28,7 +28,7 @@ export interface CanvasSight {
  * so what attention counts. An agent asking what is on the canvas passes it false on purpose: it reads
  * the node's own title and content rather than the pixels, so a zoomed-out canvas is not blind to it.
  */
-export const visibleNodes = (canvas: CanvasSight, { readable }: { readable: boolean }): string[] => {
+export function visibleNodes(canvas: CanvasSight, { readable }: { readable: boolean }): string[] {
     if (!isMeasured(canvas.viewport)) {
         return [];
     }
@@ -40,27 +40,35 @@ export const visibleNodes = (canvas: CanvasSight, { readable }: { readable: bool
     }
     const rect = visibleRect(canvas.camera, canvas.viewport);
     return canvas.nodes.filter((node) => canvas.hidden?.has(node.id) !== true && intersects(node, rect)).map((node) => node.id);
-};
+}
 
-export const readableNodes = (canvas: CanvasSight): string[] => visibleNodes(canvas, { readable: true });
+export function readableNodes(canvas: CanvasSight): string[] {
+    return visibleNodes(canvas, { readable: true });
+}
 
 /* An open canvas as the question about sight: a store keys its nodes, a sight lists them in order. */
-export const sightOf = (canvas: CanvasState): CanvasSight => ({
-    camera: canvas.camera,
-    viewport: canvas.viewport,
-    nodes: canvas.order.map((id) => canvas.nodes[id]!),
-    hidden: canvas.hidden,
-    maximized: maximizedNodeOf(canvas)
-});
+export function sightOf(canvas: CanvasState): CanvasSight {
+    return {
+        camera: canvas.camera,
+        viewport: canvas.viewport,
+        nodes: canvas.order.map((id) => canvas.nodes[id]!),
+        hidden: canvas.hidden,
+        maximized: maximizedNodeOf(canvas)
+    };
+}
 
 /* What the window has in front of a person: nothing at all while another window has the focus. */
-export const seenNodes = (windowFocused: boolean, perView: readonly (readonly string[])[]): Set<string> => new Set(windowFocused ? perView.flat() : []);
+export function seenNodes(windowFocused: boolean, perView: readonly (readonly string[])[]): Set<string> {
+    return new Set(windowFocused ? perView.flat() : []);
+}
 
 /* True while this window has the keyboard. A window behind another one is not being looked at. */
-const windowFocused = (): boolean => typeof document !== 'undefined' && document.hasFocus();
+function windowFocused(): boolean {
+    return typeof document !== 'undefined' && document.hasFocus();
+}
 
 // All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
-export const nodesInSight = (): string[][] => {
+export function nodesInSight(): string[][] {
     const { views, layout } = useDocument.getState();
     const onScreen = new Set(layout === null ? [] : viewIdsIn(layout));
     return views.flatMap((view) => {
@@ -79,10 +87,12 @@ export const nodesInSight = (): string[][] => {
         }
         return [readableNodes(sightOf(canvas))];
     });
-};
+}
 
 /*
  * The nodes a person is looking at right now. Empty while the window is behind another one, so a
  * node that was on screen when the window went away counts as unseen from that moment.
  */
-export const seenNodeIds = (): Set<string> => seenNodes(windowFocused(), nodesInSight());
+export function seenNodeIds(): Set<string> {
+    return seenNodes(windowFocused(), nodesInSight());
+}

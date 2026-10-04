@@ -3,18 +3,20 @@ import type { ProviderAccounts, ProviderAccountStatus } from '@ruimte/agent-cont
 import { chatHost, setChatHost, type ChatHost } from '../host';
 import { accountName, accountStatusLine, accountsOfKind, canContinueOn, freeAccountColor, hasAccountChoice, mintAccountId, offeredAccounts } from './accounts';
 
-const status = (id: string, patch: Partial<ProviderAccountStatus> = {}): ProviderAccountStatus => ({
-    id,
-    kind: id.split('_')[0]!,
-    state: 'ready',
-    email: null,
-    plan: null,
-    organization: null,
-    home: `/home/${id}`,
-    message: null,
-    checkedAt: 1,
-    ...patch
-});
+function status(id: string, patch: Partial<ProviderAccountStatus> = {}): ProviderAccountStatus {
+    return {
+        id,
+        kind: id.split('_')[0]!,
+        state: 'ready',
+        email: null,
+        plan: null,
+        organization: null,
+        home: `/home/${id}`,
+        message: null,
+        checkedAt: 1,
+        ...patch
+    };
+}
 
 const accounts: ProviderAccounts = {
     accounts: {

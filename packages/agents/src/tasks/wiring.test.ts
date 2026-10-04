@@ -28,23 +28,23 @@ let clock: ManualClock;
 let claude: InProcessCli;
 
 /* Settles once `check` holds, looked at after every chat event and every task written; no clock is involved. */
-const until = (check: () => boolean): Promise<void> => {
+function until(check: () => boolean): Promise<void> {
     if (check()) {
         return Promise.resolve();
     }
     return new Promise((resolve) => {
         watchers.push({ check, resolve });
     });
-};
+}
 
-const look = (): void => {
+function look(): void {
     for (const watcher of [...watchers]) {
         if (watcher.check()) {
             watchers.splice(watchers.indexOf(watcher), 1);
             watcher.resolve();
         }
     }
-};
+}
 
 beforeEach(async () => {
     dataDir = await mkdtemp(join(tmpdir(), 'agents-tasks-'));
@@ -89,7 +89,9 @@ afterEach(async () => {
     await rm(dataDir, { recursive: true, force: true });
 });
 
-const turnsOf = (chatId: string): ChatTurnItem[] => (host.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(chatId: string): ChatTurnItem[] {
+    return (host.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 test('a chat child settles its task on the end of its turn, and the parent is woken once with the result', async () => {
     const task = await wiring.verbs.open({ projectId: 'project', parentId: 'lead', childId: 'child', title: 'Lexer', prompt: 'fix the lexer' });

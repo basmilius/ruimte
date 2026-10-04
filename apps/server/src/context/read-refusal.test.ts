@@ -4,21 +4,23 @@ import { refusalRows } from '@ruimte/agents/context/refusal';
 import { readRefusal } from './read-refusal.ts';
 
 /* The refusal as the CLI prints it, which is what these sentences are written for. */
-const refuseRead = (...args: Parameters<typeof readRefusal>): string => {
+function refuseRead(...args: Parameters<typeof readRefusal>): string {
     const { code, message, lines } = readRefusal(...args);
     return refusalRows(code, message, lines);
-};
+}
 
-const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode => ({
-    id,
-    kind,
-    title: id,
-    x: 0,
-    y: 0,
-    w: 400,
-    h: 300,
-    ...extra
-});
+function node(id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode {
+    return {
+        id,
+        kind,
+        title: id,
+        x: 0,
+        y: 0,
+        w: 400,
+        h: 300,
+        ...extra
+    };
+}
 
 /* The canvas of the session this all started in: one line runs from the chat into the terminal,
    and every other node on it has none. */

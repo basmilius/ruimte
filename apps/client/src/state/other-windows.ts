@@ -6,11 +6,7 @@ export type StorageTarget = Pick<Window, 'addEventListener' | 'removeEventListen
  * `storage` event fires in every page but the one that wrote, which is the shape this needs: the
  * writer keeps what it has and the others read again. A key of null is the whole storage cleared.
  */
-export const followOtherWindows = (
-    key: string,
-    reread: () => void,
-    target: StorageTarget | null = typeof window === 'undefined' ? null : window
-): (() => void) => {
+export function followOtherWindows(key: string, reread: () => void, target: StorageTarget | null = typeof window === 'undefined' ? null : window): () => void {
     if (target === null) {
         return () => undefined;
     }
@@ -21,4 +17,4 @@ export const followOtherWindows = (
     };
     target.addEventListener('storage', onStorage);
     return () => target.removeEventListener('storage', onStorage);
-};
+}

@@ -28,17 +28,22 @@ const SYSTEM_SETTINGS_PANES: ReadonlySet<string> = new Set([
     'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
 ]);
 
-export const isSystemSettingsPane = (url: string): boolean => SYSTEM_SETTINGS_PANES.has(url);
+export function isSystemSettingsPane(url: string): boolean {
+    return SYSTEM_SETTINGS_PANES.has(url);
+}
 
 /* A frame inside the app's page never leaves for the system browser: nobody chose that link. */
-export const appSubframeNavigation = (url: string, appOrigin: string, schemes: readonly string[] = []): NavigationVerdict =>
-    isAppUrl(url, appOrigin, [...schemes]) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
+export function appSubframeNavigation(url: string, appOrigin: string, schemes: readonly string[] = []): NavigationVerdict {
+    return isAppUrl(url, appOrigin, [...schemes]) || url === 'about:blank' || url === 'about:srcdoc' ? 'allow' : 'refuse';
+}
 
 // TODO(Bas): media, location and notifications through a prompt per origin in the client, once that exists.
 const GUEST_PERMISSIONS: ReadonlySet<string> = new Set(['fullscreen', 'pointerLock', 'clipboard-sanitized-write']);
 
 /* What a page in a browser node gets without asking. Electron grants everything to a session without a handler. */
-export const allowGuestPermission = (permission: string): boolean => GUEST_PERMISSIONS.has(permission);
+export function allowGuestPermission(permission: string): boolean {
+    return GUEST_PERMISSIONS.has(permission);
+}
 
 /* What a person does on purpose: a press or a key, never a move, a wheel or a scroll. */
 const DELIBERATE_INPUT: ReadonlySet<string> = new Set(['mouseDown', 'mouseUp', 'rawKeyDown', 'keyDown', 'gestureTap', 'touchEnd']);
@@ -51,7 +56,7 @@ export const GESTURE_MS = 1000;
  * The preview runs the file's scripts, and without this a cloned repository's page could send the
  * person's browser anywhere, over and over. One press lets one link out.
  */
-export const createGestureGate = (now: () => number) => {
+export function createGestureGate(now: () => number) {
     let pressedAt: number | null = null;
     return {
         saw(type: string): void {
@@ -65,7 +70,7 @@ export const createGestureGate = (now: () => number) => {
             return recent;
         }
     };
-};
+}
 
 /* The part of a `<webview>`'s preferences a guest could use to reach Node or another session. */
 export interface GuestWebPreferences {
@@ -83,7 +88,7 @@ export interface GuestWebPreferences {
  * included, and must not attach. A script in the page could otherwise ask for Node or a preload of
  * its own; the guest preload is registered on the session and survives this.
  */
-export const hardenGuestPreferences = (preferences: GuestWebPreferences): boolean => {
+export function hardenGuestPreferences(preferences: GuestWebPreferences): boolean {
     if (preferences.partition !== BROWSER_PARTITION && preferences.partition !== PREVIEW_PARTITION) {
         return false;
     }
@@ -93,4 +98,4 @@ export const hardenGuestPreferences = (preferences: GuestWebPreferences): boolea
     preferences.contextIsolation = true;
     preferences.sandbox = true;
     return true;
-};
+}

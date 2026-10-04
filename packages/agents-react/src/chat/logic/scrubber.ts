@@ -45,8 +45,8 @@ const WIDTH_PERSON_PX = 8;
 const WIDTH_WAKE_PX = 5;
 
 /* `marks` is what `bookmarkRows` answers: the bookmark drawn at a row, by row id. */
-export const ticksOf = (rows: readonly TimelineRow[], marks: ReadonlyMap<string, ChatBookmark> = new Map()): ScrubberTick[] =>
-    rows.flatMap((row, rowIndex): ScrubberTick[] => {
+export function ticksOf(rows: readonly TimelineRow[], marks: ReadonlyMap<string, ChatBookmark> = new Map()): ScrubberTick[] {
+    return rows.flatMap((row, rowIndex): ScrubberTick[] => {
         const bookmark = marks.get(row.id) ?? null;
         if (row.kind === 'user') {
             // A message of only attachments still has a place in the thread; its names stand in for the text.
@@ -67,6 +67,7 @@ export const ticksOf = (rows: readonly TimelineRow[], marks: ReadonlyMap<string,
         const turnId = row.kind === 'turn-fold' ? row.turn.id : null;
         return [{ id: row.id, rowIndex, kind: 'bookmark', text: bookmark.excerpt, createdAt: bookmark.createdAt, turnId, bookmark }];
     });
+}
 
 /* One drawn tick: a message, or a run of messages merged once the height has fewer pixels than they need. */
 export interface TickSlot {
@@ -89,7 +90,7 @@ export interface ScrubberLayout {
 }
 
 /* `marked` and `found` say per message whether it has a bookmark and whether a find hit falls under it; absent, none has. */
-export const layoutTicks = (kinds: readonly TickKind[], height: number, marked: readonly boolean[] = [], found: readonly boolean[] = []): ScrubberLayout => {
+export function layoutTicks(kinds: readonly TickKind[], height: number, marked: readonly boolean[] = [], found: readonly boolean[] = []): ScrubberLayout {
     const count = kinds.length;
     const room = Math.max(0, Math.floor(height));
     const slotCount = Math.min(count, Math.floor(room / MIN_PITCH_PX));
@@ -116,13 +117,13 @@ export const layoutTicks = (kinds: readonly TickKind[], height: number, marked: 
         });
     }
     return { top, pitch, count, slots };
-};
+}
 
 /*
  * The tick whose stretch of the thread a row falls in: a tick stands for its row and every row up to
  * the next tick's, and a row above the first tick counts under the first. Null without ticks.
  */
-export const tickOfRow = (ticks: readonly ScrubberTick[], rowIndex: number): number | null => {
+export function tickOfRow(ticks: readonly ScrubberTick[], rowIndex: number): number | null {
     if (ticks.length === 0) {
         return null;
     }
@@ -139,10 +140,10 @@ export const tickOfRow = (ticks: readonly ScrubberTick[], rowIndex: number): num
         }
     }
     return found;
-};
+}
 
 /* Per tick, whether any of the rows has a find hit in its stretch. */
-export const ticksWithHits = (ticks: readonly ScrubberTick[], hitRows: readonly number[]): boolean[] => {
+export function ticksWithHits(ticks: readonly ScrubberTick[], hitRows: readonly number[]): boolean[] {
     const found = ticks.map(() => false);
     for (const row of hitRows) {
         const tick = tickOfRow(ticks, row);
@@ -151,10 +152,10 @@ export const ticksWithHits = (ticks: readonly ScrubberTick[], hitRows: readonly 
         }
     }
     return found;
-};
+}
 
 /* The message under a height in the strip; inside a merged tick the height picks among its messages. */
-export const messageAt = (layout: ScrubberLayout, y: number): number | null => {
+export function messageAt(layout: ScrubberLayout, y: number): number | null {
     const { slots, top, pitch } = layout;
     if (slots.length === 0) {
         return null;
@@ -164,9 +165,9 @@ export const messageAt = (layout: ScrubberLayout, y: number): number | null => {
     const slot = slots[index]!;
     const fraction = Math.min(1, Math.max(0, (offset - index * pitch) / pitch));
     return slot.first + Math.min(slot.last - slot.first, Math.floor(fraction * (slot.last - slot.first + 1)));
-};
+}
 
-export const slotOf = (layout: ScrubberLayout, message: number): number | null => {
+export function slotOf(layout: ScrubberLayout, message: number): number | null {
     const { slots } = layout;
     let low = 0;
     let high = slots.length - 1;
@@ -182,13 +183,13 @@ export const slotOf = (layout: ScrubberLayout, message: number): number | null =
         }
     }
     return null;
-};
+}
 
 /*
  * At rest every tick of a kind is as long as the next, so length never competes with the brightness
  * that says what is on screen. Only a pointer on the strip magnifies, the way a dock does, one step out.
  */
-export const tickWidth = (kind: TickKind, distanceFromPointer: number | null): number => {
+export function tickWidth(kind: TickKind, distanceFromPointer: number | null): number {
     if (distanceFromPointer === 0) {
         return WIDTH_HOVERED_PX;
     }
@@ -196,10 +197,10 @@ export const tickWidth = (kind: TickKind, distanceFromPointer: number | null): n
         return kind === 'wake' ? WIDTH_NEAR_WAKE_PX : WIDTH_NEAR_PERSON_PX;
     }
     return kind === 'wake' ? WIDTH_WAKE_PX : WIDTH_PERSON_PX;
-};
+}
 
 /* The last index whose start lies at or above a line, or -1. The starts only grow. */
-const lastAtOrAbove = (starts: readonly number[], line: number): number => {
+function lastAtOrAbove(starts: readonly number[], line: number): number {
     let low = 0;
     let high = starts.length - 1;
     let found = -1;
@@ -213,7 +214,7 @@ const lastAtOrAbove = (starts: readonly number[], line: number): number => {
         }
     }
     return found;
-};
+}
 
 export interface ReadingPosition {
     /* Where each message's row starts in the thread, in the virtualizer's measurements. */
@@ -232,7 +233,7 @@ export interface MessageRange {
  * The messages on screen. A message counts from its own start to the start of the next one, so the
  * question whose answer fills the screen is in view even after it scrolled out at the top.
  */
-export const messagesInView = ({ starts, scrollTop, visibleHeight }: ReadingPosition): MessageRange | null => {
+export function messagesInView({ starts, scrollTop, visibleHeight }: ReadingPosition): MessageRange | null {
     const bottom = scrollTop + visibleHeight;
     if (starts.length === 0 || visibleHeight <= 0 || starts[0]! >= bottom) {
         return null;
@@ -244,17 +245,19 @@ export const messagesInView = ({ starts, scrollTop, visibleHeight }: ReadingPosi
         last--;
     }
     return { first, last: Math.max(first, last) };
-};
+}
 
 /* Whether a drawn tick covers any of the messages on screen. */
-export const slotInView = (slot: TickSlot, range: MessageRange | null): boolean => range !== null && slot.last >= range.first && slot.first <= range.last;
+export function slotInView(slot: TickSlot, range: MessageRange | null): boolean {
+    return range !== null && slot.last >= range.first && slot.first <= range.last;
+}
 
 /*
  * The message a step back or forward lands on, among the ones `eligible` allows. A jump puts a
  * message's start at the top, so back from there is the one before it, and back from the middle of
  * a long answer is the question it belongs to. A pixel of slack absorbs rounding in the scroller.
  */
-export const stepMessage = (starts: readonly number[], eligible: (index: number) => boolean, scrollTop: number, direction: -1 | 1): number | null => {
+export function stepMessage(starts: readonly number[], eligible: (index: number) => boolean, scrollTop: number, direction: -1 | 1): number | null {
     if (direction === -1) {
         for (let i = lastAtOrAbove(starts, scrollTop - 1.5); i >= 0; i--) {
             if (eligible(i)) {
@@ -269,18 +272,18 @@ export const stepMessage = (starts: readonly number[], eligible: (index: number)
         }
     }
     return null;
-};
+}
 
 /*
  * The left padding of the thread in a view that draws the strip at its left edge. A wide view keeps
  * the usual padding, since its centered column already clears the strip; a narrower one pads until
  * the column's text starts clear of it, so nothing is ever drawn under the strip.
  */
-export const threadPaddingLeft = (width: number, strip: boolean): number => {
+export function threadPaddingLeft(width: number, strip: boolean): number {
     if (!strip) {
         return THREAD_PADDING_PX;
     }
     // The column's margin is half of what the padding leaves, so the padding counts the clearance twice.
     const padding = 2 * STRIP_CLEARANCE_PX + CONTENT_MAX_WIDTH_PX + THREAD_PADDING_PX - Math.floor(width);
     return Math.min(STRIP_CLEARANCE_PX, Math.max(THREAD_PADDING_PX, padding));
-};
+}

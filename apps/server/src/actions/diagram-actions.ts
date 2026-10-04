@@ -21,17 +21,19 @@ const DocumentSchema = z.strictObject({
     edges: z.array(z.strictObject(DiagramEdgeSchema.shape))
 });
 
-const pathOf = (path: readonly PropertyKey[]): string =>
-    path.reduce<string>((text, key) => (typeof key === 'number' ? `${text}[${key}]` : text === '' ? String(key) : `${text}.${String(key)}`), '');
+function pathOf(path: readonly PropertyKey[]): string {
+    return path.reduce<string>((text, key) => (typeof key === 'number' ? `${text}[${key}]` : text === '' ? String(key) : `${text}.${String(key)}`), '');
+}
 
-const valueAt = (value: unknown, path: readonly PropertyKey[]): unknown =>
-    path.reduce<unknown>(
+function valueAt(value: unknown, path: readonly PropertyKey[]): unknown {
+    return path.reduce<unknown>(
         (current, key) => (current !== null && typeof current === 'object' ? (current as Record<PropertyKey, unknown>)[key] : undefined),
         value
     );
+}
 
 /* The item a path is inside, by what names it, so an agent finds the node without counting to index 17. */
-const whoseLabel = (json: unknown, path: readonly PropertyKey[]): string => {
+function whoseLabel(json: unknown, path: readonly PropertyKey[]): string {
     const [list, index] = path;
     if (typeof index !== 'number') {
         return '';
@@ -44,10 +46,10 @@ const whoseLabel = (json: unknown, path: readonly PropertyKey[]): string => {
         return ` (${list === 'groups' ? 'group' : 'node'} "${item.id}")`;
     }
     return '';
-};
+}
 
 /* Zod's own sentences ("Invalid input: expected string, received undefined") name the rule and not the repair. */
-const issueText = (issue: z.core.$ZodIssue, json: unknown): string => {
+function issueText(issue: z.core.$ZodIssue, json: unknown): string {
     switch (issue.code) {
         case 'invalid_type':
             if (issue.path.length === 0) {
@@ -65,14 +67,14 @@ const issueText = (issue: z.core.$ZodIssue, json: unknown): string => {
         default:
             return issue.message;
     }
-};
+}
 
 // Enough to repair a document in one pass, few enough that a broken one does not fill the window.
 const MAX_PROBLEMS = 20;
 
 const HELP_LINE = 'detail\truimte-context help view diagram';
 
-const documentProblems = (error: z.ZodError, json: unknown): VerbRefusal => {
+function documentProblems(error: z.ZodError, json: unknown): VerbRefusal {
     const problems = error.issues.map((issue) => {
         const path = pathOf(issue.path) || 'document';
         return { path, text: `${issueText(issue, json)}${whoseLabel(json, issue.path)}` };
@@ -83,7 +85,7 @@ const documentProblems = (error: z.ZodError, json: unknown): VerbRefusal => {
         ...(problems.length > MAX_PROBLEMS ? [`note\t${problems.length - MAX_PROBLEMS} more past these`] : []),
         HELP_LINE
     ]);
-};
+}
 
 export const diagramActions: ActionHandlers<ServerActionContext> = {
     'diagram.replaceContent': async ({ viewId, document }, { context }) => {

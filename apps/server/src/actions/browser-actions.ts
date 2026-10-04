@@ -13,14 +13,14 @@ import { VerbRefusal, field, orNote, type BrowserDriveHost, type CanvasHost } fr
 import type { ServerActionContext } from './context.ts';
 
 /* Where a page is now when somebody holds it, else the address stored on its node. Reading it wakes nobody. */
-const addressOf = async (host: CanvasHost, id: string, stored: string | undefined): Promise<string | undefined> => {
+async function addressOf(host: CanvasHost, id: string, stored: string | undefined): Promise<string | undefined> {
     const outcome = await host.browsers?.drive(id, { kind: 'state' });
     return outcome?.state?.url ? outcome.state.url : stored;
-};
+}
 
 /* Every browser node this caller may drive, for a refusal that offers what the next call takes. */
-const browserLines = async (host: CanvasHost, sources: readonly ContextSource[], callerCanvas: string | null): Promise<string[]> =>
-    orNote(
+async function browserLines(host: CanvasHost, sources: readonly ContextSource[], callerCanvas: string | null): Promise<string[]> {
+    return orNote(
         await Promise.all(
             sources
                 .filter((source) => source.kind === 'browser')
@@ -30,12 +30,13 @@ const browserLines = async (host: CanvasHost, sources: readonly ContextSource[],
             ? 'No browser node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
             : 'No browser node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas'
     );
+}
 
 /*
  * What gets a caller a page it may drive. A line only runs between two nodes of one canvas, so for
  * a page on another canvas that line is no answer, and a page of its own beside it is.
  */
-const lineLines = (id: string, url: string | undefined, callerCanvas: string | null, pageCanvas: string): string[] => {
+function lineLines(id: string, url: string | undefined, callerCanvas: string | null, pageCanvas: string): string[] {
     if (callerCanvas === null) {
         return [
             `note\t${id} stands on ${pageCanvas}, and you are a view of your own: a line only runs between two nodes of one canvas, so no page can be linked to you`
@@ -48,13 +49,13 @@ const lineLines = (id: string, url: string | undefined, callerCanvas: string | n
         `note\t${id} stands on ${pageCanvas} and you on ${callerCanvas}, and a line only runs between two nodes of one canvas`,
         `see\truimte-context node new browser --url ${url ?? '<url>'}\topens a page of your own on your canvas, with the line to it drawn`
     ];
-};
+}
 
 /*
  * The node an action works on. A browser node of this project, with a line between it and the
  * caller: the same line a read takes, since driving a page and reading it are one permission.
  */
-const targetOf = async ({ host, place }: ServerActionContext, caller: string, id: string): Promise<ProjectNode> => {
+async function targetOf({ host, place }: ServerActionContext, caller: string, id: string): Promise<ProjectNode> {
     const content = await host.read(place.projectId);
     const sources = deriveProjectContextSources(content.views, null).get(caller) ?? [];
     const linked = sources.find((source) => source.id === id);
@@ -77,34 +78,36 @@ const targetOf = async ({ host, place }: ServerActionContext, caller: string, id
         ]);
     }
     return node;
-};
+}
 
 /* The machine's door to a page, or the refusal for a machine built without one. */
-const driverOf = ({ host }: ServerActionContext): BrowserDriveHost => {
+function driverOf({ host }: ServerActionContext): BrowserDriveHost {
     const driver = host.browsers;
     if (!driver) {
         throw new VerbRefusal('unavailable', 'This machine cannot drive a page');
     }
     return driver;
-};
+}
 
-const pageOf = (state: BrowserPageState | null): ActionOutput<'browser.inspect'>['page'] =>
-    state === null ? null : { url: state.url, title: state.title, loading: state.loading, canGoBack: state.canGoBack, canGoForward: state.canGoForward };
+function pageOf(state: BrowserPageState | null): ActionOutput<'browser.inspect'>['page'] {
+    return state === null ? null : { url: state.url, title: state.title, loading: state.loading, canGoBack: state.canGoBack, canGoForward: state.canGoForward };
+}
 
 /* Where the page stands after the drive; nobody holding it is an answer, never an error. */
-const outcomeOf = (nodeId: string, outcome: DriveOutcome | null): ActionOutput<'browser.inspect'> =>
-    outcome === null
+function outcomeOf(nodeId: string, outcome: DriveOutcome | null): ActionOutput<'browser.inspect'> {
+    return outcome === null
         ? { nodeId, open: false, page: null, error: null }
         : { nodeId, open: true, page: pageOf(outcome.state), error: outcome.error ?? outcome.state?.error ?? null };
+}
 
 /*
  * Only what the page's address and its own history do: a click, a keystroke and a scroll stay a
  * person's, so no action here takes one.
  */
-const drive = async (context: ServerActionContext, caller: string, nodeId: string, action: BrowserDriveAction) => {
+async function drive(context: ServerActionContext, caller: string, nodeId: string, action: BrowserDriveAction) {
     await targetOf(context, caller, nodeId);
     return { output: outcomeOf(nodeId, await driverOf(context).drive(nodeId, action)) };
-};
+}
 
 export const browserActions: ActionHandlers<ServerActionContext> = {
     'browser.inspect': async ({ nodeId }, { actor, context }) => drive(context, actor.id, nodeId, { kind: 'state' }),

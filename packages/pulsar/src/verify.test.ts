@@ -6,12 +6,13 @@ import { verifySignature as verifyWeb } from './verify-web.ts';
 /* The two files are one function in two runtimes, so every case has to answer the same on both. */
 const pair = generateKeyPairSync('ed25519');
 const publicKey = (pair.publicKey.export({ format: 'jwk' }) as { x: string }).x;
-const signatureOf = (message: string): string => sign(null, Buffer.from(message, 'utf8'), pair.privateKey).toString('base64url');
+function signatureOf(message: string): string {
+    return sign(null, Buffer.from(message, 'utf8'), pair.privateKey).toString('base64url');
+}
 
-const both = async (key: string, message: string, signature: string): Promise<[boolean, boolean]> => [
-    verifyNode(key, message, signature),
-    await verifyWeb(key, message, signature)
-];
+async function both(key: string, message: string, signature: string): Promise<[boolean, boolean]> {
+    return [verifyNode(key, message, signature), await verifyWeb(key, message, signature)];
+}
 
 describe('verifySignature', () => {
     test('takes a signature over exactly this message', async () => {

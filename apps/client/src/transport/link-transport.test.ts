@@ -27,13 +27,13 @@ class FakeLink implements Link {
 }
 
 // Fake timers leave setImmediate alone. Each step runs the timers due in that millisecond, then every promise they started.
-const tick = async (ms = 0): Promise<void> => {
+async function tick(ms = 0): Promise<void> {
     for (let i = 0; i < ms; i++) {
         jest.advanceTimersByTime(1);
         await new Promise((resolve) => setImmediate(resolve));
     }
     await new Promise((resolve) => setImmediate(resolve));
-};
+}
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -43,7 +43,7 @@ afterEach(() => {
     jest.useRealTimers();
 });
 
-const setup = (onOpen?: (events: LinkEvents) => void) => {
+function setup(onOpen?: (events: LinkEvents) => void) {
     const links: FakeLink[] = [];
     const transport = new LinkTransport('ws://machine/ws', (_url, events) => {
         onOpen?.(events);
@@ -52,7 +52,7 @@ const setup = (onOpen?: (events: LinkEvents) => void) => {
         return link;
     });
     return { transport, links };
-};
+}
 
 describe('LinkTransport', () => {
     const piece = { mime: 'video/mp4', size: 3, version: '1-3', offset: 0 };

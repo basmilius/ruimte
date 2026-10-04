@@ -4,7 +4,7 @@ import { EditorView, type DecorationSet } from '@codemirror/view';
 import { chipDecorations } from './chips';
 import { markdownLanguage } from './editor';
 
-const chipsOf = (state: EditorState): string[] => {
+function chipsOf(state: EditorState): string[] {
     const found: string[] = [];
     for (const source of state.facet(EditorView.decorations)) {
         (source as DecorationSet).between(0, state.doc.length, (from, to) => {
@@ -12,7 +12,7 @@ const chipsOf = (state: EditorState): string[] => {
         });
     }
     return found;
-};
+}
 
 describe('chipDecorations', () => {
     test('marks the chosen mentions and skills in the text', () => {

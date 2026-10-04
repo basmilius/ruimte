@@ -59,7 +59,9 @@ type Dialog =
     | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string }
     | { kind: 'pull-request'; cwd: string; subject: string };
 
-const filesOf = (work: readonly GitWork[]): GitFile[] => work.flatMap((step) => step.files);
+function filesOf(work: readonly GitWork[]): GitFile[] {
+    return work.flatMap((step) => step.files);
+}
 
 /*
  * What the daemon knows about the checkouts of a project: every repository the folder holds, the
@@ -808,7 +810,7 @@ export function GitPanel() {
 }
 
 /* The branches a pick offers: everything but the one that is out, and only local ones to delete. */
-const pickableBranches = (dialog: Dialog | null, state: CheckoutRefs | null): Choice[] => {
+function pickableBranches(dialog: Dialog | null, state: CheckoutRefs | null): Choice[] {
     if (dialog?.kind !== 'pick-branch' || state === null) {
         return [];
     }
@@ -816,17 +818,17 @@ const pickableBranches = (dialog: Dialog | null, state: CheckoutRefs | null): Ch
     return source
         .filter((ref) => !ref.current && ref.name !== state.branch)
         .map((ref) => ({ value: ref.name, label: ref.name, ...(ref.isDefault ? { hint: i18next.t('panels:git.branchMenu.default') } : {}) }));
-};
+}
 
 /* The pull request opens where every other link does: the system browser, not a node on the canvas. */
-const openUrl = (url: string): void => {
+function openUrl(url: string): void {
     const bridge = desktop();
     if (bridge) {
         void bridge.openExternal(url);
     } else {
         window.open(url, '_blank', 'noreferrer');
     }
-};
+}
 
 interface ActionsMenuProps {
     busy: boolean;

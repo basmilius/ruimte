@@ -16,40 +16,50 @@ const W = DELEGATION_WIDTH;
 const H = DELEGATION_HEIGHT;
 const TAU = Math.PI * 2;
 
-const clamp = (value: number, low = 0, high = 1) => (value < low ? low : value > high ? high : value);
-const lerp = (from: number, to: number, amount: number) => from + (to - from) * amount;
-const fract = (value: number) => value - Math.floor(value);
-const mod = (value: number, size: number) => ((value % size) + size) % size;
-const smoothstep = (from: number, to: number, value: number) => {
+function clamp(value: number, low = 0, high = 1) {
+    return value < low ? low : value > high ? high : value;
+}
+function lerp(from: number, to: number, amount: number) {
+    return from + (to - from) * amount;
+}
+function fract(value: number) {
+    return value - Math.floor(value);
+}
+function mod(value: number, size: number) {
+    return ((value % size) + size) % size;
+}
+function smoothstep(from: number, to: number, value: number) {
     const amount = clamp((value - from) / (to - from));
     return amount * amount * (3 - 2 * amount);
-};
-const outCubic = (value: number) => 1 - Math.pow(1 - clamp(value), 3);
-const inOutCubic = (value: number) => {
+}
+function outCubic(value: number) {
+    return 1 - Math.pow(1 - clamp(value), 3);
+}
+function inOutCubic(value: number) {
     const amount = clamp(value);
     return amount < 0.5 ? 4 * amount * amount * amount : 1 - Math.pow(-2 * amount + 2, 3) / 2;
-};
-const inBack = (value: number, overshoot: number) => {
+}
+function inBack(value: number, overshoot: number) {
     const amount = clamp(value);
     return (overshoot + 1) * amount * amount * amount - overshoot * amount * amount;
-};
+}
 
-const hexToRgb = (hex: string): [number, number, number] => {
+function hexToRgb(hex: string): [number, number, number] {
     const value = parseInt(hex.replace('#', ''), 16);
     return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
-};
-const rgba = (hex: string, alpha = 1) => {
+}
+function rgba(hex: string, alpha = 1) {
     const [red, green, blue] = hexToRgb(hex);
     return `rgba(${red},${green},${blue},${alpha})`;
-};
-const mix = (from: string, to: string, amount: number, alpha = 1) => {
+}
+function mix(from: string, to: string, amount: number, alpha = 1) {
     const start = hexToRgb(from);
     const end = hexToRgb(to);
     const channel = (index: number) => Math.round(lerp(start[index] ?? 0, end[index] ?? 0, amount));
     return `rgba(${channel(0)},${channel(1)},${channel(2)},${alpha})`;
-};
+}
 // Colors the client mixes in CSS (`color-mix`), mixed once here and kept as hex so they can be mixed again.
-const hexMix = (from: string, to: string, amount: number) => {
+function hexMix(from: string, to: string, amount: number) {
     const start = hexToRgb(from);
     const end = hexToRgb(to);
     return `#${start
@@ -59,7 +69,7 @@ const hexMix = (from: string, to: string, amount: number) => {
                 .padStart(2, '0')
         )
         .join('')}`;
-};
+}
 
 // The site's dark theme, token for token (globals.css).
 const PAL = {
@@ -131,36 +141,48 @@ const SLOT_OF = new Int32Array(CHILDREN.length);
 ORDER.forEach((child, slot) => {
     SLOT_OF[child] = slot;
 });
-const lift = (index: number) => CHILDREN[index]!.done + 0.15;
-const fly = (index: number) => CHILDREN[index]!.done + 0.45;
-const land = (index: number) => fly(index) + 0.85;
+function lift(index: number) {
+    return CHILDREN[index]!.done + 0.15;
+}
+function fly(index: number) {
+    return CHILDREN[index]!.done + 0.45;
+}
+function land(index: number) {
+    return fly(index) + 0.85;
+}
 const ANSWER_LINES = ['Load the cart once and batch', 'the shipping call. The bundle', 'can stay as it is.'];
 const ANSWER_WORDS = ANSWER_LINES.join(' ').split(' ').length;
 
 // `.status-pulse`: 2s, down to half opacity and back.
-const statusPulse = (time: number) => 0.75 + 0.25 * Math.cos((time * TAU) / 2);
+function statusPulse(time: number) {
+    return 0.75 + 0.25 * Math.cos((time * TAU) / 2);
+}
 
 // A spring's step response, for lifts and settles that have to stay a pure function of time.
-const springStep = (elapsed: number, omega = 16, zeta = 0.5) => {
+function springStep(elapsed: number, omega = 16, zeta = 0.5) {
     if (elapsed <= 0) {
         return 0;
     }
     const damped = omega * Math.sqrt(1 - zeta * zeta);
     return 1 - Math.exp(-zeta * omega * elapsed) * (Math.cos(damped * elapsed) + ((zeta * omega) / damped) * Math.sin(damped * elapsed));
-};
+}
 
-const parentX = (local: number) => {
+function parentX(local: number) {
     const out = inOutCubic((local - SLIDE) / 0.9);
     const back = inOutCubic((local - RETURN) / 0.9);
     return lerp(PX_CENTER, PX_LEFT, out * (1 - back));
-};
+}
 
-const reveal = (local: number, start: number, duration = 0.35) => outCubic((local - start) / duration);
+function reveal(local: number, start: number, duration = 0.35) {
+    return outCubic((local - start) / duration);
+}
 
 /* A connector route as polyline samples, so a pulse or a card can ride it by arc length. */
 type Route = { xs: Float32Array; ys: Float32Array; ls: Float32Array; count: number; length: number };
 
-const makeRoute = (): Route => ({ xs: new Float32Array(64), ys: new Float32Array(64), ls: new Float32Array(64), count: 0, length: 0 });
+function makeRoute(): Route {
+    return { xs: new Float32Array(64), ys: new Float32Array(64), ls: new Float32Array(64), count: 0, length: 0 };
+}
 
 function routePush(route: Route, x: number, y: number): void {
     const index = route.count;

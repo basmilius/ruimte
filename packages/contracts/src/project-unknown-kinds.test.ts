@@ -11,7 +11,9 @@ import {
 } from './project.ts';
 import { duplicateIdIn, migrateSharedFile, withoutCrossViewEdges } from './project-migrate.ts';
 
-const migratedFile = (value: unknown) => migrateSharedFile(value)?.file ?? null;
+function migratedFile(value: unknown) {
+    return migrateSharedFile(value)?.file ?? null;
+}
 import { withDuplicatedView, withRenamedView, withViewIcon } from './project-views.ts';
 
 /* A file as a newer Ruimte writes it: a view and a canvas node of kinds this version never heard of. */
@@ -38,20 +40,26 @@ const NEWER_FILE = {
     ]
 };
 
-const parsedFrom = (file: unknown) => {
+function parsedFrom(file: unknown) {
     const document = migratedFile(structuredClone(file));
     if (!document) {
         throw new Error('the newer file was refused');
     }
     return document;
-};
+}
 
-const parsed = () => parsedFrom(NEWER_FILE);
+function parsed() {
+    return parsedFrom(NEWER_FILE);
+}
 
-const canvasOf = (views: readonly unknown[]): ProjectCanvasView => views[0] as ProjectCanvasView;
+function canvasOf(views: readonly unknown[]): ProjectCanvasView {
+    return views[0] as ProjectCanvasView;
+}
 
 /* The entries a newer Ruimte owns, as text: a known entry is rewritten in the order of its schema, as it always was. */
-const unknownEntriesOf = (views: readonly unknown[]): string => JSON.stringify([canvasOf(views).nodes[1], views[1]]);
+function unknownEntriesOf(views: readonly unknown[]): string {
+    return JSON.stringify([canvasOf(views).nodes[1], views[1]]);
+}
 
 const UNKNOWN_ENTRIES = JSON.stringify([NEWER_FILE.views[0]!.nodes![1], NEWER_FILE.views[1]]);
 

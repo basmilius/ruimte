@@ -9,13 +9,13 @@ export const FS_FILE_PATH = '/fs/file';
  * Serve only authenticated image, video, sound, PDF and text bytes. Text comes here when it is past
  * what one frame on the socket carries. Ranges let a media element seek and a PDF reader fetch one page at a time.
  */
-export const handleFsFileRequest = async (
+export async function handleFsFileRequest(
     request: Request,
     url: URL,
     remoteAddress: string,
     options: AccessOptions,
     machineHome: MachineHome
-): Promise<Response> => {
+): Promise<Response> {
     if (url.pathname !== FS_FILE_PATH) {
         return new Response('Not found', { status: 404 });
     }
@@ -42,4 +42,4 @@ export const handleFsFileRequest = async (
     }
     const range = parseByteRange(request.headers.get('range'), served.size);
     return bytesResponse({ mime: served.mime, size: served.size, body: served.bytes }, { inline: true, range });
-};
+}

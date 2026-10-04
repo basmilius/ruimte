@@ -29,10 +29,10 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const start = async (sessionId: string): Promise<void> => {
+async function start(sessionId: string): Promise<void> {
     await manager.create({ sessionId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: home });
     await manager.attach(sessionId, 'c1', 80, 24);
-};
+}
 
 describe('BunPtyAdapter under a SessionManager', () => {
     test('output of the shell reaches an attached client', async () => {

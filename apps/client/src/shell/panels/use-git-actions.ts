@@ -10,23 +10,27 @@ import { useTransport } from '@/transport/context';
 
 type GitRun = ActionOutput<'git.publishBranch'>;
 
-const resultOf = (actionId: string, run: GitRun): GitActionResult => ({
-    actionId,
-    summary: run.summary,
-    output: run.output,
-    ...(run.commit === null ? {} : { commit: run.commit }),
-    ...(run.url === null ? {} : { url: run.url }),
-    ...(run.conflicts.length === 0 ? {} : { conflicts: run.conflicts })
-});
+function resultOf(actionId: string, run: GitRun): GitActionResult {
+    return {
+        actionId,
+        summary: run.summary,
+        output: run.output,
+        ...(run.commit === null ? {} : { commit: run.commit }),
+        ...(run.url === null ? {} : { url: run.url }),
+        ...(run.conflicts.length === 0 ? {} : { conflicts: run.conflicts })
+    };
+}
 
 /* A run of one repository answers the first entry; the panel never names more than one at a time. */
-const firstOf = (actionId: string, output: ActionOutput<'git.push'>): GitActionResult => resultOf(actionId, output.runs[0]!);
+function firstOf(actionId: string, output: ActionOutput<'git.push'>): GitActionResult {
+    return resultOf(actionId, output.runs[0]!);
+}
 
 /*
  * One of the panel's actions, by the kind the daemon knows it under, run through the catalog as a
  * person's. The panel's own dialogs have asked whatever there was to ask.
  */
-export const runGitKind = async ({
+export async function runGitKind({
     cwd: repository,
     actionId: run,
     kind,
@@ -38,7 +42,7 @@ export const runGitKind = async ({
     stash,
     force,
     strategy
-}: GitActionPayload): Promise<GitActionResult> => {
+}: GitActionPayload): Promise<GitActionResult> {
     switch (kind) {
         case 'fetch':
             return firstOf(run, await performAsPerson('git.fetch', { repository, run }));
@@ -84,7 +88,7 @@ export const runGitKind = async ({
         case 'create-pr':
             return resultOf(run, await performAsPerson('git.createPullRequest', { repository, title: subject ?? '', body: body ?? null, run }));
     }
-};
+}
 
 export type ActionOutcome = { ok: true; result: GitActionResult } | { ok: false; message: string; code: string | null };
 
@@ -133,12 +137,12 @@ export interface GitActions {
  * same message. A repository that fails does not stop it, so the summary at the end is where the
  * whole outcome is read; cancel breaks off the turn that is running and leaves the rest alone.
  */
-export const runManyJobs = async (
+export async function runManyJobs(
     jobs: readonly ManyJob[],
     toastByAction: Map<string, { toastId: string; title: string | null }>,
     options: ManyOptions = {},
     runKind: (payload: GitActionPayload) => Promise<GitActionResult> = runGitKind
-): Promise<ManyOutcome> => {
+): Promise<ManyOutcome> {
     if (jobs.length === 0) {
         return { done: 0, failed: 0, diverged: [] };
     }
@@ -202,10 +206,10 @@ export const runManyJobs = async (
         ...(choose === undefined || asks.length === 0 ? {} : { actions: asks })
     });
     return { done, failed: failed.length, diverged };
-};
+}
 
 /* Running the panel's actions and saying how they went. */
-export const useGitActions = (): GitActions => {
+export function useGitActions(): GitActions {
     /* Which toast a running action writes to, and the title it has to keep; an action that is over
        is not in here. A run over several repositories owns its title, since that is where the one
        thing a person cannot see from a phase is written: which repository is up and how many are left. */
@@ -273,4 +277,4 @@ export const useGitActions = (): GitActions => {
     );
 
     return useMemo(() => ({ run, runMany }), [run, runMany]);
-};
+}

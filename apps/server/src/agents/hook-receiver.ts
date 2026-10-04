@@ -16,15 +16,15 @@ const MAX_BODY_BYTES = 4 * 1024 * 1024;
 // The events whose hook stdout becomes context for the model (`hookSpecificOutput.additionalContext`), in Claude Code and Codex alike.
 const CONTEXT_EVENTS = new Set(['SessionStart', 'UserPromptSubmit']);
 
-const bearer = (request: Request): string | null => {
+function bearer(request: Request): string | null {
     const header = request.headers.get('authorization') ?? '';
     return header.startsWith('Bearer ') ? header.slice(7).trim() || null : null;
-};
+}
 
-const eventOf = (body: unknown): string | null => {
+function eventOf(body: unknown): string | null {
     const event = typeof body === 'object' && body !== null ? (body as Record<string, unknown>).hook_event_name : undefined;
     return typeof event === 'string' ? event : null;
-};
+}
 
 /*
  * Answers `POST /hooks/<kind>` from a CLI hook. The token in the bearer header names the
@@ -32,12 +32,12 @@ const eventOf = (body: unknown): string | null => {
  * hook command prints and the CLI folds into the turn; every other hook gets an empty 204. A permission
  * request is only a status: the CLI's own prompt is where it is answered.
  */
-export const handleHookRequest = async (
+export async function handleHookRequest(
     request: Request,
     pathname: string,
     target: HookTarget,
     contextHintForToken?: (token: string, event: string, kind: AgentKind) => string | null
-): Promise<Response> => {
+): Promise<Response> {
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 });
     }
@@ -75,4 +75,4 @@ export const handleHookRequest = async (
         }
     }
     return new Response(null, { status: 204 });
-};
+}

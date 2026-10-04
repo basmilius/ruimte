@@ -10,12 +10,12 @@ import { searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
 import { writeTextFile, type WriteBoundary } from '../fs/write.ts';
 
-export const registerFsHandlers = (
+export function registerFsHandlers(
     dispatcher: Dispatcher,
     watcher: FolderWatcher,
     boundaryOf: (clientId: string) => Promise<WriteBoundary>,
     machineHome: MachineHome
-): void => {
+): void {
     dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden })));
 
     dispatcher.register('fs.search', (payload) => searchFiles(payload.cwd, payload.query, payload.limit));
@@ -72,4 +72,4 @@ export const registerFsHandlers = (
             return {};
         })
     );
-};
+}

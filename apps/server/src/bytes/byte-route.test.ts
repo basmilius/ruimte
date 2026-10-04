@@ -14,8 +14,9 @@ const SVG = new Blob(['<svg xmlns="http://www.w3.org/2000/svg"></svg>']);
 
 let root: string;
 
-const local = (init?: RequestInit): Request =>
-    new Request(URL_OF_A_FILE, { ...init, headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) } });
+function local(init?: RequestInit): Request {
+    return new Request(URL_OF_A_FILE, { ...init, headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) } });
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-byte-route-'));

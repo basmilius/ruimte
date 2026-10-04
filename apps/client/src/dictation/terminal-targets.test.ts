@@ -2,7 +2,9 @@ import { expect, test } from 'bun:test';
 import type { DictationTarget } from './controller';
 import { registerTerminalDictationTarget, terminalTargetKey, useTerminalDictationTargets } from './terminal-targets';
 
-const target = (id: string): DictationTarget => ({ id, element: {} as HTMLElement, capture: () => null });
+function target(id: string): DictationTarget {
+    return { id, element: {} as HTMLElement, capture: () => null };
+}
 
 test('terminal controls resolve only a target on their own endpoint', () => {
     const local = terminalTargetKey('local', 'terminal');

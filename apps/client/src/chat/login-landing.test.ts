@@ -2,18 +2,20 @@ import { describe, expect, test } from 'bun:test';
 import type { ProviderAccountStatus } from '@ruimte/contracts';
 import { loginLanded } from './login-landing';
 
-const status = (patch: Partial<ProviderAccountStatus>): ProviderAccountStatus => ({
-    id: 'claude',
-    kind: 'claude',
-    state: 'signed-out',
-    email: null,
-    plan: null,
-    organization: null,
-    home: '/Users/me/.claude',
-    message: null,
-    checkedAt: 1,
-    ...patch
-});
+function status(patch: Partial<ProviderAccountStatus>): ProviderAccountStatus {
+    return {
+        id: 'claude',
+        kind: 'claude',
+        state: 'signed-out',
+        email: null,
+        plan: null,
+        organization: null,
+        home: '/Users/me/.claude',
+        message: null,
+        checkedAt: 1,
+        ...patch
+    };
+}
 
 describe('a login that lands', () => {
     test('lands once a signed-out account reads logged in, with a check in between or not', () => {

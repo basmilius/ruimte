@@ -87,7 +87,7 @@ let monacoEngine: Promise<EditorEngine> | null = null;
  * never with the app. Monaco's themes, languages and keybindings are global to the page, so there is
  * one engine and a second call gets the first; one that failed to load is tried again.
  */
-export const loadMonacoEngine = (options: MonacoEngineOptions): Promise<EditorEngine> => {
+export function loadMonacoEngine(options: MonacoEngineOptions): Promise<EditorEngine> {
     monacoEngine ??= import('./monaco.ts')
         .then(({ createMonacoEngine }) => createMonacoEngine(options))
         .catch((error: unknown) => {
@@ -95,4 +95,4 @@ export const loadMonacoEngine = (options: MonacoEngineOptions): Promise<EditorEn
             throw error;
         });
     return monacoEngine;
-};
+}

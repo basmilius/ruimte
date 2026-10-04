@@ -15,12 +15,12 @@ let store: SnoozeStore;
 let events: SessionEvent[];
 let changes: SnoozeChange[];
 
-const open = (): SnoozeStore => {
+function open(): SnoozeStore {
     const opened = new SnoozeStore({ path: join(home, 'snoozes.json'), clock });
     opened.subscribe('client-1', (event) => events.push(event));
     opened.observe((change) => changes.push(change));
     return opened;
-};
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-snoozes-'));

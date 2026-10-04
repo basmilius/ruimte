@@ -10,23 +10,27 @@ const SUFFIX = '.bookmarks.json';
 
 const BookmarkFileSchema = z.object({ version: z.literal(1), bookmarks: ChatBookmarksSchema });
 
-export const bookmarkFileName = (chatId: string): string => `${encodeURIComponent(chatId)}${SUFFIX}`;
+export function bookmarkFileName(chatId: string): string {
+    return `${encodeURIComponent(chatId)}${SUFFIX}`;
+}
 
 /* Whether a name in the chats folder is a bookmarks file, which the chat records beside it must not count as a chat. */
-export const isBookmarkFileName = (name: string): boolean => name.endsWith(SUFFIX);
+export function isBookmarkFileName(name: string): boolean {
+    return name.endsWith(SUFFIX);
+}
 
 export type BookmarkListener = (chatId: string, bookmarks: ChatBookmark[]) => void;
 
 /* A name as it is kept: trimmed, and none at all when nothing is left. */
-const cleanName = (name: string | undefined): string | undefined => {
+function cleanName(name: string | undefined): string | undefined {
     const trimmed = name === undefined ? undefined : clipText(name.trim(), CHAT_BOOKMARK_LIMITS.name);
     return trimmed === undefined || trimmed === '' ? undefined : trimmed;
-};
+}
 
-const named = (bookmark: ChatBookmark, name: string | undefined): ChatBookmark => {
+function named(bookmark: ChatBookmark, name: string | undefined): ChatBookmark {
     const { name: _previous, ...rest } = bookmark;
     return name === undefined ? rest : { ...rest, name };
-};
+}
 
 /*
  * The bookmarks of every chat, one file per chat beside its record under `<home>/chats`, apart

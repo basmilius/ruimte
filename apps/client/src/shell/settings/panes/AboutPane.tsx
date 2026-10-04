@@ -45,7 +45,7 @@ interface Detail {
 
 /* The rows under the header, in the order a bug report wants them. The shell's versions are missing
    in a browser and in a shell that started before it passed them on. */
-const detailsOf = (server: ServerInfo | undefined): Detail[] => {
+function detailsOf(server: ServerInfo | undefined): Detail[] {
     const versions = desktop()?.versions;
     const machine = server?.label ?? server?.model ?? i18next.t('settings:about.details.notConnected');
     const rows: Detail[] = [
@@ -70,7 +70,7 @@ const detailsOf = (server: ServerInfo | undefined): Detail[] => {
         }
     );
     return rows;
-};
+}
 
 /* Where the update stands, as an icon in the color of what it asks of you. */
 const STATUS_ICONS: Record<UpdateState['status'], { icon: LucideIcon; className: string }> = {
@@ -85,19 +85,19 @@ const STATUS_ICONS: Record<UpdateState['status'], { icon: LucideIcon; className:
 };
 
 /* The release date of the version on offer, once the shell's copy of the notes knows it. */
-const releasedOn = (releases: readonly Release[] | undefined, version: string | undefined): string | null => {
+function releasedOn(releases: readonly Release[] | undefined, version: string | undefined): string | null {
     const published = releases?.find((release) => release.version === version)?.publishedAt;
     const at = published ? new Date(published) : null;
     return at === null || Number.isNaN(at.getTime()) ? null : formatDayWithYear(at);
-};
+}
 
 /* The version this window runs. A browser has no app version of its own: it runs the client the machine serves. */
-const useShownVersion = (): string | undefined => {
+function useShownVersion(): string | undefined {
     const endpointId = useFocusedMachine().endpointId;
     const machineVersion = useServers((s) => s.byEndpoint[endpointId]?.version);
     const currentVersion = useUpdates((s) => s.currentVersion);
     return isDesktop() && currentVersion ? currentVersion : (machineVersion ?? undefined);
-};
+}
 
 /* The sky of the welcome over the top of About, with the title bar of the dialog floating over it. */
 export function AboutHero() {

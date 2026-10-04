@@ -8,7 +8,7 @@ import { type DiskText, type TextDrafts, useTextDrafts } from '@/state/text-draf
  * file, a reload) comes back into this one. The editor's own edit is already its text, so it never
  * echoes.
  */
-export const bindDraftEditor = (editor: Editor, drafts: TextDrafts, endpointId: string, path: string): (() => void) => {
+export function bindDraftEditor(editor: Editor, drafts: TextDrafts, endpointId: string, path: string): () => void {
     const key = endpointKey(endpointId, path);
     const offChange = editor.onChange(() => drafts.edit(endpointId, path, editor.getText()));
     const offSave = editor.onSave(() => {
@@ -29,7 +29,7 @@ export const bindDraftEditor = (editor: Editor, drafts: TextDrafts, endpointId: 
         offBlur();
         offDraft();
     };
-};
+}
 
 export interface DraftEditorMount {
     editor: Editor;
@@ -42,13 +42,13 @@ export interface DraftEditorMount {
  * Taking it down keeps the draft, since a node the canvas culls or draws as a plate disposes its
  * editor and the next one has to open on what was typed.
  */
-export const mountDraftEditor = (
+export function mountDraftEditor(
     engine: EditorEngine,
     element: HTMLElement,
     drafts: TextDrafts,
     target: { endpointId: string; path: string; disk: DiskText },
     options: Omit<EditorOptions, 'text' | 'path'>
-): DraftEditorMount => {
+): DraftEditorMount {
     const { endpointId, path, disk } = target;
     drafts.open(endpointId, path, disk);
     const editor = engine.mount(element, { ...options, path, text: drafts.draft(endpointId, path)?.text ?? disk.text });
@@ -61,4 +61,4 @@ export const mountDraftEditor = (
             void drafts.save(endpointId, path);
         }
     };
-};
+}

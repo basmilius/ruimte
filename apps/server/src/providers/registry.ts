@@ -11,8 +11,9 @@ import { copilotProvider, geminiProvider } from './terminal-providers.ts';
 const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider, geminiProvider, copilotProvider];
 
 /* The provider of a kind, for the places that have no registry at hand (the hooks). */
-export const providerFor = (kind: AgentKind): ChatProvider =>
-    kind === 'apple' ? appleProvider : (BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider);
+export function providerFor(kind: AgentKind): ChatProvider {
+    return kind === 'apple' ? appleProvider : (BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider);
+}
 
 interface ProviderRegistryOptions {
     providers?: ChatProvider[];

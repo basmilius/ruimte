@@ -25,21 +25,29 @@ const UNKNOWN_NODE_SIZE = { w: 320, h: 200 };
 
 const RawEntrySchema = z.record(z.string(), z.unknown());
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const finiteOr = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+function finiteOr(value: unknown, fallback: number): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
 
-const positiveOr = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback);
+function positiveOr(value: unknown, fallback: number): number {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
 
 /* The frame of a node of an unknown kind as the entry gives it, with what a plate needs where the entry is silent. */
-const unknownNodeFrameOf = (raw: Record<string, unknown>): { id: unknown; title: string; x: number; y: number; w: number; h: number } => ({
-    id: raw.id,
-    title: typeof raw.title === 'string' ? raw.title : String(raw.kind),
-    x: finiteOr(raw.x, 0),
-    y: finiteOr(raw.y, 0),
-    w: positiveOr(raw.w, UNKNOWN_NODE_SIZE.w),
-    h: positiveOr(raw.h, UNKNOWN_NODE_SIZE.h)
-});
+function unknownNodeFrameOf(raw: Record<string, unknown>): { id: unknown; title: string; x: number; y: number; w: number; h: number } {
+    return {
+        id: raw.id,
+        title: typeof raw.title === 'string' ? raw.title : String(raw.kind),
+        x: finiteOr(raw.x, 0),
+        y: finiteOr(raw.y, 0),
+        w: positiveOr(raw.w, UNKNOWN_NODE_SIZE.w),
+        h: positiveOr(raw.h, UNKNOWN_NODE_SIZE.h)
+    };
+}
 
 // What a person may change about such a node: where it stands, how big it is, and its id when a canvas is copied.
 const UNKNOWN_NODE_WRITABLE = ['id', 'x', 'y', 'w', 'h'] as const;
@@ -50,12 +58,12 @@ const UNKNOWN_NODE_WRITABLE = ['id', 'x', 'y', 'w', 'h'] as const;
  * entry coming back over the wire is opened up first, so a machine that does know the kind reads the
  * real thing again.
  */
-const readEntry = (
+function readEntry(
     value: unknown,
     known: ReadonlySet<string>,
     stored: (entry: Record<string, unknown>) => unknown,
     wrap: (raw: Record<string, unknown>) => unknown
-): unknown => {
+): unknown {
     if (!isRecord(value)) {
         return value;
     }
@@ -67,7 +75,7 @@ const readEntry = (
         return entry;
     }
     return wrap(entry);
-};
+}
 
 // Where the title of a node came from: the session named itself from its first prompt, or a person
 // typed it. The title follows the session until someone sets it.
@@ -126,10 +134,12 @@ export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 /* Every kind a node on a canvas can have in memory: the ones this version makes, and the one it only carries. */
 export type CanvasNodeKind = ProjectNode['kind'];
 
-export const isUnknownNode = (node: Pick<ProjectNode, 'kind'>): boolean => node.kind === UNKNOWN_KIND;
+export function isUnknownNode(node: Pick<ProjectNode, 'kind'>): boolean {
+    return node.kind === UNKNOWN_KIND;
+}
 
 /* A node the way the file holds it: an unknown one is what was read, with whatever a person moved on top. */
-export const storedNodeOf = (node: ProjectNode): unknown => {
+export function storedNodeOf(node: ProjectNode): unknown {
     if (node.kind !== UNKNOWN_KIND || !node.raw) {
         return node;
     }
@@ -141,7 +151,7 @@ export const storedNodeOf = (node: ProjectNode): unknown => {
         }
     }
     return stored;
-};
+}
 
 export const CanvasNodeSchema = z.preprocess(
     (value) =>
@@ -216,8 +226,9 @@ const KNOWN_EDGE_ROLES: ReadonlySet<string> = new Set(EDGE_ROLES);
  * line falls back to what a line without a role has always been, while the word itself stays on the
  * edge for the Ruimte that wrote it. Same rule as a node or a view of an unknown kind.
  */
-export const edgeRole = (edge: Pick<ProjectEdge, 'role'>): EdgeRole | null =>
-    edge.role !== undefined && KNOWN_EDGE_ROLES.has(edge.role) ? (edge.role as EdgeRole) : null;
+export function edgeRole(edge: Pick<ProjectEdge, 'role'>): EdgeRole | null {
+    return edge.role !== undefined && KNOWN_EDGE_ROLES.has(edge.role) ? (edge.role as EdgeRole) : null;
+}
 
 // A named arrangement: where every node and text sat when it was saved.
 export const ProjectLayoutSchema = z.object({
@@ -403,7 +414,9 @@ export const PROJECT_ICON_NAMES = [
 
 export type ProjectIconName = (typeof PROJECT_ICON_NAMES)[number];
 
-export const isProjectIconName = (value: string): value is ProjectIconName => (PROJECT_ICON_NAMES as readonly string[]).includes(value);
+export function isProjectIconName(value: string): value is ProjectIconName {
+    return (PROJECT_ICON_NAMES as readonly string[]).includes(value);
+}
 
 /*
  * A Lucide name as the shared file and the wire carry it: any name, since the list grows with a
@@ -432,7 +445,9 @@ export const ProjectIconSchema = z.discriminatedUnion('kind', [
 export type ProjectIcon = z.infer<typeof ProjectIconSchema>;
 
 // The mark a project wears when nothing was picked and the folder declares none.
-export const initialIconOf = (name: string): ProjectIcon => ({ kind: 'initial', value: [...name.trim()][0]?.toUpperCase() ?? '?' });
+export function initialIconOf(name: string): ProjectIcon {
+    return { kind: 'initial', value: [...name.trim()][0]?.toUpperCase() ?? '?' };
+}
 
 // Where the name on screen came from: a person typed it, or it is the folder's own name.
 export const ProjectNameSourceSchema = z.enum(['chosen', 'folder']);
@@ -598,48 +613,71 @@ export const ProjectViewSchema = z.preprocess(
 export type ProjectView = z.infer<typeof ProjectViewSchema>;
 export type ProjectViewKind = ProjectView['kind'];
 
-export const isCanvasView = (view: ProjectView): view is ProjectCanvasView => view.kind === 'canvas';
+export function isCanvasView(view: ProjectView): view is ProjectCanvasView {
+    return view.kind === 'canvas';
+}
 
-export const isSeparatorView = (view: ProjectView): view is ProjectSeparatorView => view.kind === 'separator';
+export function isSeparatorView(view: ProjectView): view is ProjectSeparatorView {
+    return view.kind === 'separator';
+}
 
-export const isSubheaderView = (view: ProjectView): view is ProjectSubheaderView => view.kind === 'subheader';
+export function isSubheaderView(view: ProjectView): view is ProjectSubheaderView {
+    return view.kind === 'subheader';
+}
 
 /* The rows that divide the list rather than stand in it: a line, and a heading over what follows.
    Neither opens, neither holds a session, and neither is shared on its own. */
-export const isDividerView = (view: ProjectView): view is ProjectSeparatorView | ProjectSubheaderView => isSeparatorView(view) || isSubheaderView(view);
+export function isDividerView(view: ProjectView): view is ProjectSeparatorView | ProjectSubheaderView {
+    return isSeparatorView(view) || isSubheaderView(view);
+}
 
-export const isDrawingView = (view: ProjectView): view is ProjectDrawingView => view.kind === 'drawing';
+export function isDrawingView(view: ProjectView): view is ProjectDrawingView {
+    return view.kind === 'drawing';
+}
 
-export const isDiagramView = (view: ProjectView): view is ProjectDiagramView => view.kind === 'diagram';
+export function isDiagramView(view: ProjectView): view is ProjectDiagramView {
+    return view.kind === 'diagram';
+}
 
-export const isFileView = (view: ProjectView): view is ProjectFileView => view.kind === 'file';
+export function isFileView(view: ProjectView): view is ProjectFileView {
+    return view.kind === 'file';
+}
 
-export const isUnknownView = (view: ProjectView): view is ProjectUnknownView => view.kind === UNKNOWN_KIND;
+export function isUnknownView(view: ProjectView): view is ProjectUnknownView {
+    return view.kind === UNKNOWN_KIND;
+}
 
 /* The mark a person picked for a view; a divider has no room for one and an unknown view keeps whatever it has in the file. */
-export const viewIconOf = (view: ProjectView): ProjectIconChoice | null => (isDividerView(view) || view.kind === UNKNOWN_KIND ? null : (view.icon ?? null));
+export function viewIconOf(view: ProjectView): ProjectIconChoice | null {
+    return isDividerView(view) || view.kind === UNKNOWN_KIND ? null : (view.icon ?? null);
+}
 
 /*
  * The views that are one session under their own id: what a node carries, without a canvas around
  * it. A divider holds nothing, and a drawing, a diagram and a file are all read off disk, so none
  * of them has a session to attach to.
  */
-export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView =>
-    view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
+export function isSessionView(view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView {
+    return view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
+}
 
-export const isEmptyChatView = (view: ProjectView): view is ProjectChatView => view.kind === 'chat' && view.empty === true;
+export function isEmptyChatView(view: ProjectView): view is ProjectChatView {
+    return view.kind === 'chat' && view.empty === true;
+}
 
 /* The views a person can put on screen. A divider marks the list rather than standing in it, and
    this version has nothing to draw a view of an unknown kind with. */
-export const isOpenableView = (view: ProjectView): boolean => !isDividerView(view) && view.kind !== UNKNOWN_KIND;
+export function isOpenableView(view: ProjectView): boolean {
+    return !isDividerView(view) && view.kind !== UNKNOWN_KIND;
+}
 
 /* A view the way the file holds it. */
-export const storedViewOf = (view: ProjectView): unknown => {
+export function storedViewOf(view: ProjectView): unknown {
     if (view.kind === UNKNOWN_KIND) {
         return view.raw;
     }
     return view.kind === 'canvas' ? { ...view, nodes: view.nodes.map(storedNodeOf) } : view;
-};
+}
 
 /*
  * The flags one person put on views and nodes, by id, since a view id and a node id are one
@@ -689,7 +727,9 @@ export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
  * Views as a file holds them: every entry of an unknown kind back in the shape it was read in. The
  * wire takes either shape, since reading opens an `unknown` entry up again.
  */
-export const storedViewsOf = (views: readonly ProjectView[]): unknown[] => views.map(storedViewOf);
+export function storedViewsOf(views: readonly ProjectView[]): unknown[] {
+    return views.map(storedViewOf);
+}
 
 /*
  * What `.ruimte/project.json` holds: the identity of the project and the views a person put in git.
@@ -1032,7 +1072,9 @@ export const ProjectCloseResultSchema = z.object({
 export type ProjectCloseResult = z.infer<typeof ProjectCloseResultSchema>;
 
 /* A project a person closed. The menu keeps it under Recent until someone opens it again. */
-export const isRecentProject = (summary: ProjectSummary): boolean => summary.closedAt !== null && summary.closedAt !== undefined;
+export function isRecentProject(summary: ProjectSummary): boolean {
+    return summary.closedAt !== null && summary.closedAt !== undefined;
+}
 
 export const ProjectDeletePayloadSchema = z.object({
     projectId: ProjectIdSchema,

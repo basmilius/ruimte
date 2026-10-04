@@ -6,7 +6,11 @@ export const LOCK_KEYS: readonly (keyof Locks)[] = ['pan', 'zoom', 'move', 'resi
 
 /* The words are asked for when a row draws, not held: this module is imported before i18next has
    any, so a label taken here would stay in whichever language loaded first. */
-export const lockLabel = (key: keyof Locks): string => i18next.t(`canvas:locks.${key}.label`);
+export function lockLabel(key: keyof Locks): string {
+    return i18next.t(`canvas:locks.${key}.label`);
+}
 
 /* What the lock stops, under its own name. */
-export const lockHint = (key: keyof Locks): string => i18next.t(`canvas:locks.${key}.hint`);
+export function lockHint(key: keyof Locks): string {
+    return i18next.t(`canvas:locks.${key}.hint`);
+}

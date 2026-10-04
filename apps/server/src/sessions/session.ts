@@ -25,11 +25,12 @@ export const RESTORED_TEXT = '[session restored, previous shell ended]';
 const RESTORED_MARKER = `\r\n\x1b[2m${RESTORED_TEXT}\x1b[0m\r\n`;
 
 /* What Ruimte itself puts on a screen, line by line, so it never reads as output of the shell. */
-const dimmed = (text: string): string =>
-    text
+function dimmed(text: string): string {
+    return text
         .split('\n')
         .map((line) => `\x1b[2m${line}\x1b[0m\r\n`)
         .join('');
+}
 
 interface SessionOptions {
     id: string;

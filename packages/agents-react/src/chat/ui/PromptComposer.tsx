@@ -13,8 +13,9 @@ import { useChatActions } from '../actions';
 import { Icon } from '@basmilius/desktop-ui';
 
 /* The one being read stays in front; otherwise blocking before optional, oldest first, as everywhere else. */
-const pickSubject = (waiting: readonly PromptSubject[], activeId: string | null): PromptSubject | null =>
-    waiting.find((subject) => promptIdOf(subject) === activeId) ?? orderPrompts(waiting, isBlockingSubject, promptCreatedAt)[0] ?? null;
+function pickSubject(waiting: readonly PromptSubject[], activeId: string | null): PromptSubject | null {
+    return waiting.find((subject) => promptIdOf(subject) === activeId) ?? orderPrompts(waiting, isBlockingSubject, promptCreatedAt)[0] ?? null;
+}
 
 export function PromptComposer({
     chatId,

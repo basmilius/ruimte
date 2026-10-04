@@ -66,10 +66,11 @@ interface ChatsStore {
     forgetWhere(matches: (key: string) => boolean): void;
 }
 
-const isWaiting = (item: ChatItem | undefined): item is ChatApprovalItem | ChatQuestionItem =>
-    (item?.kind === 'approval' && item.decision === 'pending') || (item?.kind === 'question' && item.state === 'pending');
+function isWaiting(item: ChatItem | undefined): item is ChatApprovalItem | ChatQuestionItem {
+    return (item?.kind === 'approval' && item.decision === 'pending') || (item?.kind === 'question' && item.state === 'pending');
+}
 
-const stateOf = (info: ChatInfo, items: ChatItem[], page?: ChatPage): ChatState => {
+function stateOf(info: ChatInfo, items: ChatItem[], page?: ChatPage): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
     const order = items.map((item) => item.id);
     if (page === undefined || page.history.cursor === null) {
@@ -80,24 +81,25 @@ const stateOf = (info: ChatInfo, items: ChatItem[], page?: ChatPage): ChatState 
         byId[item.id] = item;
     }
     return { info, items: byId, structure: byId, order, history: page.history, waitingBefore: before.map((item) => item.id) };
-};
+}
 
 /* An older host names no place in the thread, and it always hands over the whole of it. */
-const isBeforePage = (state: ChatState, historyIndex: number | undefined): boolean =>
-    state.history !== undefined && historyIndex !== undefined && historyIndex < state.history.start;
+function isBeforePage(state: ChatState, historyIndex: number | undefined): boolean {
+    return state.history !== undefined && historyIndex !== undefined && historyIndex < state.history.start;
+}
 
 /* An item from before the page this client holds matters only as a request that waits, or one that stopped waiting. */
-const withEarlierItem = (state: ChatState, item: ChatItem): ChatState => {
+function withEarlierItem(state: ChatState, item: ChatItem): ChatState {
     const waiting = state.waitingBefore ?? [];
     const held = waiting.includes(item.id);
     if (isWaiting(item)) {
         return { ...withItem(state, item), waitingBefore: held ? waiting : [...waiting, item.id] };
     }
     return held ? { ...withItem(state, item), waitingBefore: waiting.filter((id) => id !== item.id) } : state;
-};
+}
 
 /* The page before the one a chat holds, unless the thread was read again since that page was asked for. */
-export const prependPage = (state: ChatState, cursor: string, page: ChatHistoryResult): ChatState => {
+export function prependPage(state: ChatState, cursor: string, page: ChatHistoryResult): ChatState {
     if (state.history?.cursor !== cursor) {
         return state;
     }
@@ -115,29 +117,34 @@ export const prependPage = (state: ChatState, cursor: string, page: ChatHistoryR
     }
     const waitingBefore = (state.waitingBefore ?? []).filter((id) => !olderIds.has(id));
     return { ...state, items, structure: items, order, history: page.history, waitingBefore };
-};
+}
 
 /* The requests that still wait, oldest first: those from before the page this client holds, then the thread's own. */
-export const waitingRequestsOf = (chat: Pick<ChatState, 'structure' | 'order' | 'waitingBefore'> | undefined): Array<ChatApprovalItem | ChatQuestionItem> =>
-    [...(chat?.waitingBefore ?? []), ...(chat?.order ?? [])].map((id) => chat?.structure[id]).filter(isWaiting);
+export function waitingRequestsOf(chat: Pick<ChatState, 'structure' | 'order' | 'waitingBefore'> | undefined): Array<ChatApprovalItem | ChatQuestionItem> {
+    return [...(chat?.waitingBefore ?? []), ...(chat?.order ?? [])].map((id) => chat?.structure[id]).filter(isWaiting);
+}
 
 /* The state with one item replaced, in the thread and in the structure the rows come from. */
-const withItem = (state: ChatState, item: ChatItem): ChatState => {
+function withItem(state: ChatState, item: ChatItem): ChatState {
     const items = { ...state.items, [item.id]: item };
     return { ...state, items, structure: items };
-};
+}
 
 /* Cheap enough, since a status only arrives when the host saw one change, never on a streamed word. */
-const sameInfo = (left: ChatInfo, right: ChatInfo): boolean => JSON.stringify(left) === JSON.stringify(right);
+function sameInfo(left: ChatInfo, right: ChatInfo): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
+}
 
 /* The statuses with this chat's info in them, the same object when that info is already there. */
-const withStatus = (statuses: ChatStatuses, key: string, info: ChatInfo): ChatStatuses =>
-    statuses[key]?.info === info ? statuses : { ...statuses, [key]: { info } };
+function withStatus(statuses: ChatStatuses, key: string, info: ChatInfo): ChatStatuses {
+    return statuses[key]?.info === info ? statuses : { ...statuses, [key]: { info } };
+}
 
-const without = <T>(rows: Record<string, T>, matches: (key: string) => boolean): Record<string, T> =>
-    Object.fromEntries(Object.entries(rows).filter(([key]) => !matches(key)));
+function without<T>(rows: Record<string, T>, matches: (key: string) => boolean): Record<string, T> {
+    return Object.fromEntries(Object.entries(rows).filter(([key]) => !matches(key)));
+}
 
-export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
+export function applyEvent(state: ChatState, event: ChatEvent): ChatState {
     switch (event.type) {
         case 'item': {
             if (isBeforePage(state, event.historyIndex)) {
@@ -168,7 +175,7 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
         case 'reset':
             return stateOf(event.info, event.items);
     }
-};
+}
 
 export const useChats = create<ChatsStore>((set) => ({
     byKey: {},
@@ -246,24 +253,27 @@ export const useChats = create<ChatsStore>((set) => ({
 }));
 
 /* The sink of one host's chat client: it hands over chat ids, this puts them under the keys of its scope. */
-export const chatSink = (keyOf: (chatId: string) => string): ChatSink => ({
-    reset: (chatId, info, items, page) => useChats.getState().reset(keyOf(chatId), info, items, page),
-    prepend: (chatId, cursor, page) => useChats.getState().prepend(keyOf(chatId), cursor, page),
-    apply: (chatId, event) => useChats.getState().apply(keyOf(chatId), event),
-    status: (chatId, info) => useChats.getState().status(keyOf(chatId), info),
-    bookmarks: (chatId, bookmarks) => useChats.getState().bookmarks(keyOf(chatId), bookmarks),
-    forget: (chatId) => useChats.getState().forget(keyOf(chatId))
-});
+export function chatSink(keyOf: (chatId: string) => string): ChatSink {
+    return {
+        reset: (chatId, info, items, page) => useChats.getState().reset(keyOf(chatId), info, items, page),
+        prepend: (chatId, cursor, page) => useChats.getState().prepend(keyOf(chatId), cursor, page),
+        apply: (chatId, event) => useChats.getState().apply(keyOf(chatId), event),
+        status: (chatId, info) => useChats.getState().status(keyOf(chatId), info),
+        bookmarks: (chatId, bookmarks) => useChats.getState().bookmarks(keyOf(chatId), bookmarks),
+        forget: (chatId) => useChats.getState().forget(keyOf(chatId))
+    };
+}
 
 /* One chat's thread in the scope this is rendered in. The selector keeps a render tied to the field it reads. */
-export const useChatRow = <T>(chatId: string, select: (row: ChatState | undefined) => T): T => {
+export function useChatRow<T>(chatId: string, select: (row: ChatState | undefined) => T): T {
     const { keyOf } = useChatScope();
     return useChats((s) => select(s.byKey[keyOf(chatId)]));
-};
+}
 
 /* The item as the thread holds it now, for a row derived from the structure, which a delta leaves alone. */
-export const useCurrentItem = <T extends ChatItem>(chatId: string, derived: T): T =>
-    useChatRow(chatId, (row) => {
+export function useCurrentItem<T extends ChatItem>(chatId: string, derived: T): T {
+    return useChatRow(chatId, (row) => {
         const item = row?.items[derived.id];
         return item?.kind === derived.kind ? (item as T) : derived;
     });
+}

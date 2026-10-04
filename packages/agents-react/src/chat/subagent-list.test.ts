@@ -17,32 +17,40 @@ import {
 } from './subagent-list';
 import { formatMoment, formatTokens } from '@basmilius/desktop-ui/format';
 
-const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
-    id,
-    kind: 'subagent',
-    createdAt: 0,
-    turnId: null,
-    toolUseId: `toolu_${id}`,
-    description: `Agent ${id}`,
-    subagentType: null,
-    prompt: null,
-    background: false,
-    status: 'running',
-    startedAt: 0,
-    finishedAt: null,
-    summary: null,
-    result: null,
-    usage: null,
-    lastTool: null,
-    itemsTruncated: false,
-    ...patch
-});
+function subagent(id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem {
+    return {
+        id,
+        kind: 'subagent',
+        createdAt: 0,
+        turnId: null,
+        toolUseId: `toolu_${id}`,
+        description: `Agent ${id}`,
+        subagentType: null,
+        prompt: null,
+        background: false,
+        status: 'running',
+        startedAt: 0,
+        finishedAt: null,
+        summary: null,
+        result: null,
+        usage: null,
+        lastTool: null,
+        itemsTruncated: false,
+        ...patch
+    };
+}
 
-const message = (id: string): ChatItem => ({ id, kind: 'user', createdAt: 0, turnId: null, text: id });
+function message(id: string): ChatItem {
+    return { id, kind: 'user', createdAt: 0, turnId: null, text: id };
+}
 
-const note = (id: string): ChatItem => ({ id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text: id });
+function note(id: string): ChatItem {
+    return { id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text: id };
+}
 
-const task = (status: SubagentTask['status']): SubagentTask => ({ status, createdAt: 0, settledAt: null });
+function task(status: SubagentTask['status']): SubagentTask {
+    return { status, createdAt: 0, settledAt: null };
+}
 
 describe('subagent list', () => {
     test('the flyout lists what runs and what settled since the last message, in thread order', () => {

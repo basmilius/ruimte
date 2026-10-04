@@ -4,20 +4,22 @@ import type { WakeChat } from '../chat/wake-chat.ts';
 import type { WakeParentEntry } from './task-work.ts';
 import { RESULT_PREVIEW_BYTES, wakeParentHandler, wakePrompt } from './wake-parent.ts';
 
-const task = (id: string, overrides: Partial<Task> = {}): Task => ({
-    id,
-    projectId: 'project',
-    parentId: 'chat-lead',
-    childId: `chat-${id}`,
-    title: `Title ${id}`,
-    prompt: 'do it',
-    status: 'done',
-    result: { text: `result of ${id}`, source: 'turn', at: 1 },
-    createdAt: 1,
-    settledAt: 2,
-    wake: 'pending',
-    ...overrides
-});
+function task(id: string, overrides: Partial<Task> = {}): Task {
+    return {
+        id,
+        projectId: 'project',
+        parentId: 'chat-lead',
+        childId: `chat-${id}`,
+        title: `Title ${id}`,
+        prompt: 'do it',
+        status: 'done',
+        result: { text: `result of ${id}`, source: 'turn', at: 1 },
+        createdAt: 1,
+        settledAt: 2,
+        wake: 'pending',
+        ...overrides
+    };
+}
 
 const entry: WakeParentEntry = {
     kind: 'wake-parent',
@@ -31,7 +33,7 @@ const entry: WakeParentEntry = {
 };
 
 /* A task store as the handler reads it, and a chat that says whether a turn is in its way. */
-const fixture = (tasks: Task[], chat: { items?: ChatItem[]; busy?: boolean; deliveryPending?: boolean } | null) => {
+function fixture(tasks: Task[], chat: { items?: ChatItem[]; busy?: boolean; deliveryPending?: boolean } | null) {
     const woken: string[][] = [];
     const marked: string[] = [];
     const dropped: string[] = [];
@@ -86,7 +88,7 @@ const fixture = (tasks: Task[], chat: { items?: ChatItem[]; busy?: boolean; deli
         chat: async () => wake
     });
     return { handler, woken, marked, dropped };
-};
+}
 
 describe('wake-parent', () => {
     test('takes every settled task that has not woken the chat, in one turn, and leaves the open ones', async () => {

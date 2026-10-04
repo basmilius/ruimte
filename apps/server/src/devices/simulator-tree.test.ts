@@ -45,9 +45,13 @@ const ROOT = {
     children: []
 };
 
-const treeReply = (id: number) => ({ type: 'tree', id, scale: 3, root: ROOT, truncated: false, ms: 30 });
+function treeReply(id: number) {
+    return { type: 'tree', id, scale: 3, root: ROOT, truncated: false, ms: 30 };
+}
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+function flush() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 let timers: ManualTimers;
 let children: FakeChild[];
@@ -71,10 +75,10 @@ beforeEach(() => {
 });
 
 /* The last process started, once the reader has asked it for a tree. */
-const asked = async (): Promise<FakeChild> => {
+async function asked(): Promise<FakeChild> {
     await flush();
     return children.at(-1)!;
-};
+}
 
 describe('SimulatorTreeReader', () => {
     test('starts the bridge on the first read, waits for it and keeps it for the next', async () => {

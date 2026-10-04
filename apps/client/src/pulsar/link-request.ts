@@ -18,20 +18,20 @@ const PendingLinkSchema = z.object({ code: z.string().max(32).nullable(), opened
 export type PendingLink = z.infer<typeof PendingLinkSchema>;
 
 /* The code a `/link` address carries, `{ code: null }` for the page without one, or null for any other page. */
-export const linkRequestOf = (pathname: string, search: string): { code: string | null } | null => {
+export function linkRequestOf(pathname: string, search: string): { code: string | null } | null {
     if (pathname.replace(/\/+$/, '') !== LINK_PATH) {
         return null;
     }
     const code = new URLSearchParams(search).get('code');
     return { code: code === null ? null : typedCode(code) };
-};
+}
 
-export const rememberLink = (storage: LoginStorage, code: string | null, now = Date.now()): void => {
+export function rememberLink(storage: LoginStorage, code: string | null, now = Date.now()): void {
     storage.setItem(PENDING_LINK_KEY, JSON.stringify({ code, openedAt: now } satisfies PendingLink));
-};
+}
 
 /* The request a page left for GitHub with, until no code it carries could still be waiting. */
-export const rememberedLink = (storage: LoginStorage, now = Date.now()): PendingLink | null => {
+export function rememberedLink(storage: LoginStorage, now = Date.now()): PendingLink | null {
     const raw = storage.getItem(PENDING_LINK_KEY);
     if (raw === null) {
         return null;
@@ -48,24 +48,24 @@ export const rememberedLink = (storage: LoginStorage, now = Date.now()): Pending
         return null;
     }
     return pending.data;
-};
+}
 
-export const forgetLink = (storage: LoginStorage): void => {
+export function forgetLink(storage: LoginStorage): void {
     storage.removeItem(PENDING_LINK_KEY);
-};
+}
 
 /*
  * What a person typed, shaped the way the terminal prints it: letters only, upper case, a dash after
  * the fourth. A letter the code never uses stays, so the lookup can say it is not a code rather than
  * the field swallowing a key without a word.
  */
-export const typedCode = (input: string): string => {
+export function typedCode(input: string): string {
     const letters = input
         .toUpperCase()
         .replace(/[^A-Z]/g, '')
         .slice(0, USER_CODE_LENGTH);
     return letters.length > 4 ? `${letters.slice(0, 4)}-${letters.slice(4)}` : letters;
-};
+}
 
 export type LinkStep = 'unavailable' | 'sign-in' | 'signing-in' | 'enter-code' | 'confirm' | 'added' | 'denied';
 
@@ -77,7 +77,7 @@ export interface LinkStepInput {
 }
 
 /* Which part of the dialog stands: an outcome first, then the account, then the code. */
-export const linkStep = (input: LinkStepInput): LinkStep => {
+export function linkStep(input: LinkStepInput): LinkStep {
     if (input.outcome !== null) {
         return input.outcome;
     }
@@ -92,7 +92,7 @@ export const linkStep = (input: LinkStepInput): LinkStep => {
         case 'signed-in':
             return input.lookedUp ? 'confirm' : 'enter-code';
     }
-};
+}
 
 interface LinkRequestState {
     open: boolean;
@@ -103,7 +103,7 @@ interface LinkRequestState {
 export const useLinkRequest = create<LinkRequestState>(() => ({ open: false, code: null }));
 
 /* Once at boot: a `/link` address becomes the dialog, and so does one the page left for GitHub with. */
-export const startLinkRequest = (storage: LoginStorage = localStorage): void => {
+export function startLinkRequest(storage: LoginStorage = localStorage): void {
     const arrived = linkRequestOf(location.pathname, location.search);
     if (arrived !== null) {
         rememberLink(storage, arrived.code);
@@ -114,9 +114,9 @@ export const startLinkRequest = (storage: LoginStorage = localStorage): void => 
     if (pending !== null) {
         useLinkRequest.setState({ open: true, code: pending.code });
     }
-};
+}
 
-export const closeLinkRequest = (storage: LoginStorage = localStorage): void => {
+export function closeLinkRequest(storage: LoginStorage = localStorage): void {
     forgetLink(storage);
     useLinkRequest.setState({ open: false, code: null });
-};
+}

@@ -13,8 +13,8 @@ const TIMEOUT_MS = 60_000;
  * model left to write freely opens with a sentence about what it is about to do, and that sentence
  * would land in the commit.
  */
-export const buildMessagePrompt = (nameStatus: string, patch: string): string =>
-    [
+export function buildMessagePrompt(nameStatus: string, patch: string): string {
+    return [
         'Write a git commit message for the staged changes below.',
         '',
         'Rules:',
@@ -30,13 +30,14 @@ export const buildMessagePrompt = (nameStatus: string, patch: string): string =>
         'Patch:',
         patch.trim() === '' ? '(empty)' : patch.trim()
     ].join('\n');
+}
 
 /*
  * The JSON out of whatever the CLI wrote around it: a print-mode run still prints a line about the
  * session, and a model still opens with a word now and then. The last object in the output is the
  * answer; a run that holds none at all falls back to its first line as the subject.
  */
-export const parseSuggestion = (output: string): GitSuggestMessageResult | null => {
+export function parseSuggestion(output: string): GitSuggestMessageResult | null {
     const start = output.indexOf('{');
     const end = output.lastIndexOf('}');
     if (start >= 0 && end > start) {
@@ -55,10 +56,10 @@ export const parseSuggestion = (output: string): GitSuggestMessageResult | null 
         .map((line) => line.trim())
         .find((line) => line !== '');
     return first === undefined ? null : { subject: first, body: '' };
-};
+}
 
 /* What a commit message is written from: the staged patch, or the working tree when nothing is staged. */
-const stagedInput = async (top: string): Promise<{ nameStatus: string; patch: string } | null> => {
+async function stagedInput(top: string): Promise<{ nameStatus: string; patch: string } | null> {
     for (const scope of [['--cached'], []]) {
         const nameStatus = (await git(['diff', ...scope, '--name-status'], top)) ?? '';
         if (nameStatus.trim() !== '') {
@@ -67,7 +68,7 @@ const stagedInput = async (top: string): Promise<{ nameStatus: string; patch: st
         }
     }
     return null;
-};
+}
 
 export interface SuggestOptions {
     provider?: AgentKind;
@@ -79,7 +80,7 @@ export interface SuggestOptions {
  * A commit message written by the agent CLI the machine already has, in its own one-shot print
  * mode: no chat, no session, no SDK, one process that reads a prompt and prints an answer.
  */
-export const suggestMessage = async (cwd: string, registry: ProviderRegistry, options: SuggestOptions = {}): Promise<GitSuggestMessageResult> => {
+export async function suggestMessage(cwd: string, registry: ProviderRegistry, options: SuggestOptions = {}): Promise<GitSuggestMessageResult> {
     const top = await toplevel(cwd);
     const input = await stagedInput(top);
     if (input === null) {
@@ -110,4 +111,4 @@ export const suggestMessage = async (cwd: string, registry: ProviderRegistry, op
     } finally {
         clearTimeout(timer);
     }
-};
+}

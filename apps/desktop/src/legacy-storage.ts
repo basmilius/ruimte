@@ -11,7 +11,7 @@ import { STORAGE_MOVE_PATH } from './app-files';
  * meets a new one and the client asks it a statement again. The flag is written whatever happened, so a
  * failure costs the old settings once and never a start.
  */
-export const moveLegacyStorage = async (port: number, flagPath: string): Promise<() => void> => {
+export async function moveLegacyStorage(port: number, flagPath: string): Promise<() => void> {
     if (existsSync(flagPath)) {
         return () => undefined;
     }
@@ -47,4 +47,4 @@ export const moveLegacyStorage = async (port: number, flagPath: string): Promise
             window.destroy();
         }
     };
-};
+}

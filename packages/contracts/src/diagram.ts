@@ -87,17 +87,17 @@ export type DiagramDocument = z.infer<typeof DiagramDocumentSchema>;
 export const EMPTY_DIAGRAM: DiagramDocument = { version: 1, rev: 0, meta: { title: '', direction: 'right' }, nodes: [], groups: [], edges: [] };
 
 /* One version so far, so reading is a parse. A file that is not a diagram at all reads as null. */
-export const migrateDiagram = (value: unknown): DiagramDocument | null => {
+export function migrateDiagram(value: unknown): DiagramDocument | null {
     const parsed = DiagramDocumentSchema.safeParse(value);
     return parsed.success ? parsed.data : null;
-};
+}
 
 /*
  * The first rule of the graph the content breaks, as a sentence that names the id, or null. The
  * schema cannot say this, and an agent that wrote the file needs the id to repair it: a silent drop
  * would leave it believing the edge is there.
  */
-export const diagramProblemIn = (content: Pick<DiagramContent, 'nodes' | 'groups' | 'edges'>): string | null => {
+export function diagramProblemIn(content: Pick<DiagramContent, 'nodes' | 'groups' | 'edges'>): string | null {
     if (content.nodes.length > DIAGRAM_LIMITS.nodes) {
         return `A diagram holds at most ${DIAGRAM_LIMITS.nodes} nodes, and this one has ${content.nodes.length}`;
     }
@@ -138,7 +138,7 @@ export const diagramProblemIn = (content: Pick<DiagramContent, 'nodes' | 'groups
         }
     }
     return null;
-};
+}
 
 export const DiagramTargetPayloadSchema = z.object({
     projectId: ProjectIdSchema,

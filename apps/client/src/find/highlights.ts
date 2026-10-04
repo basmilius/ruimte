@@ -6,9 +6,11 @@
  */
 const owners = new Map<string, { matches: Range[]; current: Range | null }>();
 
-const supported = (): boolean => typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined';
+function supported(): boolean {
+    return typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined';
+}
 
-const paint = (): void => {
+function paint(): void {
     if (!supported()) {
         return;
     }
@@ -22,15 +24,15 @@ const paint = (): void => {
     }
     CSS.highlights.set('find-match', new Highlight(...matches));
     CSS.highlights.set('find-current', new Highlight(...current));
-};
+}
 
-export const setFindHighlights = (owner: string, matches: Range[], current: Range | null): void => {
+export function setFindHighlights(owner: string, matches: Range[], current: Range | null): void {
     owners.set(owner, { matches, current });
     paint();
-};
+}
 
-export const clearFindHighlights = (owner: string): void => {
+export function clearFindHighlights(owner: string): void {
     if (owners.delete(owner)) {
         paint();
     }
-};
+}

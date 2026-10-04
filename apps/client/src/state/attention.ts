@@ -37,7 +37,7 @@ export interface ChatSightWorkspace {
  * Plan visibility ignores zoom and window focus. It also uses the pre-panel viewport so opening the
  * panel cannot push its own chat out of sight and immediately close it.
  */
-export const chatsInSight = (workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> => {
+export function chatsInSight(workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> {
     const onScreen = new Set(workspace.layout === null ? [] : viewIdsIn(workspace.layout));
     const chats = new Set<string>();
     for (const view of workspace.views) {
@@ -61,10 +61,10 @@ export const chatsInSight = (workspace: ChatSightWorkspace, { planWidth }: { pla
         }
     }
     return chats;
-};
+}
 
 /* The open project, as `chatsInSight` reads it. */
-export const liveChatSight = (): ChatSightWorkspace => {
+export function liveChatSight(): ChatSightWorkspace {
     const { views, layout } = useDocument.getState();
     return {
         views,
@@ -82,7 +82,7 @@ export const liveChatSight = (): ChatSightWorkspace => {
                   };
         }
     };
-};
+}
 
 /* Everything one pass of the watcher needs to decide, all of it keyed the same way. */
 export interface AttentionPass {
@@ -105,14 +105,15 @@ export interface AttentionPass {
  * not end, since that is a person's turn and the needs-you count is already about it. A node that left
  * the project did not end a turn either, it went.
  */
-export const settledSince = (pass: AttentionPass): string[] =>
-    [...pass.previous].filter((key) => !pass.working.has(key) && !pass.needsYou.has(key) && pass.known.has(key));
+export function settledSince(pass: AttentionPass): string[] {
+    return [...pass.previous].filter((key) => !pass.working.has(key) && !pass.needsYou.has(key) && pass.known.has(key));
+}
 
 /*
  * Marking and clearing are the same rule read twice, which is why looking at a node while its turn
  * ends never leaves a mark behind, and looking at a marked node always takes it off.
  */
-export const nextUnseen = (pass: AttentionPass): Set<string> => {
+export function nextUnseen(pass: AttentionPass): Set<string> {
     const next = new Set<string>();
     for (const key of [...pass.unseen, ...settledSince(pass)]) {
         if (!pass.seen.has(key) && !pass.working.has(key) && !pass.needsYou.has(key) && pass.known.has(key)) {
@@ -120,7 +121,7 @@ export const nextUnseen = (pass: AttentionPass): Set<string> => {
         }
     }
     return next;
-};
+}
 
 /* The three counts the toolbar, the badge and the quit guard all read, as the nodes behind them. */
 export interface AttentionGroups {
@@ -134,14 +135,14 @@ export interface AttentionGroups {
     finished: string[];
 }
 
-export const groupAttention = (
+export function groupAttention(
     nodes: readonly StatusOf[],
     sessions: SessionsByKey,
     chats: ChatStatuses,
     endpointId: string,
     unseen: Readonly<Record<string, true>>,
     snoozes: Snoozes
-): AttentionGroups => {
+): AttentionGroups {
     const groups: AttentionGroups = { needsYou: [], snoozed: [], working: [], finished: [] };
     for (const node of nodes) {
         if (nodeStatus(node, sessions, chats, endpointId) === 'needs-you') {
@@ -161,10 +162,12 @@ export const groupAttention = (
         }
     }
     return groups;
-};
+}
 
 /* One number for the dock badge, everything a person still has to come back to. */
-export const attentionTotal = (groups: AttentionGroups): number => groups.needsYou.length + groups.finished.length;
+export function attentionTotal(groups: AttentionGroups): number {
+    return groups.needsYou.length + groups.finished.length;
+}
 
 interface AttentionStore {
     /* Keyed with `endpointKey`. A plain record, so a render subscribes to the object it reads. */
@@ -195,26 +198,27 @@ export const useAttention = create<AttentionStore>((set) => ({
  * Whether this node carries a mark. Takes the machine rather than reading the active one, for a list
  * that draws a row per machine (the sidebar) and for a test with no React around it.
  */
-export const isUnseen = (unseen: Readonly<Record<string, true>>, endpointId: string, nodeId: string): boolean =>
-    unseen[endpointKey(endpointId, nodeId)] === true;
+export function isUnseen(unseen: Readonly<Record<string, true>>, endpointId: string, nodeId: string): boolean {
+    return unseen[endpointKey(endpointId, nodeId)] === true;
+}
 
-export const useUnseen = (nodeId: string): boolean => {
+export function useUnseen(nodeId: string): boolean {
     const endpointId = useEndpointId();
     return useAttention((s) => isUnseen(s.unseen, endpointId, nodeId));
-};
+}
 
 /*
  * Takes the mark off by hand, for a person who dismisses it rather than goes to the node. Looking at
  * the node does this on its own, so nothing has to call this to keep the marks honest.
  */
-export const clearUnseen = (nodeId: string): void => {
+export function clearUnseen(nodeId: string): void {
     clearPushNotification(currentEndpointId(), nodeId);
     const key = endpointKey(currentEndpointId(), nodeId);
     useAttention.getState().setUnseen(new Set(Object.keys(useAttention.getState().unseen).filter((entry) => entry !== key)));
-};
+}
 
 /* Whether each node needs you, keyed for the snoozes; a node with no status yet says nothing either way. */
-export const snoozeObservations = (nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): Map<string, boolean> => {
+export function snoozeObservations(nodes: readonly StatusOf[], sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): Map<string, boolean> {
     const observed = new Map<string, boolean>();
     for (const node of nodes) {
         const status = nodeStatus(node, sessions, chats, endpointId);
@@ -223,14 +227,14 @@ export const snoozeObservations = (nodes: readonly StatusOf[], sessions: Session
         }
     }
     return observed;
-};
+}
 
 /*
  * Keeps the marks, the counts and what the shell is told in step with the stores the hooks write
  * into. Every pass counts the project from scratch, so a subscription that misses a change only ever
  * delays a clear by one event and never leaves a stale mark behind.
  */
-export const startAttentionWatch = (): (() => void) => {
+export function startAttentionWatch(): () => void {
     let previous: ReadonlySet<string> = new Set<string>();
     let told = '';
 
@@ -303,4 +307,4 @@ export const startAttentionWatch = (): (() => void) => {
         window.removeEventListener('focus', pass);
         window.removeEventListener('blur', pass);
     };
-};
+}

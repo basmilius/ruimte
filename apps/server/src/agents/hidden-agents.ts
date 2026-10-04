@@ -16,7 +16,7 @@ const HiddenAgentSchema = z.object({
 
 export type HiddenAgent = z.infer<typeof HiddenAgentSchema>;
 
-export const openedAgentCount = (
+export function openedAgentCount(
     deps: {
         lineage: AgentLineageStore;
         hiddenAgents: HiddenAgentStore;
@@ -26,8 +26,8 @@ export const openedAgentCount = (
         sessions: Pick<SessionManager, 'get'>;
     },
     caller: string
-): number =>
-    deps.lineage.openedCount(caller, (id) => {
+): number {
+    return deps.lineage.openedCount(caller, (id) => {
         if (deps.hiddenAgents.get(id) === undefined) {
             return true;
         }
@@ -40,6 +40,7 @@ export const openedAgentCount = (
             deps.outbox.list().some((entry) => entry.target === id)
         );
     });
+}
 
 // Hidden sessions belong to their parent chat, so they never enter a project's views or shared file.
 export class HiddenAgentStore {

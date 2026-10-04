@@ -40,12 +40,12 @@ export interface ContentMachine {
     diagramSvg(store: StoreApi<DiagramState>): string;
 }
 
-const clipboard = (): Clipboard => {
+function clipboard(): Clipboard {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
         throw new ActionRefusal('no-clipboard', 'This window has no clipboard to copy to.');
     }
     return navigator.clipboard;
-};
+}
 
 const LIVE_MACHINE: ContentMachine = {
     writeText: (text) => clipboard().writeText(text),
@@ -62,22 +62,28 @@ const MAX_NOTE_CHARACTERS = 12_000;
 /* A drawing read lists at most this many elements, front ones last, which is what a picture of it shows first. */
 const MAX_READ_ELEMENTS = 300;
 
-const isOnScreen = (state: DocumentState, viewId: string): boolean => state.layout !== null && locateView(state.layout, viewId) !== null;
+function isOnScreen(state: DocumentState, viewId: string): boolean {
+    return state.layout !== null && locateView(state.layout, viewId) !== null;
+}
 
-const withLine = (body: string, text: string): string => (body === '' ? text : `${body}${body.endsWith('\n') ? '' : '\n'}${text}`);
+function withLine(body: string, text: string): string {
+    return body === '' ? text : `${body}${body.endsWith('\n') ? '' : '\n'}${text}`;
+}
 
-const plural = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`;
+function plural(count: number, noun: string): string {
+    return `${count} ${count === 1 ? noun : `${noun}s`}`;
+}
 
 /*
  * The editor of a drawing or a diagram in a cell. Only one on screen holds what a person sees and
  * can undo, so anything else is refused rather than written behind the file's back.
  */
-const editorOf = <State>(
+function editorOf<State>(
     document: StoreApi<DocumentState>,
     viewId: string,
     kind: 'drawing' | 'diagram',
     peek: (viewId: string) => StoreApi<State> | null
-): { view: ProjectView; store: StoreApi<State> } => {
+): { view: ProjectView; store: StoreApi<State> } {
     const state = document.getState();
     const view = state.views.find((candidate) => candidate.id === viewId);
     if (!view || !(kind === 'drawing' ? isDrawingView(view) : isDiagramView(view))) {
@@ -88,20 +94,20 @@ const editorOf = <State>(
         throw new ActionRefusal('inactive-view', `Open “${view.name}” before changing or reading what it holds.`);
     }
     return { view, store };
-};
+}
 
 /* A step back through the editor's own history, honest only while nothing came after it. */
-const historyUndo =
-    <State extends { past: readonly unknown[]; undo(): void }>(store: StoreApi<State>, depth: number, name: string) =>
-    () => {
+function historyUndo<State extends { past: readonly unknown[]; undo(): void }>(store: StoreApi<State>, depth: number, name: string) {
+    return () => {
         if (store.getState().past.length !== depth) {
             throw new ActionRefusal('stale-undo', `“${name}” changed after this action, so it cannot be safely undone here.`);
         }
         store.getState().undo();
     };
+}
 
 /* The elements an action names, or what is selected; a locked one stays out of every change but locking. */
-const targetsOf = (state: DrawingState, ids: readonly string[] | null | undefined, view: string): string[] => {
+function targetsOf(state: DrawingState, ids: readonly string[] | null | undefined, view: string): string[] {
     if (ids == null) {
         if (state.selection.length === 0) {
             throw new ActionRefusal('nothing-selected', `Nothing is selected in “${view}”; name the elements by id.`);
@@ -114,12 +120,12 @@ const targetsOf = (state: DrawingState, ids: readonly string[] | null | undefine
         throw new ActionRefusal('unknown-element', `“${view}” has no element ${missing.map((id) => `“${id}”`).join(', ')}.`);
     }
     return [...new Set(ids)];
-};
+}
 
 type DrawnSpec = NonNullable<ActionInput<'drawing.addElements'>['elements']>[number];
 
 /* A shape of the kind asked for, drawn the way the dock's style would draw it by hand. */
-const drawnElement = (spec: DrawnSpec, style: DrawingStyle): DrawingElement => {
+function drawnElement(spec: DrawnSpec, style: DrawingStyle): DrawingElement {
     const id = nextId('el');
     const seed = newSeed();
     const rect = { x: Math.min(spec.x, spec.x + spec.w), y: Math.min(spec.y, spec.y + spec.h), w: Math.abs(spec.w), h: Math.abs(spec.h) };
@@ -146,26 +152,29 @@ const drawnElement = (spec: DrawnSpec, style: DrawingStyle): DrawingElement => {
             return spec.color === null ? shape : { ...shape, stroke: spec.color };
         }
     }
-};
+}
 
 /* The style fields that were given; null keeps what an element has. */
-const givenStyle = (style: ActionInput<'drawing.updateElements'>['style']): Partial<DrawingStyle> =>
-    style == null ? {} : (Object.fromEntries(Object.entries(style).filter(([, value]) => value !== null)) as Partial<DrawingStyle>);
+function givenStyle(style: ActionInput<'drawing.updateElements'>['style']): Partial<DrawingStyle> {
+    return style == null ? {} : (Object.fromEntries(Object.entries(style).filter(([, value]) => value !== null)) as Partial<DrawingStyle>);
+}
 
-const summaryOf = (element: DrawingElement): ActionOutput<'drawing.read'>['elements'][number] => ({
-    id: element.id,
-    kind: element.kind === 'line' && element.arrowEnd === true ? 'arrow' : element.kind,
-    x: Math.round(element.x),
-    y: Math.round(element.y),
-    w: Math.round(element.w),
-    h: Math.round(element.h),
-    text: isWritten(element) ? element.text : null,
-    color: element.kind === 'note' ? (element.fillColor ?? 'yellow') : element.stroke,
-    locked: element.locked === true
-});
+function summaryOf(element: DrawingElement): ActionOutput<'drawing.read'>['elements'][number] {
+    return {
+        id: element.id,
+        kind: element.kind === 'line' && element.arrowEnd === true ? 'arrow' : element.kind,
+        x: Math.round(element.x),
+        y: Math.round(element.y),
+        w: Math.round(element.w),
+        h: Math.round(element.h),
+        text: isWritten(element) ? element.text : null,
+        color: element.kind === 'note' ? (element.fillColor ?? 'yellow') : element.stroke,
+        locked: element.locked === true
+    };
+}
 
 /* What a JSON document of a drawing or a diagram holds, or a refusal that says what is wrong with it. */
-const parsedDocument = <Schema extends z.ZodType>(document: string, schema: Schema, what: string): z.output<Schema> => {
+function parsedDocument<Schema extends z.ZodType>(document: string, schema: Schema, what: string): z.output<Schema> {
     let json: unknown;
     try {
         json = JSON.parse(document);
@@ -177,20 +186,22 @@ const parsedDocument = <Schema extends z.ZodType>(document: string, schema: Sche
         throw new ActionRefusal('bad-document', `The ${what} does not fit: ${z.prettifyError(parsed.error)}`);
     }
     return parsed.data;
-};
+}
 
-const nodeOfDiagram = (state: DiagramState, id: string, view: string): DiagramNode => {
+function nodeOfDiagram(state: DiagramState, id: string, view: string): DiagramNode {
     const node = state.content.nodes.find((candidate) => candidate.id === id);
     if (!node) {
         throw new ActionRefusal('unknown-diagram-node', `“${view}” has no node “${id}”.`);
     }
     return node;
-};
+}
 
-const withDiagramNode = (content: DiagramContent, id: string, next: DiagramNode): DiagramContent => ({
-    ...content,
-    nodes: content.nodes.map((node) => (node.id === id ? next : node))
-});
+function withDiagramNode(content: DiagramContent, id: string, next: DiagramNode): DiagramContent {
+    return {
+        ...content,
+        nodes: content.nodes.map((node) => (node.id === id ? next : node))
+    };
+}
 
 /*
  * What a person does to a note, a drawing and a diagram, as actions: the drawing's keys, menu and

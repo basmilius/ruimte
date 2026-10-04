@@ -15,29 +15,33 @@ import {
     type OnboardingFacts
 } from './tasks';
 
-const provider = (kind: AgentKind, name: string, installed: boolean): ProviderInfo => ({
-    kind,
-    name,
-    installed,
-    version: installed ? '1.0.0' : null,
-    models: [],
-    defaultModel: null,
-    // Only whether it chats is read here.
-    capabilities: { chat: kind !== 'gemini' } as ProviderInfo['capabilities'],
-    resumeCommand: ''
-});
+function provider(kind: AgentKind, name: string, installed: boolean): ProviderInfo {
+    return {
+        kind,
+        name,
+        installed,
+        version: installed ? '1.0.0' : null,
+        models: [],
+        defaultModel: null,
+        // Only whether it chats is read here.
+        capabilities: { chat: kind !== 'gemini' } as ProviderInfo['capabilities'],
+        resumeCommand: ''
+    };
+}
 
-const status = (id: string, kind: string, state: ProviderAccountStatus['state']): ProviderAccountStatus => ({
-    id,
-    kind,
-    state,
-    email: null,
-    plan: null,
-    organization: null,
-    home: '',
-    message: null,
-    checkedAt: 1
-});
+function status(id: string, kind: string, state: ProviderAccountStatus['state']): ProviderAccountStatus {
+    return {
+        id,
+        kind,
+        state,
+        email: null,
+        plan: null,
+        organization: null,
+        home: '',
+        message: null,
+        checkedAt: 1
+    };
+}
 
 const PROVIDERS = [
     provider('claude', 'Claude Code', true),
@@ -47,21 +51,25 @@ const PROVIDERS = [
     provider('apple', 'Apple Foundation Models', false)
 ];
 
-const accounts = (states: Partial<Record<string, ProviderAccountStatus['state']>>): ProviderAccounts => ({
-    accounts: {
-        claude: { kind: 'claude' },
-        claude_work: { kind: 'claude', label: 'Work', home: '~/.claude_work' },
-        codex: { kind: 'codex' }
-    },
-    statuses: [
-        status('claude', 'claude', states.claude ?? 'signed-out'),
-        status('claude_work', 'claude', states.claude_work ?? 'signed-out'),
-        status('codex', 'codex', states.codex ?? 'signed-out')
-    ],
-    loginCommands: { claude: 'claude auth login', codex: 'codex login' }
-});
+function accounts(states: Partial<Record<string, ProviderAccountStatus['state']>>): ProviderAccounts {
+    return {
+        accounts: {
+            claude: { kind: 'claude' },
+            claude_work: { kind: 'claude', label: 'Work', home: '~/.claude_work' },
+            codex: { kind: 'codex' }
+        },
+        statuses: [
+            status('claude', 'claude', states.claude ?? 'signed-out'),
+            status('claude_work', 'claude', states.claude_work ?? 'signed-out'),
+            status('codex', 'codex', states.codex ?? 'signed-out')
+        ],
+        loginCommands: { claude: 'claude auth login', codex: 'codex login' }
+    };
+}
 
-const facts = (patch: Partial<OnboardingFacts> = {}): OnboardingFacts => ({ introSeen: false, loggedIn: [], notLoggedIn: [], computer: 'off', ...patch });
+function facts(patch: Partial<OnboardingFacts> = {}): OnboardingFacts {
+    return { introSeen: false, loggedIn: [], notLoggedIn: [], computer: 'off', ...patch };
+}
 
 describe('the tasks of the onboarding', () => {
     test('offer computer use only where the helper can run', () => {

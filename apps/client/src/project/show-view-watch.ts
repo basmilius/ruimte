@@ -9,7 +9,7 @@ import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
 
 /* The answer of the open project, on the cell the person was last in. */
-const showInWorkspace = (payload: ProjectShowViewEvent): void => {
+function showInWorkspace(payload: ProjectShowViewEvent): void {
     const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === payload.viewId);
     if (!view || !isOpenableView(view)) {
@@ -32,21 +32,21 @@ const showInWorkspace = (payload: ProjectShowViewEvent): void => {
         message: notice.message,
         action: notice.action === 'go' ? { kind: 'go', viewId: payload.viewId } : shown === null ? null : { kind: 'back', shown }
     });
-};
+}
 
-const onShowView = (endpointId: string, payload: ProjectShowViewEvent): void => {
+function onShowView(endpointId: string, payload: ProjectShowViewEvent): void {
     // The same project id may be open on another machine, so the machine has to match as well.
     if (windowWorkspace()?.connection.endpointId === endpointId && useProject.getState().current?.projectId === payload.projectId) {
         showInWorkspace(payload);
     }
-};
+}
 
 /*
  * `ruimte-context view open` on any machine this client is holding a socket to. The daemon only sends it
  * to the clients that have that project open, and this side still checks it is about the project
  * on screen, since the socket may outlive a switch to another project.
  */
-export const startShowViewWatch = (): (() => void) => {
+export function startShowViewWatch(): () => void {
     const stopLinks = watchPool((link, endpointId) => ({
         subscriptions: [link.on('project.showView', (payload) => onShowView(endpointId, payload))]
     }));
@@ -56,4 +56,4 @@ export const startShowViewWatch = (): (() => void) => {
         stopLinks();
         stopShell();
     };
-};
+}

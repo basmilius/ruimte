@@ -32,15 +32,19 @@ export const useProvidersStore = create<ProvidersStore>((set, get) => ({
  * The CLIs of the host in scope. An agent menu has to offer what the host the chat will run on has
  * installed, never what another host answered.
  */
-export const useProviders = <T>(select: (row: ProvidersRow) => T): T => {
+export function useProviders<T>(select: (row: ProvidersRow) => T): T {
     const { id } = useChatScope();
     return useProvidersStore((s) => select(s.byScope[id] ?? NONE));
-};
+}
 
 /* The same answer outside a render. */
-export const providersOf = (scopeId: string): ProvidersRow => useProvidersStore.getState().byScope[scopeId] ?? NONE;
+export function providersOf(scopeId: string): ProvidersRow {
+    return useProvidersStore.getState().byScope[scopeId] ?? NONE;
+}
 
 /* What one host's chat client fills in; it knows its own host and nothing of the others. */
-export const providerSinkFor = (scopeId: string): { setProviders(providers: ProviderInfo[]): void } => ({
-    setProviders: (providers) => useProvidersStore.getState().setProviders(scopeId, providers)
-});
+export function providerSinkFor(scopeId: string): { setProviders(providers: ProviderInfo[]): void } {
+    return {
+        setProviders: (providers) => useProvidersStore.getState().setProviders(scopeId, providers)
+    };
+}

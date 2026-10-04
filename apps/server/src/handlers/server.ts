@@ -7,7 +7,7 @@ interface ServerHandlerOptions {
     model: string | null;
 }
 
-export const registerServerHandlers = (dispatcher: Dispatcher, options: ServerHandlerOptions): void => {
+export function registerServerHandlers(dispatcher: Dispatcher, options: ServerHandlerOptions): void {
     dispatcher.register('server.hello', () => ({
         version: options.version,
         platform: process.platform,
@@ -17,4 +17,4 @@ export const registerServerHandlers = (dispatcher: Dispatcher, options: ServerHa
 
     // There is nothing to compute. The round trip is the answer, and the client times it.
     dispatcher.register('server.ping', () => ({ time: Date.now() }));
-};
+}

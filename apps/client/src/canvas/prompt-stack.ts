@@ -21,7 +21,9 @@ export const usePromptFront = create<PromptFrontStore>((set, get) => ({
     }
 }));
 
-export const bringPromptToFront = (nodeId: string): void => usePromptFront.getState().bringToFront(nodeId);
+export function bringPromptToFront(nodeId: string): void {
+    return usePromptFront.getState().bringToFront(nodeId);
+}
 
 export const PROMPT_STACK_ATTRIBUTE = 'data-prompt-stack';
 
@@ -29,7 +31,7 @@ export const PROMPT_STACK_ATTRIBUTE = 'data-prompt-stack';
 let returnFocus: HTMLElement | null = null;
 
 /* Puts the keyboard on the front card of the focused canvas. False when that canvas has no prompt. */
-export const focusPromptStack = (): boolean => {
+export function focusPromptStack(): boolean {
     const viewId = useDocument.getState().activeViewId;
     if (viewId === null) {
         return false;
@@ -43,12 +45,14 @@ export const focusPromptStack = (): boolean => {
         returnFocus = current;
     }
     return focusPromptStart(stack);
-};
+}
 
-export const isInPromptStack = (target: EventTarget | null): boolean => target instanceof Element && target.closest(`[${PROMPT_STACK_ATTRIBUTE}]`) !== null;
+export function isInPromptStack(target: EventTarget | null): boolean {
+    return target instanceof Element && target.closest(`[${PROMPT_STACK_ATTRIBUTE}]`) !== null;
+}
 
 /* Escape from a card: back to where the keyboard was, or to the canvas when that is gone. */
-export const leavePromptStack = (): void => {
+export function leavePromptStack(): void {
     const target = returnFocus;
     returnFocus = null;
     if (target !== null && target.isConnected && !isInPromptStack(target)) {
@@ -56,4 +60,4 @@ export const leavePromptStack = (): void => {
         return;
     }
     (document.activeElement as HTMLElement | null)?.blur();
-};
+}

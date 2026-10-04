@@ -6,7 +6,9 @@ interface Node {
 }
 
 // Every promise callback queued so far has run by the next macrotask.
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('what a client has mounted', () => {
     test('a lost link detaches everything and reports each one', () => {

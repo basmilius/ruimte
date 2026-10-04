@@ -5,7 +5,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { FILE_HTML_PLUGINS } from './markdown-html';
 
-const render = (text: string) => renderToStaticMarkup(createElement(ReactMarkdown, { rehypePlugins: FILE_HTML_PLUGINS, remarkPlugins: [remarkGfm] }, text));
+function render(text: string) {
+    return renderToStaticMarkup(createElement(ReactMarkdown, { rehypePlugins: FILE_HTML_PLUGINS, remarkPlugins: [remarkGfm] }, text));
+}
 
 test('renders README logos, alignment, details and inline HTML', () => {
     const html = render(

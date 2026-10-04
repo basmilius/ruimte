@@ -1,31 +1,40 @@
 import { describe, expect, test } from 'bun:test';
 import { cloneCodexState, codexMightCarryUsage, createCodexState, parseCodexLine, type CodexParserState } from './codex.ts';
 
-const at = (seconds: number): string => new Date(Date.parse('2026-09-10T09:00:00.000Z') + seconds * 1000).toISOString();
+function at(seconds: number): string {
+    return new Date(Date.parse('2026-09-10T09:00:00.000Z') + seconds * 1000).toISOString();
+}
 
-const meta = (seconds: number, payload: Record<string, unknown> = {}): string =>
-    JSON.stringify({ type: 'session_meta', timestamp: at(seconds), payload: { id: 't-1', cwd: '/home/bas/ruimte', ...payload } });
+function meta(seconds: number, payload: Record<string, unknown> = {}): string {
+    return JSON.stringify({ type: 'session_meta', timestamp: at(seconds), payload: { id: 't-1', cwd: '/home/bas/ruimte', ...payload } });
+}
 
-const context = (seconds: number, model = 'gpt-5.6-sol'): string =>
-    JSON.stringify({ type: 'turn_context', timestamp: at(seconds), payload: { model, cwd: '/home/bas/ruimte' } });
+function context(seconds: number, model = 'gpt-5.6-sol'): string {
+    return JSON.stringify({ type: 'turn_context', timestamp: at(seconds), payload: { model, cwd: '/home/bas/ruimte' } });
+}
 
-const counts = (input: number, cached: number, cacheWrite: number, output: number, reasoning = 0): Record<string, number> => ({
-    input_tokens: input,
-    cached_input_tokens: cached,
-    cache_write_input_tokens: cacheWrite,
-    output_tokens: output,
-    reasoning_output_tokens: reasoning,
-    total_tokens: input + output
-});
+function counts(input: number, cached: number, cacheWrite: number, output: number, reasoning = 0): Record<string, number> {
+    return {
+        input_tokens: input,
+        cached_input_tokens: cached,
+        cache_write_input_tokens: cacheWrite,
+        output_tokens: output,
+        reasoning_output_tokens: reasoning,
+        total_tokens: input + output
+    };
+}
 
-const tokens = (seconds: number, total: Record<string, number>, last: Record<string, number>): string =>
-    JSON.stringify({
+function tokens(seconds: number, total: Record<string, number>, last: Record<string, number>): string {
+    return JSON.stringify({
         type: 'event_msg',
         timestamp: at(seconds),
         payload: { type: 'token_count', info: { total_token_usage: total, last_token_usage: last } }
     });
+}
 
-const feed = (lines: readonly string[], state: CodexParserState = createCodexState()) => lines.flatMap((line) => parseCodexLine(line, state) ?? []);
+function feed(lines: readonly string[], state: CodexParserState = createCodexState()) {
+    return lines.flatMap((line) => parseCodexLine(line, state) ?? []);
+}
 
 describe('the Codex reader', () => {
     test('counts the difference with the cumulative total of the line before it', () => {

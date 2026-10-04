@@ -1,15 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { binaryPathOf, exitCodeOf, INTEL_NODE_REFUSAL, LauncherError, MUSL_REFUSAL, platformPackageOf, WINDOWS_REFUSAL, type Resolve } from './launcher';
 
-const installed =
-    (...names: string[]): Resolve =>
-    (request) => {
+function installed(...names: string[]): Resolve {
+    return (request) => {
         const name = names.find((candidate) => request === `${candidate}/package.json`);
         if (!name) {
             throw new Error(`Cannot find module '${request}'`);
         }
         return `/project/node_modules/${name}/package.json`;
     };
+}
 
 describe('platformPackageOf', () => {
     test('one package per supported platform', () => {

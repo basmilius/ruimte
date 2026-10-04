@@ -6,7 +6,7 @@ import { deviceMatches, type DeviceInfo, type DeviceReference } from '@ruimte/co
  * reference is looked up among the devices this machine has at the moment of reading; one that is
  * not among them says so, since a name without a device behind it is nothing to build for.
  */
-export const renderDevice = (reference: DeviceReference, devices: readonly DeviceInfo[]): string => {
+export function renderDevice(reference: DeviceReference, devices: readonly DeviceInfo[]): string {
     const device = devices.find((candidate) => deviceMatches(candidate, reference));
     const lines = [`# Device: ${reference.name}`, '', `platform: ${reference.platform}`, `kind: ${reference.kind}`, `runtime: ${reference.runtime}`];
     if (!device) {
@@ -17,4 +17,4 @@ export const renderDevice = (reference: DeviceReference, devices: readonly Devic
         ].join('\n');
     }
     return [...lines, `state: ${device.state}`, `deviceId: ${device.deviceId}`, `backendId: ${device.backendId}`].join('\n');
-};
+}

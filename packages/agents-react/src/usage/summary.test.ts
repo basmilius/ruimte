@@ -3,43 +3,49 @@ import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/agent
 import { formatTokens, moneyFormat, shortPath } from './format';
 import { deriveDays, deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
 
-const totals = (patch: Partial<UsageTotals> = {}): UsageTotals => ({
-    calls: 1,
-    input: 100,
-    cacheRead: 900,
-    cacheWrite: 50,
-    cacheWrite1h: 0,
-    output: 40,
-    reasoning: 10,
-    ...patch
-});
+function totals(patch: Partial<UsageTotals> = {}): UsageTotals {
+    return {
+        calls: 1,
+        input: 100,
+        cacheRead: 900,
+        cacheWrite: 50,
+        cacheWrite1h: 0,
+        output: 40,
+        reasoning: 10,
+        ...patch
+    };
+}
 
-const bucket = (patch: Partial<UsageBucket>): UsageBucket => ({
-    slot: '2026-09-10',
-    provider: 'claude',
-    model: 'claude-opus-5',
-    totals: totals(),
-    costUsd: 1,
-    cacheSavingsUsd: 0.25,
-    sessions: 1,
-    ...patch
-});
+function bucket(patch: Partial<UsageBucket>): UsageBucket {
+    return {
+        slot: '2026-09-10',
+        provider: 'claude',
+        model: 'claude-opus-5',
+        totals: totals(),
+        costUsd: 1,
+        cacheSavingsUsd: 0.25,
+        sessions: 1,
+        ...patch
+    };
+}
 
-const summary = (buckets: UsageBucket[], patch: Partial<UsageSummaryResult> = {}): UsageSummaryResult => ({
-    from: '2026-09-08',
-    to: '2026-09-10',
-    resolution: 'day',
-    timeZone: 'Europe/Amsterdam',
-    buckets,
-    models: [],
-    projects: [],
-    sessions: 3,
-    scan: { at: 0, files: 0, changedFiles: 0, durationMs: 0, running: false, failed: false },
-    pricing: { source: 'litellm', fetchedAt: null, models: 0 },
-    rate: null,
-    roots: [],
-    ...patch
-});
+function summary(buckets: UsageBucket[], patch: Partial<UsageSummaryResult> = {}): UsageSummaryResult {
+    return {
+        from: '2026-09-08',
+        to: '2026-09-10',
+        resolution: 'day',
+        timeZone: 'Europe/Amsterdam',
+        buckets,
+        models: [],
+        projects: [],
+        sessions: 3,
+        scan: { at: 0, files: 0, changedFiles: 0, durationMs: 0, running: false, failed: false },
+        pricing: { source: 'litellm', fetchedAt: null, models: 0 },
+        rate: null,
+        roots: [],
+        ...patch
+    };
+}
 
 describe('the slots of a period', () => {
     test('a day period keeps every calendar day, including the empty ones', () => {

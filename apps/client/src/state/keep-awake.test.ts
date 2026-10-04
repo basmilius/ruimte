@@ -8,44 +8,52 @@ import { closedLidOf, keepAwakeChoice, keepAwakeTeller, keepAwakeToMove, keepAwa
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { serverInfoOf, useServers, type ServerInfo } from '@/state/server';
 
-const agent = (status: AgentStatus, live = true): AgentInfo => ({
-    kind: 'claude',
-    agentSessionId: 'a1',
-    transcriptPath: null,
-    status,
-    live,
-    updatedAt: 0
-});
-
-const session = (agentInfo?: AgentInfo, attached = true): SessionState => ({ attached, agent: agentInfo });
-
-const chat = (status: AgentStatus): ChatState => ({
-    info: {
-        chatId: 'c1',
-        provider: 'claude',
-        cwd: '/',
-        agentSessionId: null,
-        model: null,
-        selection: { model: 'claude-sonnet-5', options: {} },
-        runtimeMode: 'full-access',
+function agent(status: AgentStatus, live = true): AgentInfo {
+    return {
+        kind: 'claude',
+        agentSessionId: 'a1',
+        transcriptPath: null,
         status,
-        running: true,
-        activeTurnId: null,
-        slashCommands: [],
-        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
-        createdAt: 0
-    },
-    items: {},
-    structure: {},
-    order: []
-});
+        live,
+        updatedAt: 0
+    };
+}
 
-const settings = (keepAwake: KeepAwakeSettings['keepAwake'], patch: Partial<KeepAwakeSettings> = {}): KeepAwakeSettings => ({
-    keepAwake,
-    keepAwakeOnBattery: false,
-    keepAwakeDisplay: false,
-    ...patch
-});
+function session(agentInfo?: AgentInfo, attached = true): SessionState {
+    return { attached, agent: agentInfo };
+}
+
+function chat(status: AgentStatus): ChatState {
+    return {
+        info: {
+            chatId: 'c1',
+            provider: 'claude',
+            cwd: '/',
+            agentSessionId: null,
+            model: null,
+            selection: { model: 'claude-sonnet-5', options: {} },
+            runtimeMode: 'full-access',
+            status,
+            running: true,
+            activeTurnId: null,
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+            createdAt: 0
+        },
+        items: {},
+        structure: {},
+        order: []
+    };
+}
+
+function settings(keepAwake: KeepAwakeSettings['keepAwake'], patch: Partial<KeepAwakeSettings> = {}): KeepAwakeSettings {
+    return {
+        keepAwake,
+        keepAwakeOnBattery: false,
+        keepAwakeDisplay: false,
+        ...patch
+    };
+}
 
 const SYSTEM: KeepAwakeRequest = { onBattery: false, display: false };
 
@@ -174,7 +182,9 @@ describe('what the shell is told', () => {
     });
 });
 
-const machine = (patch: Partial<ServerInfo>): ServerInfo => ({ ...serverInfoOf('nobody'), keepAwakeAvailable: true, ...patch });
+function machine(patch: Partial<ServerInfo>): ServerInfo {
+    return { ...serverInfoOf('nobody'), keepAwakeAvailable: true, ...patch };
+}
 
 describe('where the setting is kept', () => {
     test('the machine once it holds keep awake, this client against a daemon from before', () => {

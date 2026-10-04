@@ -15,38 +15,48 @@ import {
     splitMessage
 } from './git-actions';
 
-const status = (patch: Partial<GitStatus> = {}): GitStatus => ({
-    repo: true,
-    root: '/repo',
-    branch: 'main',
-    detached: false,
-    upstream: 'origin/main',
-    ahead: 0,
-    behind: 0,
-    base: 'origin/main',
-    mergeBase: null,
-    files: [],
-    truncated: false,
-    live: true,
-    ...patch
-});
+function status(patch: Partial<GitStatus> = {}): GitStatus {
+    return {
+        repo: true,
+        root: '/repo',
+        branch: 'main',
+        detached: false,
+        upstream: 'origin/main',
+        ahead: 0,
+        behind: 0,
+        base: 'origin/main',
+        mergeBase: null,
+        files: [],
+        truncated: false,
+        live: true,
+        ...patch
+    };
+}
 
-const checkout = (label: string, patch: Partial<GitStatus> | null): { path: string; label: string; status: GitStatus | null } => ({
-    path: `/work/${label}`,
-    label,
-    status: patch === null ? null : status(patch)
-});
+function checkout(label: string, patch: Partial<GitStatus> | null): { path: string; label: string; status: GitStatus | null } {
+    return {
+        path: `/work/${label}`,
+        label,
+        status: patch === null ? null : status(patch)
+    };
+}
 
-const commit = (at: number, hash: string): GitCommit => ({ hash, shortHash: hash.slice(0, 7), subject: hash, author: 'Ada', at, refs: [] });
+function commit(at: number, hash: string): GitCommit {
+    return { hash, shortHash: hash.slice(0, 7), subject: hash, author: 'Ada', at, refs: [] };
+}
 
-const row = (at: number, hash: string) => ({ ...commit(at, hash), cwd: '/work/one', repo: '' });
+function row(at: number, hash: string) {
+    return { ...commit(at, hash), cwd: '/work/one', repo: '' };
+}
 
-const log = (repo: string, ats: number[], cursor: string | null): LoadedLog => ({
-    cwd: `/work/${repo}`,
-    repo,
-    commits: ats.map((at) => commit(at, `${repo}-${at}`)),
-    cursor
-});
+function log(repo: string, ats: number[], cursor: string | null): LoadedLog {
+    return {
+        cwd: `/work/${repo}`,
+        repo,
+        commits: ats.map((at) => commit(at, `${repo}-${at}`)),
+        cursor
+    };
+}
 
 describe('pushing a folder of repositories', () => {
     test('every repository says for itself what a push would do', () => {

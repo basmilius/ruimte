@@ -4,9 +4,11 @@ import { AccessTokens, ACCESS_TOKEN_MARGIN_MS, type SessionKeeper, type SessionV
 const account = { id: 'account-1', provider: 'github' as const, login: 'someone' };
 const NOW = 1_800_000_000_000;
 
-const viewFor = (accessToken: string, accessExpiresAt: number): SessionView => ({ accessToken, accessExpiresAt, expiresAt: NOW + 86_400_000, account });
+function viewFor(accessToken: string, accessExpiresAt: number): SessionView {
+    return { accessToken, accessExpiresAt, expiresAt: NOW + 86_400_000, account };
+}
 
-const keeperWith = (answers: Array<SessionView | null>) => {
+function keeperWith(answers: Array<SessionView | null>) {
     const keeper = {
         refreshes: 0,
         exchange: async () => viewFor('x'.repeat(43), NOW),
@@ -19,7 +21,7 @@ const keeperWith = (answers: Array<SessionView | null>) => {
         signOut: async () => undefined
     } satisfies SessionKeeper & { refreshes: number };
     return keeper;
-};
+}
 
 describe('AccessTokens', () => {
     test('a token with time left is used as it is, and one close to its end is refreshed first', async () => {

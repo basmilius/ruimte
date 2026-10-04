@@ -2,7 +2,9 @@ import i18next from 'i18next';
 import { PROTOCOL_VERSION, protocolMismatch, type EndpointInfo, type ProtocolMismatch } from '@ruimte/contracts';
 
 /* What a row and a failed connection say about a machine on another wire version. */
-export const protocolRefusal = (mismatch: ProtocolMismatch): string => i18next.t(`machines:protocol.${mismatch}`);
+export function protocolRefusal(mismatch: ProtocolMismatch): string {
+    return i18next.t(`machines:protocol.${mismatch}`);
+}
 
 // A request id the transport never hands out, since its own ids are numbers.
 const CHECK_ID = 'protocol';
@@ -13,14 +15,14 @@ interface CheckFrame {
     result?: Partial<EndpointInfo>;
 }
 
-const parseFrame = (data: string): CheckFrame | null => {
+function parseFrame(data: string): CheckFrame | null {
     try {
         const parsed: unknown = JSON.parse(data);
         return typeof parsed === 'object' && parsed !== null ? (parsed as CheckFrame) : null;
     } catch {
         return null;
     }
-};
+}
 
 export interface ProtocolGateEvents {
     send(data: string): void;
@@ -35,7 +37,7 @@ export interface ProtocolGateEvents {
  * the link open and refuses an answer without a version. Frames that arrive before the answer (an
  * event sent to every socket) are held and delivered once the link is open.
  */
-export const protocolGate = (events: ProtocolGateEvents, client: number = PROTOCOL_VERSION) => {
+export function protocolGate(events: ProtocolGateEvents, client: number = PROTOCOL_VERSION) {
     let checked = false;
     const held: Array<string | Uint8Array> = [];
     return {
@@ -65,7 +67,9 @@ export const protocolGate = (events: ProtocolGateEvents, client: number = PROTOC
             }
         }
     };
-};
+}
 
 /* The socket URL with this client's version on it. */
-export const withProtocol = (url: string, client: number = PROTOCOL_VERSION): string => `${url}${url.includes('?') ? '&' : '?'}protocol=${client}`;
+export function withProtocol(url: string, client: number = PROTOCOL_VERSION): string {
+    return `${url}${url.includes('?') ? '&' : '?'}protocol=${client}`;
+}

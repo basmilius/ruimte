@@ -18,20 +18,22 @@ export interface AndroidSdkEnvironment {
     exists(path: string): boolean;
 }
 
-const defaultEnvironment = (): AndroidSdkEnvironment => ({
-    env: process.env,
-    platform: process.platform,
-    home: homedir(),
-    which: (command) => Bun.which(command),
-    realpath: (path) => realpathSync(path),
-    exists: (path) => existsSync(path)
-});
+function defaultEnvironment(): AndroidSdkEnvironment {
+    return {
+        env: process.env,
+        platform: process.platform,
+        home: homedir(),
+        which: (command) => Bun.which(command),
+        realpath: (path) => realpathSync(path),
+        exists: (path) => existsSync(path)
+    };
+}
 
 /*
  * Finds the SDK a person installed. A daemon running as a service gets the login shell's PATH but no
  * ANDROID_HOME, so the SDK that holds the `adb` on PATH counts before the default install folders.
  */
-export const locateAndroidSdk = (environment: AndroidSdkEnvironment = defaultEnvironment()): AndroidSdk | null => {
+export function locateAndroidSdk(environment: AndroidSdkEnvironment = defaultEnvironment()): AndroidSdk | null {
     const { env, exists } = environment;
     const executable = environment.platform === 'win32' ? '.exe' : '';
     const adbIn = (root: string): string => join(root, 'platform-tools', `adb${executable}`);
@@ -61,12 +63,12 @@ export const locateAndroidSdk = (environment: AndroidSdkEnvironment = defaultEnv
     }
     const emulator = root && exists(emulatorIn(root)) ? emulatorIn(root) : null;
     return { adb, emulator, avdHome: avdHomeOf(environment) };
-};
+}
 
-const avdHomeOf = ({ env, home }: AndroidSdkEnvironment): string => {
+function avdHomeOf({ env, home }: AndroidSdkEnvironment): string {
     if (env.ANDROID_AVD_HOME) {
         return env.ANDROID_AVD_HOME;
     }
     const userHome = env.ANDROID_USER_HOME ?? env.ANDROID_EMULATOR_HOME;
     return join(userHome ?? join(home, '.android'), 'avd');
-};
+}

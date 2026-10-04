@@ -17,12 +17,13 @@ export interface ApnsResult {
 
 const tokens = new Map<ApnsEnvironment, { secret: string; keyId: string; teamId: string; issuedAt: number; token: Promise<string> }>();
 
-const credentials = (env: Env, environment: ApnsEnvironment) =>
-    environment === 'sandbox'
+function credentials(env: Env, environment: ApnsEnvironment) {
+    return environment === 'sandbox'
         ? { secret: env.APNS_SANDBOX_KEY, keyId: env.APNS_SANDBOX_KEY_ID }
         : { secret: env.APNS_PRODUCTION_KEY, keyId: env.APNS_PRODUCTION_KEY_ID };
+}
 
-const providerToken = (env: Env, environment: ApnsEnvironment, now: number): Promise<string> => {
+function providerToken(env: Env, environment: ApnsEnvironment, now: number): Promise<string> {
     const selected = credentials(env, environment);
     const secret = selected.secret!;
     const keyId = selected.keyId!;
@@ -51,14 +52,14 @@ const providerToken = (env: Env, environment: ApnsEnvironment, now: number): Pro
         }
     });
     return token;
-};
+}
 
-export const apnsConfigured = (env: Env, environment: ApnsEnvironment): boolean => {
+export function apnsConfigured(env: Env, environment: ApnsEnvironment): boolean {
     const { secret, keyId } = credentials(env, environment);
     return !!(secret && keyId && env.APNS_TEAM_ID && env.APNS_TOPIC);
-};
+}
 
-export const apnsPayload = (push: PushEnvelope, startsActivity: boolean, deliveredAt: number = push.issuedAt): object => {
+export function apnsPayload(push: PushEnvelope, startsActivity: boolean, deliveredAt: number = push.issuedAt): object {
     if (push.pushType === 'background') {
         return { aps: { 'content-available': 1 }, ruimte: push };
     }
@@ -84,9 +85,9 @@ export const apnsPayload = (push: PushEnvelope, startsActivity: boolean, deliver
                 : {})
         }
     };
-};
+}
 
-export const deliverApns = async (env: Env, target: ApnsTarget, push: PushEnvelope, now: number, send: typeof fetch = fetch): Promise<ApnsResult> => {
+export async function deliverApns(env: Env, target: ApnsTarget, push: PushEnvelope, now: number, send: typeof fetch = fetch): Promise<ApnsResult> {
     const body = JSON.stringify(apnsPayload(push, target.startsActivity, now));
     if (new TextEncoder().encode(body).byteLength > 4096) {
         return { ok: false, status: 413 };
@@ -117,7 +118,8 @@ export const deliverApns = async (env: Env, target: ApnsTarget, push: PushEnvelo
     }
     await response.body?.cancel();
     return { ok: true, status: response.status };
-};
+}
 
-export const invalidApnsToken = (result: ApnsResult): boolean =>
-    result.status === 410 || (result.status === 400 && (result.reason === 'BadDeviceToken' || result.reason === 'DeviceTokenNotForTopic'));
+export function invalidApnsToken(result: ApnsResult): boolean {
+    return result.status === 410 || (result.status === 400 && (result.reason === 'BadDeviceToken' || result.reason === 'DeviceTokenNotForTopic'));
+}

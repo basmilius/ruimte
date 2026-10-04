@@ -49,16 +49,16 @@ export interface LoginStorage {
 }
 
 /* The redirect this page listens on, or null where the address book would refuse it. */
-export const webRedirectUriFor = (origin: string): string | null => {
+export function webRedirectUriFor(origin: string): string | null {
     const uri = `${origin}${APP_REDIRECT_LOOPBACK_PATH}`;
     return isAppRedirectUri(uri) ? uri : null;
-};
+}
 
 /* Writes down what the return needs and answers the start URL to leave for. */
-export const beginWebLogin = async (
+export async function beginWebLogin(
     storage: LoginStorage,
     options: { addressBookUrl: string; redirectUri: string; provider?: ProviderId; link?: string; confirm?: boolean; now?: number }
-): Promise<string> => {
+): Promise<string> {
     const pkce = await createPkce();
     const state = createLoginState();
     const pending: PendingLogin = {
@@ -79,17 +79,17 @@ export const beginWebLogin = async (
         challenge: pkce.challenge,
         link: options.link
     });
-};
+}
 
 /*
  * The code and the verifier, when the query this page came back with belongs to the login it started.
  * The pending login is spent whatever the answer, so a reload of the callback address tries nothing twice.
  */
-export const completeWebLogin = (
+export function completeWebLogin(
     storage: LoginStorage,
     query: URLSearchParams,
     now = Date.now()
-): { code: string; verifier: string; redirectUri: string; link: boolean; confirm: boolean; provider: ProviderId } => {
+): { code: string; verifier: string; redirectUri: string; link: boolean; confirm: boolean; provider: ProviderId } {
     const raw = storage.getItem(PENDING_LOGIN_KEY);
     storage.removeItem(PENDING_LOGIN_KEY);
     let pending: PendingLogin | null = null;
@@ -114,7 +114,7 @@ export const completeWebLogin = (
         confirm: pending.confirm === true,
         provider: pending.provider ?? 'github'
     };
-};
+}
 
 const StoredSessionSchema = z.object({ refreshToken: z.string().min(1), expiresAt: z.number().int(), account: AccountSchema });
 
@@ -123,7 +123,7 @@ const STORE_NAME = 'session';
 const RECORD_ID = 'current';
 
 /* The session in IndexedDB, beside the key it is bound to rather than in `localStorage` with everything else. */
-export const indexedDbSessionStore = (): SessionStore => {
+export function indexedDbSessionStore(): SessionStore {
     const open = (): Promise<IDBDatabase> =>
         new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, 1);
@@ -155,14 +155,15 @@ export const indexedDbSessionStore = (): SessionStore => {
             await run('readwrite', (store) => store.put(session, RECORD_ID));
         }
     };
-};
+}
 
 /* Every tab of this origin keeps its own vault over the one IndexedDB record, so a refresh waits for the others. */
-const oneTabAtATime = <T>(run: () => Promise<T>): Promise<T> =>
-    typeof navigator !== 'undefined' && 'locks' in navigator ? navigator.locks.request('ruimte-pulsar-refresh', run) : run();
+function oneTabAtATime<T>(run: () => Promise<T>): Promise<T> {
+    return typeof navigator !== 'undefined' && 'locks' in navigator ? navigator.locks.request('ruimte-pulsar-refresh', run) : run();
+}
 
 /* The page as a platform to sign in on, or null inside the desktop shell and on an origin the address book would not send a login back to. */
-export const webPulsar = (): PulsarPlatform | null => {
+export function webPulsar(): PulsarPlatform | null {
     if (desktop() !== null || typeof location === 'undefined' || typeof indexedDB === 'undefined') {
         return null;
     }
@@ -176,4 +177,4 @@ export const webPulsar = (): PulsarPlatform | null => {
         keeper: vault,
         web: { redirectUri, storage: localStorage }
     };
-};
+}

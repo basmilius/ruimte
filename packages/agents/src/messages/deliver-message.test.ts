@@ -14,7 +14,9 @@ const entry: DeliverMessageEntry = {
     notBefore: 1
 };
 
-const notice = (from: string, fromTitle: string): Notice => ({ projectId: 'project', targetId: 'chat-2', from, fromTitle, text: 'hello', createdAt: 1 });
+function notice(from: string, fromTitle: string): Notice {
+    return { projectId: 'project', targetId: 'chat-2', from, fromTitle, text: 'hello', createdAt: 1 };
+}
 
 const words = {
     prompt: (count: number): string => `${count} messages above`,
@@ -22,7 +24,7 @@ const words = {
 };
 
 /* A queue and a chat that writes down every turn it is woken for. */
-const fixture = (waiting: Notice[], options: { placed?: boolean; chat?: boolean } = {}) => {
+function fixture(waiting: Notice[], options: { placed?: boolean; chat?: boolean } = {}) {
     const woken: Parameters<WakeChat['wake']>[0][] = [];
     const chat: WakeChat = {
         items: () => [],
@@ -38,7 +40,7 @@ const fixture = (waiting: Notice[], options: { placed?: boolean; chat?: boolean 
         words
     });
     return { woken, handler };
-};
+}
 
 describe('deliverMessageHandler', () => {
     test('opens one turn for everything waiting, with the senders on it and the words of the host', async () => {

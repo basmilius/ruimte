@@ -56,11 +56,15 @@ export const IDLE_SWIPE: SwipeState = { phase: 'idle', dx: 0, dy: 0, checked: fa
 
 const NONE: SwipeOutcome = { kind: 'none' };
 
-const sideOf = (dx: number): SwipeSide => (dx < 0 ? 'back' : 'forward');
+function sideOf(dx: number): SwipeSide {
+    return dx < 0 ? 'back' : 'forward';
+}
 
-const allowed = (side: SwipeSide, history: SwipeHistory): boolean => (side === 'back' ? history.canGoBack : history.canGoForward);
+function allowed(side: SwipeSide, history: SwipeHistory): boolean {
+    return side === 'back' ? history.canGoBack : history.canGoForward;
+}
 
-const measure = (state: SwipeState, history: SwipeHistory): { side: SwipeSide; progress: number } | null => {
+function measure(state: SwipeState, history: SwipeHistory): { side: SwipeSide; progress: number } | null {
     if (state.phase !== 'tracking' || state.dx === 0 || Math.abs(state.dx) <= SWIPE_DOMINANCE * Math.abs(state.dy)) {
         return null;
     }
@@ -69,24 +73,25 @@ const measure = (state: SwipeState, history: SwipeHistory): { side: SwipeSide; p
         return null;
     }
     return { side, progress: Math.min(1, Math.abs(state.dx) / SWIPE_THRESHOLD_PX) };
-};
+}
 
-const finish = (state: SwipeState, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } => {
+function finish(state: SwipeState, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } {
     const measured = measure(state, history);
     if (measured && measured.progress >= 1) {
         return { state: { ...IDLE_SWIPE, deafUntil: now + SWIPE_DEAF_MS }, outcome: { kind: 'navigate', side: measured.side } };
     }
     return { state: { ...IDLE_SWIPE, deafUntil: state.deafUntil }, outcome: NONE };
-};
+}
 
 /*
  * The gesture after a silence, which is how it ends when no momentum follows (the fingers stopped
  * before they lifted). The registry calls it on a timer `SWIPE_GESTURE_GAP_MS` after the last sample.
  */
-export const settleSwipe = (state: SwipeState, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } =>
-    state.phase === 'idle' ? { state, outcome: NONE } : finish(state, history, now);
+export function settleSwipe(state: SwipeState, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } {
+    return state.phase === 'idle' ? { state, outcome: NONE } : finish(state, history, now);
+}
 
-export const feedWheel = (state: SwipeState, sample: WheelSample, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } => {
+export function feedWheel(state: SwipeState, sample: WheelSample, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } {
     // A pinch neither adds to a swipe nor, when the page prevents it, holds the next one.
     if (sample.pinch) {
         return { state, outcome: NONE };
@@ -122,4 +127,4 @@ export const feedWheel = (state: SwipeState, sample: WheelSample, history: Swipe
     current = { ...current, dx: current.dx + sample.deltaX, dy: current.dy + sample.deltaY, checked: current.checked || firstHorizontal };
     const measured = measure(current, history);
     return { state: current, outcome: measured ? { kind: 'progress', ...measured } : NONE };
-};
+}

@@ -16,7 +16,7 @@ export const ROLE_LINES: readonly string[] = [
 const EDGE_LINES_MAX = 20;
 
 /* What a refusal about a line may offer: only the lines this same call would remove. */
-export const edgeLines = (canvas: ProjectCanvasView, takes: (edge: ProjectEdge) => boolean): string[] => {
+export function edgeLines(canvas: ProjectCanvasView, takes: (edge: ProjectEdge) => boolean): string[] {
     const edges = canvas.edges.filter(takes);
     if (edges.length > EDGE_LINES_MAX) {
         return [`detail\truimte-context link list --view ${canvas.id}\tthe ${canvas.edges.length} lines of ${canvas.id}`];
@@ -27,11 +27,13 @@ export const edgeLines = (canvas: ProjectCanvasView, takes: (edge: ProjectEdge) 
             ? `${canvas.id} has no lines on it`
             : `You have no line on ${canvas.id} to remove; link delete takes a line whose ends are both yours`
     );
-};
+}
 
 /*
  * Who drew a line is written down nowhere, so it is read off its ends, the rule `node delete` follows
  * for a node: an end is yours when it is you or a node you made. Both ends have to be, since a line a
  * person drew into an agent is the context that person gave it.
  */
-export const ownEnd = (id: string, call: VerbCall): boolean => id === call.caller || call.host.madeBy(id) === call.caller;
+export function ownEnd(id: string, call: VerbCall): boolean {
+    return id === call.caller || call.host.madeBy(id) === call.caller;
+}

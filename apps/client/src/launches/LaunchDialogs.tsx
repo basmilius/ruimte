@@ -48,10 +48,14 @@ import { TransportError } from '@/transport/transport';
 
 const PROJECT_FOLDER = '.';
 
-const close = (): void => useLaunches.getState().setDialog(null);
+function close(): void {
+    return useLaunches.getState().setDialog(null);
+}
 
 let draftCount = 0;
-const freshId = (): string => `new:${++draftCount}`;
+function freshId(): string {
+    return `new:${++draftCount}`;
+}
 
 /* The editor and the import, whichever the chip or the menu asked for. */
 export function LaunchDialogs() {
@@ -92,13 +96,14 @@ export function LaunchDialogs() {
 
 type Failure = { conflict: true } | { conflict: false; message: string };
 
-const failureOf = (e: unknown, fallback: string): Failure =>
-    e instanceof TransportError && e.code === 'rev-conflict'
+function failureOf(e: unknown, fallback: string): Failure {
+    return e instanceof TransportError && e.code === 'rev-conflict'
         ? { conflict: true }
         : {
               conflict: false,
               message: e instanceof Error ? e.message : fallback
           };
+}
 
 /*
  * Every launch of the project at once, a list on the left and the chosen one on the right, saved as a

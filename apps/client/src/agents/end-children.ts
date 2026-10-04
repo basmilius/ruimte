@@ -16,25 +16,31 @@ export interface PendingEnd {
 export const useEndingAgents = create<{ pending: PendingEnd | null }>(() => ({ pending: null }));
 
 /* The question the dialog asks, in the language on screen. */
-export const endingTitle = (pending: PendingEnd): string => {
+export function endingTitle(pending: PendingEnd): string {
     if (pending.action === 'stop-subagents') {
         return i18next.t('agents:dialog.stopSubagentsTitle');
     }
     return i18next.t(pending.action === 'stop' ? 'agents:dialog.stopTitle' : 'agents:dialog.deleteTitle', { what: pending.what });
-};
+}
 
-export const endsAgentsWarning = (agents: number): string => i18next.t('agents:ending.alsoEnds', { count: agents });
+export function endsAgentsWarning(agents: number): string {
+    return i18next.t('agents:ending.alsoEnds', { count: agents });
+}
 
-export const stopsTaskWarning = (agents: number): string => `${i18next.t('agents:ending.stopsTask')}${agents === 0 ? '' : ` ${endsAgentsWarning(agents)}`}`;
+export function stopsTaskWarning(agents: number): string {
+    return `${i18next.t('agents:ending.stopsTask')}${agents === 0 ? '' : ` ${endsAgentsWarning(agents)}`}`;
+}
 
-export const stopsSubagentsWarning = (agents: number): string => `${i18next.t('agents:ending.stopsSubagents')} ${endsAgentsWarning(agents)}`;
+export function stopsSubagentsWarning(agents: number): string {
+    return `${i18next.t('agents:ending.stopsSubagents')} ${endsAgentsWarning(agents)}`;
+}
 
 /*
  * The live agents these nodes opened, each once however many of them opened it. A machine that
  * does not know the question (or cannot be asked) names none, which is how deleting worked before
  * it ended anything.
  */
-export const agentsEndedBy = async (transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<string[]> => {
+export async function agentsEndedBy(transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<string[]> {
     if (transport === null || nodeIds.length === 0) {
         return [];
     }
@@ -48,22 +54,23 @@ export const agentsEndedBy = async (transport: Pick<Transport, 'request'> | null
     );
     const going = new Set(nodeIds);
     return [...new Set(answers.flat().filter((id) => !going.has(id)))];
-};
+}
 
-export const agentsEndedWith = async (transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<number> =>
-    (await agentsEndedBy(transport, nodeIds)).length;
+export async function agentsEndedWith(transport: Pick<Transport, 'request'> | null, nodeIds: readonly string[]): Promise<number> {
+    return (await agentsEndedBy(transport, nodeIds)).length;
+}
 
 /*
  * Asks first when the delete would end an agent or leave a worktree behind. A worktree is never
  * removed on its own, so the moment its node goes is when a person sees that it stays.
  */
-export const askBeforeEndingAgents = async (
+export async function askBeforeEndingAgents(
     transport: Pick<Transport, 'request'> | null,
     nodeIds: readonly string[],
     what: string,
     run: () => void,
     worktrees?: () => Promise<PendingEnd['worktrees']>
-): Promise<void> => {
+): Promise<void> {
     const [agents, left] = await Promise.all([agentsEndedWith(transport, nodeIds), worktrees?.().catch(() => undefined)]);
     const offered = left !== undefined && left.worktrees.length > 0 ? left : undefined;
     if (agents === 0 && offered === undefined) {
@@ -71,19 +78,19 @@ export const askBeforeEndingAgents = async (
         return;
     }
     useEndingAgents.setState({ pending: { what, agents, run, ...(offered === undefined ? {} : { worktrees: offered }) } });
-};
+}
 
 // Stopping a task always removes its node, so this confirmation cannot use the delete shortcut above.
-export const askBeforeStoppingTask = async (transport: Pick<Transport, 'request'> | null, childId: string, what: string, run: () => void): Promise<void> => {
+export async function askBeforeStoppingTask(transport: Pick<Transport, 'request'> | null, childId: string, what: string, run: () => void): Promise<void> {
     const agents = await agentsEndedWith(transport, [childId]);
     useEndingAgents.setState({ pending: { what, agents, action: 'stop', run } });
-};
+}
 
-export const askBeforeStoppingSubagents = async (transport: Pick<Transport, 'request'> | null, chatId: string, run: () => void): Promise<void> => {
+export async function askBeforeStoppingSubagents(transport: Pick<Transport, 'request'> | null, chatId: string, run: () => void): Promise<void> {
     const agents = await agentsEndedWith(transport, [chatId]);
     if (agents === 0) {
         run();
         return;
     }
     useEndingAgents.setState({ pending: { agents, action: 'stop-subagents', run } });
-};
+}

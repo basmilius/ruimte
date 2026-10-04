@@ -3,27 +3,37 @@ import type { DrawingDocument, DrawingElement } from '@ruimte/contracts';
 import { boundsOf, createDrawingStore, focusedDrawing, withStyle } from './drawing';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
-const drawing = () => focusedDrawing().getState();
+function drawing() {
+    return focusedDrawing().getState();
+}
 
-const rect = (id: string, x = 0, y = 0): DrawingElement => ({ kind: 'rect', id, x, y, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 });
+function rect(id: string, x = 0, y = 0): DrawingElement {
+    return { kind: 'rect', id, x, y, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 };
+}
 
-const text = (id: string, value = 'hello'): DrawingElement => ({
-    kind: 'text',
-    id,
-    x: 0,
-    y: 0,
-    w: 80,
-    h: 24,
-    stroke: 'ink',
-    strokeWidth: 1,
-    seed: 2,
-    text: value,
-    size: 20
-});
+function text(id: string, value = 'hello'): DrawingElement {
+    return {
+        kind: 'text',
+        id,
+        x: 0,
+        y: 0,
+        w: 80,
+        h: 24,
+        stroke: 'ink',
+        strokeWidth: 1,
+        seed: 2,
+        text: value,
+        size: 20
+    };
+}
 
-const document = (elements: DrawingElement[], rev = 3): DrawingDocument => ({ version: 1, rev, elements });
+function document(elements: DrawingElement[], rev = 3): DrawingDocument {
+    return { version: 1, rev, elements };
+}
 
-const ids = (): string[] => drawing().elements.map((element) => element.id);
+function ids(): string[] {
+    return drawing().elements.map((element) => element.id);
+}
 
 beforeEach(() => {
     drawing().setViewport({ w: 800, h: 600 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { moveToNewWindow, wantsNewWindow, type MoveDeps } from './windows';
 
-const spyMove = (over: Partial<MoveDeps> = {}): { deps: Partial<MoveDeps>; steps: string[] } => {
+function spyMove(over: Partial<MoveDeps> = {}): { deps: Partial<MoveDeps>; steps: string[] } {
     const steps: string[] = [];
     return {
         steps,
@@ -26,7 +26,7 @@ const spyMove = (over: Partial<MoveDeps> = {}): { deps: Partial<MoveDeps>; steps
             ...over
         }
     };
-};
+}
 
 describe('moving the project to a new window', () => {
     test('writes what is on screen, hands the project over, and only then lets go of it', async () => {

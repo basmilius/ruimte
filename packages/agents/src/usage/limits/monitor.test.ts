@@ -4,16 +4,21 @@ import { ProviderRegistry } from '../../providers/registry.ts';
 import { UsageMonitor, type LimitAccount, type LimitAccounts } from './monitor.ts';
 import type { ProbeResult } from './probe.ts';
 
-const registry = (installed: readonly UsageProvider[]): ProviderRegistry =>
-    new ProviderRegistry({ detect: (command) => Promise.resolve({ installed: installed.includes(command as UsageProvider), version: '1.0.0' }) });
+function registry(installed: readonly UsageProvider[]): ProviderRegistry {
+    return new ProviderRegistry({ detect: (command) => Promise.resolve({ installed: installed.includes(command as UsageProvider), version: '1.0.0' }) });
+}
 
-const reading = (used: number): ProbeResult => ({
-    plan: 'max',
-    windows: [{ id: 'five_hour', kind: 'session', label: 'Session', used, resetsAt: 1_000, durationMs: 5 * 60 * 60_000 }],
-    cost: null
-});
+function reading(used: number): ProbeResult {
+    return {
+        plan: 'max',
+        windows: [{ id: 'five_hour', kind: 'session', label: 'Session', used, resetsAt: 1_000, durationMs: 5 * 60 * 60_000 }],
+        cost: null
+    };
+}
 
-const providerOf = (monitor: UsageMonitor, kind: UsageProvider) => monitor.snapshot().providers.find((provider) => provider.kind === kind)!;
+function providerOf(monitor: UsageMonitor, kind: UsageProvider) {
+    return monitor.snapshot().providers.find((provider) => provider.kind === kind)!;
+}
 
 describe('the usage monitor', () => {
     test('reads every installed CLI and says so about the ones that are not there', async () => {

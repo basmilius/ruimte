@@ -13,24 +13,26 @@ import { WAITING_GRACE_MS } from '@ruimte/agents/tasks/waiting-child';
 
 type Daemon = TestDaemon;
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'term-lead', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'term-lead', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let root: string;
 let home: string;
@@ -62,23 +64,23 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (claudeCli?: FakeCli): Promise<Daemon> => {
+async function boot(claudeCli?: FakeCli): Promise<Daemon> {
     const daemon = await bootTestDaemon({ home, store, clock, ...(claudeCli ? { claudeCli } : {}) });
     running.push(daemon);
     return daemon;
-};
+}
 
 const verb = runVerb;
 
-const delegate = async (daemon: Daemon, title: string, prompt: string, chat = true): Promise<{ childId: string; taskId: string }> => {
+async function delegate(daemon: Daemon, title: string, prompt: string, chat = true): Promise<{ childId: string; taskId: string }> {
     const [line] = await verb(daemon, 'chat-lead', 'agent', ['claude', ...(chat ? [] : ['--terminal']), '--task', title, '--prompt', prompt]);
     const fields = line!.split('\t');
     expect(fields).toHaveLength(6);
     return { childId: fields[0]!, taskId: fields[5]! };
-};
+}
 
 /* Opens a team of terminal roles with --task, each settling only once it calls done. */
-const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> => {
+async function delegateTeam(daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> {
     const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude', terminal: true }));
     const lines = await verb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
     expect(lines).toHaveLength(titles.length + 2);
@@ -87,40 +89,47 @@ const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<
         const fields = line.split('\t');
         return { childId: fields[0]!, taskId: fields[6]! };
     });
-};
+}
 
 /* A terminal child reporting back, and the outbox done with whatever that owed. */
-const report = async (daemon: Daemon, child: { childId: string; taskId: string }, result: string): Promise<void> => {
+async function report(daemon: Daemon, child: { childId: string; taskId: string }, result: string): Promise<void> {
     expect(await verb(daemon, child.childId, 'done', ['--result', result])).toEqual([`done\t${child.taskId}\tchat-lead`]);
     await daemon.until(() => daemon.enqueued.some((work) => work.kind === 'wake-parent' && work.payload.taskId === child.taskId));
     await daemon.worker.settled();
-};
+}
 
 /* The lead with a finished turn behind it, idle and stored, so a wake finds it after a restart too. */
-const leadIdle = async (daemon: Daemon): Promise<void> => {
+async function leadIdle(daemon: Daemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'plan the work');
     await daemon.until(() => turnsOf(daemon, 'chat-lead').some((turn) => turn.state === 'done'));
-};
+}
 
-const turnsOf = (daemon: Daemon, chatId: string): ChatTurnItem[] =>
-    (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(daemon: Daemon, chatId: string): ChatTurnItem[] {
+    return (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
-const wakeTurns = (daemon: Daemon): ChatTurnItem[] => turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined);
+function wakeTurns(daemon: Daemon): ChatTurnItem[] {
+    return turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined);
+}
 
-const leadItems = (daemon: Daemon): ChatItem[] => daemon.chats.get('chat-lead')?.thread.list() ?? [];
+function leadItems(daemon: Daemon): ChatItem[] {
+    return daemon.chats.get('chat-lead')?.thread.list() ?? [];
+}
 
 /* The lead in the middle of a turn, as it is while it runs the verbs. */
-const leadWorking = async (daemon: Daemon): Promise<void> => {
+async function leadWorking(daemon: Daemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'slow');
     await daemon.until(() => daemon.chats.get('chat-lead')?.info.agentSessionId !== null);
-};
+}
 
 /* Settled and owed: the wake entries are in the outbox, which is where a restart finds them. */
-const settledTasks = (daemon: Daemon, count: number) => (): boolean =>
-    daemon.tasks.ofParent('chat-lead').filter((task) => task.status !== 'open').length === count &&
-    daemon.outbox.list().filter((entry) => entry.kind === 'wake-parent').length === count;
+function settledTasks(daemon: Daemon, count: number) {
+    return (): boolean =>
+        daemon.tasks.ofParent('chat-lead').filter((task) => task.status !== 'open').length === count &&
+        daemon.outbox.list().filter((entry) => entry.kind === 'wake-parent').length === count;
+}
 
 describe('a task wakes the chat that gave it', () => {
     test('three children that settle while the lead works give it exactly one new turn with three results, without polling', async () => {

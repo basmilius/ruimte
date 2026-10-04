@@ -9,14 +9,15 @@ import { verbNamed } from './verbs.ts';
 const noun = verbNamed('computer') as Noun;
 
 /* Only what a computer verb reaches: where the caller stands, and the machine's computer use. */
-const hostFor = (setup: ComputerSetup): CanvasHost =>
-    ({
+function hostFor(setup: ComputerSetup): CanvasHost {
+    return {
         locate: () => ({ projectId: 'p1', folder: '/tmp/p1', canvasId: 'c1' }),
         computer: setup.computer
-    }) as unknown as CanvasHost;
+    } as unknown as CanvasHost;
+}
 
 /* What the CLI prints: the lines of an answer, or the refusal with its advice. */
-const run = async (setup: ComputerSetup, argv: string[], caller = 'chat-1'): Promise<string[]> => {
+async function run(setup: ComputerSetup, argv: string[], caller = 'chat-1'): Promise<string[]> {
     try {
         return await noun.run(argv, { caller, host: hostFor(setup) });
     } catch (error) {
@@ -25,15 +26,15 @@ const run = async (setup: ComputerSetup, argv: string[], caller = 'chat-1'): Pro
         }
         throw error;
     }
-};
+}
 
 /* Lets the agent in for this time, so what follows is about the answer and not about asking. */
-const approved = async (setup: ComputerSetup): Promise<void> => {
+async function approved(setup: ComputerSetup): Promise<void> {
     const call = run(setup, ['state', 'TextEdit']);
     await until(() => setup.computer.pendingApprovals().length === 1);
     await setup.computer.answer(setup.computer.pendingApprovals()[0]!.requestId, 'once');
     await call;
-};
+}
 
 /* The state rows after an action on a window that did not change. */
 const UNCHANGED = ['window\tUntitled\t292,161\t586x488', 'shot\t/home/computer-use/screenshots/shot.png\t1172x976\t2\t292,161', 'changes\tnone'];

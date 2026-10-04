@@ -3,7 +3,9 @@ import type { AgentEventType, AgentRequestType, ChatItem, ChatSubagentPayload, C
 import { ChatTransportError, type ChatEventMap, type ChatRequestMap, type ChatTransport, type ChatTransportStatus } from '../transport';
 import { mergeNewest, SubagentConversation, type SubagentConversationState } from './subagent-conversation';
 
-const note = (id: string, text = id): ChatItem => ({ id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text });
+function note(id: string, text = id): ChatItem {
+    return { id, kind: 'note', createdAt: 0, turnId: null, level: 'info', text };
+}
 
 /* A machine that answers `chat.subagent` from a list the test grows, newest page first with offsets as cursors. */
 class FakeMachine implements ChatTransport {
@@ -66,12 +68,12 @@ class FakeMachine implements ChatTransport {
     }
 }
 
-const open = async (machine: FakeMachine): Promise<{ conversation: SubagentConversation; states: SubagentConversationState[] }> => {
+async function open(machine: FakeMachine): Promise<{ conversation: SubagentConversation; states: SubagentConversationState[] }> {
     const states: SubagentConversationState[] = [];
     const conversation = new SubagentConversation(machine, 'chat-1', 'toolu_1', (state) => states.push(state));
     await conversation.start();
     return { conversation, states };
-};
+}
 
 describe('mergeNewest', () => {
     test('replaces what is there in place and adds what is new after it', () => {

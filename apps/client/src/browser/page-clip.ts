@@ -13,15 +13,19 @@ interface Corners {
     bl: number;
 }
 
-const round = (value: number): number => Math.round(value);
+function round(value: number): number {
+    return Math.round(value);
+}
 
-const overlaps = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+function overlaps(a: Rect, b: Rect): boolean {
+    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
 
 /*
  * A hole inside the page, with a corner left square wherever the page's own edge already cuts it.
  * Null for a node that fell off the page entirely.
  */
-const shapeOf = (hole: PageHole, width: number, height: number): { rect: Rect; corners: Corners } | null => {
+function shapeOf(hole: PageHole, width: number, height: number): { rect: Rect; corners: Corners } | null {
     const left = Math.max(0, round(hole.x));
     const top = Math.max(0, round(hole.y));
     const right = Math.min(width, round(hole.x + hole.w));
@@ -41,9 +45,9 @@ const shapeOf = (hole: PageHole, width: number, height: number): { rect: Rect; c
             bl: cut.left || cut.bottom ? 0 : radius
         }
     };
-};
+}
 
-const roundedPath = (rect: Rect, corners: Corners): string => {
+function roundedPath(rect: Rect, corners: Corners): string {
     const { x, y, w, h } = rect;
     const arc = (radius: number, toX: number, toY: number): string => (radius > 0 ? `A${radius},${radius} 0 0 1 ${toX},${toY}` : '');
     return [
@@ -60,10 +64,10 @@ const roundedPath = (rect: Rect, corners: Corners): string => {
     ]
         .filter((part) => part !== '')
         .join(' ');
-};
+}
 
 /* Holes that cross each other, as one group each. A group of one keeps its shape; the rest is cut. */
-const groupsOf = (holes: readonly Rect[]): Rect[][] => {
+function groupsOf(holes: readonly Rect[]): Rect[][] {
     const groups: Rect[][] = [];
     for (const hole of holes) {
         const touching = groups.filter((group) => group.some((other) => overlaps(hole, other)));
@@ -73,7 +77,7 @@ const groupsOf = (holes: readonly Rect[]): Rect[][] => {
         groups.push([hole, ...touching.flat()]);
     }
     return groups;
-};
+}
 
 /*
  * The same area as the rectangles given, as rectangles that never overlap. A path is filled with the
@@ -81,7 +85,7 @@ const groupsOf = (holes: readonly Rect[]): Rect[][] => {
  * other's edges first. Neighbours in a row are put back together, which is the whole hole again
  * wherever nothing crossed it.
  */
-export const disjointRects = (rects: readonly Rect[]): Rect[] => {
+export function disjointRects(rects: readonly Rect[]): Rect[] {
     const xs = [...new Set(rects.flatMap((rect) => [rect.x, rect.x + rect.w]))].sort((a, b) => a - b);
     const ys = [...new Set(rects.flatMap((rect) => [rect.y, rect.y + rect.h]))].sort((a, b) => a - b);
     const out: Rect[] = [];
@@ -106,7 +110,7 @@ export const disjointRects = (rects: readonly Rect[]): Rect[] => {
         }
     }
     return out;
-};
+}
 
 /*
  * The page with a hole for everything standing on top of it, in the page's own pixels. Null where
@@ -114,7 +118,7 @@ export const disjointRects = (rects: readonly Rect[]): Rect[] => {
  * crosses another hole: the two are cut along each other's edges there, since even-odd would
  * otherwise fill the piece they share.
  */
-export const pageClipPath = (width: number, height: number, holes: readonly PageHole[]): string | null => {
+export function pageClipPath(width: number, height: number, holes: readonly PageHole[]): string | null {
     const shapes = holes.map((hole) => shapeOf(hole, width, height)).filter((shape): shape is { rect: Rect; corners: Corners } => shape !== null);
     if (shapes.length === 0) {
         return null;
@@ -131,4 +135,4 @@ export const pageClipPath = (width: number, height: number, holes: readonly Page
         }
     }
     return `path(evenodd, "${parts.join(' ')}")`;
-};
+}

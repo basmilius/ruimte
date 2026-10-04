@@ -13,22 +13,22 @@ export const EMPTY_DEVICE_LIST: DeviceListState = { devices: [], unavailable: []
 
 const COLLAPSED_STORAGE_KEY = 'ruimte.devices.collapsed';
 
-const readCollapsedGroups = (): readonly string[] => {
+function readCollapsedGroups(): readonly string[] {
     try {
         const stored: unknown = JSON.parse(localStorage.getItem(COLLAPSED_STORAGE_KEY) ?? '[]');
         return Array.isArray(stored) ? stored.filter((key): key is string => typeof key === 'string') : [];
     } catch {
         return [];
     }
-};
+}
 
-const persistCollapsedGroups = (keys: readonly string[]): void => {
+function persistCollapsedGroups(keys: readonly string[]): void {
     try {
         localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(keys));
     } catch {
         // Storage that refuses keeps the choice for this session only.
     }
-};
+}
 
 interface DevicesState {
     byEndpoint: Record<string, DeviceListState>;
@@ -75,13 +75,17 @@ export const useDevices = create<DevicesState>((set, get) => ({
     }
 }));
 
-export const sameDevice = (left: Pick<DeviceInfo, 'backendId' | 'deviceId'>, right: Pick<DeviceInfo, 'backendId' | 'deviceId'>): boolean =>
-    left.backendId === right.backendId && left.deviceId === right.deviceId;
+export function sameDevice(left: Pick<DeviceInfo, 'backendId' | 'deviceId'>, right: Pick<DeviceInfo, 'backendId' | 'deviceId'>): boolean {
+    return left.backendId === right.backendId && left.deviceId === right.deviceId;
+}
 
 // Re-exported, since what a reference points at is one rule and the daemon answers it too.
 export { deviceMatches };
 
-export const useDeviceList = (endpointId: string): DeviceListState => useDevices((state) => state.byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST);
+export function useDeviceList(endpointId: string): DeviceListState {
+    return useDevices((state) => state.byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST);
+}
 
-export const useResolvedDevice = (endpointId: string, reference: DeviceReference | undefined): DeviceInfo | null =>
-    useDevices((state) => (reference ? (state.byEndpoint[endpointId]?.devices.find((device) => deviceMatches(device, reference)) ?? null) : null));
+export function useResolvedDevice(endpointId: string, reference: DeviceReference | undefined): DeviceInfo | null {
+    return useDevices((state) => (reference ? (state.byEndpoint[endpointId]?.devices.find((device) => deviceMatches(device, reference)) ?? null) : null));
+}

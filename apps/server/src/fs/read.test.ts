@@ -10,30 +10,35 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0x00, 0x00, 0x00]), Buffer.from('WEBPVP8 ')]);
 
 /* The head of an ISO base media file: a box length, `ftyp`, and the brand that says which flavor. */
-const isoMedia = (brand: string): Buffer => Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from(brand)]);
+function isoMedia(brand: string): Buffer {
+    return Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from(brand)]);
+}
 
 /* An `ftyp` box whose length covers the major brand, a minor version and the compatible brands. */
-const ftyp = (major: string, ...compatible: string[]): Buffer => {
+function ftyp(major: string, ...compatible: string[]): Buffer {
     const length = 16 + compatible.length * 4;
     return Buffer.concat([Buffer.from([0x00, 0x00, 0x00, length]), Buffer.from(`ftyp${major}`), Buffer.alloc(4), Buffer.from(compatible.join(''))]);
-};
+}
 
 // An icon directory with one 16 by 16 entry, and a bitmap file header in front of a BITMAPINFOHEADER.
 const ICO = Buffer.from([0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00, ...new Array(8).fill(0)]);
 const BMP = Buffer.concat([Buffer.from('BM'), Buffer.from([0x46, 0x00, 0x00, 0x00, 0, 0, 0, 0, 0x36, 0, 0, 0, 0x28, 0, 0, 0]), Buffer.alloc(8)]);
 
-const latin1 = (text: string): Uint8Array => new Uint8Array(Buffer.from(text, 'latin1'));
+function latin1(text: string): Uint8Array {
+    return new Uint8Array(Buffer.from(text, 'latin1'));
+}
 
-const ebml = (docType: string): Buffer =>
-    Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from([0x42, 0x82]), Buffer.from(docType), Buffer.alloc(16)]);
+function ebml(docType: string): Buffer {
+    return Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from([0x42, 0x82]), Buffer.from(docType), Buffer.alloc(16)]);
+}
 
 let root: string;
 
-const write = async (name: string, content: string | Buffer): Promise<string> => {
+async function write(name: string, content: string | Buffer): Promise<string> {
     const path = join(root, name);
     await writeFile(path, content);
     return path;
-};
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-fs-read-'));

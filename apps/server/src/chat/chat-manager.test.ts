@@ -32,8 +32,8 @@ let claude: InProcessCli;
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-const makeManager = (extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) =>
-    new ChatManager({
+function makeManager(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
+    return new ChatManager({
         providers,
         store,
         attachments,
@@ -41,14 +41,15 @@ const makeManager = (extra: Partial<ConstructorParameters<typeof ChatManager>[0]
         env: { PATH: process.env.PATH, HOME: home, RUIMTE_HOOK_URL: 'x' },
         ...extra
     });
+}
 
 // A chat's title timer and its CLI outlive a shutdown; only a dispose ends them.
-const retire = async (target: ChatManager): Promise<void> => {
+async function retire(target: ChatManager): Promise<void> {
     await target.shutdown();
     for (const info of target.list()) {
         target.get(info.chatId)?.dispose();
     }
-};
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-chat-'));
@@ -68,14 +69,17 @@ afterEach(async () => {
 // The device of the session this line was written for; both CLIs are asserted against it.
 const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 18 Pro Max' }];
 
-const idle = () => recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
+function idle() {
+    return recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
+}
 
 // What a subagent did in the thread: the calls it made and the text it wrote, each under the call that started it.
-const subagentWork = (): Array<Extract<ChatItem, { kind: 'tool' | 'assistant' }>> =>
-    [...recorder.items.values()].filter(
+function subagentWork(): Array<Extract<ChatItem, { kind: 'tool' | 'assistant' }>> {
+    return [...recorder.items.values()].filter(
         (item): item is Extract<ChatItem, { kind: 'tool' | 'assistant' }> =>
             (item.kind === 'tool' || item.kind === 'assistant') && Boolean(item.parentToolUseId)
     );
+}
 
 describe('ChatManager', () => {
     test('create spawns nothing; the first send starts the CLI with the selection and streams a reply', async () => {

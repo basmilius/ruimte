@@ -3,7 +3,7 @@ import type { SpeechState } from '@ruimte/desktop-bridge';
 import { cancelDictation, registerDictationTarget, setDictationEngine, stopDictation, toggleDictation, useDictation, type DictationTarget } from './controller';
 import { DictationError, type DictationHandlers } from './engine';
 
-const fakeEngine = () => {
+function fakeEngine() {
     let handlers: DictationHandlers | null = null;
     const calls: string[] = [];
     const engine = {
@@ -17,9 +17,9 @@ const fakeEngine = () => {
         }
     };
     return { engine, calls, handlers: () => handlers! };
-};
+}
 
-const target = (id = 'field') => {
+function target(id = 'field') {
     const inserted: string[] = [];
     const previews: string[] = [];
     const element = { isConnected: true } as unknown as HTMLElement;
@@ -29,7 +29,7 @@ const target = (id = 'field') => {
         capture: () => ({ insert: (text) => inserted.push(text), preview: (text) => previews.push(text) })
     };
     return { target: dictationTarget, inserted, previews };
-};
+}
 
 const READY = { enabled: true, phase: 'ready' } as unknown as SpeechState;
 

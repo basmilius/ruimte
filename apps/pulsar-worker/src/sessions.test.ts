@@ -12,22 +12,28 @@ const deviceKey = generateKeyPairSync('ed25519');
 const sessionKey = deviceKey.publicKey.export({ format: 'jwk' }).x!;
 let db: D1Database;
 
-const signedWith = (key: ReturnType<typeof generateKeyPairSync>, refreshToken: string, issuedAt = Date.now()): SessionRefreshPayload => ({
-    refreshToken,
-    issuedAt,
-    signature: sign(null, Buffer.from(sessionRefreshMessage(refreshToken, issuedAt)), key.privateKey).toString('base64url')
-});
+function signedWith(key: ReturnType<typeof generateKeyPairSync>, refreshToken: string, issuedAt = Date.now()): SessionRefreshPayload {
+    return {
+        refreshToken,
+        issuedAt,
+        signature: sign(null, Buffer.from(sessionRefreshMessage(refreshToken, issuedAt)), key.privateKey).toString('base64url')
+    };
+}
 
-const signed = (refreshToken: string, issuedAt = Date.now()): SessionRefreshPayload => signedWith(deviceKey, refreshToken, issuedAt);
+function signed(refreshToken: string, issuedAt = Date.now()): SessionRefreshPayload {
+    return signedWith(deviceKey, refreshToken, issuedAt);
+}
 
-const bearer = (token: string): Request => new Request('https://pulsar.test/v1/account', { headers: { authorization: `Bearer ${token}` } });
+function bearer(token: string): Request {
+    return new Request('https://pulsar.test/v1/account', { headers: { authorization: `Bearer ${token}` } });
+}
 
-const rotated = (outcome: Awaited<ReturnType<typeof rotateSession>>): SessionResult => {
+function rotated(outcome: Awaited<ReturnType<typeof rotateSession>>): SessionResult {
     if (outcome === null || outcome === 'clock-skew') {
         throw new Error(`Expected a rotation, got ${outcome}`);
     }
     return outcome;
-};
+}
 
 beforeEach(() => {
     setSystemTime(new Date(NOW));

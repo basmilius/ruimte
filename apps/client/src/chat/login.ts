@@ -7,7 +7,9 @@ import { useUi } from '@/state/ui';
 import { windowWorkspace } from '@/state/window';
 import { transportFor } from '@/transport';
 
-const words = (key: string, values?: Record<string, string>): string => i18next.t(`settings:providers.account.login.${key}`, values);
+function words(key: string, values?: Record<string, string>): string {
+    return i18next.t(`settings:providers.account.login.${key}`, values);
+}
 
 /*
  * Runs the CLI's own login in the account's environment. With a workspace of that machine on screen it
@@ -15,7 +17,7 @@ const words = (key: string, values?: Record<string, string>): string => i18next.
  * the person sees; a person making the node is what approves its command. Anywhere else it is a terminal
  * in a dialog of its own, over whatever is open, which watches the login itself.
  */
-export const openLogin = async (endpointId: string, kind: AgentKind, id: string, name: string): Promise<void> => {
+export async function openLogin(endpointId: string, kind: AgentKind, id: string, name: string): Promise<void> {
     const command = providerAccountsOf(endpointId).accounts?.loginCommands?.[kind];
     if (command === undefined) {
         return;
@@ -35,4 +37,4 @@ export const openLogin = async (endpointId: string, kind: AgentKind, id: string,
     void transportFor(endpointId)
         ?.request('accounts.watchLogin', { id })
         .catch(() => undefined);
-};
+}

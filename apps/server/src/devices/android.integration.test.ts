@@ -14,12 +14,12 @@ const server = new ScrcpyServerFile(scrcpyServerDirectory(false, process.execPat
 const backend = new AndroidBackend({ createSource: (adb, serial) => new ScrcpySource(adbScrcpyHost(adb, serial), () => server.path()) });
 const booted = locateAndroidSdk() === null ? undefined : (await backend.list().catch(() => [])).find((device) => device.state === 'booted');
 
-const waitFor = async (condition: () => boolean, ms: number): Promise<void> => {
+async function waitFor(condition: () => boolean, ms: number): Promise<void> {
     const deadline = Date.now() + ms;
     while (!condition() && Date.now() < deadline) {
         await Bun.sleep(50);
     }
-};
+}
 
 describe.skipIf(booted === undefined)('Android screen', () => {
     test('streams H.264 from a key frame, takes input and ends cleanly', async () => {

@@ -70,11 +70,11 @@ export interface JsonDocumentReadOptions {
  * where it is: only a person can decide which of the two things sharing an id was meant. One from a
  * newer Ruimte stays too, and untouched: a file a later release reads is not a file to move aside.
  */
-export const readJsonDocument = async <T>(
+export async function readJsonDocument<T>(
     path: string,
     parse: (text: string) => JsonDocumentParse<T>,
     options: JsonDocumentReadOptions = {}
-): Promise<JsonDocumentRead<T>> => {
+): Promise<JsonDocumentRead<T>> {
     let text: string;
     try {
         text = await readFile(path, 'utf8');
@@ -97,28 +97,37 @@ export const readJsonDocument = async <T>(
     const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
     await rename(path, setAside);
     return { kind: 'corrupt', setAside };
-};
+}
 
 /* The text that landed is the answer: a caller keeps it to tell its own write from someone else's. */
-export const writeJsonDocument = async <T>(path: string, document: T, serialize: (document: T) => string): Promise<string> => {
+export async function writeJsonDocument<T>(path: string, document: T, serialize: (document: T) => string): Promise<string> {
     await mkdir(dirname(path), { recursive: true });
     const text = serialize(document);
     await writeAtomic(path, text, 0o644, { durable: true });
     return text;
-};
+}
 
 /* What a file from a later release is refused with, in the one sentence a person can act on. */
-export const tooNewMessage = (noun: string, version: number, known: number): string =>
-    `This ${noun} was written by a newer Ruimte (file version ${version}, this one reads ${known}). Update Ruimte to open it.`;
+export function tooNewMessage(noun: string, version: number, known: number): string {
+    return `This ${noun} was written by a newer Ruimte (file version ${version}, this one reads ${known}). Update Ruimte to open it.`;
+}
 
 /* Where the two files of a project sit, and the one line that keeps the second out of the repository. */
-export const documentPathInFolder = (folder: string): string => join(folder, PROJECT_DIR, PROJECT_FILE);
+export function documentPathInFolder(folder: string): string {
+    return join(folder, PROJECT_DIR, PROJECT_FILE);
+}
 
-export const privateDirOf = (documentPath: string): string => join(dirname(documentPath), PRIVATE_DIR);
+export function privateDirOf(documentPath: string): string {
+    return join(dirname(documentPath), PRIVATE_DIR);
+}
 
-export const privatePathOf = (documentPath: string): string => join(privateDirOf(documentPath), PROJECT_FILE);
+export function privatePathOf(documentPath: string): string {
+    return join(privateDirOf(documentPath), PROJECT_FILE);
+}
 
-export const gitignorePathOf = (documentPath: string): string => join(dirname(documentPath), GITIGNORE_FILE);
+export function gitignorePathOf(documentPath: string): string {
+    return join(dirname(documentPath), GITIGNORE_FILE);
+}
 
 /*
  * Written once, when a project folder has none, and never touched again: a person who edits these
@@ -134,7 +143,7 @@ export const GITIGNORE_TEXT = [
     ''
 ].join('\n');
 
-export const writeGitignoreIfMissing = async (documentPath: string): Promise<boolean> => {
+export async function writeGitignoreIfMissing(documentPath: string): Promise<boolean> {
     const path = gitignorePathOf(documentPath);
     if (await fileExists(path)) {
         return false;
@@ -142,12 +151,14 @@ export const writeGitignoreIfMissing = async (documentPath: string): Promise<boo
     await mkdir(dirname(path), { recursive: true });
     await writeAtomic(path, GITIGNORE_TEXT, 0o644);
     return true;
-};
+}
 
 /* Reads `.ruimte/project.json` on any version there has been. */
-export const readSharedFile = (path: string): Promise<JsonDocumentRead<SharedFileRead>> => readJsonDocument(path, parseSharedFile);
+export function readSharedFile(path: string): Promise<JsonDocumentRead<SharedFileRead>> {
+    return readJsonDocument(path, parseSharedFile);
+}
 
-export const parseSharedFile = (text: string): JsonDocumentParse<SharedFileRead> => {
+export function parseSharedFile(text: string): JsonDocumentParse<SharedFileRead> {
     let value: unknown;
     try {
         value = JSON.parse(text);
@@ -167,9 +178,9 @@ export const parseSharedFile = (text: string): JsonDocumentParse<SharedFileRead>
         return { kind: 'invalid', message: `Two views or nodes in this project share the id "${duplicate}"` };
     }
     return { kind: 'ok', document: { ...read, file: { ...read.file, views: withoutCrossViewEdges(read.file.views) } } };
-};
+}
 
-export const parsePrivateFile = (text: string): JsonDocumentParse<ProjectPrivateFile> => {
+export function parsePrivateFile(text: string): JsonDocumentParse<ProjectPrivateFile> {
     let value: unknown;
     try {
         value = JSON.parse(text);
@@ -185,9 +196,11 @@ export const parsePrivateFile = (text: string): JsonDocumentParse<ProjectPrivate
         return { kind: 'unreadable' };
     }
     return { kind: 'ok', document: { ...parsed.data, views: withoutCrossViewEdges(parsed.data.views) } };
-};
+}
 
-export const readPrivateFile = (path: string): Promise<JsonDocumentRead<ProjectPrivateFile>> => readJsonDocument(path, parsePrivateFile);
+export function readPrivateFile(path: string): Promise<JsonDocumentRead<ProjectPrivateFile>> {
+    return readJsonDocument(path, parsePrivateFile);
+}
 
 /*
  * The file the way git reads best: two spaces for the shape, and every node, text, line and
@@ -200,13 +213,16 @@ const INDENT = '  ';
 
 const LINE_PER_ITEM = new Set(['nodes', 'texts', 'edges', 'layouts']);
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const itemsOnLines = (items: readonly unknown[], indent: string): string =>
-    items.length === 0 ? '[]' : `[\n${items.map((item) => `${indent}${INDENT}${JSON.stringify(item)}`).join(',\n')}\n${indent}]`;
+function itemsOnLines(items: readonly unknown[], indent: string): string {
+    return items.length === 0 ? '[]' : `[\n${items.map((item) => `${indent}${INDENT}${JSON.stringify(item)}`).join(',\n')}\n${indent}]`;
+}
 
 /* A canvas opened up; every other view is small enough to read on one line. */
-const serializeView = (view: unknown, indent: string): string => {
+function serializeView(view: unknown, indent: string): string {
     if (!isRecord(view) || view.kind !== 'canvas') {
         return `${indent}${JSON.stringify(view)}`;
     }
@@ -220,14 +236,14 @@ const serializeView = (view: unknown, indent: string): string => {
                 : `${inner}${JSON.stringify(key)}: ${JSON.stringify(value)}`
         );
     return `${indent}{\n${fields.join(',\n')}\n${indent}}`;
-};
+}
 
-const viewsOnLines = (views: readonly ProjectView[], indent: string): string => {
+function viewsOnLines(views: readonly ProjectView[], indent: string): string {
     const stored = storedViewsOf(views);
     return stored.length === 0 ? '[]' : `[\n${stored.map((view) => serializeView(view, `${indent}${INDENT}`)).join(',\n')}\n${indent}]`;
-};
+}
 
-export const serializeSharedFile = (file: ProjectSharedFile): string => {
+export function serializeSharedFile(file: ProjectSharedFile): string {
     const fields = [
         `${INDENT}"version": ${file.version}`,
         `${INDENT}"name": ${JSON.stringify(file.name)}`,
@@ -236,9 +252,9 @@ export const serializeSharedFile = (file: ProjectSharedFile): string => {
         `${INDENT}"views": ${viewsOnLines(file.views, INDENT)}`
     ];
     return `{\n${fields.join(',\n')}\n}\n`;
-};
+}
 
-export const serializePrivateFile = (file: ProjectPrivateFile): string => {
+export function serializePrivateFile(file: ProjectPrivateFile): string {
     const fields = [
         `${INDENT}"version": ${file.version}`,
         `${INDENT}"rev": ${file.rev}`,
@@ -248,16 +264,22 @@ export const serializePrivateFile = (file: ProjectPrivateFile): string => {
         ...(file.flags ? [`${INDENT}"flags": ${JSON.stringify(file.flags, null, 2).split('\n').join(`\n${INDENT}`)}`] : [])
     ];
     return `{\n${fields.join(',\n')}\n}\n`;
-};
+}
 
-export const writeSharedFile = (path: string, file: ProjectSharedFile): Promise<string> => writeJsonDocument(path, file, serializeSharedFile);
+export function writeSharedFile(path: string, file: ProjectSharedFile): Promise<string> {
+    return writeJsonDocument(path, file, serializeSharedFile);
+}
 
-export const writePrivateFile = (path: string, file: ProjectPrivateFile): Promise<string> => writeJsonDocument(path, file, serializePrivateFile);
+export function writePrivateFile(path: string, file: ProjectPrivateFile): Promise<string> {
+    return writeJsonDocument(path, file, serializePrivateFile);
+}
 
-const toPosix = (path: string): string => path.split(sep).join('/');
+function toPosix(path: string): string {
+    return path.split(sep).join('/');
+}
 
 /* Maps the folder of a node or a standalone view; undefined takes the folder away. */
-const mapCwd = <T extends { cwd?: string }>(carrier: T, map: (cwd: string) => string | undefined): T => {
+function mapCwd<T extends { cwd?: string }>(carrier: T, map: (cwd: string) => string | undefined): T {
     if (!carrier.cwd) {
         return carrier;
     }
@@ -268,22 +290,23 @@ const mapCwd = <T extends { cwd?: string }>(carrier: T, map: (cwd: string) => st
     const rest = { ...carrier };
     delete rest.cwd;
     return rest;
-};
+}
 
-const mapViews = (views: ProjectView[], map: (cwd: string) => string | undefined): ProjectView[] =>
-    views.map((view) => {
+function mapViews(views: ProjectView[], map: (cwd: string) => string | undefined): ProjectView[] {
+    return views.map((view) => {
         if (isCanvasView(view)) {
             return { ...view, nodes: view.nodes.map((node: ProjectNode) => mapCwd(node, map)) };
         }
         // Only a chat and a terminal carry a node; every other view has no folder to map.
         return view.kind === 'chat' || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;
     });
+}
 
 /*
  * Paths inside the project folder are stored relative to it, so a clone on another machine
  * resolves them against its own checkout. Anything outside the folder stays absolute.
  */
-export const toPortable = (content: ProjectContent, folder: string | null): ProjectContent => {
+export function toPortable(content: ProjectContent, folder: string | null): ProjectContent {
     if (!folder) {
         return content;
     }
@@ -300,13 +323,15 @@ export const toPortable = (content: ProjectContent, folder: string | null): Proj
             return climbsOut(rel) ? cwd : `./${toPosix(rel)}`;
         })
     };
-};
+}
 
 /* Whether a path `relative` gave leaves the folder it was taken from; a folder named `..cache` does not. */
-export const climbsOut = (rel: string): boolean => rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+export function climbsOut(rel: string): boolean {
+    return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+}
 
 /* A relative folder that climbs out of the project is one `toPortable` never writes, so it is somebody else's and goes. */
-export const fromPortable = <T extends ProjectContent>(content: T, folder: string | null): T => {
+export function fromPortable<T extends ProjectContent>(content: T, folder: string | null): T {
     if (!folder) {
         return content;
     }
@@ -321,27 +346,37 @@ export const fromPortable = <T extends ProjectContent>(content: T, folder: strin
             return climbsOut(rel) ? undefined : resolved;
         })
     };
-};
+}
 
-export const drawingsDirOf = (documentPath: string): string => join(dirname(documentPath), DRAWINGS_DIR);
+export function drawingsDirOf(documentPath: string): string {
+    return join(dirname(documentPath), DRAWINGS_DIR);
+}
 
-export const diagramsDirOf = (documentPath: string): string => join(dirname(documentPath), DIAGRAMS_DIR);
+export function diagramsDirOf(documentPath: string): string {
+    return join(dirname(documentPath), DIAGRAMS_DIR);
+}
 
 /* The same two directories under `private/`, where the files of views nobody shared sit. */
-export const privateDrawingsDirOf = (documentPath: string): string => join(privateDirOf(documentPath), DRAWINGS_DIR);
+export function privateDrawingsDirOf(documentPath: string): string {
+    return join(privateDirOf(documentPath), DRAWINGS_DIR);
+}
 
-export const privateDiagramsDirOf = (documentPath: string): string => join(privateDirOf(documentPath), DIAGRAMS_DIR);
+export function privateDiagramsDirOf(documentPath: string): string {
+    return join(privateDirOf(documentPath), DIAGRAMS_DIR);
+}
 
 /* The view id, never its name: a rename must not move a file, and two machines must agree. */
-export const viewFilePathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
+export function viewFilePathIn(dir: string, viewId: string): string {
+    return join(dir, `${encodeURIComponent(viewId)}.json`);
+}
 
-export const viewFilePathOf = (documentPath: string, kind: 'drawing' | 'diagram', viewId: string, shared: readonly string[]): string => {
+export function viewFilePathOf(documentPath: string, kind: 'drawing' | 'diagram', viewId: string, shared: readonly string[]): string {
     const dir = kind === 'drawing' ? drawingsDirOf(documentPath) : diagramsDirOf(documentPath);
     return viewFilePathIn(shared.includes(viewId) ? dir : join(privateDirOf(documentPath), basename(dir)), viewId);
-};
+}
 
 /* The view a drawing or diagram file belongs to, or null for a name that is not one of ours. */
-export const viewIdOfFile = (filename: string): string | null => {
+export function viewIdOfFile(filename: string): string | null {
     if (!filename.endsWith('.json')) {
         return null;
     }
@@ -351,21 +386,23 @@ export const viewIdOfFile = (filename: string): string | null => {
     } catch {
         return null;
     }
-};
+}
 
 /*
  * The top level indented, every entry of a list on one line. `JSON.stringify(document, null, 2)`
  * would put every point of every stroke on a line of its own, and a diff of that says nothing.
  */
-const oneItemPerLine = (items: readonly unknown[]): string =>
-    items.length === 0 ? '[]' : `[\n${items.map((item) => `    ${JSON.stringify(item)}`).join(',\n')}\n  ]`;
+function oneItemPerLine(items: readonly unknown[]): string {
+    return items.length === 0 ? '[]' : `[\n${items.map((item) => `    ${JSON.stringify(item)}`).join(',\n')}\n  ]`;
+}
 
-export const serializeDrawing = (document: DrawingDocument): string =>
-    ['{', `  "version": ${document.version},`, `  "rev": ${document.rev},`, `  "elements": ${oneItemPerLine(document.elements)}`, '}', ''].join('\n');
+export function serializeDrawing(document: DrawingDocument): string {
+    return ['{', `  "version": ${document.version},`, `  "rev": ${document.rev},`, `  "elements": ${oneItemPerLine(document.elements)}`, '}', ''].join('\n');
+}
 
 export type DrawingParse = JsonDocumentParse<DrawingDocument>;
 
-export const parseDrawing = (text: string): DrawingParse => {
+export function parseDrawing(text: string): DrawingParse {
     let value: unknown;
     try {
         value = JSON.parse(text);
@@ -386,16 +423,19 @@ export const parseDrawing = (text: string): DrawingParse => {
         return { kind: 'invalid', message: `Two elements in this drawing share the id "${duplicate}"` };
     }
     return { kind: 'ok', document };
-};
+}
 
-export const readDrawing = (path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<DrawingDocument>> =>
-    readJsonDocument(path, parseDrawing, options);
+export function readDrawing(path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<DrawingDocument>> {
+    return readJsonDocument(path, parseDrawing, options);
+}
 
-export const writeDrawing = (path: string, document: DrawingDocument): Promise<string> => writeJsonDocument(path, document, serializeDrawing);
+export function writeDrawing(path: string, document: DrawingDocument): Promise<string> {
+    return writeJsonDocument(path, document, serializeDrawing);
+}
 
 /* The same shape for a diagram, so a diff names the node, group or edge that was added. */
-export const serializeDiagram = (document: DiagramDocument): string =>
-    [
+export function serializeDiagram(document: DiagramDocument): string {
+    return [
         '{',
         `  "version": ${document.version},`,
         `  "rev": ${document.rev},`,
@@ -406,10 +446,11 @@ export const serializeDiagram = (document: DiagramDocument): string =>
         '}',
         ''
     ].join('\n');
+}
 
 export type DiagramParse = JsonDocumentParse<DiagramDocument>;
 
-export const parseDiagram = (text: string): DiagramParse => {
+export function parseDiagram(text: string): DiagramParse {
     let value: unknown;
     try {
         value = JSON.parse(text);
@@ -430,12 +471,15 @@ export const parseDiagram = (text: string): DiagramParse => {
         return { kind: 'invalid', message: problem };
     }
     return { kind: 'ok', document };
-};
+}
 
-export const readDiagram = (path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<DiagramDocument>> =>
-    readJsonDocument(path, parseDiagram, options);
+export function readDiagram(path: string, options?: JsonDocumentReadOptions): Promise<JsonDocumentRead<DiagramDocument>> {
+    return readJsonDocument(path, parseDiagram, options);
+}
 
-export const writeDiagram = (path: string, document: DiagramDocument): Promise<string> => writeJsonDocument(path, document, serializeDiagram);
+export function writeDiagram(path: string, document: DiagramDocument): Promise<string> {
+    return writeJsonDocument(path, document, serializeDiagram);
+}
 
 // What an uploaded icon may be, and what it is called on disk. An `.ico` is a favicon, not
 // something a person picks in a file dialog, so it is read but never written.
@@ -449,19 +493,21 @@ export const ICON_EXTENSION_BY_MIME: Record<string, string> = {
 
 const ICON_EXTENSIONS = Object.values(ICON_EXTENSION_BY_MIME).concat('jpeg');
 
-export const iconPathInFolder = (folder: string, extension: string): string => join(folder, PROJECT_DIR, `icon.${extension}`);
+export function iconPathInFolder(folder: string, extension: string): string {
+    return join(folder, PROJECT_DIR, `icon.${extension}`);
+}
 
 /* Only one `.ruimte/icon.*` may exist, or the derivation order would decide which one wins. */
-export const removeIconFiles = async (folder: string): Promise<void> => {
+export async function removeIconFiles(folder: string): Promise<void> {
     for (const extension of ICON_EXTENSIONS) {
         await rm(iconPathInFolder(folder, extension), { force: true });
     }
-};
+}
 
-export const writeIconFile = async (folder: string, extension: string, bytes: Uint8Array): Promise<string> => {
+export async function writeIconFile(folder: string, extension: string, bytes: Uint8Array): Promise<string> {
     const path = iconPathInFolder(folder, extension);
     await mkdir(dirname(path), { recursive: true });
     await removeIconFiles(folder);
     await writeAtomic(path, bytes, 0o644);
     return path;
-};
+}

@@ -6,7 +6,9 @@ import { ChatError } from './errors.ts';
 import { readingThread, settledReading } from './subagent-projection.ts';
 import { errorText } from '../error-text.ts';
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export interface ThreadItemsParams {
     threadId: string;
@@ -16,20 +18,21 @@ export interface ThreadItemsParams {
 }
 
 /* One `thread/items/list` answer as far as a reader needs it: the entries newest first, and the cursor to older ones. */
-export const parseThreadItemsPage = (result: unknown): { entries: Record<string, unknown>[]; nextCursor: string | null } => {
+export function parseThreadItemsPage(result: unknown): { entries: Record<string, unknown>[]; nextCursor: string | null } {
     const data = isRecord(result) && Array.isArray(result.data) ? result.data.filter(isRecord) : [];
     const nextCursor = isRecord(result) && typeof result.nextCursor === 'string' && result.nextCursor !== '' ? result.nextCursor : null;
     return { entries: data, nextCursor };
-};
+}
 
-const userText = (content: unknown): string =>
-    Array.isArray(content)
+function userText(content: unknown): string {
+    return Array.isArray(content)
         ? content
               .filter(isRecord)
               .map((block) => (typeof block.text === 'string' ? block.text : ''))
               .filter((text) => text !== '')
               .join('\n')
         : '';
+}
 
 /*
  * Items of a Codex thread, oldest first, through the mapping the live stream uses. Every entry is
@@ -37,7 +40,7 @@ const userText = (content: unknown): string =>
  * depends on where a page happened to start, and a client merging two reads by id would show that
  * thought twice.
  */
-export const projectCodexItems = (entriesOldestFirst: Record<string, unknown>[], now: number): ChatItem[] => {
+export function projectCodexItems(entriesOldestFirst: Record<string, unknown>[], now: number): ChatItem[] {
     const { thread, projector } = readingThread('Codex', () => now);
     const protocol = new CodexProtocol(0);
     for (const entry of entriesOldestFirst) {
@@ -58,7 +61,7 @@ export const projectCodexItems = (entriesOldestFirst: Record<string, unknown>[],
         }
     }
     return thread.list().map(settledReading);
-};
+}
 
 export interface CodexProcessSpec {
     command: string[];
@@ -69,7 +72,7 @@ export interface CodexProcessSpec {
 }
 
 /* An app-server started for the questions `work` asks and ended after them, for a chat whose own process may not run. */
-const withAppServer = async <T>(spec: CodexProcessSpec, work: (transport: CodexTransport) => Promise<T>): Promise<T> => {
+async function withAppServer<T>(spec: CodexProcessSpec, work: (transport: CodexTransport) => Promise<T>): Promise<T> {
     const transport = new CodexTransport({
         command: spec.command,
         cwd: spec.cwd,
@@ -89,15 +92,16 @@ const withAppServer = async <T>(spec: CodexProcessSpec, work: (transport: CodexT
         transport.end();
         transport.kill('SIGTERM');
     }
-};
+}
 
 /*
  * A page asked of an app-server started for this one question, for a chat whose own process is not
  * running. The app-server reads a thread it never loaded from disk (checked against codex-cli 0.154.0),
  * so nothing has to be resumed first.
  */
-export const listThreadItemsOnce = (spec: CodexProcessSpec, params: ThreadItemsParams): Promise<unknown> =>
-    withAppServer(spec, (transport) => transport.request('thread/items/list', params));
+export function listThreadItemsOnce(spec: CodexProcessSpec, params: ThreadItemsParams): Promise<unknown> {
+    return withAppServer(spec, (transport) => transport.request('thread/items/list', params));
+}
 
 export interface ThreadForkParams {
     threadId: string;
@@ -108,7 +112,7 @@ export interface ThreadForkParams {
 }
 
 /* The id of the `turns`-th turn of a thread, oldest first, or null when it has fewer. */
-const nthTurnId = async (transport: CodexTransport, threadId: string, turns: number): Promise<string | null> => {
+async function nthTurnId(transport: CodexTransport, threadId: string, turns: number): Promise<string | null> {
     let seen = 0;
     let cursor: string | null = null;
     do {
@@ -122,15 +126,15 @@ const nthTurnId = async (transport: CodexTransport, threadId: string, turns: num
         cursor = isRecord(page) && typeof page.nextCursor === 'string' && page.nextCursor !== '' ? page.nextCursor : null;
     } while (cursor !== null);
     return null;
-};
+}
 
 /*
  * A new thread with the turns of `threadId` up to the one named, through `thread/fork`, and its id.
  * Asked of a process of its own even while the chat's backend holds the thread: measured against
  * codex-cli 0.154.0, with the original answering on in its own process afterwards.
  */
-export const forkThreadOnce = (spec: CodexProcessSpec, params: ThreadForkParams): Promise<string> =>
-    withAppServer(spec, async (transport) => {
+export function forkThreadOnce(spec: CodexProcessSpec, params: ThreadForkParams): Promise<string> {
+    return withAppServer(spec, async (transport) => {
         let lastTurnId: string | null = null;
         if (params.at !== null) {
             lastTurnId = 'turnId' in params.at ? params.at.turnId : await nthTurnId(transport, params.threadId, params.at.turns);
@@ -155,3 +159,4 @@ export const forkThreadOnce = (spec: CodexProcessSpec, params: ThreadForkParams)
         }
         return thread.id;
     });
+}

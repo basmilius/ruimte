@@ -12,7 +12,7 @@ const NONE: CanvasPrompt[] = [];
  * The prompts of the canvas in this cell. It subscribes rather than selecting: every streamed word
  * changes the chats store, and the stack should only hear about a prompt that came or went.
  */
-export const useCanvasPrompts = (): CanvasPrompt[] => {
+export function useCanvasPrompts(): CanvasPrompt[] {
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
     const [prompts, setPrompts] = useState<CanvasPrompt[]>(NONE);
@@ -41,4 +41,4 @@ export const useCanvasPrompts = (): CanvasPrompt[] => {
     }, [canvasStore, endpointId]);
 
     return prompts;
-};
+}

@@ -11,18 +11,20 @@ export interface FindHost {
 
 const hosts = new Set<FindHost>();
 
-export const registerFindHost = (host: FindHost): (() => void) => {
+export function registerFindHost(host: FindHost): () => void {
     hosts.add(host);
     return () => {
         hosts.delete(host);
     };
-};
+}
 
 // Drawn at all: a renderer that keeps a hidden preview mounted beside its source has two hosts in one surface.
-const shown = (host: FindHost): boolean => host.element.isConnected && host.element.getClientRects().length > 0;
+function shown(host: FindHost): boolean {
+    return host.element.isConnected && host.element.getClientRects().length > 0;
+}
 
 /* The host inside an element, the deepest when one surface holds another. */
-const hostWithin = (scope: Element): FindHost | null => {
+function hostWithin(scope: Element): FindHost | null {
     let found: FindHost | null = null;
     for (const host of hosts) {
         if (scope.contains(host.element) && shown(host) && (found === null || found.element.contains(host.element))) {
@@ -30,10 +32,10 @@ const hostWithin = (scope: Element): FindHost | null => {
         }
     }
     return found;
-};
+}
 
 /* The host the keyboard is in, the deepest one around it. */
-const hostAround = (element: Element): FindHost | null => {
+function hostAround(element: Element): FindHost | null {
     let found: FindHost | null = null;
     for (const host of hosts) {
         if (host.element.contains(element) && shown(host) && (found === null || found.element.contains(host.element))) {
@@ -41,14 +43,14 @@ const hostAround = (element: Element): FindHost | null => {
         }
     }
     return found;
-};
+}
 
 /*
  * The surface with the focus. The keyboard's own element says it first; a thread or a document takes
  * no focus of its own, so after that it is the node whose body has the keyboard on a canvas, and the
  * one surface of any other cell.
  */
-export const focusedFindHost = (): FindHost | null => {
+export function focusedFindHost(): FindHost | null {
     const active = document.activeElement;
     if (active !== null && active !== document.body) {
         const around = hostAround(active);
@@ -68,11 +70,11 @@ export const focusedFindHost = (): FindHost | null => {
     const nodeId = focusedCanvas().getState().bodyFocusId;
     const node = nodeId === null ? null : cell.querySelector(`[data-node-id="${CSS.escape(nodeId)}"]`);
     return node === null ? null : hostWithin(node);
-};
+}
 
 /* False when nothing with the focus can be searched, so the key goes on to whatever else wants it. */
-export const openFocusedFind = (): boolean => {
+export function openFocusedFind(): boolean {
     const host = focusedFindHost();
     host?.open();
     return host !== null;
-};
+}

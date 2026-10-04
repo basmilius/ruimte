@@ -34,7 +34,9 @@ export interface BrokerMembership {
     leave(): void;
 }
 
-const secondsOf = (ms: number): number => Math.max(1, Math.ceil(ms / 1000));
+function secondsOf(ms: number): number {
+    return Math.max(1, Math.ceil(ms / 1000));
+}
 
 /*
  * One socket per broker for every attempt this page makes at once. The broker lets a key hold one
@@ -194,9 +196,8 @@ export interface BrokerSignalingOptions {
  * machine's pinned key signed it for this client, so a broker that swaps a fingerprint is caught
  * here as well as in the channel's handshake.
  */
-export const brokerSignaling =
-    (options: BrokerSignalingOptions): SignalingOpener =>
-    (connectionId, events) => {
+export function brokerSignaling(options: BrokerSignalingOptions): SignalingOpener {
+    return (connectionId, events) => {
         const sockets = options.sockets ?? brokerSockets;
         const host = brokerHostOf(options.brokerUrl);
         const ids = new Set<string>();
@@ -294,3 +295,4 @@ export const brokerSignaling =
             }
         };
     };
+}

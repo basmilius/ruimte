@@ -8,10 +8,11 @@ import { ComputerAppGrants } from './ComputerAppGrants';
 
 const EMPTY: Grants = { always: [], terminals: [], thisTime: [] };
 
-const render = (grants: Grants): string =>
-    renderToStaticMarkup(
+function render(grants: Grants): string {
+    return renderToStaticMarkup(
         createElement(I18nextProvider, { i18n: i18next }, createElement(ComputerAppGrants, { grants, busy: false, onRevoke: () => undefined }))
     );
+}
 
 describe('the grants of a machine in settings', () => {
     test('an empty list says so, and nothing is held this time', () => {

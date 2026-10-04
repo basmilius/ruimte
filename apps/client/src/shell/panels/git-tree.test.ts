@@ -36,16 +36,20 @@ import {
     type GitTreeRow
 } from './git-tree.ts';
 
-const file = (path: string, state: GitFileState = 'unstaged', status = 'M', added = 1, deleted = 0): GitFile => ({
-    path,
-    state,
-    status,
-    added,
-    deleted,
-    binary: false
-});
+function file(path: string, state: GitFileState = 'unstaged', status = 'M', added = 1, deleted = 0): GitFile {
+    return {
+        path,
+        state,
+        status,
+        added,
+        deleted,
+        binary: false
+    };
+}
 
-const dir = (path: string, isExpanded: boolean): GitTreeRow => ({ path, kind: 'directory', isExpanded });
+function dir(path: string, isExpanded: boolean): GitTreeRow {
+    return { path, kind: 'directory', isExpanded };
+}
 
 describe('the groups of the list', () => {
     test('a file staged and changed again is one row among the changes, partly in the index', () => {

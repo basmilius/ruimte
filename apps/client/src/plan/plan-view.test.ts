@@ -55,9 +55,13 @@ const plan: Plan = {
     ]
 };
 
-const options = (patch: Partial<PlanViewOptions> = {}): PlanViewOptions => ({ filter: 'all', collapseDone: false, collapsed: new Set(), ...patch });
+function options(patch: Partial<PlanViewOptions> = {}): PlanViewOptions {
+    return { filter: 'all', collapseDone: false, collapsed: new Set(), ...patch };
+}
 
-const ids = (rows: ReturnType<typeof planRows>): string[] => rows.map((row) => row.item.id);
+function ids(rows: ReturnType<typeof planRows>): string[] {
+    return rows.map((row) => row.item.id);
+}
 
 describe('the rows of a plan', () => {
     test('everything in document order, a parent with its count and whether work goes on below it', () => {

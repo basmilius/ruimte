@@ -20,13 +20,13 @@ export interface NodeModeDeps {
  * The mode a node runs in as far as the daemon knows it, which is what an agent it opens may get at
  * most. Never above the ceiling its opener gave it, whatever a hook or the node's own file says.
  */
-export const nodeMode =
-    (deps: NodeModeDeps) =>
-    (nodeId: string): RuntimeMode => {
+export function nodeMode(deps: NodeModeDeps) {
+    return (nodeId: string): RuntimeMode => {
         const mode = deps.chatMode(nodeId) ?? deps.reportedMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
         const ceiling = deps.ceiling(nodeId);
         return ceiling === null ? mode : narrowerMode(mode, ceiling);
     };
+}
 
 export interface NodeAccountDeps {
     chat(nodeId: string): Pick<ChatInfo, 'provider' | 'account'> | undefined;
@@ -34,9 +34,8 @@ export interface NodeAccountDeps {
 }
 
 /* The CLI and account the agent of a node runs under. A CLI a person started by hand in a terminal runs under its default account. */
-export const nodeAccount =
-    (deps: NodeAccountDeps) =>
-    (nodeId: string): NodeAccount | null => {
+export function nodeAccount(deps: NodeAccountDeps) {
+    return (nodeId: string): NodeAccount | null => {
         const chat = deps.chat(nodeId);
         if (chat !== undefined) {
             return { kind: chat.provider, ...(chat.account === undefined ? {} : { account: chat.account }) };
@@ -49,13 +48,14 @@ export const nodeAccount =
         const account = session.launch?.kind === kind ? session.launch.account : undefined;
         return { kind, ...(account === undefined ? {} : { account }) };
     };
+}
 
 /*
  * The entry a verb owes for a node it made. A chat opened by a chat takes that chat's mode unless
  * `--mode` said otherwise, and every start carries the opener's mode as the ceiling, read now, since
  * the opener may be gone by the time the entry runs.
  */
-export const startAgentWork = (start: AgentStart, deps: NodeModeDeps): OutboxWork => {
+export function startAgentWork(start: AgentStart, deps: NodeModeDeps): OutboxWork {
     const runtimeMode = start.runtimeMode ?? (start.node === 'chat' ? deps.chatMode(start.openedBy) : undefined);
     return {
         kind: 'start-agent',
@@ -69,7 +69,7 @@ export const startAgentWork = (start: AgentStart, deps: NodeModeDeps): OutboxWor
             ...(start.account === undefined ? {} : { account: start.account })
         }
     };
-};
+}
 
 /*
  * The size a terminal agent starts at with nobody looking. Wide enough that a CLI does not wrap its
@@ -108,9 +108,8 @@ export interface StartAgentDeps {
  * without its task. A failure is logged and the node stays as it is, so a client that mounts it
  * tries again the way it always did.
  */
-export const startAgentHandler =
-    (deps: StartAgentDeps) =>
-    async (entry: StartAgentEntry): Promise<void> => {
+export function startAgentHandler(deps: StartAgentDeps) {
+    return async (entry: StartAgentEntry): Promise<void> => {
         const { node, provider, cwd, runtimeMode, ceiling, selection, account } = entry.payload;
         const nodeId = entry.target;
         const log = deps.log ?? ((line: string) => console.error(line));
@@ -168,3 +167,4 @@ export const startAgentHandler =
             await (node === 'chat' ? deps.killChat(nodeId) : deps.killSession(nodeId)).catch(() => undefined);
         }
     };
+}

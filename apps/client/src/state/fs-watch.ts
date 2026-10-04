@@ -4,7 +4,9 @@ import { machineTransport } from '@/transport';
 import type { Transport } from '@/transport/transport';
 
 /* Whether a path sits inside another, on either kind of machine. */
-export const isUnderFolder = (path: string, ancestor: string): boolean => path.startsWith(`${ancestor}/`) || path.startsWith(`${ancestor}\\`);
+export function isUnderFolder(path: string, ancestor: string): boolean {
+    return path.startsWith(`${ancestor}/`) || path.startsWith(`${ancestor}\\`);
+}
 
 /*
  * The folders this client is watching, counted. The files panel closing while a file node reads the
@@ -31,7 +33,7 @@ export class FolderWatches extends HeldWatches {
 export const folderWatches = new FolderWatches(machineTransport);
 
 /* One folder watched for as long as the caller is on screen. Null asks for nothing. */
-export const useFolderWatch = (endpointId: string, path: string | null): void => {
+export function useFolderWatch(endpointId: string, path: string | null): void {
     useEffect(() => {
         if (path === null) {
             return;
@@ -39,4 +41,4 @@ export const useFolderWatch = (endpointId: string, path: string | null): void =>
         const watch = folderWatches.watch(endpointId, path);
         return watch.release;
     }, [endpointId, path]);
-};
+}

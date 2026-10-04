@@ -59,12 +59,15 @@ interface NodeState {
 const APPROVAL_MAX_AGE_MS = 110_000;
 
 /* What a subscription hears of for a node: the list its project has, else its own, else what every device heard before it could choose. */
-export const notifyKinds = (subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] =>
-    (projectId === null ? undefined : subscription.projects?.find((entry) => entry.projectId === projectId)?.notify) ??
-    subscription.notify ??
-    PUSH_NOTIFY_DEFAULT;
+export function notifyKinds(subscription: PushSubscribePayload, projectId: string | null): readonly PushNotifyKind[] {
+    return (
+        (projectId === null ? undefined : subscription.projects?.find((entry) => entry.projectId === projectId)?.notify) ??
+        subscription.notify ??
+        PUSH_NOTIFY_DEFAULT
+    );
+}
 
-const sendToAddressBook = async (push: PushEnvelope): Promise<number> => {
+async function sendToAddressBook(push: PushEnvelope): Promise<number> {
     const response = await fetch(`${ADDRESS_BOOK_URL}/v1/push`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -73,7 +76,7 @@ const sendToAddressBook = async (push: PushEnvelope): Promise<number> => {
     });
     await response.body?.cancel();
     return response.status;
-};
+}
 
 export class PushService {
     readonly attention: PushAttention;

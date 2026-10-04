@@ -5,7 +5,7 @@ import type { IceServer } from '@ruimte/pulsar';
  * handed out (TURN credentials from the broker). ICE tries every candidate and prefers a direct pair
  * on its own, so nothing here decides between them; a URL both lists carry is kept once.
  */
-export const mergeIceServers = (own: RTCIceServer[], route: IceServer[]): RTCIceServer[] => {
+export function mergeIceServers(own: RTCIceServer[], route: IceServer[]): RTCIceServer[] {
     const seen = new Set<string>();
     const merged: RTCIceServer[] = [];
     for (const server of [...own, ...route]) {
@@ -23,7 +23,7 @@ export const mergeIceServers = (own: RTCIceServer[], route: IceServer[]): RTCIce
         }
     }
     return merged;
-};
+}
 
 interface StatsEntry {
     id?: string;
@@ -42,7 +42,7 @@ interface StatsEntry {
  * the transport names as selected (Chromium, Safari), else one marked selected (Firefox) or nominated
  * and succeeded. Null when the report names no pair yet, which is no answer either way.
  */
-export const relayedFromStats = (report: { values(): IterableIterator<unknown> }): boolean | null => {
+export function relayedFromStats(report: { values(): IterableIterator<unknown> }): boolean | null {
     const entries = [...report.values()] as StatsEntry[];
     const byId = new Map(entries.filter((entry) => entry.id !== undefined).map((entry) => [entry.id!, entry]));
     const selectedId = entries.find((entry) => entry.type === 'transport' && entry.selectedCandidatePairId !== undefined)?.selectedCandidatePairId;
@@ -57,4 +57,4 @@ export const relayedFromStats = (report: { values(): IterableIterator<unknown> }
     const local = pair.localCandidateId !== undefined ? byId.get(pair.localCandidateId) : undefined;
     const remote = pair.remoteCandidateId !== undefined ? byId.get(pair.remoteCandidateId) : undefined;
     return local?.candidateType === 'relay' || remote?.candidateType === 'relay';
-};
+}

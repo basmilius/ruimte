@@ -9,9 +9,13 @@ import { ProjectStore } from '../projects/project-store.ts';
 import { ModeApprovals, modesSet, personModeOf } from './mode-approvals.ts';
 import { makeHarness } from './test-helpers.ts';
 
-const terminal = (id: string, extra: Partial<ProjectNode> = {}): ProjectNode => ({ id, kind: 'terminal', title: 'Shell', x: 0, y: 0, w: 10, h: 10, ...extra });
+function terminal(id: string, extra: Partial<ProjectNode> = {}): ProjectNode {
+    return { id, kind: 'terminal', title: 'Shell', x: 0, y: 0, w: 10, h: 10, ...extra };
+}
 
-const canvasOf = (...nodes: ProjectNode[]): ProjectView[] => [{ kind: 'canvas', id: 'main', name: 'Canvas', nodes, texts: [], edges: [], layouts: [] }];
+function canvasOf(...nodes: ProjectNode[]): ProjectView[] {
+    return [{ kind: 'canvas', id: 'main', name: 'Canvas', nodes, texts: [], edges: [], layouts: [] }];
+}
 
 describe('modesSet', () => {
     test('names a terminal agent a save adds or changes the mode of, with the default for one that names none', () => {

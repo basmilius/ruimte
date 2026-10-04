@@ -17,14 +17,17 @@ const pending = new Map<string, { resolve(result: unknown): void; reject(error: 
 let nextId = 1;
 let output = '';
 
-const request = <T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> =>
-    new Promise((resolve, reject) => {
+function request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
+    return new Promise((resolve, reject) => {
         const id = String(nextId++);
         pending.set(id, { resolve: resolve as (result: unknown) => void, reject });
         socket.send(JSON.stringify({ id, type, payload }));
     });
+}
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 socket.onmessage = (message) => {
     const parsed = parseServerFrame(JSON.parse(String(message.data)));

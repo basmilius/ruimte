@@ -12,4 +12,6 @@ export const MODEL_CATALOGS = { catalogs: { claude, codex } } as unknown as Mode
 // Short enough that a fix to a catalog reaches every machine within the hour it asks.
 const CACHE_CONTROL = 'public, max-age=300';
 
-export const readCatalogs = (): Response => json(MODEL_CATALOGS, 200, { 'cache-control': CACHE_CONTROL });
+export function readCatalogs(): Response {
+    return json(MODEL_CATALOGS, 200, { 'cache-control': CACHE_CONTROL });
+}

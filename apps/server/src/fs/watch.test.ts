@@ -11,18 +11,18 @@ const root = resolve('/work/repo');
 let fake: FakeWatch;
 let changes: FsChangedEvent[];
 
-const sink = (event: SessionEvent): void => {
+function sink(event: SessionEvent): void {
     if (event.event === 'fs.changed') {
         changes.push(event.payload);
     }
-};
+}
 
 /* A watcher on a platform that watches a tree in one call, or on one that watches a directory at a time. */
-const watcherOn = (platform: NodeJS.Platform): FolderWatcher => {
+function watcherOn(platform: NodeJS.Platform): FolderWatcher {
     const watcher = new FolderWatcher(platform, fake, 0);
     watcher.subscribe('client-1', sink);
     return watcher;
-};
+}
 
 beforeEach(() => {
     fake = new FakeWatch();

@@ -7,7 +7,7 @@ let loaded: Promise<void> | null = null;
  * drawing view rather than with the app, and the text is only measured once the face is really
  * there: measuring against the fallback would size every box wrong.
  */
-export const loadDrawingFont = (): Promise<void> => {
+export function loadDrawingFont(): Promise<void> {
     loaded ??= (async () => {
         await import('@fontsource/kalam/400.css');
         if (typeof document === 'undefined' || !document.fonts) {
@@ -16,4 +16,4 @@ export const loadDrawingFont = (): Promise<void> => {
         await document.fonts.load(`400 20px ${DEFAULT_FONT_STACKS.hand}`).catch(() => undefined);
     })();
     return loaded;
-};
+}

@@ -25,7 +25,11 @@ export const LIMITS = {
     deviceCodeIp: 30
 } as const;
 
-export const windowStartOf = (now: number): number => now - (now % WINDOW_MS);
+export function windowStartOf(now: number): number {
+    return now - (now % WINDOW_MS);
+}
 
 // Whole seconds until the window `now` falls in ends, rounded up so a client that waits them is never early.
-export const retryAfterSeconds = (now: number): number => Math.ceil((windowStartOf(now) + WINDOW_MS - now) / 1000);
+export function retryAfterSeconds(now: number): number {
+    return Math.ceil((windowStartOf(now) + WINDOW_MS - now) / 1000);
+}

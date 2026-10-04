@@ -4,18 +4,20 @@ import type { ThreadCard } from '../../host';
 import { withThreadCards } from './thread-cards';
 import { deriveTimelineRows, type TimelineRow } from './timeline';
 
-const tool = (id: string, createdAt: number, turnId: string, state: ChatToolItem['state'] = 'done'): ChatToolItem => ({
-    id,
-    kind: 'tool',
-    createdAt,
-    turnId,
-    toolUseId: id,
-    name: 'Bash',
-    input: { command: 'ls' },
-    output: '',
-    state,
-    parentToolUseId: null
-});
+function tool(id: string, createdAt: number, turnId: string, state: ChatToolItem['state'] = 'done'): ChatToolItem {
+    return {
+        id,
+        kind: 'tool',
+        createdAt,
+        turnId,
+        toolUseId: id,
+        name: 'Bash',
+        input: { command: 'ls' },
+        output: '',
+        state,
+        parentToolUseId: null
+    };
+}
 
 const settled: ChatItem[] = [
     { id: 't1', kind: 'turn', createdAt: 1000, turnId: 't1', state: 'done', endedAt: 9000, costUsd: 0 },
@@ -28,9 +30,13 @@ const settled: ChatItem[] = [
 
 const options = { expandedGroups: new Set<string>(), expandedTurns: new Set<string>(), expandedSubagents: new Set<string>(), activeTurnId: null };
 
-const card = (id: string, at: number): ThreadCard => ({ id, at, render: () => null });
+function card(id: string, at: number): ThreadCard {
+    return { id, at, render: () => null };
+}
 
-const shape = (rows: readonly TimelineRow[]): string[] => rows.map((row) => (row.kind === 'app-card' ? row.id : row.kind));
+function shape(rows: readonly TimelineRow[]): string[] {
+    return rows.map((row) => (row.kind === 'app-card' ? row.id : row.kind));
+}
 
 describe('withThreadCards', () => {
     test('without cards the thread keeps the very rows it derived', () => {

@@ -14,23 +14,27 @@ let repo: string;
 let remote: string;
 let actions: GitActions;
 
-const run = (args: string[], cwd: string = repo): Promise<string> => gitIn(cwd, args);
+function run(args: string[], cwd: string = repo): Promise<string> {
+    return gitIn(cwd, args);
+}
 
-const write = (name: string, body: string): Promise<void> => writeFile(join(repo, name), body);
+function write(name: string, body: string): Promise<void> {
+    return writeFile(join(repo, name), body);
+}
 
 interface Progress {
     phases: GitActionPhase[];
     lines: string[];
 }
 
-const act = async (payload: Omit<GitActionPayload, 'cwd' | 'actionId'> & { cwd?: string }, progress?: Progress) => {
+async function act(payload: Omit<GitActionPayload, 'cwd' | 'actionId'> & { cwd?: string }, progress?: Progress) {
     return await actions.run({ cwd: repo, actionId: `action-${Math.random()}`, ...payload }, (phase, line) => {
         progress?.phases.push(phase);
         if (line !== '') {
             progress?.lines.push(line);
         }
     });
-};
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-actions', async (dir) => {

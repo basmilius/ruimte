@@ -24,4 +24,6 @@ const links = new MachineLinks({
  * row opened from the account, or a machine only the account list has. Resolves with the row id once
  * the link is open; see `MachineLinks` for the rules.
  */
-export const ensureMachine = (id: string, signal?: AbortSignal): Promise<string> => links.ensure(id, signal);
+export function ensureMachine(id: string, signal?: AbortSignal): Promise<string> {
+    return links.ensure(id, signal);
+}

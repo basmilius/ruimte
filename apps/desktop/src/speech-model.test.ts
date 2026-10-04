@@ -9,13 +9,13 @@ const temporary: string[] = [];
 afterEach(async () => {
     await Promise.all(temporary.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
 });
-const fixture = async () => {
+async function fixture() {
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-speech-'));
     temporary.push(directory);
     const helper = join(directory, 'helper');
     await writeFile(helper, 'test');
     return { directory, helper };
-};
+}
 test('model files must match both size and SHA-256', async () => {
     const { directory } = await fixture();
     const path = join(directory, 'model');

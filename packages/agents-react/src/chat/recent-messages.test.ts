@@ -2,10 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatItem } from '@ruimte/agent-contracts';
 import { recentChatMessages } from './recent-messages';
 
-const item = (id: string, kind: 'user' | 'assistant', text: string, parentToolUseId?: string): ChatItem =>
-    kind === 'user'
+function item(id: string, kind: 'user' | 'assistant', text: string, parentToolUseId?: string): ChatItem {
+    return kind === 'user'
         ? { id, kind, text, createdAt: Number(id), turnId: null }
         : { id, kind, text, streaming: false, parentToolUseId: parentToolUseId ?? null, createdAt: Number(id), turnId: null };
+}
 
 describe('recentChatMessages', () => {
     test('keeps only the latest person and top-level assistant messages in order', () => {

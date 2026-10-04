@@ -7,7 +7,7 @@ export type DrawingPalette = Record<DrawingColor, string>;
  * What every palette name is right now. A drawing names colors and the theme owns the values, so
  * the painter reads them once per render and again whenever the theme changes.
  */
-const readColors = (prefix: string): DrawingPalette => {
+function readColors(prefix: string): DrawingPalette {
     const probe = document.createElement('span');
     probe.style.display = 'none';
     document.body.append(probe);
@@ -20,23 +20,35 @@ const readColors = (prefix: string): DrawingPalette => {
     }
     probe.remove();
     return palette;
-};
+}
 
-export const readPalette = (): DrawingPalette => readColors('draw');
+export function readPalette(): DrawingPalette {
+    return readColors('draw');
+}
 
 /* The sheet a sticky note is written on, per palette name. */
-export const readPaper = (): DrawingPalette => readColors('draw-paper');
+export function readPaper(): DrawingPalette {
+    return readColors('draw-paper');
+}
 
 /* The edge of that sheet: the same paper, a step deeper into its own color. */
-export const readEdge = (): DrawingPalette => readColors('draw-edge');
+export function readEdge(): DrawingPalette {
+    return readColors('draw-edge');
+}
 
-const tokenValue = (name: string): string => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function tokenValue(name: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 
-export const readCanvasBackground = (): string => tokenValue('--canvas-bg');
+export function readCanvasBackground(): string {
+    return tokenValue('--canvas-bg');
+}
 
 /* The three faces a text may be set in. A canvas needs a real stack, not the token that holds one. */
-export const readFontStacks = (): Record<DrawingFont, string> => ({
-    hand: DEFAULT_FONT_STACKS.hand,
-    sans: tokenValue('--font-sans') || DEFAULT_FONT_STACKS.sans,
-    mono: tokenValue('--font-mono') || DEFAULT_FONT_STACKS.mono
-});
+export function readFontStacks(): Record<DrawingFont, string> {
+    return {
+        hand: DEFAULT_FONT_STACKS.hand,
+        sans: tokenValue('--font-sans') || DEFAULT_FONT_STACKS.sans,
+        mono: tokenValue('--font-mono') || DEFAULT_FONT_STACKS.mono
+    };
+}

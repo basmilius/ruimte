@@ -15,13 +15,17 @@ const NEEDS_PROMPT = '--prompt needs what the task asks, in quotes';
  * and its wake went out or never will (cancelled, or a parent nobody can wake); a task it was given is
  * history once it settled. An earlier run with the same titles otherwise reads as work still out.
  */
-const isCurrentTask = (task: Task, nodeId: string): boolean => task.status === 'open' || (task.parentId === nodeId && task.wake === 'pending');
+function isCurrentTask(task: Task, nodeId: string): boolean {
+    return task.status === 'open' || (task.parentId === nodeId && task.wake === 'pending');
+}
 
 /* The title of a task nobody named: its first line, cut to what a name on the canvas fits. */
-const titleFromPrompt = (prompt: string): string => clipText(field(prompt.split('\n').find((line) => line.trim() !== '') ?? prompt).trim(), MAX_TITLE_LENGTH);
+function titleFromPrompt(prompt: string): string {
+    return clipText(field(prompt.split('\n').find((line) => line.trim() !== '') ?? prompt).trim(), MAX_TITLE_LENGTH);
+}
 
 /* A node of this project, on whatever canvas it sits: a task travels by lineage, not over a canvas. */
-const nodeOf = (content: ProjectContent, id: string): ProjectNode | undefined => {
+function nodeOf(content: ProjectContent, id: string): ProjectNode | undefined {
     for (const view of content.views) {
         if (isCanvasView(view)) {
             const node = view.nodes.find((candidate) => candidate.id === id);
@@ -31,11 +35,12 @@ const nodeOf = (content: ProjectContent, id: string): ProjectNode | undefined =>
         }
     }
     return undefined;
-};
+}
 
 /* The agent nodes this caller opened itself, which is the whole of what it may set to work. */
-const openedAgents = (content: ProjectContent, caller: string, madeBy: (nodeId: string) => string | null): ProjectNode[] =>
-    content.views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => isAgentKind(node.kind) && madeBy(node.id) === caller) : []));
+function openedAgents(content: ProjectContent, caller: string, madeBy: (nodeId: string) => string | null): ProjectNode[] {
+    return content.views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => isAgentKind(node.kind) && madeBy(node.id) === caller) : []));
+}
 
 export const taskActions: ActionHandlers<ServerActionContext> = {
     'task.list': async ({ all }, { actor, context }) => {

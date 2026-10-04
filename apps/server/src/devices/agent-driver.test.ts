@@ -46,7 +46,9 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+function settle() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('DeviceDriver', () => {
     test('writes a shot under the home folder and counts later coordinates in its pixels', async () => {

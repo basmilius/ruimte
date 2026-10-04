@@ -21,21 +21,27 @@ export interface PlanTextOptions {
     formatTime?: (at: string) => string;
 }
 
-const localTime = (at: string): string => {
+function localTime(at: string): string {
     const date = new Date(at);
     if (Number.isNaN(date.getTime())) {
         return '';
     }
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-};
+}
 
-const oneLine = (text: string): string => text.replace(/\s*\n\s*/g, ' ');
+function oneLine(text: string): string {
+    return text.replace(/\s*\n\s*/g, ' ');
+}
 
-const descriptionLines = (description: string | undefined, indent: string): string[] => (description ? [`${indent}${oneLine(description)}`] : []);
+function descriptionLines(description: string | undefined, indent: string): string[] {
+    return description ? [`${indent}${oneLine(description)}`] : [];
+}
 
-const counter = (progress: PlanProgress): string => `${progress.finished}/${progress.total}`;
+function counter(progress: PlanProgress): string {
+    return `${progress.finished}/${progress.total}`;
+}
 
-export const progressText = (plan: Pick<Plan, 'meta' | 'items'>): string => {
+export function progressText(plan: Pick<Plan, 'meta' | 'items'>): string {
     const progress = planProgress(plan.items);
     const extra = (count: number, label: string): string[] => (count > 0 ? [`${count} ${label}`] : []);
     const warnings = progress.warning === 1 ? 'warning' : 'warnings';
@@ -59,16 +65,18 @@ export const progressText = (plan: Pick<Plan, 'meta' | 'items'>): string => {
         ...extra(progress.skipped, 'skipped'),
         ...extra(progress.blocked, 'blocked')
     ].join(', ');
-};
+}
 
-const sentences = (parts: string[]): string => parts.map((part, index) => (index < parts.length - 1 && !/[.!?]$/.test(part) ? `${part}.` : part)).join(' ');
+function sentences(parts: string[]): string {
+    return parts.map((part, index) => (index < parts.length - 1 && !/[.!?]$/.test(part) ? `${part}.` : part)).join(' ');
+}
 
 /*
  * The compact text `plan read` prints for an agent: one line per item with its id in brackets, so
  * the ids survive a compacted conversation, and a step's or a section's description on the line
  * under it, the way the Markdown of a plan has it. The markers are `PLAN_LEGEND`.
  */
-export const renderPlanText = (plan: Plan, options: PlanTextOptions = {}): string => {
+export function renderPlanText(plan: Plan, options: PlanTextOptions = {}): string {
     const formatTime = options.formatTime ?? localTime;
     const lines = [`Plan "${plan.meta.title}" (${plan.id}, ${plan.meta.kind}, rev ${plan.rev}): ${progressText(plan)}`];
     const second: string[] = [];
@@ -148,4 +156,4 @@ export const renderPlanText = (plan: Plan, options: PlanTextOptions = {}): strin
     }
     flushLoose();
     return lines.join('\n');
-};
+}

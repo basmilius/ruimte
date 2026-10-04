@@ -6,7 +6,7 @@ import { COUNTS_QUIET_MS, WorktreeLists } from './worktrees';
 type Call = { type: RequestType; payload: unknown };
 
 /* A transport that records every request and answers a worktree list with no worktrees. */
-const fakeTransport = (): { transport: Transport; calls: Call[] } => {
+function fakeTransport(): { transport: Transport; calls: Call[] } {
     const calls: Call[] = [];
     const transport: Transport = {
         status: 'open',
@@ -21,7 +21,7 @@ const fakeTransport = (): { transport: Transport; calls: Call[] } => {
         subscribeStatus: () => () => undefined
     };
     return { transport, calls };
-};
+}
 
 describe('WorktreeLists.refreshCounts', () => {
     test('counts again once the quiet window after the last count has passed', () => {

@@ -29,14 +29,16 @@ export interface NodeRect {
     h: number;
 }
 
-const snap = (value: number): number => Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+function snap(value: number): number {
+    return Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+}
 
 /*
  * The frame a group takes around what it holds: room on every side and the title band above it,
  * snapped to the grid. Both the client's own grouping and the daemon's `node group` action run this, so a
  * frame an agent draws sits where a person's drag would have put it. Nothing to hold is no frame.
  */
-export const groupFrame = (members: readonly NodeRect[]): NodeRect | null => {
+export function groupFrame(members: readonly NodeRect[]): NodeRect | null {
     if (members.length === 0) {
         return null;
     }
@@ -50,7 +52,7 @@ export const groupFrame = (members: readonly NodeRect[]): NodeRect | null => {
         w: snap(width + GROUP_PADDING * 2),
         h: snap(height + GROUP_PADDING * 2 + GROUP_HEADER)
     };
-};
+}
 
 /* What saying which things a group holds needs of it, so a frame that is not a node yet also fits. */
 export interface GroupFrame extends NodeRect {
@@ -74,18 +76,20 @@ export interface GroupItem {
  * its members keep the places they had, so what lies inside it is measured against the height it
  * goes back to when it opens.
  */
-export const groupRect = (group: Omit<GroupFrame, 'id'>): NodeRect => ({
-    x: group.x,
-    y: group.y,
-    w: group.w,
-    h: group.collapsed === true ? (group.expandedHeight ?? group.h) : group.h
-});
+export function groupRect(group: Omit<GroupFrame, 'id'>): NodeRect {
+    return {
+        x: group.x,
+        y: group.y,
+        w: group.w,
+        h: group.collapsed === true ? (group.expandedHeight ?? group.h) : group.h
+    };
+}
 
-const holds = (rect: NodeRect, item: GroupItem): boolean => {
+function holds(rect: NodeRect, item: GroupItem): boolean {
     const x = item.x + (item.w ?? 0) / 2;
     const y = item.y + (item.h ?? 0) / 2;
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
-};
+}
 
 /*
  * Which of these things the group holds, in the order they came in. Open, that is read off the
@@ -93,14 +97,14 @@ const holds = (rect: NodeRect, item: GroupItem): boolean => {
  * collapsed, the file spells it out, because the members sit nowhere near the header the group has
  * shrunk to. Only ids that are still there come back, so a member removed while collapsed is gone.
  */
-export const groupMemberIds = (group: GroupFrame, items: readonly GroupItem[]): string[] => {
+export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): string[] {
     if (group.collapsed === true) {
         const ids = new Set(group.memberIds ?? []);
         return items.filter((item) => ids.has(item.id)).map((item) => item.id);
     }
     const rect = groupRect(group);
     return items.filter((item) => item.id !== group.id && holds(rect, item)).map((item) => item.id);
-};
+}
 
 /*
  * The colors a node's accent and a group's frame pick from, in the hue order the picker draws them

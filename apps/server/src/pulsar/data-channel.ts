@@ -17,34 +17,36 @@ export interface RawDataChannel {
     onBufferedAmountLow(listener: () => void): void;
 }
 
-export const fromWerift = (channel: RTCDataChannel): RawDataChannel => ({
-    get label() {
-        return channel.label;
-    },
-    get readyState() {
-        return channel.readyState;
-    },
-    get bufferedAmount() {
-        return channel.bufferedAmount;
-    },
-    get bufferedAmountLowThreshold() {
-        return channel.bufferedAmountLowThreshold;
-    },
-    set bufferedAmountLowThreshold(value: number) {
-        channel.bufferedAmountLowThreshold = value;
-    },
-    send: (data) => channel.send(typeof data === 'string' ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength)),
-    close: () => channel.close(),
-    onMessage: (listener) => {
-        channel.onMessage.subscribe((data) => listener(data));
-    },
-    onState: (listener) => {
-        channel.stateChanged.subscribe((state) => listener(state));
-    },
-    onBufferedAmountLow: (listener) => {
-        channel.bufferedAmountLow.subscribe(() => listener());
-    }
-});
+export function fromWerift(channel: RTCDataChannel): RawDataChannel {
+    return {
+        get label() {
+            return channel.label;
+        },
+        get readyState() {
+            return channel.readyState;
+        },
+        get bufferedAmount() {
+            return channel.bufferedAmount;
+        },
+        get bufferedAmountLowThreshold() {
+            return channel.bufferedAmountLowThreshold;
+        },
+        set bufferedAmountLowThreshold(value: number) {
+            channel.bufferedAmountLowThreshold = value;
+        },
+        send: (data) => channel.send(typeof data === 'string' ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength)),
+        close: () => channel.close(),
+        onMessage: (listener) => {
+            channel.onMessage.subscribe((data) => listener(data));
+        },
+        onState: (listener) => {
+            channel.stateChanged.subscribe((state) => listener(state));
+        },
+        onBufferedAmountLow: (listener) => {
+            channel.bufferedAmountLow.subscribe(() => listener());
+        }
+    };
+}
 
 // Before the handshake a frame is a challenge answer of a few hundred bytes; nothing larger is read from a stranger.
 export const UNAUTHENTICATED_FRAME_CHARS = 4_096;
@@ -67,7 +69,7 @@ export interface DirectChannel extends ClientChannel {
  * not go out, `bufferedAmount` is the channel's own, and a drain is the channel's
  * `bufferedamountlow`, which fires at the gate's low-water mark.
  */
-export const directChannel = (raw: RawDataChannel): DirectChannel => {
+export function directChannel(raw: RawDataChannel): DirectChannel {
     const closeListeners: Array<() => void> = [];
     const drainListeners: Array<() => void> = [];
     const assembler = new FrameAssembler();
@@ -180,4 +182,4 @@ export const directChannel = (raw: RawDataChannel): DirectChannel => {
             drainListeners.push(listener);
         }
     };
-};
+}

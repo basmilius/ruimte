@@ -42,33 +42,35 @@ export interface PlanApplied {
 
 const ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
-export const randomItemId = (): string => {
+export function randomItemId(): string {
     const bytes = crypto.getRandomValues(new Uint8Array(6));
     return Array.from(bytes, (byte) => ID_ALPHABET[byte % ID_ALPHABET.length]).join('');
-};
+}
 
-const issueMessage = (error: z.ZodError): string => {
+function issueMessage(error: z.ZodError): string {
     const issue = error.issues[0];
     if (!issue) {
         return 'The plan is not valid';
     }
     const path = issue.path.map((part) => (typeof part === 'number' ? `[${part}]` : `.${String(part)}`)).join('');
     return `${path ? `${path.replace(/^\./, '')}: ` : ''}${issue.message}`;
-};
+}
 
-const idMinter = (taken: Set<string>, mintId: () => string, minted: string[]) => (): string => {
-    for (let attempt = 0; attempt < 1000; attempt++) {
-        const id = mintId();
-        if (!taken.has(id)) {
-            taken.add(id);
-            minted.push(id);
-            return id;
+function idMinter(taken: Set<string>, mintId: () => string, minted: string[]) {
+    return (): string => {
+        for (let attempt = 0; attempt < 1000; attempt++) {
+            const id = mintId();
+            if (!taken.has(id)) {
+                taken.add(id);
+                minted.push(id);
+                return id;
+            }
         }
-    }
-    throw new Error('Could not mint a free plan item id');
-};
+        throw new Error('Could not mint a free plan item id');
+    };
+}
 
-const setState = (step: PlanStep, state: PlanStepState, actor: PlanActor, now: string): void => {
+function setState(step: PlanStep, state: PlanStepState, actor: PlanActor, now: string): void {
     // An agent confirming what a person set leaves the person's mark on it.
     if (actor === 'agent' && step.by === 'person' && step.state === state) {
         return;
@@ -83,23 +85,23 @@ const setState = (step: PlanStep, state: PlanStepState, actor: PlanActor, now: s
     step.state = state;
     step.by = actor;
     step.at = now;
-};
+}
 
-const setNote = (step: PlanStep, text: string): void => {
+function setNote(step: PlanStep, text: string): void {
     if (text === '') {
         delete step.note;
     } else {
         step.note = text;
     }
-};
+}
 
 /* The array a new or moved item goes into and where, or a refusal. */
-const placeFor = (
+function placeFor(
     plan: Plan,
     type: PlanItem['type'],
     under: string | undefined,
     after: string | undefined
-): { siblings: PlanItem[]; index: number; parent: PlanSection | PlanStep | null } | PlanRefusal => {
+): { siblings: PlanItem[]; index: number; parent: PlanSection | PlanStep | null } | PlanRefusal {
     let parent: PlanSection | PlanStep | null = null;
     let siblings: PlanItem[] = plan.items;
     if (under !== undefined) {
@@ -140,10 +142,10 @@ const placeFor = (
         return refuse('plan-bad-position', `"${after}" is not directly under "${under}"`);
     }
     return { siblings, index: index + 1, parent };
-};
+}
 
 /* A leaf that gets its first sub-step: its state now follows from its children. */
-const becomeParent = (parent: PlanSection | PlanStep | null, dropped: string[]): void => {
+function becomeParent(parent: PlanSection | PlanStep | null, dropped: string[]): void {
     if (parent?.type !== 'step' || (parent.steps?.length ?? 0) !== 1) {
         return;
     }
@@ -153,17 +155,17 @@ const becomeParent = (parent: PlanSection | PlanStep | null, dropped: string[]):
     delete parent.state;
     delete parent.by;
     delete parent.at;
-};
+}
 
-const pruneEmptySteps = (items: readonly PlanItem[]): void => {
+function pruneEmptySteps(items: readonly PlanItem[]): void {
     for (const item of allItems(items)) {
         if (item.type === 'step' && item.steps?.length === 0) {
             delete item.steps;
         }
     }
-};
+}
 
-const applyOne = (plan: Plan, op: PlanOp, options: PlanApplyOptions, mint: () => string, dropped: string[]): PlanRefusal | null => {
+function applyOne(plan: Plan, op: PlanOp, options: PlanApplyOptions, mint: () => string, dropped: string[]): PlanRefusal | null {
     const verdict = canApply(op, options.actor, plan);
     if (!verdict.ok) {
         return verdict;
@@ -272,14 +274,14 @@ const applyOne = (plan: Plan, op: PlanOp, options: PlanApplyOptions, mint: () =>
             return null;
         }
     }
-};
+}
 
 /*
  * Applies a batch of operations for one actor, all or nothing. Each operation sees the plan as the
  * ones before it left it, and the whole batch is one rev, so a step done and the next one active land
  * together.
  */
-export const applyPlanOps = (plan: Plan, ops: readonly PlanOp[], options: PlanApplyOptions): PlanApplied | PlanRefusal => {
+export function applyPlanOps(plan: Plan, ops: readonly PlanOp[], options: PlanApplyOptions): PlanApplied | PlanRefusal {
     const parsedOps = z.array(PlanOpSchema).min(1).safeParse(ops);
     if (!parsedOps.success) {
         return refuse('plan-invalid', issueMessage(parsedOps.error));
@@ -305,17 +307,17 @@ export const applyPlanOps = (plan: Plan, ops: readonly PlanOp[], options: PlanAp
         return checked;
     }
     return { ok: true, plan: checked.plan, minted, dropped };
-};
+}
 
 /* A plan as it is stored or sent: the schema, then the rules that need the whole tree. */
-export const validatePlan = (value: unknown): { ok: true; plan: Plan } | PlanRefusal => {
+export function validatePlan(value: unknown): { ok: true; plan: Plan } | PlanRefusal {
     const parsed = PlanSchema.safeParse(value);
     if (!parsed.success) {
         return refuse('plan-invalid', issueMessage(parsed.error));
     }
     const problem = structureProblem(parsed.data);
     return problem ?? { ok: true, plan: parsed.data };
-};
+}
 
 /*
  * What an agent hands `plan new`. Strict, so a misspelled field is refused by its path instead of
@@ -363,10 +365,10 @@ export const PlanDraftSchema = z.strictObject({
 });
 export type PlanDraft = z.infer<typeof PlanDraftSchema>;
 
-export const parsePlanDraft = (value: unknown): { ok: true; draft: PlanDraft } | PlanRefusal => {
+export function parsePlanDraft(value: unknown): { ok: true; draft: PlanDraft } | PlanRefusal {
     const parsed = PlanDraftSchema.safeParse(value);
     return parsed.success ? { ok: true, draft: parsed.data } : refuse('plan-invalid', issueMessage(parsed.error));
-};
+}
 
 export interface PlanCreateOptions {
     id: string;
@@ -377,7 +379,7 @@ export interface PlanCreateOptions {
 }
 
 /* A new plan from an agent's draft: ids minted, states marked as the agent's, and the same rules as any later change. */
-export const createPlan = (draft: PlanDraft, options: PlanCreateOptions): PlanApplied | PlanRefusal => {
+export function createPlan(draft: PlanDraft, options: PlanCreateOptions): PlanApplied | PlanRefusal {
     const parsed = PlanDraftSchema.safeParse(draft);
     if (!parsed.success) {
         return refuse('plan-invalid', issueMessage(parsed.error));
@@ -443,7 +445,8 @@ export const createPlan = (draft: PlanDraft, options: PlanCreateOptions): PlanAp
         }
     }
     return { ok: true, plan: checked.plan, minted, dropped: [] };
-};
+}
 
-const allDraftItems = (items: readonly PlanDraftItem[]): PlanDraftItem[] =>
-    items.flatMap((item) => [item, ...allDraftItems(item.type === 'section' ? item.items : item.type === 'step' ? (item.steps ?? []) : [])]);
+function allDraftItems(items: readonly PlanDraftItem[]): PlanDraftItem[] {
+    return items.flatMap((item) => [item, ...allDraftItems(item.type === 'section' ? item.items : item.type === 'step' ? (item.steps ?? []) : [])]);
+}

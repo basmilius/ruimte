@@ -8,17 +8,32 @@ const PATTERN_SECONDS = 8;
 const TRANSITION_SECONDS = 2.4;
 const PATTERN_COUNT = 8;
 
-const clamp = (value: number): number => Math.max(0.04, Math.min(0.7, value));
-const amplify = (value: number): number => 0.04 + (value - 0.04) * 1.5;
-const wave = (turns: number): number => 0.5 + 0.5 * Math.sin(turns * TAU);
-const pulse = (distance: number, width: number): number => Math.exp(-(distance * distance) / width);
-const loop = (value: number): number => ((value % 1) + 1) % 1;
-const wrappedPulse = (x: number, center: number, width: number): number =>
-    pulse(x - center, width) + pulse(x - center - 1, width) + pulse(x - center + 1, width);
-const smooth = (value: number): number => value * value * (3 - 2 * value);
-const mix = (from: number, to: number, amount: number): number => from + (to - from) * amount;
+function clamp(value: number): number {
+    return Math.max(0.04, Math.min(0.7, value));
+}
+function amplify(value: number): number {
+    return 0.04 + (value - 0.04) * 1.5;
+}
+function wave(turns: number): number {
+    return 0.5 + 0.5 * Math.sin(turns * TAU);
+}
+function pulse(distance: number, width: number): number {
+    return Math.exp(-(distance * distance) / width);
+}
+function loop(value: number): number {
+    return ((value % 1) + 1) % 1;
+}
+function wrappedPulse(x: number, center: number, width: number): number {
+    return pulse(x - center, width) + pulse(x - center - 1, width) + pulse(x - center + 1, width);
+}
+function smooth(value: number): number {
+    return value * value * (3 - 2 * value);
+}
+function mix(from: number, to: number, amount: number): number {
+    return from + (to - from) * amount;
+}
 
-const pattern = (index: number, x: number, seconds: number): [number, number] => {
+function pattern(index: number, x: number, seconds: number): [number, number] {
     switch (index) {
         case 0: {
             const envelope = 0.35 + 0.65 * Math.sin(Math.PI * x) ** 2;
@@ -67,9 +82,9 @@ const pattern = (index: number, x: number, seconds: number): [number, number] =>
             ];
         }
     }
-};
+}
 
-export const idleVoiceBands = (atMs: number, count: number): IdleVoiceBands => {
+export function idleVoiceBands(atMs: number, count: number): IdleVoiceBands {
     const seconds = atMs / 1_000;
     const cycle = seconds / PATTERN_SECONDS;
     const current = Math.floor(cycle) % PATTERN_COUNT;
@@ -85,4 +100,4 @@ export const idleVoiceBands = (atMs: number, count: number): IdleVoiceBands => {
         output.push(clamp(amplify(mix(from[1], to[1], transition))));
     }
     return { input, output };
-};
+}

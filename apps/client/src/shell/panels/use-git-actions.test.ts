@@ -4,17 +4,19 @@ import type { GitActionPayload, GitActionResult } from '@ruimte/contracts';
 import { useToasts } from '@/state/toasts';
 import { runManyJobs, type ManyJob } from './use-git-actions';
 
-const job = (label: string): ManyJob => ({ cwd: `/work/${label}`, kind: 'pull', label });
+function job(label: string): ManyJob {
+    return { cwd: `/work/${label}`, kind: 'pull', label };
+}
 
 /* Pulls every repository, except that the ones named here moved on both sides. */
-const pulling =
-    (diverged: readonly string[]) =>
-    async (payload: GitActionPayload): Promise<GitActionResult> => {
+function pulling(diverged: readonly string[]) {
+    return async (payload: GitActionPayload): Promise<GitActionResult> => {
         if (diverged.some((label) => payload.cwd === `/work/${label}`)) {
             throw new ActionRefusal('diverged', 'main and the remote have both moved on.');
         }
         return { actionId: payload.actionId, summary: 'Pulled into main.', output: '' };
     };
+}
 
 describe('a run over several repositories', () => {
     test('a branch that moved on both sides comes back as a choice, not a failure', async () => {

@@ -105,7 +105,9 @@ describe('ticksOf', () => {
     });
 });
 
-const kinds = (count: number): TickKind[] => Array.from({ length: count }, (_, i) => (i % 5 === 4 ? 'wake' : 'person'));
+function kinds(count: number): TickKind[] {
+    return Array.from({ length: count }, (_, i) => (i % 5 === 4 ? 'wake' : 'person'));
+}
 
 describe('layoutTicks', () => {
     test('a few messages sit at the full pitch, centered in whole pixels', () => {

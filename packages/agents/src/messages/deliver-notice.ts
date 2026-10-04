@@ -39,7 +39,7 @@ export interface ChatDelivery {
  * Between turns the last one counts, since work it left running (a background subagent) may still
  * write, and a turn the CLI opened by itself goes on with the step of the turn before it.
  */
-export const turnFromMessage = (items: readonly ChatItem[], activeTurnId: string | null): boolean => {
+export function turnFromMessage(items: readonly ChatItem[], activeTurnId: string | null): boolean {
     const from = activeTurnId === null ? items.findLastIndex((item) => item.kind === 'turn') : items.findIndex((item) => item.id === activeTurnId);
     for (let i = from; i >= 0; i--) {
         const turn = items[i]!;
@@ -54,23 +54,25 @@ export const turnFromMessage = (items: readonly ChatItem[], activeTurnId: string
         }
     }
     return false;
-};
+}
 
 /* The chats of a core as a message sees them. */
-export const chatNoticeTargets = (chats: Pick<ChatCore, 'get' | 'hasStored'>): ChatNoticeTargets => ({
-    chat: async (id) => {
-        const session = chats.get(id);
-        if (session) {
-            return session.info.activeTurnId === null ? 'idle' : 'running';
+export function chatNoticeTargets(chats: Pick<ChatCore, 'get' | 'hasStored'>): ChatNoticeTargets {
+    return {
+        chat: async (id) => {
+            const session = chats.get(id);
+            if (session) {
+                return session.info.activeTurnId === null ? 'idle' : 'running';
+            }
+            // A chat nobody has loaded is idle: the turn opens on the thread the host reads back from disk.
+            return (await chats.hasStored(id)) ? 'idle' : 'none';
+        },
+        fromMessage: (id) => {
+            const session = chats.get(id);
+            return session !== undefined && turnFromMessage(session.thread.list(), session.info.activeTurnId);
         }
-        // A chat nobody has loaded is idle: the turn opens on the thread the host reads back from disk.
-        return (await chats.hasStored(id)) ? 'idle' : 'none';
-    },
-    fromMessage: (id) => {
-        const session = chats.get(id);
-        return session !== undefined && turnFromMessage(session.thread.list(), session.info.activeTurnId);
-    }
-});
+    };
+}
 
 /*
  * One message on its way to a chat, and whether the chat owes a turn on it. A chat between turns gets
@@ -79,7 +81,7 @@ export const chatNoticeTargets = (chats: Pick<ChatCore, 'get' | 'hasStored'>): C
  * chat. One step deep, so the turn a message opened wakes nobody with a message of its own. A node the
  * host runs something else in, such as a terminal, is the host's to deliver to before this.
  */
-export const deliverToChat = async (store: Pick<NoticeStore, 'put'>, targets: ChatNoticeTargets, notice: Omit<Notice, 'createdAt'>): Promise<ChatDelivery> => {
+export async function deliverToChat(store: Pick<NoticeStore, 'put'>, targets: ChatNoticeTargets, notice: Omit<Notice, 'createdAt'>): Promise<ChatDelivery> {
     const waiting = await store.put(notice);
     const chat = await targets.chat(notice.targetId);
     if (chat === 'none') {
@@ -92,7 +94,7 @@ export const deliverToChat = async (store: Pick<NoticeStore, 'put'>, targets: Ch
         return { outcome: 'from-message', waiting };
     }
     return { outcome: 'wake', waiting };
-};
+}
 
 /* The chat a message was left for, as the two things showing it needs: whether it is there, and a line in its thread. */
 export interface NoticeChat {
@@ -108,11 +110,11 @@ export interface NoticeChat {
  * An id no chat holds shows nothing and marks nothing, so the chat that opens on that id later still
  * has all of it.
  */
-export const showNotices = async (store: Pick<NoticeStore, 'show'>, chat: NoticeChat, words: Pick<MessageWords, 'shown'>, targetId: string): Promise<void> => {
+export async function showNotices(store: Pick<NoticeStore, 'show'>, chat: NoticeChat, words: Pick<MessageWords, 'shown'>, targetId: string): Promise<void> {
     if (!(await chat.has(targetId))) {
         return;
     }
     for (const notice of await store.show(targetId)) {
         await chat.note(targetId, words.shown(notice));
     }
-};
+}

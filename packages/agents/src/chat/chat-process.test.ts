@@ -2,7 +2,7 @@ import { afterEach, describe, expect, jest, test } from 'bun:test';
 import { ChatChild, StreamTail, type ChatSpawnOptions } from './chat-process.ts';
 
 /* A process that only records what it is told, and exits when the test says so. */
-const fakeChild = (onExit: (exitCode: number | null, stderr: string | null) => void = () => undefined) => {
+function fakeChild(onExit: (exitCode: number | null, stderr: string | null) => void = () => undefined) {
     const signals: string[] = [];
     let exit: ChatSpawnOptions['onExit'] = () => undefined;
     let stderr: ReadableStreamDefaultController<Uint8Array> | null = null;
@@ -37,7 +37,7 @@ const fakeChild = (onExit: (exitCode: number | null, stderr: string | null) => v
             exit(code);
         }
     };
-};
+}
 
 afterEach(() => {
     jest.useRealTimers();

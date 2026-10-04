@@ -14,7 +14,7 @@ export const readsFlag = z.string().min(1, '--reads needs one or more node ids, 
  * The ids of --reads, read before the lock: a bad one should refuse the call before it cuts a
  * worktree. Which nodes they are is only known once the call knows which canvas it lands on.
  */
-export const readsIds = (raw: string | undefined): string[] => {
+export function readsIds(raw: string | undefined): string[] {
     if (raw === undefined) {
         return [];
     }
@@ -23,18 +23,20 @@ export const readsIds = (raw: string | undefined): string[] => {
         throw new VerbRefusal('too-many-links', `--reads names ${ids.length} nodes and at most ${MAX_LINKS} may be linked at once`);
     }
     return ids;
-};
+}
 
 /* What --reads does, said the same way by every verb that takes it; `head` is what its lines run into. */
-export const readsLines = (head: string): readonly string[] => [
-    `reads\tThe line runs from the node you name into ${head}, so ${head} can run ruimte-context read on the id; between two agents that direction is what makes it readable`,
-    'reads\tNo role and the label context, like every other line this verb draws into an agent',
-    'reads\tThe node, its lines and the start of the agent are one write, so a line is there before the first turn runs; this is how you open an agent on a note you just put down',
-    'reads\tOnly nodes that are on that canvas already, so never an agent this same call opens; an id that names none of them is refused with the ids that do',
-    'reads\tNaming yourself is the line this verb draws from you anyway, which is reported once and never drawn twice',
-    'reads\tUnder --dry-run every line it would draw is a row of its own, as <the node> -> <the agent it would run into>',
-    `limit\tAt most ${MAX_LINKS} ids in --reads`
-];
+export function readsLines(head: string): readonly string[] {
+    return [
+        `reads\tThe line runs from the node you name into ${head}, so ${head} can run ruimte-context read on the id; between two agents that direction is what makes it readable`,
+        'reads\tNo role and the label context, like every other line this verb draws into an agent',
+        'reads\tThe node, its lines and the start of the agent are one write, so a line is there before the first turn runs; this is how you open an agent on a note you just put down',
+        'reads\tOnly nodes that are on that canvas already, so never an agent this same call opens; an id that names none of them is refused with the ids that do',
+        'reads\tNaming yourself is the line this verb draws from you anyway, which is reported once and never drawn twice',
+        'reads\tUnder --dry-run every line it would draw is a row of its own, as <the node> -> <the agent it would run into>',
+        `limit\tAt most ${MAX_LINKS} ids in --reads`
+    ];
+}
 
 const LINK_DETAIL: readonly string[] = [
     'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn, updated for one that was there and took the --role you named, and existing for one nothing happened to',

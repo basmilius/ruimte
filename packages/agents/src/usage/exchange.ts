@@ -13,7 +13,7 @@ const FETCH_TIMEOUT_MS = 10_000;
 /* The one currency the page offers next to dollars. Every price the host knows is in dollars. */
 export const TARGET_CURRENCY = 'EUR';
 
-export const parseRate = (document: unknown, currency: string): Omit<UsageRate, 'fetchedAt'> | null => {
+export function parseRate(document: unknown, currency: string): Omit<UsageRate, 'fetchedAt'> | null {
     const body = typeof document === 'object' && document !== null ? (document as Record<string, unknown>) : null;
     const rates = body === null || typeof body.rates !== 'object' || body.rates === null ? null : (body.rates as Record<string, unknown>);
     const rate = rates === null ? undefined : rates[currency];
@@ -21,7 +21,7 @@ export const parseRate = (document: unknown, currency: string): Omit<UsageRate, 
         return null;
     }
     return { currency, rate, date: body.date };
-};
+}
 
 /*
  * What a dollar is worth in euros, asked of the ECB through frankfurter.app once a day and kept on

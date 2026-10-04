@@ -5,7 +5,9 @@ import type { TaskStore } from './task-store.ts';
 import type { GiveTaskEntry } from './task-work.ts';
 
 /* The note above the turn a task opens, so whoever reads the child sees who asked for it. */
-export const taskNote = (from: string): string => `Task from ${from}`;
+export function taskNote(from: string): string {
+    return `Task from ${from}`;
+}
 
 export interface GiveTaskDeps {
     tasks: Pick<TaskStore, 'get'>;
@@ -24,9 +26,8 @@ export interface GiveTaskDeps {
  * `wait`, the same as a person's own message, so nothing the host owes steps on what the agent is
  * doing. One agent holds one task at a time, so the task is never queued twice.
  */
-export const giveTaskHandler =
-    (deps: GiveTaskDeps) =>
-    async (entry: GiveTaskEntry): Promise<OutboxOutcome> => {
+export function giveTaskHandler(deps: GiveTaskDeps) {
+    return async (entry: GiveTaskEntry): Promise<OutboxOutcome> => {
         const task = deps.tasks.get(entry.payload.taskId);
         // Settled or cancelled before the turn could open, or a node the project no longer places.
         if (!task || task.status !== 'open' || !deps.placed(task.childId)) {
@@ -48,3 +49,4 @@ export const giveTaskHandler =
         }
         await chat.persist?.();
     };
+}

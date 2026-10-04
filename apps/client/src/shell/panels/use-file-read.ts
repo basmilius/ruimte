@@ -16,7 +16,7 @@ export type FileRead = { status: 'loading' } | { status: 'error'; message: strin
  * so nothing unmounts and the scroll position lives through a save. Text past `fs.read`'s cap is
  * fetched as bytes behind it.
  */
-export const useFileRead = (path: string): { state: FileRead; retry(): void } => {
+export function useFileRead(path: string): { state: FileRead; retry(): void } {
     const [state, setState] = useState<FileRead>({ status: 'loading' });
     const [attempt, setAttempt] = useState(0);
     const transport = useTransport();
@@ -74,4 +74,4 @@ export const useFileRead = (path: string): { state: FileRead; retry(): void } =>
     }, []);
 
     return { state, retry };
-};
+}

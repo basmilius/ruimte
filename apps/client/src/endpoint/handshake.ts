@@ -9,7 +9,7 @@ import { forgetTicket, rememberLocalSecret, rememberSecretForUrls, rememberTicke
  * URL. A daemon from before the trade answers with its app shell or a 404; that one is sent the
  * secret in the URL as before. A refusal or a daemon that does not answer leaves the last ticket.
  */
-export const tradeLocalSecret = async (endpoint: Endpoint, secret: string): Promise<void> => {
+export async function tradeLocalSecret(endpoint: Endpoint, secret: string): Promise<void> {
     const response = await fetch(`${endpoint.httpBaseUrl}/auth/local-ticket`, {
         method: 'POST',
         headers: { authorization: `Bearer ${secret}` }
@@ -25,7 +25,7 @@ export const tradeLocalSecret = async (endpoint: Endpoint, secret: string): Prom
     }
     forgetTicket(endpoint.id);
     rememberSecretForUrls(endpoint.id, secret);
-};
+}
 
 /*
  * The address a socket for this machine opens on, credential and all. Runs before every connection
@@ -34,7 +34,7 @@ export const tradeLocalSecret = async (endpoint: Endpoint, secret: string): Prom
  * while that ticket lives, and never a second socket. Only the row of this machine has an address of
  * its own; every other machine is reached through a route.
  */
-export const socketAddressFor = async (endpointId: string): Promise<string> => {
+export async function socketAddressFor(endpointId: string): Promise<string> {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
     if (!endpoint) {
         throw new Error(i18next.t('machines:handshake.noEndpoint', { id: endpointId }));
@@ -50,4 +50,4 @@ export const socketAddressFor = async (endpointId: string): Promise<string> => {
         }
     }
     return socketUrlFor(endpoint);
-};
+}

@@ -22,15 +22,17 @@ import type { SidebarNode } from './sidebar-rows';
 
 const NO_APPROVALS: readonly ComputerApproval[] = [];
 
-const idOf = (prompt: CanvasPrompt): string => prompt.id;
+function idOf(prompt: CanvasPrompt): string {
+    return prompt.id;
+}
 
-const pick = (waiting: readonly CanvasPrompt[], activeId: string | null, activeIndex: number): CanvasPrompt | null => {
+function pick(waiting: readonly CanvasPrompt[], activeId: string | null, activeIndex: number): CanvasPrompt | null {
     const id = stackFront(waiting.map(idOf), activeId, activeIndex);
     return waiting.find((prompt) => prompt.id === id) ?? null;
-};
+}
 
 /* The workspace's actions only reach the machine it runs on, so a chat on another machine is answered on that machine's own link. */
-const clientsOn = (endpointId: string): ChatPromptClients => {
+function clientsOn(endpointId: string): ChatPromptClients {
     const transport = machineTransport(endpointId);
     return {
         approve: async (chatId, requestId, decision, message) => {
@@ -43,13 +45,13 @@ const clientsOn = (endpointId: string): ChatPromptClients => {
             await transport.request('chat.dismiss', { chatId, itemId });
         }
     };
-};
+}
 
 /* Enough of a chat for its prompts: every item that came with the read, the requests from before its page among them. */
-const chatOf = (result: ChatAttachResult): ChatState => {
+function chatOf(result: ChatAttachResult): ChatState {
     const byId = Object.fromEntries([...(result.pending ?? []), ...result.items].map((item) => [item.id, item]));
     return { info: result.info, items: byId, structure: byId, order: Object.keys(byId) };
-};
+}
 
 interface WaitingPrompts {
     /* Null until the chat was read. */
@@ -63,7 +65,7 @@ interface WaitingPrompts {
  * from the store; any other is read from its machine, again whenever that machine says it changed.
  * A terminal's own question stays in its TUI, so a terminal only brings the cards about operating an app.
  */
-const useWaitingPrompts = (endpointId: string, node: SidebarNode): WaitingPrompts => {
+function useWaitingPrompts(endpointId: string, node: SidebarNode): WaitingPrompts {
     const key = endpointKey(endpointId, node.id);
     const local = useEndpointId() === endpointId;
     const [held] = useState(() => node.kind === 'chat' && (chatClientFor(endpointId)?.isMounted(node.id) ?? false));
@@ -125,7 +127,7 @@ const useWaitingPrompts = (endpointId: string, node: SidebarNode): WaitingPrompt
     }, [inspects, read, chat, computer, endpointId, key, node.id, node.kind, node.title, node.provider]);
 
     return { prompts, failed: read?.failed ?? false, reread: () => setRevision((before) => before + 1) };
-};
+}
 
 function CardBody({ endpointId, node, onOpen, onEmpty }: { endpointId: string; node: SidebarNode; onOpen(): void; onEmpty(): void }) {
     const { t } = useTranslation(['shell', 'canvas']);

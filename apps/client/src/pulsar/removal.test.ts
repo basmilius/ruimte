@@ -2,17 +2,19 @@ import { describe, expect, test } from 'bun:test';
 import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
 import { rowsRemovedFromAccount } from './removal';
 
-const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: '',
-    wsBaseUrl: '',
-    reachability: 'public',
-    daemonId: id,
-    daemonPublicKey: null,
-    pairedBy: 'statement',
-    ...overrides
-});
+function row(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        reachability: 'public',
+        daemonId: id,
+        daemonPublicKey: null,
+        pairedBy: 'statement',
+        ...overrides
+    };
+}
 
 describe('rowsRemovedFromAccount', () => {
     test('a removed machine goes, and one still on the account stays', () => {

@@ -13,7 +13,7 @@ const WIDE = new Set([...'MW@%&']);
  * for the system face (SF on macOS) and Helvetica as a stand-in for Inter and Segoe UI, taking the
  * wider of the two at weight 600, so an estimate errs towards a box that is a little too wide.
  */
-const ratioOf = (char: string): number => {
+function ratioOf(char: string): number {
     if (NARROW.has(char)) {
         return 0.3;
     }
@@ -37,20 +37,20 @@ const ratioOf = (char: string): number => {
     }
     // CJK and everything after it is set on a full em; any other letter is taken as a wide Latin one.
     return char.codePointAt(0)! >= 0x2e80 ? 1 : 0.64;
-};
+}
 
 const REGULAR = 0.94;
 
 /* No DOM in this package, so text is estimated rather than measured, the same way on every machine. */
-export const estimateTextWidth = (text: string, size: number, bold = false): number => {
+export function estimateTextWidth(text: string, size: number, bold = false): number {
     let units = 0;
     for (const char of text) {
         units += ratioOf(char);
     }
     return Math.ceil(units * size * (bold ? 1 : REGULAR));
-};
+}
 
-const breakWord = (word: string, size: number, bold: boolean, maxWidth: number): string[] => {
+function breakWord(word: string, size: number, bold: boolean, maxWidth: number): string[] {
     const pieces: string[] = [];
     let piece = '';
     for (const char of word) {
@@ -62,9 +62,9 @@ const breakWord = (word: string, size: number, bold: boolean, maxWidth: number):
     }
     pieces.push(piece);
     return pieces;
-};
+}
 
-export const wrapText = (text: string, size: number, bold: boolean, maxWidth: number): string[] => {
+export function wrapText(text: string, size: number, bold: boolean, maxWidth: number): string[] {
     const words = text
         .trim()
         .split(/\s+/)
@@ -85,7 +85,8 @@ export const wrapText = (text: string, size: number, bold: boolean, maxWidth: nu
     }
     lines.push(line);
     return lines;
-};
+}
 
-export const widestLine = (lines: readonly string[], size: number, bold: boolean): number =>
-    lines.reduce((widest, line) => Math.max(widest, estimateTextWidth(line, size, bold)), 0);
+export function widestLine(lines: readonly string[], size: number, bold: boolean): number {
+    return lines.reduce((widest, line) => Math.max(widest, estimateTextWidth(line, size, bold)), 0);
+}

@@ -3,11 +3,11 @@ import { ensureSyntaxTree } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { codeRanges, markdownLanguage } from './editor';
 
-const stateOf = (doc: string): EditorState => {
+function stateOf(doc: string): EditorState {
     const state = EditorState.create({ doc, extensions: markdownLanguage });
     ensureSyntaxTree(state, doc.length, 5000);
     return state;
-};
+}
 
 describe('codeRanges', () => {
     test('finds code spans and fenced blocks', () => {

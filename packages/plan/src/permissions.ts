@@ -8,7 +8,7 @@ const ALLOWED: PlanVerdict = { ok: true };
 const PERSON_OPS: ReadonlySet<PlanOp['op']> = new Set(['set', 'note', 'unlock']);
 const AGENT_OPS: ReadonlySet<PlanOp['op']> = new Set(['set', 'note', 'add', 'edit', 'move', 'remove', 'meta']);
 
-const stepFor = (plan: Plan, id: string, leaf: boolean): PlanStep | PlanRefusal => {
+function stepFor(plan: Plan, id: string, leaf: boolean): PlanStep | PlanRefusal {
     const location = locateItem(plan, id);
     if (!location) {
         return refuse('plan-missing-item', `The plan has no item "${id}"`);
@@ -20,9 +20,9 @@ const stepFor = (plan: Plan, id: string, leaf: boolean): PlanStep | PlanRefusal 
         return refuse('plan-parent-state', `The step "${id}" has sub-steps, so its state follows from them`);
     }
     return location.item;
-};
+}
 
-const mayState = (plan: Plan, step: PlanStep, state: PlanStepState, actor: PlanActor): PlanVerdict => {
+function mayState(plan: Plan, step: PlanStep, state: PlanStepState, actor: PlanActor): PlanVerdict {
     const checks = effectiveChecks(plan, step);
     if (actor === 'person') {
         return checks === 'agent' ? refuse('step-locked', `Only the agent checks "${step.id}" until a person unlocks it`) : ALLOWED;
@@ -34,10 +34,10 @@ const mayState = (plan: Plan, step: PlanStep, state: PlanStepState, actor: PlanA
         return refuse('set-by-person', `A person set "${step.id}" to ${step.state}; add a note or ask in the chat instead`);
     }
     return ALLOWED;
-};
+}
 
 /* Adding under a leaf takes its state away, which may not happen to a state a person set. */
-const mayHoldChildren = (plan: Plan, under: string | undefined): PlanVerdict => {
+function mayHoldChildren(plan: Plan, under: string | undefined): PlanVerdict {
     if (under === undefined) {
         return ALLOWED;
     }
@@ -46,14 +46,14 @@ const mayHoldChildren = (plan: Plan, under: string | undefined): PlanVerdict => 
         return refuse('set-by-person', `A person set "${under}" to ${location.item.state}; a sub-step would take that state away`);
     }
     return ALLOWED;
-};
+}
 
 /*
  * Whether this actor may apply the operation to the plan as it is now: who sets which step, what a
  * person set, what a person unlocked. The shape of the result (depth, size, positions) is checked
  * when the operation is applied.
  */
-export const canApply = (op: PlanOp, actor: PlanActor, plan: Plan): PlanVerdict => {
+export function canApply(op: PlanOp, actor: PlanActor, plan: Plan): PlanVerdict {
     if (!(actor === 'person' ? PERSON_OPS : AGENT_OPS).has(op.op)) {
         return refuse('op-not-allowed', actor === 'person' ? `A person cannot ${op.op} in a plan` : `An agent cannot ${op.op} a plan`);
     }
@@ -152,10 +152,11 @@ export const canApply = (op: PlanOp, actor: PlanActor, plan: Plan): PlanVerdict 
             return ALLOWED;
         }
     }
-};
+}
 
 /* Deleting a plan takes every check a person made in it along, so an agent leaves one that holds any. */
-export const canDeletePlan = (plan: Plan, actor: PlanActor): PlanVerdict =>
-    actor === 'agent' && plan.items.some(holdsPersonState)
+export function canDeletePlan(plan: Plan, actor: PlanActor): PlanVerdict {
+    return actor === 'agent' && plan.items.some(holdsPersonState)
         ? refuse('set-by-person', `A person checked steps of "${plan.meta.title}", so the plan stays`)
         : ALLOWED;
+}

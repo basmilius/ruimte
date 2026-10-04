@@ -52,14 +52,16 @@ export const DEFAULT_RUNTIME_MODE: RuntimeMode = 'full-access';
  * without a mode got the default, while a resume without one and a CLI a person typed into a plain
  * shell run with whatever that CLI decides, which the daemon cannot know and so takes as the strictest.
  */
-export const launchedMode = (launch: AgentLaunch | null): RuntimeMode => {
+export function launchedMode(launch: AgentLaunch | null): RuntimeMode {
     if (launch === null) {
         return 'supervised';
     }
     return launch.runtimeMode ?? (launch.resume ? 'supervised' : DEFAULT_RUNTIME_MODE);
-};
+}
 
-const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
+function quote(value: string): string {
+    return `'${value.replaceAll("'", `'\\''`)}'`;
+}
 
 /*
  * Codex 0.157 runs a session in a shared background server unless told not to, and that server runs
@@ -68,23 +70,23 @@ const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
  */
 let codexNoDaemon = false;
 
-const codexHelp = async (): Promise<string> => {
+async function codexHelp(): Promise<string> {
     const proc = Bun.spawn(['codex', '--help'], { stdout: 'pipe', stderr: 'ignore' });
     return await new Response(proc.stdout).text();
-};
+}
 
 /* Asks the installed Codex once whether it takes `--no-daemon`; a Codex that is not there takes nothing. */
-export const probeCodexNoDaemon = async (help: () => Promise<string> = codexHelp): Promise<void> => {
+export async function probeCodexNoDaemon(help: () => Promise<string> = codexHelp): Promise<void> {
     codexNoDaemon = (await help().catch(() => '')).includes('--no-daemon');
-};
+}
 
 // What a CLI gets on every line, fresh or resumed, whatever the mode.
-const alwaysFlags = (kind: AgentKind): string[] => {
+function alwaysFlags(kind: AgentKind): string[] {
     if (kind === 'claude') {
         return [quote(CLAUDE_ALLOW_CONTEXT)];
     }
     return kind === 'codex' && codexNoDaemon ? ['--no-daemon'] : [];
-};
+}
 
 /*
  * How a CLI is told about `ruimte-context` on its launch line, where it takes one: a note there sits with the
@@ -97,7 +99,9 @@ const NOTE_FLAGS: Partial<Record<AgentKind, (note: string) => string[]>> = {
 };
 
 /* Whether a launch line of this kind carries the verbs note, so a hook must not say it a second time. */
-export const takesNoteOnLine = (kind: AgentKind): boolean => NOTE_FLAGS[kind] !== undefined;
+export function takesNoteOnLine(kind: AgentKind): boolean {
+    return NOTE_FLAGS[kind] !== undefined;
+}
 
 /*
  * What a launch puts on a CLI's line beside the command itself: the permission mode and, where the
@@ -105,20 +109,20 @@ export const takesNoteOnLine = (kind: AgentKind): boolean => NOTE_FLAGS[kind] !=
  * that gap with `DEFAULT_RUNTIME_MODE`, because a resume of a CLI nobody chose a mode for would
  * otherwise be handed full access.
  */
-const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined): string[] => {
+function launchFlags(launch: AgentLaunch, runtimeMode: RuntimeMode | undefined): string[] {
     const flags = [...alwaysFlags(launch.kind), ...(runtimeMode === undefined ? [] : RUNTIME_FLAGS[launch.kind][runtimeMode])];
     const modelFlag = MODEL_FLAG[launch.kind];
     if (launch.model && modelFlag) {
         flags.push(modelFlag, quote(launch.model));
     }
     return flags;
-};
+}
 
 /*
  * Put the first prompt on the launch command because CLIs expose no reliable ready-for-input signal.
  * Building the line in the daemon also keeps flags out of the wire protocol.
  */
-export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string, note?: string): string => {
+export function terminalCommand(launch: AgentLaunch, firstPrompt?: string, note?: string): string {
     const provider = providerFor(launch.kind);
     if (!provider.capabilities.terminal) {
         throw new Error(`${provider.name} is only available as a chat.`);
@@ -136,7 +140,7 @@ export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string, note?
         parts.push(...provider.firstPromptArgs(firstPrompt).map(quote));
     }
     return parts.join(' ');
-};
+}
 
 /*
  * How each CLI is told to pick its session up again; the template is the provider's own. The mode
@@ -145,16 +149,20 @@ export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string, note?
  * then told the same thing twice; Codex takes its sandbox and its approval policy from the line
  * alone, so without this a `full-access` node would come back sandboxed.
  */
-export const resumeCommand = (launch: AgentLaunch, agentSessionId: string): string =>
-    resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode));
+export function resumeCommand(launch: AgentLaunch, agentSessionId: string): string {
+    return resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode));
+}
 
 /* The line a CLI starts fresh with, whatever the launch it was recorded with asked to resume. */
-export const freshCommand = (launch: AgentLaunch, note?: string): string => terminalCommand({ ...launch, resume: undefined }, undefined, note);
+export function freshCommand(launch: AgentLaunch, note?: string): string {
+    return terminalCommand({ ...launch, resume: undefined }, undefined, note);
+}
 
 /*
  * A resume the daemon has no evidence for, in one line. The CLI exits non-zero when the session it
  * was handed is not there, so the shell starts a fresh one itself: the node ends up with its CLI
  * either way and the shell still reads a single line, which is what typing two of them cost before.
  */
-export const resumeOrFreshCommand = (launch: AgentLaunch, agentSessionId: string, note?: string): string =>
-    `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch, note)}`;
+export function resumeOrFreshCommand(launch: AgentLaunch, agentSessionId: string, note?: string): string {
+    return `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch, note)}`;
+}

@@ -110,16 +110,16 @@ export type DrawingDocument = z.infer<typeof DrawingDocumentSchema>;
 export const EMPTY_DRAWING: DrawingDocument = { version: 1, rev: 0, elements: [] };
 
 /* One version so far, so reading is a parse. A file that is not a drawing at all reads as null. */
-export const migrateDrawing = (value: unknown): DrawingDocument | null => {
+export function migrateDrawing(value: unknown): DrawingDocument | null {
     const parsed = DrawingDocumentSchema.safeParse(value);
     return parsed.success ? parsed.data : null;
-};
+}
 
 /*
  * Element ids never leave their own file, so they only have to be unique inside it. A repeat would
  * make selection and hit tests pick two elements at once, so such a file is refused by name.
  */
-export const duplicateElementIdIn = (elements: DrawingElement[]): string | null => {
+export function duplicateElementIdIn(elements: DrawingElement[]): string | null {
     const seen = new Set<string>();
     for (const element of elements) {
         if (seen.has(element.id)) {
@@ -128,7 +128,7 @@ export const duplicateElementIdIn = (elements: DrawingElement[]): string | null 
         seen.add(element.id);
     }
     return null;
-};
+}
 
 export const DrawingTargetPayloadSchema = z.object({
     projectId: ProjectIdSchema,

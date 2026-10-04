@@ -21,14 +21,18 @@ import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
 GlobalWorkerOptions.workerSrc = workerUrl;
 
 // Where `pdfjsAssets` in `vite.config.ts` puts what pdf.js fetches by name.
-const assetFolder = (folder: string): string => new URL(`${import.meta.env.BASE_URL}assets/pdfjs-${version}/${folder}/`, location.href).href;
+function assetFolder(folder: string): string {
+    return new URL(`${import.meta.env.BASE_URL}assets/pdfjs-${version}/${folder}/`, location.href).href;
+}
 
 // How far past the edge of the view a page is drawn ahead of being scrolled to.
 const DRAW_AHEAD = '50% 0px';
 
 type Source = { kind: 'url'; url: string } | { kind: 'data'; data: ArrayBuffer } | { kind: 'failed'; reason: string };
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 /*
  * Where pdf.js reads the file. It fetches, and `connect-src` lets a fetch reach this page's origin

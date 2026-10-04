@@ -60,8 +60,8 @@ export class ComposerPreferences {
     }
 }
 
-const isNewer = (held: Held, than: Held): boolean => {
+function isNewer(held: Held, than: Held): boolean {
     const changedAt = held.preference.changedAt ?? 0;
     const otherChangedAt = than.preference.changedAt ?? 0;
     return changedAt === otherChangedAt ? held.told > than.told : changedAt > otherChangedAt;
-};
+}

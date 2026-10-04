@@ -17,22 +17,25 @@ const BodySchema = z.object({ argv: z.array(z.string()) });
 
 const TEXT = { 'content-type': 'text/plain; charset=utf-8' };
 
-const text = (lines: string[], status = 200): Response => new Response(lines.length === 0 ? '' : `${lines.join('\n')}\n`, { status, headers: TEXT });
+function text(lines: string[], status = 200): Response {
+    return new Response(lines.length === 0 ? '' : `${lines.join('\n')}\n`, { status, headers: TEXT });
+}
 
-const refusal = (code: string, message: string, lines: string[] = [], status = 422): Response =>
-    new Response(`${refusalBody(code, message, lines)}\n`, { status, headers: TEXT });
+function refusal(code: string, message: string, lines: string[] = [], status = 422): Response {
+    return new Response(`${refusalBody(code, message, lines)}\n`, { status, headers: TEXT });
+}
 
 /*
  * A name with a space in it is a caller that quoted the whole line ("help agent"), which otherwise
  * only gets the verb list back and no hint of what went wrong.
  */
-const joinedWordsLines = (name: string): string[] => {
+function joinedWordsLines(name: string): string[] {
     const [first, ...rest] = name.split(/\s+/).filter((word) => word !== '');
     if (rest.length === 0 || !first || !verbNamed(first)) {
         return [];
     }
     return [`note\tA verb and its arguments are separate words, so this is ruimte-context ${first} ${rest.join(' ')}, not one name`];
-};
+}
 
 interface CanvasRouteDeps {
     /* The session or chat a bearer token speaks for. */
@@ -44,7 +47,7 @@ interface CanvasRouteDeps {
  * `POST /canvas/<verb or noun>` with `{ argv }`, the words after it. The daemon parses them rather
  * than the CLI, so a `ruimte-context` from an older build never disagrees with the verbs it talks to.
  */
-export const handleCanvasRequest = async (request: Request, pathname: string, deps: CanvasRouteDeps): Promise<Response> => {
+export async function handleCanvasRequest(request: Request, pathname: string, deps: CanvasRouteDeps): Promise<Response> {
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 });
     }
@@ -88,4 +91,4 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
         console.error(`Canvas verb ${name} failed:`, errorText(e));
         return new Response(`The verb failed: ${errorText(e)}`, { status: 500, headers: TEXT });
     }
-};
+}

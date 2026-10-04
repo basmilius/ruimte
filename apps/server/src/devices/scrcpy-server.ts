@@ -21,12 +21,15 @@ export const SCRCPY_SERVER_FILE = 'scrcpy-server';
 export const SCRCPY_LICENSE_FILE = 'scrcpy-server.LICENSE';
 
 /* Beside the binary in a build; a development checkout fetches it into a folder git ignores. */
-export const scrcpyServerDirectory = (compiled: boolean, executable: string, serverRoot: string): string =>
-    compiled ? join(dirname(executable), 'native') : join(serverRoot, '.native', `scrcpy-v${SCRCPY_SERVER.version}`);
+export function scrcpyServerDirectory(compiled: boolean, executable: string, serverRoot: string): string {
+    return compiled ? join(dirname(executable), 'native') : join(serverRoot, '.native', `scrcpy-v${SCRCPY_SERVER.version}`);
+}
 
-const sha256 = (bytes: Uint8Array): string => new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+function sha256(bytes: Uint8Array): string {
+    return new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+}
 
-const fetchVerified = async (url: string, expected: string): Promise<Uint8Array> => {
+async function fetchVerified(url: string, expected: string): Promise<Uint8Array> {
     const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`${url} answered ${response.status}`);
@@ -36,10 +39,10 @@ const fetchVerified = async (url: string, expected: string): Promise<Uint8Array>
         throw new Error(`${url} does not match its pinned checksum`);
     }
     return bytes;
-};
+}
 
 /* Puts the pinned server and its license in `directory`, verified against their checksums. */
-export const downloadScrcpyServer = async (directory: string): Promise<void> => {
+export async function downloadScrcpyServer(directory: string): Promise<void> {
     await mkdir(directory, { recursive: true });
     const [server, license] = await Promise.all([
         fetchVerified(SCRCPY_SERVER.url, SCRCPY_SERVER.sha256),
@@ -50,7 +53,7 @@ export const downloadScrcpyServer = async (directory: string): Promise<void> => 
     await writeFile(partial, server);
     await rename(partial, join(directory, SCRCPY_SERVER_FILE));
     await writeFile(join(directory, SCRCPY_LICENSE_FILE), license);
-};
+}
 
 /*
  * The path of the verified server, checked once per process. Only a development checkout downloads

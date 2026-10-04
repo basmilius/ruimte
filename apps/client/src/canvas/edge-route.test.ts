@@ -2,10 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import { NODE_GAP, portPoint, routeDraft, routeEdge, selfRoute, type Obstacle } from './edge-route';
 
 const box = { x: 0, y: 0, w: 100, h: 100 };
-const at = (x: number, y: number): Obstacle => ({ id: `n-${x}-${y}`, x, y, w: 100, h: 100 });
+function at(x: number, y: number): Obstacle {
+    return { id: `n-${x}-${y}`, x, y, w: 100, h: 100 };
+}
 
 /* The turning points of a route, which is what the rounded corners are drawn between. */
-const turns = (d: string): [number, number][] => [...d.matchAll(/Q (-?[\d.]+) (-?[\d.]+)/g)].map((match) => [Number(match[1]), Number(match[2])]);
+function turns(d: string): [number, number][] {
+    return [...d.matchAll(/Q (-?[\d.]+) (-?[\d.]+)/g)].map((match) => [Number(match[1]), Number(match[2])]);
+}
 
 describe('the sides a line runs between', () => {
     const sides = (b: { x: number; y: number; w: number; h: number }, obstacles: Obstacle[] = []): string[] => {

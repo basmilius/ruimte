@@ -41,7 +41,7 @@ interface EndpointHost {
 
 export const PAIRING_REMOVED = 'Pairing links are gone. Put this machine on your account with `ruimte login`, or from the Ruimte app on it.';
 
-export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
+export function registerAuthHandlers(dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void {
     const { identity } = host;
 
     // Built per client, so what the machine is called travels alongside what this connection is allowed.
@@ -216,4 +216,4 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         host.disconnect(payload.id);
         return {};
     });
-};
+}

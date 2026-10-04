@@ -12,28 +12,32 @@ let asked: BrowserDriveAction[];
 let held: BrowserPageState | null;
 let answer: DriveOutcome | null;
 
-const infoOf = (browserId: string): BrowserInfo => ({
-    browserId,
-    url: 'https://example.com',
-    title: 'Example',
-    loading: false,
-    canGoBack: true,
-    canGoForward: false,
-    error: null
-});
+function infoOf(browserId: string): BrowserInfo {
+    return {
+        browserId,
+        url: 'https://example.com',
+        title: 'Example',
+        loading: false,
+        canGoBack: true,
+        canGoForward: false,
+        error: null
+    };
+}
 
-const stateOf = (browserId: string): BrowserPageState => ({
-    browserId,
-    url: 'https://client.example',
-    title: 'Client',
-    loading: false,
-    canGoBack: false,
-    canGoForward: false,
-    error: null
-});
+function stateOf(browserId: string): BrowserPageState {
+    return {
+        browserId,
+        url: 'https://client.example',
+        title: 'Client',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false,
+        error: null
+    };
+}
 
-const driverOf = (): BrowserDriver =>
-    new BrowserDriver(
+function driverOf(): BrowserDriver {
+    return new BrowserDriver(
         home,
         {
             drive: async (_browserId, action) => {
@@ -51,6 +55,7 @@ const driverOf = (): BrowserDriver =>
             state: () => held
         }
     );
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-drive-'));

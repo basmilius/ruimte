@@ -26,10 +26,12 @@ export interface ChatSearch {
 const NOTHING: ChatSearch = { hits: [], invalid: false };
 
 /* A sub-agent's own steps, and the agents it opened, belong to its row, which the thread keeps shut; they are its business. */
-const isChild = (item: ChatItem): boolean => (item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent') && Boolean(item.parentToolUseId);
+function isChild(item: ChatItem): boolean {
+    return (item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent') && Boolean(item.parentToolUseId);
+}
 
 /* What a reader can find in an item, part by part, in the order its row draws them. */
-export const findableFields = (item: ChatItem): { field: ChatFindField; text: string }[] => {
+export function findableFields(item: ChatItem): { field: ChatFindField; text: string }[] {
     if (isChild(item)) {
         return [];
     }
@@ -66,10 +68,10 @@ export const findableFields = (item: ChatItem): { field: ChatFindField; text: st
         default:
             return [];
     }
-};
+}
 
 /* Every hit in the items, in their order. */
-export const searchChat = (items: readonly ChatItem[], query: FindQuery): ChatSearch => {
+export function searchChat(items: readonly ChatItem[], query: FindQuery): ChatSearch {
     const compiled = compileFind(query);
     if (compiled.kind === 'empty') {
         return NOTHING;
@@ -93,9 +95,11 @@ export const searchChat = (items: readonly ChatItem[], query: FindQuery): ChatSe
         }
     }
     return { hits, invalid: false };
-};
+}
 
-export const hitKey = (hit: ChatHit): string => `${hit.itemId}:${hit.field}:${hit.occurrence}`;
+export function hitKey(hit: ChatHit): string {
+    return `${hit.itemId}:${hit.field}:${hit.occurrence}`;
+}
 
 /* What stands between a hit and the screen: its row, a run of tool calls to open, or a turn to unfold. */
 export type HitPlace = { kind: 'row'; index: number } | { kind: 'group'; id: string } | { kind: 'turn'; turnId: string } | null;
@@ -107,7 +111,7 @@ export interface RowIndex {
     folds: Map<string, number>;
 }
 
-export const indexRows = (rows: readonly TimelineRow[]): RowIndex => {
+export function indexRows(rows: readonly TimelineRow[]): RowIndex {
     const byItem = new Map<string, number>();
     const folds = new Map<string, number>();
     rows.forEach((row, index) => {
@@ -122,17 +126,17 @@ export const indexRows = (rows: readonly TimelineRow[]): RowIndex => {
         }
     });
     return { rows: byItem, folds };
-};
+}
 
 /* The row a hit is shown at, as the thread stands; -1 for an item the thread draws nowhere. */
-export const hitRow = (index: RowIndex, item: ChatItem | undefined): number => {
+export function hitRow(index: RowIndex, item: ChatItem | undefined): number {
     if (item === undefined) {
         return -1;
     }
     return index.rows.get(item.id) ?? (item.turnId === null ? undefined : index.folds.get(item.turnId)) ?? -1;
-};
+}
 
-export const placeOfHit = (rows: readonly TimelineRow[], index: RowIndex, item: ChatItem | undefined): HitPlace => {
+export function placeOfHit(rows: readonly TimelineRow[], index: RowIndex, item: ChatItem | undefined): HitPlace {
     if (item === undefined) {
         return null;
     }
@@ -142,4 +146,4 @@ export const placeOfHit = (rows: readonly TimelineRow[], index: RowIndex, item: 
         return row.kind === 'work-group' ? { kind: 'group', id: row.id } : { kind: 'row', index: own };
     }
     return item.turnId !== null && index.folds.has(item.turnId) ? { kind: 'turn', turnId: item.turnId } : null;
-};
+}

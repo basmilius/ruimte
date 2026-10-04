@@ -19,7 +19,7 @@ interface Target {
 
 /* Launches belong to the project on screen, on the machine it came from. One that names its owner acts
    only while that project is the one on screen, and does nothing once a person switched away. */
-export const launchTarget = (onScreen: LaunchOwner | null, owner?: LaunchOwner): Target | null => {
+export function launchTarget(onScreen: LaunchOwner | null, owner?: LaunchOwner): Target | null {
     if (onScreen === null) {
         return null;
     }
@@ -27,19 +27,20 @@ export const launchTarget = (onScreen: LaunchOwner | null, owner?: LaunchOwner):
         return null;
     }
     return { ...onScreen, key: endpointKey(onScreen.endpointId, onScreen.projectId) };
-};
+}
 
-const target = (owner?: LaunchOwner): Target | null => {
+function target(owner?: LaunchOwner): Target | null {
     const { current, currentEndpointId } = defaultProjectStore.getState();
     return launchTarget(current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId }, owner);
-};
+}
 
-const failed = (title: string, e: unknown): void => {
+function failed(title: string, e: unknown): void {
     useToasts.getState().show({ kind: 'error', title, description: e instanceof Error ? e.message : String(e) });
-};
+}
 
-const nameOf = (at: Target, launchId: string): string =>
-    useLaunches.getState().documents[at.key]?.launches.find((launch) => launch.id === launchId)?.name ?? launchId;
+function nameOf(at: Target, launchId: string): string {
+    return useLaunches.getState().documents[at.key]?.launches.find((launch) => launch.id === launchId)?.name ?? launchId;
+}
 
 export interface StartOptions {
     restart?: boolean;
@@ -52,7 +53,7 @@ export interface StartOptions {
 }
 
 /* Starts a launch, or starts it again; what it has to ask a person first comes back as the store's `ask`. */
-export const startLaunch = async (launchId: string, options: StartOptions = {}): Promise<void> => {
+export async function startLaunch(launchId: string, options: StartOptions = {}): Promise<void> {
     const at = target(options.owner);
     const link = at === null ? null : transportFor(at.endpointId);
     if (at === null || link === null) {
@@ -73,9 +74,9 @@ export const startLaunch = async (launchId: string, options: StartOptions = {}):
     } catch (e) {
         failed(i18next.t('launches:startFailed', { name: nameOf(at, launchId) }), e);
     }
-};
+}
 
-export const stopLaunch = async (launchId: string, force = false): Promise<void> => {
+export async function stopLaunch(launchId: string, force = false): Promise<void> {
     const at = target();
     const link = at === null ? null : transportFor(at.endpointId);
     if (at === null || link === null) {
@@ -86,10 +87,10 @@ export const stopLaunch = async (launchId: string, force = false): Promise<void>
     } catch (e) {
         failed(i18next.t('launches:stopFailed', { name: nameOf(at, launchId) }), e);
     }
-};
+}
 
 /* Every launch of the project that runs; a group stops through its members. */
-export const stopAllLaunches = (): void => {
+export function stopAllLaunches(): void {
     const at = target();
     if (at === null) {
         return;
@@ -100,27 +101,27 @@ export const stopAllLaunches = (): void => {
             void stopLaunch(status.launchId);
         }
     }
-};
+}
 
-export const chooseLaunch = (launchId: string): void => {
+export function chooseLaunch(launchId: string): void {
     const at = target();
     if (at !== null) {
         useUi.getState().chooseLaunch(at.key, launchId);
     }
-};
+}
 
 /* The launch on the chip, as its id. */
-export const chosenLaunchId = (): string | null => {
+export function chosenLaunchId(): string | null {
     const at = target();
     if (at === null) {
         return null;
     }
     const document = useLaunches.getState().documents[at.key];
     return document === undefined ? null : (chosenLaunch(document, useUi.getState().chosenLaunches[at.key])?.id ?? null);
-};
+}
 
 /* What ⌥⌘R does: start the launch on the chip, or start it again while it runs. */
-export const runChosenLaunch = (): void => {
+export function runChosenLaunch(): void {
     const at = target();
     const launchId = chosenLaunchId();
     if (at === null || launchId === null) {
@@ -131,17 +132,17 @@ export const runChosenLaunch = (): void => {
     const launch = document?.launches.find((candidate) => candidate.id === launchId);
     const ids = launch?.kind === 'group' ? (launch.launches ?? []) : [launchId];
     void startLaunch(launchId, { restart: ids.some((id) => statuses[id] !== undefined && statuses[id].state !== 'exited') });
-};
+}
 
-export const stopChosenLaunch = (): void => {
+export function stopChosenLaunch(): void {
     const launchId = chosenLaunchId();
     if (launchId !== null) {
         void stopLaunch(launchId);
     }
-};
+}
 
 /* The launch's output in the panel, which also makes it the one on the chip. */
-export const showLaunchOutput = (launchId?: string, owner?: LaunchOwner): void => {
+export function showLaunchOutput(launchId?: string, owner?: LaunchOwner): void {
     if (owner !== undefined && target(owner) === null) {
         return;
     }
@@ -149,18 +150,18 @@ export const showLaunchOutput = (launchId?: string, owner?: LaunchOwner): void =
         chooseLaunch(launchId);
     }
     useUi.getState().setPanel({ open: true, kind: 'launches' });
-};
+}
 
-const originOf = (url: string): string | null => {
+function originOf(url: string): string | null {
     try {
         return new URL(url).origin;
     } catch {
         return null;
     }
-};
+}
 
 /* The page at a launch's address: the browser node that already shows it, else a new one on the canvas on screen. */
-export const openLaunchAddress = (url: string): void => {
+export function openLaunchAddress(url: string): void {
     const origin = originOf(url);
     for (const view of useDocument.getState().views) {
         if (view.kind === 'browser' && originOf(view.url) === origin) {
@@ -177,4 +178,4 @@ export const openLaunchAddress = (url: string): void => {
         }
     }
     void createNodeAction('browser', { url });
-};
+}

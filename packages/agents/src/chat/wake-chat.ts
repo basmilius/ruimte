@@ -19,7 +19,7 @@ export interface ChatOpenerDeps {
  * A chat, loaded from disk when nobody has it, so work owed to a chat nobody mounted since the restart
  * still lands. Null for a node with no thread at all.
  */
-export const loadChat = async (deps: ChatOpenerDeps, chatId: string): Promise<ChatSession | null> => {
+export async function loadChat(deps: ChatOpenerDeps, chatId: string): Promise<ChatSession | null> {
     if (!deps.chats.get(chatId)) {
         if (!deps.placed(chatId) || !(await deps.chats.hasStored(chatId))) {
             return null;
@@ -27,12 +27,11 @@ export const loadChat = async (deps: ChatOpenerDeps, chatId: string): Promise<Ch
         await deps.chats.create({ chatId });
     }
     return deps.chats.get(chatId) ?? null;
-};
+}
 
 /* The chat a turn is to be opened in. */
-export const chatOpener =
-    (deps: ChatOpenerDeps) =>
-    async (chatId: string): Promise<WakeChat | null> => {
+export function chatOpener(deps: ChatOpenerDeps) {
+    return async (chatId: string): Promise<WakeChat | null> => {
         const session = await loadChat(deps, chatId);
         return session
             ? {
@@ -43,3 +42,4 @@ export const chatOpener =
               }
             : null;
     };
+}

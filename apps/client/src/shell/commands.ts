@@ -58,25 +58,25 @@ export interface Command {
 }
 
 /* Whichever surface is on screen owns the zoom rows in the palette. */
-const zoomTarget = (): Pick<CanvasState, 'zoomToSelection' | 'zoomTo'> => {
+function zoomTarget(): Pick<CanvasState, 'zoomToSelection' | 'zoomTo'> {
     const view = activeViewOf(useDocument.getState());
     if (view && isDrawingView(view)) {
         return focusedDrawing().getState();
     }
     return view && isDiagramView(view) ? focusedDiagram().getState() : focusedCanvas().getState();
-};
+}
 
-const centerWorld = () => {
+function centerWorld() {
     const s = focusedCanvas().getState();
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
-};
+}
 
 /*
  * One command per agent CLI per kind of node, from the daemon's catalog. A CLI that is not
  * installed is left out: the Agents settings pane is where that gets fixed, not the palette.
  */
-const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas: boolean): Command[] =>
-    providers
+function agentCommands(target: AgentTarget, providers: ProviderInfo[], onCanvas: boolean): Command[] {
+    return providers
         .filter((provider) => provider.installed && provider.capabilities[target])
         .flatMap((provider) => [
             ...(onCanvas
@@ -97,12 +97,13 @@ const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas:
                 run: () => void createViewAction(target, { provider: provider.kind })
             }
         ]);
+}
 
 /*
  * Moving a node to another view is one command per target: the palette has no second step, and a
  * project rarely has enough views for that to grow long.
  */
-const moveNodeCommands = (): Command[] => {
+function moveNodeCommands(): Command[] {
     const { selection, nodes } = focusedCanvas().getState();
     const node = selection.length === 1 ? nodes[selection[0]!] : undefined;
     if (!node || node.kind === 'group') {
@@ -117,10 +118,10 @@ const moveNodeCommands = (): Command[] => {
             hint: node.title,
             run: () => moveNodeToViewAction(node.id, view.id)
         }));
-};
+}
 
 /* One row per launch that says what a press does to it now, so a launch that runs offers its restart and its stop. */
-const launchCommands = (): Command[] => {
+function launchCommands(): Command[] {
     const { current, currentEndpointId } = useProject.getState();
     if (current === null || currentEndpointId === null) {
         return [];
@@ -161,7 +162,7 @@ const launchCommands = (): Command[] => {
             run: () => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() })
         }
     ];
-};
+}
 
 /*
  * What an empty palette offers: the handful of rows worth a place before anything is typed. The
@@ -171,7 +172,7 @@ const launchCommands = (): Command[] => {
 export const OPENING_COMMAND_IDS: readonly string[] = ['add-chat', 'add-terminal', 'view-new', 'find-in-files', 'open-folder', 'usage', 'settings'];
 
 /* Everything the palette can do besides jumping to a node. One list, so the dock and the keys agree. */
-export const appCommands = (): Command[] => {
+export function appCommands(): Command[] {
     const canvas = focusedCanvas().getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
     const current = useProject.getState().current;
@@ -586,4 +587,4 @@ export const appCommands = (): Command[] => {
         // About the machine this window runs beside, so only a client with one has it.
         ...(hasLocalMachine() ? [{ id: 'onboarding', label: i18next.t('shell:palette.commands.onboarding'), run: () => openOnboarding() }] : [])
     ];
-};
+}

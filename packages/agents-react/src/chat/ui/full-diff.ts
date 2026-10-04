@@ -11,7 +11,7 @@ export interface DiffContents {
  * the lines between its hunks. The hunks stay the patch's own, so a patch made without whitespace
  * keeps its counts. Null when there is no hunk to lay over them, and the patch alone is drawn.
  */
-export const fullFileDiff = (patch: string, name: string, contents: DiffContents): FileDiffMetadata | null => {
+export function fullFileDiff(patch: string, name: string, contents: DiffContents): FileDiffMetadata | null {
     try {
         const parsed = processFile(patch, {
             oldFile: { name, contents: contents.old },
@@ -22,4 +22,4 @@ export const fullFileDiff = (patch: string, name: string, contents: DiffContents
     } catch {
         return null;
     }
-};
+}

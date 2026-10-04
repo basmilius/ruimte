@@ -14,8 +14,8 @@ const MAX_BYTES = 256 * 1024;
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml';
 
 /* A picked file without the data URL prefix that FileReader adds. */
-const readAsBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
+function readAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = () => reject(new Error(i18next.t('shell:projectSettings.unreadable')));
         reader.onload = () => {
@@ -25,6 +25,7 @@ const readAsBase64 = (file: File): Promise<string> =>
         };
         reader.readAsDataURL(file);
     });
+}
 
 /* Everything the form works on, in one value the dialog can outlive its target with. */
 export interface ProjectSettingsSubject {

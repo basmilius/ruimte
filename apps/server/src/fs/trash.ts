@@ -7,14 +7,15 @@ type TrashErrorCode = 'trash-unsupported' | 'trash-failed';
 
 export class TrashError extends CodedError<TrashErrorCode> {}
 
-const exists = (path: string): Promise<boolean> =>
-    lstat(path).then(
+function exists(path: string): Promise<boolean> {
+    return lstat(path).then(
         () => true,
         () => false
     );
+}
 
 /* `name.ext`, then `name 2.ext`, `name 3.ext`: the first that is free in the trash. */
-const freeName = async (name: string, taken: (candidate: string) => Promise<boolean>): Promise<string> => {
+async function freeName(name: string, taken: (candidate: string) => Promise<boolean>): Promise<string> {
     const extension = extname(name);
     const stem = extension === '' ? name : name.slice(0, -extension.length);
     for (let i = 1; ; i++) {
@@ -23,10 +24,10 @@ const freeName = async (name: string, taken: (candidate: string) => Promise<bool
             return candidate;
         }
     }
-};
+}
 
 /* A rename cannot cross a volume, and a copy-then-delete is not a trash a person can put back from. */
-const move = async (from: string, to: string): Promise<void> => {
+async function move(from: string, to: string): Promise<void> {
     try {
         await rename(from, to);
     } catch (e) {
@@ -35,15 +36,15 @@ const move = async (from: string, to: string): Promise<void> => {
         }
         throw new TrashError('trash-failed', e instanceof Error ? e.message : 'The file could not be moved to the trash');
     }
-};
+}
 
-const localIso = (at: Date): string => {
+function localIso(at: Date): string {
     const pad = (value: number): string => String(value).padStart(2, '0');
     return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}:${pad(at.getSeconds())}`;
-};
+}
 
 /* The trash of the freedesktop.org spec in the home directory, with the `.trashinfo` a file manager restores from. */
-const trashLinux = async (path: string, home: string, env: NodeJS.ProcessEnv): Promise<void> => {
+async function trashLinux(path: string, home: string, env: NodeJS.ProcessEnv): Promise<void> {
     const root = join(env.XDG_DATA_HOME || join(home, '.local', 'share'), 'Trash');
     const files = join(root, 'files');
     const info = join(root, 'info');
@@ -70,19 +71,19 @@ const trashLinux = async (path: string, home: string, env: NodeJS.ProcessEnv): P
         await unlink(join(info, `${name}.trashinfo`)).catch(() => undefined);
         throw e;
     }
-};
+}
 
 /*
  * Moves a path to the trash of the machine the daemon runs on, which is a rename into the trash
  * folder: no Finder, no Electron and no permission prompt, since the daemon also runs as a service
  * with neither. Items on another volume than the home folder are refused rather than deleted.
  */
-export const trashPath = async (
+export async function trashPath(
     path: string,
     platform: NodeJS.Platform = process.platform,
     home: string = homedir(),
     env: NodeJS.ProcessEnv = process.env
-): Promise<void> => {
+): Promise<void> {
     switch (platform) {
         case 'darwin': {
             const folder = join(home, '.Trash');
@@ -96,4 +97,4 @@ export const trashPath = async (
         default:
             throw new TrashError('trash-unsupported', 'This machine has no trash Ruimte can move files to');
     }
-};
+}

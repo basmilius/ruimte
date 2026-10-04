@@ -13,7 +13,7 @@ export interface ContinueOnDeps {
  * The original's resume at the reset lapses either way, so the turn is never taken up twice; after a
  * fork the original never owes that turn a resume again, whatever switch a person turns on later.
  */
-export const continueOn = async (deps: ContinueOnDeps, payload: ChatContinueOnPayload): Promise<ChatContinueOnResult> => {
+export async function continueOn(deps: ContinueOnDeps, payload: ChatContinueOnPayload): Promise<ChatContinueOnResult> {
     const { turnId, limit, inPlace } = await deps.chats.limitedTurnFor(payload.chatId, payload.account);
     if (inPlace) {
         deps.chats.continueInPlace(payload.chatId, payload.account);
@@ -23,13 +23,13 @@ export const continueOn = async (deps: ContinueOnDeps, payload: ChatContinueOnPa
     deps.chats.continuedInFork(payload.chatId, fork.info.account);
     await deps.chats.continueInFork(fork.info.chatId, limit);
     return { chatId: fork.info.chatId, fork };
-};
+}
 
 /*
  * The turn that takes a limited one up under another account a person picked: in the chat itself, or
  * in the fork that got its conversation handed over, whose own note already says where it came from.
  */
-export const continueOnWake = (kind: ChatTurnLimit['kind'], account: string, forked: boolean): { text: string; label: string; note?: string } => {
+export function continueOnWake(kind: ChatTurnLimit['kind'], account: string, forked: boolean): { text: string; label: string; note?: string } {
     const reason = kind === 'usage' ? 'stopped on a usage limit' : 'stopped because the model was overloaded';
     const label = `Continued on ${account}`;
     if (forked) {
@@ -40,7 +40,9 @@ export const continueOnWake = (kind: ChatTurnLimit['kind'], account: string, for
         label,
         note: `Continued under the account '${account}' after the previous turn ${reason}`
     };
-};
+}
 
 /* What the original of a fork that went on after its limited turn says under that turn. */
-export const continuedInForkNote = (account: string): string => `Continued under the account '${account}' in a fork`;
+export function continuedInForkNote(account: string): string {
+    return `Continued under the account '${account}' in a fork`;
+}

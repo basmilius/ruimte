@@ -175,16 +175,18 @@ export const useServers = create<ServersStore>((set, get) => ({
 }));
 
 /* What the machine in scope said about itself, read the way a component asks for one field. */
-export const useServer = <T>(select: (info: ServerInfo) => T): T => {
+export function useServer<T>(select: (info: ServerInfo) => T): T {
     const endpointId = useEndpointId();
     return useServers((s) => select(s.byEndpoint[endpointId] ?? UNKNOWN));
-};
+}
 
 /* The same answer outside a render. */
-export const serverInfoOf = (endpointId: string): ServerInfo => useServers.getState().byEndpoint[endpointId] ?? UNKNOWN;
+export function serverInfoOf(endpointId: string): ServerInfo {
+    return useServers.getState().byEndpoint[endpointId] ?? UNKNOWN;
+}
 
 /* What the daemon's machine calls its file manager; the daemon runs it, so its platform decides. */
-export const fileManagerName = (platform: string | null): string => {
+export function fileManagerName(platform: string | null): string {
     switch (platform) {
         case 'darwin':
             return 'Finder';
@@ -193,4 +195,4 @@ export const fileManagerName = (platform: string | null): string => {
         default:
             return 'Files';
     }
-};
+}

@@ -15,8 +15,8 @@ const meta: HandoffMeta = {
 };
 
 /* Six turns, each a question and an answer of `size` characters. */
-const sixTurns = (size: number): ChatItem[] =>
-    Array.from({ length: 6 }, (_, index): ChatItem[] => {
+function sixTurns(size: number): ChatItem[] {
+    return Array.from({ length: 6 }, (_, index): ChatItem[] => {
         const turnId = `turn-${index + 1}`;
         return [
             { id: turnId, kind: 'turn', createdAt: index, turnId, state: 'done', endedAt: index, costUsd: 0 },
@@ -24,6 +24,7 @@ const sixTurns = (size: number): ChatItem[] =>
             { id: `answer-${index + 1}`, kind: 'assistant', createdAt: index, turnId, text: `answer ${index + 1} ${'x'.repeat(size)}`, streaming: false }
         ];
     }).flat();
+}
 
 describe('handoffText', () => {
     test('a short conversation goes along whole, under a header that says where it came from and how to read it', () => {

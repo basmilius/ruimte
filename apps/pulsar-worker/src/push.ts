@@ -19,7 +19,7 @@ import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { overLimit } from './rate-limit.ts';
 import { authenticate } from './sessions.ts';
 
-export const registerPushDevice = async (request: Request, env: Env): Promise<Response> => {
+export async function registerPushDevice(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return failure('unauthorized', 'Sign in again');
@@ -44,7 +44,7 @@ export const registerPushDevice = async (request: Request, env: Env): Promise<Re
         .bind(randomToken(), session.account.id, session.id, body.value.token.toLowerCase(), body.value.environment, Date.now())
         .first<{ handle: string }>();
     return json({ handle: row!.handle });
-};
+}
 
 interface ActivitySelection {
     activity_scope: string | null;
@@ -52,7 +52,7 @@ interface ActivitySelection {
     start_collapse_id: string | null;
 }
 
-const selectsActivity = async (device: ActivitySelection, machineId: string, collapseId: string): Promise<boolean> => {
+async function selectsActivity(device: ActivitySelection, machineId: string, collapseId: string): Promise<boolean> {
     if (device.activity_scope === 'machines') {
         const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pushCollapseIdMessage(machineId, MACHINE_ACTIVITY_NODE)));
         const expected = btoa(String.fromCharCode(...new Uint8Array(hash)))
@@ -62,7 +62,7 @@ const selectsActivity = async (device: ActivitySelection, machineId: string, col
         return collapseId === expected;
     }
     return device.start_machine_id === machineId && device.start_collapse_id === collapseId;
-};
+}
 
 interface DeliveryTarget {
     token: string;
@@ -75,13 +75,13 @@ export interface PushDeliverySeams {
 }
 const SYSTEM_PUSH: PushDeliverySeams = { now: Date.now, send: deliverApns };
 
-export const changePushDevice = async (
+export async function changePushDevice(
     request: Request,
     env: Env,
     handle: string,
     activity: 'update' | 'start' | null,
     seams: PushDeliverySeams = SYSTEM_PUSH
-): Promise<Response> => {
+): Promise<Response> {
     const now = seams.now();
     const session = await authenticate(request, env.DB);
     if (!session) {
@@ -215,9 +215,9 @@ export const changePushDevice = async (
         }
     }
     return noContent();
-};
+}
 
-const claimActivityStart = async (env: Env, push: Extract<PushEnvelope, { pushType: 'liveactivity' }>, now: number, automatic: boolean): Promise<boolean> => {
+async function claimActivityStart(env: Env, push: Extract<PushEnvelope, { pushType: 'liveactivity' }>, now: number, automatic: boolean): Promise<boolean> {
     // Unconfirmed starts expire with the APNs message. Reclaim legacy eight-hour leases too.
     const claim = await env.DB.prepare(
         `INSERT INTO push_activity_start (handle, collapse_id, expires_at, machine_id, started_at) VALUES (?1, ?2, ?3, ?5, ?6)
@@ -229,9 +229,9 @@ const claimActivityStart = async (env: Env, push: Extract<PushEnvelope, { pushTy
         .bind(push.handle, push.collapseId, now + PUSH_MAX_AGE_MS, now, push.machineId, automatic ? push.activity.startedAt : null)
         .run();
     return claim.meta.changes > 0;
-};
+}
 
-export const sendPush = async (request: Request, env: Env, seams: PushDeliverySeams = SYSTEM_PUSH): Promise<Response> => {
+export async function sendPush(request: Request, env: Env, seams: PushDeliverySeams = SYSTEM_PUSH): Promise<Response> {
     const now = seams.now();
     const ipLimit = await overLimit(env.DB, `push-ip:${clientIp(request)}`, 240, now);
     if (ipLimit) {
@@ -399,4 +399,4 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
         return failure(result.status === 413 ? 'bad-request' : 'internal', 'The notification could not be delivered');
     }
     return noContent();
-};
+}

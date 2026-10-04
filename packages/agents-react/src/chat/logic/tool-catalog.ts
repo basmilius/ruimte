@@ -15,14 +15,16 @@ export interface ToolEntry {
     readsImage: boolean;
 }
 
-const entry = (icon: LucideIcon, summary: readonly string[], rest: Partial<ToolEntry> = {}): ToolEntry => ({
-    icon,
-    summary,
-    grouped: true,
-    changesFiles: false,
-    readsImage: false,
-    ...rest
-});
+function entry(icon: LucideIcon, summary: readonly string[], rest: Partial<ToolEntry> = {}): ToolEntry {
+    return {
+        icon,
+        summary,
+        grouped: true,
+        changesFiles: false,
+        readsImage: false,
+        ...rest
+    };
+}
 
 /*
  * The icon, the summary line, the group sentence and the file-changing flag of every tool the thread
@@ -55,4 +57,6 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     Workflow: entry(Workflow, [], { grouped: false })
 };
 
-export const toolEntry = (name: string): ToolEntry | undefined => TOOL_CATALOG[name];
+export function toolEntry(name: string): ToolEntry | undefined {
+    return TOOL_CATALOG[name];
+}

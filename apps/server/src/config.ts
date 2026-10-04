@@ -47,11 +47,11 @@ export interface ServerConfig {
 export const SESSION_VARIABLES = RUIMTE_SESSION_VARIABLES;
 
 /** Removes the variables of a session this process was started from; a daemon never belongs to one. */
-export const forgetInheritedSession = (env: Record<string, string | undefined>): void => {
+export function forgetInheritedSession(env: Record<string, string | undefined>): void {
     for (const name of SESSION_VARIABLES) {
         delete env[name];
     }
-};
+}
 
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4210;
@@ -60,20 +60,22 @@ export const DEFAULT_PORT = 4210;
 const LAN_PORT_OFFSET = 10;
 
 /* The door's port when no flag names one; a daemon on a port the system picked gets a door on one too. */
-export const defaultLanPort = (port: number): number => (port === 0 || port + LAN_PORT_OFFSET > 65535 ? 0 : port + LAN_PORT_OFFSET);
+export function defaultLanPort(port: number): number {
+    return port === 0 || port + LAN_PORT_OFFSET > 65535 ? 0 : port + LAN_PORT_OFFSET;
+}
 
 /* `4330-4339` as the first and last port; one port on its own is a range of one. */
-export const parsePortRange = (value: string): [number, number] => {
+export function parsePortRange(value: string): [number, number] {
     const [first, last = first] = value.split('-').map((part) => Number(part.trim()));
     const valid = (port: number | undefined): port is number => port !== undefined && Number.isInteger(port) && port > 0 && port <= 65535;
     if (!valid(first) || !valid(last) || last < first) {
         throw new Error(`Invalid --direct-ports: ${value}`);
     }
     return [first, last];
-};
+}
 
 /* A broker URL, or null for nothing at all; an empty value is nothing, so compose can pass an unset variable through. */
-export const parseBrokerUrl = (value: string | undefined, flag: string): string | null => {
+export function parseBrokerUrl(value: string | undefined, flag: string): string | null {
     const trimmed = value?.trim() ?? '';
     if (trimmed === '') {
         return null;
@@ -83,18 +85,18 @@ export const parseBrokerUrl = (value: string | undefined, flag: string): string 
         throw new Error(`Invalid ${flag}: ${trimmed} (${problem})`);
     }
     return trimmed;
-};
+}
 
 /* `--no-broker` and the word `off` turn the broker off whatever the machine's setting says; a URL picks one. */
-export const parseBrokerOverride = (noBroker: boolean, value: string | undefined): BrokerOverride => {
+export function parseBrokerOverride(noBroker: boolean, value: string | undefined): BrokerOverride {
     if (noBroker || value?.trim().toLowerCase() === 'off') {
         return { mode: 'off' };
     }
     const url = parseBrokerUrl(value, '--broker');
     return url === null ? null : { mode: 'custom', url };
-};
+}
 
-export const parseServerArgs = (argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig => {
+export function parseServerArgs(argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig {
     // Everything after `context` belongs to the agent's CLI (`node note --text ...`), whose flags the daemon parses, not this.
     const cli = argv[0] === 'context';
     const { values, positionals } = parseArgs({
@@ -174,4 +176,4 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         command,
         args: cli || service ? argv.slice(1) : positionals.slice(1)
     };
-};
+}

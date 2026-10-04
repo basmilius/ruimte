@@ -35,14 +35,16 @@ export interface DevServerTile {
 }
 
 /* A page is opened by the name a person types, not by the address a probe used. */
-const urlOf = (port: number): string => `http://localhost:${port}`;
+function urlOf(port: number): string {
+    return `http://localhost:${port}`;
+}
 
 /*
  * What the splash offers: the servers that answered, by port, and then the ports nobody is on yet,
  * in the order of the table. The dead ones stay on screen because a person often starts the server
  * after opening the node, and the tile is where they come back to.
  */
-export const devServerTiles = (running: readonly DevServer[], known: readonly KnownPort[] = DEV_SERVER_PORTS): DevServerTile[] => {
+export function devServerTiles(running: readonly DevServer[], known: readonly KnownPort[] = DEV_SERVER_PORTS): DevServerTile[] {
     const tools = new Map(known.map((entry) => [entry.port, entry.tools.join(', ')]));
     const live = [...running]
         .sort((one, other) => one.port - other.port)
@@ -52,4 +54,4 @@ export const devServerTiles = (running: readonly DevServer[], known: readonly Kn
         .filter((entry) => !up.has(entry.port))
         .map((entry): DevServerTile => ({ port: entry.port, url: urlOf(entry.port), detail: tools.get(entry.port), running: false }));
     return [...live, ...rest];
-};
+}

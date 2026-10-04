@@ -12,7 +12,7 @@ const BESIDE_PX = 32;
  * canvas the new node sits beside the one the link came from, and a page that is a view of its own
  * opens another view, since there is no canvas under it to sit on.
  */
-export const openLinkBeside = (url: string, webContentsId: number): void => {
+export function openLinkBeside(url: string, webContentsId: number): void {
     const sourceKey = browserRegistry.keyOfContents(webContentsId);
     const source = sourceKey === null ? undefined : focusedCanvas().getState().nodes[splitKey(sourceKey).id];
     if (!source) {
@@ -21,4 +21,4 @@ export const openLinkBeside = (url: string, webContentsId: number): void => {
     }
     const size = NODE_SIZE.browser;
     void createNodeAction('browser', { url, at: { x: source.x + source.w + BESIDE_PX + size.w / 2, y: source.y + size.h / 2 } });
-};
+}

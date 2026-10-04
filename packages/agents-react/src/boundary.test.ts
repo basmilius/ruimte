@@ -5,11 +5,14 @@ import { describe, expect, test } from 'bun:test';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
-const sources = (): string[] => [...new Glob('**/*.{ts,tsx}').scanSync(HERE)];
+function sources(): string[] {
+    return [...new Glob('**/*.{ts,tsx}').scanSync(HERE)];
+}
 
 /* Every module a file names, in a static import, an export or a lazy `import()`. */
-const specifiersOf = (path: string): string[] =>
-    [...readFileSync(join(HERE, path), 'utf8').matchAll(/(?:from\s+|import\s*\(\s*|^import\s+)'([^']+)'/gm)].map((match) => match[1]!);
+function specifiersOf(path: string): string[] {
+    return [...readFileSync(join(HERE, path), 'utf8').matchAll(/(?:from\s+|import\s*\(\s*|^import\s+)'([^']+)'/gm)].map((match) => match[1]!);
+}
 
 describe('the boundary of @ruimte/agents-react', () => {
     test('nothing imports from an app', () => {

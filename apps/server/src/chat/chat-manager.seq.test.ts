@@ -21,7 +21,7 @@ let managers: ChatManager[];
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
 /* One run of the daemon's chats over the same home, with every event it numbered. */
-const boot = (extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) => {
+function boot(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
     const manager = new ChatManager({
         providers,
         store: new ChatStore(home, { attachments: attachments }),
@@ -40,12 +40,16 @@ const boot = (extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {})
         }
     });
     return { manager, recorder, numbered };
-};
+}
 
 /* What a client holds after an attach and the events it applied since; the daemon's own thread is the model of it. */
-const mirrorOf = (result: ChatAttachResult): ChatThread => new ChatThread(result.info, result.items);
+function mirrorOf(result: ChatAttachResult): ChatThread {
+    return new ChatThread(result.info, result.items);
+}
 
-const idle = (recorder: ChatRecorder) => (): boolean => recorder.info?.status === 'idle' && recorder.info.activeTurnId === null && recorder.info.running;
+function idle(recorder: ChatRecorder) {
+    return (): boolean => recorder.info?.status === 'idle' && recorder.info.activeTurnId === null && recorder.info.running;
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-chat-seq-'));

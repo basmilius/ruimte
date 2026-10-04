@@ -42,7 +42,11 @@ export const useWindow = create<WindowState>((set) => ({
     }
 }));
 
-export const workspaceOf = (content: WindowContent): Workspace | null => (content.kind === 'workspace' ? content.workspace : null);
+export function workspaceOf(content: WindowContent): Workspace | null {
+    return content.kind === 'workspace' ? content.workspace : null;
+}
 
 /* The workspace on screen, for code outside React. */
-export const windowWorkspace = (): Workspace | null => workspaceOf(useWindow.getState().content);
+export function windowWorkspace(): Workspace | null {
+    return workspaceOf(useWindow.getState().content);
+}

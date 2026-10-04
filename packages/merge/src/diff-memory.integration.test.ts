@@ -7,10 +7,12 @@ import { diffLines } from './diff.ts';
  * file's work counts along. Run on its own a high peak from elsewhere could hide a regression, never
  * fake one.
  */
-const sides = (length: number): [string[], string[]] => [
-    Array.from({ length }, (_, index) => (index % 2 === 0 ? `same ${index}` : `left ${index}`)),
-    Array.from({ length }, (_, index) => (index % 2 === 0 ? `same ${index}` : `right ${index}`))
-];
+function sides(length: number): [string[], string[]] {
+    return [
+        Array.from({ length }, (_, index) => (index % 2 === 0 ? `same ${index}` : `left ${index}`)),
+        Array.from({ length }, (_, index) => (index % 2 === 0 ? `same ${index}` : `right ${index}`))
+    ];
+}
 
 for (const [length, count] of [
     [5000, 1],

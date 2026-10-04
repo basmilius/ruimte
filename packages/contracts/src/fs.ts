@@ -228,17 +228,25 @@ export const FS_IMAGE_MIMES = [
     'image/svg+xml'
 ] as const;
 
-export const isImageMime = (mime: string): boolean => (FS_IMAGE_MIMES as readonly string[]).includes(mime);
+export function isImageMime(mime: string): boolean {
+    return (FS_IMAGE_MIMES as readonly string[]).includes(mime);
+}
 
 // Container recognition does not imply codec support, so the viewer still checks `canPlayType`.
 export const FS_VIDEO_MIMES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/ogg'] as const;
 
-export const isVideoMime = (mime: string): boolean => (FS_VIDEO_MIMES as readonly string[]).includes(mime);
+export function isVideoMime(mime: string): boolean {
+    return (FS_VIDEO_MIMES as readonly string[]).includes(mime);
+}
 
 export const FS_AUDIO_MIMES = ['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/flac', 'audio/ogg'] as const;
 
-export const isAudioMime = (mime: string): boolean => (FS_AUDIO_MIMES as readonly string[]).includes(mime);
+export function isAudioMime(mime: string): boolean {
+    return (FS_AUDIO_MIMES as readonly string[]).includes(mime);
+}
 
 export const FS_PDF_MIME = 'application/pdf';
 
-export const isPdfMime = (mime: string): boolean => mime === FS_PDF_MIME;
+export function isPdfMime(mime: string): boolean {
+    return mime === FS_PDF_MIME;
+}

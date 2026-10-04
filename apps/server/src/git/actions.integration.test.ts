@@ -10,7 +10,7 @@ let repo: string;
 let pidFile: string;
 
 /* Takes the hook down if the cancel under test did not, so no shell outlives the file. */
-const killHook = async (): Promise<void> => {
+async function killHook(): Promise<void> {
     const pid = Number.parseInt((await readFile(pidFile, 'utf8').catch(() => '')).trim(), 10);
     if (Number.isFinite(pid)) {
         try {
@@ -19,7 +19,7 @@ const killHook = async (): Promise<void> => {
             // Gone already, which is what the cancel is for.
         }
     }
-};
+}
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-action-cancel-')));

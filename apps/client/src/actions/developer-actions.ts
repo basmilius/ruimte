@@ -63,49 +63,72 @@ type Call = ActionCall<void> & { confirmed: boolean };
 /* What operation.cancel names a git run by: the id its progress streams under. */
 export const GIT_OPERATION = 'git:';
 
-const sameActor = (left: ActionActor, right: ActionActor): boolean => left.kind === right.kind && left.id === right.id;
+function sameActor(left: ActionActor, right: ActionActor): boolean {
+    return left.kind === right.kind && left.id === right.id;
+}
 
 /* A person's own dialogs already asked; everyone else answers the action's question first. */
-export const asksFirst = (call: Call): boolean => !call.confirmed && call.actor.kind !== 'person';
+export function asksFirst(call: Call): boolean {
+    return !call.confirmed && call.actor.kind !== 'person';
+}
 
-const isAbsolutePath = (value: string): boolean => /^(\/|[A-Za-z]:[\\/])/.test(value);
+function isAbsolutePath(value: string): boolean {
+    return /^(\/|[A-Za-z]:[\\/])/.test(value);
+}
 
 /* What the panel calls a checkout: its path under the project folder, or its own name when it sits elsewhere. */
-const labelOf = (folder: string, path: string): string => (path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : basenameOf(path));
+function labelOf(folder: string, path: string): string {
+    return path.startsWith(`${folder}/`) ? path.slice(folder.length + 1) : basenameOf(path);
+}
 
-const listed = (items: readonly string[]): string => (items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
+function listed(items: readonly string[]): string {
+    return items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
 
-const quoted = (items: readonly string[]): string => (items.length === 0 ? 'none' : listed(items.map((item) => `“${item}”`)));
+function quoted(items: readonly string[]): string {
+    return items.length === 0 ? 'none' : listed(items.map((item) => `“${item}”`));
+}
 
-const plural = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`;
+function plural(count: number, noun: string): string {
+    return `${count} ${count === 1 ? noun : `${noun}s`}`;
+}
 
-const runOutput = (checkout: Checkout, result: GitActionResult): GitRun => ({
-    repository: checkout.label,
-    path: checkout.path,
-    summary: result.summary,
-    output: result.output,
-    commit: result.commit ?? null,
-    url: result.url ?? null,
-    conflicts: result.conflicts ?? []
-});
+function runOutput(checkout: Checkout, result: GitActionResult): GitRun {
+    return {
+        repository: checkout.label,
+        path: checkout.path,
+        summary: result.summary,
+        output: result.output,
+        commit: result.commit ?? null,
+        url: result.url ?? null,
+        conflicts: result.conflicts ?? []
+    };
+}
 
 /* The daemon's refusal keeps its code, so a caller can still tell a diverged branch from a failure. */
-export const asRefusal = (error: unknown): unknown => (error instanceof TransportError ? new ActionRefusal(error.code, error.message) : error);
+export function asRefusal(error: unknown): unknown {
+    return error instanceof TransportError ? new ActionRefusal(error.code, error.message) : error;
+}
 
 /* Where a branch stands in words: which one, and the remote it goes to. */
-const branchOf = (status: GitStatus): string => status.branch ?? 'a detached HEAD';
+function branchOf(status: GitStatus): string {
+    return status.branch ?? 'a detached HEAD';
+}
 
-const remoteOf = (status: GitStatus): string => status.upstream ?? `origin as a new upstream for ${branchOf(status)}`;
+function remoteOf(status: GitStatus): string {
+    return status.upstream ?? `origin as a new upstream for ${branchOf(status)}`;
+}
 
-const changedFiles = (status: GitStatus, staged: boolean): string[] =>
-    status.files.filter((file) => (staged ? file.state === 'staged' : true)).map((file) => file.path);
+function changedFiles(status: GitStatus, staged: boolean): string[] {
+    return status.files.filter((file) => (staged ? file.state === 'staged' : true)).map((file) => file.path);
+}
 
 /* A file list for a question: every name up to a handful, then how many more. */
-const filesLine = (paths: readonly string[]): string => {
+function filesLine(paths: readonly string[]): string {
     const shown = paths.slice(0, 8);
     const more = paths.length - shown.length;
     return more > 0 ? `${shown.join(', ')} and ${plural(more, 'more file')}` : listed(shown);
-};
+}
 
 /*
  * The git panel, the branch menu, the commit box, the conflict view and the worktree dialogs as

@@ -3,24 +3,24 @@ import { controlMessages, encodeScroll, encodeTouch, ScrcpyProtocolError, Scrcpy
 
 const codecH264 = new Uint8Array([0x68, 0x32, 0x36, 0x34]);
 
-const session = (width: number, height: number): Uint8Array => {
+function session(width: number, height: number): Uint8Array {
     const bytes = new DataView(new ArrayBuffer(12));
     bytes.setUint8(0, 0x80);
     bytes.setUint32(4, width);
     bytes.setUint32(8, height);
     return new Uint8Array(bytes.buffer);
-};
+}
 
-const packet = (flags: number, payload: number[]): Uint8Array => {
+function packet(flags: number, payload: number[]): Uint8Array {
     const bytes = new DataView(new ArrayBuffer(12 + payload.length));
     bytes.setUint8(0, flags);
     bytes.setUint8(7, 42);
     bytes.setUint32(8, payload.length);
     new Uint8Array(bytes.buffer).set(payload, 12);
     return new Uint8Array(bytes.buffer);
-};
+}
 
-const join = (...parts: Uint8Array[]): Uint8Array => {
+function join(...parts: Uint8Array[]): Uint8Array {
     const joined = new Uint8Array(parts.reduce((total, part) => total + part.byteLength, 0));
     let offset = 0;
     for (const part of parts) {
@@ -28,7 +28,7 @@ const join = (...parts: Uint8Array[]): Uint8Array => {
         offset += part.byteLength;
     }
     return joined;
-};
+}
 
 const sps = [0, 0, 0, 1, 0x67, 0x42, 0xc0, 0x2a];
 const idr = [0, 0, 0, 1, 0x65, 0x88];

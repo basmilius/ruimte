@@ -73,10 +73,12 @@ interface TimelineOptions {
  */
 const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'changed-files', 'compaction', 'app-card']);
 
-export const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
+export function isBlock(row: TimelineRow): boolean {
+    return BLOCK_KINDS.has(row.kind);
+}
 
 /* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
-export const summarizeGroup = (tools: ChatToolItem[]): string => {
+export function summarizeGroup(tools: ChatToolItem[]): string {
     const names = new Set(tools.map((tool) => tool.name));
     const only = names.size === 1 ? tools[0]!.name : null;
     if (only !== null && toolEntry(only)?.grouped === true) {
@@ -92,14 +94,14 @@ export const summarizeGroup = (tools: ChatToolItem[]): string => {
         return i18next.t('agent-chat:group.calls', { name: only, count: tools.length });
     }
     return i18next.t('agent-chat:group.toolCalls', { count: tools.length });
-};
+}
 
 /*
  * What a folded turn did, a sentence per kind of call in the order it first came: "Read 11 files",
  * "Searched 2 patterns". Every file change reads as one sentence, and calls without a sentence of
  * their own are counted together at the end.
  */
-export const summarizeTurn = (tools: readonly ChatToolItem[]): string[] => {
+export function summarizeTurn(tools: readonly ChatToolItem[]): string[] {
     // Keyed by the sentence, so its place is where the first call of that kind came.
     const counts = new Map<string, number>();
     const edited = new Set<string>();
@@ -120,13 +122,13 @@ export const summarizeTurn = (tools: readonly ChatToolItem[]): string[] => {
         parts.push(i18next.t(parts.length === 0 ? 'agent-chat:group.toolCalls' : 'agent-chat:group.otherCalls', { count: other }));
     }
     return parts;
-};
+}
 
 /*
  * What a turn nobody asked for is about. The CLI wakes the agent when a background subagent settles
  * and hands over its summary; without one all that is known is that the agent went on by itself.
  */
-export const agentTurnLabel = (turn: ChatTurnItem): string => {
+export function agentTurnLabel(turn: ChatTurnItem): string {
     const about = (what: string): string => (turn.label ? i18next.t('agent-chat:turn.about', { what, label: turn.label }) : what);
     // A turn the machine opened with the results of tasks this chat gave; the label is their titles.
     if (turn.taskIds !== undefined && turn.taskIds.length > 0) {
@@ -137,10 +139,10 @@ export const agentTurnLabel = (turn: ChatTurnItem): string => {
         return about(i18next.t('agent-chat:turn.wokenByMessage', { count: turn.messageFrom.length }));
     }
     return turn.label ? i18next.t('agent-chat:turn.subagentFinished', { label: turn.label }) : i18next.t('agent-chat:turn.continued');
-};
+}
 
 /* The items of the turn tell a turn a person stopped from one the machine ended after a restart. */
-export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): string => {
+export function turnLabel(turn: ChatTurnItem, items: readonly ChatItem[] = []): string {
     const duration = formatElapsedShort((turn.endedAt ?? turn.createdAt) - turn.createdAt);
     switch (turn.state) {
         case 'aborted':
@@ -150,16 +152,17 @@ export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): 
         default:
             return i18next.t('agent-chat:turn.worked', { duration });
     }
-};
+}
 
 // A subagent's own work, and an agent it opened, belong to its row, not to the thread; an old record has no row for it.
-const parentOf = (item: ChatItem): string | null =>
-    item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent' ? (item.parentToolUseId ?? null) : null;
+function parentOf(item: ChatItem): string | null {
+    return item.kind === 'tool' || item.kind === 'assistant' || item.kind === 'subagent' ? (item.parentToolUseId ?? null) : null;
+}
 
 // Deeper than the CLI forwards any call; it also ends a chain of rows that would name each other.
 const MAX_NESTING = 8;
 
-const branchOf = (item: ChatSubagentItem, options: TimelineOptions, children: Map<string, ChatItem[]>, depth = 0): SubagentBranch => {
+function branchOf(item: ChatSubagentItem, options: TimelineOptions, children: Map<string, ChatItem[]>, depth = 0): SubagentBranch {
     const own = children.get(item.toolUseId) ?? [];
     return {
         id: item.id,
@@ -171,10 +174,10 @@ const branchOf = (item: ChatSubagentItem, options: TimelineOptions, children: Ma
                 : own.filter((child): child is ChatSubagentItem => child.kind === 'subagent').map((child) => branchOf(child, options, children, depth + 1)),
         expanded: options.expandedSubagents.has(item.id)
     };
-};
+}
 
 /* The branch a subagent's row sits in, its own or one it hangs under, anywhere in the thread's rows. */
-export const findSubagentBranch = (rows: readonly TimelineRow[], toolUseId: string): { index: number; branch: SubagentBranch } | null => {
+export function findSubagentBranch(rows: readonly TimelineRow[], toolUseId: string): { index: number; branch: SubagentBranch } | null {
     const search = (branch: SubagentBranch): SubagentBranch | null => {
         if (branch.item.toolUseId === toolUseId) {
             return branch;
@@ -195,10 +198,10 @@ export const findSubagentBranch = (rows: readonly TimelineRow[], toolUseId: stri
         }
     }
     return null;
-};
+}
 
 /* What each subagent did, keyed by the call that spawned it, in the order it happened. */
-const groupChildren = (items: ChatItem[]): Map<string, ChatItem[]> => {
+function groupChildren(items: ChatItem[]): Map<string, ChatItem[]> {
     const children = new Map<string, ChatItem[]>();
     for (const item of items) {
         const parent = parentOf(item);
@@ -213,9 +216,9 @@ const groupChildren = (items: ChatItem[]): Map<string, ChatItem[]> => {
         }
     }
     return children;
-};
+}
 
-const flushTools = (buffer: ChatToolItem[], rows: TimelineRow[], options: TimelineOptions): void => {
+function flushTools(buffer: ChatToolItem[], rows: TimelineRow[], options: TimelineOptions): void {
     if (buffer.length === 0) {
         return;
     }
@@ -237,10 +240,10 @@ const flushTools = (buffer: ChatToolItem[], rows: TimelineRow[], options: Timeli
     for (const tool of live) {
         rows.push({ kind: 'work-live', id: tool.id, tool });
     }
-};
+}
 
 /* Rows for a run of items, in order, with tool runs folded and a subagent's work under its own row. */
-const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map<string, ChatItem[]>): TimelineRow[] => {
+function rowsForItems(items: ChatItem[], options: TimelineOptions, children: Map<string, ChatItem[]>): TimelineRow[] {
     const rows: TimelineRow[] = [];
     const tools: ChatToolItem[] = [];
     for (const item of items) {
@@ -301,10 +304,10 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map
     }
     flushTools(tools, rows, options);
     return rows;
-};
+}
 
 /* The card of a settled turn: the checkpoint diff when the host took one, else what the tool calls carry. */
-const changedFilesRow = (turn: ChatTurnItem, items: ChatItem[]): TimelineRow | null => {
+function changedFilesRow(turn: ChatTurnItem, items: ChatItem[]): TimelineRow | null {
     const edits = items.filter(
         (item): item is ChatToolItem => item.kind === 'tool' && item.state === 'done' && isFileChange(item.name) && hasFileChanges(item)
     );
@@ -314,9 +317,9 @@ const changedFilesRow = (turn: ChatTurnItem, items: ChatItem[]): TimelineRow | n
         return null;
     }
     return { kind: 'changed-files', id: `files-${turn.id}`, turnId: turn.id, tools: edits, diff, checkpoint: turn.checkpoint !== undefined };
-};
+}
 
-const lastAssistantRow = (rows: TimelineRow[]): TimelineRow | null => {
+function lastAssistantRow(rows: TimelineRow[]): TimelineRow | null {
     for (let i = rows.length - 1; i >= 0; i--) {
         const row = rows[i]!;
         if (row.kind === 'assistant') {
@@ -327,10 +330,10 @@ const lastAssistantRow = (rows: TimelineRow[]): TimelineRow | null => {
         }
     }
     return null;
-};
+}
 
 /* The whole thread as rows; items without a turn (older records) are shown as they are. */
-export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions): TimelineRow[] => {
+export function deriveTimelineRows(items: ChatItem[], options: TimelineOptions): TimelineRow[] {
     const rows: TimelineRow[] = [];
     const children = groupChildren(items);
     // Items are grouped by turn, in order of first appearance; runs of turnless items keep their place.
@@ -413,4 +416,4 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
         }
     }
     return rows;
-};
+}

@@ -21,7 +21,7 @@ export interface PulsarPlatform {
  * refresh token. Null in a plain browser, which has neither a listener nor a place a page cannot read,
  * so signing in is not offered there. Every answer is parsed, since it crossed a process boundary.
  */
-export const desktopPulsar = (): PulsarPlatform | null => {
+export function desktopPulsar(): PulsarPlatform | null {
     const bridge = desktop();
     const pulsar = bridge?.pulsar;
     if (!bridge || !pulsar) {
@@ -42,4 +42,4 @@ export const desktopPulsar = (): PulsarPlatform | null => {
             signOut: () => pulsar.signOut()
         }
     };
-};
+}

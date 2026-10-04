@@ -5,7 +5,7 @@ interface FakeFrame extends ScriptFrame {
     calls: { code: string; userGesture?: boolean }[];
 }
 
-const fakeFrame = (state: { destroyed?: boolean; detached?: boolean } = {}): FakeFrame => {
+function fakeFrame(state: { destroyed?: boolean; detached?: boolean } = {}): FakeFrame {
     const calls: FakeFrame['calls'] = [];
     return {
         calls,
@@ -16,7 +16,7 @@ const fakeFrame = (state: { destroyed?: boolean; detached?: boolean } = {}): Fak
             return Promise.resolve(true);
         }
     };
-};
+}
 
 describe('runGuestEdit', () => {
     test('selects all inside the guest frame, whatever holds the focus', () => {

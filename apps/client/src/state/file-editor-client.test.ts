@@ -44,18 +44,24 @@ interface Kind<S extends EditorState> {
     written(content: unknown): string[];
 }
 
-const rect = (id: string): DrawingElement => ({ kind: 'rect', id, x: 0, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 });
+function rect(id: string): DrawingElement {
+    return { kind: 'rect', id, x: 0, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 };
+}
 
-const node = (id: string): DiagramNode => ({ id, label: id });
+function node(id: string): DiagramNode {
+    return { id, label: id };
+}
 
-const diagramDocument = (rev: number, ...nodes: DiagramNode[]): DiagramDocument => ({
-    version: 1,
-    rev,
-    meta: { title: '', direction: 'right' },
-    nodes,
-    groups: [],
-    edges: []
-});
+function diagramDocument(rev: number, ...nodes: DiagramNode[]): DiagramDocument {
+    return {
+        version: 1,
+        rev,
+        meta: { title: '', direction: 'right' },
+        nodes,
+        groups: [],
+        edges: []
+    };
+}
 
 const DRAWING: Kind<DrawingState> = {
     name: 'drawing',
@@ -88,17 +94,19 @@ const summary: ProjectSummary = {
     nameSource: 'chosen'
 };
 
-const project = (kind: 'drawing' | 'diagram'): ProjectDocument => ({
-    version: 3,
-    rev: 1,
-    name: 'p',
-    color: '#000',
-    views: [
-        { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] },
-        { kind, id: 'view-1', name: 'Sketch' },
-        { kind, id: 'view-2', name: 'Plan' }
-    ]
-});
+function project(kind: 'drawing' | 'diagram'): ProjectDocument {
+    return {
+        version: 3,
+        rev: 1,
+        name: 'p',
+        color: '#000',
+        views: [
+            { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [], layouts: [] },
+            { kind, id: 'view-1', name: 'Sketch' },
+            { kind, id: 'view-2', name: 'Plan' }
+        ]
+    };
+}
 
 class FakeTransport implements Transport {
     status: TransportStatus = 'open';
@@ -177,12 +185,12 @@ class FakeTransport implements Transport {
 }
 
 // Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
-const tick = async (ms = 5): Promise<void> => {
+async function tick(ms = 5): Promise<void> {
     for (let i = 0; i < ms; i++) {
         jest.advanceTimersByTime(1);
         await new Promise((resolve) => setImmediate(resolve));
     }
-};
+}
 
 interface Harness<S> {
     readonly stores: WorkspaceStores;
@@ -198,7 +206,7 @@ interface Harness<S> {
  * Every suite gets a workspace of its own. The stores every module makes for the first workspace are
  * shared by every test file in the process, so a client over those would see what other files left there.
  */
-const harnessFor = <S extends EditorState>(kind: Kind<S>): Harness<S> => {
+function harnessFor<S extends EditorState>(kind: Kind<S>): Harness<S> {
     const stores = createWorkspaceStores();
     const registry = kind.registry(stores);
     let transport: FakeTransport;
@@ -246,9 +254,9 @@ const harnessFor = <S extends EditorState>(kind: Kind<S>): Harness<S> => {
         current: () => (registry.live()[0]?.[1] ?? registry.blank).getState(),
         editorOf: (viewId) => (registry.peek(viewId) ?? registry.blank).getState()
     };
-};
+}
 
-const suite = <S extends EditorState>(kind: Kind<S>): void => {
+function suite<S extends EditorState>(kind: Kind<S>): void {
     describe(`a ${kind.name} file`, () => {
         const harness = harnessFor(kind);
         const documents = (): WorkspaceStores['document'] => harness.stores.document;
@@ -458,7 +466,7 @@ const suite = <S extends EditorState>(kind: Kind<S>): void => {
             expect(harness.flushes).toBe(2);
         });
     });
-};
+}
 
 suite(DRAWING);
 suite(DIAGRAM);

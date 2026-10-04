@@ -11,7 +11,7 @@ import { diskFiles, runCommand } from './system';
  */
 
 /* Null where there is no background service, which is Windows and anything that is neither macOS nor Linux. */
-export const platformServiceManager = (platform: NodeJS.Platform): ServiceManager | null => {
+export function platformServiceManager(platform: NodeJS.Platform): ServiceManager | null {
     if (platform === 'darwin') {
         return launchdManager({
             uid: process.getuid?.() ?? 0,
@@ -30,13 +30,15 @@ export const platformServiceManager = (platform: NodeJS.Platform): ServiceManage
         });
     }
     return null;
-};
+}
 
 /*
  * The binary a service of `ruimte service install` runs: a copy out of the npx cache, which npm clears
  * whenever it likes. The app tells that service from its own by it.
  */
-export const commandLineServiceProgram = (ruimteHome: string): string => join(ruimteHome, 'bin', 'ruimte');
+export function commandLineServiceProgram(ruimteHome: string): string {
+    return join(ruimteHome, 'bin', 'ruimte');
+}
 
 export interface DaemonService {
     /* The daemon binary and its arguments, absolute. */
@@ -53,14 +55,18 @@ export interface DaemonService {
     path: string;
 }
 
-export const daemonServiceSpec = (service: DaemonService): ServiceSpec => ({
-    label: LAUNCH_AGENT_LABEL,
-    program: service.program,
-    args: service.args,
-    // `RUIMTE_SERVICE` tells the daemon that something starts it again when it exits, so it may update itself.
-    environment: { RUIMTE_HOME: service.ruimteHome, PATH: service.path, RUIMTE_SERVICE: '1' },
-    workingDirectory: service.home,
-    logFile: serviceLogFile(service.home)
-});
+export function daemonServiceSpec(service: DaemonService): ServiceSpec {
+    return {
+        label: LAUNCH_AGENT_LABEL,
+        program: service.program,
+        args: service.args,
+        // `RUIMTE_SERVICE` tells the daemon that something starts it again when it exits, so it may update itself.
+        environment: { RUIMTE_HOME: service.ruimteHome, PATH: service.path, RUIMTE_SERVICE: '1' },
+        workingDirectory: service.home,
+        logFile: serviceLogFile(service.home)
+    };
+}
 
-export const serviceDefinition = (platform: NodeJS.Platform, spec: ServiceSpec): string => (platform === 'darwin' ? launchAgentPlist(spec) : systemdUnit(spec));
+export function serviceDefinition(platform: NodeJS.Platform, spec: ServiceSpec): string {
+    return platform === 'darwin' ? launchAgentPlist(spec) : systemdUnit(spec);
+}

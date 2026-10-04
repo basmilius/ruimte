@@ -14,9 +14,13 @@ export interface AgentHostOptions<Core extends ChatCore = ChatCore> extends Agen
     background?: boolean;
 }
 
-const errorReply = (id: string | null, code: string, message: string): ReplyError => ({ id, ok: false, error: { code, message } });
+function errorReply(id: string | null, code: string, message: string): ReplyError {
+    return { id, ok: false, error: { code, message } };
+}
 
-const isAgentRequest = (type: string): type is AgentRequestType => Object.hasOwn(AGENT_REQUEST_SCHEMAS, type);
+function isAgentRequest(type: string): type is AgentRequestType {
+    return Object.hasOwn(AGENT_REQUEST_SCHEMAS, type);
+}
 
 /*
  * The chats of an app that has no daemon: it answers the agent requests over any `FramePort` and

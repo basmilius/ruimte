@@ -91,7 +91,9 @@ interface CommandOptions {
 
 const KEEP_AWAKE_LABELS: Record<KeepAwakeMode, string> = { off: 'keepAwakeOff', working: 'keepAwakeWorking', always: 'keepAwakeAlways' };
 
-const t = (key: string, options?: Record<string, unknown>): string => i18next.t(`shell:menu.${key}`, options ?? {});
+function t(key: string, options?: Record<string, unknown>): string {
+    return i18next.t(`shell:menu.${key}`, options ?? {});
+}
 
 const ELECTRON_KEYS: Record<string, string> = { ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', '+': 'Plus' };
 
@@ -99,7 +101,7 @@ const ELECTRON_KEYS: Record<string, string> = { ArrowLeft: 'Left', ArrowRight: '
  * The accelerator the shell shows next to an item. On macOS a menu shows only what it also binds, and
  * a key without Cmd or Ctrl would be taken from every text field, so those get none there.
  */
-export const toAccelerator = (shortcut: Shortcut, apple: boolean): string | undefined => {
+export function toAccelerator(shortcut: Shortcut, apple: boolean): string | undefined {
     if (shortcut.key === '' || (apple && !shortcut.mod && !shortcut.meta && !shortcut.ctrl)) {
         return undefined;
     }
@@ -121,28 +123,42 @@ export const toAccelerator = (shortcut: Shortcut, apple: boolean): string | unde
     }
     parts.push(ELECTRON_KEYS[shortcut.key] ?? shortcut.key);
     return parts.join('+');
-};
+}
 
-const sameShortcut = (one: Shortcut, other: Shortcut): boolean =>
-    one.key === other.key && one.mod === other.mod && one.ctrl === other.ctrl && one.meta === other.meta && one.alt === other.alt && one.shift === other.shift;
+function sameShortcut(one: Shortcut, other: Shortcut): boolean {
+    return (
+        one.key === other.key &&
+        one.mod === other.mod &&
+        one.ctrl === other.ctrl &&
+        one.meta === other.meta &&
+        one.alt === other.alt &&
+        one.shift === other.shift
+    );
+}
 
 const separator: MenuNode = { kind: 'separator' };
 
-const role = (name: MenuRole, label: string): MenuNode => ({ kind: 'role', role: name, label });
+function role(name: MenuRole, label: string): MenuNode {
+    return { kind: 'role', role: name, label };
+}
 
-const shell = (action: MenuShellAction, label: string): MenuNode => ({ kind: 'shell', action, label });
+function shell(action: MenuShellAction, label: string): MenuNode {
+    return { kind: 'shell', action, label };
+}
 
-const submenu = (id: string, label: string, items: MenuNode[], enabled?: boolean): MenuNode => ({
-    kind: 'submenu',
-    id,
-    label,
-    items: tidy(items),
-    ...(enabled === undefined ? {} : { enabled })
-});
+function submenu(id: string, label: string, items: MenuNode[], enabled?: boolean): MenuNode {
+    return {
+        kind: 'submenu',
+        id,
+        label,
+        items: tidy(items),
+        ...(enabled === undefined ? {} : { enabled })
+    };
+}
 
 /* No line at either end and never two in a row, so a group that is not offered takes its line with it. */
-export const tidy = (items: MenuNode[]): MenuNode[] =>
-    items.filter(
+export function tidy(items: MenuNode[]): MenuNode[] {
+    return items.filter(
         (item, index) =>
             item.kind !== 'separator' ||
             (index > 0 &&
@@ -150,8 +166,11 @@ export const tidy = (items: MenuNode[]): MenuNode[] =>
                 items[index - 1]!.kind !== 'separator' &&
                 items.slice(index + 1).some((next) => next.kind !== 'separator'))
     );
+}
 
-const only = (condition: boolean, ...items: MenuNode[]): MenuNode[] => (condition ? items : []);
+function only(condition: boolean, ...items: MenuNode[]): MenuNode[] {
+    return condition ? items : [];
+}
 
 const ZOOMABLE: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram'];
 
@@ -159,7 +178,7 @@ const ZOOMABLE: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram'
 const KIND_MENUS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram', 'chat', 'terminal', 'browser', 'file'];
 
 /* The application menu for one moment: which view has the focus, what is selected, where it runs. */
-export const menuModel = (context: MenuContext): MenuSpec => {
+export function menuModel(context: MenuContext): MenuSpec {
     const { apple, workspace } = context;
     const desktop = context.host === 'desktop';
     // The shell draws an accelerator; the web client prints the keys, except the ones its browser keeps.
@@ -410,13 +429,13 @@ export const menuModel = (context: MenuContext): MenuSpec => {
         helpMenu
     ];
     return { menus: menus.map((menu) => ({ id: menu.id, label: menu.label, items: tidy(menu.items) })) };
-};
+}
 
 /* The menu of the view with the focus, named after its kind, so everything a drawing offers sits in one place. */
-const viewKindMenu = (
+function viewKindMenu(
     context: MenuContext,
     command: (id: CommandId | string, label: string, options?: CommandOptions) => MenuNode
-): { id: string; label: string; items: MenuNode[] } | null => {
+): { id: string; label: string; items: MenuNode[] } | null {
     const kind = context.view;
     if (kind === null || !KIND_MENUS.includes(kind)) {
         return null;
@@ -509,4 +528,4 @@ const viewKindMenu = (
             command('view-delete', t('deleteView'))
         ]
     };
-};
+}

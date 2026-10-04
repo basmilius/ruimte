@@ -16,31 +16,39 @@ const windowClock: PlanClock = {
 
 let rules: PlanPanelRules | null = null;
 
-const uiIo = (clock: PlanClock): PlanPanelIo => ({
-    get: () => ({ anchor: useUi.getState().planAnchor, open: useUi.getState().planOpen }),
-    set: (state) => useUi.getState().setPlanPanel(state),
-    clock
-});
+function uiIo(clock: PlanClock): PlanPanelIo {
+    return {
+        get: () => ({ anchor: useUi.getState().planAnchor, open: useUi.getState().planOpen }),
+        set: (state) => useUi.getState().setPlanPanel(state),
+        clock
+    };
+}
 
 /* Rules that exist before the watch starts, for a press in a test or before boot; they see no chat in sight. */
-const activeRules = (): PlanPanelRules => (rules ??= new PlanPanelRules(uiIo(windowClock)));
+function activeRules(): PlanPanelRules {
+    return (rules ??= new PlanPanelRules(uiIo(windowClock)));
+}
 
 /* A press on a chat's pill opens that plan in the panel, whatever was closed before. */
-export const openPlanFromPill = (chatId: string, planId: string): void => {
+export function openPlanFromPill(chatId: string, planId: string): void {
     usePlans.getState().markSeen(currentEndpointId(), chatId);
     activeRules().pill(chatId, planId);
-};
+}
 
-export const closePlanPanel = (): void => activeRules().close();
+export function closePlanPanel(): void {
+    return activeRules().close();
+}
 
-export const pickPlan = (planId: string): void => activeRules().pick(planId);
+export function pickPlan(planId: string): void {
+    return activeRules().pick(planId);
+}
 
 /*
  * Keeps the plan panel in line with what is on screen: which chats are in sight, which plans exist
  * and which were just made. The measuring runs once a frame at most, since a pan changes a canvas on
  * every pointer move.
  */
-export const startPlanPanelWatch = (clock: PlanClock = windowClock): (() => void) => {
+export function startPlanPanelWatch(clock: PlanClock = windowClock): () => void {
     rules?.dispose();
     const own = new PlanPanelRules(uiIo(clock));
     rules = own;
@@ -103,4 +111,4 @@ export const startPlanPanelWatch = (clock: PlanClock = windowClock): (() => void
             rules = null;
         }
     };
-};
+}

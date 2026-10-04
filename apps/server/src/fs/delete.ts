@@ -14,7 +14,7 @@ export class DeleteError extends CodedError<DeleteErrorCode> {}
  * A symbolic link is trashed as the link and never followed, so a link out of the project cannot
  * take its target along.
  */
-export const deletePath = async (path: string, boundary: WriteBoundary, trash: (path: string) => Promise<void> = trashPath): Promise<void> => {
+export async function deletePath(path: string, boundary: WriteBoundary, trash: (path: string) => Promise<void> = trashPath): Promise<void> {
     const entry = await lstat(path).catch(() => null);
     if (entry === null) {
         throw new DeleteError('not-found', 'That path is not there');
@@ -41,4 +41,4 @@ export const deletePath = async (path: string, boundary: WriteBoundary, trash: (
         throw new DeleteError('ruimte-state', `${path} is Ruimte's own state and is not deleted from here`);
     }
     await trash(real);
-};
+}

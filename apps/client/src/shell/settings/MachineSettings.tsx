@@ -32,10 +32,10 @@ export function WithReason({ reason, children }: { reason: string | null; childr
  * switch sends back the name and icon the machine has; a machine nobody named answers to its own
  * default, and sending that name back would make it chosen.
  */
-const saveMachineSetting = async (
+async function saveMachineSetting(
     endpoint: Endpoint,
     patch: { broker?: BrokerSetting; lanDoor?: boolean; streamingAllowed?: boolean; resumeAtReset?: boolean }
-): Promise<void> => {
+): Promise<void> {
     const link = transportFor(endpoint.id);
     if (!link) {
         return;
@@ -69,7 +69,7 @@ const saveMachineSetting = async (
             description: messageOf(e, i18next.t('settings:machine.toast.unchanged'))
         });
     }
-};
+}
 
 /*
  * Running the wire to this machine over a WebRTC DataChannel instead of its socket, an experiment;
@@ -214,8 +214,9 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
 }
 
 /* Where the door listens, as addresses a person could type: a port is no quantity, so it is not formatted as a number. */
-const doorAddresses = (lan: LanDoor): string =>
-    lan.addresses.map((address) => (address.includes(':') ? `[${address}]:${lan.port}` : `${address}:${lan.port}`)).join(', ');
+function doorAddresses(lan: LanDoor): string {
+    return lan.addresses.map((address) => (address.includes(':') ? `[${address}]:${lan.port}` : `${address}:${lan.port}`)).join(', ');
+}
 
 /*
  * Whether the machine keeps its door on the local network open, so a client on the same network
@@ -302,7 +303,9 @@ export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason:
     );
 }
 
-const ago = (timestamp: number): string => formatAgo(Date.now() - timestamp);
+function ago(timestamp: number): string {
+    return formatAgo(Date.now() - timestamp);
+}
 
 /* The browsers and apps one machine let in, each with a way to cut it off. */
 export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {

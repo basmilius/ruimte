@@ -38,24 +38,28 @@ export interface VoiceDiagnosticsSummary {
     latest: { domains: ActionDomain[]; toolCount: number; toolBytes: number } | null;
 }
 
-export const median = (values: readonly number[]): number | null => {
+export function median(values: readonly number[]): number | null {
     if (values.length === 0) {
         return null;
     }
     const sorted = values.toSorted((left, right) => left - right);
     const middle = Math.floor(sorted.length / 2);
     return sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
-};
+}
 
-const latencyOf = (values: readonly number[]): VoiceLatency => ({
-    count: values.length,
-    medianMs: median(values),
-    slowestMs: values.length === 0 ? null : Math.max(...values)
-});
+function latencyOf(values: readonly number[]): VoiceLatency {
+    return {
+        count: values.length,
+        medianMs: median(values),
+        slowestMs: values.length === 0 ? null : Math.max(...values)
+    };
+}
 
-const shareOf = (count: number, total: number): number | null => (total === 0 ? null : count / total);
+function shareOf(count: number, total: number): number | null {
+    return total === 0 ? null : count / total;
+}
 
-const countsOf = (names: readonly string[], total: number): VoiceCount[] => {
+function countsOf(names: readonly string[], total: number): VoiceCount[] {
     const counts = new Map<string, number>();
     for (const name of names) {
         counts.set(name, (counts.get(name) ?? 0) + 1);
@@ -63,9 +67,9 @@ const countsOf = (names: readonly string[], total: number): VoiceCount[] => {
     return [...counts]
         .map(([name, count]) => ({ name, count, share: total === 0 ? 0 : count / total }))
         .toSorted((left, right) => right.count - left.count || left.name.localeCompare(right.name));
-};
+}
 
-export const summarizeVoiceSessions = (sessions: readonly VoiceSessionRecord[]): VoiceDiagnosticsSummary => {
+export function summarizeVoiceSessions(sessions: readonly VoiceSessionRecord[]): VoiceDiagnosticsSummary {
     const requests = sessions.flatMap((session) => session.requests);
     const calls = requests.flatMap((request) => request.calls);
     const finished = calls.filter((call) => call.result !== null);
@@ -104,4 +108,4 @@ export const summarizeVoiceSessions = (sessions: readonly VoiceSessionRecord[]):
         },
         latest: latest ? { domains: latest.domains, toolCount: latest.toolCount, toolBytes: latest.toolBytes } : null
     };
-};
+}

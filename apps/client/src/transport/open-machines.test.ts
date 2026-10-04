@@ -3,7 +3,7 @@ import { watchOpenMachines, type OpenMachineSource } from './open-machines';
 import type { TransportStatus } from './transport';
 
 /* A pool in memory: links under ids with a status, and the `endpoint.changed` listeners on each. */
-const fakeSource = () => {
+function fakeSource() {
     const statuses = new Map<string, TransportStatus>();
     const poolListeners = new Set<() => void>();
     const changeListeners = new Map<string, Set<() => void>>();
@@ -46,7 +46,7 @@ const fakeSource = () => {
         },
         listenerCount: (endpointId: string) => changeListeners.get(endpointId)?.size ?? 0
     };
-};
+}
 
 describe('what every open machine says about itself', () => {
     test('is asked of every machine whose link is open, not only the active one', () => {

@@ -16,10 +16,12 @@ export interface EditorBindings<T> {
     subscribe(listener: (viewId: string, state: T, previous: T) => void): () => void;
 }
 
-export const editorBindings = <T>(registry: EditorRegistry<T>): EditorBindings<T> => ({
-    use: editorHook(registry),
-    useStore: () => useEditorStoreOf(registry),
-    focused: () => focusedEditor(registry),
-    live: (viewId) => registry.peek(viewId)?.getState() ?? null,
-    subscribe: (listener) => registry.subscribe(listener)
-});
+export function editorBindings<T>(registry: EditorRegistry<T>): EditorBindings<T> {
+    return {
+        use: editorHook(registry),
+        useStore: () => useEditorStoreOf(registry),
+        focused: () => focusedEditor(registry),
+        live: (viewId) => registry.peek(viewId)?.getState() ?? null,
+        subscribe: (listener) => registry.subscribe(listener)
+    };
+}

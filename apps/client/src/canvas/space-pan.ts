@@ -24,32 +24,35 @@ const SPACE_CONTROLS = [
  */
 let spaceDown = false;
 
-export const isSpaceDown = (): boolean => spaceDown;
+export function isSpaceDown(): boolean {
+    return spaceDown;
+}
 
-export const holdSpace = (): void => {
+export function holdSpace(): void {
     spaceDown = true;
-};
+}
 
-export const releaseSpace = (): void => {
+export function releaseSpace(): void {
     spaceDown = false;
-};
+}
 
 /* Whether a space press belongs to what has the focus: a control it works, or anything in a popup or a dialog. */
-export const spaceWorksTarget = (target: EventTarget | null): boolean =>
-    (target instanceof Element && target.closest(SPACE_CONTROLS) !== null) || isInFloatingLayer(target);
+export function spaceWorksTarget(target: EventTarget | null): boolean {
+    return (target instanceof Element && target.closest(SPACE_CONTROLS) !== null) || isInFloatingLayer(target);
+}
 
 /*
  * A space that goes up while another app or a page's guest has the keyboard never reaches this
  * window, so losing the focus or the screen lets go of it as well.
  */
-export const followSpaceRelease = (
+export function followSpaceRelease(
     windowTarget: Pick<EventTarget, 'addEventListener' | 'removeEventListener'> = window,
     documentTarget: Pick<EventTarget, 'addEventListener' | 'removeEventListener'> = document
-): (() => void) => {
+): () => void {
     windowTarget.addEventListener('blur', releaseSpace);
     documentTarget.addEventListener('visibilitychange', releaseSpace);
     return () => {
         windowTarget.removeEventListener('blur', releaseSpace);
         documentTarget.removeEventListener('visibilitychange', releaseSpace);
     };
-};
+}

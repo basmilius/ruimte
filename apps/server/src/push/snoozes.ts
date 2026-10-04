@@ -21,16 +21,18 @@ interface SnoozeStoreOptions {
     clock?: OutboxClock;
 }
 
-const keyOf = (projectId: string, nodeId: string): string => JSON.stringify([projectId, nodeId]);
+function keyOf(projectId: string, nodeId: string): string {
+    return JSON.stringify([projectId, nodeId]);
+}
 
-const readSaved = (path: string): Snooze[] => {
+function readSaved(path: string): Snooze[] {
     try {
         return SnoozeListSchema.parse(JSON.parse(readFileSync(path, 'utf8'))).snoozes;
     } catch (e) {
         console.warn(`${path} would not read; snoozes start empty:`, errorText(e));
         return [];
     }
-};
+}
 
 /*
  * The snoozes of this machine, one per node, shared by every client and the push alerts. They live

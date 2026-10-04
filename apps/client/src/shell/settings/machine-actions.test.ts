@@ -4,25 +4,29 @@ import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
 import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActionDeps } from './machine-actions';
 import type { MachineEntry } from './machine-list';
 
-const endpoint = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: '',
-    wsBaseUrl: '',
-    reachability: 'public',
-    daemonId: id,
-    daemonPublicKey: null,
-    ...overrides
-});
+function endpoint(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        reachability: 'public',
+        daemonId: id,
+        daemonPublicKey: null,
+        ...overrides
+    };
+}
 
-const machine = (id: string, brokerUrl: string | null = 'wss://broker.example.com'): Machine => ({
-    id,
-    name: id,
-    icon: null,
-    publicKey: 'A'.repeat(43),
-    brokerUrl,
-    lastSeenAt: null
-});
+function machine(id: string, brokerUrl: string | null = 'wss://broker.example.com'): Machine {
+    return {
+        id,
+        name: id,
+        icon: null,
+        publicKey: 'A'.repeat(43),
+        brokerUrl,
+        lastSeenAt: null
+    };
+}
 
 const opened: MachineEntry = { id: 'studio', endpoint: endpoint('studio'), machine: machine('studio'), local: false, onAccount: true };
 const accountOnly: MachineEntry = { id: 'attic', endpoint: null, machine: machine('attic'), local: false, onAccount: true };
@@ -92,7 +96,7 @@ describe('machineDialogModel', () => {
     });
 });
 
-const recorder = () => {
+function recorder() {
     const calls: string[] = [];
     const deps: MachineActionDeps = {
         forgetEndpoint: async (endpointId) => {
@@ -106,7 +110,7 @@ const recorder = () => {
         }
     };
     return { calls, deps };
-};
+}
 
 describe('machine actions', () => {
     test('forgetting touches this client only', async () => {

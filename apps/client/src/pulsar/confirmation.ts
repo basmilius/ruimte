@@ -15,18 +15,21 @@ interface ConfirmationState {
 export const useAccountConfirmation = create<ConfirmationState>(() => ({ text: null }));
 
 /* Stays until the person dismisses it or the next attempt starts, since they may come back to it late. */
-export const confirmAccount = (text: string): void => {
+export function confirmAccount(text: string): void {
     useAccountConfirmation.setState({ text });
-};
+}
 
-export const dismissAccountConfirmation = (): void => {
+export function dismissAccountConfirmation(): void {
     useAccountConfirmation.setState({ text: null });
-};
+}
 
 /* Named after the provider the person picked, since the account may be shown as another one. */
-export const signedInConfirmation = (provider: ProviderId, account: Account): string =>
-    account.login === null
+export function signedInConfirmation(provider: ProviderId, account: Account): string {
+    return account.login === null
         ? i18next.t('machines:account.confirmation.signedIn', { provider: PROVIDER_NAMES[provider] })
         : i18next.t('machines:account.confirmation.signedInAs', { provider: PROVIDER_NAMES[provider], login: account.login });
+}
 
-export const linkedConfirmation = (provider: ProviderId): string => i18next.t('machines:account.confirmation.linked', { provider: PROVIDER_NAMES[provider] });
+export function linkedConfirmation(provider: ProviderId): string {
+    return i18next.t('machines:account.confirmation.linked', { provider: PROVIDER_NAMES[provider] });
+}

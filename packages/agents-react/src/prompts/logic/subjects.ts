@@ -57,16 +57,21 @@ export interface ApprovalButtonSpec {
 }
 
 /* Unique across the chats of a surface and the app's own prompts, and stable while the prompt waits. */
-export const promptIdOf = (subject: PromptSubject): string =>
-    subject.kind === 'chat' ? `agent-chat:${subject.nodeId}:${subject.item.requestId}` : subject.prompt.id;
+export function promptIdOf(subject: PromptSubject): string {
+    return subject.kind === 'chat' ? `agent-chat:${subject.nodeId}:${subject.item.requestId}` : subject.prompt.id;
+}
 
-export const promptCreatedAt = (subject: PromptSubject): number => (subject.kind === 'chat' ? subject.item.createdAt : subject.prompt.createdAt);
+export function promptCreatedAt(subject: PromptSubject): number {
+    return subject.kind === 'chat' ? subject.item.createdAt : subject.prompt.createdAt;
+}
 
 /* Only a chat's optional question does not hold anything up; the app says so of its own. */
-export const isBlockingSubject = (subject: PromptSubject): boolean => (subject.kind === 'chat' ? isBlockingPrompt(subject.item) : subject.prompt.blocking);
+export function isBlockingSubject(subject: PromptSubject): boolean {
+    return subject.kind === 'chat' ? isBlockingPrompt(subject.item) : subject.prompt.blocking;
+}
 
 /* The buttons of a chat's permission request in the order it draws them: a remembered rule, Deny, then Allow as the primary. */
-export const approvalButtons = (subject: PromptSubject, reason: string): ApprovalButtonSpec[] => {
+export function approvalButtons(subject: PromptSubject, reason: string): ApprovalButtonSpec[] {
     if (subject.kind !== 'chat' || subject.item.kind !== 'approval') {
         return [];
     }
@@ -93,10 +98,10 @@ export const approvalButtons = (subject: PromptSubject, reason: string): Approva
         },
         { id: 'allow', label: i18next.t('agent-prompts:approval.allow'), primary: true, action: { kind: 'approve', decision: 'allow' } }
     ];
-};
+}
 
 /* Sends a card's action as the request its subject is answered with. A refusal comes back as an error for the card to show. */
-export const answerPrompt = async (subject: PromptSubject, action: PromptAction, chat: ChatPromptClients | null): Promise<void> => {
+export async function answerPrompt(subject: PromptSubject, action: PromptAction, chat: ChatPromptClients | null): Promise<void> {
     if (subject.kind === 'host') {
         return chatHost().prompts.answer(subject.prompt, action);
     }
@@ -114,4 +119,4 @@ export const answerPrompt = async (subject: PromptSubject, action: PromptAction,
         return chat.dismiss(nodeId, item.id);
     }
     throw new Error(i18next.t('agent-prompts:error.noChoices'));
-};
+}

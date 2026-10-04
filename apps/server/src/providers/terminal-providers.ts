@@ -25,25 +25,21 @@ const TERMINAL_ONLY_CAPABILITIES: ProviderCapabilities = {
 // No models over the wire: the catalog is a chat concern and these CLIs pick their own model.
 const EMPTY_CATALOG = { defaultModel: '', profiles: {}, models: [] };
 
-const terminalProvider = (
-    kind: AgentKind,
-    name: string,
-    command: string,
-    resumeCommand: string,
-    firstPromptArgs: (prompt: string) => string[]
-): ChatProvider => ({
-    kind,
-    name,
-    catalog: new ModelCatalog(EMPTY_CATALOG),
-    capabilities: TERMINAL_ONLY_CAPABILITIES,
-    command: [command],
-    resumeCommand,
-    detect: detectCli,
-    firstPromptArgs,
-    createBackend: () => {
-        throw new Error(`${name} has no chat backend; it runs as a terminal agent.`);
-    }
-});
+function terminalProvider(kind: AgentKind, name: string, command: string, resumeCommand: string, firstPromptArgs: (prompt: string) => string[]): ChatProvider {
+    return {
+        kind,
+        name,
+        catalog: new ModelCatalog(EMPTY_CATALOG),
+        capabilities: TERMINAL_ONLY_CAPABILITIES,
+        command: [command],
+        resumeCommand,
+        detect: detectCli,
+        firstPromptArgs,
+        createBackend: () => {
+            throw new Error(`${name} has no chat backend; it runs as a terminal agent.`);
+        }
+    };
+}
 
 export const geminiProvider: ChatProvider = {
     // `--prompt` answers and exits; `-i` (`--prompt-interactive`) runs the prompt and stays.

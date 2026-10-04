@@ -16,7 +16,7 @@ export interface LogoutOptions {
  * `ruimte logout`: takes this machine off its account, the way Settings, Machines does in the app on it,
  * for a machine without the app. Only the local secret may, so it runs where the daemon's home is.
  */
-export const runLogout = async (options: LogoutOptions): Promise<number> => {
+export async function runLogout(options: LogoutOptions): Promise<number> {
     const fetcher: Fetch = options.fetch ?? ((input, init) => fetch(input, init));
     const out = options.out ?? ((line: string) => console.log(line));
     const err = options.err ?? ((line: string) => console.error(line));
@@ -53,4 +53,4 @@ export const runLogout = async (options: LogoutOptions): Promise<number> => {
             : `This machine is on no account now, and ${revoked === 1 ? '1 client' : `${revoked} clients`} that came in through it lost access. \`ruimte login\` puts it on one.`
     );
     return 0;
-};
+}

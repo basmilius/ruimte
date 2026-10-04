@@ -12,21 +12,27 @@ import { accountNote, explain, isSignedOut, nextReset, type LimitAccount, type L
 
 /* Red where a window is nearly spent, amber where it is worth knowing. A window with room to spare
    is not news, so it takes the text color rather than a hue that competes with the two that are. */
-const toneOf = (used: number): string => (used >= 0.9 ? 'bg-status-error' : used >= 0.7 ? 'bg-status-needs-you' : 'bg-text');
+function toneOf(used: number): string {
+    return used >= 0.9 ? 'bg-status-error' : used >= 0.7 ? 'bg-status-needs-you' : 'bg-text';
+}
 
 /* A time of day when the reset is today, a weekday and a time when it is not. */
-const resetAtLabel = (resetsAt: number, now: number): string => (isSameDay(resetsAt, now) ? formatClock(resetsAt) : formatWeekdayClock(resetsAt));
+function resetAtLabel(resetsAt: number, now: number): string {
+    return isSameDay(resetsAt, now) ? formatClock(resetsAt) : formatWeekdayClock(resetsAt);
+}
 
 /* How long the window still has, or nothing once it has run out. */
-const resetInLabel = (resetsAt: number, now: number): string | null => (resetsAt <= now ? null : formatCountdown(resetsAt - now));
+function resetInLabel(resetsAt: number, now: number): string | null {
+    return resetsAt <= now ? null : formatCountdown(resetsAt - now);
+}
 
 /* How much of the window has run, or null when the provider named neither a reset nor a length. */
-const elapsedShare = (window: UsageWindow, now: number): number | null => {
+function elapsedShare(window: UsageWindow, now: number): number | null {
     if (window.resetsAt === null || window.durationMs === null || window.durationMs <= 0) {
         return null;
     }
     return Math.min(1, Math.max(0, 1 - (window.resetsAt - now) / window.durationMs));
-};
+}
 
 export function WindowBar({ window, now, compact }: { window: UsageWindow; now: number; compact: boolean }) {
     const { t } = useTranslation('agent-usage');

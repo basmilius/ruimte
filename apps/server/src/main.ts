@@ -9,10 +9,10 @@ import { errorText } from './error-text.ts';
  * Without a listener Bun prints an uncaught error with a code frame, which in the compiled binary is
  * minified bundle source. A throw at the top level of this module lands here as well.
  */
-const fail = (error: unknown): never => {
+function fail(error: unknown): never {
     console.error(errorText(error));
     process.exit(1);
-};
+}
 process.on('uncaughtException', fail);
 process.on('unhandledRejection', fail);
 

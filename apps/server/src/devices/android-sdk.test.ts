@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { locateAndroidSdk, type AndroidSdkEnvironment } from './android-sdk.ts';
 
-const environment = (overrides: Partial<AndroidSdkEnvironment> & { files?: string[] }): AndroidSdkEnvironment => {
+function environment(overrides: Partial<AndroidSdkEnvironment> & { files?: string[] }): AndroidSdkEnvironment {
     const files = new Set(overrides.files ?? []);
     return {
         env: {},
@@ -12,7 +12,7 @@ const environment = (overrides: Partial<AndroidSdkEnvironment> & { files?: strin
         exists: (path) => files.has(path),
         ...overrides
     };
-};
+}
 
 describe('locateAndroidSdk', () => {
     test('finds the SDK that holds the adb on PATH when no variable names it', () => {

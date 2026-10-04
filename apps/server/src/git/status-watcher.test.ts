@@ -16,12 +16,12 @@ let events: GitStatusEvent[];
 let changed: GitChangedEvent[];
 let unsubscribe: () => void;
 
-const git = async (args: string[]): Promise<void> => {
+async function git(args: string[]): Promise<void> {
     await gitIn(repo, args);
-};
+}
 
 /* A watcher whose status runs take as long as `runMs` says, whatever the machine is doing. */
-const watcherWith = (runMs: number): GitStatusWatcher => {
+function watcherWith(runMs: number): GitStatusWatcher {
     let clock = 0;
     const next = new GitStatusWatcher('darwin', fake, () => {
         const now = clock;
@@ -37,7 +37,7 @@ const watcherWith = (runMs: number): GitStatusWatcher => {
         }
     });
     return next;
-};
+}
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-git-watch-')));

@@ -3,11 +3,11 @@ import type { PushAttentionEntry } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
 import { PushAttentionSync } from './push-attention';
 
-const flush = async () => {
+async function flush() {
     for (let i = 0; i < 10; i++) {
         await Promise.resolve();
     }
-};
+}
 
 test('only readable nodes acknowledge results, including results received after focusing', async () => {
     let receive = (_entry: PushAttentionEntry) => {};

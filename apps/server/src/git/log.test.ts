@@ -13,7 +13,9 @@ const FIELD = '\u001f';
 let root: string;
 let repo: string;
 
-const run = (args: string[], cwd: string = repo): Promise<string> => gitIn(cwd, args);
+function run(args: string[], cwd: string = repo): Promise<string> {
+    return gitIn(cwd, args);
+}
 
 // Built once for the file: every test here only reads the history, and each commit is two processes.
 beforeAll(async () => {

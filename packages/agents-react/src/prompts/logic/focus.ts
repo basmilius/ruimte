@@ -3,7 +3,7 @@
  * request's buttons that grants nothing for good. Allow is drawn last and filled, so it only gets the
  * keyboard when it stands alone, and a stray Enter never grants anything. False when `root` holds no card.
  */
-export const focusPromptStart = (root: ParentNode | null | undefined): boolean => {
+export function focusPromptStart(root: ParentNode | null | undefined): boolean {
     const card = root?.querySelector<HTMLElement>('.prompt-card');
     if (!card) {
         return false;
@@ -15,11 +15,11 @@ export const focusPromptStart = (root: ParentNode | null | undefined): boolean =
         card.querySelector<HTMLElement>('.prompt-heading');
     start?.focus({ preventScroll: true });
     return start !== null;
-};
+}
 
 /* Puts the keyboard on a card's heading, where keys typed for something else answer nothing. False when `root` holds no card. */
-export const focusPromptHeading = (root: ParentNode | null | undefined): boolean => {
+export function focusPromptHeading(root: ParentNode | null | undefined): boolean {
     const heading = root?.querySelector<HTMLElement>('.prompt-card .prompt-heading');
     heading?.focus({ preventScroll: true });
     return !!heading;
-};
+}

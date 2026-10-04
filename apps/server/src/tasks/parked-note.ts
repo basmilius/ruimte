@@ -11,7 +11,7 @@ export interface ParkedNoteDeps {
 }
 
 /* What the chat is told about work that was given up on, in the words of the kind it was. */
-const parkedText = (entry: OutboxEntry, title: string, reason: string): string => {
+function parkedText(entry: OutboxEntry, title: string, reason: string): string {
     switch (entry.kind) {
         case 'wake-parent':
             return `The machine could not wake this chat with the results of its tasks: ${reason}`;
@@ -28,15 +28,14 @@ const parkedText = (entry: OutboxEntry, title: string, reason: string): string =
         default:
             return `The machine could not resume the turn of ${title} (${entry.target}) after a restart: ${reason}`;
     }
-};
+}
 
 /*
  * A piece of owed work the daemon gave up on is said in the thread of the chat it was for: the chat
  * that opened the node, or the chat a wake was for. Only in a chat, since a terminal has no thread.
  */
-export const parkedNote =
-    (deps: ParkedNoteDeps) =>
-    (entry: OutboxEntry, error: unknown): void => {
+export function parkedNote(deps: ParkedNoteDeps) {
+    return (entry: OutboxEntry, error: unknown): void => {
         // A summary that was not delivered is said in its fork, by its own handler; a note about a waiting child was only news.
         if (entry.kind === 'deliver-summary' || entry.kind === 'deliver-waiting') {
             return;
@@ -54,3 +53,4 @@ export const parkedNote =
             deps.alert(chatId, text);
         }
     };
+}

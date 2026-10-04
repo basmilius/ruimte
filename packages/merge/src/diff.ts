@@ -29,7 +29,7 @@ interface Move {
 }
 
 /* One round of the walk: every diagonal of this distance taken as far as its lines match. True once the far corner is reached. */
-const extend = (left: readonly string[], right: readonly string[], reach: Int32Array, offset: number, distance: number): boolean => {
+function extend(left: readonly string[], right: readonly string[], reach: Int32Array, offset: number, distance: number): boolean {
     for (let diagonal = -distance; diagonal <= distance; diagonal += 2) {
         const down = diagonal === -distance || (diagonal !== distance && reach[offset + diagonal - 1]! < reach[offset + diagonal + 1]!);
         let x = down ? reach[offset + diagonal + 1]! : reach[offset + diagonal - 1]! + 1;
@@ -44,10 +44,10 @@ const extend = (left: readonly string[], right: readonly string[], reach: Int32A
         }
     }
     return false;
-};
+}
 
 /* The path back from the far corner, one edit per step, in the order the file reads. */
-const backtrack = (left: readonly string[], right: readonly string[], saved: readonly Int32Array[], distance: number, offset: number): Move[] => {
+function backtrack(left: readonly string[], right: readonly string[], saved: readonly Int32Array[], distance: number, offset: number): Move[] {
     const moves: Move[] = [];
     let x = left.length;
     let y = right.length;
@@ -74,14 +74,14 @@ const backtrack = (left: readonly string[], right: readonly string[], saved: rea
         }
     }
     return moves.reverse();
-};
+}
 
 /*
  * Myers' greedy walk: for every edit distance it keeps the furthest reach on each diagonal, and every
  * STRIDE-th state a round started in, which is what the path is read back from once the far corner
  * is reached. Null once the distance passes what is worth walking.
  */
-const walk = (left: readonly string[], right: readonly string[]): Move[] | null => {
+function walk(left: readonly string[], right: readonly string[]): Move[] | null {
     const limit = Math.min(left.length + right.length, MAX_DISTANCE);
     const offset = limit;
     const reach = new Int32Array(2 * limit + 1);
@@ -95,10 +95,10 @@ const walk = (left: readonly string[], right: readonly string[]): Move[] | null 
         }
     }
     return null;
-};
+}
 
 /* The stretches the moves cover, with edits that follow each other straight away folded into one. */
-const changesOf = (moves: readonly Move[]): Change[] => {
+function changesOf(moves: readonly Move[]): Change[] {
     const changes: Change[] = [];
     let current: Change | null = null;
     for (const move of moves) {
@@ -125,10 +125,10 @@ const changesOf = (moves: readonly Move[]): Change[] => {
         changes.push(current);
     }
     return changes;
-};
+}
 
 /* Where `other` differs from `base`, in line stretches, in the order they appear. */
-export const diffLines = (base: readonly string[], other: readonly string[]): Change[] => {
+export function diffLines(base: readonly string[], other: readonly string[]): Change[] {
     let prefix = 0;
     while (prefix < base.length && prefix < other.length && base[prefix] === other[prefix]) {
         prefix += 1;
@@ -150,4 +150,4 @@ export const diffLines = (base: readonly string[], other: readonly string[]): Ch
         otherStart: change.otherStart + prefix,
         otherEnd: change.otherEnd + prefix
     }));
-};
+}

@@ -16,21 +16,23 @@ const STOP_REASON = 'the worktree this agent worked in was merged or removed';
  * inside it, and the node the worktree was made for wherever its folder is now. A chat is in a turn
  * while it has one, a terminal while the hooks of its live agent say it runs.
  */
-export const worktreeAgents = (sources: WorktreeAgentSources): WorktreeAgents => ({
-    in(path, nodeId) {
-        const found: WorktreeAgent[] = [];
-        for (const chat of sources.chats()) {
-            if (chat.chatId === nodeId || isInside(path, chat.cwd)) {
-                found.push({ nodeId: chat.chatId, working: chat.activeTurnId !== null, live: chat.running });
+export function worktreeAgents(sources: WorktreeAgentSources): WorktreeAgents {
+    return {
+        in(path, nodeId) {
+            const found: WorktreeAgent[] = [];
+            for (const chat of sources.chats()) {
+                if (chat.chatId === nodeId || isInside(path, chat.cwd)) {
+                    found.push({ nodeId: chat.chatId, working: chat.activeTurnId !== null, live: chat.running });
+                }
             }
-        }
-        for (const session of sources.sessions()) {
-            if (session.sessionId === nodeId || isInside(path, session.cwd)) {
-                const agent = session.agent;
-                found.push({ nodeId: session.sessionId, working: agent?.live === true && agent.status === 'running', live: !session.exited });
+            for (const session of sources.sessions()) {
+                if (session.sessionId === nodeId || isInside(path, session.cwd)) {
+                    const agent = session.agent;
+                    found.push({ nodeId: session.sessionId, working: agent?.live === true && agent.status === 'running', live: !session.exited });
+                }
             }
-        }
-        return found;
-    },
-    stop: (nodeId) => sources.stopNode(nodeId, STOP_REASON)
-});
+            return found;
+        },
+        stop: (nodeId) => sources.stopNode(nodeId, STOP_REASON)
+    };
+}

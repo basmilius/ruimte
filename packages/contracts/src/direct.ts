@@ -72,13 +72,13 @@ export const DirectVerdictFrameSchema = z.discriminatedUnion('type', [DirectAcce
 export type DirectVerdictFrame = z.infer<typeof DirectVerdictFrameSchema>;
 
 /* Every DTLS fingerprint an SDP announces, normalized, so both peers read the same list out of the same text. */
-export const sdpFingerprints = (sdp: string): string[] => {
+export function sdpFingerprints(sdp: string): string[] {
     const found = new Set<string>();
     for (const match of sdp.matchAll(/^a=fingerprint:(\S+)\s+([0-9A-Fa-f:]+)\s*$/gm)) {
         found.add(`${match[1]!.toLowerCase()} ${match[2]!.toUpperCase()}`);
     }
     return [...found].sort();
-};
+}
 
 /*
  * What ties the handshake to the one DTLS session it runs over: the fingerprints of the offer and of
@@ -86,22 +86,27 @@ export const sdpFingerprints = (sdp: string): string[] => {
  * its own ends up with two DTLS sessions whose peers compute two different bindings, so neither
  * signature below verifies on the other side.
  */
-export const channelBinding = (offerSdp: string, answerSdp: string): string => JSON.stringify([sdpFingerprints(offerSdp), sdpFingerprints(answerSdp)]);
+export function channelBinding(offerSdp: string, answerSdp: string): string {
+    return JSON.stringify([sdpFingerprints(offerSdp), sdpFingerprints(answerSdp)]);
+}
 
 /*
  * The bytes signed on a channel. Prefixes of their own, so a signature over the HTTP handshake's
  * challenge never verifies as one over a channel's, and the binding last, since it is JSON and the
  * fields before it never hold a newline.
  */
-export const daemonChannelMessage = (daemonId: string, challenge: string, binding: string): string =>
-    `ruimte-daemon-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
+export function daemonChannelMessage(daemonId: string, challenge: string, binding: string): string {
+    return `ruimte-daemon-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
+}
 
-export const clientChannelMessage = (daemonId: string, challenge: string, publicKey: string, binding: string): string =>
-    `ruimte-client-channel-v1\n${daemonId}\n${challenge}\n${publicKey}\n${binding}`;
+export function clientChannelMessage(daemonId: string, challenge: string, publicKey: string, binding: string): string {
+    return `ruimte-client-channel-v1\n${daemonId}\n${challenge}\n${publicKey}\n${binding}`;
+}
 
 // Keyed with the local secret as an HMAC-SHA256, so the channel learns that the client holds it and never the secret itself.
-export const localSecretChannelMessage = (daemonId: string, challenge: string, binding: string): string =>
-    `ruimte-local-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
+export function localSecretChannelMessage(daemonId: string, challenge: string, binding: string): string {
+    return `ruimte-local-channel-v1\n${daemonId}\n${challenge}\n${binding}`;
+}
 
 /*
  * A frame larger than the peer's SCTP max-message-size is refused outright (werift announces 64 KiB,
@@ -114,7 +119,7 @@ export const DIRECT_PIECE_CHARS = 16_000;
 const MORE = '+';
 const LAST = '=';
 
-export const splitFrame = (data: string, pieceChars: number = DIRECT_PIECE_CHARS): string[] => {
+export function splitFrame(data: string, pieceChars: number = DIRECT_PIECE_CHARS): string[] {
     if (data.length <= pieceChars) {
         return [LAST + data];
     }
@@ -131,7 +136,7 @@ export const splitFrame = (data: string, pieceChars: number = DIRECT_PIECE_CHARS
         start = end;
     }
     return pieces;
-};
+}
 
 export type AssembledPiece = { kind: 'frame'; frame: string } | { kind: 'partial' } | { kind: 'invalid' };
 
@@ -173,9 +178,11 @@ export const DIRECT_BINARY_PIECE_BYTES = 64 * 1024;
 const BINARY_MORE = 0x01;
 const BINARY_LAST = 0x02;
 
-export const isBinaryPiece = (piece: Uint8Array): boolean => piece[0] === BINARY_MORE || piece[0] === BINARY_LAST;
+export function isBinaryPiece(piece: Uint8Array): boolean {
+    return piece[0] === BINARY_MORE || piece[0] === BINARY_LAST;
+}
 
-export const splitBinaryFrame = (data: Uint8Array, pieceBytes: number = DIRECT_BINARY_PIECE_BYTES): Uint8Array<ArrayBuffer>[] => {
+export function splitBinaryFrame(data: Uint8Array, pieceBytes: number = DIRECT_BINARY_PIECE_BYTES): Uint8Array<ArrayBuffer>[] {
     const bodyBytes = pieceBytes - 1;
     const pieces: Uint8Array<ArrayBuffer>[] = [];
     let start = 0;
@@ -188,7 +195,7 @@ export const splitBinaryFrame = (data: Uint8Array, pieceBytes: number = DIRECT_B
         start = end;
     } while (start < data.byteLength);
     return pieces;
-};
+}
 
 export type AssembledBinaryPiece = { kind: 'frame'; frame: Uint8Array<ArrayBuffer> } | { kind: 'partial' } | { kind: 'invalid' };
 

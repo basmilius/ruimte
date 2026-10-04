@@ -11,14 +11,14 @@ import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './com
 // How long a call held by the person waits before it asks the helper again.
 const HOLD_MS = 500;
 
-const codeOf = async (work: Promise<unknown>): Promise<string> => {
+async function codeOf(work: Promise<unknown>): Promise<string> {
     try {
         await work;
     } catch (error) {
         return (error as { code?: string }).code ?? 'no-code';
     }
     return 'no-refusal';
-};
+}
 
 describe('computer use', () => {
     test('refuses every call while it is off, and never starts the helper for one', async () => {
@@ -236,15 +236,15 @@ describe('the approval of an app', () => {
 });
 
 /* Raises the card for TextEdit and answers it for this time; the call it held goes through. */
-const allowOnce = async (computer: ComputerSetup['computer'], nodeId: string): Promise<void> => {
+async function allowOnce(computer: ComputerSetup['computer'], nodeId: string): Promise<void> {
     const call = computer.operate(nodeId, 'state', 'TextEdit', {});
     await until(() => computer.pendingApprovals().length === 1);
     await computer.answer(computer.pendingApprovals()[0]!.requestId, 'once');
     await call;
-};
+}
 
 /* Whether the node is asked again: a card goes up, which the test then lets expire unanswered. */
-const asksAgain = async (setup: ComputerSetup, nodeId: string): Promise<boolean> => {
+async function asksAgain(setup: ComputerSetup, nodeId: string): Promise<boolean> {
     const acted = setup.helper.acted.length;
     const call = codeOf(setup.computer.operate(nodeId, 'click', 'TextEdit', { element: 1 }));
     await until(() => setup.computer.pendingApprovals().length > 0 || setup.helper.acted.length > acted);
@@ -259,7 +259,7 @@ const asksAgain = async (setup: ComputerSetup, nodeId: string): Promise<boolean>
         await codeOf(setup.computer.operate(nodeId, 'click', 'TextEdit', { element: 1 }));
     }
     return asked;
-};
+}
 
 describe('"this time"', () => {
     test('lasts until the turn of a chat ends', async () => {
@@ -529,14 +529,14 @@ describe('naming an app', () => {
 });
 
 /* Lets chat-1 into TextEdit for always, and forgets what that showed. */
-const letIn = async (setup: ComputerSetup): Promise<void> => {
+async function letIn(setup: ComputerSetup): Promise<void> {
     const call = setup.computer.operate('chat-1', 'state', 'TextEdit', {});
     await until(() => setup.computer.pendingApprovals().length === 1);
     await setup.computer.answer(setup.computer.pendingApprovals()[0]!.requestId, 'always');
     await call;
     await until(() => setup.helper.presences.at(-1) === 'think');
     setup.helper.requests.length = 0;
-};
+}
 
 describe('the presence at the cursor', () => {
     test('asks for permission with the app, then works between actions and waits on the person', async () => {
@@ -800,16 +800,17 @@ describe('a stop by the person', () => {
 
 const NOTES = { name: 'Notes', pid: 502, bundleId: 'com.example.notes' };
 
-const refusalOf = (work: Promise<unknown>): Promise<{ code: string; message: string } | null> =>
-    work.then(
+function refusalOf(work: Promise<unknown>): Promise<{ code: string; message: string } | null> {
+    return work.then(
         () => null,
         (error: unknown) => error as { code: string; message: string }
     );
+}
 
 /* Lets the call run until it stands in line for the Mac. */
-const inLine = async (computer: ComputerSetup['computer'], count: number): Promise<void> => {
+async function inLine(computer: ComputerSetup['computer'], count: number): Promise<void> {
     await until(() => (computer.status().waiting ?? []).length === count);
-};
+}
 
 describe('one agent at a time', () => {
     test('refuses another agent busy at once, naming the node that holds the Mac', async () => {

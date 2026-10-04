@@ -28,7 +28,7 @@ const BOLD_LINE = /^ {0,3}\*\*(?:[^*]|\*(?!\*))+\*\*:?[ \t]*$/;
  * A reply cut into blocks at blank lines outside a code fence, so each block parses on its own and
  * only the one still growing is parsed again. Joined back together the blocks are the text.
  */
-export const splitMarkdownBlocks = (text: string): MarkdownBlock[] => {
+export function splitMarkdownBlocks(text: string): MarkdownBlock[] {
     if (DEFINITION.test(text)) {
         return [{ text, openFence: isFenceOpenAtEnd(text) }];
     }
@@ -50,7 +50,7 @@ export const splitMarkdownBlocks = (text: string): MarkdownBlock[] => {
     });
     blocks.push({ text: text.slice(start), openFence: fence !== null });
     return blocks;
-};
+}
 
 /*
  * The blocks of a reply still being written that will not change any more: every block but the last.
@@ -58,15 +58,16 @@ export const splitMarkdownBlocks = (text: string): MarkdownBlock[] => {
  * still turn out to continue it (a list item, an indented paragraph). A section title waits for the
  * block under it, so it never sits alone above a block that is still streaming.
  */
-export const settledBlocksText = (text: string): string =>
-    withoutTrailingTitles(
+export function settledBlocksText(text: string): string {
+    return withoutTrailingTitles(
         splitMarkdownBlocks(text)
             .slice(0, -1)
             .map((block) => block.text)
             .join('')
     );
+}
 
-const withoutTrailingTitles = (text: string): string => {
+function withoutTrailingTitles(text: string): string {
     const lines = text.split('\n');
     let end = lines.length;
     for (let index = lines.length - 1; index >= 0; index--) {
@@ -88,10 +89,10 @@ const withoutTrailingTitles = (text: string): string => {
         .slice(0, end)
         .map((line) => `${line}\n`)
         .join('');
-};
+}
 
 /* The fence a line leaves open: it opens one, closes the one that is open, or changes nothing. */
-const nextFence = (fence: OpenFence | null, line: string): OpenFence | null => {
+function nextFence(fence: OpenFence | null, line: string): OpenFence | null {
     const match = FENCE.exec(line);
     if (!match) {
         return fence;
@@ -111,12 +112,12 @@ const nextFence = (fence: OpenFence | null, line: string): OpenFence | null => {
         return null;
     }
     return fence;
-};
+}
 
-const isFenceOpenAtEnd = (text: string): boolean => {
+function isFenceOpenAtEnd(text: string): boolean {
     let fence: OpenFence | null = null;
     for (const line of text.split('\n')) {
         fence = nextFence(fence, line);
     }
     return fence !== null;
-};
+}

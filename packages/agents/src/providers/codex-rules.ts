@@ -18,20 +18,26 @@ export interface CodexRules {
 
 export type CodexRulesResult = 'unchanged' | 'written';
 
-export const codexRulesText = (rules: CodexRules): string =>
-    [
-        `# Written by ${rules.app}; it is rewritten when it changes.`,
-        ...rules.commands.map((command) => `prefix_rule(pattern=[${JSON.stringify(command)}], decision="allow")`)
-    ].join('\n') + '\n';
+export function codexRulesText(rules: CodexRules): string {
+    return (
+        [
+            `# Written by ${rules.app}; it is rewritten when it changes.`,
+            ...rules.commands.map((command) => `prefix_rule(pattern=[${JSON.stringify(command)}], decision="allow")`)
+        ].join('\n') + '\n'
+    );
+}
 
 // Codex loads every `*.rules` file in the `rules` folder of its home, and only from there, never from a flag.
-export const codexRulesPathIn = (folder: string, rules: CodexRules): string =>
-    join(folder, 'rules', `${rules.app.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.rules`);
+export function codexRulesPathIn(folder: string, rules: CodexRules): string {
+    return join(folder, 'rules', `${rules.app.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.rules`);
+}
 
-export const defaultCodexHome = (env: Record<string, string | undefined> = process.env): string => env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex');
+export function defaultCodexHome(env: Record<string, string | undefined> = process.env): string {
+    return env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex');
+}
 
 /* Idempotent: a file that already says the same is left alone. */
-export const installCodexRules = async (path: string, rules: CodexRules): Promise<CodexRulesResult> => {
+export async function installCodexRules(path: string, rules: CodexRules): Promise<CodexRulesResult> {
     const text = codexRulesText(rules);
     try {
         if ((await readFile(path, 'utf8')) === text) {
@@ -45,4 +51,4 @@ export const installCodexRules = async (path: string, rules: CodexRules): Promis
     await mkdir(dirname(path), { recursive: true });
     await writeAtomic(path, text, 0o644);
     return 'written';
-};
+}

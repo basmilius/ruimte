@@ -9,7 +9,9 @@ const targets: CopyTarget[] = [
     { absolute: '/work/app/old.ts', relative: 'old.ts', gone: true }
 ];
 
-const bridge = (copyFiles?: DesktopBridge['copyFiles']): DesktopBridge => ({ platform: 'darwin', copyFiles }) as DesktopBridge;
+function bridge(copyFiles?: DesktopBridge['copyFiles']): DesktopBridge {
+    return { platform: 'darwin', copyFiles } as DesktopBridge;
+}
 
 describe('copiedText', () => {
     test('a line per target for names, paths and relative paths', () => {

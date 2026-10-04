@@ -12,7 +12,7 @@ export interface MenuPoint {
  * Electron reports a webview context menu in embedder-window coordinates. Guest actions need that
  * point translated from the scaled host back into the guest's unscaled CSS pixels.
  */
-export const menuPointFor = (params: { x: number; y: number }, hostRect: HostRect, zoom: number): MenuPoint => {
+export function menuPointFor(params: { x: number; y: number }, hostRect: HostRect, zoom: number): MenuPoint {
     const scale = zoom > 0 ? zoom : 1;
     return {
         window: { x: params.x, y: params.y },
@@ -21,4 +21,4 @@ export const menuPointFor = (params: { x: number; y: number }, hostRect: HostRec
             y: Math.round((params.y - hostRect.top) / scale)
         }
     };
-};
+}

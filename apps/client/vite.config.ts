@@ -20,23 +20,25 @@ const desktopUi = realpathSync(fileURLToPath(new URL('./node_modules/@basmilius/
  * lets a person put it on a Home Screen: Safari clears a site's storage after seven days without a
  * visit, and a Home Screen app is exempt, which is where the session and the client key live.
  */
-const stationHead = (): Plugin => ({
-    name: 'ruimte-station-head',
-    transformIndexHtml: (html) => ({
-        // A browser prefers an SVG icon over any PNG, so the page's own mark would win over the app icon.
-        html: html.replace(/\s*<link rel="icon" href="\/favicon\.svg"[^>]*>/, ''),
-        tags: [
-            { tag: 'link', attrs: { rel: 'manifest', href: '/manifest.webmanifest' }, injectTo: 'head' },
-            { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, injectTo: 'head' },
-            { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' }, injectTo: 'head' },
-            { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16.png' }, injectTo: 'head' },
-            { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
-            { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'Ruimte' }, injectTo: 'head' },
-            // The page runs under the status bar either way on iPadOS; saying so keeps it that way, and `#root` keeps clear of it.
-            { tag: 'meta', attrs: { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }, injectTo: 'head' }
-        ]
-    })
-});
+function stationHead(): Plugin {
+    return {
+        name: 'ruimte-station-head',
+        transformIndexHtml: (html) => ({
+            // A browser prefers an SVG icon over any PNG, so the page's own mark would win over the app icon.
+            html: html.replace(/\s*<link rel="icon" href="\/favicon\.svg"[^>]*>/, ''),
+            tags: [
+                { tag: 'link', attrs: { rel: 'manifest', href: '/manifest.webmanifest' }, injectTo: 'head' },
+                { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, injectTo: 'head' },
+                { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' }, injectTo: 'head' },
+                { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16.png' }, injectTo: 'head' },
+                { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+                { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'Ruimte' }, injectTo: 'head' },
+                // The page runs under the status bar either way on iPadOS; saying so keeps it that way, and `#root` keeps clear of it.
+                { tag: 'meta', attrs: { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }, injectTo: 'head' }
+            ]
+        })
+    };
+}
 
 /*
  * The service worker behind a video over a direct connection (`src/worker/bytes-worker.ts`). A worker
@@ -44,7 +46,7 @@ const stationHead = (): Plugin => ({
  * never a hashed chunk under `/assets/`: a small build of its own, served in dev and written beside
  * `index.html`. The page registers it as `BYTES_WORKER_SCRIPT`.
  */
-const bytesWorker = (): Plugin => {
+function bytesWorker(): Plugin {
     const fileName = 'bytes-worker.js';
     const bundle = async (): Promise<string> => {
         const result = await build({
@@ -53,7 +55,10 @@ const bytesWorker = (): Plugin => {
             publicDir: false,
             logLevel: 'warn',
             resolve: { conditions: ['source', ...defaultClientConditions] },
-            build: { write: false, rolldownOptions: { input: fileURLToPath(new URL('./src/worker/bytes-worker.ts', import.meta.url)), output: { format: 'iife' } } }
+            build: {
+                write: false,
+                rolldownOptions: { input: fileURLToPath(new URL('./src/worker/bytes-worker.ts', import.meta.url)), output: { format: 'iife' } }
+            }
         });
         const output = Array.isArray(result) ? result[0] : result;
         if (!output || !('output' in output)) {
@@ -76,7 +81,7 @@ const bytesWorker = (): Plugin => {
             this.emitFile({ type: 'asset', fileName, source: await bundle() });
         }
     };
-};
+}
 
 /*
  * What pdf.js fetches by folder and file name while it reads a PDF: the wasm decoders, the standard
@@ -85,7 +90,7 @@ const bytesWorker = (): Plugin => {
  * page builds the same path from pdf.js's `version` (`src/shell/panels/PdfFile.tsx`). QuickJS runs a
  * PDF's own scripts, which this viewer never does, so it stays out.
  */
-const pdfjsAssets = (): Plugin => {
+function pdfjsAssets(): Plugin {
     const root = dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json'));
     const version = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }).version;
     const base = `assets/pdfjs-${version}`;
@@ -115,7 +120,7 @@ const pdfjsAssets = (): Plugin => {
             }
         }
     };
-};
+}
 
 export default defineConfig(({ mode }) => ({
     plugins: [react(), tailwindcss(), bytesWorker(), pdfjsAssets(), ...(mode === 'station' ? [stationHead()] : [])],

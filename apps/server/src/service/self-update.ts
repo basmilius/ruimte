@@ -23,7 +23,7 @@ export interface SelfUpdateFacts {
     idle(): boolean;
 }
 
-export const selfUpdateVerdict = (facts: SelfUpdateFacts): SelfUpdateVerdict => {
+export function selfUpdateVerdict(facts: SelfUpdateFacts): SelfUpdateVerdict {
     if (!facts.underService || facts.running === null) {
         return 'off';
     }
@@ -35,18 +35,20 @@ export const selfUpdateVerdict = (facts: SelfUpdateFacts): SelfUpdateVerdict => 
     }
     // Only asked once the build differs, since reading the process table is the one step that costs anything.
     return facts.idle() ? 'update' : 'busy';
-};
+}
 
 /* Where `scripts/compile.ts` writes the id, beside the binary, so the new id is read without running the new binary. */
-export const buildFileOf = (executable: string): string => join(dirname(executable), 'ruimte.build');
+export function buildFileOf(executable: string): string {
+    return join(dirname(executable), 'ruimte.build');
+}
 
-export const readBuildFile = (path: string, read: (path: string) => string = (file) => readFileSync(file, 'utf8')): string | null => {
+export function readBuildFile(path: string, read: (path: string) => string = (file) => readFileSync(file, 'utf8')): string | null {
     try {
         return read(path).trim() || null;
     } catch {
         return null;
     }
-};
+}
 
 export interface SelfUpdateTimers {
     every(ms: number, run: () => void): () => void;

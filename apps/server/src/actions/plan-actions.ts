@@ -8,10 +8,12 @@ import type { ServerActionContext } from './context.ts';
 const HELP_LINE = 'detail\truimte-context help plan';
 
 /* The plan store holds a person-only step against anyone who is not a person, whoever runs the action. */
-const planActorOf = (actor: ActionActor): PlanActor => (actor.kind === 'person' ? 'person' : 'agent');
+function planActorOf(actor: ActionActor): PlanActor {
+    return actor.kind === 'person' ? 'person' : 'agent';
+}
 
 /* The chat the caller is: a plan is kept beside a chat's record, and a terminal has none. */
-const callerChat = async ({ host, place }: ServerActionContext, caller: string): Promise<string> => {
+async function callerChat({ host, place }: ServerActionContext, caller: string): Promise<string> {
     const kind = callerKind(await host.read(place.projectId), caller);
     if (kind !== 'chat') {
         throw new VerbRefusal(
@@ -20,14 +22,18 @@ const callerChat = async ({ host, place }: ServerActionContext, caller: string):
         );
     }
     return caller;
-};
+}
 
-const planRow = (plan: Plan): string => `plan\t${plan.id}\t${plan.meta.kind}\t${field(plan.meta.title)}\t${field(progressText(plan))}`;
+function planRow(plan: Plan): string {
+    return `plan\t${plan.id}\t${plan.meta.kind}\t${field(plan.meta.title)}\t${field(progressText(plan))}`;
+}
 
-const plansOrNote = (plans: readonly Plan[]): string[] => orNote(plans.map(planRow), 'This chat has no plan; ruimte-context plan new makes one');
+function plansOrNote(plans: readonly Plan[]): string[] {
+    return orNote(plans.map(planRow), 'This chat has no plan; ruimte-context plan new makes one');
+}
 
 /* A refusal of the store, with what the agent can do next beside it. */
-const refused = async (host: CanvasHost, chatId: string, refusal: PlanRefusal): Promise<VerbRefusal> => {
+async function refused(host: CanvasHost, chatId: string, refusal: PlanRefusal): Promise<VerbRefusal> {
     switch (refusal.code) {
         case 'plan-not-found':
             return new VerbRefusal(refusal.code, refusal.message, plansOrNote(await host.plans.read(chatId)));
@@ -49,27 +55,29 @@ const refused = async (host: CanvasHost, chatId: string, refusal: PlanRefusal): 
         default:
             return new VerbRefusal(refusal.code, refusal.message);
     }
-};
+}
 
 /* Operations of the caller on its own plan, all or nothing, or the store's refusal with what to do instead. */
-const applyOps = async (actor: ActionActor, context: ServerActionContext, planId: string | null, ops: PlanOp[]): Promise<PlanApplied> => {
+async function applyOps(actor: ActionActor, context: ServerActionContext, planId: string | null, ops: PlanOp[]): Promise<PlanApplied> {
     const chatId = await callerChat(context, actor.id);
     const applied = await context.host.plans.apply(chatId, planId ?? undefined, ops, planActorOf(actor));
     if (!applied.ok) {
         throw await refused(context.host, chatId, applied);
     }
     return applied;
-};
+}
 
-const changed = (applied: PlanApplied) => ({ output: { plan: applied.plan, dropped: applied.dropped } });
+function changed(applied: PlanApplied) {
+    return { output: { plan: applied.plan, dropped: applied.dropped } };
+}
 
-const parseJson = (source: string): unknown => {
+function parseJson(source: string): unknown {
     try {
         return JSON.parse(source);
     } catch (e) {
         throw new VerbRefusal('bad-json', `The document is not JSON: ${e instanceof Error ? e.message : 'it does not parse'}`, [HELP_LINE]);
     }
-};
+}
 
 export const planActions: ActionHandlers<ServerActionContext> = {
     'plan.list': async (_input, { actor, context }) => ({

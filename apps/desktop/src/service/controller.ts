@@ -57,7 +57,9 @@ export interface ServiceController {
     unsettled(): boolean;
 }
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 export const UNPROVEN =
     'Something else answers where this machine should be, and it could not prove that it belongs to you, so Ruimte does not connect to it. If it is an earlier Ruimte started from a terminal, stop or update it and open Ruimte again.';
@@ -67,7 +69,7 @@ const RESPAWNS = 5;
 const STAYED_UP_MS = 60_000;
 const FIRST_PAUSE_MS = 1000;
 
-export const createServiceController = (deps: ServiceControllerDeps): ServiceController => {
+export function createServiceController(deps: ServiceControllerDeps): ServiceController {
     let owner: DaemonOwner | null = null;
     let failure: string | null = null;
     let pendingRestart: PendingRestart | null = null;
@@ -306,4 +308,4 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             return pendingRestart !== null || (staleDefinition && owner === 'service');
         }
     };
-};
+}

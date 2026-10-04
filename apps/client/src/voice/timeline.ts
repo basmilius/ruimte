@@ -5,7 +5,7 @@ export type VoiceTimelineEntry =
     | { kind: 'action'; item: VoiceAction }
     | { kind: 'action-group'; items: VoiceAction[]; order: number };
 
-export const voiceTimeline = (transcript: VoiceUtterance[], actions: VoiceAction[]): VoiceTimelineEntry[] => {
+export function voiceTimeline(transcript: VoiceUtterance[], actions: VoiceAction[]): VoiceTimelineEntry[] {
     const ordered: VoiceTimelineEntry[] = [
         ...transcript.map((item): VoiceTimelineEntry => ({ kind: 'utterance', item })),
         ...actions.map((item): VoiceTimelineEntry => ({ kind: 'action', item }))
@@ -24,4 +24,4 @@ export const voiceTimeline = (transcript: VoiceUtterance[], actions: VoiceAction
         }
     }
     return grouped;
-};
+}

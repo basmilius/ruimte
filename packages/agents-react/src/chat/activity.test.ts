@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatBackgroundTask } from '@ruimte/agent-contracts';
 import { backgroundCounts } from './activity';
 
-const task = (id: string, kind: ChatBackgroundTask['kind']): ChatBackgroundTask => ({ id, kind, description: '', command: null, startedAt: 0 });
+function task(id: string, kind: ChatBackgroundTask['kind']): ChatBackgroundTask {
+    return { id, kind, description: '', command: null, startedAt: 0 };
+}
 
 describe('chat activity', () => {
     test('splits what runs in the background into shells and monitors', () => {

@@ -7,24 +7,26 @@ import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'term-other', kind: 'terminal', title: 'Other', x: 0, y: 700, w: 560, h: 360 }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'term-other', kind: 'terminal', title: 'Other', x: 0, y: 700, w: 560, h: 360 }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let root: string;
 let store: ProjectStore;
@@ -47,13 +49,18 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const operation = (caller: string, id: string): Promise<string[]> => runVerb(daemon, caller, 'operation', ['get', id]);
+function operation(caller: string, id: string): Promise<string[]> {
+    return runVerb(daemon, caller, 'operation', ['get', id]);
+}
 
-const firstTurnDone = (chatId: string): boolean =>
-    daemon.chats
-        .get(chatId)
-        ?.thread.list()
-        .some((item): item is ChatTurnItem => item.kind === 'turn' && item.state === 'done') === true;
+function firstTurnDone(chatId: string): boolean {
+    return (
+        daemon.chats
+            .get(chatId)
+            ?.thread.list()
+            .some((item): item is ChatTurnItem => item.kind === 'turn' && item.state === 'done') === true
+    );
+}
 
 test('a start with a task is queued until the outbox runs it, running while the task is open, and completed once it is done', async () => {
     const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--task', 'Lexer', '--prompt', 'fix the lexer']);

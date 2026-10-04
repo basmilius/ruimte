@@ -5,19 +5,21 @@ import { VerbRefusal, canvasFor, field, orNote, type ChatRequestHost } from '../
 import type { ServerActionContext } from './context.ts';
 
 /* One row per request an agent waits on, which is what a refusal of `answer` offers instead. */
-const requestLine = (nodeId: string, item: ChatQuestionItem | ChatApprovalItem): string =>
-    item.kind === 'question'
+function requestLine(nodeId: string, item: ChatQuestionItem | ChatApprovalItem): string {
+    return item.kind === 'question'
         ? `question\t${nodeId}\t${item.requestId}\t${item.questions.map((question) => `${question.id}: ${field(question.question)}`).join(' | ')}`
         : `approval\t${nodeId}\t${item.requestId}\t${field(item.toolName)}\ta person's alone`;
+}
 
-const waitingLines = (requests: ChatRequestHost, nodeId: string): string[] =>
-    orNote(
+function waitingLines(requests: ChatRequestHost, nodeId: string): string[] {
+    return orNote(
         requests.waiting(nodeId).map((item) => requestLine(nodeId, item)),
         `${nodeId} waits on no question now`
     );
+}
 
 /* The answers keyed by question id, from the one answer or the map a call gave, refused while one is missing. */
-const answersFor = (item: ChatQuestionItem, answer: string | null, answers: Record<string, string> | null): Record<string, string> => {
+function answersFor(item: ChatQuestionItem, answer: string | null, answers: Record<string, string> | null): Record<string, string> {
     const ids = item.questions.map((question) => question.id);
     if (answer !== null && answers !== null) {
         throw new VerbRefusal('answer-twice', '--answer and --answers both carry the answer; give one of them');
@@ -45,7 +47,7 @@ const answersFor = (item: ChatQuestionItem, answer: string | null, answers: Reco
         );
     }
     return given;
-};
+}
 
 export const agentActions: ActionHandlers<ServerActionContext> = {
     'agent.answer': async ({ nodeId, requestId, answer, answers }, { actor, context }) => {

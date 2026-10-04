@@ -33,7 +33,7 @@ const ACCOUNT_DELETION = [
 ];
 
 /* Ends Sign in with Apple for Ruimte at Apple with the code the iOS app sent; null when it did. */
-const revokeApple = async (env: Env, accountId: string, authorizationCode: string): Promise<Response | null> => {
+async function revokeApple(env: Env, accountId: string, authorizationCode: string): Promise<Response | null> {
     const identity = await env.DB.prepare("SELECT subject FROM identity WHERE account_id = ?1 AND provider = 'apple'")
         .bind(accountId)
         .first<{ subject: string }>();
@@ -52,7 +52,7 @@ const revokeApple = async (env: Env, accountId: string, authorizationCode: strin
         return failure('apple-revocation-failed', 'Apple did not end Sign in with Apple for Ruimte, so the account is still here. Try again.');
     }
     return null;
-};
+}
 
 /*
  * `DELETE /v1/account`. Besides a live access token the body carries the name the person typed, compared
@@ -60,7 +60,7 @@ const revokeApple = async (env: Env, accountId: string, authorizationCode: strin
  * nothing, so the app can try again. One batch, so an account is either all there or all gone; a sign-in
  * with one of its identities afterwards opens a new account.
  */
-export const deleteAccount = async (request: Request, env: Env): Promise<Response> => {
+export async function deleteAccount(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return failure('unauthorized', 'Sign in again');
@@ -87,4 +87,4 @@ export const deleteAccount = async (request: Request, env: Env): Promise<Respons
     }
     await env.DB.batch(ACCOUNT_DELETION.map((query) => env.DB.prepare(query).bind(session.account.id)));
     return noContent();
-};
+}

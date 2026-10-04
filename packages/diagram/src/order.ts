@@ -10,7 +10,7 @@ const SWEEPS = 12;
  * in every layer, and a unit that is not in a group stays on the same side of a group from one layer
  * to the next inside it, so no hop has to cross a group it does not belong to.
  */
-export const orderLayers = (layering: Layering): void => {
+export function orderLayers(layering: Layering): void {
     const { units, hops, bands, items } = layering;
     const position = new Array<number>(units.length).fill(0);
     const bandPosition = bands.map((band) => new Array<number>(band.last - band.first + 1).fill(0));
@@ -232,4 +232,4 @@ export const orderLayers = (layering: Layering): void => {
         band.members = best.members[index]!;
         band.rank = best.ranks[index]!;
     });
-};
+}

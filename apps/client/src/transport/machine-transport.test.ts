@@ -5,15 +5,17 @@ import { MachineTransports } from './machine-transport';
 import { TransportPool, type PooledTransport } from './pool';
 import type { ConnectionState, TransportStatus } from './transport';
 
-const endpoint = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: null,
-    daemonPublicKey: null
-});
+function endpoint(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: null,
+        daemonPublicKey: null
+    };
+}
 
 class FakeLink implements PooledTransport {
     connection: ConnectionState = { status: 'connecting', attempts: 0, retryAt: null };
@@ -54,7 +56,7 @@ class FakeLink implements PooledTransport {
     dispose(): void {}
 }
 
-const setup = () => {
+function setup() {
     const opened: FakeLink[] = [];
     const pool = new TransportPool({
         idleMs: 1,
@@ -65,7 +67,7 @@ const setup = () => {
         }
     });
     return { pool, opened, transports: new MachineTransports(pool) };
-};
+}
 
 describe('the transport of one machine', () => {
     test('is the same object for a machine, and making it opens no link', async () => {

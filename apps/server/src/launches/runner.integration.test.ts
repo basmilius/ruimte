@@ -24,14 +24,16 @@ let store: LaunchStore;
 let runner: LaunchRunner;
 let statuses: LaunchStatus[];
 
-const freePort = (): number => {
+function freePort(): number {
     const probe = Bun.serve({ port: 0, fetch: () => new Response('') });
     const port = probe.port!;
     probe.stop(true);
     return port;
-};
+}
 
-const lastOf = (launchId: string): LaunchStatus | undefined => statuses.findLast((status) => status.launchId === launchId);
+function lastOf(launchId: string): LaunchStatus | undefined {
+    return statuses.findLast((status) => status.launchId === launchId);
+}
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-launch-')));

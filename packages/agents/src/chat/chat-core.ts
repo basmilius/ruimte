@@ -65,14 +65,15 @@ export interface InterruptedRun {
 type BookmarkableItem = Extract<ChatItem, { kind: 'user' | 'assistant' }>;
 
 /* A message a person or the agent wrote in the chat's own thread; a subagent's words belong to its row. */
-const isBookmarkable = (item: ChatItem): item is BookmarkableItem =>
-    item.kind === 'user' || (item.kind === 'assistant' && (item.parentToolUseId ?? null) === null);
+function isBookmarkable(item: ChatItem): item is BookmarkableItem {
+    return item.kind === 'user' || (item.kind === 'assistant' && (item.parentToolUseId ?? null) === null);
+}
 
 /* The start of a message on one line; a message of only attachments is its file names. */
-const excerptOf = (item: BookmarkableItem): string => {
+function excerptOf(item: BookmarkableItem): string {
     const files = item.kind === 'user' ? (item.attachments ?? []).map((attachment) => attachment.name).join(', ') : '';
     return (item.text.trim() === '' ? files : item.text).replace(/\s+/g, ' ').trim();
-};
+}
 
 // One process worked on the turn and one more may take it up after a restart; a loop of resumes could redo a command forever.
 const MAX_ATTEMPTS = 2;
@@ -1196,17 +1197,19 @@ export class ChatCore {
 }
 
 /* The hooks of one chat, over the core's own. */
-const limitHooks = (hooks: NonNullable<ChatCoreOptions['limitResume']>, chatId: string): LimitResumeHooks => ({
-    allowed: () => hooks.allowed(),
-    now: () => hooks.now(),
-    owe: (turnId, at) => hooks.owe(chatId, turnId, at),
-    lapse: () => hooks.lapse(chatId),
-    owed: () => hooks.owed(chatId)
-});
+function limitHooks(hooks: NonNullable<ChatCoreOptions['limitResume']>, chatId: string): LimitResumeHooks {
+    return {
+        allowed: () => hooks.allowed(),
+        now: () => hooks.now(),
+        owe: (turnId, at) => hooks.owe(chatId, turnId, at),
+        lapse: () => hooks.lapse(chatId),
+        owed: () => hooks.owed(chatId)
+    };
+}
 
 /* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */
-const interruptedTurn = (record: { info: ChatInfo; items: ChatItem[] }): Extract<ChatItem, { kind: 'turn' }> | null => {
+function interruptedTurn(record: { info: ChatInfo; items: ChatItem[] }): Extract<ChatItem, { kind: 'turn' }> | null {
     const turnId = record.info.activeTurnId;
     const turn = turnId === null ? undefined : record.items.find((item) => item.id === turnId);
     return turn?.kind === 'turn' && turn.state === 'running' ? turn : null;
-};
+}

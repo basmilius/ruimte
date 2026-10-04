@@ -7,14 +7,15 @@ export const VIEW_MARGIN = 96;
 /* How long a node stays live after leaving the viewport; a pan across it never thrashes. */
 const OFFSCREEN_GRACE_MS = 10_000;
 
-export const useNodeInViewport = (id: string): boolean =>
-    useCanvas((s) => {
+export function useNodeInViewport(id: string): boolean {
+    return useCanvas((s) => {
         const node = s.nodes[id];
         if (!node || s.viewport.w === 0) {
             return true;
         }
         return intersects(node, visibleRect(s.camera, s.viewport, VIEW_MARGIN));
     });
+}
 
 /*
  * Under this a node is a few dozen pixels tall, a shape on the canvas rather than something anyone
@@ -23,10 +24,12 @@ export const useNodeInViewport = (id: string): boolean =>
  */
 export const READABLE_ZOOM = 0.4;
 
-export const useReadableZoom = (): boolean => useCanvas((s) => s.camera.zoom >= READABLE_ZOOM);
+export function useReadableZoom(): boolean {
+    return useCanvas((s) => s.camera.zoom >= READABLE_ZOOM);
+}
 
 /* True while visible and for a grace period after; the caller unmounts the live view when it turns false. */
-export const useHeldWhileVisible = (visible: boolean): boolean => {
+export function useHeldWhileVisible(visible: boolean): boolean {
     const [held, setHeld] = useState(true);
     // Re-arming the hold is derived while rendering: an effect would cost an extra render each time.
     if (visible && !held) {
@@ -40,4 +43,4 @@ export const useHeldWhileVisible = (visible: boolean): boolean => {
         return () => window.clearTimeout(timer);
     }, [visible]);
     return visible || held;
-};
+}

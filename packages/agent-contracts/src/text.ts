@@ -5,7 +5,7 @@ const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
  * cut only between characters as a person sees them. A cut between the halves of a surrogate pair
  * leaves a lone half, which JSON writes as an escape the iPhone app refuses along with its whole frame.
  */
-export const clipText = (text: string, max: number): string => {
+export function clipText(text: string, max: number): string {
     if (text.length <= max) {
         return text;
     }
@@ -17,4 +17,4 @@ export const clipText = (text: string, max: number): string => {
         end += segment.length;
     }
     return text.slice(0, end);
-};
+}

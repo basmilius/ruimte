@@ -3,14 +3,16 @@ import type { ComputerUseStatus } from '@ruimte/contracts';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { canSwitch, computerSetupOf, opensSystemSettings, recheckOf, setupLine, showsGrants } from './setup';
 
-const status = (patch: Partial<ComputerUseStatus> = {}): ComputerUseStatus => ({
-    enabled: true,
-    present: true,
-    running: true,
-    accessibility: true,
-    screenRecording: true,
-    ...patch
-});
+function status(patch: Partial<ComputerUseStatus> = {}): ComputerUseStatus {
+    return {
+        enabled: true,
+        present: true,
+        running: true,
+        accessibility: true,
+        screenRecording: true,
+        ...patch
+    };
+}
 
 describe('the setup of computer use', () => {
     test('a machine that is no Mac is macOS only, whatever it answered', () => {

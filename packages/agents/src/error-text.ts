@@ -5,7 +5,7 @@
  */
 
 /** The message of an error, or its whole stack with `debug` set. */
-export const describeError = (error: unknown, debug: boolean): string => {
+export function describeError(error: unknown, debug: boolean): string {
     if (!(error instanceof Error)) {
         return String(error);
     }
@@ -13,14 +13,16 @@ export const describeError = (error: unknown, debug: boolean): string => {
         return error.stack ?? `${error.name}: ${error.message}`;
     }
     return error.message === '' ? error.name : error.message;
-};
+}
 
 // The host decides once whether a stack is worth showing; the package reads no variable of its own.
 let showStacks = false;
 
-export const setErrorStacks = (on: boolean): void => {
+export function setErrorStacks(on: boolean): void {
     showStacks = on;
-};
+}
 
 /** `describeError` as the host set it, for a log line or a note. */
-export const errorText = (error: unknown): string => describeError(error, showStacks);
+export function errorText(error: unknown): string {
+    return describeError(error, showStacks);
+}

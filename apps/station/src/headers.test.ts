@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { CONTENT_SECURITY_POLICY, notFoundForMissingAsset, withSecurityHeaders } from './headers';
 
-const directive = (name: string): string[] =>
-    CONTENT_SECURITY_POLICY.split(';')
-        .map((part) => part.trim().split(/\s+/))
-        .find((parts) => parts[0] === name)
-        ?.slice(1) ?? [];
+function directive(name: string): string[] {
+    return (
+        CONTENT_SECURITY_POLICY.split(';')
+            .map((part) => part.trim().split(/\s+/))
+            .find((parts) => parts[0] === name)
+            ?.slice(1) ?? []
+    );
+}
 
 describe('the station headers', () => {
     test('run no inline script and let nothing frame the page', () => {

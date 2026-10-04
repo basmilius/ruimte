@@ -20,23 +20,25 @@ import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'chat-child', kind: 'chat', title: 'Child', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
-            texts: [],
-            edges: [],
-            layouts: []
-        },
-        // A chat that is a view of its own rather than a node. The index places it the same way.
-        { kind: 'chat', id: 'chat-view', name: 'Chat', node: { provider: 'claude' } }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-child', kind: 'chat', title: 'Child', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
+                texts: [],
+                edges: [],
+                layouts: []
+            },
+            // A chat that is a view of its own rather than a node. The index places it the same way.
+            { kind: 'chat', id: 'chat-view', name: 'Chat', node: { provider: 'claude' } }
+        ]
+    };
+}
 
 /* One run of the daemon over a home. What it loads from disk, the chats and the outbox that owes their resumes. */
 interface Daemon {
@@ -77,7 +79,7 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
+async function boot(spawn?: SpawnChatProcess): Promise<Daemon> {
     const outbox = new OutboxStore(home);
     await outbox.load();
     const claude = inProcess(fakeClaude);
@@ -146,10 +148,10 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
     };
     running.push(daemon);
     return daemon;
-};
+}
 
 /* The first daemon. The child is in the middle of a turn when it goes down. */
-const interruptChild = async (provider: 'claude' | 'codex' = 'claude', chatId = 'chat-child'): Promise<{ turnId: string; agentSessionId: string }> => {
+async function interruptChild(provider: 'claude' | 'codex' = 'claude', chatId = 'chat-child'): Promise<{ turnId: string; agentSessionId: string }> {
     const daemon = await boot();
     daemon.worker.start();
     await daemon.chats.create({ chatId, cwd: folder, provider });
@@ -161,9 +163,11 @@ const interruptChild = async (provider: 'claude' | 'codex' = 'claude', chatId = 
     running.splice(running.indexOf(daemon), 1);
     await daemon.stop();
     return { turnId, agentSessionId };
-};
+}
 
-const turnOf = (daemon: Daemon, turnId: string, chatId = 'chat-child'): ChatItem | undefined => daemon.chats.get(chatId)?.thread.get(turnId);
+function turnOf(daemon: Daemon, turnId: string, chatId = 'chat-child'): ChatItem | undefined {
+    return daemon.chats.get(chatId)?.thread.get(turnId);
+}
 
 describe('resume-run', () => {
     test('a child the daemon stopped in the middle of a turn goes on with --resume under the same turn, as its second attempt', async () => {

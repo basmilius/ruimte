@@ -22,8 +22,9 @@ import { useUi } from '@/state/ui';
 
 /* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
    pane draws, so the words are the ones the interface is in right now. */
-const runtimeModeItems = (): SelectItem<RuntimeMode>[] =>
-    RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
+function runtimeModeItems(): SelectItem<RuntimeMode>[] {
+    return RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
+}
 
 const KEEP_AWAKE_DESCRIPTIONS = {
     off: null,

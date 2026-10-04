@@ -34,18 +34,24 @@ export interface OutputGateOptions {
 }
 
 /* The session a frame streams output for, or null for every other frame; only output is gated. */
-const outputSessionId = (frame: ServerFrame): string | null => {
+function outputSessionId(frame: ServerFrame): string | null {
     if (!('event' in frame) || frame.event !== 'session.output') {
         return null;
     }
     return (frame.payload as SessionOutputEvent).sessionId;
-};
+}
 
-const deviceFrameOf = (frame: ServerFrame): DeviceFrame | null => ('event' in frame && frame.event === 'device.frame' ? (frame.payload as DeviceFrame) : null);
+function deviceFrameOf(frame: ServerFrame): DeviceFrame | null {
+    return 'event' in frame && frame.event === 'device.frame' ? (frame.payload as DeviceFrame) : null;
+}
 
-const replaceableFrame = (frame: ServerFrame): boolean => 'event' in frame && frame.event === 'browser.frame';
+function replaceableFrame(frame: ServerFrame): boolean {
+    return 'event' in frame && frame.event === 'browser.frame';
+}
 
-const deviceStreamKey = (stream: DeviceStream): string => JSON.stringify([stream.backendId, stream.deviceId]);
+function deviceStreamKey(stream: DeviceStream): string {
+    return JSON.stringify([stream.backendId, stream.deviceId]);
+}
 
 /*
  * Drops terminal output and live frames above the socket's high-water mark to bound memory. Once

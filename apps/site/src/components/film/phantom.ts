@@ -3,8 +3,12 @@
 
 type Point = readonly [number, number];
 
-const round = (value: number): number => Math.floor(value * 100 + 0.5) / 100;
-const fmt = ([x, y]: Point): string => `${round(x)} ${round(y)}`;
+function round(value: number): number {
+    return Math.floor(value * 100 + 0.5) / 100;
+}
+function fmt([x, y]: Point): string {
+    return `${round(x)} ${round(y)}`;
+}
 
 function poly(corners: readonly Point[]): string {
     return `M ${fmt(corners[0])} ${corners

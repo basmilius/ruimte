@@ -10,7 +10,7 @@ const scopes = new Map<string, ChatScope>();
  * The same object for as long as the id stands, so what reads it through a context is not redrawn.
  * Both are looked up when asked for, since a row that learns its daemon id moves them under the new id.
  */
-export const chatScopeOf = (endpointId: string): ChatScope => {
+export function chatScopeOf(endpointId: string): ChatScope {
     let scope = scopes.get(endpointId);
     if (scope === undefined) {
         scope = {
@@ -28,4 +28,4 @@ export const chatScopeOf = (endpointId: string): ChatScope => {
         scopes.set(endpointId, scope);
     }
     return scope;
-};
+}

@@ -3,7 +3,7 @@ import type { ConnectionState, TransportStatus } from '../transport/transport';
 import { watchLastSeen, type LastSeenSource } from './last-seen';
 
 /* A pool in memory: which machines have a link, and in which state. */
-const fakeSource = () => {
+function fakeSource() {
     const states = new Map<string, TransportStatus>();
     const listeners = new Set<() => void>();
     const source: LastSeenSource = {
@@ -27,7 +27,7 @@ const fakeSource = () => {
         }
     };
     return { source, set };
-};
+}
 
 describe('when a machine last had a link', () => {
     test('is noted when its link opens and again when it stops being open', () => {

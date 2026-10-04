@@ -108,7 +108,9 @@ const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
-const isPathQuery = (query: string): boolean => query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
+function isPathQuery(query: string): boolean {
+    return query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
+}
 
 const BROWSE_DEBOUNCE_MS = 60;
 
@@ -146,27 +148,31 @@ interface BrowseAnswer {
  * machine is asking for it, so its link is brought up first; a machine forgotten mid-browse fails
  * there with its reason.
  */
-const requestBrowse = async (endpointId: string, partialPath: string, cwd: string | null, fallback: Transport): Promise<BrowseAnswer> => {
+async function requestBrowse(endpointId: string, partialPath: string, cwd: string | null, fallback: Transport): Promise<BrowseAnswer> {
     try {
         const socket = transportFor(await ensureMachine(endpointId)) ?? fallback;
         return { result: await socket.request('fs.browse', { partialPath, cwd: cwd ?? undefined }), failure: null };
     } catch (e) {
         return { result: null, failure: e instanceof Error ? e.message : i18next.t('shell:palette.unreadablePath') };
     }
-};
+}
 
 /* What a listing is of. The separator is one no path can carry, so two of them never read as one. */
-const browseKey = (endpointId: string, path: string): string => `${endpointId}\u0000${path}`;
+function browseKey(endpointId: string, path: string): string {
+    return `${endpointId}\u0000${path}`;
+}
 
 const LIST_ID = 'palette-list';
-const optionId = (index: number): string => `palette-option-${index}`;
+function optionId(index: number): string {
+    return `palette-option-${index}`;
+}
 
-const matches = (query: string, text: string): boolean => {
+function matches(query: string, text: string): boolean {
     // Every typed word has to appear somewhere, in any order.
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const haystack = text.toLowerCase();
     return words.every((word) => haystack.includes(word));
-};
+}
 
 /* One of the three switches that narrow a search in files, drawn as the pressed gray key every
    other toggle in the app uses. */

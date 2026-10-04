@@ -36,10 +36,10 @@ const RESUME_GRACE_MS = 15_000;
 
 /* What a fresh screen says before the shell has printed anything: the linked context, then whatever
    was left for this node while it did not exist. */
-const motdOf = (hint: string | null, notices: readonly string[]): string | undefined => {
+function motdOf(hint: string | null, notices: readonly string[]): string | undefined {
     const lines = [...(hint === null ? [] : [hint]), ...notices];
     return lines.length === 0 ? undefined : lines.join('\n');
-};
+}
 
 export class SessionError extends CodedError<SessionErrorCode> {}
 
@@ -47,7 +47,9 @@ export type SessionEvent = { [E in EventType]: { event: E; payload: EventMap[E] 
 
 export type SessionSink = (event: SessionEvent) => void;
 
-const sizeOf = (session: Session): { cols: number; rows: number } => ({ cols: session.cols, rows: session.rows });
+function sizeOf(session: Session): { cols: number; rows: number } {
+    return { cols: session.cols, rows: session.rows };
+}
 
 interface CreateSessionOptions {
     sessionId: string;

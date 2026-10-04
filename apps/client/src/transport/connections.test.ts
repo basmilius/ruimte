@@ -43,9 +43,8 @@ const project: ProjectSummary = {
 };
 
 /* What a daemon answers a workspace with, so a project opens without a socket; `refuse` makes the open fail. */
-const answer =
-    (refuse: { open: boolean }) =>
-    (type: RequestType): Promise<RequestMap[RequestType]['result']> => {
+function answer(refuse: { open: boolean }) {
+    return (type: RequestType): Promise<RequestMap[RequestType]['result']> => {
         if (type === 'project.open') {
             return refuse.open
                 ? Promise.reject(new Error('That project is gone'))
@@ -68,9 +67,10 @@ const answer =
         }
         return Promise.resolve({} as RequestMap[RequestType]['result']);
     };
+}
 
 /* Counts what is subscribed and not yet let go of, by wrapping the method that hands out the unsubscribe. */
-const countLive = <T extends object, K extends keyof T>(target: T, method: K): { live: () => number; restore: () => void } => {
+function countLive<T extends object, K extends keyof T>(target: T, method: K): { live: () => number; restore: () => void } {
     let live = 0;
     const original = (target[method] as (...args: unknown[]) => () => void).bind(target);
     const spy = spyOn(target, method).mockImplementation(((...args: unknown[]) => {
@@ -86,7 +86,7 @@ const countLive = <T extends object, K extends keyof T>(target: T, method: K): {
         };
     }) as never);
     return { live: () => live, restore: () => spy.mockRestore() };
-};
+}
 
 describe('a workspace and the link of its machine', () => {
     const refuse = { open: false };

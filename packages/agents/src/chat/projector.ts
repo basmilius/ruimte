@@ -17,7 +17,7 @@ import type { ChatThread } from './thread.ts';
  * Content of the main conversation, which the CLI only writes inside a turn it closes with a `result`.
  * A frame that carries a parent tool call is a subagent talking inside its own row.
  */
-export const isMainAgentOutput = (event: BackendEvent): boolean => {
+export function isMainAgentOutput(event: BackendEvent): boolean {
     switch (event.type) {
         case 'text.done':
             return !event.parentRef;
@@ -30,28 +30,35 @@ export const isMainAgentOutput = (event: BackendEvent): boolean => {
         default:
             return false;
     }
-};
+}
 
 /*
  * What a turn of the agent's own begins with. A request may come from a background subagent while
  * the CLI runs no turn at all, and a note or a usage line is not the agent starting to work.
  */
-const startsAgentTurn = (event: BackendEvent): boolean =>
-    isMainAgentOutput(event) || ((event.type === 'approval.requested' || event.type === 'question.requested') && event.background !== true);
+function startsAgentTurn(event: BackendEvent): boolean {
+    return isMainAgentOutput(event) || ((event.type === 'approval.requested' || event.type === 'question.requested') && event.background !== true);
+}
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+function str(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
 
 /* A markdown code block around text that may hold backticks of its own. */
-const fenced = (text: string): string => {
+function fenced(text: string): string {
     const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
     const fence = '`'.repeat(Math.max(3, longest + 1));
     return `${fence}\n${text}\n${fence}`;
-};
+}
 
 // The Agent tool is what Claude Code calls a delegation; older builds and other CLIs say Task.
-const isAgentTool = (name: string): boolean => name === 'Agent' || name === 'Task';
+function isAgentTool(name: string): boolean {
+    return name === 'Agent' || name === 'Task';
+}
 
 // What the CLI answers a background launch with; the agent itself only settles much later.
 const LAUNCH_PLACEHOLDER = 'Async agent launched successfully';
@@ -74,7 +81,7 @@ const MAX_SUMMARY_CHARS = 80;
  * report as the summary, so this takes the first line that says something, cut to a length a
  * header can show; the full report itself stays on the subagent's own row.
  */
-export const summaryLine = (summary: string): string => {
+export function summaryLine(summary: string): string {
     const first = summary.split('\n').find((line) => line.trim() !== '') ?? '';
     const text = first.replace(/\s+/g, ' ').trim();
     if (text.length <= MAX_SUMMARY_CHARS) {
@@ -83,15 +90,15 @@ export const summaryLine = (summary: string): string => {
     const cut = clipText(text, MAX_SUMMARY_CHARS);
     const space = cut.lastIndexOf(' ');
     return `${(space > MAX_SUMMARY_CHARS / 2 ? cut.slice(0, space) : cut).trimEnd()}...`;
-};
+}
 
-const usageField = (text: string, name: string): number => {
+function usageField(text: string, name: string): number {
     const match = new RegExp(`${name}:\\s*(\\d+)`).exec(text);
     return match ? Number(match[1]) : 0;
-};
+}
 
 /* The report a foreground subagent ended with, without the footer the CLI adds, plus what it spent. */
-export const stripAgentFooter = (output: string): { text: string | null; usage: ChatSubagentUsage | null } => {
+export function stripAgentFooter(output: string): { text: string | null; usage: ChatSubagentUsage | null } {
     const match = AGENT_FOOTER.exec(output);
     const text = (match ? output.slice(0, match.index) : output).trim();
     const block = match?.[1];
@@ -99,7 +106,7 @@ export const stripAgentFooter = (output: string): { text: string | null; usage: 
         ? { totalTokens: usageField(block, 'subagent_tokens'), toolUses: usageField(block, 'tool_uses'), durationMs: usageField(block, 'duration_ms') }
         : null;
     return { text: text === '' || text === NO_OUTPUT ? null : text, usage };
-};
+}
 
 interface ProjectorOptions {
     // How the CLI is named in the notes a stopped process leaves behind.

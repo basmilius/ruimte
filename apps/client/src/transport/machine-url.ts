@@ -39,7 +39,7 @@ const NOTHING: MachineUrl = { url: null, failure: null };
  * active one. A second workspace or a list that spans machines would otherwise ask the wrong daemon.
  * Null for a machine this client no longer knows.
  */
-export const httpUrlFor = (endpointId: string, resource: MachineResource): string | null => {
+export function httpUrlFor(endpointId: string, resource: MachineResource): string | null {
     const endpoint = endpointById(endpointId);
     if (!endpoint) {
         return null;
@@ -60,9 +60,9 @@ export const httpUrlFor = (endpointId: string, resource: MachineResource): strin
         return `${endpoint.httpBaseUrl}/projects/${encodeURIComponent(resource.projectId)}/icon?${query.toString()}`;
     }
     return `${endpoint.httpBaseUrl}/fs/file?${query.toString()}`;
-};
+}
 
-const wireResourceOf = (resource: MachineResource): ByteResource => {
+function wireResourceOf(resource: MachineResource): ByteResource {
     if (resource.kind === 'attachment') {
         return { kind: 'attachment', chatId: resource.chatId, attachmentId: resource.attachmentId };
     }
@@ -70,10 +70,10 @@ const wireResourceOf = (resource: MachineResource): ByteResource => {
         return { kind: 'projectIcon', projectId: resource.projectId, theme: resource.theme };
     }
     return { kind: 'file', path: resource.path };
-};
+}
 
 /* A file's bytes whole, for something that reads them rather than draws them, over the same way `useMachineUrl` picks. */
-export const readMachineFile = async (endpointId: string, file: { path: string; mtime: number; size: number }, maxBytes: number): Promise<ArrayBuffer> => {
+export async function readMachineFile(endpointId: string, file: { path: string; mtime: number; size: number }, maxBytes: number): Promise<ArrayBuffer> {
     if (endpointById(endpointId)?.direct === true) {
         const transport = transportFor(endpointId);
         if (!transport) {
@@ -91,9 +91,9 @@ export const readMachineFile = async (endpointId: string, file: { path: string; 
         throw new Error(`HTTP ${response.status}`);
     }
     return response.arrayBuffer();
-};
+}
 
-export const machineResourceKey = (endpointId: string, resource: MachineResource): string => {
+export function machineResourceKey(endpointId: string, resource: MachineResource): string {
     if (resource.kind === 'attachment') {
         return JSON.stringify([endpointId, resource.kind, resource.chatId, resource.attachmentId]);
     }
@@ -101,7 +101,7 @@ export const machineResourceKey = (endpointId: string, resource: MachineResource
         return JSON.stringify([endpointId, resource.kind, resource.projectId, resource.theme, resource.version]);
     }
     return JSON.stringify([endpointId, resource.kind, resource.path, resource.mtime, resource.size]);
-};
+}
 
 /*
  * The one way something on screen turns bytes on a machine into a URL. Over a socket that is the HTTP
@@ -112,7 +112,7 @@ export const machineResourceKey = (endpointId: string, resource: MachineResource
  * the bytes worker answers its player's ranges on this page's origin, so it starts at once and never
  * sits in memory whole, and it only falls back to a blob while the worker does not control the page.
  */
-export const useMachineUrl = (resource: MachineResource | null, endpointId?: string): MachineUrl => {
+export function useMachineUrl(resource: MachineResource | null, endpointId?: string): MachineUrl {
     const activeId = useEndpoints((s) => s.activeId);
     const machineId = endpointId ?? activeId;
     const direct = useEndpoints((s) => s.endpoints.find((entry) => entry.id === machineId)?.direct === true);
@@ -165,4 +165,4 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
         return { url: bytesStreamUrl({ machine: machineId, path: resource.path, mtime: resource.mtime, size: resource.size }), failure: null };
     }
     return held !== null && held.key === key ? held.state : NOTHING;
-};
+}

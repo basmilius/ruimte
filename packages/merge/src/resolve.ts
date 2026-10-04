@@ -2,14 +2,17 @@ import type { MergeBlock } from './blocks.ts';
 
 export type MergeSide = 'ours' | 'theirs';
 
-export const sideLines = (block: MergeBlock, side: MergeSide): string[] => (side === 'ours' ? [...block.ours] : [...block.theirs]);
+export function sideLines(block: MergeBlock, side: MergeSide): string[] {
+    return side === 'ours' ? [...block.ours] : [...block.theirs];
+}
 
 /* Both sides, one after the other, for the conflict where the two additions both belong. */
-export const bothLines = (block: MergeBlock, first: MergeSide): string[] =>
-    first === 'ours' ? [...block.ours, ...block.theirs] : [...block.theirs, ...block.ours];
+export function bothLines(block: MergeBlock, first: MergeSide): string[] {
+    return first === 'ours' ? [...block.ours, ...block.theirs] : [...block.theirs, ...block.ours];
+}
 
 /* What a block is worth without anyone choosing: the side that changed, or the change both made. */
-export const autoLines = (block: MergeBlock): string[] | null => {
+export function autoLines(block: MergeBlock): string[] | null {
     switch (block.kind) {
         case 'stable':
         case 'ours':
@@ -20,10 +23,10 @@ export const autoLines = (block: MergeBlock): string[] | null => {
         case 'conflict':
             return null;
     }
-};
+}
 
-const squashed = (lines: readonly string[]): string =>
-    lines
+function squashed(lines: readonly string[]): string {
+    return lines
         .map((line) => {
             const body = line.trim();
             // Indentation is meaning in Python, YAML or a Makefile, so only a blank line loses its own.
@@ -31,29 +34,30 @@ const squashed = (lines: readonly string[]): string =>
             return `${indent}${body.replace(/\s+/g, ' ')}`;
         })
         .join('\n');
+}
 
 /* Where `inner` starts in `outer` as one run of lines, or -1. */
-const runIn = (outer: readonly string[], inner: readonly string[]): number => {
+function runIn(outer: readonly string[], inner: readonly string[]): number {
     for (let start = 0; start + inner.length <= outer.length; start += 1) {
         if (inner.every((line, index) => outer[start + index] === line)) {
             return start;
         }
     }
     return -1;
-};
+}
 
 /*
  * Whether `outer` holds every line of `inner` and adds nothing `inner` took out: a base line among
  * what `outer` adds is one `inner` deleted, and taking `outer` would put it back.
  */
-const covers = (base: readonly string[], outer: readonly string[], inner: readonly string[]): boolean => {
+function covers(base: readonly string[], outer: readonly string[], inner: readonly string[]): boolean {
     const start = runIn(outer, inner);
     if (inner.length === 0 || start < 0) {
         return false;
     }
     const added = [...outer.slice(0, start), ...outer.slice(start + inner.length)];
     return added.every((line) => !base.includes(line) || inner.includes(line));
-};
+}
 
 /*
  * What the wand makes of a conflict, or null for one that needs a person after all. It closes the
@@ -61,7 +65,7 @@ const covers = (base: readonly string[], outer: readonly string[], inner: readon
  * line, and the side that already holds every line of the other without putting back what the other
  * deleted. Anything else is a choice, and a wand that guesses at those is a wand nobody trusts twice.
  */
-export const wandLines = (block: MergeBlock): string[] | null => {
+export function wandLines(block: MergeBlock): string[] | null {
     if (block.kind !== 'conflict') {
         return autoLines(block);
     }
@@ -75,7 +79,7 @@ export const wandLines = (block: MergeBlock): string[] | null => {
         return [...block.theirs];
     }
     return null;
-};
+}
 
 /*
  * A short name for the two sides of one block, so an answer written for it can be checked against
@@ -83,7 +87,7 @@ export const wandLines = (block: MergeBlock): string[] | null => {
  * the stretch does, and it has to read the same on a daemon and in a browser, which rules out the
  * one hash a browser cannot take synchronously.
  */
-export const fingerprint = (block: MergeBlock): string => {
+export function fingerprint(block: MergeBlock): string {
     let hash = 0x811c9dc5;
     for (const line of [...block.ours, '\u0000', ...block.theirs]) {
         for (let index = 0; index < line.length; index += 1) {
@@ -92,7 +96,7 @@ export const fingerprint = (block: MergeBlock): string => {
         hash = Math.imul(hash ^ 0x0a, 0x01000193);
     }
     return (hash >>> 0).toString(16).padStart(8, '0');
-};
+}
 
 /* Where one block landed in the draft, `to` exclusive, so a block is a range a person can act on. */
 export interface MergeSpan {
@@ -114,7 +118,7 @@ export interface MergeDraft {
  * that have already been answered are passed in, which is how a proposal lands in a file nobody has
  * open.
  */
-export const draftOf = (blocks: readonly MergeBlock[], answered: ReadonlyMap<number, readonly string[]> = new Map()): MergeDraft => {
+export function draftOf(blocks: readonly MergeBlock[], answered: ReadonlyMap<number, readonly string[]> = new Map()): MergeDraft {
     const lines: string[] = [];
     const spans: MergeSpan[] = [];
     for (const [index, block] of blocks.entries()) {
@@ -123,4 +127,4 @@ export const draftOf = (blocks: readonly MergeBlock[], answered: ReadonlyMap<num
         spans.push({ block: index, kind: block.kind, from, to: lines.length });
     }
     return { lines, spans };
-};
+}

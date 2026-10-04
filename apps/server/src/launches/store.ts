@@ -98,13 +98,16 @@ interface LoadedLaunches {
     settle: Settled | null;
 }
 
-const sharedPathIn = (folder: string): string => join(folder, PROJECT_DIR, LAUNCHES_FILE);
+function sharedPathIn(folder: string): string {
+    return join(folder, PROJECT_DIR, LAUNCHES_FILE);
+}
 
-const privatePathIn = (folder: string): string => join(folder, PROJECT_DIR, PRIVATE_DIR, LAUNCHES_FILE);
+function privatePathIn(folder: string): string {
+    return join(folder, PROJECT_DIR, PRIVATE_DIR, LAUNCHES_FILE);
+}
 
-const parseWith =
-    <T>(schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } }) =>
-    (text: string): JsonDocumentParse<T> => {
+function parseWith<T>(schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } }) {
+    return (text: string): JsonDocumentParse<T> => {
         let value: unknown;
         try {
             value = JSON.parse(text);
@@ -118,38 +121,52 @@ const parseWith =
         const parsed = schema.safeParse(value);
         return parsed.success ? { kind: 'ok', document: parsed.data } : { kind: 'unreadable' };
     };
+}
 
 const parseShared = parseWith<LaunchesSharedFile>(LaunchesSharedFileSchema);
 
 const parsePrivate = parseWith<LaunchesPrivateFile>(LaunchesPrivateFileSchema);
 
-const serialize = (file: unknown): string => `${JSON.stringify(file, null, 4)}\n`;
+function serialize(file: unknown): string {
+    return `${JSON.stringify(file, null, 4)}\n`;
+}
 
-const restOf = (file: Record<string, unknown>, known: readonly string[]): Record<string, unknown> =>
-    Object.fromEntries(Object.entries(file).filter(([key]) => !known.includes(key)));
+function restOf(file: Record<string, unknown>, known: readonly string[]): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(file).filter(([key]) => !known.includes(key)));
+}
 
 const SHARED_KEYS = ['version', 'launches'];
 
 const PRIVATE_KEYS = ['version', 'rev', 'order', 'launches', 'overlays'];
 
-const launchesOf = (entries: readonly LaunchFileEntry[]): LaunchConfig[] => entries.flatMap((entry) => ('launch' in entry ? [entry.launch] : []));
+function launchesOf(entries: readonly LaunchFileEntry[]): LaunchConfig[] {
+    return entries.flatMap((entry) => ('launch' in entry ? [entry.launch] : []));
+}
 
-const rawOf = (entries: readonly LaunchFileEntry[]): unknown[] => entries.flatMap((entry) => ('raw' in entry ? [entry.raw] : []));
+function rawOf(entries: readonly LaunchFileEntry[]): unknown[] {
+    return entries.flatMap((entry) => ('raw' in entry ? [entry.raw] : []));
+}
 
-const stripEntry = (entry: LaunchConfigEntry): LaunchConfig => {
+function stripEntry(entry: LaunchConfigEntry): LaunchConfig {
     const { shared: _shared, overlay: _overlay, ...launch } = entry;
     return launch;
-};
+}
 
-const isEmptyOverlay = (overlay: LaunchConfigOverlay | undefined): boolean =>
-    overlay === undefined ||
-    Object.entries(overlay).every(([, value]) => value === undefined || (typeof value === 'object' && Object.keys(value as object).length === 0));
+function isEmptyOverlay(overlay: LaunchConfigOverlay | undefined): boolean {
+    return (
+        overlay === undefined ||
+        Object.entries(overlay).every(([, value]) => value === undefined || (typeof value === 'object' && Object.keys(value as object).length === 0))
+    );
+}
 
 /* The approval key: the launch and everything that decides what runs, so a change to any of them asks again. */
-const approvalKeyOf = (launchId: string): string => `launch:${launchId}`;
+function approvalKeyOf(launchId: string): string {
+    return `launch:${launchId}`;
+}
 
-const digestOf = (resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string =>
-    JSON.stringify([resolved.command, resolved.cwd, Object.entries(resolved.env).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))]);
+function digestOf(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string {
+    return JSON.stringify([resolved.command, resolved.cwd, Object.entries(resolved.env).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))]);
+}
 
 /*
  * The launches of every project on this machine: `.ruimte/launches.json`, which a team commits, and
@@ -433,7 +450,7 @@ export class LaunchStore {
 type LaunchFileRead<T> = JsonDocumentRead<T>;
 
 /* A file from a newer Ruimte is refused, never set aside: a later release reads it. */
-const readLaunchFile = async <T>(path: string, parse: (text: string) => JsonDocumentParse<T>, setAside = true): Promise<LaunchFileRead<T>> => {
+async function readLaunchFile<T>(path: string, parse: (text: string) => JsonDocumentParse<T>, setAside = true): Promise<LaunchFileRead<T>> {
     const read = await readJsonDocument(path, parse, { setAside });
     if (read.kind === 'too-new') {
         throw new LaunchError('launches-invalid', tooNewMessage('launch file', read.version, LAUNCHES_VERSION));
@@ -442,11 +459,13 @@ const readLaunchFile = async <T>(path: string, parse: (text: string) => JsonDocu
         console.warn(`Set aside a launch file that would not parse: ${read.setAside}`);
     }
     return read;
-};
+}
 
-const textOf = <T>(read: LaunchFileRead<T>): string | null => (read.kind === 'ok' ? read.text : read.kind === 'missing' ? '' : null);
+function textOf<T>(read: LaunchFileRead<T>): string | null {
+    return read.kind === 'ok' ? read.text : read.kind === 'missing' ? '' : null;
+}
 
-const takeShared = (state: LoadedLaunches, read: LaunchFileRead<LaunchesSharedFile>): void => {
+function takeShared(state: LoadedLaunches, read: LaunchFileRead<LaunchesSharedFile>): void {
     if (read.kind !== 'ok') {
         state.sharedText = read.kind === 'missing' ? '' : state.sharedText;
         state.shared = read.kind === 'missing' ? [] : state.shared;
@@ -455,9 +474,9 @@ const takeShared = (state: LoadedLaunches, read: LaunchFileRead<LaunchesSharedFi
     state.sharedText = read.text;
     state.shared = readLaunchEntries(read.document.launches);
     state.sharedRest = restOf(read.document, SHARED_KEYS);
-};
+}
 
-const takePrivate = (state: LoadedLaunches, read: LaunchFileRead<LaunchesPrivateFile>): void => {
+function takePrivate(state: LoadedLaunches, read: LaunchFileRead<LaunchesPrivateFile>): void {
     if (read.kind !== 'ok') {
         if (read.kind === 'missing') {
             state.privateText = '';
@@ -473,10 +492,10 @@ const takePrivate = (state: LoadedLaunches, read: LaunchFileRead<LaunchesPrivate
     state.order = read.document.order ?? [];
     state.overlays = read.document.overlays ?? {};
     state.privateRest = restOf(read.document, PRIVATE_KEYS);
-};
+}
 
 /* The launches of both files in the order of the menu; one the order does not name goes after, shared first. */
-const ordered = (state: LoadedLaunches): LaunchConfig[] => {
+function ordered(state: LoadedLaunches): LaunchConfig[] {
     const all = [...launchesOf(state.shared), ...launchesOf(state.private)];
     const seen = new Set<string>();
     const unique = all.filter((launch) => {
@@ -491,13 +510,13 @@ const ordered = (state: LoadedLaunches): LaunchConfig[] => {
         .map((launch, index) => ({ launch, index }))
         .sort((a, b) => (rank.get(a.launch.id) ?? state.order.length + a.index) - (rank.get(b.launch.id) ?? state.order.length + b.index))
         .map(({ launch }) => launch);
-};
+}
 
 /*
  * The first rule a list of launches breaks, or null. A folder is held to the project here as far as
  * the words go; the start holds it to the real path again, since a symlink can move in between.
  */
-export const problemIn = (folder: string, worktrees: readonly string[], launches: readonly LaunchConfigEntry[]): string | null => {
+export function problemIn(folder: string, worktrees: readonly string[], launches: readonly LaunchConfigEntry[]): string | null {
     const ids = new Set<string>();
     for (const launch of launches) {
         if (ids.has(launch.id)) {
@@ -538,4 +557,4 @@ export const problemIn = (folder: string, worktrees: readonly string[], launches
         }
     }
     return null;
-};
+}

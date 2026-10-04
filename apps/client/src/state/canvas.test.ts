@@ -5,9 +5,13 @@ import type { CanvasPatch } from '@/project/merge';
 import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, maximizedNodeOf, maximizeTargetOf, patchSnapshot, type CanvasNode } from './canvas';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
-const canvas = () => focusedCanvas().getState();
+function canvas() {
+    return focusedCanvas().getState();
+}
 
-const node = (id: string, x: number, y: number, kind: CanvasNode['kind'] = 'terminal'): CanvasNode => ({ id, kind, title: id, x, y, w: 200, h: 100 });
+function node(id: string, x: number, y: number, kind: CanvasNode['kind'] = 'terminal'): CanvasNode {
+    return { id, kind, title: id, x, y, w: 200, h: 100 };
+}
 
 describe('groups', () => {
     test('a group carries the nodes, texts and nested groups inside it, never the selected ones', () => {

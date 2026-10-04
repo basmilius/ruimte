@@ -24,21 +24,26 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     internal: 500
 };
 
-export const json = (body: unknown, status = 200, headers: HeadersInit = {}): Response => {
+export function json(body: unknown, status = 200, headers: HeadersInit = {}): Response {
     const outgoing = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     new Headers(headers).forEach((value, name) => outgoing.set(name, value));
     return new Response(JSON.stringify(body), { status, headers: outgoing });
-};
+}
 
-export const failure = (code: AddressBookErrorCode, message: string, headers: HeadersInit = {}): Response =>
-    json({ error: { code, message } }, STATUS_OF[code], headers);
+export function failure(code: AddressBookErrorCode, message: string, headers: HeadersInit = {}): Response {
+    return json({ error: { code, message } }, STATUS_OF[code], headers);
+}
 
-export const noContent = (): Response => new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
+export function noContent(): Response {
+    return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
+}
 
-export const clientIp = (request: Request): string => request.headers.get('cf-connecting-ip') ?? 'unknown';
+export function clientIp(request: Request): string {
+    return request.headers.get('cf-connecting-ip') ?? 'unknown';
+}
 
 // A parsed body, or the response that says why there is none.
-export const readBody = async <T>(request: Request, schema: z.ZodType<T>, maxBytes = MAX_BODY_BYTES): Promise<{ value: T } | { response: Response }> => {
+export async function readBody<T>(request: Request, schema: z.ZodType<T>, maxBytes = MAX_BODY_BYTES): Promise<{ value: T } | { response: Response }> {
     const text = await request.text();
     if (text.length > maxBytes) {
         return { response: failure('bad-request', 'The body is too large') };
@@ -55,7 +60,7 @@ export const readBody = async <T>(request: Request, schema: z.ZodType<T>, maxByt
         return { response: failure('bad-request', issue ? `${issue.path.join('.') || 'body'}: ${issue.message}` : 'The body does not match') };
     }
     return { value: parsed.data };
-};
+}
 
 const LOOPBACK_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?$/;
 
@@ -64,7 +69,7 @@ const LOOPBACK_ORIGIN = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d{1,5})?$/
  * Vite in dev, so loopback is what a page needs. Tokens are bearer and never cookies, so this is about
  * which pages may read the answers, not about forged requests.
  */
-export const allowedOrigin = (request: Request, env: Env): string | null => {
+export function allowedOrigin(request: Request, env: Env): string | null {
     const origin = request.headers.get('origin');
     if (!origin) {
         return null;
@@ -77,9 +82,9 @@ export const allowedOrigin = (request: Request, env: Env): string | null => {
         .map((entry) => entry.trim())
         .filter((entry) => entry.length > 0);
     return extra.includes(origin) ? origin : null;
-};
+}
 
-export const corsHeaders = (origin: string | null): Record<string, string> => {
+export function corsHeaders(origin: string | null): Record<string, string> {
     if (!origin) {
         return { vary: 'Origin' };
     }
@@ -90,4 +95,4 @@ export const corsHeaders = (origin: string | null): Record<string, string> => {
         'access-control-max-age': '600',
         vary: 'Origin'
     };
-};
+}

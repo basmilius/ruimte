@@ -12,10 +12,11 @@ const ApprovalSchema = z.object({
 type Approval = z.infer<typeof ApprovalSchema>;
 
 /* A hash rather than the command itself, so the folder does not keep a readable list of what ran where. */
-const hashOf = (folder: string, nodeId: string, command: string): string =>
-    createHash('sha256')
+function hashOf(folder: string, nodeId: string, command: string): string {
+    return createHash('sha256')
         .update(JSON.stringify([folder, nodeId, command]))
         .digest('hex');
+}
 
 /*
  * The commands a person on this machine let a terminal type, per project folder and node. Under
@@ -52,7 +53,7 @@ export interface NodeCommand {
 }
 
 /* The command of every terminal in these views, on a canvas or a view of its own, by node id. */
-const commandsOf = (views: readonly ProjectView[]): Map<string, string> => {
+function commandsOf(views: readonly ProjectView[]): Map<string, string> {
     const commands = new Map<string, string>();
     for (const view of views) {
         if (isCanvasView(view)) {
@@ -66,10 +67,10 @@ const commandsOf = (views: readonly ProjectView[]): Map<string, string> => {
         }
     }
     return commands;
-};
+}
 
 /* The commands a save sets or changes: what `after` has that `before` did not have for the same node. */
-export const commandsSet = (before: readonly ProjectView[], after: readonly ProjectView[]): NodeCommand[] => {
+export function commandsSet(before: readonly ProjectView[], after: readonly ProjectView[]): NodeCommand[] {
     const had = commandsOf(before);
     return [...commandsOf(after)].filter(([nodeId, command]) => had.get(nodeId) !== command).map(([nodeId, command]) => ({ nodeId, command }));
-};
+}

@@ -55,14 +55,14 @@ const REAL_DEPS: SwitchDeps = {
     claim: (project) => claimWindow(project)
 };
 
-const requestOf = (plan: SwitchPlan): OpenRequest => {
+function requestOf(plan: SwitchPlan): OpenRequest {
     switch (plan.kind) {
         case 'project':
             return { projectId: plan.projectId };
         case 'folder':
             return { folder: plan.folder, createFolder: plan.createFolder };
     }
-};
+}
 
 /*
  * The steps of one switch. The machine is reached before anything moves, since no machine keeps a
@@ -72,7 +72,7 @@ const requestOf = (plan: SwitchPlan): OpenRequest => {
  * is left (written and released) and the next one is built in a workspace of its own. A run
  * remembers what it left and what it entered, so going back undoes exactly that.
  */
-export const switchRun = (plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): SwitchRun => {
+export function switchRun(plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): SwitchRun {
     let left: Whereabouts | null = null;
     let entered = false;
     /* What the window showed when it asked the shell for the next project, which going back asks for again. */
@@ -143,73 +143,80 @@ export const switchRun = (plan: SwitchPlan, deps: SwitchDeps = REAL_DEPS): Switc
         },
         back
     };
-};
+}
 
 export const projectSwitch = new ProjectSwitch();
 
-export const useProjectSwitch = <T>(selector: (state: SwitchState) => T): T => useStore(projectSwitch.store, selector);
+export function useProjectSwitch<T>(selector: (state: SwitchState) => T): T {
+    return useStore(projectSwitch.store, selector);
+}
 
-const targetOf = (plan: SwitchPlan): SwitchTarget => ({
-    endpointId: plan.endpointId,
-    summary:
-        plan.kind === 'project'
-            ? (useProjectList.getState().projects.find((row) => row.endpointId === plan.endpointId && row.summary.projectId === plan.projectId)?.summary ??
-              null)
-            : null,
-    folder: plan.kind === 'folder' ? plan.folder : null,
-    name: null
-});
+function targetOf(plan: SwitchPlan): SwitchTarget {
+    return {
+        endpointId: plan.endpointId,
+        summary:
+            plan.kind === 'project'
+                ? (useProjectList.getState().projects.find((row) => row.endpointId === plan.endpointId && row.summary.projectId === plan.projectId)?.summary ??
+                  null)
+                : null,
+        folder: plan.kind === 'folder' ? plan.folder : null,
+        name: null
+    };
+}
 
 /* Every way into a project passes here, so the window can say what it is waiting on. */
-const begin = async (plan: SwitchPlan): Promise<SwitchOutcome> => {
+async function begin(plan: SwitchPlan): Promise<SwitchOutcome> {
     const stays = plan.kind === 'project' && isOpenHere(plan.endpointId, plan.projectId);
     if (!stays && !(await confirmLeavingConflict())) {
         return 'cancelled';
     }
     return projectSwitch.start(targetOf(plan), () => switchRun(plan));
-};
+}
 
 /*
  * Opens a project on the machine it belongs to. The only way in: a project id means nothing without
  * the daemon that minted it, so picking one out of the union is also picking a machine.
  */
-export const openProject = (endpointId: string, projectId: string): Promise<SwitchOutcome> => begin({ kind: 'project', endpointId, projectId });
+export function openProject(endpointId: string, projectId: string): Promise<SwitchOutcome> {
+    return begin({ kind: 'project', endpointId, projectId });
+}
 
 /*
  * The folder twin of `openProject`: a folder is a path on one machine, so opening one found while
  * browsing another daemon moves the window there. `createFolder` is browse mode's offer to make a
  * path that is not there, and the daemon makes the whole missing chain.
  */
-export const openFolderOn = (endpointId: string, folder: string, createFolder = false): Promise<SwitchOutcome> =>
-    begin({ kind: 'folder', endpointId, folder, createFolder });
+export function openFolderOn(endpointId: string, folder: string, createFolder = false): Promise<SwitchOutcome> {
+    return begin({ kind: 'folder', endpointId, folder, createFolder });
+}
 
-const putAway = async (): Promise<void> => {
+async function putAway(): Promise<void> {
     const workspace = windowWorkspace();
     if (!workspace) {
         return;
     }
     await workspace.connection.projects.closeProject();
     showStart();
-};
+}
 
 /* Puts the open project away and goes back to the start screen. The machine ends its sessions only once no other client has it open. */
-export const closeProject = async (): Promise<void> => {
+export async function closeProject(): Promise<void> {
     if (windowWorkspace() && (await confirmLeavingConflict())) {
         await putAway();
     }
-};
+}
 
-export const isOpenHere = (endpointId: string, projectId: string): boolean => {
+export function isOpenHere(endpointId: string, projectId: string): boolean {
     const { current, currentEndpointId } = useProject.getState();
     return windowWorkspace() !== null && current?.projectId === projectId && currentEndpointId === endpointId;
-};
+}
 
 /*
  * Closes any project on any machine, the one on screen included. A project this window is not
  * showing never has to be opened for it: the daemon holds its document and knows who else has it
  * open, so closing one from the menu leaves the canvas where it is.
  */
-export const closeProjectOn = async (endpointId: string, summary: ProjectSummary): Promise<void> => {
+export async function closeProjectOn(endpointId: string, summary: ProjectSummary): Promise<void> {
     if (isOpenHere(endpointId, summary.projectId)) {
         await closeProject();
         return;
@@ -220,23 +227,23 @@ export const closeProjectOn = async (endpointId: string, summary: ProjectSummary
     }
     // Closing is this client's, whatever the machine does with it: the row moves here either way.
     closeListedProjectLocally(endpointId, summary);
-};
+}
 
 /*
  * What closing would do, asked of the machine the project lives on. A machine that cannot be
  * reached answers nothing, and closing it there is this client letting go and no more.
  */
-export const closingProject = async (endpointId: string, summary: ProjectSummary, local: number | null): Promise<ProjectClosingResult | null> => {
+export async function closingProject(endpointId: string, summary: ProjectSummary, local: number | null): Promise<ProjectClosingResult | null> {
     const transport = transportFor(endpointId);
     if (transport?.status !== 'open') {
         return null;
     }
     const closing = await transport.request('project.closing', { projectId: summary.projectId }).catch(() => null);
     return closing === null ? null : closingCount(closing, local);
-};
+}
 
 /* Removes a project from its machine. The open one is closed first, so its sessions end with it. */
-export const deleteProject = async (endpointId: string, projectId: string, removeFiles: boolean): Promise<void> => {
+export async function deleteProject(endpointId: string, projectId: string, removeFiles: boolean): Promise<void> {
     const { current, currentEndpointId } = useProject.getState();
     // Deleting takes the unsaved edits of an open conflict with it, which the person already agreed to.
     if (windowWorkspace() && current?.projectId === projectId && currentEndpointId === endpointId) {
@@ -250,7 +257,7 @@ export const deleteProject = async (endpointId: string, projectId: string, remov
     // After the close, which wrote this client's copy on its way out.
     dropClientLocal(browserStorage(), endpointId, projectId);
     await listProjects(endpointId).catch(() => undefined);
-};
+}
 
 /*
  * The first thing a window opens, through the same switch as any other, so a machine that takes a
@@ -259,12 +266,12 @@ export const deleteProject = async (endpointId: string, projectId: string, remov
  * cold start: the last project the window had open. Anything else (nothing remembered, a machine
  * this client no longer knows, the idle row of the web client) is the start screen straight away.
  */
-export const bootWindow = async (
+export async function bootWindow(
     storage: LastProjectStorage | null = browserStorage(),
     open: (endpointId: string, projectId: string) => Promise<SwitchOutcome> = openProject,
     local = hasLocalMachine(),
     target: WindowTarget = pageWindowTarget()
-): Promise<SwitchOutcome | null> => {
+): Promise<SwitchOutcome | null> {
     const wanted = target.kind === 'project' ? target : target.kind === 'last' ? readLastProject(storage) : null;
     const known =
         wanted !== null && isRealMachine(wanted.endpointId, local) && useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === wanted.endpointId);
@@ -288,4 +295,4 @@ export const bootWindow = async (
     } finally {
         useWindow.getState().setBooting(false);
     }
-};
+}

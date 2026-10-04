@@ -40,7 +40,7 @@ export const APP_REDIRECT_SCHEME_URI = 'ruimte://pulsar/callback';
 export const APP_REDIRECT_LOOPBACK_PATH = '/pulsar/callback';
 export const WEB_REDIRECT_URIS: readonly string[] = ['https://station.ruimte.app/pulsar/callback', 'http://localhost:4212/pulsar/callback'];
 
-export const isAppRedirectUri = (value: string): boolean => {
+export function isAppRedirectUri(value: string): boolean {
     if (value === APP_REDIRECT_SCHEME_URI || WEB_REDIRECT_URIS.includes(value)) {
         return true;
     }
@@ -61,7 +61,7 @@ export const isAppRedirectUri = (value: string): boolean => {
         url.password === '' &&
         value === `http://${url.host}${APP_REDIRECT_LOOPBACK_PATH}`
     );
-};
+}
 
 /*
  * `GET /auth/<provider>/start` query. The app keeps the PKCE verifier and its own state; the address
@@ -194,15 +194,19 @@ export type AccountDeletePayload = z.infer<typeof AccountDeletePayloadSchema>;
 export const ACCOUNT_DELETE_WORD = 'DELETE';
 
 /* What a person types to delete the account. Apple hands out no login and the iOS app asks for no name, so the fixed word stands in last. */
-export const accountConfirmationName = (account: Account): string => account.displayName ?? account.login ?? ACCOUNT_DELETE_WORD;
+export function accountConfirmationName(account: Account): string {
+    return account.displayName ?? account.login ?? ACCOUNT_DELETE_WORD;
+}
 
-const foldName = (text: string): string => text.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
+function foldName(text: string): string {
+    return text.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
 /* Case and runs of whitespace aside, so a person who read the name right is never refused over how it was typed. */
-export const confirmsAccountDeletion = (account: Account, typed: string): boolean => {
+export function confirmsAccountDeletion(account: Account, typed: string): boolean {
     const expected = foldName(accountConfirmationName(account));
     return expected !== '' && foldName(typed) === expected;
-};
+}
 
 /*
  * `GET /v1/providers`: the providers this address book can sign in with right now. Strings rather than

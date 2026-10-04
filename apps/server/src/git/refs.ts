@@ -11,7 +11,7 @@ const FIELD = '\u001f';
 export const REF_FORMAT = `%(refname:short)${FIELD}%(committerdate:unix)${FIELD}%(HEAD)`;
 
 /* `worktree list --porcelain` writes a paragraph per checkout: `worktree <path>` and `branch <ref>`. */
-export const parseWorktreeBranches = (output: string): Map<string, string> => {
+export function parseWorktreeBranches(output: string): Map<string, string> {
     const branches = new Map<string, string>();
     let path: string | null = null;
     for (const line of output.split('\n')) {
@@ -22,10 +22,10 @@ export const parseWorktreeBranches = (output: string): Map<string, string> => {
         }
     }
     return branches;
-};
+}
 
 /* One line per ref: its short name, the date of its tip and `*` for the one HEAD is on. */
-export const parseRefs = (output: string, kind: GitRef['kind'], worktrees: Map<string, string>, base: string | null): GitRef[] => {
+export function parseRefs(output: string, kind: GitRef['kind'], worktrees: Map<string, string>, base: string | null): GitRef[] {
     const refs: GitRef[] = [];
     for (const line of output.split('\n')) {
         if (line === '') {
@@ -47,10 +47,10 @@ export const parseRefs = (output: string, kind: GitRef['kind'], worktrees: Map<s
         });
     }
     return refs;
-};
+}
 
 /* `stash list` writes the ref and the message it was saved under, one stash per line. */
-export const parseStashes = (output: string): GitStash[] => {
+export function parseStashes(output: string): GitStash[] {
     const stashes: GitStash[] = [];
     for (const line of output.split('\n')) {
         if (line === '') {
@@ -62,14 +62,14 @@ export const parseStashes = (output: string): GitStash[] => {
         }
     }
     return stashes;
-};
+}
 
 /*
  * Every branch the panel can put the checkout on, newest tip first: the local ones, then the remote
  * ones. A branch another worktree has out carries that path, because git refuses to check it out
  * twice and the menu says so before the checkout does.
  */
-export const listRefs = async (cwd: string): Promise<GitRefsResult> => {
+export async function listRefs(cwd: string): Promise<GitRefsResult> {
     const top = await toplevel(cwd);
     const [locals, remotes, worktrees, stashes, base] = await Promise.all([
         git(['for-each-ref', '--sort=-committerdate', `--format=${REF_FORMAT}`, 'refs/heads'], top),
@@ -85,4 +85,4 @@ export const listRefs = async (cwd: string): Promise<GitRefsResult> => {
         current: refs.find((ref) => ref.current)?.name ?? null,
         stashes: parseStashes(stashes ?? '')
     };
-};
+}

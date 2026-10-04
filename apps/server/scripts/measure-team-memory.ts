@@ -36,21 +36,23 @@ const MIB = 1024 * 1024;
 const LEAD = 'chat-lead';
 const ROLES = ['Lexer', 'Parser', 'Checker', 'Emitter', 'Docs'];
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: LEAD, kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: LEAD, kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 // Counted on the prototype, since the harness builds the daemon's own store.
 let written = 0;
@@ -79,10 +81,12 @@ const lead = daemon.chats;
 await lead.create({ chatId: LEAD, provider: 'claude', cwd: folder });
 await lead.send(LEAD, 'plan the work');
 
-const idle = (chatId: string): boolean => daemon.chats.get(chatId)?.info.activeTurnId === null;
+function idle(chatId: string): boolean {
+    return daemon.chats.get(chatId)?.info.activeTurnId === null;
+}
 
 /* Every task of the round settled, its wake delivered, and every chat idle with nothing owed. */
-const roundDone = async (taskIds: readonly string[], children: readonly string[]): Promise<void> => {
+async function roundDone(taskIds: readonly string[], children: readonly string[]): Promise<void> {
     const stuck = setTimeout(() => {
         const tasks = taskIds.map((taskId) => daemon.tasks.get(taskId)).map((entry) => `${entry?.id} ${entry?.status} ${entry?.wake}`);
         const chats = [LEAD, ...children].map((chatId) => `${chatId} ${daemon.chats.get(chatId)?.info.status} ${daemon.chats.get(chatId)?.info.activeTurnId}`);
@@ -97,7 +101,7 @@ const roundDone = async (taskIds: readonly string[], children: readonly string[]
         await Bun.sleep(1);
     }
     clearTimeout(stuck);
-};
+}
 
 const task = `output:${outputBytes}`;
 const roles = ROLES.map((title) => ({ title, prompt: task, provider: 'claude' }));
@@ -115,7 +119,7 @@ await roundDone(
     children
 );
 
-const round = async (): Promise<void> => {
+async function round(): Promise<void> {
     const taskIds: string[] = [];
     for (const childId of children) {
         const [line = ''] = await runVerb(daemon, LEAD, 'task', ['new', childId, '--prompt', task, '--title', 'Next part']);
@@ -126,7 +130,7 @@ const round = async (): Promise<void> => {
         taskIds.push(taskId);
     }
     await roundDone(taskIds, children);
-};
+}
 
 interface Sample {
     round: number;
@@ -135,15 +139,17 @@ interface Sample {
     objects: number;
 }
 
-const sample = (at: number): Sample => {
+function sample(at: number): Sample {
     Bun.gc(true);
     const memory = process.memoryUsage();
     return { round: at, heapUsed: memory.heapUsed, rss: memory.rss, objects: heapStats().objectCount };
-};
+}
 
-const chats = (): string[] => [LEAD, ...children];
+function chats(): string[] {
+    return [LEAD, ...children];
+}
 
-const report = (entry: Sample): void => {
+function report(entry: Sample): void {
     const threads = chats().map((chatId) => daemon.chats.get(chatId)?.thread.list() ?? []);
     console.log(
         [
@@ -156,7 +162,7 @@ const report = (entry: Sample): void => {
             `records written ${writes} (${(written / MIB).toFixed(0)} MiB)`
         ].join('\t')
     );
-};
+}
 
 for (let i = 0; i < warmup; i++) {
     await round();
@@ -177,13 +183,13 @@ for (let i = 1; i <= rounds; i++) {
 const last = samples.at(-1)!;
 
 /* Least squares over every round, so one late collection does not decide the slope. */
-const slope = (pick: (entry: Sample) => number): number => {
+function slope(pick: (entry: Sample) => number): number {
     const meanX = samples.reduce((sum, entry) => sum + entry.round, 0) / samples.length;
     const meanY = samples.reduce((sum, entry) => sum + pick(entry), 0) / samples.length;
     const over = samples.reduce((sum, entry) => sum + (entry.round - meanX) * (pick(entry) - meanY), 0);
     const under = samples.reduce((sum, entry) => sum + (entry.round - meanX) ** 2, 0);
     return under === 0 ? 0 : over / under;
-};
+}
 
 console.log(
     [

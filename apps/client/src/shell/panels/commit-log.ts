@@ -7,16 +7,16 @@ const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
 /* The date a row falls back to once "days ago" stops meaning anything, with the year when it is not this one. */
-const dateOf = (at: number, now: number): string => {
+function dateOf(at: number, now: number): string {
     const date = new Date(at * 1000);
     return date.getFullYear() === new Date(now * 1000).getFullYear() ? formatDay(date) : formatDayWithYear(date);
-};
+}
 
 /* How long ago a commit was written, short enough for the right edge of a log row. */
-export const relativeTime = (at: number, now: number): string => {
+export function relativeTime(at: number, now: number): string {
     const seconds = Math.max(0, now - at);
     return seconds < 7 * DAY ? formatAgo(seconds * 1000) : dateOf(at, now);
-};
+}
 
 /* One commit with the checkout it came out of, which is what opening a row needs and what a row says
    while the folder holds more than one repository. */
@@ -41,7 +41,9 @@ export interface LogSection {
 }
 
 /* The date git orders a log by. A daemon that does not send it leaves the author date, which a rebase keeps. */
-const committedAt = (commit: GitCommit): number => commit.committedAt ?? commit.at;
+function committedAt(commit: GitCommit): number {
+    return commit.committedAt ?? commit.at;
+}
 
 /*
  * The logs of several checkouts as one history, newest first, each in the order git gave it. Every
@@ -49,7 +51,7 @@ const committedAt = (commit: GitCommit): number => commit.committedAt ?? commit.
  * runs out: below that a repository could still hold a commit newer than the rows still waiting, and
  * putting those rows in now would mean moving them later. They come with the next page instead.
  */
-export const mergeLogs = (logs: readonly LoadedLog[]): { rows: LogRow[]; more: boolean } => {
+export function mergeLogs(logs: readonly LoadedLog[]): { rows: LogRow[]; more: boolean } {
     const queues = logs.map((log) => ({ log, next: 0 }));
     const headOf = (queue: (typeof queues)[number]): GitCommit => queue.log.commits[queue.next]!;
     const rows: LogRow[] = [];
@@ -66,20 +68,20 @@ export const mergeLogs = (logs: readonly LoadedLog[]): { rows: LogRow[]; more: b
         }
     }
     return { rows, more: logs.some((log) => log.cursor !== null) };
-};
+}
 
-const startOfDay = (seconds: number): number => {
+function startOfDay(seconds: number): number {
     const date = new Date(seconds * 1000);
     date.setHours(0, 0, 0, 0);
     return Math.floor(date.getTime() / 1000);
-};
+}
 
 /*
  * The log as the days it was written on, in the order the commits came in. The days are counted
  * from midnight and not from the elapsed hours, so a commit from last night is under Yesterday the
  * way a person remembers it, not under Today because it was eleven hours ago.
  */
-export const groupCommits = (commits: readonly LogRow[], now: number): LogSection[] => {
+export function groupCommits(commits: readonly LogRow[], now: number): LogSection[] {
     const today = startOfDay(now);
     const sections: LogSection[] = [];
     for (const commit of commits) {
@@ -93,4 +95,4 @@ export const groupCommits = (commits: readonly LogRow[], now: number): LogSectio
         }
     }
     return sections;
-};
+}

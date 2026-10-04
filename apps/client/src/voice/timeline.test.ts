@@ -2,25 +2,29 @@ import { describe, expect, test } from 'bun:test';
 import type { VoiceAction, VoiceUtterance } from '@/voice/state';
 import { voiceTimeline } from '@/voice/timeline';
 
-const action = (id: string, order: number, kind: VoiceAction['kind'] = 'note'): VoiceAction => ({
-    id,
-    order,
-    kind,
-    status: 'completed',
-    label: kind === 'note' ? 'Added note' : 'Focused view',
-    detail: id,
-    undoable: true
-});
+function action(id: string, order: number, kind: VoiceAction['kind'] = 'note'): VoiceAction {
+    return {
+        id,
+        order,
+        kind,
+        status: 'completed',
+        label: kind === 'note' ? 'Added note' : 'Focused view',
+        detail: id,
+        undoable: true
+    };
+}
 
-const utterance = (order: number): VoiceUtterance => ({
-    id: `utterance-${order}`,
-    order,
-    speaker: 'assistant',
-    text: 'Done',
-    startMs: 0,
-    endMs: 1,
-    interrupted: false
-});
+function utterance(order: number): VoiceUtterance {
+    return {
+        id: `utterance-${order}`,
+        order,
+        speaker: 'assistant',
+        text: 'Done',
+        startMs: 0,
+        endMs: 1,
+        interrupted: false
+    };
+}
 
 describe('voice timeline', () => {
     test('groups consecutive note creations', () => {

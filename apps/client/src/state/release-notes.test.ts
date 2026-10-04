@@ -2,17 +2,21 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge, Release, ReleaseNotesState, UpdateState } from '@/desktop/bridge';
 import { ensureReleaseNotes, missingNotesNotice, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
 
-const release = (version: string, body = '- Something changed.'): Release => ({
-    version,
-    publishedAt: '2026-09-14T07:52:45Z',
-    body,
-    url: `https://github.com/basmilius/ruimte/releases/tag/v${version}`,
-    compareUrl: null
-});
+function release(version: string, body = '- Something changed.'): Release {
+    return {
+        version,
+        publishedAt: '2026-09-14T07:52:45Z',
+        body,
+        url: `https://github.com/basmilius/ruimte/releases/tag/v${version}`,
+        compareUrl: null
+    };
+}
 
 const LIST = [release('0.0.9'), release('0.0.8'), release('0.0.7'), release('0.0.3', '')];
 
-const updates = (patch: Partial<UpdateState>): UpdateState => ({ status: 'current', currentVersion: '0.0.8', ...patch });
+function updates(patch: Partial<UpdateState>): UpdateState {
+    return { status: 'current', currentVersion: '0.0.8', ...patch };
+}
 
 describe('notesView', () => {
     test('with no update, the installed version is the one the link is about', () => {

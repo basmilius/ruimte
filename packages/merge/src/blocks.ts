@@ -14,9 +14,11 @@ export interface MergeBlock {
     theirs: string[];
 }
 
-const same = (left: readonly string[], right: readonly string[]): boolean => left.length === right.length && left.every((line, index) => line === right[index]);
+function same(left: readonly string[], right: readonly string[]): boolean {
+    return left.length === right.length && left.every((line, index) => line === right[index]);
+}
 
-const kindOf = (base: readonly string[], ours: readonly string[], theirs: readonly string[]): MergeBlockKind => {
+function kindOf(base: readonly string[], ours: readonly string[], theirs: readonly string[]): MergeBlockKind {
     if (same(ours, theirs)) {
         return same(base, ours) ? 'stable' : 'both';
     }
@@ -27,10 +29,12 @@ const kindOf = (base: readonly string[], ours: readonly string[], theirs: readon
         return 'ours';
     }
     return 'conflict';
-};
+}
 
 /* How many lines a change adds over what it replaces, which is how far it moves everything after it. */
-const delta = (change: Change): number => change.otherEnd - change.otherStart - (change.baseEnd - change.baseStart);
+function delta(change: Change): number {
+    return change.otherEnd - change.otherStart - (change.baseEnd - change.baseStart);
+}
 
 /*
  * The three versions of a file as the stretches they agree and disagree on, in reading order. A
@@ -38,7 +42,7 @@ const delta = (change: Change): number => change.otherEnd - change.otherStart - 
  * both added something in exactly the same place; anything else is one side's alone and merges
  * without asking. This is what every other function here counts, draws and resolves.
  */
-export const splitBlocks = (base: readonly string[], ours: readonly string[], theirs: readonly string[]): MergeBlock[] => {
+export function splitBlocks(base: readonly string[], ours: readonly string[], theirs: readonly string[]): MergeBlock[] {
     const ourChanges = diffLines(base, ours);
     const theirChanges = diffLines(base, theirs);
     const blocks: MergeBlock[] = [];
@@ -92,7 +96,9 @@ export const splitBlocks = (base: readonly string[], ours: readonly string[], th
     }
     push(base.length, ours.length, theirs.length);
     return blocks;
-};
+}
 
 /* The stretches a person still has to decide on. */
-export const openBlocks = (blocks: readonly MergeBlock[]): number => blocks.filter((block) => block.kind === 'conflict').length;
+export function openBlocks(blocks: readonly MergeBlock[]): number {
+    return blocks.filter((block) => block.kind === 'conflict').length;
+}

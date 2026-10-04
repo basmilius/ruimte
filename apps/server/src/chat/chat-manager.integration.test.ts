@@ -44,18 +44,22 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const idle = () => recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
+function idle() {
+    return recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
+}
 
-const crashed = () => recorder.info?.running === false && recorder.info.status === 'error';
+function crashed() {
+    return recorder.info?.running === false && recorder.info.status === 'error';
+}
 
-const alive = (pid: number): boolean => {
+function alive(pid: number): boolean {
     try {
         process.kill(pid, 0);
         return true;
     } catch {
         return false;
     }
-};
+}
 
 describe('ChatManager over real processes', () => {
     test('Claude Code answers over its pipes and a crash reports the exit code', async () => {

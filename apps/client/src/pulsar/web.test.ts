@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { LoginStartQuerySchema } from '@ruimte/pulsar';
 import { PENDING_LOGIN_LIFETIME_MS, beginWebLogin, completeWebLogin, webRedirectUriFor, type LoginStorage } from './web';
 
-const memoryStorage = (): LoginStorage & { items: Map<string, string> } => {
+function memoryStorage(): LoginStorage & { items: Map<string, string> } {
     const items = new Map<string, string>();
     return {
         items,
@@ -14,14 +14,14 @@ const memoryStorage = (): LoginStorage & { items: Map<string, string> } => {
             items.delete(key);
         }
     };
-};
+}
 
 const REDIRECT = 'https://station.ruimte.app/pulsar/callback';
 
-const leave = async (storage: LoginStorage, now = 1_000, confirm?: boolean) => {
+async function leave(storage: LoginStorage, now = 1_000, confirm?: boolean) {
     const start = new URL(await beginWebLogin(storage, { addressBookUrl: 'https://pulsar.ruimte.app', redirectUri: REDIRECT, confirm, now }));
     return LoginStartQuerySchema.parse(Object.fromEntries(start.searchParams));
-};
+}
 
 describe('signing in on the web', () => {
     test('only an origin the address book sends a login back to gets a redirect', () => {

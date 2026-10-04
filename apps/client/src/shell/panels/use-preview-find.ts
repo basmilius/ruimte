@@ -28,20 +28,20 @@ const NOTHING = { total: 0, current: null };
 const readyPages = new WeakSet<FindablePage>();
 
 /* Electron's find throws until the guest is attached and `dom-ready` fired, which a Cmd+F right after opening beats. */
-export const trackPageReady = (element: FindablePage): void => {
+export function trackPageReady(element: FindablePage): void {
     element.addEventListener('dom-ready', () => readyPages.add(element), { once: true });
-};
+}
 
-const readyPage = (page: RefObject<FindablePage | null>): FindablePage | null => {
+function readyPage(page: RefObject<FindablePage | null>): FindablePage | null {
     const element = page.current;
     return element !== null && readyPages.has(element) ? element : null;
-};
+}
 
 /*
  * The find bar over an HTML preview in the desktop app, answered by Chromium's own find in the page.
  * That find only knows literal text and case, so the other two toggles never reach it.
  */
-export const usePreviewFind = (find: FindState, page: RefObject<FindablePage | null>): PreviewFind => {
+export function usePreviewFind(find: FindState, page: RefObject<FindablePage | null>): PreviewFind {
     const [state, setState] = useState<{ total: number; current: number | null }>(NOTHING);
     const wasOpen = useRef(false);
     const { text, caseSensitive } = find.query;
@@ -90,4 +90,4 @@ export const usePreviewFind = (find: FindState, page: RefObject<FindablePage | n
     }, []);
 
     return { total: find.open && text !== '' ? state.total : 0, current: find.open ? state.current : null, step, found, refresh };
-};
+}

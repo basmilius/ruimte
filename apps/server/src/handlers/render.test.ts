@@ -50,14 +50,14 @@ afterEach(async () => {
     await rm(root, { force: true, recursive: true });
 });
 
-const request = async (type: string, payload: unknown): Promise<ServerFrame> => {
+async function request(type: string, payload: unknown): Promise<ServerFrame> {
     const frames: ServerFrame[] = [];
     await dispatcher.handle(
         { id: 'mobile', access: { reachability: 'public', sessionId: 'paired' }, send: (frame) => frames.push(frame) },
         JSON.stringify({ id: 'render', type, payload })
     );
     return frames[0]!;
-};
+}
 
 test('render requests read the current persisted revision through the registered stores', async () => {
     await drawings.open(projectId, 'drawing');

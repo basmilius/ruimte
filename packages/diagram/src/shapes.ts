@@ -14,7 +14,7 @@ export interface ShapePaths {
     detail: string | null;
 }
 
-const roundedRect = (box: Rect, radius: number): string => {
+function roundedRect(box: Rect, radius: number): string {
     const r = Math.round(Math.min(radius, box.w / 2, box.h / 2));
     const right = box.x + box.w;
     const bottom = box.y + box.h;
@@ -30,9 +30,9 @@ const roundedRect = (box: Rect, radius: number): string => {
         `A${r} ${r} 0 0 1 ${box.x + r} ${box.y}`,
         'Z'
     ].join(' ');
-};
+}
 
-export const shapePaths = (shape: DiagramShape | undefined, box: Rect): ShapePaths => {
+export function shapePaths(shape: DiagramShape | undefined, box: Rect): ShapePaths {
     const right = box.x + box.w;
     const bottom = box.y + box.h;
     const middleX = Math.round(box.x + box.w / 2);
@@ -58,7 +58,7 @@ export const shapePaths = (shape: DiagramShape | undefined, box: Rect): ShapePat
         default:
             return { body: `M${box.x} ${box.y} H${right} V${bottom} H${box.x} Z`, detail: null };
     }
-};
+}
 
 export interface TextLine {
     text: string;
@@ -69,7 +69,7 @@ export interface TextLine {
     muted: boolean;
 }
 
-export const textLinesOf = (box: Pick<NodeBox, 'x' | 'y' | 'w' | 'h' | 'label' | 'sub'>, shape?: DiagramShape): TextLine[] => {
+export function textLinesOf(box: Pick<NodeBox, 'x' | 'y' | 'w' | 'h' | 'label' | 'sub'>, shape?: DiagramShape): TextLine[] {
     const x = Math.round(box.x + box.w / 2);
     const height = box.label.length * LABEL_LINE + box.sub.length * SUB_LINE;
     // The lid of a cylinder takes the top of the box, so its text sits below it.
@@ -78,9 +78,9 @@ export const textLinesOf = (box: Pick<NodeBox, 'x' | 'y' | 'w' | 'h' | 'label' |
     const subTop = top + box.label.length * LABEL_LINE;
     const sub = box.sub.map((text, index) => ({ text, x, y: subTop + index * SUB_LINE + 12, size: SUB_SIZE, bold: false, muted: true }));
     return [...label, ...sub];
-};
+}
 
-export const edgeLabelLinesOf = (label: EdgeLabelBox): TextLine[] => {
+export function edgeLabelLinesOf(label: EdgeLabelBox): TextLine[] {
     const x = Math.round(label.x + label.w / 2);
     return label.lines.map((text, index) => ({
         text,
@@ -90,11 +90,13 @@ export const edgeLabelLinesOf = (label: EdgeLabelBox): TextLine[] => {
         bold: false,
         muted: false
     }));
-};
+}
 
-export const edgePath = (points: readonly Point[]): string => points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ');
+export function edgePath(points: readonly Point[]): string {
+    return points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ');
+}
 
-export const arrowHeadPath = (points: readonly Point[]): string => {
+export function arrowHeadPath(points: readonly Point[]): string {
     const tip = points.at(-1)!;
     const before = points.at(-2) ?? tip;
     const length = Math.hypot(tip.x - before.x, tip.y - before.y) || 1;
@@ -104,9 +106,9 @@ export const arrowHeadPath = (points: readonly Point[]): string => {
     const baseY = tip.y - uy * HEAD_LENGTH;
     const round = Math.round;
     return `M${tip.x} ${tip.y} L${round(baseX - uy * HEAD_WIDTH)} ${round(baseY + ux * HEAD_WIDTH)} L${round(baseX + uy * HEAD_WIDTH)} ${round(baseY - ux * HEAD_WIDTH)} Z`;
-};
+}
 
-export const dashOf = (style: DiagramEdgeStyle | undefined): string | null => {
+export function dashOf(style: DiagramEdgeStyle | undefined): string | null {
     if (style === 'dashed') {
         return '8 6';
     }
@@ -114,4 +116,4 @@ export const dashOf = (style: DiagramEdgeStyle | undefined): string | null => {
         return '2 5';
     }
     return null;
-};
+}

@@ -33,11 +33,11 @@ const FIRST_BYTE_TIMEOUT_MS = 1_000;
 /* How long input waits for the first frame, which is what gives a touch its pixels. */
 const FIRST_FRAME_TIMEOUT_MS = 5_000;
 
-const writeInput = (control: ScrcpyConnection, screen: ScreenSize, input: DeviceInput): void => {
+function writeInput(control: ScrcpyConnection, screen: ScreenSize, input: DeviceInput): void {
     for (const message of controlMessages(input, screen)) {
         control.write(message);
     }
-};
+}
 
 interface Session {
     serverProcess: ScrcpyServerProcess;
@@ -232,60 +232,62 @@ export class ScrcpySource implements DeviceSource {
 }
 
 /* The host of a real device: adb for one serial and a loopback socket. */
-export const adbScrcpyHost = (adb: string, serial: string): ScrcpyHost => ({
-    adb: async (arguments_) => {
-        const child = Bun.spawn([adb, '-s', serial, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
-        const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
-        return { exitCode, stdout, stderr };
-    },
-    spawn: (arguments_) => {
-        const child = Bun.spawn([adb, '-s', serial, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
-        let output = '';
-        const collect = async (stream: ReadableStream<Uint8Array>): Promise<void> => {
-            const decoder = new TextDecoder();
-            for await (const chunk of stream) {
-                output = (output + decoder.decode(chunk, { stream: true })).slice(-4096);
-            }
-        };
-        void collect(child.stdout).catch(() => undefined);
-        void collect(child.stderr).catch(() => undefined);
-        return { exited: child.exited, output: () => output, kill: () => child.kill('SIGTERM') };
-    },
-    connect: async (port, handlers) => {
-        const queue: Uint8Array[] = [];
-        const socket = await Bun.connect({
-            hostname: '127.0.0.1',
-            port,
-            socket: {
-                data: (_socket, data) => handlers.data(new Uint8Array(data)),
-                close: () => handlers.close(),
-                error: () => handlers.close(),
-                drain: (current) => {
-                    while (queue.length > 0) {
-                        const next = queue[0]!;
-                        const written = current.write(next);
-                        if (written < next.byteLength) {
-                            queue[0] = next.subarray(written);
-                            return;
+export function adbScrcpyHost(adb: string, serial: string): ScrcpyHost {
+    return {
+        adb: async (arguments_) => {
+            const child = Bun.spawn([adb, '-s', serial, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
+            const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+            return { exitCode, stdout, stderr };
+        },
+        spawn: (arguments_) => {
+            const child = Bun.spawn([adb, '-s', serial, ...arguments_], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
+            let output = '';
+            const collect = async (stream: ReadableStream<Uint8Array>): Promise<void> => {
+                const decoder = new TextDecoder();
+                for await (const chunk of stream) {
+                    output = (output + decoder.decode(chunk, { stream: true })).slice(-4096);
+                }
+            };
+            void collect(child.stdout).catch(() => undefined);
+            void collect(child.stderr).catch(() => undefined);
+            return { exited: child.exited, output: () => output, kill: () => child.kill('SIGTERM') };
+        },
+        connect: async (port, handlers) => {
+            const queue: Uint8Array[] = [];
+            const socket = await Bun.connect({
+                hostname: '127.0.0.1',
+                port,
+                socket: {
+                    data: (_socket, data) => handlers.data(new Uint8Array(data)),
+                    close: () => handlers.close(),
+                    error: () => handlers.close(),
+                    drain: (current) => {
+                        while (queue.length > 0) {
+                            const next = queue[0]!;
+                            const written = current.write(next);
+                            if (written < next.byteLength) {
+                                queue[0] = next.subarray(written);
+                                return;
+                            }
+                            queue.shift();
                         }
-                        queue.shift();
                     }
                 }
-            }
-        });
-        return {
-            write: (bytes) => {
-                if (queue.length > 0) {
-                    queue.push(bytes);
-                    return;
-                }
-                const written = socket.write(bytes);
-                if (written < bytes.byteLength) {
-                    queue.push(bytes.subarray(Math.max(0, written)));
-                }
-            },
-            close: () => socket.end()
-        };
-    },
-    sleep: (ms) => Bun.sleep(ms)
-});
+            });
+            return {
+                write: (bytes) => {
+                    if (queue.length > 0) {
+                        queue.push(bytes);
+                        return;
+                    }
+                    const written = socket.write(bytes);
+                    if (written < bytes.byteLength) {
+                        queue.push(bytes.subarray(Math.max(0, written)));
+                    }
+                },
+                close: () => socket.end()
+            };
+        },
+        sleep: (ms) => Bun.sleep(ms)
+    };
+}

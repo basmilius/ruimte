@@ -2,16 +2,18 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatTurnItem } from '@ruimte/agent-contracts';
 import { limitedTurn, limitResumeAt } from './limit-resume.ts';
 
-const turn = (id: string, limit?: ChatTurnItem['limit']): ChatTurnItem => ({
-    id,
-    kind: 'turn',
-    createdAt: 1,
-    turnId: id,
-    state: limit ? 'error' : 'done',
-    endedAt: 2,
-    costUsd: 0,
-    ...(limit ? { limit } : {})
-});
+function turn(id: string, limit?: ChatTurnItem['limit']): ChatTurnItem {
+    return {
+        id,
+        kind: 'turn',
+        createdAt: 1,
+        turnId: id,
+        state: limit ? 'error' : 'done',
+        endedAt: 2,
+        costUsd: 0,
+        ...(limit ? { limit } : {})
+    };
+}
 
 const NOW = 1_000_000;
 

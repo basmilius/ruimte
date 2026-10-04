@@ -2,31 +2,37 @@ import { describe, expect, test } from 'bun:test';
 import type { GitRepo, LaunchConfigEntry, LaunchesDocument, LaunchStatus } from '@ruimte/contracts';
 import { chosenLaunch, headlineOf, launchFolder, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
 
-const launch = (id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry => ({
-    id,
-    name: id,
-    kind: 'service',
-    command: `run ${id}`,
-    shared: true,
-    ...overrides
-});
+function launch(id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry {
+    return {
+        id,
+        name: id,
+        kind: 'service',
+        command: `run ${id}`,
+        shared: true,
+        ...overrides
+    };
+}
 
-const status = (launchId: string, overrides: Partial<LaunchStatus> = {}): LaunchStatus => ({
-    projectId: 'p1',
-    launchId,
-    sessionId: `launch-${launchId}`,
-    kind: 'service',
-    state: 'running',
-    exitCode: null,
-    startedAt: 1_000,
-    endedAt: null,
-    port: null,
-    url: null,
-    stopped: false,
-    ...overrides
-});
+function status(launchId: string, overrides: Partial<LaunchStatus> = {}): LaunchStatus {
+    return {
+        projectId: 'p1',
+        launchId,
+        sessionId: `launch-${launchId}`,
+        kind: 'service',
+        state: 'running',
+        exitCode: null,
+        startedAt: 1_000,
+        endedAt: null,
+        port: null,
+        url: null,
+        stopped: false,
+        ...overrides
+    };
+}
 
-const doc = (launches: LaunchConfigEntry[], approved = launches.map((entry) => entry.id)): LaunchesDocument => ({ rev: 1, launches, approved });
+function doc(launches: LaunchConfigEntry[], approved = launches.map((entry) => entry.id)): LaunchesDocument {
+    return { rev: 1, launches, approved };
+}
 
 describe('the state of a launch', () => {
     test('a launch that never ran is at rest, or waits on approval', () => {

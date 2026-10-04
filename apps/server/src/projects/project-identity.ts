@@ -85,26 +85,26 @@ const ICON_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'
  * What a folder may declare as its icon. An .ico is taken here on its four-byte signature alone,
  * looser than the general sniff, since the folder pointed at this file by name.
  */
-export const sniffIconMime = (bytes: Uint8Array): string | null => {
+export function sniffIconMime(bytes: Uint8Array): string | null {
     // An .ico with image type 1; type 2 is a cursor, which is not an icon we want to serve.
     if (bytes[0] === 0x00 && bytes[1] === 0x00 && bytes[2] === 0x01 && bytes[3] === 0x00) {
         return 'image/vnd.microsoft.icon';
     }
     const mime = sniffMime(bytes) ?? (looksLikeSvg(bytes) ? 'image/svg+xml' : null);
     return mime !== null && ICON_MIMES.has(mime) ? mime : null;
-};
+}
 
 /* True while `path` stays inside `folder`, symlinks resolved. */
-const isInside = (folder: string, path: string): boolean => {
+function isInside(folder: string, path: string): boolean {
     const rel = relative(folder, path);
     return rel !== '' && !climbsOut(rel);
-};
+}
 
 /*
  * Resolves a candidate to a real file inside the folder. A symlink that points out of the folder
  * is refused after `realpath`, so a repository cannot hand the daemon someone's private key.
  */
-const jailedFile = async (folder: string, candidate: string): Promise<{ path: string; size: number; mtimeMs: number } | null> => {
+async function jailedFile(folder: string, candidate: string): Promise<{ path: string; size: number; mtimeMs: number } | null> {
     if (candidate.includes('\0') || isAbsolute(candidate)) {
         return null;
     }
@@ -136,10 +136,10 @@ const jailedFile = async (folder: string, candidate: string): Promise<{ path: st
     } catch {
         return null;
     }
-};
+}
 
 /* The bytes of a candidate with its sniffed MIME, or null when it is missing, too big or not an image. */
-const readImage = async (folder: string, candidate: string): Promise<{ path: string; mime: string; size: number; mtimeMs: number } | null> => {
+async function readImage(folder: string, candidate: string): Promise<{ path: string; mime: string; size: number; mtimeMs: number } | null> {
     const file = await jailedFile(folder, candidate);
     if (!file || file.size === 0 || file.size > ICON_MAX_BYTES) {
         return null;
@@ -155,19 +155,19 @@ const readImage = async (folder: string, candidate: string): Promise<{ path: str
         return null;
     }
     return { path: file.path, mime, size: file.size, mtimeMs: file.mtimeMs };
-};
+}
 
-const darkVariantOf = (candidate: string): string => {
+function darkVariantOf(candidate: string): string {
     const ext = extname(candidate);
     return `${candidate.slice(0, candidate.length - ext.length)}_dark${ext}`;
-};
+}
 
-const versionOf = (light: { size: number; mtimeMs: number }, dark: { size: number; mtimeMs: number } | null): string => {
+function versionOf(light: { size: number; mtimeMs: number }, dark: { size: number; mtimeMs: number } | null): string {
     const stamp = (file: { size: number; mtimeMs: number }): string => `${Math.round(file.mtimeMs)}-${file.size}`;
     return dark ? `${stamp(light)}.${stamp(dark)}` : stamp(light);
-};
+}
 
-const toDerived = async (folder: string, candidate: string, light: { path: string; mime: string; size: number; mtimeMs: number }): Promise<DerivedIcon> => {
+async function toDerived(folder: string, candidate: string, light: { path: string; mime: string; size: number; mtimeMs: number }): Promise<DerivedIcon> {
     const dark = await readImage(folder, darkVariantOf(candidate));
     return {
         from: candidate,
@@ -177,19 +177,19 @@ const toDerived = async (folder: string, candidate: string, light: { path: strin
         darkPath: dark?.path ?? null,
         darkMime: dark?.mime ?? null
     };
-};
+}
 
 /*
  * The file to serve for a derived icon, held against the folder again: the cache is minutes old,
  * and a symlink swapped in since must not reach a file outside it.
  */
-export const servedIcon = async (folder: string, icon: DerivedIcon, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null> => {
+export async function servedIcon(folder: string, icon: DerivedIcon, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null> {
     const file = await readImage(folder, theme === 'dark' && icon.darkPath !== null ? darkVariantOf(icon.from) : icon.from);
     return file === null ? null : { path: file.path, mime: file.mime };
-};
+}
 
 /* The `href` of the first `<link rel="icon">` in an HTML head, or null. */
-export const faviconHref = (html: string): string | null => {
+export function faviconHref(html: string): string | null {
     for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
         const rel = tag.match(/\brel\s*=\s*["']?([^"'>\s]+)/i)?.[1]?.toLowerCase();
         if (!rel || !/(^|\s)(icon|shortcut)(\s|$)/.test(rel.replace(/-/g, ' '))) {
@@ -201,9 +201,9 @@ export const faviconHref = (html: string): string | null => {
         }
     }
     return null;
-};
+}
 
-const iconFromHtml = async (folder: string): Promise<DerivedIcon | null> => {
+async function iconFromHtml(folder: string): Promise<DerivedIcon | null> {
     const file = await jailedFile(folder, HTML_CANDIDATE);
     if (!file || file.size === 0) {
         return null;
@@ -230,14 +230,14 @@ const iconFromHtml = async (folder: string): Promise<DerivedIcon | null> => {
         }
     }
     return null;
-};
+}
 
 /*
  * The name `.idea/.name` declares, or null when the folder declares none. Asked once, when a
  * folder gets its first canvas; after that the name lives in `project.json` and this file is
  * never read again, so an editor renaming its own project never renames ours.
  */
-export const readIdeaName = async (folder: string): Promise<string | null> => {
+export async function readIdeaName(folder: string): Promise<string | null> {
     const file = await jailedFile(folder, IDEA_NAME_FILE);
     if (!file || file.size === 0 || file.size > NAME_MAX_BYTES) {
         return null;
@@ -259,13 +259,13 @@ export const readIdeaName = async (folder: string): Promise<string | null> => {
         }
     }
     return null;
-};
+}
 
 /*
  * What a folder says about itself: an icon file, if it has one. Nothing is written back and
  * nothing is remembered on disk, so a folder stays the source of truth for its icon.
  */
-export const deriveIdentity = async (folder: string): Promise<DerivedIdentity> => {
+export async function deriveIdentity(folder: string): Promise<DerivedIdentity> {
     try {
         if (!(await stat(folder)).isDirectory()) {
             return EMPTY;
@@ -281,7 +281,7 @@ export const deriveIdentity = async (folder: string): Promise<DerivedIdentity> =
         }
     }
     return { icon: await iconFromHtml(folder), unresolved: false };
-};
+}
 
 /* Keeps a folder's answer for a few minutes; a folder that could not be read is asked again. */
 export class IdentityCache {
@@ -316,7 +316,7 @@ export class IdentityCache {
     }
 }
 
-const normalizeKey = (folder: string): string => {
+function normalizeKey(folder: string): string {
     const path = resolve(folder);
     return path.length > 1 && path.endsWith(sep) ? path.slice(0, -1) : path;
-};
+}

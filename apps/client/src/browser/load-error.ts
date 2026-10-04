@@ -42,11 +42,13 @@ const SHAPE: Record<LoadErrorKind, Shape> = {
 
 /* Read at the moment of the failure, not kept in a table. Words built at module level would be
    the language the window started in, and stay that way after a person picks another one. */
-const copyOf = (kind: LoadErrorKind): Copy => ({
-    title: i18next.t(`browser:error.${kind}.title`),
-    hint: SHAPE[kind].hint ? i18next.t(`browser:error.${kind}.hint`) : null,
-    retryable: SHAPE[kind].retryable
-});
+function copyOf(kind: LoadErrorKind): Copy {
+    return {
+        title: i18next.t(`browser:error.${kind}.title`),
+        hint: SHAPE[kind].hint ? i18next.t(`browser:error.${kind}.hint`) : null,
+        retryable: SHAPE[kind].retryable
+    };
+}
 
 /* The codes worth naming, from Chromium's `net_error_list.h`. */
 const KIND_BY_CODE = new Map<number, LoadErrorKind>([
@@ -74,25 +76,25 @@ const CERT_END = -200;
 
 /* Chromium's symbol for the code, which is what its description already is on a webview. Anything
    else (an empty description, a sentence from another layer) degrades to the number. */
-const symbolOf = (code: number, description: string): string => {
+function symbolOf(code: number, description: string): string {
     const trimmed = description.trim().replace(/^net::/, '');
     return /^[A-Z][A-Z0-9_]+$/.test(trimmed) ? trimmed : `net error ${code}`;
-};
+}
 
-const kindOf = (code: number, symbol: string): LoadErrorKind => {
+function kindOf(code: number, symbol: string): LoadErrorKind {
     if ((code >= CERT_BEGIN && code <= CERT_END) || symbol.startsWith('ERR_CERT')) {
         return 'certificate';
     }
     return KIND_BY_CODE.get(code) ?? 'other';
-};
+}
 
 /*
  * What to say about a load that failed. Pure on purpose, so the wording of every failure lives in
  * one place and the node and the browser view read the same; an unknown code falls back to the
  * generic sentence plus Chromium's symbol instead of a guess.
  */
-export const classifyLoadError = (code: number, description: string): LoadError => {
+export function classifyLoadError(code: number, description: string): LoadError {
     const symbol = symbolOf(code, description);
     const kind = kindOf(code, symbol);
     return { kind, symbol, ...copyOf(kind) };
-};
+}

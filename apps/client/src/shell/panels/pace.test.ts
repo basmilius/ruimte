@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { paced, type PaceSeams } from './pace';
 
 /* A clock and a queue of timers the test moves by hand, so nothing here waits on the wall. */
-const fakeSeams = (): PaceSeams & { advance: (ms: number) => void } => {
+function fakeSeams(): PaceSeams & { advance: (ms: number) => void } {
     let clock = 1000;
     const timers: { at: number; run: () => void }[] = [];
     return {
@@ -28,7 +28,7 @@ const fakeSeams = (): PaceSeams & { advance: (ms: number) => void } => {
             }
         }
     };
-};
+}
 
 describe('paced', () => {
     test('hands the first value on right away', () => {

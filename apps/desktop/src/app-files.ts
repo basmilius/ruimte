@@ -35,7 +35,7 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
  * client routes itself), or null for a file the build does not have or a path that leaves the build.
  * A missing chunk answers 404 rather than the page, so a stale one fails as a load error.
  */
-export const clientFileFor = (root: string, url: string): string | null => {
+export function clientFileFor(root: string, url: string): string | null {
     let parsed: URL;
     try {
         parsed = new URL(url);
@@ -57,10 +57,10 @@ export const clientFileFor = (root: string, url: string): string | null => {
     }
     const file = join(root, relative);
     return file.startsWith(root.endsWith(sep) ? root : `${root}${sep}`) ? file : null;
-};
+}
 
 /* What the shell answers for one request on its scheme. */
-export const answerAppRequest = async (root: string, url: string): Promise<Response> => {
+export async function answerAppRequest(root: string, url: string): Promise<Response> {
     if (new URL(url).pathname === STORAGE_MOVE_PATH) {
         return new Response('<!doctype html><title>Ruimte</title>', { headers: { 'content-type': CONTENT_TYPES['.html']! } });
     }
@@ -80,4 +80,4 @@ export const answerAppRequest = async (root: string, url: string): Promise<Respo
             'content-security-policy': CLIENT_CSP
         }
     });
-};
+}

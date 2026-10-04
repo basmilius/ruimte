@@ -27,14 +27,16 @@ export interface EditGateInput {
     zoomedOut: boolean;
 }
 
-const isInside = (root: string, path: string): boolean => path === root || isUnderFolder(path, root);
+function isInside(root: string, path: string): boolean {
+    return path === root || isUnderFolder(path, root);
+}
 
 /*
  * The machine's rule for `fs.write`, mirrored so a person never types an edit it will refuse.
  * The machine stays the authority: a worktree outside its own worktrees folder is offered here and
  * refused there, which the save says.
  */
-export const editBlockOf = ({ path, roots, large, plain, coarse, zoomedOut }: EditGateInput): EditBlock | null => {
+export function editBlockOf({ path, roots, large, plain, coarse, zoomedOut }: EditGateInput): EditBlock | null {
     const inside = roots.filter((root) => isInside(root, path));
     if (inside.length === 0) {
         return 'outside-project';
@@ -52,9 +54,11 @@ export const editBlockOf = ({ path, roots, large, plain, coarse, zoomedOut }: Ed
         return 'touch';
     }
     return zoomedOut ? 'zoom' : null;
-};
+}
 
-export const isCoarsePointer = (): boolean => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+export function isCoarsePointer(): boolean {
+    return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+}
 
 export interface FileNodeGate {
     zoomedOut: boolean;
@@ -65,4 +69,6 @@ export interface FileNodeGate {
 /* What a file node tells the editor in it. A tab and a view have none. */
 export const FileNodeGateContext = createContext<FileNodeGate | null>(null);
 
-export const useFileNodeGate = (): FileNodeGate | null => useContext(FileNodeGateContext);
+export function useFileNodeGate(): FileNodeGate | null {
+    return useContext(FileNodeGateContext);
+}

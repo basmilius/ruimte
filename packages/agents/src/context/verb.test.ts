@@ -4,7 +4,7 @@ import { createVerbRegistry, type HelpTopic, type Verb, type VerbCallBase } from
 
 const REFUSAL = 'refused\tcode\tmessage';
 
-const helpWith = (topics?: readonly HelpTopic[]): Verb<VerbCallBase> => {
+function helpWith(topics?: readonly HelpTopic[]): Verb<VerbCallBase> {
     const { defineVerb, defineHelp } = createVerbRegistry<VerbCallBase>({ cli: 'test-context' });
     const read = defineVerb({
         name: 'read',
@@ -17,7 +17,7 @@ const helpWith = (topics?: readonly HelpTopic[]): Verb<VerbCallBase> => {
     });
     const help: Verb<VerbCallBase> = defineHelp({ entries: () => [read, help], root: () => [], refusal: REFUSAL, topics });
     return help;
-};
+}
 
 const RUNTIME: HelpTopic = { name: 'runtime', summary: 'The API a scene is written against', body: ['api\tclip(from, to)', 'api\tease(name)'] };
 

@@ -29,14 +29,15 @@ const pending = new Map<string, (result: unknown) => void>();
 let alerts: ProcessesAlerts['alerts'] = [];
 let lines = 0;
 
-const request = <T>(type: string, payload: unknown): Promise<T> =>
-    new Promise((resolve) => {
+function request<T>(type: string, payload: unknown): Promise<T> {
+    return new Promise((resolve) => {
         const id = crypto.randomUUID();
         pending.set(id, (result) => resolve(result as T));
         socket.send(JSON.stringify({ id, type, payload }));
     });
+}
 
-const record = async (sample: ProcessesSampleEvent): Promise<void> => {
+async function record(sample: ProcessesSampleEvent): Promise<void> {
     const [sessions, chats] = await Promise.all([request<SessionListResult>('session.list', {}), request<ChatListResult>('chat.list', {})]);
     const line = {
         at: sample.at,
@@ -54,7 +55,7 @@ const record = async (sample: ProcessesSampleEvent): Promise<void> => {
     };
     await appendFile(file, `${JSON.stringify(line)}\n`);
     lines++;
-};
+}
 
 socket.onmessage = (message) => {
     const frame = JSON.parse(String(message.data)) as { id?: string; ok?: boolean; result?: unknown; event?: string; payload?: unknown };

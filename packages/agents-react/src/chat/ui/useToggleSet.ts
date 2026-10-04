@@ -12,7 +12,7 @@ export interface ToggleSet {
  * The ids of the folds a thread has open. `onToggle` is what a thread does about a person opening
  * one, which is to stop following the end: a fold is a deliberate look back, not a reason to jump.
  */
-export const useToggleSet = (onToggle?: () => void): ToggleSet => {
+export function useToggleSet(onToggle?: () => void): ToggleSet {
     const [ids, setIds] = useState<ReadonlySet<string>>(() => new Set());
 
     const toggle = useCallback(
@@ -36,4 +36,4 @@ export const useToggleSet = (onToggle?: () => void): ToggleSet => {
     }, []);
 
     return { ids, toggle, add };
-};
+}

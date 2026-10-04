@@ -18,27 +18,31 @@ const COMMON = {
 
 const OS_NAMES: Record<Target['os'], string> = { darwin: 'macOS', linux: 'Linux' };
 
-export const platformManifest = (target: Target, version: string): Manifest => ({
-    name: packageNameOf(target),
-    version,
-    description: `The Ruimte machine for ${OS_NAMES[target.os]} on ${target.cpu}. Install ruimte instead; it picks this package for you.`,
-    ...COMMON,
-    os: [target.os],
-    cpu: [target.cpu],
-    // Bun's Linux binaries link against glibc; npm leaves the package out on musl rather than install one that does not start.
-    ...(target.os === 'linux' ? { libc: ['glibc'] } : {}),
-    files: ['bin']
-});
+export function platformManifest(target: Target, version: string): Manifest {
+    return {
+        name: packageNameOf(target),
+        version,
+        description: `The Ruimte machine for ${OS_NAMES[target.os]} on ${target.cpu}. Install ruimte instead; it picks this package for you.`,
+        ...COMMON,
+        os: [target.os],
+        cpu: [target.cpu],
+        // Bun's Linux binaries link against glibc; npm leaves the package out on musl rather than install one that does not start.
+        ...(target.os === 'linux' ? { libc: ['glibc'] } : {}),
+        files: ['bin']
+    };
+}
 
-export const launcherManifest = (version: string): Manifest => ({
-    name: LAUNCHER_NAME,
-    version,
-    description:
-        'Ruimte for a machine without the app: the machine that terminals, agents and browsers run on, reachable from the Ruimte app and station.ruimte.app.',
-    ...COMMON,
-    type: 'module',
-    bin: { ruimte: 'bin/ruimte.js' },
-    files: ['bin'],
-    engines: { node: '>=18' },
-    optionalDependencies: Object.fromEntries(TARGETS.map((target) => [packageNameOf(target), version]))
-});
+export function launcherManifest(version: string): Manifest {
+    return {
+        name: LAUNCHER_NAME,
+        version,
+        description:
+            'Ruimte for a machine without the app: the machine that terminals, agents and browsers run on, reachable from the Ruimte app and station.ruimte.app.',
+        ...COMMON,
+        type: 'module',
+        bin: { ruimte: 'bin/ruimte.js' },
+        files: ['bin'],
+        engines: { node: '>=18' },
+        optionalDependencies: Object.fromEntries(TARGETS.map((target) => [packageNameOf(target), version]))
+    };
+}

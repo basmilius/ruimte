@@ -7,7 +7,7 @@ import { blobTypeFor } from './piece';
 const RESOURCE = { kind: 'file', path: '/tmp/picture.gif' } as const;
 
 /* A daemon that serves `bytes` in pieces and counts what it was asked, optionally changing the file under a read. */
-const daemon = (bytes: Uint8Array<ArrayBuffer>, mime = 'image/gif') => {
+function daemon(bytes: Uint8Array<ArrayBuffer>, mime = 'image/gif') {
     const asked: BytesReadPayload[] = [];
     let version = '1-1';
     let content = bytes;
@@ -24,15 +24,15 @@ const daemon = (bytes: Uint8Array<ArrayBuffer>, mime = 'image/gif') => {
             version = `${Number(version.split('-')[0]) + 1}-${next.length}`;
         }
     };
-};
+}
 
-const random = (size: number): Uint8Array<ArrayBuffer> => {
+function random(size: number): Uint8Array<ArrayBuffer> {
     const bytes = new Uint8Array(size);
     for (let i = 0; i < size; i += 1) {
         bytes[i] = (i * 31 + 7) % 256;
     }
     return bytes;
-};
+}
 
 describe('readResource', () => {
     test('the pieces arrive one after the other and join into the whole file', async () => {

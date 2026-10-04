@@ -25,25 +25,29 @@ const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', node
 const claude = { kind: 'claude', name: 'Claude Code', installed: true, capabilities: { chat: true, terminal: true } } as unknown as ProviderInfo;
 const codex = { kind: 'codex', name: 'Codex', installed: false, capabilities: { chat: true, terminal: true } } as unknown as ProviderInfo;
 
-const createView = (registry: ActionRegistry<void>, input: Partial<ActionInput<'view.create'>> & Pick<ActionInput<'view.create'>, 'kind'>) =>
-    registry.execute('view.create', { name: null, url: null, command: null, path: null, provider: null, ...input }, PERSON_ACTION_CALL);
+function createView(registry: ActionRegistry<void>, input: Partial<ActionInput<'view.create'>> & Pick<ActionInput<'view.create'>, 'kind'>) {
+    return registry.execute('view.create', { name: null, url: null, command: null, path: null, provider: null, ...input }, PERSON_ACTION_CALL);
+}
 
-const createNode = (registry: ActionRegistry<void>, input: Partial<ActionInput<'node.create'>> & Pick<ActionInput<'node.create'>, 'kind'>) =>
-    registry.execute(
+function createNode(registry: ActionRegistry<void>, input: Partial<ActionInput<'node.create'>> & Pick<ActionInput<'node.create'>, 'kind'>) {
+    return registry.execute(
         'node.create',
         { viewId: 'main', title: null, content: null, url: null, command: null, path: null, provider: null, at: null, ...input },
         VOICE_ACTION_CALL
     );
+}
 
-const canvas = () => defaultCanvases.of('main').getState();
+function canvas() {
+    return defaultCanvases.of('main').getState();
+}
 
 /* Asks, answers yes, and hands back what the action did. */
-const confirmed = async (registry: ActionRegistry<void>, asked: Awaited<ReturnType<ActionRegistry<void>['execute']>>) => {
+async function confirmed(registry: ActionRegistry<void>, asked: Awaited<ReturnType<ActionRegistry<void>['execute']>>) {
     if (asked.status !== 'needs_confirmation') {
         throw new Error(`Expected a confirmation, got ${asked.status}`);
     }
     return registry.confirm(asked.confirmationToken, true, VOICE_ACTION_CALL);
-};
+}
 
 const document: ProjectDocument = {
     version: 3,

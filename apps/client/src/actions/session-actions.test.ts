@@ -11,22 +11,24 @@ import { TransportError, type Transport } from '@/transport/transport';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] | Promise<RequestMap[Type]['result']> };
 
-const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
-    chatId: 'chat',
-    provider: 'claude',
-    cwd: '/work',
-    agentSessionId: 'session-1',
-    model: null,
-    selection: { model: 'sonnet', options: { effort: 'medium' } },
-    runtimeMode: 'supervised',
-    status: 'running',
-    running: true,
-    activeTurnId: 'turn-2',
-    slashCommands: [],
-    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 2 },
-    createdAt: 0,
-    ...patch
-});
+function info(patch: Partial<ChatInfo> = {}): ChatInfo {
+    return {
+        chatId: 'chat',
+        provider: 'claude',
+        cwd: '/work',
+        agentSessionId: 'session-1',
+        model: null,
+        selection: { model: 'sonnet', options: { effort: 'medium' } },
+        runtimeMode: 'supervised',
+        status: 'running',
+        running: true,
+        activeTurnId: 'turn-2',
+        slashCommands: [],
+        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 2 },
+        createdAt: 0,
+        ...patch
+    };
+}
 
 const question: ChatItem = {
     id: 'q-item',
@@ -112,22 +114,24 @@ const thread: ChatItem[] = [
     }
 ];
 
-const rowOf = (chatInfo: ChatInfo, items: ChatItem[] = thread): ChatState => {
+function rowOf(chatInfo: ChatInfo, items: ChatItem[] = thread): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
     return { info: chatInfo, items: byId, structure: byId, order: items.map((item) => item.id) };
-};
+}
 
-const plan = (): Plan => ({
-    id: 'p1',
-    rev: 1,
-    createdAt: '2026-09-23T10:00:00Z',
-    meta: { title: 'Ship', kind: 'steps', checks: 'anyone' },
-    items: [
-        { type: 'step', id: 'write', title: 'Write the code' },
-        { type: 'step', id: 'look', title: 'Look at it in the app', checks: 'person' },
-        { type: 'step', id: 'locked', title: 'Run the suite', checks: 'agent' }
-    ]
-});
+function plan(): Plan {
+    return {
+        id: 'p1',
+        rev: 1,
+        createdAt: '2026-09-23T10:00:00Z',
+        meta: { title: 'Ship', kind: 'steps', checks: 'anyone' },
+        items: [
+            { type: 'step', id: 'write', title: 'Write the code' },
+            { type: 'step', id: 'look', title: 'Look at it in the app', checks: 'person' },
+            { type: 'step', id: 'locked', title: 'Run the suite', checks: 'agent' }
+        ]
+    };
+}
 
 const claude = {
     kind: 'claude',
@@ -171,7 +175,7 @@ interface Fake {
     revealed: ChatForkResult[];
 }
 
-const fake = (answers: Answers = {}, machine: Partial<SessionMachine> = {}): Fake => {
+function fake(answers: Answers = {}, machine: Partial<SessionMachine> = {}): Fake {
     const asked: { type: RequestType; payload: Record<string, unknown> }[] = [];
     const applied: Fake['applied'] = [];
     const retargeted: string[] = [];
@@ -247,17 +251,18 @@ const fake = (answers: Answers = {}, machine: Partial<SessionMachine> = {}): Fak
         })
     );
     return { registry, of: (type) => asked.filter((entry) => entry.type === type).map((entry) => entry.payload), applied, retargeted, revealed };
-};
+}
 
-const confirm = async (registry: ActionRegistry<void>, asked: ActionResult): Promise<ActionResult> => {
+async function confirm(registry: ActionRegistry<void>, asked: ActionResult): Promise<ActionResult> {
     if (asked.status !== 'needs_confirmation') {
         throw new Error(`Expected a confirmation, got ${JSON.stringify(asked)}`);
     }
     return registry.confirm(asked.confirmationToken, true, VOICE_ACTION_CALL);
-};
+}
 
-const consequences = (result: ActionResult): string =>
-    result.status === 'needs_confirmation' ? `${result.confirmation.title} ${result.confirmation.consequences.join(' ')}` : '';
+function consequences(result: ActionResult): string {
+    return result.status === 'needs_confirmation' ? `${result.confirmation.title} ${result.confirmation.consequences.join(' ')}` : '';
+}
 
 beforeEach(() => {
     useDocument.getState().load(

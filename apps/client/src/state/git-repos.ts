@@ -36,14 +36,17 @@ interface Entry {
  * Whether HEAD could have moved between two statuses of one checkout. A commit, a pull, a rebase and
  * a checkout all show up in at least one of these; an edit to a file shows up in none of them.
  */
-export const headMoved = (before: GitStatus | null, after: GitStatus): boolean =>
-    before === null ||
-    before.branch !== after.branch ||
-    before.detached !== after.detached ||
-    before.upstream !== after.upstream ||
-    before.ahead !== after.ahead ||
-    before.behind !== after.behind ||
-    before.mergeBase !== after.mergeBase;
+export function headMoved(before: GitStatus | null, after: GitStatus): boolean {
+    return (
+        before === null ||
+        before.branch !== after.branch ||
+        before.detached !== after.detached ||
+        before.upstream !== after.upstream ||
+        before.ahead !== after.ahead ||
+        before.behind !== after.behind ||
+        before.mergeBase !== after.mergeBase
+    );
+}
 
 const BLANK: Entry = { status: null, failure: null, revision: 0 };
 
@@ -51,13 +54,15 @@ const BLANK: Entry = { status: null, failure: null, revision: 0 };
 const NOTHING: Record<string, Entry> = {};
 
 /* The project folder as the only repository, which is what a machine without `git.repos` answers to. */
-export const soleRepo = (folder: string): GitRepo[] => [{ path: folder, label: basenameOf(folder), kind: 'root' }];
+export function soleRepo(folder: string): GitRepo[] {
+    return [{ path: folder, label: basenameOf(folder), kind: 'root' }];
+}
 
 /* The repositories the panel draws: the ones a person hid are out, by the label they were hidden under. */
-export const visibleRepos = (repos: readonly GitRepo[], hidden: readonly string[]): GitRepo[] => {
+export function visibleRepos(repos: readonly GitRepo[], hidden: readonly string[]): GitRepo[] {
     const away = new Set(hidden);
     return repos.filter((repo) => !away.has(repo.label));
-};
+}
 
 /*
  * One checkout's status without the repositories standing inside it. A repository git does not track
@@ -65,7 +70,7 @@ export const visibleRepos = (repos: readonly GitRepo[], hidden: readonly string[
  * that repository as a section of its own; keeping the folder would say the same work twice. A
  * submodule is tracked and stays: its gitlink is a change the repository above it has to commit.
  */
-export const withoutNestedRepos = (status: GitStatus | null, root: string, others: readonly string[]): GitStatus | null => {
+export function withoutNestedRepos(status: GitStatus | null, root: string, others: readonly string[]): GitStatus | null {
     if (status === null) {
         return status;
     }
@@ -76,7 +81,7 @@ export const withoutNestedRepos = (status: GitStatus | null, root: string, other
     const files = status.files.filter((file) => file.state !== 'untracked' || !inside.has(file.path));
     // The same status back when nothing was dropped, so no tree is rebuilt over this.
     return files.length === status.files.length ? status : { ...status, files };
-};
+}
 
 export interface ProjectRepos {
     repos: readonly GitRepo[];
@@ -91,7 +96,7 @@ export interface ProjectRepos {
  * ones sitting beside it. A folder of loose checkouts has one per checkout and an ordinary project has
  * exactly one, which is the panel as it always was.
  */
-export const useProjectRepos = (folder: string | null): ProjectRepos => {
+export function useProjectRepos(folder: string | null): ProjectRepos {
     const transport = useTransport();
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, String(folder));
@@ -125,7 +130,7 @@ export const useProjectRepos = (folder: string | null): ProjectRepos => {
     const reload = useCallback((): void => setNonce((count) => count + 1), []);
     const repos = useMemo(() => (list?.key === key ? list.repos : []), [list, key]);
     return { repos, truncated: list?.key === key && list.truncated, reload };
-};
+}
 
 export interface GitCheckouts {
     checkouts: readonly GitCheckout[];
@@ -137,7 +142,7 @@ export interface GitCheckouts {
  * The status of every checkout the panel shows, each with its own watch and its own pace, so an agent
  * writing in one repository does not hold up the redraw of another.
  */
-export const useGitCheckouts = (refs: readonly GitCheckoutRef[]): GitCheckouts => {
+export function useGitCheckouts(refs: readonly GitCheckoutRef[]): GitCheckouts {
     const transport = useTransport();
     const endpointId = useEndpointId();
     const [held, setHeld] = useState<{ endpointId: string; entries: Record<string, Entry> }>({ endpointId: '', entries: {} });
@@ -239,4 +244,4 @@ export const useGitCheckouts = (refs: readonly GitCheckoutRef[]): GitCheckouts =
     );
 
     return { checkouts, refresh };
-};
+}

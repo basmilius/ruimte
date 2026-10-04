@@ -10,7 +10,9 @@ const ZOOM_SETTLE_MS = 160;
 
 /* Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform, so Ctrl always
    zooms and Cmd joins it on macOS; the Windows key never does. */
-const wheelZooms = (e: WheelEvent): boolean => e.ctrlKey || isModHeld(e, isApplePlatform());
+function wheelZooms(e: WheelEvent): boolean {
+    return e.ctrlKey || isModHeld(e, isApplePlatform());
+}
 
 export interface WheelCameraOptions {
     /* A canvas refuses a pan or a zoom while that lock is on; a drawing and a diagram have none. */
@@ -27,7 +29,7 @@ export interface WheelCameraOptions {
  * a thread) scrolls itself rather than through a default that could be prevented, and would
  * otherwise scroll and pan at once.
  */
-export const useWheelCamera = (rootRef: RefObject<HTMLElement | null>, store: StoreApi<CameraSlice>, options: WheelCameraOptions = {}): void => {
+export function useWheelCamera(rootRef: RefObject<HTMLElement | null>, store: StoreApi<CameraSlice>, options: WheelCameraOptions = {}): void {
     const latest = useRef(options);
 
     useEffect(() => {
@@ -101,4 +103,4 @@ export const useWheelCamera = (rootRef: RefObject<HTMLElement | null>, store: St
             document.removeEventListener('gesturechange', swallowGesture);
         };
     }, [rootRef, store]);
-};
+}

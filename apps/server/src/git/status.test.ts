@@ -9,9 +9,13 @@ let template: RepoTemplate;
 let root: string;
 let repo: string;
 
-const git = (args: string[], cwd: string = repo): Promise<string> => gitIn(cwd, args);
+function git(args: string[], cwd: string = repo): Promise<string> {
+    return gitIn(cwd, args);
+}
 
-const write = (name: string, body: string): Promise<void> => writeFile(join(repo, name), body);
+function write(name: string, body: string): Promise<void> {
+    return writeFile(join(repo, name), body);
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-status', (dir) => initRepo(join(dir, 'repo'), { 'tracked.txt': 'one\ntwo\nthree\n' }));

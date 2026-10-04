@@ -116,27 +116,30 @@ const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
  * Every channel answers the app's own pages and nothing else. A guest cannot reach one (its preload
  * only talks to its host), but a page the window was navigated to would inherit the bridge.
  */
-const fromAppWindow = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean =>
-    isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame, appOrigin, APP_SCHEMES);
+function fromAppWindow(event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean {
+    return isAppSender(windows.fromPage(event.sender) !== null, event.senderFrame, appOrigin, APP_SCHEMES);
+}
 
 /* The window whose page a message came from, which is where its dialog, its sheet and its answer belong. */
-const senderWindow = (event: { sender: Electron.WebContents }): Electron.BrowserWindow | null => windows.fromPage(event.sender);
+function senderWindow(event: { sender: Electron.WebContents }): Electron.BrowserWindow | null {
+    return windows.fromPage(event.sender);
+}
 
-const refuseOtherPages = (): never => {
+function refuseOtherPages(): never {
     throw new Error('Only the app window may ask this');
-};
+}
 
-const handleFromApp = <Args extends unknown[]>(channel: string, handler: (event: Electron.IpcMainInvokeEvent, ...args: Args) => unknown): void => {
+function handleFromApp<Args extends unknown[]>(channel: string, handler: (event: Electron.IpcMainInvokeEvent, ...args: Args) => unknown): void {
     ipcMain.handle(channel, (event, ...args) => (fromAppWindow(event) ? handler(event, ...(args as Args)) : refuseOtherPages()));
-};
+}
 
-const onFromApp = <Args extends unknown[]>(channel: string, listener: (event: Electron.IpcMainEvent, ...args: Args) => void): void => {
+function onFromApp<Args extends unknown[]>(channel: string, listener: (event: Electron.IpcMainEvent, ...args: Args) => void): void {
     ipcMain.on(channel, (event, ...args) => {
         if (fromAppWindow(event)) {
             listener(event, ...(args as Args));
         }
     });
-};
+}
 
 /*
  * An app opened from the Dock or a launcher inherits a bare PATH, not the one the person's shell
@@ -145,15 +148,15 @@ const onFromApp = <Args extends unknown[]>(channel: string, listener: (event: El
  */
 let loginPath: string | null | undefined;
 
-const loginShellPath = (): string | null => {
+function loginShellPath(): string | null {
     if (loginPath !== undefined) {
         return loginPath;
     }
     loginPath = askLoginShellPath();
     return loginPath;
-};
+}
 
-const askLoginShellPath = (): string | null => {
+function askLoginShellPath(): string | null {
     if (process.platform === 'win32' || !process.env.SHELL) {
         return null;
     }
@@ -165,10 +168,10 @@ const askLoginShellPath = (): string | null => {
     });
     const match = result.stdout?.match(new RegExp(`${marker}(.*?)${marker}`, 's'));
     return match?.[1] || null;
-};
+}
 
 /* Where the daemon is: compiled into the app's resources, or the repo when run from a checkout. */
-const daemonCommand = (): { command: string; args: string[] } | null => {
+function daemonCommand(): { command: string; args: string[] } | null {
     if (app.isPackaged) {
         const bin = join(process.resourcesPath, 'bin');
         return { command: join(bin, process.platform === 'win32' ? 'ruimte.exe' : 'ruimte'), args: ['--port', String(port)] };
@@ -178,15 +181,17 @@ const daemonCommand = (): { command: string; args: string[] } | null => {
         return null;
     }
     return { command: 'bun', args: [entry, '--port', String(port)] };
-};
+}
 
 /* The built client the shell serves on its scheme: in the app's resources, or the repo's build when run from a checkout. */
-const clientRoot = (): string => (app.isPackaged ? join(process.resourcesPath, 'client') : join(repoRoot, 'apps', 'client', 'dist'));
+function clientRoot(): string {
+    return app.isPackaged ? join(process.resourcesPath, 'client') : join(repoRoot, 'apps', 'client', 'dist');
+}
 
 const MISSING_DAEMON = 'The background service is missing. Run the desktop app from the repository or install a release.';
 
 /* The app's own daemon, a child that ends with the app: the dev app always, a packaged one with the service off. */
-const spawnDaemon = (onExit: () => void): void => {
+function spawnDaemon(onExit: () => void): void {
     const target = daemonCommand();
     if (!target) {
         throw new Error(MISSING_DAEMON);
@@ -220,30 +225,30 @@ const spawnDaemon = (onExit: () => void): void => {
         }
         onExit();
     });
-};
+}
 
 /* One ask of the port, bounded, so a daemon that hangs is no answer rather than a start that never ends. */
-const probeDaemon = async (): Promise<BuildIdentity | null> => {
+async function probeDaemon(): Promise<BuildIdentity | null> {
     try {
         const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(1000) });
         return response.ok ? buildIdentityOf(await response.json()) : null;
     } catch {
         return null;
     }
-};
+}
 
 /*
  * The daemon's local secret, which is how the app proves it runs on this machine now that a loopback
  * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
  * which in `bun dev` may come after this window.
  */
-const readLocalSecret = async (): Promise<string | null> => {
+async function readLocalSecret(): Promise<string | null> {
     try {
         return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
     } catch {
         return null;
     }
-};
+}
 
 const daemonPort: DaemonPort = {
     port,
@@ -253,7 +258,7 @@ const daemonPort: DaemonPort = {
 };
 
 /* Asked before restarting a daemon of an earlier build, which cannot prove it holds the local secret. No window exists yet. */
-const askRestartUnproven = async (): Promise<boolean> => {
+async function askRestartUnproven(): Promise<boolean> {
     const { response } = await dialog.showMessageBox({
         type: 'question',
         buttons: ['Restart Now', 'Quit'],
@@ -263,10 +268,10 @@ const askRestartUnproven = async (): Promise<boolean> => {
         detail: 'That version cannot prove to Ruimte that it belongs to you, so Ruimte connects only after a restart, which ends the terminals and agents running on it. If you quit instead, the machine restarts itself as soon as nothing runs on it.'
     });
     return response === 0;
-};
+}
 
 /* Long enough for a daemon that is snapshotting its sessions on the way out of a restart. */
-const waitForDaemon = async (accept: (health: BuildIdentity) => boolean): Promise<void> => {
+async function waitForDaemon(accept: (health: BuildIdentity) => boolean): Promise<void> {
     const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
         const health = await probeDaemon();
@@ -276,10 +281,10 @@ const waitForDaemon = async (accept: (health: BuildIdentity) => boolean): Promis
         await new Promise((resolve) => setTimeout(resolve, 150));
     }
     throw new Error('The background service did not come up');
-};
+}
 
 /* The id `apps/server/scripts/compile.ts` wrote beside the binary this bundle carries. */
-const bundledBuild = (): string | null => {
+function bundledBuild(): string | null {
     if (!app.isPackaged) {
         return null;
     }
@@ -288,14 +293,16 @@ const bundledBuild = (): string | null => {
     } catch {
         return null;
     }
-};
+}
 
 const support = serviceSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE });
 
 /* Only a packaged app on macOS or Linux gets one; the dev app has none to touch, whatever it is asked. */
-const createServiceManager = (): ServiceManager | null => (support === 'supported' ? platformServiceManager(process.platform) : null);
+function createServiceManager(): ServiceManager | null {
+    return support === 'supported' ? platformServiceManager(process.platform) : null;
+}
 
-const serviceDefinition = (): string => {
+function serviceDefinition(): string {
     const target = daemonCommand();
     if (!target) {
         throw new Error(MISSING_DAEMON);
@@ -309,7 +316,7 @@ const serviceDefinition = (): string => {
         path: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin'
     });
     return definitionFor(process.platform, spec);
-};
+}
 
 const serviceController = createServiceController({
     support,
@@ -330,18 +337,18 @@ const serviceController = createServiceController({
     publish: (state) => void pushServiceState(state)
 });
 
-const pushServiceState = (state: BackgroundServiceState): BackgroundServiceState => {
+function pushServiceState(state: BackgroundServiceState): BackgroundServiceState {
     windows.send('service:state', state);
     return state;
-};
+}
 
 /* Set by "Stop the machine", which is a quit that takes the service down with it. */
 let stopMachineOnQuit = false;
 
-const stopMachine = (): void => {
+function stopMachine(): void {
     stopMachineOnQuit = true;
     app.quit();
-};
+}
 
 handleFromApp('service:state', () => serviceController.state());
 handleFromApp('service:set-keep-running', (_event, keepRunning: boolean) => pushServiceState(serviceController.setKeepRunning(keepRunning === true)));
@@ -350,7 +357,7 @@ handleFromApp('service:enable-linger', () => pushServiceState(serviceController.
  * While an older build or an older definition keeps the machine, the port is asked now and then, so
  * the question and the row in the settings go away once the daemon restarted onto the new one.
  */
-const watchPendingRestart = (): void => {
+function watchPendingRestart(): void {
     if (!serviceController.unsettled()) {
         return;
     }
@@ -362,7 +369,7 @@ const watchPendingRestart = (): void => {
             }
         });
     }, 30_000);
-};
+}
 
 handleFromApp('service:restart-now', async () => pushServiceState(await serviceController.restartNow()));
 handleFromApp('service:restart-when-idle', () => pushServiceState(serviceController.restartWhenIdle()));
@@ -391,34 +398,36 @@ const theme = createTheme({
  * buttons of a mouse and Cmd+[ inside a page, all sent to the webview element. Registered on the
  * session so the client names no path; a main frame runs it and a subframe does not.
  */
-const registerGuestPreload = (): void => {
+function registerGuestPreload(): void {
     session.fromPartition(BROWSER_PARTITION).registerPreloadScript({ type: 'frame', id: 'ruimte-guest', filePath: join(here, 'guest.cjs') });
-};
+}
 
-const isBrowserGuest = (contents: Electron.WebContents): boolean =>
-    contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
+function isBrowserGuest(contents: Electron.WebContents): boolean {
+    return contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
+}
 
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
 /* A previewed file may load adjacent assets, but cannot use its scripts to reach a server or, without a press of the person, the system browser. */
-const sealPreviewSession = (): void => {
+function sealPreviewSession(): void {
     const preview = session.fromPartition(PREVIEW_PARTITION);
     preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
     preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-};
+}
 
-const sealBrowserSession = (): void => {
+function sealBrowserSession(): void {
     const browser = session.fromPartition(BROWSER_PARTITION);
     browser.setPermissionRequestHandler((_contents, permission, callback) => callback(allowGuestPermission(permission)));
     browser.setPermissionCheckHandler((_contents, permission) => allowGuestPermission(permission));
     browser.setDevicePermissionHandler(() => false);
-};
+}
 
-const isPreviewGuest = (contents: Electron.WebContents): boolean =>
-    contents.getType() === 'webview' && contents.session === session.fromPartition(PREVIEW_PARTITION);
+function isPreviewGuest(contents: Electron.WebContents): boolean {
+    return contents.getType() === 'webview' && contents.session === session.fromPartition(PREVIEW_PARTITION);
+}
 
 /* Network links a person clicks leave the sealed preview instead of failing silently inside it. */
-const routePreviewLinks = (contents: Electron.WebContents): void => {
+function routePreviewLinks(contents: Electron.WebContents): void {
     const gesture = createGestureGate(() => Date.now());
     contents.on('input-event', (_event, input) => gesture.saw(input.type));
     contents.on('will-navigate', (event) => {
@@ -435,10 +444,10 @@ const routePreviewLinks = (contents: Electron.WebContents): void => {
         }
         return { action: 'deny' };
     });
-};
+}
 
 /* Nothing but the app loads in its window: a dropped link or file would otherwise take the bridge with it. */
-const guardAppNavigation = (contents: Electron.WebContents): void => {
+function guardAppNavigation(contents: Electron.WebContents): void {
     contents.on('will-navigate', (event) => {
         const verdict = appWindowNavigation(event.url, appOrigin, APP_SCHEMES);
         if (verdict === 'allow') {
@@ -462,7 +471,7 @@ const guardAppNavigation = (contents: Electron.WebContents): void => {
             event.preventDefault();
         }
     });
-};
+}
 
 /* What each window last asked for, by window id. Kept rather than applied once, since the power
    source it depends on changes while the request stands. */
@@ -470,21 +479,21 @@ const keepAwakeRequests = new Map<number, KeepAwakeRequest>();
 
 const holdKeepAwake = createKeepAwakeHold(powerSaveBlocker);
 
-const applyKeepAwake = (): void => {
+function applyKeepAwake(): void {
     const request = mergeKeepAwake(keepAwakeRequests.values());
     // `powerMonitor` only answers once the app is ready, and a request only arrives from a window after that.
     const onBattery = request !== null && powerMonitor.isOnBatteryPower();
     holdKeepAwake(keepAwakeBlocker(request, { platform: process.platform, onBattery }));
-};
+}
 
-const setKeepAwake = (windowId: number, request: KeepAwakeRequest | null): void => {
+function setKeepAwake(windowId: number, request: KeepAwakeRequest | null): void {
     if (request === null) {
         keepAwakeRequests.delete(windowId);
     } else {
         keepAwakeRequests.set(windowId, request);
     }
     applyKeepAwake();
-};
+}
 
 onFromApp('power:keep-awake', (event, keep: boolean) => {
     const window = senderWindow(event);
@@ -507,7 +516,7 @@ onFromApp('power:keep-awake-request', (event, request: unknown) => {
 const agentActivities = new Map<number, AgentActivity>();
 let agentActivity: AgentActivity = { working: 0, attention: 0 };
 
-const setAgentActivity = (windowId: number, activity: AgentActivity | null): void => {
+function setAgentActivity(windowId: number, activity: AgentActivity | null): void {
     if (activity === null) {
         agentActivities.delete(windowId);
     } else {
@@ -518,7 +527,7 @@ const setAgentActivity = (windowId: number, activity: AgentActivity | null): voi
     if (process.platform !== 'win32') {
         app.setBadgeCount(agentActivity.attention);
     }
-};
+}
 
 onFromApp('agents:activity', (event, activity: AgentActivity) => {
     const window = senderWindow(event);
@@ -528,10 +537,10 @@ onFromApp('agents:activity', (event, activity: AgentActivity) => {
 });
 
 /* A window that closes or reloads takes what it asked for with it; its page asks again once it is back. */
-const dropWindowShares = (windowId: number): void => {
+function dropWindowShares(windowId: number): void {
     setKeepAwake(windowId, null);
     setAgentActivity(windowId, null);
-};
+}
 
 /* Set once a person has said to quit with work still running, so the question is asked once. */
 let quitConfirmed = false;
@@ -561,7 +570,7 @@ if (launcherPipe !== undefined) {
  * Whether to go ahead with a quit. The machine is asked what runs on it only when the quit ends it,
  * since a window that closed took its own count with it and the last one may be gone already.
  */
-const askBeforeQuit = async (): Promise<boolean> => {
+async function askBeforeQuit(): Promise<boolean> {
     const survives = serviceController.survivesQuit(stopMachineOnQuit);
     const question = quitQuestion({ survives, windows: agentActivity, machine: survives ? null : await askDaemonWork(daemonPort) });
     if (question === null) {
@@ -570,7 +579,7 @@ const askBeforeQuit = async (): Promise<boolean> => {
     const parent = windows.focused();
     const { response } = parent ? await dialog.showMessageBox(parent, question) : await dialog.showMessageBox(question);
     return response === 0;
-};
+}
 
 const pageKeys = createPageKeys();
 
@@ -587,11 +596,11 @@ const menuTemplates = new Map<number, Electron.MenuItemConstructorOptions[]>();
 /* The view the window `window:open` is about to make shows first. `windows.open` calls `createWindow` in the same tick, which takes it. */
 let openingView: string | null = null;
 
-const createWindow = (
+function createWindow(
     key: string | null,
     bounds: Partial<Electron.Rectangle> & { width: number; height: number },
     origin: WindowOrigin
-): Electron.BrowserWindow => {
+): Electron.BrowserWindow {
     const view = openingView;
     openingView = null;
     const window = new BrowserWindow({
@@ -665,7 +674,7 @@ const createWindow = (
     // The smoke run opens its one window the way a start without a session does.
     void window.loadURL(windowUrl(appUrl, key, origin === 'first' || smoke, view)).catch(() => undefined);
     return window;
-};
+}
 
 /* A window per project, and the windows of the last session again at the next start. */
 const windows = createWindows({
@@ -681,7 +690,7 @@ const windows = createWindows({
  * The microphone is for the app's own pages, and only for audio. Set once on the session every
  * window shares; a handler per window would leave only the last window able to ask.
  */
-const sealAppSession = (): void => {
+function sealAppSession(): void {
     const own = session.defaultSession;
     own.setPermissionCheckHandler((requester, permission, _origin, details) => {
         if (permission !== 'media') {
@@ -697,10 +706,10 @@ const sealAppSession = (): void => {
         const mediaTypes = 'mediaTypes' in details ? details.mediaTypes : undefined;
         callback(windows.fromPage(requester) !== null && details.isMainFrame && mediaTypes?.length === 1 && mediaTypes[0] === 'audio');
     });
-};
+}
 
 /* Opens the inspector for a guest page, on the element under `at` when a point comes with it. */
-const guestDevTools = (id: number, at?: { x: number; y: number }): void => {
+function guestDevTools(id: number, at?: { x: number; y: number }): void {
     const guest = webContents.fromId(id);
     if (!guest) {
         return;
@@ -736,7 +745,7 @@ const guestDevTools = (id: number, at?: { x: number; y: number }): void => {
         }
     });
     devtoolsWindows.set(id, window);
-};
+}
 
 /* Which guest a right-click came from, so the client draws a preview's menu without a page's history. */
 type GuestKind = 'browser' | 'preview';
@@ -754,10 +763,10 @@ const SPELLING_SUGGESTIONS = 5;
 /* Where a selection goes when someone asks the system browser to look it up, as in the client's menu. */
 const SEARCH_URL = 'https://www.google.com/search?q=';
 
-const menuLabel = (text: string): string => {
+function menuLabel(text: string): string {
     const line = text.trim().replace(/\s+/g, ' ');
     return line.length > 24 ? `${line.slice(0, 24)}…` : line;
-};
+}
 
 /*
  * The menu over an editable field, native on purpose. A text field is the one place where the
@@ -766,7 +775,7 @@ const menuLabel = (text: string): string => {
  * platform recognizes, so every row that has one uses it, and the rows macOS appends itself are
  * not in the template.
  */
-const editableGuestMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams, inspectable: boolean): void => {
+function editableGuestMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, inspectable: boolean): void {
     const template: Electron.MenuItemConstructorOptions[] = [];
     for (const word of params.dictionarySuggestions.slice(0, SPELLING_SUGGESTIONS)) {
         template.push({ label: word, click: () => contents.replaceMisspelling(word) });
@@ -806,7 +815,7 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
      * Electron. No position: the menu belongs at the cursor, which is where Electron puts it.
      */
     Menu.buildFromTemplate(template).popup({ window: windows.fromContents(contents) ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
-};
+}
 
 /* The frame each guest's last right-click landed in, so copy and select all act where the person pointed. */
 const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
@@ -818,7 +827,7 @@ const menuFrames = new WeakMap<Electron.WebContents, Electron.WebFrameMain>();
  * editable field is the exception and never leaves the shell, because what the platform adds to a
  * native menu there is worth more than a menu in the app's own style.
  */
-const guestContextMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void => {
+function guestContextMenu(contents: Electron.WebContents, params: Electron.ContextMenuParams, guest: GuestKind): void {
     if (params.isEditable) {
         editableGuestMenu(contents, params, guest === 'browser');
         return;
@@ -848,7 +857,7 @@ const guestContextMenu = (contents: Electron.WebContents, params: Electron.Conte
         },
         pageURL: params.pageURL
     });
-};
+}
 
 /* A sealed preview only reads: nothing it is asked to do may download, inspect or leave for the system browser. */
 const PREVIEW_ACTIONS = new Set(['copy', 'select-all', 'copy-image']);
@@ -975,14 +984,14 @@ const addressBookUrl = process.env.RUIMTE_PULSAR_URL ?? ADDRESS_BOOK_URL;
 let pulsarVault: SessionVault | null = null;
 let pendingLogin: LoopbackLogin | null = null;
 
-const pulsarSessions = (): SessionVault => {
+function pulsarSessions(): SessionVault {
     pulsarVault ??= new SessionVault({
         client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init) }),
         store: fileSessionStore(join(app.getPath('userData'), 'pulsar-session.bin'), safeStorage),
         signer: fileSessionKey(join(app.getPath('userData'), 'pulsar-key.bin'), safeStorage)
     });
     return pulsarVault;
-};
+}
 
 type OpenAiCredentialStatus = {
     configured: boolean;
@@ -991,18 +1000,18 @@ type OpenAiCredentialStatus = {
 
 let openAiKeyStore: SecretStore | null = null;
 
-const openAiKeys = (): SecretStore => {
+function openAiKeys(): SecretStore {
     openAiKeyStore ??= fileSecretStore(join(app.getPath('userData'), 'openai-api-key.bin'), safeStorage);
     return openAiKeyStore;
-};
+}
 
-const openAiCredentialStatus = async (): Promise<OpenAiCredentialStatus> => {
+async function openAiCredentialStatus(): Promise<OpenAiCredentialStatus> {
     const store = openAiKeys();
     if ((await store.read()) !== null) {
         return { configured: true, persistent: store.persistent() };
     }
     return { configured: false, persistent: false };
-};
+}
 
 handleFromApp('openai:credential-status', () => openAiCredentialStatus());
 
@@ -1261,7 +1270,7 @@ handleFromApp('update:download', () => updater.download());
  * Installing closes every window before it quits, so a quit that ends work is asked about while they
  * are still there. Not when `confirmed`: a person asked from another client after being told what ends.
  */
-const installUpdate = async (confirmed: boolean): Promise<void> => {
+async function installUpdate(confirmed: boolean): Promise<void> {
     if (!confirmed && !serviceController.survivesQuit(false) && !(await askBeforeQuit())) {
         return;
     }
@@ -1269,7 +1278,7 @@ const installUpdate = async (confirmed: boolean): Promise<void> => {
     if (!updater.install()) {
         quitConfirmed = false;
     }
-};
+}
 
 onFromApp('update:install', (_event, confirmed: unknown) => void installUpdate(confirmed === true));
 
@@ -1283,7 +1292,7 @@ const releaseNotes = createReleaseNotes({
 handleFromApp('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
 
 // What stands until the page sends its own menu, and again after a reload or a crash.
-const setStaticMenu = (): void => {
+function setStaticMenu(): void {
     const openSettings = (section: string | null): void => {
         const window = windows.focused();
         window?.show();
@@ -1304,7 +1313,7 @@ const setStaticMenu = (): void => {
         toggleDevTools: () => windows.focused()?.webContents.toggleDevTools()
     });
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-};
+}
 
 /* A page in a browser node or an HTML preview never sees the key, so there the menu answers. */
 const runMenuCommand = createMenuCommands({
@@ -1316,16 +1325,16 @@ const runMenuCommand = createMenuCommands({
     }
 });
 
-const shellMenuItem = (action: MenuShellAction, label: string): Electron.MenuItemConstructorOptions | null => {
+function shellMenuItem(action: MenuShellAction, label: string): Electron.MenuItemConstructorOptions | null {
     if (action === 'devtools') {
         return { label, accelerator: devToolsAccelerator(), click: () => windows.focused()?.webContents.toggleDevTools() };
     }
     // Only where a service can run: anywhere else quitting already stops the machine.
     return action === 'stop-machine-and-quit' && support === 'supported' ? { label, click: () => stopMachine() } : null;
-};
+}
 
 /* The menu of the window that came to the front, or the fixed one until its page sent one. */
-const applyMenuOf = (window: Electron.BrowserWindow): void => {
+function applyMenuOf(window: Electron.BrowserWindow): void {
     const template = menuTemplates.get(window.id);
     if (!template) {
         setStaticMenu();
@@ -1336,7 +1345,7 @@ const applyMenuOf = (window: Electron.BrowserWindow): void => {
     } catch (error) {
         console.error('[ruimte] menu refused', error);
     }
-};
+}
 
 // Every page builds the menu from what has the focus in it (`apps/client/src/shell/menu`); the shell draws the one in front.
 onFromApp('menu:set', (event, spec: MenuSpec) => {
@@ -1356,15 +1365,15 @@ onFromApp('menu:set', (event, spec: MenuSpec) => {
  * gets measured instead of guessed. The traffic lights are native and never show up in a page
  * capture; only what the client draws next to them does.
  */
-const captureTitleBar = async (window: Electron.BrowserWindow, target: string): Promise<void> => {
+async function captureTitleBar(window: Electron.BrowserWindow, target: string): Promise<void> {
     const image = await window.webContents.capturePage({ x: 0, y: 0, width: 200, height: TITLEBAR_HEIGHT });
     const { scaleFactor } = screen.getDisplayMatching(window.getBounds());
     writeFileSync(target, image.toPNG({ scaleFactor }));
     console.log(`smoke: wrote ${target} at ${scaleFactor}x`);
-};
+}
 
 /* Adds a browser node through the client's own keyboard path, points it at the dev server and waits for the page. */
-const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
+async function runSmoke(window: Electron.BrowserWindow): Promise<void> {
     console.log('smoke: window loaded');
     window.webContents.on('preload-error', (_event, path, error) => console.log(`smoke: preload error in ${path}: ${error.message}`));
     console.log(`smoke: bridge is ${await window.webContents.executeJavaScript('typeof window.ruimteDesktop')}`);
@@ -1404,7 +1413,7 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
         `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; const views = [...document.querySelectorAll('webview')]; return JSON.stringify({ ids, state: id ? window.ruimte.browserState(id) : null, views: views.map((v) => ({ src: v.getAttribute('src'), attached: v.isConnected, parent: v.parentElement?.style.visibility })) }); })()`
     );
     console.log(`smoke: the browser node did not finish loading: ${detail}`);
-};
+}
 
 if (!app.requestSingleInstanceLock()) {
     app.quit();

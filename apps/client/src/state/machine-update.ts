@@ -11,7 +11,7 @@ import { watchPool, type WatchablePool } from '@/transport/pool-watch';
  */
 
 /* What the machine is told, or null for a step this wire does not know yet, which then tells nothing. */
-export const machineReportOf = (state: UpdateState): MachineUpdateReport | null => {
+export function machineReportOf(state: UpdateState): MachineUpdateReport | null {
     const status = MachineUpdateStatusSchema.safeParse(state.status);
     if (!status.success) {
         return null;
@@ -23,12 +23,12 @@ export const machineReportOf = (state: UpdateState): MachineUpdateReport | null 
         ...(state.percent === undefined ? {} : { percent: Math.min(100, Math.max(0, state.percent)) }),
         ...(state.error ? { error: state.error.slice(0, 1000) } : {})
     };
-};
+}
 
 export type InstallStep = 'install' | 'download' | 'wait' | 'none';
 
 /* What a requested install does now: a ready update installs, one not yet fetched downloads first. */
-export const installStep = (status: UpdateState['status']): InstallStep => {
+export function installStep(status: UpdateState['status']): InstallStep {
     switch (status) {
         case 'ready':
             return 'install';
@@ -39,7 +39,7 @@ export const installStep = (status: UpdateState['status']): InstallStep => {
         default:
             return 'none';
     }
-};
+}
 
 export interface MachineUpdateShell {
     state(): UpdateState;
@@ -53,7 +53,7 @@ export interface MachineUpdateShell {
  * feeds it the shell's states and the one that stops it. A machine from before answers
  * `unknown-request`, which changes nothing here.
  */
-export const startMachineUpdate = (shell: MachineUpdateShell, source?: WatchablePool): { apply(state: UpdateState): void; stop(): void } => {
+export function startMachineUpdate(shell: MachineUpdateShell, source?: WatchablePool): { apply(state: UpdateState): void; stop(): void } {
     let local: Transport | null = null;
     // Set by a requested install that waits for the download to finish.
     let installWhenReady = false;
@@ -108,4 +108,4 @@ export const startMachineUpdate = (shell: MachineUpdateShell, source?: Watchable
         },
         stop
     };
-};
+}

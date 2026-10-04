@@ -7,12 +7,16 @@ import { attachmentNote } from './input.ts';
 import { CodexTransport, DEFAULT_CODEX_CLIENT, type CodexClientInfo, type CodexFrame } from './codex-transport.ts';
 import { errorText } from '../error-text.ts';
 
-const textInput = (text: string) => [{ type: 'text', text, text_elements: [] }];
+function textInput(text: string) {
+    return [{ type: 'text', text, text_elements: [] }];
+}
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /* The enabled skills of a `skills/list` answer; Codex reports one entry per folder it was asked about. */
-export const parseSkillsList = (result: unknown): ChatSkill[] => {
+export function parseSkillsList(result: unknown): ChatSkill[] {
     const data = isRecord(result) && Array.isArray(result.data) ? result.data : [];
     const skills = new Map<string, ChatSkill>();
     for (const entry of data) {
@@ -28,7 +32,7 @@ export const parseSkillsList = (result: unknown): ChatSkill[] => {
         }
     }
     return [...skills.values()].sort((a, b) => a.name.localeCompare(b.name));
-};
+}
 
 export interface CodexBackendOptions {
     client?: CodexClientInfo;

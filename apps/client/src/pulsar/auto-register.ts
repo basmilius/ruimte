@@ -41,19 +41,21 @@ export interface AnnouncedIdentity {
  * of this machine reaches it with the local secret and never pins a key, so the key it announces stands
  * in; a key a row pinned still wins.
  */
-export const announcedRecordOf = (endpoint: Pick<Endpoint, 'brokerUrl' | 'daemonPublicKey'>, info: AnnouncedIdentity): MachineRecord | null => {
+export function announcedRecordOf(endpoint: Pick<Endpoint, 'brokerUrl' | 'daemonPublicKey'>, info: AnnouncedIdentity): MachineRecord | null {
     const publicKey = endpoint.daemonPublicKey ?? info.publicKey;
     // The label and the broker arrive in one `endpoint.info`, so a known label means the broker is known too.
     if (info.label === null || publicKey === null) {
         return null;
     }
     return { name: info.label, icon: info.icon, brokerUrl: endpoint.brokerUrl ?? null, publicKey };
-};
+}
 
 export type RegisterOutcome = 'registered' | 'removed' | 'refused' | 'skipped' | 'failed';
 
 // The code a failure carries: a transport error of the machine, or an address book error.
-const codeOf = (error: unknown): string | null => (error instanceof Error && 'code' in error && typeof error.code === 'string' ? error.code : null);
+function codeOf(error: unknown): string | null {
+    return error instanceof Error && 'code' in error && typeof error.code === 'string' ? error.code : null;
+}
 
 interface Failure {
     count: number;
@@ -65,10 +67,10 @@ interface Failure {
  * Compared the way the daemon signs it: the name cut to what the address book keeps and an icon it cannot
  * store read as none, so a machine whose record can never match is not registered again on every sweep.
  */
-const recordKeyOf = (record: MachineRecord): string => {
+function recordKeyOf(record: MachineRecord): string {
     const icon = MachineIconSchema.safeParse(record.icon);
     return JSON.stringify([record.name.slice(0, MACHINE_NAME_MAX), icon.success ? icon.data : null, record.brokerUrl, record.publicKey]);
-};
+}
 
 /*
  * Registers each changed machine state once per account. Explicit removals stay removed, and failures

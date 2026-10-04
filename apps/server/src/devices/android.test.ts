@@ -42,8 +42,8 @@ class FakeAdb {
     };
 }
 
-const backendWith = (adb: FakeAdb, options: AndroidBackendOptions = {}): AndroidBackend =>
-    new AndroidBackend({
+function backendWith(adb: FakeAdb, options: AndroidBackendOptions = {}): AndroidBackend {
+    return new AndroidBackend({
         locate: () => SDK,
         run: adb.run,
         readAvds: async () => [PIXEL, TABLET],
@@ -51,6 +51,7 @@ const backendWith = (adb: FakeAdb, options: AndroidBackendOptions = {}): Android
         sleep: async () => undefined,
         ...options
     });
+}
 
 describe('parseAdbDevices', () => {
     test('reads states, the model and a sentence for a state', () => {

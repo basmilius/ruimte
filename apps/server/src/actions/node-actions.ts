@@ -32,17 +32,19 @@ import { verbCallOf, type ServerActionContext } from './context.ts';
 /* The set is closed and short enough to print whole, unlike the Lucide names a view picks from. */
 export const COLOR_LINES: readonly string[] = [['colors', ...NODE_ACCENT_NAMES].join('\t')];
 
-const withCanvas = (content: ProjectContent, canvas: ProjectCanvasView): ProjectContent => ({
-    ...content,
-    views: content.views.map((view) => (view.id === canvas.id ? canvas : view))
-});
+function withCanvas(content: ProjectContent, canvas: ProjectCanvasView): ProjectContent {
+    return {
+        ...content,
+        views: content.views.map((view) => (view.id === canvas.id ? canvas : view))
+    };
+}
 
 /*
  * What this refusal may offer: the nodes on the caller's own canvas that this same call would
  * actually remove. The caller's own node is left out, since `deletes-caller` refuses it two lines
  * later, and so is every node the caller did not make unless the machine frees them.
  */
-const deletableLines = (content: ProjectContent, place: IndexedPlace, call: VerbCall, anyNode: boolean): string[] => {
+function deletableLines(content: ProjectContent, place: IndexedPlace, call: VerbCall, anyNode: boolean): string[] {
     const canvas = place.canvasId === null ? undefined : content.views.find((view) => view.id === place.canvasId);
     if (canvas === undefined || !isCanvasView(canvas)) {
         return ['detail\truimte-context node list --view <id>\tthe nodes of a canvas, which is where an id comes from'];
@@ -51,7 +53,7 @@ const deletableLines = (content: ProjectContent, place: IndexedPlace, call: Verb
         takes: (node) => node.id !== call.caller && (anyNode || call.host.madeBy(node.id) === call.caller),
         empty: `You have no node on ${canvas.id} to remove; node delete takes a node you made yourself`
     });
-};
+}
 
 /*
  * Who may write in a note. Not the maker alone, the way `node delete` reads a node: a shared note is
@@ -59,24 +61,28 @@ const deletableLines = (content: ProjectContent, place: IndexedPlace, call: Verb
  * A line is what a person drew, so it is what grants this, and either direction counts, since a note
  * holds no agent and a line into it reads as the same relationship as one out of it.
  */
-const mayWrite = (canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall): boolean =>
-    call.host.madeBy(node.id) === call.caller ||
-    canvas.edges.some((edge) => (edge.from === call.caller && edge.to === node.id) || (edge.to === call.caller && edge.from === node.id));
+function mayWrite(canvas: ProjectCanvasView, node: ProjectNode, call: VerbCall): boolean {
+    return (
+        call.host.madeBy(node.id) === call.caller ||
+        canvas.edges.some((edge) => (edge.from === call.caller && edge.to === node.id) || (edge.to === call.caller && edge.from === node.id))
+    );
+}
 
 /* What a refusal may offer instead: only the notes this same call would really write in. */
-const writableLines = (canvas: ProjectCanvasView, call: VerbCall): string[] =>
-    nodeLines(canvas, {
+function writableLines(canvas: ProjectCanvasView, call: VerbCall): string[] {
+    return nodeLines(canvas, {
         takes: (node) => node.kind === 'note' && mayWrite(canvas, node, call),
         empty: `${canvas.id} has no note you may write in; ruimte-context node new note --text B adds one of your own`
     });
+}
 
 /* The text as a line of its own under what is there, and nothing but the text on a note still empty. */
-const withLine = (body: string, text: string): string => {
+function withLine(body: string, text: string): string {
     if (body === '') {
         return text;
     }
     return `${body}${body.endsWith('\n') ? '' : '\n'}${text}`;
-};
+}
 
 /*
  * The lines between the caller and what the frame now holds, which the one line into the group says
@@ -85,16 +91,19 @@ const withLine = (body: string, text: string): string => {
  * since a line a person drew is the context that person gave. Which way a line runs is not part of
  * it: a line between an agent and a node that is not one reads the same in both directions.
  */
-const ownLinesInto = (edges: readonly ProjectEdge[], held: ReadonlySet<string>, call: VerbCall): ProjectEdge[] =>
-    edges.filter(
+function ownLinesInto(edges: readonly ProjectEdge[], held: ReadonlySet<string>, call: VerbCall): ProjectEdge[] {
+    return edges.filter(
         (edge) =>
             ((edge.from === call.caller && held.has(edge.to)) || (edge.to === call.caller && held.has(edge.from))) &&
             ownEnd(edge.from, call) &&
             ownEnd(edge.to, call)
     );
+}
 
 /* Where a node stands, said in the words a refusal needs: a frame by id, or the canvas itself. */
-const placeName = (container: ProjectNode | undefined): string => (container === undefined ? 'on the canvas itself' : `in group ${container.id}`);
+function placeName(container: ProjectNode | undefined): string {
+    return container === undefined ? 'on the canvas itself' : `in group ${container.id}`;
+}
 
 export const nodeActions: ActionHandlers<ServerActionContext> = {
     'node.list': async ({ viewId }, { actor, context }) => {

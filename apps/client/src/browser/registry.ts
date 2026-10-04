@@ -69,13 +69,13 @@ export const useBrowser = create<BrowserStore>((set) => ({
 }));
 
 /* What one browser node shows, on the machine in scope. */
-export const useBrowserRow = <T>(nodeId: string, select: (row: BrowserState | undefined) => T): T => {
+export function useBrowserRow<T>(nodeId: string, select: (row: BrowserState | undefined) => T): T {
     const endpointId = useEndpointId();
     return useBrowser((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
-};
+}
 
 /* What this client keeps of the pages, one icon per node of this endpoint, only the ones there are. */
-export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointId: string): Record<string, string> => {
+export function faviconsOfProject(byKey: Record<string, BrowserState>, endpointId: string): Record<string, string> {
     const favicons: Record<string, string> = {};
     for (const [key, state] of Object.entries(byKey)) {
         if (state.favicon && isOfEndpoint(key, endpointId)) {
@@ -83,7 +83,7 @@ export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointI
         }
     }
     return favicons;
-};
+}
 
 const EMPTY: BrowserState = {
     url: '',
@@ -121,7 +121,7 @@ interface GuestMessage {
     args: unknown[];
 }
 
-const isWheelSample = (value: unknown): value is WheelSample => {
+function isWheelSample(value: unknown): value is WheelSample {
     const sample = value as Partial<WheelSample> | null;
     return (
         typeof sample === 'object' &&
@@ -133,25 +133,27 @@ const isWheelSample = (value: unknown): value is WheelSample => {
         typeof sample.pinch === 'boolean' &&
         typeof sample.pageTakes === 'boolean'
     );
-};
+}
 
 /* Whether pages report their wheel at all, the setting on the one platform the gesture belongs to. */
-const swipesOn = (): boolean => canSwipeBetweenPages() && useSettings.getState().browserSwipe;
+function swipesOn(): boolean {
+    return canSwipeBetweenPages() && useSettings.getState().browserSwipe;
+}
 
 /* The site a page belongs to, or the address itself when it has no host to compare. */
-const originOf = (url: string): string => {
+function originOf(url: string): string {
     try {
         return new URL(url).origin;
     } catch {
         return url;
     }
-};
+}
 
 // A load the page itself cancelled (a redirect, a new navigation) is not an error worth a banner.
 const ABORTED = -3;
 
 /* Adds a scheme when the person typed a bare host; anything with one is used as is. */
-export const normalizeUrl = (input: string): string => {
+export function normalizeUrl(input: string): string {
     const trimmed = input.trim();
     if (trimmed === '') {
         return 'about:blank';
@@ -163,17 +165,19 @@ export const normalizeUrl = (input: string): string => {
         return trimmed;
     }
     return `https://${trimmed}`;
-};
+}
 
-export const initialStreamUrl = (savedUrl: string, observedUrl?: string): string => (observedUrl && observedUrl !== 'about:blank' ? observedUrl : savedUrl);
+export function initialStreamUrl(savedUrl: string, observedUrl?: string): string {
+    return observedUrl && observedUrl !== 'about:blank' ? observedUrl : savedUrl;
+}
 
 /* A webview is a custom element. Before it is connected, assigning its `src` property can shadow
    Electron's property setter; an attribute survives the upgrade and starts the first navigation. */
-export const setInitialWebviewUrl = (element: Pick<HTMLElement, 'setAttribute'>, initialUrl: string): string => {
+export function setInitialWebviewUrl(element: Pick<HTMLElement, 'setAttribute'>, initialUrl: string): string {
     const url = normalizeUrl(initialUrl);
     element.setAttribute('src', url);
     return url;
-};
+}
 
 /*
  * The webview elements, one per browser node, created once and never re-parented. Chromium

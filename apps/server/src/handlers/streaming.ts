@@ -9,10 +9,10 @@ export const STREAMING_DISABLED_MESSAGE = 'Browser and device streaming is disab
  *
  * @param streamingAllowed Reads the machine policy at the moment of the call, never at register time.
  */
-export const streamingGate = (streamingAllowed: () => boolean): (() => void) => {
+export function streamingGate(streamingAllowed: () => boolean): () => void {
     return () => {
         if (!streamingAllowed()) {
             throw new RequestError('streaming-disabled', STREAMING_DISABLED_MESSAGE);
         }
     };
-};
+}

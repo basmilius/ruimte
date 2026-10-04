@@ -28,8 +28,8 @@ let plans: PlanStore;
 let home: string;
 
 /* Only what these handlers reach; anything else is a handler reaching further than it should. */
-const host = (): CanvasHost =>
-    ({
+function host(): CanvasHost {
+    return {
         read: async () => content,
         revision: async () => (writtenMeanwhile ? rev - 1 : rev),
         mutate: async (_projectId, apply, expectedRev) => {
@@ -82,57 +82,66 @@ const host = (): CanvasHost =>
         } as Partial<CanvasHost['tasks']> as CanvasHost['tasks'],
         plans,
         browsers: { drive: async () => null, shot: async () => null }
-    }) as Partial<CanvasHost> as CanvasHost;
+    } as Partial<CanvasHost> as CanvasHost;
+}
 
-const agent = (dryRun = false) => serverActionCall(host(), PLACE, 'term-1', dryRun);
+function agent(dryRun = false) {
+    return serverActionCall(host(), PLACE, 'term-1', dryRun);
+}
 
-const note = (input: Partial<ActionInput<'node.create'>> = {}): ActionInput<'node.create'> => ({
-    viewId: 'main',
-    kind: 'note',
-    title: null,
-    content: 'hello',
-    url: null,
-    command: null,
-    path: null,
-    provider: null,
-    at: null,
-    ...input
-});
+function note(input: Partial<ActionInput<'node.create'>> = {}): ActionInput<'node.create'> {
+    return {
+        viewId: 'main',
+        kind: 'note',
+        title: null,
+        content: 'hello',
+        url: null,
+        command: null,
+        path: null,
+        provider: null,
+        at: null,
+        ...input
+    };
+}
 
-const nodesOnMain = (): string[] => {
+function nodesOnMain(): string[] {
     const main = content.views.find((view) => view.id === 'main');
     return main?.kind === 'canvas' ? main.nodes.map((node) => node.id) : [];
-};
+}
 
-const as = (caller: string, dryRun = false) => serverActionCall(host(), PLACE, caller, dryRun);
+function as(caller: string, dryRun = false) {
+    return serverActionCall(host(), PLACE, caller, dryRun);
+}
 
-const openTask = (childId: string, parentId: string): Task => ({
-    id: `task-${childId}`,
-    projectId: PLACE.projectId,
-    parentId,
-    childId,
-    title: 'Look into it',
-    prompt: 'Look into it',
-    status: 'open',
-    result: null,
-    createdAt: 0,
-    settledAt: null,
-    wake: 'pending'
-});
+function openTask(childId: string, parentId: string): Task {
+    return {
+        id: `task-${childId}`,
+        projectId: PLACE.projectId,
+        parentId,
+        childId,
+        title: 'Look into it',
+        prompt: 'Look into it',
+        status: 'open',
+        result: null,
+        createdAt: 0,
+        settledAt: null,
+        wake: 'pending'
+    };
+}
 
-const onMain = (...nodes: ProjectNode[]): void => {
+function onMain(...nodes: ProjectNode[]): void {
     const main = content.views.find((view) => view.id === 'main');
     if (main?.kind === 'canvas') {
         main.nodes.push(...nodes);
     }
-};
+}
 
-const lineOnMain = (from: string, to: string): void => {
+function lineOnMain(from: string, to: string): void {
     const main = content.views.find((view) => view.id === 'main');
     if (main?.kind === 'canvas') {
         main.edges.push({ id: `${from}-${to}`, from, to });
     }
-};
+}
 
 beforeEach(async () => {
     made = new Map();

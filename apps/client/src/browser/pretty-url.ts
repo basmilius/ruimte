@@ -6,7 +6,7 @@ const HTTPS = 'https://';
  * `http://` is a warning and keeps its scheme, and so do `file:` and every other scheme; a path
  * that really ends in a slash keeps it, because there the slash is part of the address.
  */
-export const prettyUrl = (url: string): string => {
+export function prettyUrl(url: string): string {
     if (!url.startsWith(HTTPS)) {
         return url;
     }
@@ -16,4 +16,4 @@ export const prettyUrl = (url: string): string => {
     }
     const withoutSlash = rest.slice(0, -1);
     return rest.endsWith('/') && !withoutSlash.includes('/') ? withoutSlash : rest;
-};
+}

@@ -20,7 +20,9 @@ import {
 } from './closed-lid.ts';
 
 /* Where a home notes that it turned sleep off, kept beside nothing a client can read. */
-export const closedLidMarkerPath = (home: string): string => join(home, 'power', 'closed-lid-held');
+export function closedLidMarkerPath(home: string): string {
+    return join(home, 'power', 'closed-lid-held');
+}
 
 export interface Watchdog extends Dismissable {
     readonly pid: number;
@@ -31,7 +33,7 @@ export interface Watchdog extends Dismissable {
  * Starts a watchdog detached in a session of its own, holding the write end of its stdin for as long as
  * the returned handle lives. Dismissing sends a SIGKILL, which it cannot ignore, so it never runs its command then.
  */
-export const spawnWatchdog = (command: string[]): Watchdog => {
+export function spawnWatchdog(command: string[]): Watchdog {
     const watchdog = Bun.spawn(command, { stdin: 'pipe', stdout: 'ignore', stderr: 'ignore', detached: true });
     watchdog.unref();
     return {
@@ -41,10 +43,10 @@ export const spawnWatchdog = (command: string[]): Watchdog => {
             watchdog.kill('SIGKILL');
         }
     };
-};
+}
 
 /* `pmset -g pslog` as readings; its own end without a stop is a null. */
-export const streamPower = (listener: (power: PowerState | null) => void): Stoppable => {
+export function streamPower(listener: (power: PowerState | null) => void): Stoppable {
     const stream = Bun.spawn(POWER_STREAM_COMMAND, { stdin: 'ignore', stdout: 'pipe', stderr: 'ignore' });
     const parser = new PowerStreamParser();
     const decoder = new TextDecoder();
@@ -71,10 +73,10 @@ export const streamPower = (listener: (power: PowerState | null) => void): Stopp
             stream.kill();
         }
     };
-};
+}
 
 /* The closed lid on a real Mac: sudo, pmset, osascript and the marker under `$RUIMTE_HOME`. */
-export const macClosedLidSystem = (home: string, uid: number): ClosedLidSystem => {
+export function macClosedLidSystem(home: string, uid: number): ClosedLidSystem {
     const marker = closedLidMarkerPath(home);
     return {
         rulePresent: () => fileExists(closedLidRulePath(uid)),
@@ -105,4 +107,4 @@ export const macClosedLidSystem = (home: string, uid: number): ClosedLidSystem =
             removeNow: () => rmSync(marker, { force: true })
         }
     };
-};
+}

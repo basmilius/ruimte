@@ -9,42 +9,42 @@ export interface ProjectSettingsResult {
     summary: ProjectSummary;
 }
 
-const connectedTransport = async (endpointId: string): Promise<{ endpointId: string; transport: Transport }> => {
+async function connectedTransport(endpointId: string): Promise<{ endpointId: string; transport: Transport }> {
     const connectedId = await ensureMachine(endpointId);
     const transport = transportFor(connectedId);
     if (!transport) {
         throw new Error(i18next.t('project:error.machineDisconnected'));
     }
     return { endpointId: connectedId, transport };
-};
+}
 
-const remember = (endpointId: string, summary: ProjectSummary): ProjectSettingsResult => {
+function remember(endpointId: string, summary: ProjectSummary): ProjectSettingsResult {
     useProjectList.getState().patchProject(endpointId, summary);
     return { endpointId, summary };
-};
+}
 
-export const setProjectIdentity = async (
+export async function setProjectIdentity(
     endpointId: string,
     projectId: string,
     identity: { name?: string; icon?: ProjectIconChoice | null }
-): Promise<ProjectSettingsResult> => {
+): Promise<ProjectSettingsResult> {
     const connected = await connectedTransport(endpointId);
     const { summary } = await connected.transport.request('project.setIdentity', { projectId, ...identity });
     return remember(connected.endpointId, summary);
-};
+}
 
-export const uploadProjectIcon = async (endpointId: string, projectId: string, mime: string, base64: string): Promise<ProjectSettingsResult> => {
+export async function uploadProjectIcon(endpointId: string, projectId: string, mime: string, base64: string): Promise<ProjectSettingsResult> {
     const connected = await connectedTransport(endpointId);
     const cleared = await connected.transport.request('project.setIdentity', { projectId, icon: null });
     remember(connected.endpointId, cleared.summary);
     const { summary } = await connected.transport.request('project.setIcon', { projectId, image: { mime, base64 } });
     return remember(connected.endpointId, summary);
-};
+}
 
-export const setProjectFolderIcon = async (endpointId: string, projectId: string): Promise<ProjectSettingsResult> => {
+export async function setProjectFolderIcon(endpointId: string, projectId: string): Promise<ProjectSettingsResult> {
     const connected = await connectedTransport(endpointId);
     const cleared = await connected.transport.request('project.setIdentity', { projectId, icon: null });
     remember(connected.endpointId, cleared.summary);
     const { summary } = await connected.transport.request('project.setIcon', { projectId, image: null });
     return remember(connected.endpointId, summary);
-};
+}

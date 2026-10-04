@@ -95,7 +95,7 @@ export interface ChatForkDeps {
 const MAX_TITLE = 120;
 
 /* The items up to and including a turn (its own and those of every turn before it), plus what belonged to no turn before its end. */
-export const itemsThrough = (items: readonly ChatItem[], turnId: string): ChatItem[] => {
+export function itemsThrough(items: readonly ChatItem[], turnId: string): ChatItem[] {
     const kept = new Set<string>();
     let end = -1;
     for (const [index, item] of items.entries()) {
@@ -107,7 +107,7 @@ export const itemsThrough = (items: readonly ChatItem[], turnId: string): ChatIt
         }
     }
     return items.filter((item, index) => (item.turnId === null ? index <= end : kept.has(item.turnId)));
-};
+}
 
 interface Cut {
     turn: ChatTurnItem;
@@ -122,7 +122,7 @@ interface Cut {
 export type ForkFiles = { kind: 'shared'; repository: boolean } | { kind: 'worktree'; path: string; branch: string; afterTurn: boolean };
 
 /* What the person reads under the copied history, and what the agent is told in front of its first prompt. */
-export const forkNotes = (cut: Cut, original: { id: string; title: string; view: boolean }, files: ForkFiles): { note: string; preamble: string } => {
+export function forkNotes(cut: Cut, original: { id: string; title: string; view: boolean }, files: ForkFiles): { note: string; preamble: string } {
     const where = cut.last ? `its last turn (turn ${cut.number})` : `turn ${cut.number} of ${cut.total}`;
     const counted = cut.exact || cut.last ? '' : ' The cut was made by counting turns, since this turn is older than the names the CLI gives them.';
     const outside = files.kind === 'shared' && !files.repository ? ' The folder is in no git repository, so the fork has no worktree of its own.' : '';
@@ -148,13 +148,13 @@ export const forkNotes = (cut: Cut, original: { id: string; title: string; view:
         ...(cut.exact || cut.last ? [] : ['The cut was made by counting turns; if the last message you remember does not match, say so.'])
     ].join(' ');
     return { note, preamble };
-};
+}
 
 /* The CLIs with a chat that can be forked and go on a fork. */
 const CHAT_CLIS: ReadonlySet<AgentKind> = new Set(['claude', 'codex']);
 
 /* What the person reads under the copied history of a fork that goes on with another CLI. */
-export const switchNote = (cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string => {
+export function switchNote(cut: Cut, original: { title: string }, files: ForkFiles, handoff: { to: string; turns: number; all: boolean }): string {
     const where = cut.last ? `its last turn (turn ${cut.number})` : `turn ${cut.number} of ${cut.total}`;
     const place =
         files.kind === 'worktree'
@@ -166,21 +166,23 @@ export const switchNote = (cut: Cut, original: { title: string }, files: ForkFil
               : ' The files stay as they are now, which may be newer than that turn.';
     const read = handoff.all ? 'the whole conversation' : `the last ${handoff.turns === 1 ? 'turn' : `${handoff.turns} turns`}`;
     return `Forked from ${original.title} after ${where} and continued with ${handoff.to}.${place} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
-};
+}
 
 // What the CLI's own thread code refuses with is a chat error of the package's, whose code carries over as it is.
-const cliRefusal = (error: unknown): ChatError =>
-    error instanceof AgentChatError ? new ChatError(error.code, error.message) : new ChatError('fork-failed', errorText(error));
+function cliRefusal(error: unknown): ChatError {
+    return error instanceof AgentChatError ? new ChatError(error.code, error.message) : new ChatError('fork-failed', errorText(error));
+}
 
 /*
  * The tree of the files after a turn, the one taken when it settled, else the one the next turn
  * started from (the same folder, unless a person changed it in between). Null when neither was taken.
  */
-export const treeAfterTurn = (turns: readonly ChatTurnItem[], index: number): string | null =>
-    turns[index]?.checkpointAfter ?? turns[index + 1]?.checkpoint ?? null;
+export function treeAfterTurn(turns: readonly ChatTurnItem[], index: number): string | null {
+    return turns[index]?.checkpointAfter ?? turns[index + 1]?.checkpoint ?? null;
+}
 
 /* What the fork dialog needs to know before it offers a worktree and the files of a turn. */
-export const readForkInfo = async (deps: ChatForkDeps, payload: ChatForkInfoPayload): Promise<ChatForkInfoResult> => {
+export async function readForkInfo(deps: ChatForkDeps, payload: ChatForkInfoPayload): Promise<ChatForkInfoResult> {
     const source = await deps.source(payload.chatId);
     if (source === null) {
         throw new ChatError('chat-not-found', `No chat ${payload.chatId}`);
@@ -198,13 +200,13 @@ export const readForkInfo = async (deps: ChatForkDeps, payload: ChatForkInfoPayl
     const filesAfterTurn = tree === null ? index === turns.length - 1 : await deps.treeExists(source.info.cwd, tree);
     const title = `${deps.titleFor(payload.chatId) ?? nameOf(source.info.provider)} (fork)`;
     return { repository: true, branches, branch: freeBranch(branchSlug(title), new Set(branches)), filesAfterTurn };
-};
+}
 
 /*
  * Snapshot the CLI conversation before creating its node or view, so mounting always finds a stable
  * thread. Failed setup rolls back everything except Codex threads, which its API cannot delete.
  */
-export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Promise<ChatForkResult> => {
+export async function forkChat(deps: ChatForkDeps, payload: ChatForkPayload): Promise<ChatForkResult> {
     const source = await deps.source(payload.chatId);
     if (source === null) {
         throw new ChatError('chat-not-found', `No chat ${payload.chatId}`);
@@ -437,9 +439,9 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
             await undo();
             throw error;
         });
-};
+}
 
-const requireAccount = (deps: ChatForkDeps, kind: AgentKind, account: string | undefined): void => {
+function requireAccount(deps: ChatForkDeps, kind: AgentKind, account: string | undefined): void {
     if (account === undefined) {
         return;
     }
@@ -447,14 +449,14 @@ const requireAccount = (deps: ChatForkDeps, kind: AgentKind, account: string | u
         throw new AccountError('account-unavailable', `The account '${account}' is not available on this machine: it keeps no accounts.`);
     }
     deps.accounts.require(kind, account);
-};
+}
 
 /*
  * The tree a worktree fork puts its files to, checked before anything is made (the files after the
  * turn, or the folder as it is now for a last turn whose tree was never taken). A tree git collected
  * is refused, so the dialog can offer the fork from HEAD instead.
  */
-const filesTree = async (deps: ChatForkDeps, cwd: string, turns: readonly ChatTurnItem[], index: number): Promise<string | null> => {
+async function filesTree(deps: ChatForkDeps, cwd: string, turns: readonly ChatTurnItem[], index: number): Promise<string | null> {
     const tree = treeAfterTurn(turns, index);
     if (tree === null) {
         if (index === turns.length - 1) {
@@ -466,10 +468,10 @@ const filesTree = async (deps: ChatForkDeps, cwd: string, turns: readonly ChatTu
         throw new ChatError('checkpoint-missing', 'The files of this turn are no longer in the repository, so the fork can only start from HEAD');
     }
     return tree;
-};
+}
 
 /* The view a fork that is a view is listed after (the original itself, or the canvas the original stands on). */
-const originViewOf = (content: ProjectContent, place: IndexedPlace, chatId: string): string => {
+function originViewOf(content: ProjectContent, place: IndexedPlace, chatId: string): string {
     const id = place.canvasId ?? chatId;
     const view = content.views.find((candidate) => candidate.id === id);
     const stands = place.canvasId === null ? view?.kind === 'chat' : view !== undefined && isCanvasView(view) && view.nodes.some((node) => node.id === chatId);
@@ -477,10 +479,10 @@ const originViewOf = (content: ProjectContent, place: IndexedPlace, chatId: stri
         throw new ChatError('chat-not-found', `${chatId} left the project while the fork was made`);
     }
     return id;
-};
+}
 
 /* The canvas the fork lands on (the one the original stands on, else the one the payload names for a chat that is a view). */
-const forkCanvas = (content: ProjectContent, place: IndexedPlace, payload: ChatForkPayload): ProjectCanvasView => {
+function forkCanvas(content: ProjectContent, place: IndexedPlace, payload: ChatForkPayload): ProjectCanvasView {
     const id = place.canvasId ?? payload.viewId;
     const canvas = content.views.find((view) => view.id === id);
     if (!canvas || !isCanvasView(canvas)) {
@@ -490,84 +492,86 @@ const forkCanvas = (content: ProjectContent, place: IndexedPlace, payload: ChatF
         throw new ChatError('chat-not-found', `${payload.chatId} left its canvas while the fork was made`);
     }
     return canvas;
-};
+}
 
 /* The daemon's pieces a fork is made of, wired once for `daemon.ts` and the test daemon alike. */
-export const chatForkDeps = (wiring: {
+export function chatForkDeps(wiring: {
     chats: ChatManager;
     host: Pick<CanvasHost, 'installedAgents' | 'locate' | 'read' | 'mutate'>;
     titleFor(id: string): string | null;
     lineage: Pick<AgentLineageStore, 'depthOf' | 'put'>;
     worktrees?: Pick<Worktrees, 'add' | 'addFresh' | 'remove' | 'branches'>;
     checkpoints?: Pick<Checkpoints, 'take' | 'exists' | 'restore'>;
-}): ChatForkDeps => ({
-    source: (chatId) => wiring.chats.forkSource(chatId),
-    installed: () => wiring.host.installedAgents(),
-    startingPoint: (provider, selection) => wiring.chats.startingPoint(provider, selection),
-    locate: (id) => wiring.host.locate(id),
-    titleFor: (id) => wiring.titleFor(id),
-    read: (projectId) => wiring.host.read(projectId),
-    mutate: (projectId, apply) => wiring.host.mutate(projectId, apply),
-    depthOf: (nodeId) => wiring.lineage.depthOf(nodeId),
-    recordFork: (record) => wiring.lineage.put({ ...record, agent: true, relation: 'fork' }),
-    forkClaude: ({ source, at, newSessionId, cwd }) =>
-        forkClaudeTranscript({
-            projectsDir: wiring.chats.claudeProjectsDirOf(source),
-            cwd: source.cwd,
-            sessionId: source.agentSessionId ?? '',
-            at,
-            forkCwd: cwd,
-            newSessionId
-        }),
-    forkCodex: ({ source, at, cwd }) => {
-        const tier = codexServiceTier(source.selection);
-        return forkThreadOnce(wiring.chats.codexProcess(source), {
-            threadId: source.agentSessionId ?? '',
-            at,
-            options: {
-                cwd,
-                model: source.selection.model,
-                ...(tier === null ? {} : { serviceTier: tier }),
-                ...codexThreadOptions(source.runtimeMode)
+}): ChatForkDeps {
+    return {
+        source: (chatId) => wiring.chats.forkSource(chatId),
+        installed: () => wiring.host.installedAgents(),
+        startingPoint: (provider, selection) => wiring.chats.startingPoint(provider, selection),
+        locate: (id) => wiring.host.locate(id),
+        titleFor: (id) => wiring.titleFor(id),
+        read: (projectId) => wiring.host.read(projectId),
+        mutate: (projectId, apply) => wiring.host.mutate(projectId, apply),
+        depthOf: (nodeId) => wiring.lineage.depthOf(nodeId),
+        recordFork: (record) => wiring.lineage.put({ ...record, agent: true, relation: 'fork' }),
+        forkClaude: ({ source, at, newSessionId, cwd }) =>
+            forkClaudeTranscript({
+                projectsDir: wiring.chats.claudeProjectsDirOf(source),
+                cwd: source.cwd,
+                sessionId: source.agentSessionId ?? '',
+                at,
+                forkCwd: cwd,
+                newSessionId
+            }),
+        forkCodex: ({ source, at, cwd }) => {
+            const tier = codexServiceTier(source.selection);
+            return forkThreadOnce(wiring.chats.codexProcess(source), {
+                threadId: source.agentSessionId ?? '',
+                at,
+                options: {
+                    cwd,
+                    model: source.selection.model,
+                    ...(tier === null ? {} : { serviceTier: tier }),
+                    ...codexThreadOptions(source.runtimeMode)
+                }
+            });
+        },
+        branchesOf: async (folder) => (wiring.worktrees ? wiring.worktrees.branches(folder).catch(() => null) : null),
+        addWorktree: async ({ cwd, want, projectId, nodeId }) => {
+            if (!wiring.worktrees) {
+                throw new ChatError('not-a-repository', 'This machine makes no worktrees');
             }
-        });
-    },
-    branchesOf: async (folder) => (wiring.worktrees ? wiring.worktrees.branches(folder).catch(() => null) : null),
-    addWorktree: async ({ cwd, want, projectId, nodeId }) => {
-        if (!wiring.worktrees) {
-            throw new ChatError('not-a-repository', 'This machine makes no worktrees');
-        }
-        const worktrees = wiring.worktrees;
-        // A chat in a subfolder of the repository goes on in the same subfolder of the worktree.
-        const prefix = ((await git(['rev-parse', '--show-prefix'], cwd)) ?? '').trim();
-        const origin = { madeBy: 'fork' as const, projectId, nodeId };
-        const worktree = 'branch' in want ? (await worktrees.add(cwd, want.branch, origin)).worktree : await worktrees.addFresh(cwd, want.fresh, origin);
-        return {
-            worktree,
-            cwd: prefix === '' ? worktree.path : join(worktree.path, prefix).replace(/\/$/, ''),
-            // Made a moment ago by this fork, and only taken back because the fork itself was refused.
-            undo: async () => {
-                await worktrees.remove(cwd, worktree.path, { force: true });
+            const worktrees = wiring.worktrees;
+            // A chat in a subfolder of the repository goes on in the same subfolder of the worktree.
+            const prefix = ((await git(['rev-parse', '--show-prefix'], cwd)) ?? '').trim();
+            const origin = { madeBy: 'fork' as const, projectId, nodeId };
+            const worktree = 'branch' in want ? (await worktrees.add(cwd, want.branch, origin)).worktree : await worktrees.addFresh(cwd, want.fresh, origin);
+            return {
+                worktree,
+                cwd: prefix === '' ? worktree.path : join(worktree.path, prefix).replace(/\/$/, ''),
+                // Made a moment ago by this fork, and only taken back because the fork itself was refused.
+                undo: async () => {
+                    await worktrees.remove(cwd, worktree.path, { force: true });
+                }
+            };
+        },
+        treeExists: async (cwd, tree) => (wiring.checkpoints ? wiring.checkpoints.exists(cwd, tree) : false),
+        takeTree: async (cwd) => (wiring.checkpoints ? wiring.checkpoints.take(cwd) : null),
+        restoreTree: async (cwd, tree) => {
+            if (!wiring.checkpoints) {
+                throw new ChatError('checkpoint-missing', 'This machine keeps no trees of turns');
             }
-        };
-    },
-    treeExists: async (cwd, tree) => (wiring.checkpoints ? wiring.checkpoints.exists(cwd, tree) : false),
-    takeTree: async (cwd) => (wiring.checkpoints ? wiring.checkpoints.take(cwd) : null),
-    restoreTree: async (cwd, tree) => {
-        if (!wiring.checkpoints) {
-            throw new ChatError('checkpoint-missing', 'This machine keeps no trees of turns');
+            await wiring.checkpoints.restore(cwd, tree);
+        },
+        writeRecord: (chatId, info, items, preambles) => wiring.chats.writeRecord(chatId, info, items, preambles),
+        deleteRecord: (chatId) => wiring.chats.deleteRecord(chatId),
+        copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
+        copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.copyBookmarks(fromChatId, toChatId, itemIds),
+        newSessionId: () => randomUUID(),
+        now: () => Date.now(),
+        accounts: {
+            require: (kind, account) => wiring.chats.requireAccount(kind, account),
+            canContinue: (kind, from, to) => wiring.chats.canContinue(kind, from, to),
+            label: (kind, account) => wiring.chats.accountLabel(kind, account)
         }
-        await wiring.checkpoints.restore(cwd, tree);
-    },
-    writeRecord: (chatId, info, items, preambles) => wiring.chats.writeRecord(chatId, info, items, preambles),
-    deleteRecord: (chatId) => wiring.chats.deleteRecord(chatId),
-    copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
-    copyBookmarks: (fromChatId, toChatId, itemIds) => wiring.chats.copyBookmarks(fromChatId, toChatId, itemIds),
-    newSessionId: () => randomUUID(),
-    now: () => Date.now(),
-    accounts: {
-        require: (kind, account) => wiring.chats.requireAccount(kind, account),
-        canContinue: (kind, from, to) => wiring.chats.canContinue(kind, from, to),
-        label: (kind, account) => wiring.chats.accountLabel(kind, account)
-    }
-});
+    };
+}

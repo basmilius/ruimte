@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { DEFAULT_WEBGL_CONTEXTS, WebglSlots } from './webgl-slots.ts';
 
-const requestAll = (slots: WebglSlots, ids: string[]): void => {
+function requestAll(slots: WebglSlots, ids: string[]): void {
     for (const id of ids) {
         slots.request(id);
     }
-};
+}
 
 describe('WebglSlots', () => {
     test('everyone under the cap gets a context', () => {

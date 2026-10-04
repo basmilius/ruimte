@@ -22,10 +22,12 @@ const COMMON_DETAIL: readonly string[] = [
     SCOPE_LINE
 ];
 
-const yesNo = (value: boolean): string => (value ? 'yes' : 'no');
+function yesNo(value: boolean): string {
+    return value ? 'yes' : 'no';
+}
 
 /* What an action answers with: where the page stands, or the one line saying nobody has it open. */
-const pageLines = ({ nodeId, open, page, error }: ActionOutput<'browser.inspect'>): string[] => {
+function pageLines({ nodeId, open, page, error }: ActionOutput<'browser.inspect'>): string[] {
     if (!open) {
         return [`open\tno\tNobody has this page open right now, so nothing was driving it`];
     }
@@ -41,13 +43,13 @@ const pageLines = ({ nodeId, open, page, error }: ActionOutput<'browser.inspect'
               ]),
         ...(error === null ? [] : [`error\t${field(error)}`])
     ];
-};
+}
 
 const NODE_PARAM = { syntax: '<id>', need: 'required', field: 'nodeId', more: 'ruimte-context list names the ones linked to you' } as const;
 
 /* The actions that take nothing but the node: the page is told one word and answers where it stands. */
-const plainAction = (word: string, action: 'browser.inspect' | 'browser.back' | 'browser.forward' | 'browser.stop', detail: readonly string[] = []) =>
-    defineActionVerb('browser', {
+function plainAction(word: string, action: 'browser.inspect' | 'browser.back' | 'browser.forward' | 'browser.stop', detail: readonly string[] = []) {
+    return defineActionVerb('browser', {
         name: word,
         action,
         usage: '<id>',
@@ -62,6 +64,7 @@ const plainAction = (word: string, action: 'browser.inspect' | 'browser.back' | 
             return pageLines(await runAction(call, action, { nodeId: id }));
         }
     });
+}
 
 const stateAction = plainAction('state', 'browser.inspect');
 

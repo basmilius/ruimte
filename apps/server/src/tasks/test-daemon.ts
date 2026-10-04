@@ -99,7 +99,7 @@ export interface TestDaemonOptions {
     onLimits?: (update: LimitsUpdate) => void;
 }
 
-export const bootTestDaemon = async ({
+export async function bootTestDaemon({
     home,
     store,
     clock,
@@ -111,7 +111,7 @@ export const bootTestDaemon = async ({
     accounts,
     env = { PATH: process.env.PATH, HOME: home },
     onLimits
-}: TestDaemonOptions): Promise<TestDaemon> => {
+}: TestDaemonOptions): Promise<TestDaemon> {
     await store.hiddenAgents.load();
     const prompts = new PendingPromptStore(home);
     await prompts.load();
@@ -370,10 +370,10 @@ export const bootTestDaemon = async ({
             }
         }
     };
-};
+}
 
 /* A verb the node `caller` runs, the way `ruimte-context` posts it; the token is the caller's id. */
-export const runVerb = async (daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, argv: string[]): Promise<string[]> => {
+export async function runVerb(daemon: Pick<TestDaemon, 'host'>, caller: string, name: string, argv: string[]): Promise<string[]> {
     const path = `${CANVAS_PATH}/${name}`;
     const response = await handleCanvasRequest(
         new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: `Bearer ${caller}` }, body: JSON.stringify({ argv }) }),
@@ -381,4 +381,4 @@ export const runVerb = async (daemon: Pick<TestDaemon, 'host'>, caller: string, 
         { targetForToken: (token) => token, host: daemon.host }
     );
     return (await response.text()).trim().split('\n');
-};
+}

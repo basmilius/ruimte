@@ -1,26 +1,32 @@
 import { describe, expect, test } from 'bun:test';
 import { buildBrowserMenu, buildPreviewMenu, type BrowserMenuInput, type BrowserMenuItem } from '@/browser/browser-menu';
 
-const input = (patch: Partial<BrowserMenuInput> = {}): BrowserMenuInput => ({
-    webContentsId: 7,
-    x: 10,
-    y: 20,
-    linkURL: '',
-    linkText: '',
-    srcURL: '',
-    mediaType: 'none',
-    isEditable: false,
-    selectionText: '',
-    editFlags: { canCut: false, canCopy: false, canPaste: false, canSelectAll: false },
-    pageURL: 'https://bas.dev/',
-    canGoBack: false,
-    canGoForward: false,
-    ...patch
-});
+function input(patch: Partial<BrowserMenuInput> = {}): BrowserMenuInput {
+    return {
+        webContentsId: 7,
+        x: 10,
+        y: 20,
+        linkURL: '',
+        linkText: '',
+        srcURL: '',
+        mediaType: 'none',
+        isEditable: false,
+        selectionText: '',
+        editFlags: { canCut: false, canCopy: false, canPaste: false, canSelectAll: false },
+        pageURL: 'https://bas.dev/',
+        canGoBack: false,
+        canGoForward: false,
+        ...patch
+    };
+}
 
-const ids = (groups: BrowserMenuItem[][]): string[][] => groups.map((group) => group.map((item) => item.id));
+function ids(groups: BrowserMenuItem[][]): string[][] {
+    return groups.map((group) => group.map((item) => item.id));
+}
 
-const find = (groups: BrowserMenuItem[][], id: string): BrowserMenuItem | undefined => groups.flat().find((item) => item.id === id);
+function find(groups: BrowserMenuItem[][], id: string): BrowserMenuItem | undefined {
+    return groups.flat().find((item) => item.id === id);
+}
 
 describe('buildBrowserMenu', () => {
     test('a click on nothing is the page itself', () => {

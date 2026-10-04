@@ -11,12 +11,12 @@ import { withAccessToken } from './account';
  * key, so the address book only vouches for a key the asker holds. The answer is checked against what
  * was asked before it goes anywhere.
  */
-export const requestSignalAccess = async (
+export async function requestSignalAccess(
     machineId: string,
     key: ClientKey,
     label: string,
     request: (payload: AccessRequestPayload) => Promise<AccessStatement>
-): Promise<SignalAccess> => {
+): Promise<SignalAccess> {
     const nonce = randomToken(18);
     const signature = await key.sign(accessRequestMessage(machineId, key.publicKey, nonce));
     const statement = await request({ machineId, clientPublicKey: key.publicKey, nonce, signature });
@@ -24,8 +24,9 @@ export const requestSignalAccess = async (
         throw new Error(i18next.t('machines:account.statementMismatch'));
     }
     return { statement, label: clipText(label, 80) };
-};
+}
 
 /* The same, asked of the account this client is signed in to. */
-export const machineAccess = (machineId: string, key: ClientKey): Promise<SignalAccess> =>
-    requestSignalAccess(machineId, key, currentClientLabel(), (payload) => withAccessToken((client, token) => client.requestStatement(token, payload)));
+export function machineAccess(machineId: string, key: ClientKey): Promise<SignalAccess> {
+    return requestSignalAccess(machineId, key, currentClientLabel(), (payload) => withAccessToken((client, token) => client.requestStatement(token, payload)));
+}

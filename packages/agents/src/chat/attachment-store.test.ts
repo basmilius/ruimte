@@ -10,7 +10,9 @@ import { ChatStore } from './chat-store.ts';
 let home = '';
 let store: AttachmentStore;
 
-const upload = (name: string, mime: string, text = 'hello') => ({ name, mime, data: Buffer.from(text).toString('base64') });
+function upload(name: string, mime: string, text = 'hello') {
+    return { name, mime, data: Buffer.from(text).toString('base64') };
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-attach-'));

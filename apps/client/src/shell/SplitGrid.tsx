@@ -30,8 +30,9 @@ import { CellOverlay } from '@/shell/CellOverlay';
  * mentions the file); `middle` leaves the grid the strip along the edge and takes the rest (the
  * canvas, which makes a node of it). A surface that says nothing lets the whole cell split.
  */
-const takesDrop = (target: EventTarget | null): string | null =>
-    (target as HTMLElement | null)?.closest?.('[data-takes-drop]')?.getAttribute('data-takes-drop') ?? null;
+function takesDrop(target: EventTarget | null): string | null {
+    return (target as HTMLElement | null)?.closest?.('[data-takes-drop]')?.getAttribute('data-takes-drop') ?? null;
+}
 
 /*
  * Dragging the line in front of item `at` of an axis. Sizes are shares of an axis rather than pixels,
@@ -39,12 +40,7 @@ const takesDrop = (target: EventTarget | null): string | null =>
  * the items share, which is the only place a share can be turned back into a pointer position.
  * Option is read on every move, so it can be pressed or let go halfway through a drag.
  */
-const splitDrag = (
-    axis: 'x' | 'y',
-    sizes: readonly number[],
-    at: number,
-    onSizes: (sizes: number[]) => void
-): ((event: ReactPointerEvent<HTMLElement>) => void) => {
+function splitDrag(axis: 'x' | 'y', sizes: readonly number[], at: number, onSizes: (sizes: number[]) => void): (event: ReactPointerEvent<HTMLElement>) => void {
     return (event: ReactPointerEvent<HTMLElement>): void => {
         event.preventDefault();
         const handle = event.currentTarget;
@@ -69,7 +65,7 @@ const splitDrag = (
         handle.addEventListener('pointermove', onMove);
         handle.addEventListener('pointerup', onUp);
     };
-};
+}
 
 /* A double click evens out the two neighbors, and with Option every column, or every cell of the column.
    Dragging with Option moves the mirroring splitter along, the other way. */
@@ -128,7 +124,7 @@ function DropIndicator({ box, zone }: { box: { top: number; height: number }; zo
 /* The cell's box, kept up to date for the parking layer: one observer per cell, cleared with it. */
 const observers = new Map<string, ResizeObserver>();
 
-const watchCell = (viewId: string, element: HTMLElement | null): void => {
+function watchCell(viewId: string, element: HTMLElement | null): void {
     observers.get(viewId)?.disconnect();
     observers.delete(viewId);
     registerCell(viewId, element);
@@ -138,7 +134,7 @@ const watchCell = (viewId: string, element: HTMLElement | null): void => {
     const observer = new ResizeObserver(() => cellsMoved());
     observer.observe(element);
     observers.set(viewId, observer);
-};
+}
 
 /*
  * One cell: the view it holds and nothing about the grid around it. What is inside reads `useCanvas`

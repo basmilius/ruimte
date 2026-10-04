@@ -4,24 +4,34 @@ import { viewIdsIn } from '@/shell/split';
 import { focusedCanvas } from './canvas';
 import { useDocument } from './document';
 
-const view = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes,
-    texts: [],
-    edges: [],
-    layouts: []
-});
+function view(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes,
+        texts: [],
+        edges: [],
+        layouts: []
+    };
+}
 
-const node = (id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] => ({ id, kind: 'terminal', title: id, x, y, w: 100, h: 80 });
+function node(id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] {
+    return { id, kind: 'terminal', title: id, x, y, w: 100, h: 80 };
+}
 
-const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 3, rev: 1, name: 'p', color: '#000', views });
+function document(views: ProjectCanvasView[]): ProjectDocument {
+    return { version: 3, rev: 1, name: 'p', color: '#000', views };
+}
 
-const canvasAt = (at: number): ProjectCanvasView => useDocument.getState().views[at] as ProjectCanvasView;
+function canvasAt(at: number): ProjectCanvasView {
+    return useDocument.getState().views[at] as ProjectCanvasView;
+}
 
 /* An editor is made when its view goes into a cell and gets its size a frame later, from the cell. */
-const measure = (): void => focusedCanvas().getState().setViewport({ w: 800, h: 600 });
+function measure(): void {
+    return focusedCanvas().getState().setViewport({ w: 800, h: 600 });
+}
 
 beforeEach(() => {
     useDocument.getState().load(document([view('a', [node('n1', 40, 40)]), view('b', [node('n2', 900, 900)])]), {

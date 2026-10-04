@@ -10,7 +10,9 @@ let root: string;
 let home: string;
 let service: ProviderAccountsService;
 
-const nameOf = (kind: string): string => (kind === 'claude' ? 'Claude Code' : 'Codex');
+function nameOf(kind: string): string {
+    return kind === 'claude' ? 'Claude Code' : 'Codex';
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-usage-accounts-'));

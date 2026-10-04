@@ -14,6 +14,10 @@ export const NOTE_COLORS: readonly { id: NoteColor; className: string }[] = NOTE
 
 export const DEFAULT_NOTE_COLOR: NoteColor = NOTE_COLOR_NAMES[0];
 
-const isNoteColor = (color: string | undefined): color is NoteColor => (NOTE_COLOR_NAMES as readonly (string | undefined)[]).includes(color);
+function isNoteColor(color: string | undefined): color is NoteColor {
+    return (NOTE_COLOR_NAMES as readonly (string | undefined)[]).includes(color);
+}
 
-export const noteColorClass = (color: string | undefined): string => NOTE_COLOR_CLASSES[isNoteColor(color) ? color : DEFAULT_NOTE_COLOR];
+export function noteColorClass(color: string | undefined): string {
+    return NOTE_COLOR_CLASSES[isNoteColor(color) ? color : DEFAULT_NOTE_COLOR];
+}

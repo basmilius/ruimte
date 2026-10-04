@@ -26,7 +26,9 @@ function setup(configured = true) {
     };
 }
 
-const released = (timeStamp: number, key = 'M', code = 'KeyM') => ({ timeStamp, key, code });
+function released(timeStamp: number, key = 'M', code = 'KeyM') {
+    return { timeStamp, key, code };
+}
 
 describe('Voice Control shortcut', () => {
     test('a tap stays active and the next press stops', () => {

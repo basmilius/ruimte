@@ -19,6 +19,10 @@ export interface FilesView {
 /* What stands in a cell: a view of the project, or the files of this client. */
 export type CellView = ProjectView | FilesView;
 
-export const isFilesView = (view: CellView | null | undefined): view is FilesView => view?.kind === 'files';
+export function isFilesView(view: CellView | null | undefined): view is FilesView {
+    return view?.kind === 'files';
+}
 
-export const filesView = (name: string): FilesView => ({ kind: 'files', id: FILES_VIEW_ID, name });
+export function filesView(name: string): FilesView {
+    return { kind: 'files', id: FILES_VIEW_ID, name };
+}

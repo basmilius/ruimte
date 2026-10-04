@@ -15,7 +15,9 @@ interface Pending {
     reject(error: ChatTransportError): void;
 }
 
-const isEventType = (event: string): event is AgentEventType => Object.hasOwn(AGENT_EVENT_SCHEMAS, event);
+function isEventType(event: string): event is AgentEventType {
+    return Object.hasOwn(AGENT_EVENT_SCHEMAS, event);
+}
 
 /*
  * A chat host at the other end of a port, such as a process that runs the chats beside the window.
@@ -23,7 +25,7 @@ const isEventType = (event: string): event is AgentEventType => Object.hasOwn(AG
  * until `close`. Frames are checked where they arrive, and a frame that does not hold up is dropped
  * with a warning, the way the socket transport of an app drops one.
  */
-export const portTransport = (port: FramePort): PortTransport => {
+export function portTransport(port: FramePort): PortTransport {
     let status: ChatTransportStatus = 'open';
     let nextId = 1;
     const pending = new Map<string, Pending>();
@@ -141,4 +143,4 @@ export const portTransport = (port: FramePort): PortTransport => {
             }
         }
     };
-};
+}

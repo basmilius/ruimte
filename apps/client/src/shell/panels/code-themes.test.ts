@@ -5,39 +5,44 @@ import { CODE_PALETTES, CODE_THEMES, type CodeRole } from './code-themes';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
-const luminance = (hex: string): number => {
+function luminance(hex: string): number {
     const value = Number.parseInt(hex.slice(1, 7), 16);
     const [red, green, blue] = [(value >> 16) & 255, (value >> 8) & 255, value & 255].map((channel) => {
         const unit = channel / 255;
         return unit <= 0.03928 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
     });
     return 0.2126 * (red ?? 0) + 0.7152 * (green ?? 0) + 0.0722 * (blue ?? 0);
-};
+}
 
-const contrast = (first: string, second: string): number => {
+function contrast(first: string, second: string): number {
     const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
     return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
-};
+}
 
 // WCAG AA for text, and 3:1 for the roles of a side that sit below it, so a tweak cannot drop them further.
 const QUIET_ROLES: Readonly<Record<'light' | 'dark', readonly CodeRole[]>> = {
     light: ['comment', 'docComment', 'docTag', 'decorator'],
     dark: ['docComment']
 };
-const floorOf = (mode: 'light' | 'dark', role: CodeRole): number => (QUIET_ROLES[mode].includes(role) ? 3 : 4.5);
+function floorOf(mode: 'light' | 'dark', role: CodeRole): number {
+    return QUIET_ROLES[mode].includes(role) ? 3 : 4.5;
+}
 
 /* A token's value on one side, as a stylesheet declares it in hex. */
-const tokenIn = async (path: string, mode: 'light' | 'dark', token: string): Promise<string | undefined> => {
+async function tokenIn(path: string, mode: 'light' | 'dark', token: string): Promise<string | undefined> {
     const css = await Bun.file(path).text();
     return new RegExp(`\\[data-theme="${mode}"\\]\\s*\\{[^}]*?${token}:\\s*(#[0-9a-f]{6})`, 'i').exec(css)?.[1]?.toLowerCase();
-};
+}
 
 /* Where a chat draws code: the terminal ground of the client's own stylesheet. */
-const chatGround = (mode: 'light' | 'dark'): Promise<string | undefined> => tokenIn(join(HERE, '..', '..', 'styles.css'), mode, '--term-bg');
+function chatGround(mode: 'light' | 'dark'): Promise<string | undefined> {
+    return tokenIn(join(HERE, '..', '..', 'styles.css'), mode, '--term-bg');
+}
 
 /* Where a panel draws code: the surface the library's theme gives every panel. */
-const panelGround = (mode: 'light' | 'dark'): Promise<string | undefined> =>
-    tokenIn(Bun.resolveSync('@basmilius/desktop-ui/theme.css', HERE), mode, '--surface');
+function panelGround(mode: 'light' | 'dark'): Promise<string | undefined> {
+    return tokenIn(Bun.resolveSync('@basmilius/desktop-ui/theme.css', HERE), mode, '--surface');
+}
 
 describe('the colors of our code themes', () => {
     for (const theme of CODE_THEMES) {

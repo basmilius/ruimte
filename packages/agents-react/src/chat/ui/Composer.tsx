@@ -122,7 +122,7 @@ interface ComposerProps {
     onRetarget(provider: AgentKind, selection: ModelSelection): void;
 }
 
-const usePendingRequests = (chatId: string) => {
+function usePendingRequests(chatId: string) {
     // The structure, which a delta leaves alone. The prompts and the requests are items of their own.
     const structure = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
@@ -139,10 +139,10 @@ const usePendingRequests = (chatId: string) => {
         }
         return { approvals, questions };
     }, [structure, order, waitingBefore]);
-};
+}
 
 /* The empty box names its sigils as key caps, so they read as keys to press rather than as punctuation. */
-const hintedPlaceholder = (lead: string, joiner: string, hints: ReadonlyArray<{ key: string; label: string }>): HTMLElement => {
+function hintedPlaceholder(lead: string, joiner: string, hints: ReadonlyArray<{ key: string; label: string }>): HTMLElement {
     const root = document.createElement('span');
     root.className = 'composer-hints';
     const extra = document.createElement('span');
@@ -155,12 +155,12 @@ const hintedPlaceholder = (lead: string, joiner: string, hints: ReadonlyArray<{ 
     }
     root.append(lead, extra);
     return root;
-};
+}
 
-const splitPath = (path: string): { name: string; dir: string } => {
+function splitPath(path: string): { name: string; dir: string } {
     const slash = path.lastIndexOf('/');
     return slash < 0 ? { name: path, dir: '' } : { name: path.slice(slash + 1), dir: path.slice(0, slash) };
-};
+}
 
 // Keep the editor mounted while a pending request takes over, so its selection and draft survive.
 export function Composer({ chatId, info, focused, answerPromptsElsewhere, disabled, readOnly = false, providerFixed, onSend, onRetarget }: ComposerProps) {

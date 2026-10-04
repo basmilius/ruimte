@@ -43,8 +43,8 @@ export type LaunchProbe = (host: string, port: number) => Promise<boolean>;
 // A server that binds 0.0.0.0 or only one of the two loopbacks answers on one of these.
 const LOOPBACKS = ['127.0.0.1', '::1'];
 
-const connects = (host: string, port: number): Promise<boolean> =>
-    new Promise((resolve) => {
+function connects(host: string, port: number): Promise<boolean> {
+    return new Promise((resolve) => {
         const socket = connect({ host, port, timeout: 1_000 });
         const done = (open: boolean): void => {
             socket.destroy();
@@ -54,12 +54,13 @@ const connects = (host: string, port: number): Promise<boolean> =>
         socket.once('timeout', () => done(false));
         socket.once('error', () => done(false));
     });
+}
 
-export const tcpProbe: LaunchProbe = async (host, port) => {
+export async function tcpProbe(host: string, port: number): Promise<boolean> {
     const hosts = ['localhost', '0.0.0.0', '127.0.0.1', '::1', '[::1]'].includes(host) ? LOOPBACKS : [host];
     const answers = await Promise.all(hosts.map((candidate) => connects(candidate, port)));
     return answers.includes(true);
-};
+}
 
 /* Who asked, which decides what a start may approve and what a stop may do. */
 export type LaunchActor = 'person' | 'agent';
@@ -91,13 +92,14 @@ interface Run {
 }
 
 /* The same id for the same launch of the same project, so a client finds its output again after a reload. */
-export const launchSessionIdOf = (projectId: string, launchId: string): string =>
-    `launch-${createHash('sha256')
+export function launchSessionIdOf(projectId: string, launchId: string): string {
+    return `launch-${createHash('sha256')
         .update(JSON.stringify([projectId, launchId]))
         .digest('hex')
         .slice(0, 20)}`;
+}
 
-const hostOf = (url: string | null): string | null => {
+function hostOf(url: string | null): string | null {
     if (url === null) {
         return null;
     }
@@ -106,9 +108,11 @@ const hostOf = (url: string | null): string | null => {
     } catch {
         return null;
     }
-};
+}
 
-const isLive = (run: Run): boolean => run.state === 'starting' || run.state === 'running';
+function isLive(run: Run): boolean {
+    return run.state === 'starting' || run.state === 'running';
+}
 
 /*
  * Runs a project's launches, one session each. The daemon only watches what it started: a launch
@@ -417,23 +421,27 @@ export class LaunchRunner {
     }
 }
 
-const statusOf = (run: Run): LaunchStatus => ({
-    projectId: run.projectId,
-    launchId: run.launchId,
-    sessionId: run.sessionId,
-    kind: run.kind,
-    state: run.state,
-    exitCode: run.exitCode,
-    startedAt: run.startedAt,
-    endedAt: run.endedAt,
-    port: run.port,
-    url: run.url,
-    stopped: run.stopped
-});
+function statusOf(run: Run): LaunchStatus {
+    return {
+        projectId: run.projectId,
+        launchId: run.launchId,
+        sessionId: run.sessionId,
+        kind: run.kind,
+        state: run.state,
+        exitCode: run.exitCode,
+        startedAt: run.startedAt,
+        endedAt: run.endedAt,
+        port: run.port,
+        url: run.url,
+        stopped: run.stopped
+    };
+}
 
-const heldOf = (resolved: ResolvedLaunch): LaunchHeld => ({
-    launchId: resolved.launch.id,
-    command: resolved.command,
-    cwd: resolved.cwd,
-    ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {})
-});
+function heldOf(resolved: ResolvedLaunch): LaunchHeld {
+    return {
+        launchId: resolved.launch.id,
+        command: resolved.command,
+        cwd: resolved.cwd,
+        ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {})
+    };
+}

@@ -4,32 +4,42 @@ import { estimateContextBreakdown } from './context-breakdown.ts';
 
 const base = { createdAt: 0, turnId: 't' };
 
-const user = (id: string, text: string, extra: Partial<Extract<ChatItem, { kind: 'user' }>> = {}): ChatItem => ({ ...base, id, kind: 'user', text, ...extra });
+function user(id: string, text: string, extra: Partial<Extract<ChatItem, { kind: 'user' }>> = {}): ChatItem {
+    return { ...base, id, kind: 'user', text, ...extra };
+}
 
-const assistant = (id: string, text: string, parentToolUseId: string | null = null): ChatItem => ({
-    ...base,
-    id,
-    kind: 'assistant',
-    text,
-    streaming: false,
-    parentToolUseId
-});
+function assistant(id: string, text: string, parentToolUseId: string | null = null): ChatItem {
+    return {
+        ...base,
+        id,
+        kind: 'assistant',
+        text,
+        streaming: false,
+        parentToolUseId
+    };
+}
 
-const tool = (id: string, name: string, output: string, parentToolUseId: string | null = null): ChatItem => ({
-    ...base,
-    id,
-    kind: 'tool',
-    toolUseId: id,
-    name,
-    input: {},
-    output,
-    state: 'done',
-    parentToolUseId
-});
+function tool(id: string, name: string, output: string, parentToolUseId: string | null = null): ChatItem {
+    return {
+        ...base,
+        id,
+        kind: 'tool',
+        toolUseId: id,
+        name,
+        input: {},
+        output,
+        state: 'done',
+        parentToolUseId
+    };
+}
 
-const compaction = (id: string): ChatItem => ({ ...base, id, kind: 'compaction', preTokens: null });
+function compaction(id: string): ChatItem {
+    return { ...base, id, kind: 'compaction', preTokens: null };
+}
 
-const text = (tokens: number): string => 'x'.repeat(tokens * 4);
+function text(tokens: number): string {
+    return 'x'.repeat(tokens * 4);
+}
 
 describe('estimateContextBreakdown', () => {
     test('counts read tools as files read, other tools as tool output and messages as conversation', () => {

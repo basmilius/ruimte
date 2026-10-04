@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { idleVoiceBands, type IdleVoiceBands } from '@/voice/idle-waveform';
 import { useVoice, type VoicePhase } from '@/voice/state';
 
-const waveformHeight = (value: number): string => `${Math.max(2, value * 26).toFixed(2)}px`;
+function waveformHeight(value: number): string {
+    return `${Math.max(2, value * 26).toFixed(2)}px`;
+}
 
 function useDisplayedWaveform(phase: VoicePhase, inputBands: number[], outputBands: number[]): IdleVoiceBands {
     const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);

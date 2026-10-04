@@ -20,14 +20,14 @@ export const CLIPBOARD_TYPE = 'application/x-ruimte-drawing';
 type DrawingSource = StoreApi<DrawingState>;
 
 /* The selection if there is one, else the whole drawing: what every export acts on. */
-export const exportTargets = (store: DrawingSource): DrawingElement[] => {
+export function exportTargets(store: DrawingSource): DrawingElement[] {
     const { elements, selection } = store.getState();
     const selected = elements.filter((element) => selection.includes(element.id));
     return selected.length > 0 ? selected : elements;
-};
+}
 
 /* The theme as the painter reads it, so the file and a PNG of the same drawing wear the same colors. */
-export const drawingSvg = (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): string => {
+export function drawingSvg(store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): string {
     const { palette, paper, edge, fonts } = paintOptions();
     return toSvg(elements, {
         palette,
@@ -37,10 +37,10 @@ export const drawingSvg = (store: DrawingSource, elements: readonly DrawingEleme
         // Wrapped where the screen wraps, so the file shows the lines the person saw.
         measure: (element) => measureLineIn(element, fonts) ?? approximateMeasure(element.size, element.font)
     });
-};
+}
 
 /* The same painter the screen uses, on a canvas of its own, at the size the file is written in. */
-export const drawingPng = async (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): Promise<Blob | null> => {
+export async function drawingPng(store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): Promise<Blob | null> {
     const bounds = boundsOfElements(elements);
     if (!bounds) {
         return null;
@@ -61,9 +61,9 @@ export const drawingPng = async (store: DrawingSource, elements: readonly Drawin
     ctx.setTransform(PNG_SCALE, 0, 0, PNG_SCALE, (DEFAULT_SVG_MARGIN - bounds.x) * PNG_SCALE, (DEFAULT_SVG_MARGIN - bounds.y) * PNG_SCALE);
     paintElements(ctx, elements, paintOptions());
     return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
-};
+}
 
-export const download = async (blob: Blob, name: string, mime: string): Promise<void> => {
+export async function download(blob: Blob, name: string, mime: string): Promise<void> {
     const bridge = desktop();
     if (bridge?.saveFile) {
         // The desktop app asks where the file goes; a browser tab has no such dialog to offer.
@@ -76,20 +76,24 @@ export const download = async (blob: Blob, name: string, mime: string): Promise<
     anchor.download = name;
     anchor.click();
     URL.revokeObjectURL(url);
-};
+}
 
 /* Where an export lands unless the person names it otherwise: what it is and the day it was made. */
-export const exportFileName = (prefix: string, extension: string): string => `${prefix}-${new Date().toISOString().slice(0, 10)}.${extension}`;
+export function exportFileName(prefix: string, extension: string): string {
+    return `${prefix}-${new Date().toISOString().slice(0, 10)}.${extension}`;
+}
 
 /* Elements as the clipboard carries them, so a paste in another drawing brings the shapes, not a picture. */
-export const drawingClipboardText = (elements: readonly DrawingElement[]): string => JSON.stringify({ type: CLIPBOARD_TYPE, elements });
+export function drawingClipboardText(elements: readonly DrawingElement[]): string {
+    return JSON.stringify({ type: CLIPBOARD_TYPE, elements });
+}
 
 /* What a paste finds on the clipboard, or null when it is not a drawing of ours. */
-export const readDrawingElements = (text: string): DrawingElement[] | null => {
+export function readDrawingElements(text: string): DrawingElement[] | null {
     try {
         const value = JSON.parse(text) as { type?: string; elements?: DrawingElement[] };
         return value.type === CLIPBOARD_TYPE && Array.isArray(value.elements) ? value.elements : null;
     } catch {
         return null;
     }
-};
+}

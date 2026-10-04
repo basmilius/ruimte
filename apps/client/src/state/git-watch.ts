@@ -19,14 +19,16 @@ export class GitWatches extends HeldWatches {
 const gitWatches = new GitWatches(machineTransport);
 
 /* A watch on a checkout of the machine on screen. `renewed` reads again once a link that came back watches it again. */
-export const watchGit = (cwd: string, renewed?: () => void): HeldWatch => gitWatches.watch(currentEndpointId(), cwd, renewed);
+export function watchGit(cwd: string, renewed?: () => void): HeldWatch {
+    return gitWatches.watch(currentEndpointId(), cwd, renewed);
+}
 
 /*
  * The status of a checkout, kept fresh while the caller is on screen. For a panel that only reads
  * it; the git panel drives its own reads, because it also has to say why one failed and to refresh
  * after an action of its own.
  */
-export const useGitStatus = (cwd: string | null): GitStatus | null => {
+export function useGitStatus(cwd: string | null): GitStatus | null {
     const endpointId = useEndpointId();
     const [held, setHeld] = useState<{ key: string; status: GitStatus } | null>(null);
     const key = endpointKey(endpointId, String(cwd));
@@ -63,18 +65,21 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
 
     // The path on the machine that left says nothing about the same path here.
     return held?.key === key ? held.status : null;
-};
+}
 
-const bumped =
-    (key: string) =>
-    (previous: { key: string; count: number } | null): { key: string; count: number } => ({ key, count: (previous?.key === key ? previous.count : 0) + 1 });
+function bumped(key: string) {
+    return (previous: { key: string; count: number } | null): { key: string; count: number } => ({
+        key,
+        count: (previous?.key === key ? previous.count : 0) + 1
+    });
+}
 
 /*
  * A count that goes up whenever the working tree of a checkout moved, for a surface that reads git
  * itself and only needs to know that something did. It holds the watch of its own, so a diff tab
  * keeps up with no panel open beside it.
  */
-export const useGitSignal = (cwd: string | null): number => {
+export function useGitSignal(cwd: string | null): number {
     const endpointId = useEndpointId();
     const [held, setHeld] = useState<{ key: string; count: number } | null>(null);
     const key = endpointKey(endpointId, String(cwd));
@@ -99,4 +104,4 @@ export const useGitSignal = (cwd: string | null): number => {
 
     // A checkout that just changed starts over, so the reader is not told it moved when it did not.
     return held?.key === key ? held.count : 0;
-};
+}

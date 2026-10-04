@@ -25,7 +25,7 @@ const identity = {
 // The binding of one direct channel, which every challenge and signature here is made over.
 const BINDING = '[["sha-256 AA"],["sha-256 BB"]]';
 
-const signIn = async (key: { publicKey: string; privateKey: string }, daemonId = DAEMON_ID) => {
+async function signIn(key: { publicKey: string; privateKey: string }, daemonId = DAEMON_ID) {
     const { challenge } = handshake.challenge(BINDING);
     return handshake.redeem(
         {
@@ -35,12 +35,12 @@ const signIn = async (key: { publicKey: string; privateKey: string }, daemonId =
         },
         BINDING
     );
-};
+}
 
 let nonces = 0;
 
 /* Lets a key in the way a statement does, answering its session. */
-const admit = async (key: { publicKey: string }): Promise<string> => {
+async function admit(key: { publicKey: string }): Promise<string> {
     nonces += 1;
     const admitted = await store.admitStatement({
         publicKey: key.publicKey,
@@ -53,9 +53,11 @@ const admit = async (key: { publicKey: string }): Promise<string> => {
         throw new Error(`Not admitted: ${admitted.refused}`);
     }
     return admitted.sessionId;
-};
+}
 
-const sessionOf = async (ticket: string) => (await handshake.ticketAccess(ticket, 'bytes'))?.sessionId;
+async function sessionOf(ticket: string) {
+    return (await handshake.ticketAccess(ticket, 'bytes'))?.sessionId;
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-handshake-'));

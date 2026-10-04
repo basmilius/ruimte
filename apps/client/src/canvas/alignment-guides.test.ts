@@ -46,7 +46,9 @@ test('duplicate matches merge their extents and disappear without targets', () =
     expect(alignmentGuides([], [rect])).toEqual([]);
 });
 
-const node = (x: number, y = 0) => ({ x, y, w: 480, h: 320 });
+function node(x: number, y = 0) {
+    return { x, y, w: 480, h: 320 };
+}
 
 test('gaps run to the nearest neighbor on every side', () => {
     const moving = node(1000, 1000);

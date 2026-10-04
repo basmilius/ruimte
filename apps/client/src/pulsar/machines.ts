@@ -21,8 +21,9 @@ interface MachinesState {
 export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, removedMachineIds: [], error: null }));
 
 /* The row this client keeps for a machine on the account, whatever id the row is under. */
-export const rowForAccountMachine = (machineId: string, endpoints: readonly Endpoint[], local = hasLocalMachine()): Endpoint | null =>
-    listedEndpoints(endpoints, local).find((endpoint) => endpoint.id === machineId || endpoint.daemonId === machineId) ?? null;
+export function rowForAccountMachine(machineId: string, endpoints: readonly Endpoint[], local = hasLocalMachine()): Endpoint | null {
+    return listedEndpoints(endpoints, local).find((endpoint) => endpoint.id === machineId || endpoint.daemonId === machineId) ?? null;
+}
 
 /*
  * A row for a machine this client has never reached. There is no address of its own to try, so it is
@@ -30,8 +31,8 @@ export const rowForAccountMachine = (machineId: string, endpoints: readonly Endp
  * key comes from the account list, which is the trust signing in buys. Null for a machine on no
  * broker, which a client that never reached it has no way to find.
  */
-export const endpointForAccountMachine = (machine: Machine): Endpoint | null =>
-    machine.brokerUrl === null
+export function endpointForAccountMachine(machine: Machine): Endpoint | null {
+    return machine.brokerUrl === null
         ? null
         : {
               id: machine.id,
@@ -46,18 +47,19 @@ export const endpointForAccountMachine = (machine: Machine): Endpoint | null =>
               pairedBy: 'statement',
               needsStatement: true
           };
+}
 
-export const refreshAccountMachines = async (): Promise<void> => {
+export async function refreshAccountMachines(): Promise<void> {
     try {
         const list = await withAccessToken((client, token) => client.listMachines(token));
         usePulsarMachines.setState({ machines: list.machines, removedMachineIds: list.removedMachineIds ?? [], error: null });
     } catch (e) {
         usePulsarMachines.setState({ error: messageOf(e) });
     }
-};
+}
 
 /* A refusal to put a machine on an account in the words of this client; anything else as it came. */
-const withRefusalText = async <T>(work: () => Promise<T>): Promise<T> => {
+async function withRefusalText<T>(work: () => Promise<T>): Promise<T> {
     try {
         return await work();
     } catch (e) {
@@ -67,13 +69,13 @@ const withRefusalText = async <T>(work: () => Promise<T>): Promise<T> => {
         }
         throw e;
     }
-};
+}
 
 /*
  * The machine behind a row signs itself onto the account, and this client posts that with its own
  * session. Only the app on the machine may have it sign, which a machine of before this rule did not know.
  */
-export const addMachineToAccount = async (endpointId: string): Promise<void> => {
+export async function addMachineToAccount(endpointId: string): Promise<void> {
     const account = usePulsarAccount.getState().account;
     const link = transportFor(endpointId);
     if (!account || !link) {
@@ -85,14 +87,14 @@ export const addMachineToAccount = async (endpointId: string): Promise<void> => 
     }
     await withRefusalText(() => withAccessToken((client, token) => client.registerMachine(token, registration)));
     await refreshAccountMachines();
-};
+}
 
 /*
  * Takes the machine this app runs on off its account, and cuts off every client that came in through an
  * account. When this client is signed in to that account the machine leaves its list first, so nothing
  * puts it back while it leaves; another account's list keeps it until someone signed in there removes it.
  */
-export const leaveAccount = async (endpointId: string, machineId: string): Promise<number> => {
+export async function leaveAccount(endpointId: string, machineId: string): Promise<number> {
     const link = transportFor(endpointId);
     if (!link) {
         throw new Error(i18next.t('machines:link.notInList'));
@@ -109,15 +111,15 @@ export const leaveAccount = async (endpointId: string, machineId: string): Promi
     const { revoked } = await link.request('endpoint.leaveAccount', {});
     useServers.getState().setAccount(endpointId, null);
     return revoked;
-};
+}
 
 /* Off the account list; the machine keeps every client it already let in. */
-export const removeMachineFromAccount = async (machineId: string): Promise<void> => {
+export async function removeMachineFromAccount(machineId: string): Promise<void> {
     await withAccessToken((client, token) => client.deleteMachine(token, machineId));
     await refreshAccountMachines();
-};
+}
 
-export const openAccountMachine = (machine: Machine): Endpoint => {
+export function openAccountMachine(machine: Machine): Endpoint {
     const known = rowForAccountMachine(machine.id, useEndpoints.getState().endpoints);
     if (known) {
         return known;
@@ -128,8 +130,8 @@ export const openAccountMachine = (machine: Machine): Endpoint => {
     }
     useEndpoints.getState().add(row);
     return row;
-};
+}
 
-export const forgetAccountMachines = (): void => {
+export function forgetAccountMachines(): void {
     usePulsarMachines.setState({ machines: null, removedMachineIds: [], error: null });
-};
+}

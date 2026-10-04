@@ -35,10 +35,12 @@ export interface ActiveViewFacts {
 }
 
 // A session view takes its title from its node until someone names it, and a menu row needs words.
-const nameOf = (view: ProjectView): string => view.name ?? i18next.t(`shell:menu.kinds.${view.kind}`);
+function nameOf(view: ProjectView): string {
+    return view.name ?? i18next.t(`shell:menu.kinds.${view.kind}`);
+}
 
 /* What the view with the focus offers, read the way `ViewMenuItems` reads it for any view. */
-export const activeViewFacts = (): ActiveViewFacts | null => {
+export function activeViewFacts(): ActiveViewFacts | null {
     const documentState = useDocument.getState();
     const view = activeViewOf(documentState);
     if (view === null) {
@@ -70,10 +72,10 @@ export const activeViewFacts = (): ActiveViewFacts | null => {
         scratch
     });
     return { view, offers, shared, asChat, asTerminal, workingFolder, forkTurn };
-};
+}
 
 /* The launches of the project on screen, each with whether it runs. */
-const menuLaunches = (endpointId: string): MenuLaunch[] => {
+function menuLaunches(endpointId: string): MenuLaunch[] {
     const projectId = useProject.getState().current?.projectId;
     if (projectId === undefined) {
         return [];
@@ -86,10 +88,10 @@ const menuLaunches = (endpointId: string): MenuLaunch[] => {
     }
     const views = launchViews(document, statuses[key] ?? {});
     return document.launches.map((launch) => ({ id: launch.id, name: launch.name, live: views.get(launch.id)?.live === true }));
-};
+}
 
 /* The moment the menu is built for, out of the stores. */
-export const menuContext = (host: MenuHost): MenuContext => {
+export function menuContext(host: MenuHost): MenuContext {
     const documentState = useDocument.getState();
     const ui = useUi.getState();
     const canvas = focusedCanvas().getState();
@@ -142,4 +144,4 @@ export const menuContext = (host: MenuHost): MenuContext => {
         windows: host === 'desktop' && canOpenWindows(),
         newChat: offersNewChat(newChatMachine(), useNewChat.getState().refused)
     };
-};
+}

@@ -36,8 +36,9 @@ interface SessionRecord {
     push?: PushSubscribePayload;
 }
 
-const statementRecord = (record: z.infer<typeof StoredRecordSchema>): SessionRecord | null =>
-    record.origin === 'statement' && record.publicKey !== undefined ? { ...record, publicKey: record.publicKey, origin: 'statement' } : null;
+function statementRecord(record: z.infer<typeof StoredRecordSchema>): SessionRecord | null {
+    return record.origin === 'statement' && record.publicKey !== undefined ? { ...record, publicKey: record.publicKey, origin: 'statement' } : null;
+}
 
 /*
  * The nonces of statements this machine took, kept until the statement could no longer be believed
@@ -88,7 +89,7 @@ export type StatementAccountRefusal = 'wrong-account' | 'account-required' | 'no
 export type StatementAdmission = { sessionId: string; created: boolean } | { refused: 'replayed' | 'revoked' | 'bad-key' | StatementAccountRefusal };
 
 /* Whether a statement of `accountId` may let a client in on this binding; null when it may. */
-export const statementAccountRefusal = (binding: Binding, accountId: string | null): StatementAccountRefusal | null => {
+export function statementAccountRefusal(binding: Binding, accountId: string | null): StatementAccountRefusal | null {
     if (binding === null) {
         return 'no-account';
     }
@@ -100,7 +101,7 @@ export const statementAccountRefusal = (binding: Binding, accountId: string | nu
     }
     // Its key in a statement v2 says an account lists this machine, which only a registration the machine signed puts there.
     return accountId === null ? 'account-required' : null;
-};
+}
 
 export interface AccountChange {
     // False when the machine is on another account, which a person on the machine has to take it off first.

@@ -24,7 +24,7 @@ const FILL = '#000002';
 
 const generator = new RoughGenerator();
 
-const dashOf = (element: DrawingElement): number[] | null => {
+function dashOf(element: DrawingElement): number[] | null {
     if (element.strokeStyle === 'dashed') {
         return [element.strokeWidth * 4, element.strokeWidth * 4];
     }
@@ -32,10 +32,10 @@ const dashOf = (element: DrawingElement): number[] | null => {
         return [element.strokeWidth, element.strokeWidth * 3];
     }
     return null;
-};
+}
 
 /* Architect, Artist, Cartoonist. Absent reads as Artist, which is what a hand-written file gets. */
-const roughnessOf = (element: DrawingElement): Pick<Options, 'roughness' | 'bowing' | 'disableMultiStroke'> => {
+function roughnessOf(element: DrawingElement): Pick<Options, 'roughness' | 'bowing' | 'disableMultiStroke'> {
     switch (element.roughness ?? 1) {
         case 0:
             return { roughness: 0, bowing: 0, disableMultiStroke: true };
@@ -44,33 +44,35 @@ const roughnessOf = (element: DrawingElement): Pick<Options, 'roughness' | 'bowi
         default:
             return { roughness: 1, bowing: 1 };
     }
-};
+}
 
-const optionsOf = (element: DrawingElement): Options => ({
-    seed: element.seed + 1,
-    stroke: STROKE,
-    strokeWidth: element.strokeWidth,
-    ...roughnessOf(element),
-    ...(element.fill && element.fill !== 'none'
-        ? { fill: FILL, fillStyle: element.fill === 'solid' ? 'solid' : 'hachure', fillWeight: element.strokeWidth / 2, hachureGap: 8 }
-        : {})
-});
+function optionsOf(element: DrawingElement): Options {
+    return {
+        seed: element.seed + 1,
+        stroke: STROKE,
+        strokeWidth: element.strokeWidth,
+        ...roughnessOf(element),
+        ...(element.fill && element.fill !== 'none'
+            ? { fill: FILL, fillStyle: element.fill === 'solid' ? 'solid' : 'hachure', fillWeight: element.strokeWidth / 2, hachureGap: 8 }
+            : {})
+    };
+}
 
 // Rough has no rounded-rectangle primitive.
-const roundedRectPath = (w: number, h: number, radius: number): string => {
+function roundedRectPath(w: number, h: number, radius: number): string {
     const r = Math.min(radius, w / 2, h / 2);
     return `M ${r} 0 L ${w - r} 0 Q ${w} 0 ${w} ${r} L ${w} ${h - r} Q ${w} ${h} ${w - r} ${h} L ${r} ${h} Q 0 ${h} 0 ${h - r} L 0 ${r} Q 0 0 ${r} 0 Z`;
-};
+}
 
-export const outlineToPath = (outline: readonly (readonly number[])[]): string => {
+export function outlineToPath(outline: readonly (readonly number[])[]): string {
     if (outline.length === 0) {
         return '';
     }
     const [first, ...rest] = outline;
     return `M ${first![0]} ${first![1]} ${rest.map((point) => `L ${point[0]} ${point[1]}`).join(' ')} Z`;
-};
+}
 
-export const freehandOutline = (element: DrawingElement & { kind: 'freehand' }): string => {
+export function freehandOutline(element: DrawingElement & { kind: 'freehand' }): string {
     const points = element.points.map(([x, y, pressure]) => [x, y, pressure ?? 0.5] as [number, number, number]);
     const outline = getStroke(points, {
         size: element.strokeWidth * 4 + 2,
@@ -81,15 +83,17 @@ export const freehandOutline = (element: DrawingElement & { kind: 'freehand' }):
         simulatePressure: element.points.every((point) => point[2] === undefined)
     });
     return outlineToPath(outline);
-};
+}
 
-const linesToPath = (segments: readonly [Point, Point][]): string => segments.map(([from, to]) => `M ${from.x} ${from.y} L ${to.x} ${to.y}`).join(' ');
+function linesToPath(segments: readonly [Point, Point][]): string {
+    return segments.map(([from, to]) => `M ${from.x} ${from.y} L ${to.x} ${to.y}`).join(' ');
+}
 
 /*
  * One element as paths in its own frame: the origin is the element's own (x, y), so the painter
  * translates and turns, and a path can be cached until the element's shape itself changes.
  */
-export const pathsOfElement = (element: DrawingElement): ElementPath[] => {
+export function pathsOfElement(element: DrawingElement): ElementPath[] {
     if (element.kind === 'text') {
         return [];
     }
@@ -148,4 +152,4 @@ export const pathsOfElement = (element: DrawingElement): ElementPath[] => {
     ];
     // The head is always solid: a dashed arrow still points at something.
     return heads.length === 0 ? paths : [...paths, { d: linesToPath(heads), role: 'stroke', strokeWidth: element.strokeWidth, dash: null }];
-};
+}

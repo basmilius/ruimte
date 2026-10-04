@@ -12,10 +12,14 @@ const SUFFIX = '.plans.json';
 
 const PlanFileSchema = z.object({ version: z.literal(1), plans: z.array(PlanSchema) });
 
-export const planFileName = (chatId: string): string => `${encodeURIComponent(chatId)}${SUFFIX}`;
+export function planFileName(chatId: string): string {
+    return `${encodeURIComponent(chatId)}${SUFFIX}`;
+}
 
 /* Whether a name in the chats folder is a plans file, which the chat records beside it must not count as a chat. */
-export const isPlanFileName = (name: string): boolean => name.endsWith(SUFFIX);
+export function isPlanFileName(name: string): boolean {
+    return name.endsWith(SUFFIX);
+}
 
 export interface PlanStoreOptions {
     /* The clock `at` and `createdAt` are read from; a test hands in its own. */
@@ -227,5 +231,6 @@ export class PlanStore {
     }
 }
 
-const missing = (planId: string | undefined): PlanRefusal =>
-    planId === undefined ? refuse('plan-not-found', 'This chat has no plan yet') : refuse('plan-not-found', `This chat has no plan ${planId}`);
+function missing(planId: string | undefined): PlanRefusal {
+    return planId === undefined ? refuse('plan-not-found', 'This chat has no plan yet') : refuse('plan-not-found', `This chat has no plan ${planId}`);
+}

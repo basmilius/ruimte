@@ -14,7 +14,7 @@ export interface GitTarget {
     group?: string;
 }
 
-const boundGroupOf = (nodes: Record<string, CanvasNode>, id: string): CanvasNode | null => {
+function boundGroupOf(nodes: Record<string, CanvasNode>, id: string): CanvasNode | null {
     const node = nodes[id];
     if (!node) {
         return null;
@@ -28,7 +28,7 @@ const boundGroupOf = (nodes: Record<string, CanvasNode>, id: string): CanvasNode
         }
     }
     return null;
-};
+}
 
 /*
  * Which checkout the git panel is looking at. A selected group with a worktree, a selected node
@@ -36,7 +36,7 @@ const boundGroupOf = (nodes: Record<string, CanvasNode>, id: string): CanvasNode
  * folder. It is the same rule that decides where a node made inside such a group starts, so what
  * the panel shows and what an agent in the group works on are never two different trees.
  */
-export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[], folder: string | null, worktrees: readonly Worktree[] = []): GitTarget => {
+export function gitTarget(nodes: Record<string, CanvasNode>, selection: string[], folder: string | null, worktrees: readonly Worktree[] = []): GitTarget {
     for (const id of selection) {
         const worktree = boundGroupOf(nodes, id)?.worktree;
         if (worktree) {
@@ -49,7 +49,7 @@ export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[]
         }
     }
     return { cwd: folder, label: folder === null ? '' : basenameOf(folder), branch: null, kind: 'project' };
-};
+}
 
 /*
  * Every checkout the panel can be pointed at by hand: the repositories of the project folder first,
@@ -57,12 +57,12 @@ export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[]
  * is the one the daemon reports, so a menu built from this reads the same way twice. A folder whose
  * repositories are not in yet still offers itself, which is every project with exactly one.
  */
-export const gitTargets = (
+export function gitTargets(
     nodes: Record<string, CanvasNode>,
     worktrees: readonly Worktree[],
     folder: string | null,
     repos: readonly GitRepo[] = []
-): GitTarget[] => {
+): GitTarget[] {
     const targets: GitTarget[] =
         repos.length > 0
             ? repos.map((repo) => ({
@@ -89,4 +89,4 @@ export const gitTargets = (
         });
     }
     return targets;
-};
+}

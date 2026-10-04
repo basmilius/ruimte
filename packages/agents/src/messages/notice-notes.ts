@@ -29,5 +29,6 @@ export class NoticeNotes implements PromptNotes {
  * The lines a chat that just loaded owes a person for what landed while nobody held it, marked so a
  * reload writes none again. The model still hears the messages themselves from the queue.
  */
-export const unshownNotes = async (store: Pick<NoticeStore, 'show'>, chatId: string, words: Pick<MessageWords, 'shown'>): Promise<string[]> =>
-    (await store.show(chatId)).map((notice) => words.shown(notice));
+export async function unshownNotes(store: Pick<NoticeStore, 'show'>, chatId: string, words: Pick<MessageWords, 'shown'>): Promise<string[]> {
+    return (await store.show(chatId)).map((notice) => words.shown(notice));
+}

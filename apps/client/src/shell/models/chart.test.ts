@@ -14,9 +14,13 @@ import {
     type ChartModel
 } from '@/shell/models/chart';
 
-const point = (costPerTask: number, intelligence: number) => ({ costPerTask, intelligence });
+function point(costPerTask: number, intelligence: number) {
+    return { costPerTask, intelligence };
+}
 
-const model = (id: string, provider: 'claude' | 'codex', legacy = false): ChartModel => ({ id, name: id, provider, legacy, points: [] });
+function model(id: string, provider: 'claude' | 'codex', legacy = false): ChartModel {
+    return { id, name: id, provider, legacy, points: [] };
+}
 
 describe('the band', () => {
     test('runs through the points nothing beats on both axes, cheapest first', () => {

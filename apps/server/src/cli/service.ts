@@ -54,15 +54,15 @@ export interface ServicePlan {
  * `npx` and `bunx` put their own `node_modules/.bin` folders in front of PATH, and those are gone
  * once the cache is cleared; a service that kept them would look for tools in folders that are not there.
  */
-export const servicePath = (path: string | undefined): string => {
+export function servicePath(path: string | undefined): string {
     const kept = (path ?? '').split(':').filter((entry) => entry !== '' && !entry.includes('node_modules/.bin') && !entry.includes('/_npx/'));
     const unique = [...new Set(kept)];
     return unique.length > 0 ? unique.join(':') : '/usr/local/bin:/usr/bin:/bin';
-};
+}
 
 export const UNSUPPORTED_PLATFORM = 'The background service runs on macOS and Linux only.';
 
-export const serviceKindOf = (platform: NodeJS.Platform): 'launchd' | 'systemd' | null => {
+export function serviceKindOf(platform: NodeJS.Platform): 'launchd' | 'systemd' | null {
     if (platform === 'darwin') {
         return 'launchd';
     }
@@ -70,9 +70,9 @@ export const serviceKindOf = (platform: NodeJS.Platform): 'launchd' | 'systemd' 
         return 'systemd';
     }
     return null;
-};
+}
 
-export const servicePlan = (facts: ServiceFacts): ServicePlan | string => {
+export function servicePlan(facts: ServiceFacts): ServicePlan | string {
     const kind = serviceKindOf(facts.platform);
     if (kind === null) {
         return UNSUPPORTED_PLATFORM;
@@ -87,7 +87,7 @@ export const servicePlan = (facts: ServiceFacts): ServicePlan | string => {
         path: servicePath(facts.path)
     });
     return { kind, binDir, program, definition: serviceDefinition(facts.platform, spec) };
-};
+}
 
 export interface ServiceDeps {
     manager: ServiceManager;
@@ -106,15 +106,15 @@ export interface ServiceDeps {
 const APP_OWNS =
     'The background service on this machine runs another Ruimte, most likely the desktop app. Turn it off there (Settings, This machine) before installing this one.';
 
-const ownedBy = (deps: ServiceDeps, plan: ServicePlan): 'none' | 'this' | 'other' => {
+function ownedBy(deps: ServiceDeps, plan: ServicePlan): 'none' | 'this' | 'other' {
     const existing = deps.files.read(deps.manager.path);
     if (existing === null) {
         return 'none';
     }
     return definitionRunsProgram(existing, plan.program) ? 'this' : 'other';
-};
+}
 
-const lingerNote = (deps: ServiceDeps): void => {
+function lingerNote(deps: ServiceDeps): void {
     if (!deps.manager.linger || deps.manager.linger.enabled()) {
         return;
     }
@@ -122,9 +122,9 @@ const lingerNote = (deps: ServiceDeps): void => {
     deps.out('systemd stops your services when you log out, and starts this one again at your next login.');
     deps.out('To keep the machine running while nobody is logged in, allow lingering for your user:');
     deps.out(`  loginctl enable-linger ${deps.user}`);
-};
+}
 
-const install = async (facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps): Promise<number> => {
+async function install(facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps): Promise<number> {
     if (!facts.compiled) {
         deps.err('`ruimte service install` needs the compiled binary; run it through `npx ruimte service install`.');
         return 1;
@@ -157,9 +157,9 @@ const install = async (facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps
     deps.out('');
     deps.out('Next: `npx ruimte login` puts this machine on your account, and `npx ruimte status` says how clients reach it.');
     return 0;
-};
+}
 
-const uninstall = (plan: ServicePlan, deps: ServiceDeps): number => {
+function uninstall(plan: ServicePlan, deps: ServiceDeps): number {
     const owner = ownedBy(deps, plan);
     if (owner === 'none') {
         deps.out('No background service is installed.');
@@ -174,9 +174,9 @@ const uninstall = (plan: ServicePlan, deps: ServiceDeps): number => {
     deps.removeBinaries(plan.binDir);
     deps.out('Stopped and removed the background service. Your projects and the devices you let in stay where they were.');
     return 0;
-};
+}
 
-const status = async (facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps): Promise<number> => {
+async function status(facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps): Promise<number> {
     const owner = ownedBy(deps, plan);
     if (owner === 'none') {
         deps.out('Not installed. `npx ruimte service install` sets it up.');
@@ -194,9 +194,9 @@ const status = async (facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps)
         );
     }
     return owner !== 'none' && running ? 0 : 1;
-};
+}
 
-export const runServiceAction = async (action: string, facts: ServiceFacts, deps: ServiceDeps): Promise<number> => {
+export async function runServiceAction(action: string, facts: ServiceFacts, deps: ServiceDeps): Promise<number> {
     const plan = servicePlan(facts);
     if (typeof plan === 'string') {
         deps.err(plan);
@@ -218,13 +218,13 @@ export const runServiceAction = async (action: string, facts: ServiceFacts, deps
         deps.err(describeError(e, false));
         return 1;
     }
-};
+}
 
 /*
  * Each file lands under a temporary name first, so a daemon reading `ruimte.build` never sees half a
  * file. The helpers go first and whole, since a new `ruimte.build` is what restarts the daemon onto them.
  */
-export const copyServiceBinaries = (from: string, to: string): void => {
+export function copyServiceBinaries(from: string, to: string): void {
     mkdirSync(to, { recursive: true });
     const native = join(to, NATIVE_DIR);
     rmSync(native, { recursive: true, force: true });
@@ -240,25 +240,25 @@ export const copyServiceBinaries = (from: string, to: string): void => {
         chmodSync(temporary, name === 'ruimte.build' ? 0o644 : 0o755);
         replaceSync(temporary, target);
     }
-};
+}
 
-export const removeServiceBinaries = (dir: string): void => {
+export function removeServiceBinaries(dir: string): void {
     for (const name of BINARY_FILES) {
         rmSync(join(dir, name), { force: true });
     }
     rmSync(join(dir, NATIVE_DIR), { recursive: true, force: true });
-};
+}
 
-const health = async (port: number): Promise<BuildIdentity | null> => {
+async function health(port: number): Promise<BuildIdentity | null> {
     try {
         const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(2000) });
         return buildIdentityOf(await response.json());
     } catch {
         return null;
     }
-};
+}
 
-export const runService = (args: string[], options: { port: number; ruimteHome: string; compiled: boolean }): Promise<number> => {
+export function runService(args: string[], options: { port: number; ruimteHome: string; compiled: boolean }): Promise<number> {
     const manager = platformServiceManager(process.platform);
     if (manager === null) {
         console.error(UNSUPPORTED_PLATFORM);
@@ -288,4 +288,4 @@ export const runService = (args: string[], options: { port: number; ruimteHome: 
             err: (line) => console.error(line)
         }
     );
-};
+}

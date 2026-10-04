@@ -282,37 +282,45 @@ const SCOPES: Readonly<Record<Exclude<CodeRole, 'foreground'>, readonly string[]
 
 type Rule = NonNullable<ThemeRegistration['tokenColors']>[number];
 
-const tokenColors = (palette: CodePalette): Rule[] => [
-    ...Object.entries(SCOPES).map(([role, scope]) => {
-        const fontStyle = palette.fontStyles[role as CodeRole];
-        return { scope: [...scope], settings: { foreground: palette.colors[role as CodeRole], ...(fontStyle === undefined ? {} : { fontStyle }) } };
-    }),
-    // Emphasis keeps the color of the text it is in.
-    { scope: ['markup.bold'], settings: { fontStyle: 'bold' } },
-    { scope: ['markup.italic'], settings: { fontStyle: 'italic' } }
-];
+function tokenColors(palette: CodePalette): Rule[] {
+    return [
+        ...Object.entries(SCOPES).map(([role, scope]) => {
+            const fontStyle = palette.fontStyles[role as CodeRole];
+            return { scope: [...scope], settings: { foreground: palette.colors[role as CodeRole], ...(fontStyle === undefined ? {} : { fontStyle }) } };
+        }),
+        // Emphasis keeps the color of the text it is in.
+        { scope: ['markup.bold'], settings: { fontStyle: 'bold' } },
+        { scope: ['markup.italic'], settings: { fontStyle: 'italic' } }
+    ];
+}
 
-const themeOf = (type: CodeThemeMode, palette: CodePalette): CodeTheme => ({
-    name: `${THEME_ID}-${type}`,
-    displayName: `${THEME_NAME} ${type === 'light' ? 'Light' : 'Dark'}`,
-    type,
-    fg: palette.colors.foreground,
-    bg: palette.background,
-    colors: {
-        'editor.foreground': palette.colors.foreground,
-        'editor.background': palette.background,
-        // A diff draws its added, removed and changed lines in these.
-        'gitDecoration.addedResourceForeground': palette.colors.inserted,
-        'gitDecoration.deletedResourceForeground': palette.colors.deleted,
-        'gitDecoration.modifiedResourceForeground': palette.colors.changed
-    },
-    tokenColors: tokenColors(palette)
-});
+function themeOf(type: CodeThemeMode, palette: CodePalette): CodeTheme {
+    return {
+        name: `${THEME_ID}-${type}`,
+        displayName: `${THEME_NAME} ${type === 'light' ? 'Light' : 'Dark'}`,
+        type,
+        fg: palette.colors.foreground,
+        bg: palette.background,
+        colors: {
+            'editor.foreground': palette.colors.foreground,
+            'editor.background': palette.background,
+            // A diff draws its added, removed and changed lines in these.
+            'gitDecoration.addedResourceForeground': palette.colors.inserted,
+            'gitDecoration.deletedResourceForeground': palette.colors.deleted,
+            'gitDecoration.modifiedResourceForeground': palette.colors.changed
+        },
+        tokenColors: tokenColors(palette)
+    };
+}
 
 /* Ruimte's own code themes, light first. Shiki takes them as they are, so they go wherever a bundled theme id does once resolved. */
 export const CODE_THEMES: readonly CodeTheme[] = [themeOf('light', LIGHT), themeOf('dark', DARK)];
 
-const ownCodeTheme = (id: string): CodeTheme | null => CODE_THEMES.find((theme) => theme.name === id) ?? null;
+function ownCodeTheme(id: string): CodeTheme | null {
+    return CODE_THEMES.find((theme) => theme.name === id) ?? null;
+}
 
 /* What to hand Shiki for a theme id: our theme itself, or the id of a bundled one for Shiki to load. */
-export const shikiThemeOf = (id: string): string | ThemeRegistration => ownCodeTheme(id) ?? id;
+export function shikiThemeOf(id: string): string | ThemeRegistration {
+    return ownCodeTheme(id) ?? id;
+}

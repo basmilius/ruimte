@@ -10,7 +10,7 @@ const worker = self as unknown as ServiceWorkerGlobalScope;
 
 type PieceAnswer = { ok: true; result: BytesPiece } | { ok: false; message: string };
 
-const askPage = async (clientId: string, question: PieceQuestion): Promise<BytesPiece> => {
+async function askPage(clientId: string, question: PieceQuestion): Promise<BytesPiece> {
     const client = await worker.clients.get(clientId);
     if (!client) {
         throw new Error('The page that asked is gone');
@@ -28,7 +28,7 @@ const askPage = async (clientId: string, question: PieceQuestion): Promise<Bytes
     });
     client.postMessage(question, [channel.port2]);
     return answered;
-};
+}
 
 type RoutedInstall = ExtendableEvent & {
     addRoutes?: (rules: { condition: object; source: 'network' | 'fetch-event' }[]) => Promise<void>;

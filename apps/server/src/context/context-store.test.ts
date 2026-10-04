@@ -5,17 +5,19 @@ import { handleContextRequest } from './context-route.ts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 /* The route in front of a store, for a caller no project places: `list` and `read` never ask where it stands. */
-const route = (context: ContextStore) => (path: string, token?: string) => {
-    const url = new URL(`http://127.0.0.1${path}`);
-    const host = {
-        locate: () => null,
-        context: { list: (id: string) => context.list(id), read: context.answer.bind(context) }
-    } as Partial<CanvasHost> as CanvasHost;
-    return handleContextRequest(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname, {
-        targetForToken: (given) => (given === 'tok' ? 'agent' : null),
-        host
-    });
-};
+function route(context: ContextStore) {
+    return (path: string, token?: string) => {
+        const url = new URL(`http://127.0.0.1${path}`);
+        const host = {
+            locate: () => null,
+            context: { list: (id: string) => context.list(id), read: context.answer.bind(context) }
+        } as Partial<CanvasHost> as CanvasHost;
+        return handleContextRequest(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname, {
+            targetForToken: (given) => (given === 'tok' ? 'agent' : null),
+            host
+        });
+    };
+}
 
 const items: ChatItem[] = [
     { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text: 'fix the bug' },

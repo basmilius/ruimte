@@ -42,20 +42,22 @@ let clockTimer: number | null = null;
 const undo = new Map<string, () => void>();
 const chatFollowUps = new Map<string, VoiceChatFollowUp>();
 
-const failureText = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('voice:error.start'));
+function failureText(error: unknown): string {
+    return error instanceof Error ? error.message : i18next.t('voice:error.start');
+}
 
 /*
  * This context is for the speech model, not something a person reads, so it skips `format/`. A fixed
  * `en-GB` keeps the date unambiguous whatever the interface language is set to.
  */
-const temporalContext = (): string => {
+function temporalContext(): string {
     const now = new Date();
     const timeZone = localTimeZone() ?? 'unknown';
     const local = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long' }).format(now);
     return `User local date and time: ${local}. IANA time zone: ${timeZone}. UTC time: ${now.toISOString()}.`;
-};
+}
 
-const workspaceContext = (): string => {
+function workspaceContext(): string {
     const document = useDocument.getState();
     const active = activeViewOf(document);
     const project = useProject.getState().current?.name ?? i18next.t('voice:untitledProject');
@@ -73,16 +75,16 @@ const workspaceContext = (): string => {
         .map((node) => `${node.title} (${node.kind})`)
         .join(', ');
     return `${temporalContext()} Ruimte context. Project: ${project}. Active canvas: ${active.name}. Views: ${views || 'none'}. Canvas nodes: ${visible || 'none'}. Selected: ${selected || 'none'}.`;
-};
+}
 
-const appendContext = (): void => {
+function appendContext(): void {
     session?.send({ type: 'session.thinking.append', delegation_id: null, content: workspaceContext() });
-};
-const appendTime = (): void => {
+}
+function appendTime(): void {
     session?.send({ type: 'session.thinking.append', delegation_id: null, content: temporalContext() });
-};
+}
 
-const reportCompletion = (id: string, followUp: VoiceChatFollowUp, completion: NonNullable<ReturnType<typeof chatCompletion>>): void => {
+function reportCompletion(id: string, followUp: VoiceChatFollowUp, completion: NonNullable<ReturnType<typeof chatCompletion>>): void {
     if (chatFollowUps.get(id) !== followUp || !completionDelivery) {
         return;
     }
@@ -90,9 +92,9 @@ const reportCompletion = (id: string, followUp: VoiceChatFollowUp, completion: N
     chatFollowUps.delete(id);
     followUpReleases.get(id)?.();
     followUpReleases.delete(id);
-};
+}
 
-const flushChatFollowUps = (): void => {
+function flushChatFollowUps(): void {
     const chats = useChats.getState().byKey;
     for (const [id, followUp] of chatFollowUps) {
         const completion = chatCompletion(chats[followUp.key], followUp.turnId);
@@ -100,9 +102,9 @@ const flushChatFollowUps = (): void => {
             reportCompletion(id, followUp, completion);
         }
     }
-};
+}
 
-const pollChatFollowUps = (): void => {
+function pollChatFollowUps(): void {
     completionDelivery?.flush();
     for (const [id, followUp] of chatFollowUps) {
         if (readingFollowUps.has(id)) {
@@ -135,9 +137,9 @@ const pollChatFollowUps = (): void => {
             .catch(() => undefined)
             .finally(() => readingFollowUps.delete(id));
     }
-};
+}
 
-const cancelChatFollowUps = (key: string): void => {
+function cancelChatFollowUps(key: string): void {
     for (const [id, followUp] of chatFollowUps) {
         if (followUp.key === key) {
             chatFollowUps.delete(id);
@@ -146,9 +148,9 @@ const cancelChatFollowUps = (key: string): void => {
         }
     }
     completionDelivery?.cancelChat(key);
-};
+}
 
-const trackChatFollowUp = (followUp: VoiceChatFollowUp): void => {
+function trackChatFollowUp(followUp: VoiceChatFollowUp): void {
     const id = `${followUp.key}:${followUp.turnId}`;
     followUpReleases.get(id)?.();
     const endpoint = endpointById(splitKey(followUp.key).endpointId);
@@ -157,9 +159,9 @@ const trackChatFollowUp = (followUp: VoiceChatFollowUp): void => {
     }
     chatFollowUps.set(id, followUp);
     flushChatFollowUps();
-};
+}
 
-const addAction = (kind: VoiceActionKind, label: string, detail: string, undoAction?: () => void): void => {
+function addAction(kind: VoiceActionKind, label: string, detail: string, undoAction?: () => void): void {
     const action: VoiceAction = {
         id: crypto.randomUUID(),
         order: nextVoiceTimelineOrder(),
@@ -173,11 +175,13 @@ const addAction = (kind: VoiceActionKind, label: string, detail: string, undoAct
         undo.set(action.id, undoAction);
     }
     useVoice.setState((state) => ({ actions: [...state.actions, action] }));
-};
+}
 
-const number = (value: unknown): number => (typeof value === 'number' ? value : 0);
+function number(value: unknown): number {
+    return typeof value === 'number' ? value : 0;
+}
 
-const handleEvent = (event: LiveEvent): void => {
+function handleEvent(event: LiveEvent): void {
     completionDelivery?.handle(event);
     if (event.type === 'session.started') {
         useVoice.setState({ phase: 'listening', error: null, sessionStartedAt: Date.now() });
@@ -201,7 +205,7 @@ const handleEvent = (event: LiveEvent): void => {
         stopVoice();
         useVoice.setState({ phase: 'error', error: i18next.t('voice:error.session') });
     }
-};
+}
 
 export async function startVoice(): Promise<void> {
     if (session !== null) {

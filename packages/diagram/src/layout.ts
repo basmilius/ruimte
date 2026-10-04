@@ -79,7 +79,9 @@ const PORT_INSET = 10;
 /* A hop whose two ends are this close across the flow is drawn straight when one end has room to move. */
 const SNAP = 6;
 
-const even = (value: number): number => Math.ceil(value / 2) * 2;
+function even(value: number): number {
+    return Math.ceil(value / 2) * 2;
+}
 
 export interface NodeSize {
     w: number;
@@ -89,7 +91,7 @@ export interface NodeSize {
 }
 
 /* The size of a node's box, from what it says wrapped to the widest a box gets, and the shape it wears. */
-export const sizeOfNode = (node: Pick<DiagramNode, 'label' | 'sub' | 'shape'>): NodeSize => {
+export function sizeOfNode(node: Pick<DiagramNode, 'label' | 'sub' | 'shape'>): NodeSize {
     const diamond = node.shape === 'diamond';
     const maxWidth = diamond ? DIAMOND_TEXT_MAX_WIDTH : TEXT_MAX_WIDTH;
     const label = wrapText(node.label, LABEL_SIZE, true, maxWidth);
@@ -107,17 +109,17 @@ export const sizeOfNode = (node: Pick<DiagramNode, 'label' | 'sub' | 'shape'>): 
         h += CYLINDER_LID;
     }
     return { w: even(Math.max(NODE_MIN_WIDTH, textWidth + paddingX * 2)), h: even(h), label, sub };
-};
+}
 
 /* The box of an edge's label before it is placed: wrapped narrower than a node, on a padding of its own. */
-export const sizeOfEdgeLabel = (text: string): { w: number; h: number; lines: string[] } => {
+export function sizeOfEdgeLabel(text: string): { w: number; h: number; lines: string[] } {
     const lines = wrapText(text, SUB_SIZE, false, EDGE_LABEL_MAX_WIDTH);
     return {
         w: even(widestLine(lines, SUB_SIZE, false) + EDGE_LABEL_PADDING.x * 2),
         h: lines.length * SUB_LINE + EDGE_LABEL_PADDING.y * 2,
         lines
     };
-};
+}
 
 /*
  * The layer of every node: the longest path to it from a node without incoming edges. A cycle has
@@ -125,7 +127,7 @@ export const sizeOfEdgeLabel = (text: string): { w: number; h: number; lines: st
  * node still unvisited) and every edge that points back at a node still on the walk is left out of
  * the layering. The walk only depends on the order of the file, so the same file breaks the same edges.
  */
-export const layersOf = (nodes: readonly Pick<DiagramNode, 'id'>[], edges: readonly Pick<DiagramEdge, 'from' | 'to'>[]): Map<string, number> => {
+export function layersOf(nodes: readonly Pick<DiagramNode, 'id'>[], edges: readonly Pick<DiagramEdge, 'from' | 'to'>[]): Map<string, number> {
     const known = new Set(nodes.map((node) => node.id));
     const outgoing = new Map<string, string[]>(nodes.map((node) => [node.id, []]));
     const incoming = new Map<string, number>(nodes.map((node) => [node.id, 0]));
@@ -193,17 +195,23 @@ export const layersOf = (nodes: readonly Pick<DiagramNode, 'id'>[], edges: reado
         }
     }
     return layers;
-};
+}
 
 /* The layout works in the frame of a diagram that runs to the right; one that runs down is that frame mirrored across the diagonal. */
-const flip = <T extends Rect>(box: T): T => ({ ...box, x: box.y, y: box.x, w: box.h, h: box.w });
+function flip<T extends Rect>(box: T): T {
+    return { ...box, x: box.y, y: box.x, w: box.h, h: box.w };
+}
 
-const flipPoint = (point: Point): Point => ({ x: point.y, y: point.x });
+function flipPoint(point: Point): Point {
+    return { x: point.y, y: point.x };
+}
 
 /* Rounded, because a diagram lays its boxes and its lines out on a whole-pixel grid. */
-const center = (box: Rect): Point => roundPoint(centerOf(box));
+function center(box: Rect): Point {
+    return roundPoint(centerOf(box));
+}
 
-const unionOf = (rects: readonly Rect[]): Rect => {
+function unionOf(rects: readonly Rect[]): Rect {
     if (rects.length === 0) {
         return { x: 0, y: 0, w: 0, h: 0 };
     }
@@ -212,10 +220,10 @@ const unionOf = (rects: readonly Rect[]): Rect => {
     const right = Math.max(...rects.map((rect) => rect.x + rect.w));
     const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
     return { x: left, y: top, w: right - left, h: bottom - top };
-};
+}
 
 /* Drops repeated corners and corners in the middle of a straight run. */
-const simplify = (points: readonly Point[]): Point[] => {
+function simplify(points: readonly Point[]): Point[] {
     const unique = points.filter((point, index) => index === 0 || point.x !== points[index - 1]!.x || point.y !== points[index - 1]!.y);
     return unique.filter((point, index) => {
         const before = unique[index - 1];
@@ -225,13 +233,13 @@ const simplify = (points: readonly Point[]): Point[] => {
         }
         return !((before.x === point.x && point.x === after.x) || (before.y === point.y && point.y === after.y));
     });
-};
+}
 
 /*
  * How far inside the side of its box a shape's outline is, at `offset` from the middle of that side,
  * in the right-running frame, so an arrowhead lands on the outline rather than on the box.
  */
-const insetOf = (shape: DiagramShape | undefined, box: Rect, offset: number, down: boolean): number => {
+function insetOf(shape: DiagramShape | undefined, box: Rect, offset: number, down: boolean): number {
     const away = Math.abs(offset);
     const half = box.h / 2;
     const rounded = (radius: number): number => {
@@ -262,10 +270,10 @@ const insetOf = (shape: DiagramShape | undefined, box: Rect, offset: number, dow
         default:
             return 0;
     }
-};
+}
 
 /* An edge with an end the layout did not place: straight out of one box and into the other, with one elbow. */
-const looseRoute = (source: Rect, target: Rect, loop: boolean, down: boolean): Point[] => {
+function looseRoute(source: Rect, target: Rect, loop: boolean, down: boolean): Point[] {
     const from = center(source);
     const to = center(target);
     if (loop) {
@@ -307,7 +315,7 @@ const looseRoute = (source: Rect, target: Rect, loop: boolean, down: boolean): P
         { x: to.x, y: middle },
         { x: to.x, y: end }
     ]);
-};
+}
 
 interface Chain {
     edge: number;
@@ -332,7 +340,7 @@ interface Port {
  * Deterministic layered layout with integer coordinates. Barycenter sweeps order unpinned nodes;
  * pinned nodes keep their position, and skipped layers give edges explicit routing points.
  */
-export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'groups' | 'edges'>): DiagramLayout => {
+export function layoutOf(document: Pick<DiagramDocument, 'meta' | 'nodes' | 'groups' | 'edges'>): DiagramLayout {
     const down = document.meta.direction === 'down';
     const layers = layersOf(document.nodes, document.edges);
     const sizes = document.nodes.map((node) => sizeOfNode(node));
@@ -767,4 +775,4 @@ export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'gro
     const labels = edges.flatMap((edge) => (edge.label ? [edge.label] : []));
     const groupLabels = groups.map((group) => group.labelBox);
     return { nodes, groups, edges, bounds: unionOf([...nodes, ...groups, ...groupLabels, ...corners, ...labels]) };
-};
+}

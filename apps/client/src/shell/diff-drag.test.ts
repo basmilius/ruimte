@@ -3,7 +3,7 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { dragging, setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { carriesDiff, DIFF_DRAG_TYPE, droppedDiff, startDiffDrag } from './diff-drag.ts';
 
-const transfer = (data: Record<string, string> = {}): DataTransfer => {
+function transfer(data: Record<string, string> = {}): DataTransfer {
     const store = new Map(Object.entries(data));
     return {
         get types() {
@@ -15,7 +15,7 @@ const transfer = (data: Record<string, string> = {}): DataTransfer => {
         },
         effectAllowed: 'all'
     } as unknown as DataTransfer;
-};
+}
 
 const diff = { path: '/repo/src/main.ts', view: { kind: 'diff' as const, cwd: '/repo', scope: 'worktree' as const, staged: false } };
 

@@ -51,11 +51,11 @@ const PhysicalDeviceSchema = z.object({
 
 const PhysicalDeviceListSchema = z.object({ result: z.object({ devices: z.array(PhysicalDeviceSchema) }) });
 
-const defaultRunner: DevicectlRunner = async (arguments_) => {
+async function defaultRunner(arguments_: string[]): Promise<CommandResult> {
     const process = Bun.spawn(['xcrun', 'devicectl', ...arguments_], { stdout: 'pipe', stderr: 'pipe' });
     const [exitCode, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
     return { exitCode, stdout, stderr };
-};
+}
 
 export class IosPhysicalBackend implements DeviceBackend {
     readonly id = 'coredevice';

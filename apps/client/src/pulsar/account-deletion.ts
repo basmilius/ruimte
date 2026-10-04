@@ -14,7 +14,7 @@ export type LocalLeave = 'left' | 'not-on-it' | 'failed';
  * otherwise refuse the next sign-in here. Only a machine on that very account leaves: one on another
  * account is someone else's business.
  */
-export const leaveThisComputer = async (accountId: string): Promise<LocalLeave> => {
+export async function leaveThisComputer(accountId: string): Promise<LocalLeave> {
     if (!hasLocalMachine() || serverInfoOf(LOCAL_ENDPOINT_ID).accountId !== accountId) {
         return 'not-on-it';
     }
@@ -24,7 +24,7 @@ export const leaveThisComputer = async (accountId: string): Promise<LocalLeave> 
     } catch {
         return 'failed';
     }
-};
+}
 
 const CONFIRMATIONS: Record<LocalLeave, string> = {
     left: 'machines:account.confirmation.deletedAndLeft',
@@ -33,9 +33,9 @@ const CONFIRMATIONS: Record<LocalLeave, string> = {
 };
 
 /* Deletes the account, signs this app out and takes this computer's machine off it, then says how that went. */
-export const deleteAccountHere = async (confirmation: string, leave: (accountId: string) => Promise<LocalLeave> = leaveThisComputer): Promise<void> => {
+export async function deleteAccountHere(confirmation: string, leave: (accountId: string) => Promise<LocalLeave> = leaveThisComputer): Promise<void> {
     const accountId = usePulsarAccount.getState().account?.id ?? null;
     await deletePulsarAccount(confirmation);
     const outcome = accountId === null ? 'not-on-it' : await leave(accountId);
     confirmAccount(i18next.t(CONFIRMATIONS[outcome]));
-};
+}

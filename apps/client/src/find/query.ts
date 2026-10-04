@@ -28,10 +28,12 @@ export const MATCH_LIMIT = 10000;
 // A letter or digit in any script, so a whole word in Dutch ends at the same place as one in English.
 const WORD_CHAR = '[\\p{L}\\p{N}_]';
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+}
 
 /* `u` in both modes, since a whole word needs Unicode classes; a pattern that only parses without it counts as invalid. */
-export const compileFind = (query: FindQuery): CompiledFind => {
+export function compileFind(query: FindQuery): CompiledFind {
     if (query.text === '') {
         return { kind: 'empty' };
     }
@@ -44,10 +46,10 @@ export const compileFind = (query: FindQuery): CompiledFind => {
     } catch {
         return { kind: 'invalid' };
     }
-};
+}
 
 /* Every match in a text, in order. An empty match (`a*` between two letters) is nothing to show, so it is stepped over. */
-export const matchesIn = (text: string, pattern: RegExp, limit: number = MATCH_LIMIT): TextMatch[] => {
+export function matchesIn(text: string, pattern: RegExp, limit: number = MATCH_LIMIT): TextMatch[] {
     const matches: TextMatch[] = [];
     const global = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
     let found = global.exec(text);
@@ -61,10 +63,10 @@ export const matchesIn = (text: string, pattern: RegExp, limit: number = MATCH_L
         found = global.exec(text);
     }
     return matches;
-};
+}
 
 /* The step from one match to the next or the one before, round at either end. */
-export const stepIndex = (current: number | null, count: number, direction: 1 | -1): number | null => {
+export function stepIndex(current: number | null, count: number, direction: 1 | -1): number | null {
     if (count === 0) {
         return null;
     }
@@ -72,4 +74,4 @@ export const stepIndex = (current: number | null, count: number, direction: 1 | 
         return direction === 1 ? 0 : count - 1;
     }
     return (current + direction + count) % count;
-};
+}

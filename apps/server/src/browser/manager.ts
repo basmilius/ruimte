@@ -56,7 +56,7 @@ type BrowserErrorCode = 'bad-address' | 'browser-not-found' | 'browser-unavailab
 
 export class BrowserError extends CodedError<BrowserErrorCode> {}
 
-const normalizeUrl = (input: string): string => {
+function normalizeUrl(input: string): string {
     const trimmed = input.trim();
     if (trimmed === '') {
         return 'about:blank';
@@ -73,7 +73,7 @@ const normalizeUrl = (input: string): string => {
         throw new BrowserError('bad-address', 'Only HTTP and HTTPS pages can be opened');
     }
     return value;
-};
+}
 
 /* A page the length of a book would push everything else out of an agent's window; an article fits well inside this. */
 const FAVICON_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$/i;
@@ -99,8 +99,9 @@ const FAVICON_EXPRESSION = `
 })()
 `;
 
-const validFavicon = (value: unknown): string | null =>
-    typeof value === 'string' && value.length <= BROWSER_FAVICON_MAX_DATA_URL_LENGTH && FAVICON_DATA_URL.test(value) ? value : null;
+function validFavicon(value: unknown): string | null {
+    return typeof value === 'string' && value.length <= BROWSER_FAVICON_MAX_DATA_URL_LENGTH && FAVICON_DATA_URL.test(value) ? value : null;
+}
 
 class BrowserSession implements LiveFrameSource {
     readonly clients = new Set<string>();
@@ -667,12 +668,16 @@ export class BrowserManager {
     }
 }
 
-const sessionKey = (browserId: string, clientId: string): string => streamKeyOf(clientId, browserId);
+function sessionKey(browserId: string, clientId: string): string {
+    return streamKeyOf(clientId, browserId);
+}
 
-const eventFrame = (browserId: string, frame: LiveStreamFrame): BrowserFrame => ({
-    browserId,
-    sequence: frame.sequence,
-    width: frame.width,
-    height: frame.height,
-    data: Buffer.from(frame.data).toString('base64')
-});
+function eventFrame(browserId: string, frame: LiveStreamFrame): BrowserFrame {
+    return {
+        browserId,
+        sequence: frame.sequence,
+        width: frame.width,
+        height: frame.height,
+        data: Buffer.from(frame.data).toString('base64')
+    };
+}

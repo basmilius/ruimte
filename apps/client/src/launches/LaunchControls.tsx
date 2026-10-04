@@ -15,7 +15,7 @@ const STATUS_ICON: Record<Exclude<LaunchPhase, 'starting' | 'stopping'>, { icon:
 };
 
 /* A task that ended shows how it ended as a ring, so it never reads as a service that runs. */
-const dotClass = (view: LaunchView): string => {
+function dotClass(view: LaunchView): string {
     const ended = view.launch.kind === 'task' && (view.phase === 'passed' || view.phase === 'failed');
     if (ended) {
         return clsx('border-2 bg-transparent', view.phase === 'passed' ? 'border-positive' : 'border-status-error');
@@ -31,7 +31,7 @@ const dotClass = (view: LaunchView): string => {
         default:
             return 'bg-text-faint';
     }
-};
+}
 
 /* The phase as a dot, small enough to sit on a button's icon. */
 /* One launch waiting on approval, with every variable the approval covers, since a change to those alone asks again. */

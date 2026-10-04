@@ -16,7 +16,7 @@ export interface ReadResourceOptions {
  * once the one before arrived, so the daemon never has more than one piece of this resource on its
  * way; each piece is one frame that the channel splits further.
  */
-export const readResource = async (read: ReadPiece, resource: ByteResource, options: ReadResourceOptions = {}): Promise<Blob> => {
+export async function readResource(read: ReadPiece, resource: ByteResource, options: ReadResourceOptions = {}): Promise<Blob> {
     const chunkBytes = Math.min(options.chunkBytes ?? BYTES_CHUNK_MAX, BYTES_CHUNK_MAX);
     const maxBytes = options.maxBytes ?? BYTES_READ_MAX_BYTES;
     let restarts = options.restarts ?? 1;
@@ -54,4 +54,4 @@ export const readResource = async (read: ReadPiece, resource: ByteResource, opti
         }
         restarts -= 1;
     }
-};
+}

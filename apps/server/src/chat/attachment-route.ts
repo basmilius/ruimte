@@ -13,13 +13,13 @@ const INLINE_MIME = /^(image\/(png|jpeg|gif|webp|svg\+xml)|application\/pdf|text
  * handed out. The chat's own thread is what says which id belongs to which file, so nothing but
  * an attachment of a chat this daemon knows can be reached through here.
  */
-export const handleAttachmentRequest = async (
+export async function handleAttachmentRequest(
     request: Request,
     url: URL,
     remoteAddress: string,
     options: AccessOptions,
     lookup: (chatId: string, id: string) => ChatAttachment | null
-): Promise<Response> => {
+): Promise<Response> {
     const parts = url.pathname.slice(ATTACHMENTS_PATH.length + 1).split('/');
     if (parts.length !== 2 || parts[0] === '' || parts[1] === '') {
         return new Response('Not found', { status: 404 });
@@ -37,4 +37,4 @@ export const handleAttachmentRequest = async (
         return new Response('No attachment', { status: 404 });
     }
     return bytesResponse({ mime: attachment.mime, size: bytes.size, body: bytes }, { name: attachment.name, inline: INLINE_MIME.test(attachment.mime) });
-};
+}

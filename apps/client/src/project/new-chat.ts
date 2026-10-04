@@ -27,33 +27,37 @@ interface NewChatState {
 
 export const useNewChat = create<NewChatState>(() => ({ refused: {} }));
 
-const refuse = (...endpointIds: string[]): void => {
+function refuse(...endpointIds: string[]): void {
     useNewChat.setState((state) => ({ refused: { ...state.refused, ...Object.fromEntries(endpointIds.map((id) => [id, true as const])) } }));
-};
+}
 
 /*
  * The machine a new chat starts on from this window: the one of the open project, or this machine on
  * the desktop's start screen. Null where a person picks one, which is the web client's start screen.
  */
-export const newChatMachine = (
+export function newChatMachine(
     workspaceEndpointId: string | null = windowWorkspace()?.connection.endpointId ?? null,
     local = hasLocalMachine()
-): string | null => workspaceEndpointId ?? (local ? LOCAL_ENDPOINT_ID : null);
+): string | null {
+    return workspaceEndpointId ?? (local ? LOCAL_ENDPOINT_ID : null);
+}
 
 /* Whether this window offers a new chat at all. One a person picks the machine for is offered until they pick one that refuses. */
-export const offersNewChat = (machine: string | null, refused: Record<string, true>): boolean => machine === null || refused[machine] !== true;
+export function offersNewChat(machine: string | null, refused: Record<string, true>): boolean {
+    return machine === null || refused[machine] !== true;
+}
 
-export const useOffersNewChat = (): boolean => {
+export function useOffersNewChat(): boolean {
     const workspaceEndpointId = useWindow((s) => workspaceOf(s.content)?.connection.endpointId ?? null);
     const refused = useNewChat((s) => s.refused);
     return offersNewChat(newChatMachine(workspaceEndpointId), refused);
-};
+}
 
 /*
  * The chat on screen. The window switches to the Chats project itself, and hands the chat on to the
  * shell when the claim found that project in another window, which then comes to the front.
  */
-const showNewChat = async (endpointId: string, projectId: string, viewId: string): Promise<void> => {
+async function showNewChat(endpointId: string, projectId: string, viewId: string): Promise<void> {
     if (isOpenHere(endpointId, projectId)) {
         showViewOnceThere(viewId);
         return;
@@ -67,13 +71,13 @@ const showNewChat = async (endpointId: string, projectId: string, viewId: string
         return;
     }
     desktop()?.openWindow?.(endpointKey(endpointId, projectId), viewId);
-};
+}
 
 /*
  * A chat outside any project on one machine, which makes it in its Chats project and shows it. The
  * machine shows the chat nobody wrote in yet instead when there is one. False when no chat came.
  */
-export const newChatOn = async (endpointId: string): Promise<boolean> => {
+export async function newChatOn(endpointId: string): Promise<boolean> {
     let id = endpointId;
     try {
         id = await ensureMachine(endpointId);
@@ -93,18 +97,18 @@ export const newChatOn = async (endpointId: string): Promise<boolean> => {
         useToasts.getState().show({ kind: 'error', title: i18next.t('common:state.error'), description: e instanceof Error ? e.message : String(e) });
         return false;
     }
-};
+}
 
 /* The machines a person picks between where no machine is implied, in the order the Machines pane lists them. */
-const pickableMachines = (): string[] => {
+function pickableMachines(): string[] {
     const account = usePulsarAccount.getState().status === 'signed-in' ? usePulsarMachines.getState().machines : null;
     return mergeMachines({ endpoints: useEndpoints.getState().endpoints, accountMachines: account, showLocal: hasLocalMachine() }).map(
         (entry) => entry.endpoint?.id ?? entry.id
     );
-};
+}
 
 /* New chat from the tile, the palette, the menu and the shortcut alike. */
-export const newChat = (): void => {
+export function newChat(): void {
     const machine = newChatMachine();
     if (machine !== null) {
         if (offersNewChat(machine, useNewChat.getState().refused)) {
@@ -118,4 +122,4 @@ export const newChat = (): void => {
         return;
     }
     useUi.getState().openChatMachines();
-};
+}

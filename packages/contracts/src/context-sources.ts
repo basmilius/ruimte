@@ -4,18 +4,22 @@ import { isCanvasView, type CanvasNodeKind, type ProjectEdge, type ProjectNode, 
 import { resolveStoredPath } from './stored-path.ts';
 
 /* The kinds an agent lives in; a line that touches one of these is readable context for it. */
-export const isAgentKind = (kind: CanvasNodeKind): boolean => kind === 'terminal' || kind === 'chat';
+export function isAgentKind(kind: CanvasNodeKind): boolean {
+    return kind === 'terminal' || kind === 'chat';
+}
 
 // A text's first line is its name in the list an agent sees.
-const titleOf = (text: string): string => text.split('\n')[0]?.trim().slice(0, 60) || 'Text';
+function titleOf(text: string): string {
+    return text.split('\n')[0]?.trim().slice(0, 60) || 'Text';
+}
 
 /* The thing at one end of a line, or null when it is a node with nothing to read in it. */
-const sourceOf = (
+function sourceOf(
     nodes: Readonly<Record<string, ProjectNode>>,
     texts: Readonly<Record<string, ProjectText>>,
     sourceId: string,
     folder: string | null
-): ContextSource | null => {
+): ContextSource | null {
     const node = nodes[sourceId];
     const text = texts[sourceId];
     if (text) {
@@ -48,7 +52,7 @@ const sourceOf = (
         return { id: node.id, kind: 'device', title: node.title, device: node.device };
     }
     return null;
-};
+}
 
 /*
  * What the far end of a line makes readable. A group is the corner of the canvas it frames, so it
@@ -56,14 +60,14 @@ const sourceOf = (
  * over its own in turn: a person who draws a line at the outer one means everything it holds.
  * `framed` keeps that walk finite, since two frames can each hold the other's center.
  */
-const sourcesFrom = (
+function sourcesFrom(
     nodes: Readonly<Record<string, ProjectNode>>,
     texts: Readonly<Record<string, ProjectText>>,
     sourceId: string,
     targetId: string,
     folder: string | null,
     framed: Set<string>
-): ContextSource[] => {
+): ContextSource[] {
     const node = nodes[sourceId];
     if (node && node.kind === 'group') {
         if (framed.has(node.id)) {
@@ -76,7 +80,7 @@ const sourcesFrom = (
     }
     const source = sourceOf(nodes, texts, sourceId, folder);
     return source ? [source] : [];
-};
+}
 
 /*
  * Which end of a line reads, and what it reads there. Only an agent reads, so a line with an agent
@@ -84,7 +88,7 @@ const sourcesFrom = (
  * or a device has nothing to read with, and the direction is a detail of the file. With an agent at
  * both ends the direction is the whole point, and there the head reads the tail, as it always did.
  */
-const readerOf = (nodes: Readonly<Record<string, ProjectNode>>, edge: ProjectEdge): { agentId: string; sourceId: string } | null => {
+function readerOf(nodes: Readonly<Record<string, ProjectNode>>, edge: ProjectEdge): { agentId: string; sourceId: string } | null {
     const head = nodes[edge.to];
     if (head && isAgentKind(head.kind)) {
         return { agentId: edge.to, sourceId: edge.from };
@@ -94,7 +98,7 @@ const readerOf = (nodes: Readonly<Record<string, ProjectNode>>, edge: ProjectEdg
         return { agentId: edge.from, sourceId: edge.to };
     }
     return null;
-};
+}
 
 /*
  * What every agent node may read, derived from the lines it sits on. A line between two nodes that
@@ -102,12 +106,12 @@ const readerOf = (nodes: Readonly<Record<string, ProjectNode>>, edge: ProjectEdg
  * rest travels as text. The folder is what turns a file node's stored path into the path the
  * agent's own tools take.
  */
-export const deriveContextSources = (
+export function deriveContextSources(
     nodes: Readonly<Record<string, ProjectNode>>,
     texts: Readonly<Record<string, ProjectText>>,
     edges: readonly ProjectEdge[],
     folder: string | null = null
-): Map<string, ContextSource[]> => {
+): Map<string, ContextSource[]> {
     const byTarget = new Map<string, ContextSource[]>();
     for (const edge of edges) {
         const reader = readerOf(nodes, edge);
@@ -130,16 +134,18 @@ export const deriveContextSources = (
         }
     }
     return byTarget;
-};
+}
 
-const byId = <T extends { id: string }>(items: readonly T[]): Record<string, T> => Object.fromEntries(items.map((item) => [item.id, item]));
+function byId<T extends { id: string }>(items: readonly T[]): Record<string, T> {
+    return Object.fromEntries(items.map((item) => [item.id, item]));
+}
 
 /*
  * What every agent node of a project may read, over every canvas view: an agent on a canvas that is
  * not on screen keeps the lines drawn at it. A node id never repeats across the views of one
  * project (the daemon refuses such a file), so the canvases merge without overwriting each other.
  */
-export const deriveProjectContextSources = (views: readonly ProjectView[], folder: string | null): Map<string, ContextSource[]> => {
+export function deriveProjectContextSources(views: readonly ProjectView[], folder: string | null): Map<string, ContextSource[]> {
     const merged = new Map<string, ContextSource[]>();
     for (const view of views) {
         if (!isCanvasView(view)) {
@@ -150,4 +156,4 @@ export const deriveProjectContextSources = (views: readonly ProjectView[], folde
         }
     }
     return merged;
-};
+}

@@ -10,8 +10,9 @@ export interface ForkOriginReaders {
 }
 
 /* Whether two chats of one project stand where no edge can join them: not both on the same canvas. */
-const apart = (one: IndexedPlace | null, other: IndexedPlace | null): boolean =>
-    one !== null && other !== null && one.projectId === other.projectId && (one.canvasId === null || one.canvasId !== other.canvasId);
+function apart(one: IndexedPlace | null, other: IndexedPlace | null): boolean {
+    return one !== null && other !== null && one.projectId === other.projectId && (one.canvasId === null || one.canvasId !== other.canvasId);
+}
 
 /*
  * What a fork may read, with its original added when no edge could carry it, and what an original
@@ -20,7 +21,7 @@ const apart = (one: IndexedPlace | null, other: IndexedPlace | null): boolean =>
  * the node fork it is, just as a summary that points at a fork nobody can read. Two nodes on one
  * canvas are left to their edges, so a line a person removed there stays removed.
  */
-export const withForkOrigin = (targetId: string, sources: ContextSource[], readers: ForkOriginReaders): ContextSource[] => {
+export function withForkOrigin(targetId: string, sources: ContextSource[], readers: ForkOriginReaders): ContextSource[] {
     const target = readers.locate(targetId);
     const related = [readers.forkedFrom(targetId), ...readers.forksOf(targetId)].filter((id): id is string => id !== null);
     const added: ContextSource[] = [];
@@ -31,4 +32,4 @@ export const withForkOrigin = (targetId: string, sources: ContextSource[], reade
         added.push({ id, kind: 'chat', title: readers.titleFor(id) ?? id });
     }
     return added.length === 0 ? sources : [...sources, ...added];
-};
+}

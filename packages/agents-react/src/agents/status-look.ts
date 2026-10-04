@@ -23,7 +23,9 @@ const LOOKS: Record<StatusWord, StatusLook> = {
     cancelled: { icon: CircleSlash, tone: 'text-text-faint', spins: false }
 };
 
-export const statusLookOf = (word: StatusWord): StatusLook => LOOKS[word];
+export function statusLookOf(word: StatusWord): StatusLook {
+    return LOOKS[word];
+}
 
 /* A task as far as its look goes, for an app that hands work to agents as tasks. */
 export interface TaskState {
@@ -33,9 +35,9 @@ export interface TaskState {
 }
 
 /* A task calls its running state `open`, which is the host's word for it and not a person's; an open task whose child stopped on a limit is paused. */
-export const taskStatusWord = (task: TaskState): StatusWord => {
+export function taskStatusWord(task: TaskState): StatusWord {
     if (task.status !== 'open') {
         return task.status;
     }
     return task.paused === undefined ? 'running' : 'paused';
-};
+}

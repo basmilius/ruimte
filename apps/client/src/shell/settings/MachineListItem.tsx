@@ -61,7 +61,7 @@ function ConnectedTile({ entry, endpoint }: { entry: MachineEntry; endpoint: End
 }
 
 /* Why this client cannot reach the machine the way it should, for the line under the name. */
-const useRowFailure = (endpoint: Endpoint | null): string | null => {
+function useRowFailure(endpoint: Endpoint | null): string | null {
     const { t } = useTranslation('settings');
     const mismatch = useEndpoints((s) => (endpoint ? s.mismatched[endpoint.id] : undefined));
     const connection = useEndpointConnection(endpoint?.id ?? '');
@@ -73,7 +73,7 @@ const useRowFailure = (endpoint: Endpoint | null): string | null => {
     }
     // A socket reports a failure only for a refusal (another wire version), so any failure is worth the line.
     return connection.status !== 'open' ? (connection.failure ?? null) : null;
-};
+}
 
 /* One machine in the list of the Account pane: its icon with how it answers, its name, and how this client reaches it. */
 export function MachineListItem({ entry, selected, onSelect }: { entry: MachineEntry; selected: boolean; onSelect(): void }) {

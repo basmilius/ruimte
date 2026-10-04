@@ -28,14 +28,16 @@ export interface ChipOptions {
 const SKIPPED = new Set(['code', 'pre']);
 
 /* A chip as an element: the renderer reads `data-chip` and `data-value`, the text keeps the sigil. */
-const chipElement = (segment: Exclude<ChipSegment, { kind: 'text' }>): HastElement => ({
-    type: 'element',
-    tagName: 'span',
-    properties: { dataChip: segment.kind, dataValue: segment.kind === 'mention' ? segment.path : segment.name },
-    children: [{ type: 'text', value: chipText(segment) }]
-});
+function chipElement(segment: Exclude<ChipSegment, { kind: 'text' }>): HastElement {
+    return {
+        type: 'element',
+        tagName: 'span',
+        properties: { dataChip: segment.kind, dataValue: segment.kind === 'mention' ? segment.path : segment.name },
+        children: [{ type: 'text', value: chipText(segment) }]
+    };
+}
 
-const split = (parent: HastParent, mentions: string[], skills: string[]): void => {
+function split(parent: HastParent, mentions: string[], skills: string[]): void {
     parent.children = parent.children.flatMap((child): HastNode[] => {
         if (child.type === 'text') {
             return tokenizeChips(child.value, mentions, skills).map((segment) =>
@@ -47,14 +49,14 @@ const split = (parent: HastParent, mentions: string[], skills: string[]): void =
         }
         return [child];
     });
-};
+}
 
 /* The `@path` and `$name` tokens a person picked in the composer, cut out of the text as chips. */
-export const rehypeChips =
-    ({ mentions = [], skills = [] }: ChipOptions = {}) =>
-    (tree: HastParent) => {
+export function rehypeChips({ mentions = [], skills = [] }: ChipOptions = {}) {
+    return (tree: HastParent) => {
         if (mentions.length === 0 && skills.length === 0) {
             return;
         }
         split(tree, mentions, skills);
     };
+}

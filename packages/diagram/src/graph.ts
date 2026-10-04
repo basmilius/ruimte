@@ -56,9 +56,13 @@ export interface Layering {
     items: number[][];
 }
 
-export const bandCode = (band: number): number => -(band + 1);
+export function bandCode(band: number): number {
+    return -(band + 1);
+}
 
-export const bandOfCode = (code: number): number => -code - 1;
+export function bandOfCode(code: number): number {
+    return -code - 1;
+}
 
 export const NODE_MARGIN = 16;
 export const DUMMY_MARGIN = 8;

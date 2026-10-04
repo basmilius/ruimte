@@ -19,25 +19,31 @@ import { inProcess } from '@ruimte/agents/chat/fake-cli';
 import { fakeCodex, fakeCodexForks } from '@ruimte/agents/chat/fake-codex';
 import { chatForkDeps, forkChat, itemsThrough, type ChatForkDeps } from './fork.ts';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
-const turnsOf = (items: readonly ChatItem[]): ChatTurnItem[] => items.filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(items: readonly ChatItem[]): ChatTurnItem[] {
+    return items.filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
-const assistantTexts = (items: readonly ChatItem[]): string[] => items.flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
+function assistantTexts(items: readonly ChatItem[]): string[] {
+    return items.flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
+}
 
 describe('forking a Claude chat', () => {
     let root: string;

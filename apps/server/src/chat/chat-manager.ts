@@ -84,7 +84,7 @@ interface ChatManagerOptions extends ChatCoreOptions {
 }
 
 /* The environment every CLI of a chat starts in: the daemon's own, without a terminal's hook variables, with `ruimte-context` on the PATH. */
-const chatEnvOf = (env: Record<string, string | undefined>, binDir: string | undefined): Record<string, string> => {
+function chatEnvOf(env: Record<string, string | undefined>, binDir: string | undefined): Record<string, string> {
     const chat: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
         // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -96,7 +96,7 @@ const chatEnvOf = (env: Record<string, string | undefined>, binDir: string | und
         chat.PATH = chat.PATH ? `${binDir}:${chat.PATH}` : binDir;
     }
     return chat;
-};
+}
 
 /* What a chat hears about its links in front of a prompt: a link made or removed since the last one, and what another node left for it. */
 class ContextNotes implements PromptNotes {
@@ -126,17 +126,20 @@ class ContextNotes implements PromptNotes {
 }
 
 /* The rows of tasks a clear hid, as the record keeps them beside the thread. */
-const clearedExtras = (ids: ReadonlySet<string> | undefined): ChatRecordExtras => (ids === undefined || ids.size === 0 ? {} : { clearedTaskIds: [...ids] });
+function clearedExtras(ids: ReadonlySet<string> | undefined): ChatRecordExtras {
+    return ids === undefined || ids.size === 0 ? {} : { clearedTaskIds: [...ids] };
+}
 
-const clearedTaskIdsOf = (extras: ChatRecordExtras): string[] =>
-    Array.isArray(extras.clearedTaskIds) ? extras.clearedTaskIds.filter((id): id is string => typeof id === 'string') : [];
+function clearedTaskIdsOf(extras: ChatRecordExtras): string[] {
+    return Array.isArray(extras.clearedTaskIds) ? extras.clearedTaskIds.filter((id): id is string => typeof id === 'string') : [];
+}
 
 /*
  * The chat row of a task in the thread of the chat that gave it, written from the task alone so writing
  * it twice changes nothing. A new row joins the turn that is running, which is the turn that ran the
  * verb; a cancelled task gets a note saying why its row failed.
  */
-const taskRowItems = (session: ChatSession, task: Task): ChatItem[] => {
+function taskRowItems(session: ChatSession, task: Task): ChatItem[] {
     const id = `task-${task.id}`;
     const existing = session.thread.get(id);
     const row: ChatSubagentItem = {
@@ -175,7 +178,7 @@ const taskRowItems = (session: ChatSession, task: Task): ChatItem[] => {
             text: `The task "${task.title}" was cancelled: ${task.result?.text ?? 'its node was removed'}`
         }
     ];
-};
+}
 
 /*
  * Ruimte's chats: the generic core with what the daemon adds to it. A chat runs in a project, hears
@@ -623,11 +626,11 @@ export class ChatManager extends ChatCore {
 }
 
 /* A fork with no turn after the one it was cut at: nobody wrote in it, so its CLI never touched the copy. */
-export const unspokenFork = (items: readonly ChatItem[], info: ChatInfo): boolean => {
+export function unspokenFork(items: readonly ChatItem[], info: ChatInfo): boolean {
     const forkOf = info.forkOf;
     if (forkOf === undefined) {
         return false;
     }
     const turns = items.filter((item) => item.kind === 'turn');
     return turns.at(-1)?.id === forkOf.turnId;
-};
+}

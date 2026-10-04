@@ -75,10 +75,10 @@ const phpunit = `<component name="ProjectRunConfigurationManager">
 let root: string;
 let folder: string;
 
-const write = async (path: string, text: string): Promise<void> => {
+async function write(path: string, text: string): Promise<void> {
     await mkdir(join(folder, path, '..'), { recursive: true });
     await writeFile(join(folder, path), text);
-};
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-detect-'));

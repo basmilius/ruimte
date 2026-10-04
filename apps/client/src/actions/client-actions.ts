@@ -77,14 +77,20 @@ import { useProject } from '@/state/project';
 import { providersOf } from '@ruimte/agents-react/state/providers';
 import { chatClient, diagramClient, drawingClient, sessionClient } from '@/transport/connections';
 
-const kindOf = (view: ProjectView): ActionOutput<'view.focus'>['kind'] => (isUnknownView(view) ? 'unknown' : view.kind);
-const kindOfNode = (node: ProjectNode): ActionOutput<'node.focus'>['kind'] => (isUnknownNode(node) ? 'unknown' : node.kind);
+function kindOf(view: ProjectView): ActionOutput<'view.focus'>['kind'] {
+    return isUnknownView(view) ? 'unknown' : view.kind;
+}
+function kindOfNode(node: ProjectNode): ActionOutput<'node.focus'>['kind'] {
+    return isUnknownNode(node) ? 'unknown' : node.kind;
+}
 
 /* A view in any cell of the grid. Only a view on screen has an editor, and so anything to act on. */
-const isOnScreen = (state: DocumentState, viewId: string): boolean => state.layout !== null && locateView(state.layout, viewId) !== null;
+function isOnScreen(state: DocumentState, viewId: string): boolean {
+    return state.layout !== null && locateView(state.layout, viewId) !== null;
+}
 
 /* The focus says nothing here: a blur that lands after a press in another cell still means the canvas it left. */
-const canvasOnScreen = (document: StoreApi<DocumentState>, viewId: string): { view: ProjectView & { kind: 'canvas' }; canvas: CanvasState } => {
+function canvasOnScreen(document: StoreApi<DocumentState>, viewId: string): { view: ProjectView & { kind: 'canvas' }; canvas: CanvasState } {
     const state = document.getState();
     const view = state.views.find((candidate) => candidate.id === viewId);
     const canvas = isOnScreen(state, viewId) ? liveCanvas(viewId) : null;
@@ -92,13 +98,15 @@ const canvasOnScreen = (document: StoreApi<DocumentState>, viewId: string): { vi
         throw new ActionRefusal('inactive-canvas', 'Open the target canvas before changing its nodes.');
     }
     return { view, canvas };
-};
+}
 
 /* What a canvas holds after a change, since the state read before it is a snapshot. */
-const canvasNow = (document: StoreApi<DocumentState>, viewId: string): CanvasState => canvasOnScreen(document, viewId).canvas;
+function canvasNow(document: StoreApi<DocumentState>, viewId: string): CanvasState {
+    return canvasOnScreen(document, viewId).canvas;
+}
 
 /* A name needs no editor, so a rename also reaches a canvas on no cell, through the view the document keeps. */
-const nodeToName = (document: StoreApi<DocumentState>, viewId: string, nodeId: string): ProjectNode | undefined => {
+function nodeToName(document: StoreApi<DocumentState>, viewId: string, nodeId: string): ProjectNode | undefined {
     const view = document
         .getState()
         .exportViews()
@@ -107,7 +115,7 @@ const nodeToName = (document: StoreApi<DocumentState>, viewId: string, nodeId: s
         throw new ActionRefusal('unknown-view', `No canvas view with id “${viewId}” exists in this project.`);
     }
     return view.nodes.find((node) => node.id === nodeId);
-};
+}
 
 type CreatableViewKind = ActionInput<'view.create'>['kind'];
 type CreatableNodeKind = ActionInput<'node.create'>['kind'];
@@ -126,7 +134,7 @@ const VIEW_BASE_NAMES: Record<CreatableViewKind, string> = {
 };
 
 /* A new view is named after what it is, "Canvas", then "Canvas 2", until someone renames it. */
-export const freeName = (views: readonly ProjectView[], base: string): string => {
+export function freeName(views: readonly ProjectView[], base: string): string {
     const taken = new Set(views.flatMap((view) => (view.name === undefined ? [] : [view.name])));
     if (!taken.has(base)) {
         return base;
@@ -136,14 +144,14 @@ export const freeName = (views: readonly ProjectView[], base: string): string =>
         counter += 1;
     }
     return `${base} ${counter}`;
-};
+}
 
 /* What a view is called when nobody named it: what it shows, else what it is. */
-const derivedViewName = (
+function derivedViewName(
     state: DocumentState,
     kind: CreatableViewKind,
     { url, path, device }: { url: string | null; path: string | null; device: DeviceReference | null | undefined }
-): string => {
+): string {
     if (kind === 'file' && path !== null) {
         return basenameOf(path);
     }
@@ -154,21 +162,22 @@ const derivedViewName = (
         return device.name;
     }
     return freeName(state.views, VIEW_BASE_NAMES[kind]);
-};
+}
 
-const centerWorld = (canvas: CanvasState) =>
-    toWorld(canvas.camera, {
+function centerWorld(canvas: CanvasState) {
+    return toWorld(canvas.camera, {
         x: canvas.viewport.w / 2,
         y: canvas.viewport.h / 2
     });
+}
 
-const addNodeInFreeSpace = (canvas: CanvasState, kind: NodeKind, options: AddNodeOptions): string | null => {
+function addNodeInFreeSpace(canvas: CanvasState, kind: NodeKind, options: AddNodeOptions): string | null {
     const placed = nearestFreeNodeRect(Object.values(canvas.nodes), NODE_SIZE[kind], centerWorld(canvas));
     return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
-};
+}
 
 /* The editor of a view on screen: a canvas, a drawing and a diagram each keep their own history and camera. */
-const editorOnScreen = (document: StoreApi<DocumentState>, viewId: string, doing: string) => {
+function editorOnScreen(document: StoreApi<DocumentState>, viewId: string, doing: string) {
     const state = document.getState();
     const view = state.views.find((candidate) => candidate.id === viewId);
     const refusal = () => new ActionRefusal('inactive-view', `Open the target canvas, drawing or diagram before ${doing}.`);
@@ -180,20 +189,22 @@ const editorOnScreen = (document: StoreApi<DocumentState>, viewId: string, doing
         throw refusal();
     }
     return { view, editor: () => live(viewId)! };
-};
+}
 
-const listed = (items: readonly string[]): string => (items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
+function listed(items: readonly string[]): string {
+    return items.length === 1 ? items[0]! : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
 
-const quoted = (names: readonly string[]): string => listed(names.map((name) => `“${name}”`));
+function quoted(names: readonly string[]): string {
+    return listed(names.map((name) => `“${name}”`));
+}
 
-const hasNode =
-    (id: string) =>
-    (canvas: CanvasState): boolean =>
-        canvas.nodes[id] !== undefined;
+function hasNode(id: string) {
+    return (canvas: CanvasState): boolean => canvas.nodes[id] !== undefined;
+}
 
-const historyUndo =
-    (viewId: string, expectedDepth: number, stillThere?: (canvas: CanvasState) => boolean, steps = 1) =>
-    () => {
+function historyUndo(viewId: string, expectedDepth: number, stillThere?: (canvas: CanvasState) => boolean, steps = 1) {
+    return () => {
         const current = canvasNow(useDocument, viewId);
         if (current.past.length !== expectedDepth || (stillThere && !stillThere(current))) {
             throw new ActionRefusal('stale-undo', 'The canvas changed after this action, so it cannot be safely undone here.');
@@ -202,19 +213,24 @@ const historyUndo =
             current.undo();
         }
     };
+}
 
-const unknownView = (viewId: string): ActionRefusal => new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
+function unknownView(viewId: string): ActionRefusal {
+    return new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
+}
 
 /* The canvas a view becomes a node on: the one that was up last, else the first there is. */
-const lastCanvasOf = (state: DocumentState): (ProjectView & { kind: 'canvas' }) | null =>
-    state.views.filter(isCanvasView).find((view) => view.id === state.lastCanvasViewId) ?? state.views.find(isCanvasView) ?? null;
+function lastCanvasOf(state: DocumentState): (ProjectView & { kind: 'canvas' }) | null {
+    return state.views.filter(isCanvasView).find((view) => view.id === state.lastCanvasViewId) ?? state.views.find(isCanvasView) ?? null;
+}
 
 /* What stands in a cell: a view of the project, or this client's files, which the document does not have. */
-const cellName = (state: DocumentState, viewId: string): string =>
-    viewId === FILES_VIEW_ID ? 'Files' : (state.views.find((view) => view.id === viewId)?.name ?? viewId);
+function cellName(state: DocumentState, viewId: string): string {
+    return viewId === FILES_VIEW_ID ? 'Files' : (state.views.find((view) => view.id === viewId)?.name ?? viewId);
+}
 
 /* The cells of the grid column by column, each named by the view standing in it. */
-const cellsOf = (state: DocumentState): ActionOutput<'workspace.inspect'>['cells'] => {
+function cellsOf(state: DocumentState): ActionOutput<'workspace.inspect'>['cells'] {
     const layout = state.layout;
     if (layout === null) {
         return [];
@@ -228,24 +244,28 @@ const cellsOf = (state: DocumentState): ActionOutput<'workspace.inspect'>['cells
             focused: isSameCell(layout.focus, { column: columnIndex, cell: cellIndex })
         }))
     );
-};
+}
 
-const linesOf = (canvas: CanvasState, nodeId: string): number => canvas.edges.filter((edge) => edge.from === nodeId || edge.to === nodeId).length;
+function linesOf(canvas: CanvasState, nodeId: string): number {
+    return canvas.edges.filter((edge) => edge.from === nodeId || edge.to === nodeId).length;
+}
 
-const linesRemoved = (lines: number): string => `${lines} ${lines === 1 ? 'line' : 'lines'} drawn to it will be removed.`;
+function linesRemoved(lines: number): string {
+    return `${lines} ${lines === 1 ? 'line' : 'lines'} drawn to it will be removed.`;
+}
 
 /*
  * The CLI a new chat or terminal runs, as this machine reports it. A terminal that names an account
  * may run a command in place of the CLI: the shell still gets the account's environment, which is how
  * a login under that account runs.
  */
-const agentFor = (
+function agentFor(
     providers: readonly ProviderInfo[],
     kind: string,
     provider: AgentKind | null,
     command: string | null,
     account: string | null = null
-): { target: AgentTarget; info: ProviderInfo } | null => {
+): { target: AgentTarget; info: ProviderInfo } | null {
     if (provider === null) {
         if (account !== null) {
             throw new ActionRefusal('missing-provider', 'An account belongs to an agent CLI. Name the provider as well.');
@@ -266,27 +286,32 @@ const agentFor = (
         throw new ActionRefusal('unsupported-provider', `${info.name} cannot run in ${kind === 'chat' ? 'an AI Chat' : 'a terminal'}.`);
     }
     return { target: kind, info };
-};
+}
 
 /* A path as a node or a view stores it: relative inside the project folder, absolute outside it. */
-const storedFilePath = (path: string): string => storedPathOf(useProject.getState().current?.folder ?? null, path);
+function storedFilePath(path: string): string {
+    return storedPathOf(useProject.getState().current?.folder ?? null, path);
+}
 
 /* What a delete reaches besides what the document holds, in the words a confirmation reads. */
-const deletionConsequences = ({ unsaved, working, ending }: ViewDeletionFacts, from: string): string[] => [
-    ...(unsaved.length === 0 ? [] : [`Unsaved changes to ${quoted(unsaved.map(basenameOf))} will be saved first.`]),
-    ...(working.length === 0 ? [] : [`${quoted(working)} ${working.length === 1 ? 'is' : 'are'} still working and will be stopped.`]),
-    ...(ending.length === 0
-        ? []
-        : [
-              `${listed(ending.map((title) => (title === null ? 'an agent' : `“${title}”`)))} ${ending.length === 1 ? 'was' : 'were'} started from ${from} and will end too.`
-          ])
-];
+function deletionConsequences({ unsaved, working, ending }: ViewDeletionFacts, from: string): string[] {
+    return [
+        ...(unsaved.length === 0 ? [] : [`Unsaved changes to ${quoted(unsaved.map(basenameOf))} will be saved first.`]),
+        ...(working.length === 0 ? [] : [`${quoted(working)} ${working.length === 1 ? 'is' : 'are'} still working and will be stopped.`]),
+        ...(ending.length === 0
+            ? []
+            : [
+                  `${listed(ending.map((title) => (title === null ? 'an agent' : `“${title}”`)))} ${ending.length === 1 ? 'was' : 'were'} started from ${from} and will end too.`
+              ])
+    ];
+}
 
-const sessionsEnded = (sessions: number): string[] =>
-    sessions === 0 ? [] : [`${sessions} ${sessions === 1 ? 'chat or terminal session' : 'chat or terminal sessions'} may be ended.`];
+function sessionsEnded(sessions: number): string[] {
+    return sessions === 0 ? [] : [`${sessions} ${sessions === 1 ? 'chat or terminal session' : 'chat or terminal sessions'} may be ended.`];
+}
 
 /* The nodes a delete takes: the ones named, and what a collapsed group among them hides. */
-const goingWith = (canvas: CanvasState, nodeIds: readonly string[]): ProjectNode[] => {
+function goingWith(canvas: CanvasState, nodeIds: readonly string[]): ProjectNode[] {
     const going = new Set(
         nodeIds.flatMap((id) => {
             const node = canvas.nodes[id];
@@ -294,15 +319,15 @@ const goingWith = (canvas: CanvasState, nodeIds: readonly string[]): ProjectNode
         })
     );
     return [...going].flatMap((id) => canvas.nodes[id] ?? []);
-};
+}
 
 /* A view of a kind that runs no agent, under the name it was given. */
-const addViewOf = (
+function addViewOf(
     state: DocumentState,
     kind: CreatableViewKind,
     title: string,
     { url, command, path, device, cwd }: { url: string | null; command: string | null; path: string | null; device: DeviceReference | null; cwd: string | null }
-): string => {
+): string {
     const folder = cwd === null ? {} : { cwd };
     switch (kind) {
         case 'canvas':
@@ -332,19 +357,21 @@ const addViewOf = (
             }
             return state.addStandaloneView({ kind, name: title, device });
     }
-};
+}
 
-const sessionOf = (resume: string | null | undefined, cwd: string | null | undefined): AgentSession => ({
-    ...(resume == null ? {} : { resume }),
-    ...(cwd == null ? {} : { cwd })
-});
+function sessionOf(resume: string | null | undefined, cwd: string | null | undefined): AgentSession {
+    return {
+        ...(resume == null ? {} : { resume }),
+        ...(cwd == null ? {} : { cwd })
+    };
+}
 
 /* A session goes on only in the CLI that started it, so a resume without one names nothing to run. */
-const refuseResumeWithout = (resume: string | null | undefined, provider: AgentKind | null): void => {
+function refuseResumeWithout(resume: string | null | undefined, provider: AgentKind | null): void {
     if (resume != null && provider === null) {
         throw new ActionRefusal('missing-provider', 'Name the CLI whose session goes on.');
     }
-};
+}
 
 export interface ClientActionMachine {
     sendChat(chatId: string, text: string, extras: ChatSendExtras): Promise<{ queued: boolean; turnId?: string }>;
@@ -380,7 +407,7 @@ const LIVE_MACHINE: ClientActionMachine = {
     machine: {}
 };
 
-export const createClientActionRegistry = (document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> => {
+export function createClientActionRegistry(document: StoreApi<DocumentState>, machine: Partial<ClientActionMachine> = {}): ActionRegistry<void> {
     const { sendChat, clearChat, clearTerminal, providers, copyViewContent, viewDeletion, developer, sessions, content, files, pages, projects } = {
         ...LIVE_MACHINE,
         ...machine
@@ -1338,7 +1365,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>, ma
         }
     };
     return new ActionRegistry<void>(handlers, { checkRevision: checkClientRevision });
-};
+}
 
 export const clientActions = createClientActionRegistry(useDocument);
 
@@ -1352,26 +1379,26 @@ export const VOICE_ACTION_CALL: ActionCall<void> = {
 };
 
 /* A person sees what happened on screen, so a refusal stays as quiet as the store call it replaced. */
-export const runAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name> | null> => {
+export async function runAsPerson<Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name> | null> {
     const result = await clientActions.execute(name, input, PERSON_ACTION_CALL);
     return result.status === 'completed' ? result.output : null;
-};
+}
 
 /* The person already answered the app's own dialogs before this runs, so the confirmation is theirs to give. */
-const runConfirmedAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name> | null> => {
+async function runConfirmedAsPerson<Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name> | null> {
     const asked = await clientActions.execute(name, input, PERSON_ACTION_CALL);
     if (asked.status === 'needs_confirmation') {
         const confirmed = await clientActions.confirm(asked.confirmationToken, true, PERSON_ACTION_CALL);
         return confirmed.status === 'completed' ? (confirmed.output as ActionOutput<Name>) : null;
     }
     return asked.status === 'completed' ? asked.output : null;
-};
+}
 
 /*
  * For a surface that says itself how an action went, such as a toast of the git panel: the output, or
  * the refusal thrown with the machine's own code, so a diverged branch still reads apart from a failure.
  */
-export const performAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name>> => {
+export async function performAsPerson<Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name>> {
     const result = await clientActions.execute(name, input, PERSON_ACTION_CALL);
     if (result.status === 'failed') {
         throw new ActionRefusal(result.error.code, result.error.message, result.error.details);
@@ -1380,10 +1407,10 @@ export const performAsPerson = async <Name extends ActionName>(name: Name, input
         throw new ActionRefusal('confirmation-required', `“${name}” asked a person for a confirmation their own dialog should have given.`);
     }
     return result.output;
-};
+}
 
 /* `performAsPerson` for an action whose question the person's own dialog already answered. */
-export const performConfirmedAsPerson = async <Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name>> => {
+export async function performConfirmedAsPerson<Name extends ActionName>(name: Name, input: ActionInput<Name>): Promise<ActionOutput<Name>> {
     const asked = await clientActions.execute(name, input, PERSON_ACTION_CALL);
     const result = asked.status === 'needs_confirmation' ? await clientActions.confirm(asked.confirmationToken, true, PERSON_ACTION_CALL) : asked;
     if (result.status === 'failed') {
@@ -1393,7 +1420,7 @@ export const performConfirmedAsPerson = async <Name extends ActionName>(name: Na
         throw new ActionRefusal('confirmation-loop', `“${name}” asked a second time.`);
     }
     return result.output as ActionOutput<Name>;
-};
+}
 
 /* The prompt cards answer as the person whose click it was, through the actions Voice asks for too. */
 export const PERSON_PROMPT_CLIENTS: ChatPromptClients = {
@@ -1413,21 +1440,26 @@ export const PERSON_PROMPT_CLIENTS: ChatPromptClients = {
 };
 
 /* The machine's own card about operating an app, answered the same way; false when it no longer waited. */
-export const answerComputerAsPerson = async (requestId: string, choice: ComputerApprovalChoice): Promise<boolean> =>
-    (await performAsPerson('computer.answerApproval', { requestId, choice })).accepted;
+export async function answerComputerAsPerson(requestId: string, choice: ComputerApprovalChoice): Promise<boolean> {
+    return (await performAsPerson('computer.answerApproval', { requestId, choice })).accepted;
+}
 
-const activeViewId = (): string | null => useDocument.getState().activeViewId;
+function activeViewId(): string | null {
+    return useDocument.getState().activeViewId;
+}
 
-export const focusViewAction = (viewId: string): void => {
+export function focusViewAction(viewId: string): void {
     void runAsPerson('view.focus', { viewId });
-};
+}
 
-export const renameViewAction = (viewId: string, name: string): void => {
+export function renameViewAction(viewId: string, name: string): void {
     void runAsPerson('view.rename', { viewId, name });
-};
+}
 
 /* A name carried over from something that already has one may predate the limit; it is cut, never refused. */
-const carriedName = (name: string | undefined): string | null => (name === undefined ? null : clipText(name.trim(), MAX_TITLE_LENGTH) || null);
+function carriedName(name: string | undefined): string | null {
+    return name === undefined ? null : clipText(name.trim(), MAX_TITLE_LENGTH) || null;
+}
 
 export interface CreateViewOptions extends AgentSession {
     name?: string;
@@ -1438,7 +1470,7 @@ export interface CreateViewOptions extends AgentSession {
 }
 
 /* Resolves the id of the new view, or null when there is none. */
-export const createViewAction = async (kind: CreatableViewKind, options: CreateViewOptions = {}): Promise<string | null> => {
+export async function createViewAction(kind: CreatableViewKind, options: CreateViewOptions = {}): Promise<string | null> {
     const created = await runAsPerson('view.create', {
         kind,
         name: carriedName(options.name),
@@ -1452,30 +1484,32 @@ export const createViewAction = async (kind: CreatableViewKind, options: CreateV
         cwd: options.cwd ?? null
     });
     return created?.viewId ?? null;
-};
+}
 
 /* Null puts the view at the top of the list. */
-export const moveViewAction = async (viewId: string, afterViewId: string | null): Promise<void> => {
+export async function moveViewAction(viewId: string, afterViewId: string | null): Promise<void> {
     await runAsPerson('view.move', { viewId, afterViewId });
-};
+}
 
-export const deleteViewAction = (viewId: string): void => {
+export function deleteViewAction(viewId: string): void {
     void runConfirmedAsPerson('view.delete', { viewId });
-};
+}
 
-export const duplicateViewAction = (viewId: string): void => {
+export function duplicateViewAction(viewId: string): void {
     void runAsPerson('view.duplicate', { viewId });
-};
+}
 
-export const placeViewOnCanvasAction = (viewId: string): void => {
+export function placeViewOnCanvasAction(viewId: string): void {
     void runAsPerson('view.placeOnCanvas', { viewId });
-};
+}
 
 /* Resolves the id of the node that mirrors the view. */
-export const showViewOnCanvasAction = async (viewId: string): Promise<string | null> => (await runAsPerson('view.showOnCanvas', { viewId }))?.nodeId ?? null;
+export async function showViewOnCanvasAction(viewId: string): Promise<string | null> {
+    return (await runAsPerson('view.showOnCanvas', { viewId }))?.nodeId ?? null;
+}
 
 /* Resolves how to take it back, or null when nothing happened. */
-export const shareViewAction = async (viewId: string, shared: boolean): Promise<{ view: string; undo: () => void } | null> => {
+export async function shareViewAction(viewId: string, shared: boolean): Promise<{ view: string; undo: () => void } | null> {
     const result = await clientActions.execute('view.share', { viewId, shared }, PERSON_ACTION_CALL);
     if (result.status !== 'completed') {
         return null;
@@ -1489,52 +1523,52 @@ export const shareViewAction = async (viewId: string, shared: boolean): Promise<
             }
         }
     };
-};
+}
 
-export const focusNodeAction = (viewId: string | null, nodeId: string): void => {
+export function focusNodeAction(viewId: string | null, nodeId: string): void {
     if (viewId !== null) {
         void runAsPerson('node.focus', { viewId, nodeId });
     }
-};
+}
 
-export const duplicateNodeAction = (viewId: string | null, nodeId: string): void => {
+export function duplicateNodeAction(viewId: string | null, nodeId: string): void {
     if (viewId !== null) {
         void runAsPerson('node.duplicate', { viewId, nodeId });
     }
-};
+}
 
-export const renameNodeAction = (viewId: string | null, nodeId: string, name: string): void => {
+export function renameNodeAction(viewId: string | null, nodeId: string, name: string): void {
     if (viewId !== null) {
         void runAsPerson('node.rename', { viewId, nodeId, name });
     }
-};
+}
 
-export const colorNoteAction = (viewId: string | null, nodeId: string, color: NoteColor): void => {
+export function colorNoteAction(viewId: string | null, nodeId: string, color: NoteColor): void {
     if (viewId !== null) {
         void runAsPerson('note.setColor', { viewId, nodeId, color });
     }
-};
+}
 
 /* The lines a node leaves behind were asked about by the promote dialog, when it had any. */
-export const promoteNodeAction = (nodeId: string): void => {
+export function promoteNodeAction(nodeId: string): void {
     const viewId = viewOfNode(useDocument.getState().views, nodeId)?.id ?? activeViewId();
     if (viewId !== null) {
         void runConfirmedAsPerson('node.promoteToView', { viewId, nodeId });
     }
-};
+}
 
-export const moveNodeToViewAction = (nodeId: string, targetViewId: string): void => {
+export function moveNodeToViewAction(nodeId: string, targetViewId: string): void {
     const viewId = activeViewId();
     if (viewId !== null) {
         void runConfirmedAsPerson('node.moveToView', { viewId, nodeId, targetViewId });
     }
-};
+}
 
 /*
  * The action names nodes and nothing else. A pick that also holds text or a line goes to its own store
  * in one step, so a single undo still brings all of it back.
  */
-export const deleteNodesAction = (store: StoreApi<CanvasState>, ids: readonly string[]): void => {
+export function deleteNodesAction(store: StoreApi<CanvasState>, ids: readonly string[]): void {
     const canvas = store.getState();
     if (canvas.viewId !== null && defaultCanvases.peek(canvas.viewId) === store && ids.length > 0 && ids.every((id) => canvas.nodes[id] !== undefined)) {
         void runConfirmedAsPerson('node.delete', { viewId: canvas.viewId, nodeIds: [...ids] });
@@ -1542,13 +1576,13 @@ export const deleteNodesAction = (store: StoreApi<CanvasState>, ids: readonly st
     }
     canvas.select([...ids]);
     canvas.deleteSelected();
-};
+}
 
-export const fitAction = (viewId: string | null = activeViewId()): void => {
+export function fitAction(viewId: string | null = activeViewId()): void {
     if (viewId !== null) {
         void runAsPerson('canvas.fit', { viewId });
     }
-};
+}
 
 export interface CreateNodeOptions extends AgentSession {
     /* The canvas it goes on, when that is not the one in the focused cell. */
@@ -1566,7 +1600,7 @@ export interface CreateNodeOptions extends AgentSession {
 }
 
 /* On the canvas on screen, at `at` or in free space near the middle of what it shows. Resolves the new node's id. */
-export const createNodeAction = async (kind: CreatableNodeKind, options: CreateNodeOptions = {}): Promise<string | null> => {
+export async function createNodeAction(kind: CreatableNodeKind, options: CreateNodeOptions = {}): Promise<string | null> {
     const viewId = options.viewId ?? activeViewId();
     if (viewId === null) {
         return null;
@@ -1586,22 +1620,22 @@ export const createNodeAction = async (kind: CreatableNodeKind, options: CreateN
         cwd: options.cwd ?? null
     });
     return created?.nodeId ?? null;
-};
+}
 
-export const linkNodesAction = async (viewId: string, from: string, to: string): Promise<void> => {
+export async function linkNodesAction(viewId: string, from: string, to: string): Promise<void> {
     await runAsPerson('link.create', { viewId, from, to: [to] });
-};
+}
 
 /* Empty and open for typing, the way a double-click on the canvas starts one. */
-export const createTextAction = (at: Point | null = null): void => {
+export function createTextAction(at: Point | null = null): void {
     const viewId = activeViewId();
     if (viewId !== null) {
         void runAsPerson('canvasText.create', { viewId, text: null, at });
     }
-};
+}
 
 /* A group never goes inside a new group, so only the other selected nodes become its members. */
-export const groupSelectionAction = (): void => {
+export function groupSelectionAction(): void {
     const viewId = activeViewId();
     const { selection, nodes } = focusedCanvas().getState();
     const nodeIds = selection.filter((id) => {
@@ -1612,74 +1646,74 @@ export const groupSelectionAction = (): void => {
         return;
     }
     void runAsPerson('group.create', { viewId, nodeIds });
-};
+}
 
-export const historyAction = (step: 'undo' | 'redo', viewId: string | null = activeViewId()): void => {
+export function historyAction(step: 'undo' | 'redo', viewId: string | null = activeViewId()): void {
     if (viewId === null) {
         return;
     }
     void runAsPerson(step === 'undo' ? 'history.undo' : 'history.redo', { viewId });
-};
+}
 
 /* The layout dialog and the dock's delete corner are the person's answer; neither asks about replacing or losing one. */
-export const saveLayoutAction = (name: string): void => {
+export function saveLayoutAction(name: string): void {
     const viewId = activeViewId();
     if (viewId !== null) {
         void runConfirmedAsPerson('layout.save', { viewId, name });
     }
-};
+}
 
-export const applyLayoutAction = (name: string): void => {
+export function applyLayoutAction(name: string): void {
     const viewId = activeViewId();
     if (viewId !== null) {
         void runAsPerson('layout.apply', { viewId, name });
     }
-};
+}
 
-export const deleteLayoutAction = (name: string): void => {
+export function deleteLayoutAction(name: string): void {
     const viewId = activeViewId();
     if (viewId !== null) {
         void runConfirmedAsPerson('layout.delete', { viewId, name });
     }
-};
+}
 
 /* Null sets every gesture at once. */
-export const setLocksAction = (locked: boolean, gestures: (keyof Locks)[] | null = null): void => {
+export function setLocksAction(locked: boolean, gestures: (keyof Locks)[] | null = null): void {
     const viewId = activeViewId();
     if (viewId !== null) {
         void runAsPerson('canvas.setLocks', { viewId, locked, gestures });
     }
-};
+}
 
-export const splitAction = (direction: 'right' | 'down'): void => {
+export function splitAction(direction: 'right' | 'down'): void {
     void runAsPerson('split.create', { direction, viewId: null });
-};
+}
 
 /* Null closes the focused cell. */
-export const closeCellAction = (viewId: string | null = null): void => {
+export function closeCellAction(viewId: string | null = null): void {
     void runAsPerson('split.close', { viewId });
-};
+}
 
-export const focusCellAction = (direction: SplitDirection): void => {
+export function focusCellAction(direction: SplitDirection): void {
     void runAsPerson('split.focus', { direction });
-};
+}
 
 /* A drop on a cell: `cellViewId` is the view standing in the cell it landed on. */
-export const placeViewAction = (viewId: string, cellViewId: string, zone: SplitZone): void => {
+export function placeViewAction(viewId: string, cellViewId: string, zone: SplitZone): void {
     void runAsPerson('split.placeView', { viewId, paths: null, cellViewId, zone });
-};
+}
 
-export const placeFilesAction = (paths: readonly string[], cellViewId: string, zone: SplitZone): void => {
+export function placeFilesAction(paths: readonly string[], cellViewId: string, zone: SplitZone): void {
     if (paths.length > 0) {
         void runAsPerson('split.placeView', { viewId: null, paths: [...paths], cellViewId, zone });
     }
-};
+}
 
 /*
  * Everything on the canvas, text included. Like a delete, a store that is not the canvas's own editor
  * (a canvas shown inside another view) selects in place.
  */
-export const selectAllAction = (store: StoreApi<CanvasState>): void => {
+export function selectAllAction(store: StoreApi<CanvasState>): void {
     const canvas = store.getState();
     const ids = [...canvas.order, ...Object.keys(canvas.texts)];
     if (canvas.viewId !== null && defaultCanvases.peek(canvas.viewId) === store && ids.length > 0) {
@@ -1687,49 +1721,49 @@ export const selectAllAction = (store: StoreApi<CanvasState>): void => {
         return;
     }
     canvas.select(ids);
-};
+}
 
 /* The switch screen says how an open goes, so a refusal here stays quiet like every other person's action. */
-export const openProjectAction = (endpointId: string, projectId: string): void => {
+export function openProjectAction(endpointId: string, projectId: string): void {
     void runAsPerson('project.switch', { endpointId, projectId });
-};
+}
 
 /* A click on a project row. Cmd-click (Ctrl-click off macOS) opens it in a window of its own. */
-export const openProjectClickAction = (event: { metaKey: boolean; ctrlKey: boolean }, endpointId: string, projectId: string): void => {
+export function openProjectClickAction(event: { metaKey: boolean; ctrlKey: boolean }, endpointId: string, projectId: string): void {
     if (wantsNewWindow(event)) {
         openInNewWindow(endpointId, projectId);
         return;
     }
     openProjectAction(endpointId, projectId);
-};
+}
 
-export const openFolderAction = (endpointId: string, folder: string, createFolder: boolean): void => {
+export function openFolderAction(endpointId: string, folder: string, createFolder: boolean): void {
     void runAsPerson('project.create', { endpointId, folder, createFolder });
-};
+}
 
 /* The cancel button of a git run: the run is named by the id its progress streams under. */
-export const cancelGitRunAction = (runId: string): void => {
+export function cancelGitRunAction(runId: string): void {
     void runAsPerson('operation.cancel', { operationId: `${GIT_OPERATION}${runId}` });
-};
+}
 
 /* Null takes the mark away. */
-export const setViewIconAction = (viewId: string, icon: ProjectIconChoice | null): void => {
+export function setViewIconAction(viewId: string, icon: ProjectIconChoice | null): void {
     void runAsPerson('view.setIcon', { viewId, icon: icon?.value ?? null });
-};
+}
 
 /* A color a person picks is the one the shortcut sets next; null takes the flags off. */
-export const flagAction = (ids: readonly string[], color: NodeAccent | null): void => {
+export function flagAction(ids: readonly string[], color: NodeAccent | null): void {
     if (color !== null) {
         rememberFlagColor(color);
     }
     void runAsPerson('flag.set', { ids: [...ids], color });
-};
+}
 
 /*
  * What the shortcut flags: the nodes selected on the canvas with the focus, else the view in the
  * focused cell. Flagged all over it takes the flags off; otherwise it flags the lot in the last color.
  */
-export const toggleFlagAction = (): void => {
+export function toggleFlagAction(): void {
     const state = useDocument.getState();
     const view = activeViewOf(state);
     if (view === null) {
@@ -1739,18 +1773,18 @@ export const toggleFlagAction = (): void => {
     const ids = selection.length > 0 ? selection : [view.id];
     const flagged = ids.every((id) => flagOf(state.flags, id) !== null);
     void runAsPerson('flag.set', { ids, color: flagged ? null : lastFlagColor() });
-};
+}
 
 /* A person's key or menu row is the answer, as a terminal's own Cmd+K always was. */
-export const clearTerminalAction = (terminalId: string): void => {
+export function clearTerminalAction(terminalId: string): void {
     void runConfirmedAsPerson('terminal.clear', { terminalId });
-};
+}
 
 /* The body rebuilds its terminal once the fresh session is asked for; the action only asks. */
-export const restartTerminalAction = (terminalId: string): void => {
+export function restartTerminalAction(terminalId: string): void {
     void runAsPerson('terminal.restart', { terminalId });
-};
+}
 
-export const resumeTerminalAgentAction = (terminalId: string): void => {
+export function resumeTerminalAgentAction(terminalId: string): void {
     void runAsPerson('terminal.resumeAgent', { terminalId });
-};
+}

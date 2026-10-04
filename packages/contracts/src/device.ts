@@ -85,8 +85,9 @@ export const DeviceListResultSchema = z.object({
  * does, since the id is the machine's and a project file that travels to another machine would
  * carry an id that means nothing there.
  */
-export const deviceMatches = (device: DeviceInfo, reference: DeviceReference): boolean =>
-    device.platform === reference.platform && device.kind === reference.kind && device.name === reference.name && device.runtime === reference.runtime;
+export function deviceMatches(device: DeviceInfo, reference: DeviceReference): boolean {
+    return device.platform === reference.platform && device.kind === reference.kind && device.name === reference.name && device.runtime === reference.runtime;
+}
 
 export const DeviceTargetPayloadSchema = z.object({
     deviceId: DeviceIdSchema,
@@ -262,24 +263,27 @@ export const DeviceControlPayloadSchema = z.object({
 });
 
 /* The announced entries this version knows, in the order they were announced. */
-const known = <Value extends string>(schema: z.ZodEnum<Record<Value, Value>>, announced: readonly string[]): Value[] =>
-    announced.filter((entry): entry is Value => schema.safeParse(entry).success);
+function known<Value extends string>(schema: z.ZodEnum<Record<Value, Value>>, announced: readonly string[]): Value[] {
+    return announced.filter((entry): entry is Value => schema.safeParse(entry).success);
+}
 
 const IOS_BUTTONS: readonly DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
 const IOS_SIMULATOR_TOOLS: readonly DeviceTool[] = DeviceToolSchema.options;
 
-export const deviceButtons = (device: Pick<DeviceInfo, 'capabilities'>): DeviceButton[] =>
-    device.capabilities.buttons ? known(DeviceButtonSchema, device.capabilities.buttons) : [...IOS_BUTTONS];
+export function deviceButtons(device: Pick<DeviceInfo, 'capabilities'>): DeviceButton[] {
+    return device.capabilities.buttons ? known(DeviceButtonSchema, device.capabilities.buttons) : [...IOS_BUTTONS];
+}
 
-export const deviceTools = (device: Pick<DeviceInfo, 'capabilities' | 'kind' | 'platform'>): DeviceTool[] => {
+export function deviceTools(device: Pick<DeviceInfo, 'capabilities' | 'kind' | 'platform'>): DeviceTool[] {
     if (device.capabilities.tools) {
         return known(DeviceToolSchema, device.capabilities.tools);
     }
     return device.platform === 'ios' && device.kind === 'simulator' ? [...IOS_SIMULATOR_TOOLS] : [];
-};
+}
 
-export const devicePermissions = (device: Pick<DeviceInfo, 'capabilities'>): DevicePermission[] =>
-    device.capabilities.permissions ? known(DevicePermissionSchema, device.capabilities.permissions) : [...DevicePermissionSchema.options];
+export function devicePermissions(device: Pick<DeviceInfo, 'capabilities'>): DevicePermission[] {
+    return device.capabilities.permissions ? known(DevicePermissionSchema, device.capabilities.permissions) : [...DevicePermissionSchema.options];
+}
 
 export type DeviceInfo = z.infer<typeof DeviceInfoSchema>;
 export type DeviceButton = z.infer<typeof DeviceButtonSchema>;

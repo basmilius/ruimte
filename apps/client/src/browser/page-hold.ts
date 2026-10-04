@@ -12,27 +12,29 @@ const LOAD_TIMEOUT_MS = 10_000;
 const START_TIMEOUT_MS = 1_500;
 
 /* What the daemon is told about a page this client holds; the icon and the stream are the client's own. */
-export const pageStateOf = (browserId: string, row: BrowserState): BrowserPageState => ({
-    browserId,
-    url: row.url,
-    title: row.title,
-    loading: row.loading,
-    canGoBack: row.canGoBack,
-    canGoForward: row.canGoForward,
-    error: row.error === null ? row.streamError : `${row.error.description} (${row.error.code})`
-});
+export function pageStateOf(browserId: string, row: BrowserState): BrowserPageState {
+    return {
+        browserId,
+        url: row.url,
+        title: row.title,
+        loading: row.loading,
+        canGoBack: row.canGoBack,
+        canGoForward: row.canGoForward,
+        error: row.error === null ? row.streamError : `${row.error.description} (${row.error.code})`
+    };
+}
 
-const base64 = (bytes: Uint8Array): string => {
+function base64(bytes: Uint8Array): string {
     let binary = '';
     for (let offset = 0; offset < bytes.length; offset += 0x8000) {
         binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
     }
     return btoa(binary);
-};
+}
 
 /* Resolves once the page stopped loading, or once it is clear that nothing started loading at all. */
-const settled = (key: string): Promise<void> =>
-    new Promise((resolve) => {
+function settled(key: string): Promise<void> {
+    return new Promise((resolve) => {
         const timers: ReturnType<typeof setTimeout>[] = [];
         let started = useBrowser.getState().byKey[key]?.loading === true;
         let off = (): void => undefined;
@@ -64,9 +66,10 @@ const settled = (key: string): Promise<void> =>
             setTimeout(done, LOAD_TIMEOUT_MS)
         );
     });
+}
 
 /* One ask from an agent, carried out on the page this client holds under that node. */
-const answer = async (endpointId: string, event: BrowserDriveEvent): Promise<BrowserDriveResult> => {
+async function answer(endpointId: string, event: BrowserDriveEvent): Promise<BrowserDriveResult> {
     const key = endpointKey(endpointId, event.browserId);
     if (!browserRegistry.has(key)) {
         return { askId: event.askId, error: 'This client no longer has that page open' };
@@ -105,7 +108,7 @@ const answer = async (endpointId: string, event: BrowserDriveEvent): Promise<Bro
         await settled(key);
     }
     return { askId: event.askId, state: state() };
-};
+}
 
 /*
  * The pages this client draws itself, kept known to the machine they belong to. In the desktop shell
@@ -114,8 +117,8 @@ const answer = async (endpointId: string, event: BrowserDriveEvent): Promise<Bro
  *
  * Nothing here opens a link; it follows the sockets a hold already brought up.
  */
-export const startPageHolds = (): (() => void) =>
-    watchPool((link: Transport, endpointId: string) => {
+export function startPageHolds(): () => void {
+    return watchPool((link: Transport, endpointId: string) => {
         /* What the machine was told, per page, so a change is one message and a still page is none. */
         const told = new Map<string, BrowserState>();
         const report = (): void => {
@@ -148,3 +151,4 @@ export const startPageHolds = (): (() => void) =>
             ]
         };
     });
+}

@@ -55,25 +55,28 @@ export interface WebRtcLinkOptions {
 }
 
 /* Why the machine hung up. A reason this version has no words for still says the connection went. */
-const closeReason = (reason: string): string => i18next.t(`machines:direct.closed.${reason}`, { defaultValue: i18next.t('machines:direct.closed.other') });
+function closeReason(reason: string): string {
+    return i18next.t(`machines:direct.closed.${reason}`, { defaultValue: i18next.t('machines:direct.closed.other') });
+}
 
-const connectionIdOf = (): string => {
+function connectionIdOf(): string {
     const bytes = crypto.getRandomValues(new Uint8Array(16));
     return btoa(String.fromCharCode(...bytes))
         .replaceAll('+', '-')
         .replaceAll('/', '_')
         .replace(/=+$/, '');
-};
+}
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 /*
  * Close signaling once the DataChannel opens, then authenticate against its DTLS fingerprints
  * before reporting the link ready. Direct failures stay visible instead of falling back silently.
  */
-export const webRtcLink =
-    (options: WebRtcLinkOptions): LinkOpener =>
-    (url, events): Link => {
+export function webRtcLink(options: WebRtcLinkOptions): LinkOpener {
+    return (url, events): Link => {
         const connectionId = connectionIdOf();
         const assembler = new FrameAssembler();
         const binaryAssembler = new BinaryFrameAssembler();
@@ -331,13 +334,14 @@ export const webRtcLink =
             close: () => end(null)
         };
     };
+}
 
 /*
  * From one stats report: the bytes the DTLS transport under the channel received, the packets of a
  * message that is not whole yet included, and whether the pair in use is relayed; null where the
  * browser does not say.
  */
-const statsOf = async (peer: RTCPeerConnection): Promise<{ bytes: number | null; relayed: boolean | null }> => {
+async function statsOf(peer: RTCPeerConnection): Promise<{ bytes: number | null; relayed: boolean | null }> {
     try {
         const report = await peer.getStats();
         let total: number | null = null;
@@ -350,11 +354,11 @@ const statsOf = async (peer: RTCPeerConnection): Promise<{ bytes: number | null;
     } catch {
         return { bytes: null, relayed: null };
     }
-};
+}
 
 /* Waits for ICE to finish gathering, so the offer carries every candidate and nothing has to trickle. */
-const gathered = (peer: RTCPeerConnection, timeoutMs: number): Promise<void> =>
-    new Promise((resolve) => {
+function gathered(peer: RTCPeerConnection, timeoutMs: number): Promise<void> {
+    return new Promise((resolve) => {
         if (peer.iceGatheringState === 'complete') {
             resolve();
             return;
@@ -372,3 +376,4 @@ const gathered = (peer: RTCPeerConnection, timeoutMs: number): Promise<void> =>
         const timer = setTimeout(done, timeoutMs);
         peer.addEventListener('icegatheringstatechange', check);
     });
+}

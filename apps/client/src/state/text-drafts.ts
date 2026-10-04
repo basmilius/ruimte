@@ -38,10 +38,14 @@ export interface DraftLink {
     projectOpen(): Promise<void>;
 }
 
-export const isUnsavedDraft = (draft: TextDraft | undefined): boolean => draft !== undefined && draft.text !== draft.disk;
+export function isUnsavedDraft(draft: TextDraft | undefined): boolean {
+    return draft !== undefined && draft.text !== draft.disk;
+}
 
 /* A problem only a person can answer: saving waits for Reload or Overwrite. */
-const waitsForPerson = (draft: TextDraft): boolean => draft.problem?.kind === 'stale' || draft.problem?.kind === 'changed';
+function waitsForPerson(draft: TextDraft): boolean {
+    return draft.problem?.kind === 'stale' || draft.problem?.kind === 'changed';
+}
 
 interface DraftsStore {
     /* Per machine and absolute path (`state/keys.ts`), so every surface on one file shares one draft. */
@@ -59,12 +63,12 @@ interface Pending {
     holders: number;
 }
 
-const messageOf = (error: unknown): string => {
+function messageOf(error: unknown): string {
     if (isConnectionError(error)) {
         return i18next.t('panels:file.draft.notConnected');
     }
     return error instanceof TransportError ? error.message : i18next.t('panels:file.draft.saveFailed');
-};
+}
 
 /*
  * The text of every file being edited on this client, one draft per file whatever number of tabs,
@@ -340,7 +344,7 @@ export class TextDrafts {
     }
 }
 
-const liveLink = (endpointId: string): DraftLink | null => {
+function liveLink(endpointId: string): DraftLink | null {
     const transport = transportFor(endpointId);
     if (transport === null) {
         return null;
@@ -353,12 +357,14 @@ const liveLink = (endpointId: string): DraftLink | null => {
             return connection?.endpointId === endpointId ? connection.projects.whenOpen() : Promise.resolve();
         }
     };
-};
+}
 
 export const textDrafts = new TextDrafts(liveLink);
 
-export const useTextDraft = (endpointId: string, path: string | null): TextDraft | undefined =>
-    useTextDrafts((state) => (path === null ? undefined : state.rows[endpointKey(endpointId, path)]));
+export function useTextDraft(endpointId: string, path: string | null): TextDraft | undefined {
+    return useTextDrafts((state) => (path === null ? undefined : state.rows[endpointKey(endpointId, path)]));
+}
 
-export const useUnsaved = (endpointId: string, path: string | null): boolean =>
-    useTextDrafts((state) => path !== null && isUnsavedDraft(state.rows[endpointKey(endpointId, path)]));
+export function useUnsaved(endpointId: string, path: string | null): boolean {
+    return useTextDrafts((state) => path !== null && isUnsavedDraft(state.rows[endpointKey(endpointId, path)]));
+}

@@ -13,7 +13,9 @@ import { IconButton } from '@basmilius/desktop-ui';
 // Long enough to bridge an agent closing one step before it opens the next, short enough that a stop still shows soon.
 export const ACTIVE_HOLD_MS = 1500;
 
-const sameFlag = (a: true, b: true): boolean => a === b;
+function sameFlag(a: true, b: true): boolean {
+    return a === b;
+}
 
 /**
  * The step the agent is on, as one icon button in the plan panel's toolbar. It keeps its slot while

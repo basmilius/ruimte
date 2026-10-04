@@ -10,15 +10,17 @@ let project: string;
 let outside: string;
 let trashed: string[];
 
-const boundary: () => WriteBoundary = () => ({
-    folders: [project],
-    worktreesOf: async () => [],
-    worktreesRoot: join(root, 'home', 'worktrees')
-});
+function boundary(): WriteBoundary {
+    return {
+        folders: [project],
+        worktreesOf: async () => [],
+        worktreesRoot: join(root, 'home', 'worktrees')
+    };
+}
 
-const trash = async (path: string): Promise<void> => {
+async function trash(path: string): Promise<void> {
     trashed.push(path);
-};
+}
 
 const caseInsensitive = await (async (): Promise<boolean> => {
     const probe = await mkdtemp(join(tmpdir(), 'ruimte-fs-case-'));
@@ -30,14 +32,14 @@ const caseInsensitive = await (async (): Promise<boolean> => {
     }
 })();
 
-const codeOf = async (work: Promise<unknown>): Promise<string | undefined> => {
+async function codeOf(work: Promise<unknown>): Promise<string | undefined> {
     try {
         await work;
         return undefined;
     } catch (e) {
         return (e as { code?: string }).code;
     }
-};
+}
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-fs-delete-')));

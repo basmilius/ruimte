@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CodexTitleReader } from './codex-title.ts';
 
-const line = (id: string, name: unknown): string => `${JSON.stringify({ id, thread_name: name, updated_at: '2026-09-14T12:00:00.000000Z' })}\n`;
+function line(id: string, name: unknown): string {
+    return `${JSON.stringify({ id, thread_name: name, updated_at: '2026-09-14T12:00:00.000000Z' })}\n`;
+}
 
 let root: string;
 let index: string;

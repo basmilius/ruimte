@@ -14,21 +14,21 @@ interface NetworkDependencies {
 const pools = new WeakMap<AppleToolContext, AppleMcpPool>();
 const fallbackContext: AppleToolContext = { env: process.env as Record<string, string>, home: process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte') };
 
-export const closeAppleNetworkTools = async (context: AppleToolContext): Promise<void> => {
+export async function closeAppleNetworkTools(context: AppleToolContext): Promise<void> {
     const pool = pools.get(context);
     pools.delete(context);
     await pool?.close();
-};
+}
 
-const boundedJson = (value: unknown): string => {
+function boundedJson(value: unknown): string {
     const text = JSON.stringify(value);
     if (Buffer.byteLength(text) > 6000) {
         throw new Error('The result does not fit the local context. Request a narrower result.');
     }
     return text;
-};
+}
 
-export const appleTextResult = (metadata: Record<string, unknown>, value: string): string => {
+export function appleTextResult(metadata: Record<string, unknown>, value: string): string {
     let budget = 5200;
     while (budget >= 0) {
         const clipped = limitAppleText(value, budget);
@@ -39,9 +39,9 @@ export const appleTextResult = (metadata: Record<string, unknown>, value: string
         budget -= 200;
     }
     throw new Error('The result metadata exceeds the local context limit.');
-};
+}
 
-const toolListing = (server: string, tools: Tool[]): string => {
+function toolListing(server: string, tools: Tool[]): string {
     const entries: Array<{ name: string; description: string }> = [];
     for (const tool of tools.slice(0, 40)) {
         const entry = { name: tool.name, description: limitAppleText(tool.description ?? '', 180).text };
@@ -56,15 +56,15 @@ const toolListing = (server: string, tools: Tool[]): string => {
         truncated: entries.length < tools.length,
         next: 'Call MCPListTools with server and tool to inspect one input schema.'
     });
-};
+}
 
-export const executeAppleNetworkTool = async (
+export async function executeAppleNetworkTool(
     cwd: string,
     call: AppleToolCall,
     signal?: AbortSignal,
     context: AppleToolContext = fallbackContext,
     dependencies: NetworkDependencies = {}
-): Promise<AppleToolResult> => {
+): Promise<AppleToolResult> {
     signal?.throwIfAborted();
     const deadline = AbortSignal.timeout(30_000);
     const active = signal ? AbortSignal.any([signal, deadline]) : deadline;
@@ -173,4 +173,4 @@ export const executeAppleNetworkTool = async (
         output: appleTextResult({ server: call.server, tool: call.tool, isError: result.isError === true }, content + structured),
         failed: result.isError === true
     };
-};
+}

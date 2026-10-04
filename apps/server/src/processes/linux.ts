@@ -15,7 +15,7 @@ export interface ProcStat {
 }
 
 /* `/proc/<pid>/stat`. The name sits in parentheses and may hold spaces and parentheses of its own, so the fields count from the last one. */
-export const parseStat = (text: string): ProcStat | null => {
+export function parseStat(text: string): ProcStat | null {
     const open = text.indexOf('(');
     const close = text.lastIndexOf(')');
     if (open === -1 || close === -1) {
@@ -33,10 +33,10 @@ export const parseStat = (text: string): ProcStat | null => {
         return null;
     }
     return { name: text.slice(open + 1, close), ppid, cpuTicks, startTicks };
-};
+}
 
 /* `Key: value` lines as `/proc/<pid>/status`, `/proc/<pid>/io` and `/proc/meminfo` write them, the first number of each value. */
-export const parseKeyValues = (text: string): Map<string, number> => {
+export function parseKeyValues(text: string): Map<string, number> {
     const values = new Map<string, number>();
     for (const line of text.split('\n')) {
         const colon = line.indexOf(':');
@@ -49,10 +49,10 @@ export const parseKeyValues = (text: string): Map<string, number> => {
         }
     }
     return values;
-};
+}
 
 /* The first line of `/proc/stat`. Busy is everything but idle and iowait. */
-export const parseCpuLine = (text: string): { busy: number; total: number } | null => {
+export function parseCpuLine(text: string): { busy: number; total: number } | null {
     const line = text.split('\n').find((entry) => entry.startsWith('cpu '));
     if (!line) {
         return null;
@@ -61,15 +61,15 @@ export const parseCpuLine = (text: string): { busy: number; total: number } | nu
     const total = ticks.slice(0, 8).reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
     const idle = (ticks[3] ?? 0) + (ticks[4] ?? 0);
     return { busy: total - idle, total };
-};
+}
 
-const read = (path: string): string | null => {
+function read(path: string): string | null {
     try {
         return readFileSync(path, 'latin1');
     } catch {
         return null;
     }
-};
+}
 
 export class LinuxSampler implements ProcessSampler {
     private readonly home: string;

@@ -5,16 +5,18 @@ import type { UsageRecord } from './record.ts';
 
 const prices = new PriceBook('/nowhere', false);
 
-const record = (patch: Partial<UsageRecord> & { at: string }): UsageRecord => ({
-    provider: 'claude',
-    timestampMs: Date.parse(patch.at),
-    model: 'claude-opus-4-5',
-    sessionId: 's-1',
-    cwd: '/work/repo',
-    totals: { calls: 1, input: 100, cacheRead: 1_000, cacheWrite: 50, cacheWrite1h: 0, output: 40, reasoning: 10 },
-    dedupeKey: null,
-    ...patch
-});
+function record(patch: Partial<UsageRecord> & { at: string }): UsageRecord {
+    return {
+        provider: 'claude',
+        timestampMs: Date.parse(patch.at),
+        model: 'claude-opus-4-5',
+        sessionId: 's-1',
+        cwd: '/work/repo',
+        totals: { calls: 1, input: 100, cacheRead: 1_000, cacheWrite: 50, cacheWrite1h: 0, output: 40, reasoning: 10 },
+        dedupeKey: null,
+        ...patch
+    };
+}
 
 const week = { from: '2026-09-04', to: '2026-09-10', resolution: 'day', timeZone: 'Europe/Amsterdam' } as const;
 

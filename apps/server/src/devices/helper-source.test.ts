@@ -3,7 +3,7 @@ import type { LiveStreamFrame } from '@ruimte/contracts';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperMessage } from './helper-protocol.ts';
 import { DeviceHelperFailure, DeviceHelperSource, type DeviceHelperProcess } from './helper-source.ts';
 
-const join = (...chunks: Uint8Array[]): Uint8Array => {
+function join(...chunks: Uint8Array[]): Uint8Array {
     const result = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.byteLength, 0));
     let offset = 0;
     for (const chunk of chunks) {
@@ -11,7 +11,7 @@ const join = (...chunks: Uint8Array[]): Uint8Array => {
         offset += chunk.byteLength;
     }
     return result;
-};
+}
 
 class FakeHelperProcess implements DeviceHelperProcess {
     readonly writes: Uint8Array[] = [];

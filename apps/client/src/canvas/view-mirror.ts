@@ -44,7 +44,7 @@ export interface ViewMirrorHook<TSnapshot> {
  * by the editor while that same view is open. A node is a mirror, never an editor, so nothing here
  * writes; two nodes and the view itself always show the same thing.
  */
-export const createViewMirror = <TSnapshot>(kind: ViewMirrorKind<TSnapshot>): ViewMirrorHook<TSnapshot> => {
+export function createViewMirror<TSnapshot>(kind: ViewMirrorKind<TSnapshot>): ViewMirrorHook<TSnapshot> {
     const useMirrors = create<MirrorState<TSnapshot>>(() => ({ byKey: {} }));
     const empty: ViewMirror<TSnapshot> = { snapshot: null, gone: false, loading: false };
 
@@ -138,4 +138,4 @@ export const createViewMirror = <TSnapshot>(kind: ViewMirrorKind<TSnapshot>): Vi
 
         return useMirrors((state) => (key ? (state.byKey[key] ?? null) : null));
     };
-};
+}

@@ -7,7 +7,7 @@ import type { UsageRootPath } from './roots.ts';
 
 const made: string[] = [];
 
-const workspace = async (): Promise<{ home: string; claude: string; codex: string; roots: UsageRootPath[] }> => {
+async function workspace(): Promise<{ home: string; claude: string; codex: string; roots: UsageRootPath[] }> {
     const base = await mkdtemp(join(tmpdir(), 'ruimte-usage-'));
     made.push(base);
     const claude = join(base, 'claude', 'projects');
@@ -23,14 +23,14 @@ const workspace = async (): Promise<{ home: string; claude: string; codex: strin
             { provider: 'codex', path: codex }
         ]
     };
-};
+}
 
 afterEach(async () => {
     await Promise.all(made.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
-const assistant = (id: string, seconds: number, output: number): string =>
-    `${JSON.stringify({
+function assistant(id: string, seconds: number, output: number): string {
+    return `${JSON.stringify({
         type: 'assistant',
         timestamp: new Date(Date.parse('2026-09-10T09:00:00.000Z') + seconds * 1000).toISOString(),
         sessionId: 's-1',
@@ -41,6 +41,7 @@ const assistant = (id: string, seconds: number, output: number): string =>
             usage: { input_tokens: 10, cache_read_input_tokens: 100, cache_creation_input_tokens: 20, output_tokens: output }
         }
     })}\n`;
+}
 
 describe('the usage scanner', () => {
     test('reads both roots, keeps the index and opens nothing on a second pass', async () => {

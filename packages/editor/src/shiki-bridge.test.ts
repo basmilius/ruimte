@@ -12,7 +12,7 @@ interface Registration {
 }
 
 /* Monaco's registry keeps one provider per language, and a disposal takes it out only while it is still the one in place. */
-const fakeLanguages = (): MonacoLanguages & { registered: string[]; providers: Registration[]; current: Map<string, Registration> } => {
+function fakeLanguages(): MonacoLanguages & { registered: string[]; providers: Registration[]; current: Map<string, Registration> } {
     const registered: string[] = [];
     const providers: Registration[] = [];
     const current = new Map<string, Registration>();
@@ -37,15 +37,15 @@ const fakeLanguages = (): MonacoLanguages & { registered: string[]; providers: R
             };
         }
     };
-};
+}
 
 const highlighter = await getSingletonHighlighter({ themes: ['github-light', 'github-dark'], langs: ['typescript'] });
 
 // Shiki writes an opaque color with its alpha at times and Monaco without; both are the same paint.
-const opaque = (color: string): string => {
+function opaque(color: string): string {
     const lower = color.toLowerCase();
     return lower.length === 9 && lower.endsWith('ff') ? lower.slice(0, 7) : lower;
-};
+}
 
 const LINE = 'export const answer: number = await compute("forty-two", 42);';
 
@@ -53,7 +53,7 @@ const LINE = 'export const answer: number = await compute("forty-two", 42);';
 highlighter.codeToTokensBase(LINE, { lang: 'typescript', theme: 'github-dark', tokenizeTimeLimit: 0 });
 
 /* The color Monaco paints each character in, by the scope the provider hands it and the rules of the theme. */
-const monacoColors = (provider: Provider, theme: ShikiTheme): string[] => {
+function monacoColors(provider: Provider, theme: ShikiTheme): string[] {
     const { colors: chrome, rules } = monacoTheme(highlighter, theme);
     const foreground = chrome['editor.foreground']!.toLowerCase();
     const { tokens } = provider.tokenize(LINE, provider.getInitialState());
@@ -67,13 +67,13 @@ const monacoColors = (provider: Provider, theme: ShikiTheme): string[] => {
         }
     });
     return colors;
-};
+}
 
 /* The color the file viewer paints each character in: Shiki's own tokens, under the same theme. */
-const viewerColors = (theme: ShikiTheme, lang: BundledLanguage = 'typescript'): string[] => {
+function viewerColors(theme: ShikiTheme, lang: BundledLanguage = 'typescript'): string[] {
     const [line = []] = highlighter.codeToTokensBase(LINE, { lang, theme: theme as BundledTheme });
     return line.flatMap((token) => [...token.content].map(() => opaque(token.color ?? '')));
-};
+}
 
 describe('ShikiBridge', () => {
     test('colors a line the way the viewer does, in either theme', async () => {

@@ -4,18 +4,20 @@ import { until } from './computer-test-helpers.ts';
 import { presenceWords } from './overlay-words.ts';
 import { ComputerPresence, type PresenceShow } from './presence.ts';
 
-const card = (nodeId: string, app: string): ComputerApproval => ({
-    requestId: `request-${nodeId}`,
-    nodeId,
-    surface: 'chat',
-    nodeTitle: null,
-    projectId: null,
-    projectName: null,
-    app: { name: app, bundleId: `com.example.${app.toLowerCase()}` },
-    command: 'state',
-    createdAt: 1,
-    expiresAt: 2
-});
+function card(nodeId: string, app: string): ComputerApproval {
+    return {
+        requestId: `request-${nodeId}`,
+        nodeId,
+        surface: 'chat',
+        nodeTitle: null,
+        projectId: null,
+        projectName: null,
+        app: { name: app, bundleId: `com.example.${app.toLowerCase()}` },
+        command: 'state',
+        createdAt: 1,
+        expiresAt: 2
+    };
+}
 
 interface Setup {
     presence: ComputerPresence;
@@ -27,7 +29,7 @@ interface Setup {
     gate: { held: boolean; release: () => void };
 }
 
-const setup = (options: { language?: string; fail?: boolean } = {}): Setup => {
+function setup(options: { language?: string; fail?: boolean } = {}): Setup {
     const shown: string[] = [];
     const logs: string[] = [];
     const holders: (string | null)[] = [];
@@ -60,14 +62,14 @@ const setup = (options: { language?: string; fail?: boolean } = {}): Setup => {
         log: (message) => logs.push(message)
     });
     return { presence, shown, logs, alive, holders, gate };
-};
+}
 
 /* Lets the sends that are out land; a send never waits on a clock. */
-const settled = async (): Promise<void> => {
+async function settled(): Promise<void> {
     for (let i = 0; i < 5; i++) {
         await new Promise<void>((resolve) => setImmediate(resolve));
     }
-};
+}
 
 describe('the presence of the agent that holds the session', () => {
     test('works between actions, waits on the person and is done when the turn ends', async () => {

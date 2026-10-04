@@ -20,7 +20,7 @@ export interface EdgeLine {
 }
 
 /* The lines to draw for a set of edges, in the order the edges came, a pair folded into one. */
-export const edgeLines = (edges: readonly Edge[]): EdgeLine[] => {
+export function edgeLines(edges: readonly Edge[]): EdgeLine[] {
     const lines: EdgeLine[] = [];
     const paired = new Set<string>();
     for (const edge of edges) {
@@ -40,30 +40,33 @@ export const edgeLines = (edges: readonly Edge[]): EdgeLine[] => {
         });
     }
     return lines;
-};
+}
 
 /*
  * Whether a line may still be drawn between these two: never onto itself, and never a second one the
  * same way round. The way back is a line of its own, since it is what makes the other end readable,
  * so a pair fills at two and a third line between the same two would only repeat a direction.
  */
-export const canLink = (edges: readonly Edge[], from: string, to: string): boolean =>
-    from !== to && !edges.some((edge) => edge.from === from && edge.to === to);
+export function canLink(edges: readonly Edge[], from: string, to: string): boolean {
+    return from !== to && !edges.some((edge) => edge.from === from && edge.to === to);
+}
 
 /*
  * The ports a line is held to. Both directions of a pair are one line, and the one drawn back names
  * the same two ports the other way round.
  */
-export const fixedSides = (line: EdgeLine): FixedSides => ({
-    fromSide: line.edge.fromSide ?? line.back?.toSide,
-    toSide: line.edge.toSide ?? line.back?.fromSide
-});
+export function fixedSides(line: EdgeLine): FixedSides {
+    return {
+        fromSide: line.edge.fromSide ?? line.back?.toSide,
+        toSide: line.edge.toSide ?? line.back?.fromSide
+    };
+}
 
 // Geometry outside the DOM estimates glyph widths; explicit line breaks and wrapping still count.
-export const textRect = (text: { x: number; y: number; size: number; text: string; maxWidth?: number }): Rect => {
+export function textRect(text: { x: number; y: number; size: number; text: string; maxWidth?: number }): Rect {
     const widths = text.text.split('\n').map((line) => line.length * text.size * 0.55);
     const width = text.maxWidth ?? Math.max(40, ...widths.map((value) => value + 8));
     const available = Math.max(1, width - 8);
     const lines = widths.reduce((count, value) => count + Math.max(1, Math.ceil(value / available)), 0);
     return { x: text.x, y: text.y, w: width, h: lines * text.size * 1.25 + 4 };
-};
+}

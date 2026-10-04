@@ -2,19 +2,21 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
 import { agentActivity } from './agent-activity';
 
-const tool = (id: string, changes: Partial<ChatToolItem> = {}): ChatToolItem => ({
-    id,
-    toolUseId: id,
-    kind: 'tool',
-    name: 'exec_command',
-    createdAt: 1,
-    turnId: 'turn',
-    input: { command: 'bun test', secret: 'not for the summary' },
-    output: '12 tests passed',
-    state: 'done',
-    parentToolUseId: null,
-    ...changes
-});
+function tool(id: string, changes: Partial<ChatToolItem> = {}): ChatToolItem {
+    return {
+        id,
+        toolUseId: id,
+        kind: 'tool',
+        name: 'exec_command',
+        createdAt: 1,
+        turnId: 'turn',
+        input: { command: 'bun test', secret: 'not for the summary' },
+        output: '12 tests passed',
+        state: 'done',
+        parentToolUseId: null,
+        ...changes
+    };
+}
 
 describe('agent activity for voice', () => {
     test('lists recent tools without reasoning, arbitrary arguments or output', () => {

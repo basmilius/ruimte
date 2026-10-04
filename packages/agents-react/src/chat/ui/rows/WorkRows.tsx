@@ -20,8 +20,11 @@ const UnifiedDiff = lazyNamed(() => import('../UnifiedDiff'), 'default');
 
 const OUTPUT_LIMIT = 4000;
 
-const clip = (text: string): string =>
-    text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n${i18next.t('agent-chat:work.moreCharacters', { count: text.length - OUTPUT_LIMIT })}` : text;
+function clip(text: string): string {
+    return text.length > OUTPUT_LIMIT
+        ? `${text.slice(0, OUTPUT_LIMIT)}\n${i18next.t('agent-chat:work.moreCharacters', { count: text.length - OUTPUT_LIMIT })}`
+        : text;
+}
 
 export function ToggleLine({
     icon,
@@ -208,8 +211,9 @@ export function TurnFoldRow({
     );
 }
 
-const omittedLabel = (reason: 'binary' | 'too-large'): string =>
-    reason === 'binary' ? i18next.t('agent-chat:work.omitted.binary') : i18next.t('agent-chat:work.omitted.tooLarge');
+function omittedLabel(reason: 'binary' | 'too-large'): string {
+    return reason === 'binary' ? i18next.t('agent-chat:work.omitted.binary') : i18next.t('agent-chat:work.omitted.tooLarge');
+}
 
 /* One file of a turn's checkpoint diff: its patch, or the reason there is none. */
 function CheckpointFileBody({ file }: { file: ChatCheckpointFile }) {

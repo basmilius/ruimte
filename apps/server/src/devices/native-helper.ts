@@ -44,7 +44,7 @@ const NATIVE_BUTTONS: Partial<Record<Extract<DeviceInput, { kind: 'button' }>['b
     siri: 'siri'
 };
 
-export const resolveDeviceNativeAddon = (): string => {
+export function resolveDeviceNativeAddon(): string {
     const besideExecutable = join(dirname(process.execPath), 'native', 'serve-sim-native.node');
     if (existsSync(besideExecutable)) {
         return besideExecutable;
@@ -59,11 +59,13 @@ export const resolveDeviceNativeAddon = (): string => {
         // The stable error below names the missing runtime component without leaking resolver details.
     }
     throw new Error('serve-sim-native.node is not installed beside Ruimte or in its server dependencies');
-};
+}
 
-export const loadDeviceNativeAddon = (): DeviceNativeAddon => require(resolveDeviceNativeAddon()) as DeviceNativeAddon;
+export function loadDeviceNativeAddon(): DeviceNativeAddon {
+    return require(resolveDeviceNativeAddon()) as DeviceNativeAddon;
+}
 
-export const runDeviceHelper = async (deviceId: string, runtime?: DeviceHelperRuntime): Promise<number> => {
+export async function runDeviceHelper(deviceId: string, runtime?: DeviceHelperRuntime): Promise<number> {
     const input = runtime?.input ?? Bun.stdin.stream();
     const protocolDescriptor = Number(process.env.RUIMTE_DEVICE_HELPER_PROTOCOL_FD);
     const protocolSink =
@@ -134,18 +136,18 @@ export const runDeviceHelper = async (deviceId: string, runtime?: DeviceHelperRu
         await capture?.stop();
         protocolSink?.end();
     }
-};
+}
 
-const pressKeys = async (hid: NativeHidHandle, usages: readonly number[]): Promise<void> => {
+async function pressKeys(hid: NativeHidHandle, usages: readonly number[]): Promise<void> {
     for (const usage of usages) {
         await hid.key('down', usage);
     }
     for (const usage of [...usages].reverse()) {
         await hid.key('up', usage);
     }
-};
+}
 
-const applyDeviceInput = async (hid: NativeHidHandle, input: DeviceInput, width: number, height: number): Promise<void> => {
+async function applyDeviceInput(hid: NativeHidHandle, input: DeviceInput, width: number, height: number): Promise<void> {
     if (input.kind === 'pointer') {
         const phase = input.phase === 'down' ? 'begin' : input.phase === 'up' ? 'end' : 'move';
         await hid.touch(phase, input.x, input.y, width, height, input.edge === 'bottom' ? NATIVE_EDGE_BOTTOM : 0);
@@ -162,4 +164,4 @@ const applyDeviceInput = async (hid: NativeHidHandle, input: DeviceInput, width:
     } else {
         await hid.orientation(input.direction === 'left' ? ORIENTATION_LANDSCAPE_LEFT : ORIENTATION_LANDSCAPE_RIGHT);
     }
-};
+}

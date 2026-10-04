@@ -5,7 +5,9 @@ import { isNotFound, writeAtomic } from './fs.ts';
 import { KeyedSerializer } from './serializer.ts';
 
 // The id is a node id or a chat id a client chose, so it is encoded before it becomes a file name.
-export const recordFileName = (id: string): string => `${encodeURIComponent(id)}.json`;
+export function recordFileName(id: string): string {
+    return `${encodeURIComponent(id)}.json`;
+}
 
 export interface RecordDirectoryOptions<T> {
     dir: string;

@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { foregroundGroup, holdsForeground } from './foreground.ts';
 
-const printed = (output: string | null) => async (): Promise<string | null> => output;
+function printed(output: string | null) {
+    return async (): Promise<string | null> => output;
+}
 
 describe('holdsForeground', () => {
     test('the shell holds the foreground only when the group in front is its own', async () => {

@@ -16,13 +16,14 @@ export const MAX_TASK_PROMPT_LENGTH = MAX_PROMPT_LENGTH - BRIEF_ROOM;
  * calls done; the quoting advice is there because Codex's allow rule cannot parse `$'...'` or a
  * heredoc, which runs the call sandboxed and asks the person for approval.
  */
-export const taskBrief = (chat: boolean): string =>
-    chat
+export function taskBrief(chat: boolean): string {
+    return chat
         ? '\n\n(This is a task from the agent that opened you. End this turn with the result as your last message; that is reported back to it, so no ruimte-context call is needed.)'
         : "\n\n(This is a task from the agent that opened you. When it is finished, run ruimte-context done --result '...' and write a line break as \\n inside those plain single quotes; if you exit without it, the task fails.)";
+}
 
 /* What kind of node or view the caller is in its project, or null when neither names it. */
-export const callerKind = (content: ProjectContent, caller: string): string | null => {
+export function callerKind(content: ProjectContent, caller: string): string | null {
     for (const view of content.views) {
         if (view.id === caller) {
             return view.kind;
@@ -35,10 +36,10 @@ export const callerKind = (content: ProjectContent, caller: string): string | nu
         }
     }
     return null;
-};
+}
 
 /* Refuses a task from anything but a chat: a terminal agent has no turn the daemon can start with the result. */
-export const requireChatParent = (content: ProjectContent, caller: string, hiddenKind?: string): void => {
+export function requireChatParent(content: ProjectContent, caller: string, hiddenKind?: string): void {
     const kind = callerKind(content, caller) ?? hiddenKind ?? null;
     if (kind !== 'chat') {
         throw new VerbRefusal(
@@ -49,12 +50,14 @@ export const requireChatParent = (content: ProjectContent, caller: string, hidde
             ]
         );
     }
-};
+}
 
-const firstLine = (text: string): string => field(text.split('\n').find((line) => line.trim() !== '') ?? '').slice(0, 200);
+function firstLine(text: string): string {
+    return field(text.split('\n').find((line) => line.trim() !== '') ?? '').slice(0, 200);
+}
 
 /* One row of `task list`, from the side of the node that asks. */
-export const taskLine = (task: Task, nodeId: string): string => {
+export function taskLine(task: Task, nodeId: string): string {
     const gave = task.parentId === nodeId;
     return [
         'task',
@@ -67,4 +70,4 @@ export const taskLine = (task: Task, nodeId: string): string => {
         task.result === null ? '' : firstLine(task.result.text),
         task.batchId ?? '-'
     ].join('\t');
-};
+}

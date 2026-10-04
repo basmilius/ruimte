@@ -4,12 +4,13 @@ import { formatMoment, formatElapsedShort, formatTokens } from '@basmilius/deskt
 import type { StatusWord } from '../agents/status-look';
 import type { SubagentTask } from '../host';
 
-export const subagentTitle = (item: ChatSubagentItem): string =>
-    item.description || item.summary || item.subagentType || i18next.t('agent-chat:rows.subagent.label');
+export function subagentTitle(item: ChatSubagentItem): string {
+    return item.description || item.summary || item.subagentType || i18next.t('agent-chat:rows.subagent.label');
+}
 
 /* What the bar over a sub-agent's conversation says of it beside its state and its time; the model is named by the caller, which has the catalog. */
-export const subagentFacts = (item: ChatSubagentItem, modelName: string | null): string[] =>
-    [
+export function subagentFacts(item: ChatSubagentItem, modelName: string | null): string[] {
+    return [
         modelName,
         item.subagentType,
         item.background ? i18next.t('agent-chat:rows.subagent.background') : null,
@@ -18,12 +19,15 @@ export const subagentFacts = (item: ChatSubagentItem, modelName: string | null):
             : null,
         item.usage !== null && item.usage.toolUses > 0 ? i18next.t('agent-chat:group.toolCalls', { count: item.usage.toolUses }) : null
     ].filter((fact): fact is string => fact !== null && fact !== '');
+}
 
 /* The task a row stands for, whose id the host wrote into the row's own. */
-export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin === 'ruimte' && item.id.startsWith('task-') ? item.id.slice(5) : null);
+export function taskIdOf(item: ChatSubagentItem): string | null {
+    return item.origin === 'ruimte' && item.id.startsWith('task-') ? item.id.slice(5) : null;
+}
 
 /* A cancelled task is a failed row on the wire and a paused one a running row, and only the task itself still says which it is. */
-export const statusWordOf = (item: ChatSubagentItem, task: SubagentTask | null): StatusWord => {
+export function statusWordOf(item: ChatSubagentItem, task: SubagentTask | null): StatusWord {
     if (item.status === 'failed' && task?.status === 'cancelled') {
         return 'cancelled';
     }
@@ -31,18 +35,18 @@ export const statusWordOf = (item: ChatSubagentItem, task: SubagentTask | null):
         return 'paused';
     }
     return item.status;
-};
+}
 
 /* What a task's row says its agent is doing: the task's own state, or that the agent waits on a person while the task runs. */
 export type TaskRowState = StatusWord | 'waiting';
 
-export const taskRowStateOf = (item: ChatSubagentItem, task: SubagentTask | null, child: ChatInfo | undefined): TaskRowState => {
+export function taskRowStateOf(item: ChatSubagentItem, task: SubagentTask | null, child: ChatInfo | undefined): TaskRowState {
     const word = statusWordOf(item, task);
     if (word === 'running' && (child?.status === 'needs-you' || (child?.requests?.length ?? 0) > 0)) {
         return 'waiting';
     }
     return word;
-};
+}
 
 /*
  * What the flyout over the composer lists: every sub-agent still at work, and the ones that settled
@@ -50,7 +54,7 @@ export const taskRowStateOf = (item: ChatSubagentItem, task: SubagentTask | null
  * older row a message woke again. A settled one from before that message stays too while a sibling of
  * its turn still runs. Older ones are only in the thread.
  */
-export const flyoutSubagents = (order: readonly string[], structure: Readonly<Record<string, ChatItem>>): ChatSubagentItem[] => {
+export function flyoutSubagents(order: readonly string[], structure: Readonly<Record<string, ChatItem>>): ChatSubagentItem[] {
     const lastMessage = order.findLastIndex((id) => structure[id]?.kind === 'user');
     const lastMessageAt = lastMessage < 0 ? null : (structure[order[lastMessage]!]?.createdAt ?? null);
     const items = order.flatMap((id, index) => {
@@ -67,20 +71,21 @@ export const flyoutSubagents = (order: readonly string[], structure: Readonly<Re
                 (item.turnId !== null && turns.has(item.turnId))
         )
         .map(({ item }) => item);
-};
+}
 
 /* The one state the badge shows for all of them: work in progress first, then work held up, then whatever went wrong. */
-export const summaryWordOf = (words: readonly StatusWord[]): StatusWord =>
-    (['running', 'paused', 'failed', 'cancelled'] as const).find((word) => words.includes(word)) ?? 'done';
+export function summaryWordOf(words: readonly StatusWord[]): StatusWord {
+    return (['running', 'paused', 'failed', 'cancelled'] as const).find((word) => words.includes(word)) ?? 'done';
+}
 
 /* The number on the badge: the ones still at work, a paused one included, and all of them once none is. */
-export const badgeCountOf = (words: readonly StatusWord[]): number => {
+export function badgeCountOf(words: readonly StatusWord[]): number {
     const active = words.filter((word) => word === 'running' || word === 'paused').length;
     return active > 0 ? active : words.length;
-};
+}
 
 /* The time on the right of an entry: how long it has run so far, or how long it took once it settled. */
-export const entryTimeOf = (item: ChatSubagentItem, task: SubagentTask | null, now: number): string => {
+export function entryTimeOf(item: ChatSubagentItem, task: SubagentTask | null, now: number): string {
     // A task's own record says when it was given and settled; the row copies those, but may lag behind it.
     const startedAt = task?.createdAt ?? item.startedAt;
     const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
@@ -98,7 +103,7 @@ export const entryTimeOf = (item: ChatSubagentItem, task: SubagentTask | null, n
         return i18next.t(`agent-chat:common.status.${word}`);
     }
     return i18next.t(`agent-chat:activity.took.${word}`, { duration: formatElapsedShort(finishedAt - startedAt) });
-};
+}
 
 /*
  * What the Stop of an active entry does: a task stops the node working on it, and a subagent of the
@@ -107,7 +112,7 @@ export const entryTimeOf = (item: ChatSubagentItem, task: SubagentTask | null, n
  */
 export type SubagentStop = 'task' | 'mark';
 
-export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentStop | null => {
+export function stopOf(item: ChatSubagentItem, turnRunning: boolean): SubagentStop | null {
     if (item.status !== 'running') {
         return null;
     }
@@ -115,10 +120,11 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
         return item.childId === undefined ? null : 'task';
     }
     return turnRunning ? null : 'mark';
-};
+}
 
-export const stopLabel = (stop: SubagentStop): string =>
-    stop === 'task' ? i18next.t('agent-chat:subagents.stop.task') : i18next.t('agent-chat:subagents.stop.mark');
+export function stopLabel(stop: SubagentStop): string {
+    return stop === 'task' ? i18next.t('agent-chat:subagents.stop.task') : i18next.t('agent-chat:subagents.stop.mark');
+}
 
 /*
  * What the composer's Stop does. A plain click stops the turn alone, as it always has; Shift also ends
@@ -126,6 +132,10 @@ export const stopLabel = (stop: SubagentStop): string =>
  */
 export type ComposerStop = 'turn' | 'turn-and-subagents';
 
-export const composerStopOf = (shiftKey: boolean): ComposerStop => (shiftKey ? 'turn-and-subagents' : 'turn');
+export function composerStopOf(shiftKey: boolean): ComposerStop {
+    return shiftKey ? 'turn-and-subagents' : 'turn';
+}
 
-export const composerStopLabel = (): string => i18next.t('agent-chat:composer.stop');
+export function composerStopLabel(): string {
+    return i18next.t('agent-chat:composer.stop');
+}

@@ -3,18 +3,20 @@ import type { ChatItem, ChatToolItem, ChatTurnItem } from '@ruimte/agent-contrac
 import { notResumedNote } from '@ruimte/agent-contracts';
 import { agentTurnLabel, deriveTimelineRows, findSubagentBranch, isBlock, summarizeGroup, summarizeTurn, turnLabel } from './timeline';
 
-const tool = (id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem => ({
-    id,
-    kind: 'tool',
-    createdAt: 1,
-    turnId,
-    toolUseId: id,
-    name,
-    input,
-    output: '',
-    state,
-    parentToolUseId: null
-});
+function tool(id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem {
+    return {
+        id,
+        kind: 'tool',
+        createdAt: 1,
+        turnId,
+        toolUseId: id,
+        name,
+        input,
+        output: '',
+        state,
+        parentToolUseId: null
+    };
+}
 
 const thread: ChatItem[] = [
     { id: 't1', kind: 'turn', createdAt: 1000, turnId: 't1', state: 'done', endedAt: 13_000, costUsd: 0 },

@@ -10,7 +10,7 @@ import { machineTransport } from '@/transport';
 import { sidebarProjectKey, useSidebarMachines, useSidebarProjects } from './sidebar-projects';
 import type { SidebarGroup, SidebarNode, SidebarProject } from './sidebar-rows';
 
-export const useSidebarGroups = (enabled: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) => {
+export function useSidebarGroups(enabled: boolean, active: SidebarProject, expandedIds: ReadonlySet<string>) {
     const endpoints = useEndpoints((state) => state.endpoints);
     const current = useProject((state) => state.current);
     const currentEndpointId = useProject((state) => state.currentEndpointId);
@@ -126,4 +126,4 @@ export const useSidebarGroups = (enabled: boolean, active: SidebarProject, expan
         }
     }, [result.order, order]);
     return result;
-};
+}

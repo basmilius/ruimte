@@ -32,10 +32,12 @@ export const SYSTEM_SETTINGS_PANES: Readonly<Record<ComputerGrant, string>> = {
     screenRecording: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
 };
 
-const grantState = (granted: boolean | null): GrantState => (granted === null ? 'unknown' : granted ? 'granted' : 'missing');
+function grantState(granted: boolean | null): GrantState {
+    return granted === null ? 'unknown' : granted ? 'granted' : 'missing';
+}
 
 /* `platform` is the daemon's, null until it said; `status` is null until it answered `computer.status`. */
-export const computerSetupOf = (status: ComputerUseStatus | null, platform: string | null): ComputerSetup => {
+export function computerSetupOf(status: ComputerUseStatus | null, platform: string | null): ComputerSetup {
     const accessibility = grantState(status?.accessibility ?? null);
     const screenRecording = grantState(status?.screenRecording ?? null);
     const at = (phase: ComputerSetupPhase): ComputerSetup => ({ phase, accessibility, screenRecording });
@@ -55,34 +57,39 @@ export const computerSetupOf = (status: ComputerUseStatus | null, platform: stri
         return at('starting');
     }
     return at(accessibility === 'granted' && screenRecording === 'granted' ? 'ready' : 'grants');
-};
+}
 
 /* The line under a machine in the settings: where it stands, naming the grant when only one is left. */
-export const setupLine = (setup: ComputerSetup): string => {
+export function setupLine(setup: ComputerSetup): string {
     const waiting = COMPUTER_GRANTS.filter((grant) => setup[grant] !== 'granted');
     if (setup.phase === 'grants' && waiting.length === 1) {
         return i18next.t('settings:computer.machine.grantsOne', { grant: i18next.t(`settings:computer.grant.${waiting[0]!}.label`) });
     }
     return i18next.t(`settings:computer.machine.${setup.phase === 'unknown' ? 'checking' : setup.phase}`);
-};
+}
 
 /* The switch means something only on a system that has the helper. */
-export const canSwitch = (setup: ComputerSetup): boolean => setup.phase !== 'unknown' && setup.phase !== 'unsupported' && setup.phase !== 'unavailable';
+export function canSwitch(setup: ComputerSetup): boolean {
+    return setup.phase !== 'unknown' && setup.phase !== 'unsupported' && setup.phase !== 'unavailable';
+}
 
 /* Whether the grants are shown at all: only once computer use is on. */
-export const showsGrants = (setup: ComputerSetup): boolean => setup.phase === 'starting' || setup.phase === 'grants' || setup.phase === 'ready';
+export function showsGrants(setup: ComputerSetup): boolean {
+    return setup.phase === 'starting' || setup.phase === 'grants' || setup.phase === 'ready';
+}
 
 /*
  * What to ask the machine when the person comes back from System Settings. Accessibility shows up in
  * a running helper; Screen Recording only in one started after the grant, so that takes a restart.
  */
-export const recheckOf = (setup: ComputerSetup): 'restart' | 'status' | null => {
+export function recheckOf(setup: ComputerSetup): 'restart' | 'status' | null {
     if (setup.phase !== 'grants' && setup.phase !== 'starting') {
         return null;
     }
     return setup.screenRecording === 'missing' ? 'restart' : 'status';
-};
+}
 
 /* System Settings opens only on the Mac this window runs on, through a shell that can open it. */
-export const opensSystemSettings = (endpointId: string, platform: string | null, shellOpens: boolean): boolean =>
-    shellOpens && endpointId === LOCAL_ENDPOINT_ID && platform === 'darwin';
+export function opensSystemSettings(endpointId: string, platform: string | null, shellOpens: boolean): boolean {
+    return shellOpens && endpointId === LOCAL_ENDPOINT_ID && platform === 'darwin';
+}

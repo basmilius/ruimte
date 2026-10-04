@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createPanBatch, type FrameClock } from './pan-batch';
 
-const fakeClock = () => {
+function fakeClock() {
     const waiting = new Map<number, () => void>();
     let next = 1;
     const clock: FrameClock = {
@@ -21,7 +21,7 @@ const fakeClock = () => {
         }
     };
     return { clock, tick, waiting };
-};
+}
 
 describe('a pan batched per frame', () => {
     test('moves the camera once per frame by the sum of the wheel events', () => {

@@ -24,7 +24,7 @@ interface ProvidersTaskProps {
 }
 
 /* Asks the machine for its CLIs and who is logged in again, for a CLI installed or logged in from outside Ruimte. */
-const checkAgain = async (): Promise<void> => {
+async function checkAgain(): Promise<void> {
     const link = transportFor(LOCAL_ENDPOINT_ID);
     if (!link) {
         return;
@@ -38,7 +38,7 @@ const checkAgain = async (): Promise<void> => {
     if (accounts !== null) {
         useProviderAccountsStore.getState().set(LOCAL_ENDPOINT_ID, accounts);
     }
-};
+}
 
 /* The agent CLIs of this machine: who is logged in where, a login for the ones nobody is, and what is missing. */
 export function ProvidersTask({ machine, rows, missing, done, next }: ProvidersTaskProps) {

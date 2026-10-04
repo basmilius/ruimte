@@ -11,21 +11,23 @@ interface VideoCodec {
 }
 
 /* `avc1.PPCCLL` from the profile, constraint flags and level that open the sequence parameter set (RFC 6381). */
-export const h264CodecString = (data: Uint8Array): string | null => {
+export function h264CodecString(data: Uint8Array): string | null {
     const sps = annexBNalHeaders(data).find((header) => (data[header]! & 0x1f) === H264_SPS && header + 3 < data.byteLength);
     if (sps === undefined) {
         return null;
     }
     const hex = [...data.subarray(sps + 1, sps + 4)].map((byte) => byte.toString(16).padStart(2, '0').toUpperCase()).join('');
     return `avc1.${hex}`;
-};
+}
 
 const CODECS: Record<VideoFormat, VideoCodec> = {
     hevc: { keyFrame: hevcKeyFrame, codecString: () => 'hev1.1.6.L93.B0' },
     h264: { keyFrame: h264KeyFrame, codecString: h264CodecString }
 };
 
-const isVideoFormat = (format: LiveStreamFormat | undefined): format is VideoFormat => format !== undefined && format in CODECS;
+function isVideoFormat(format: LiveStreamFormat | undefined): format is VideoFormat {
+    return format !== undefined && format in CODECS;
+}
 
 export class VideoDecoderGate {
     private awaitingKeyFrame = true;
@@ -156,4 +158,6 @@ class VideoFrameDecoder implements FrameDecoder {
     }
 }
 
-export const videoFrameDecoder = (target: PaintTarget): FrameDecoder => new VideoFrameDecoder(target);
+export function videoFrameDecoder(target: PaintTarget): FrameDecoder {
+    return new VideoFrameDecoder(target);
+}

@@ -21,17 +21,17 @@ const SKIPPED = new Set(['node_modules', 'vendor', 'dist', 'build', 'target', 'c
 
 /* What the panel calls a repository: its path under the project folder, or its own name when the
    folder sits inside it instead of the other way round. */
-export const repoLabel = (folder: string, path: string): string => {
+export function repoLabel(folder: string, path: string): string {
     const within = relative(folder, path);
     return within === '' || climbsOut(within) ? basename(path) : within;
-};
+}
 
 /*
  * `submodule status --recursive` writes a line per submodule: a state character, the commit, the path
  * relative to the repository it ran in, and what that commit describes as. A `-` in front means the
  * submodule was never initialized, so there is no checkout to read.
  */
-export const parseSubmodulePaths = (output: string): string[] => {
+export function parseSubmodulePaths(output: string): string[] {
     const paths: string[] = [];
     for (const line of output.split('\n')) {
         if (line === '' || line.startsWith('-')) {
@@ -43,10 +43,10 @@ export const parseSubmodulePaths = (output: string): string[] => {
         }
     }
     return paths;
-};
+}
 
 /* The name a checkout declares: the name of the Ruimte project in it, else its `.idea/.name`. */
-const declaredName = async (path: string): Promise<string | undefined> => {
+async function declaredName(path: string): Promise<string | undefined> {
     try {
         // Parsed in place: reading it through the store would set a corrupt file aside, in a folder that is not open.
         const read = parseSharedFile(await readFile(join(path, PROJECT_DIR, PROJECT_FILE), 'utf8'));
@@ -57,34 +57,35 @@ const declaredName = async (path: string): Promise<string | undefined> => {
         // No project file, or one that cannot be read: the editor's name is next.
     }
     return (await readIdeaName(path)) ?? undefined;
-};
+}
 
 /* The folder's own repository first, then the rest by the name a person reads. */
-const inOrder = (repos: readonly GitRepo[]): GitRepo[] =>
-    [...repos].sort((left, right) => {
+function inOrder(repos: readonly GitRepo[]): GitRepo[] {
+    return [...repos].sort((left, right) => {
         if ((left.kind === 'root') !== (right.kind === 'root')) {
             return left.kind === 'root' ? -1 : 1;
         }
         return left.label < right.label ? -1 : left.label > right.label ? 1 : 0;
     });
+}
 
 /* Whether a folder is a checkout. A submodule and a linked worktree carry `.git` as a file rather
    than a directory, and both are one. */
-const isCheckout = async (dir: string): Promise<boolean> => {
+async function isCheckout(dir: string): Promise<boolean> {
     try {
         await stat(join(dir, '.git'));
         return true;
     } catch {
         return false;
     }
-};
+}
 
 /*
  * The repositories sitting in a folder, however the folder itself is arranged. A folder that is a
  * checkout is not walked into: what lies inside it is that repository's own business, and its
  * submodules come from git rather than from a scan.
  */
-const scan = async (folder: string, dir: string, depth: number, found: Set<string>): Promise<void> => {
+async function scan(folder: string, dir: string, depth: number, found: Set<string>): Promise<void> {
     let entries;
     try {
         entries = await readdir(dir, { withFileTypes: true });
@@ -106,19 +107,19 @@ const scan = async (folder: string, dir: string, depth: number, found: Set<strin
             await scan(folder, path, depth - 1, found);
         }
     }
-};
+}
 
 /* Whether a path sits inside the project folder, which every repository but the root has to. */
-const isInside = (folder: string, path: string): boolean => {
+function isInside(folder: string, path: string): boolean {
     const within = relative(folder, path);
     return within !== '' && !climbsOut(within);
-};
+}
 
 /*
  * The initialized submodules of these checkouts, however deep they nest. Git is asked before the scan
  * runs, because a submodule is a checkout the scan would find too and only git can say it is one.
  */
-const addSubmodules = async (folder: string, checkouts: readonly string[], add: (path: string, kind: GitRepo['kind']) => void): Promise<void> => {
+async function addSubmodules(folder: string, checkouts: readonly string[], add: (path: string, kind: GitRepo['kind']) => void): Promise<void> {
     const lists = await Promise.all(
         checkouts.map(async (checkout) => {
             const output = await git(['submodule', 'status', '--recursive'], checkout);
@@ -130,7 +131,7 @@ const addSubmodules = async (folder: string, checkouts: readonly string[], add: 
             add(path, 'submodule');
         }
     }
-};
+}
 
 /*
  * Every checkout the git panel can draw for a project folder: the repository the folder itself is in,
@@ -139,7 +140,7 @@ const addSubmodules = async (folder: string, checkouts: readonly string[], add: 
  * apps is. Only the root may lie above the project folder; everything else has to sit inside it, so
  * a project that is one corner of a large repository does not inherit that repository's submodules.
  */
-export const listRepos = async (folder: string): Promise<GitReposResult> => {
+export async function listRepos(folder: string): Promise<GitReposResult> {
     const root = (await git(['rev-parse', '--show-toplevel'], folder))?.trim() || null;
     const repos: GitRepo[] = [];
     const known = new Set<string>();
@@ -172,4 +173,4 @@ export const listRepos = async (folder: string): Promise<GitReposResult> => {
         })
     );
     return { repos: named, truncated: ordered.length > MAX_REPOS };
-};
+}

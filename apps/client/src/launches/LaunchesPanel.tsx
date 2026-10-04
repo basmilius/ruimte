@@ -31,7 +31,7 @@ const RESIZE_DEBOUNCE_MS = 50;
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /* What the picker says after the name: how long it runs and where, or how it ended. */
-const pickerDetail = (view: LaunchView, now: number, t: Translate): string => {
+function pickerDetail(view: LaunchView, now: number, t: Translate): string {
     const { phase, status } = view;
     if (phase === 'held') {
         return t('phase.held');
@@ -55,7 +55,7 @@ const pickerDetail = (view: LaunchView, now: number, t: Translate): string => {
               outcome: t('panel.stopped'),
               ago: formatAgo(now - status.endedAt)
           });
-};
+}
 
 /*
  * The launches of the project on screen, and the terminal of the chosen one. The terminal is the

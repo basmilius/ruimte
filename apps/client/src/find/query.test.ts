@@ -2,13 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { locateOffset } from './dom-text';
 import { compileFind, EMPTY_FIND_QUERY, matchesIn, stepIndex, type FindQuery } from './query';
 
-const pattern = (text: string, options: Partial<FindQuery> = {}): RegExp => {
+function pattern(text: string, options: Partial<FindQuery> = {}): RegExp {
     const compiled = compileFind({ ...EMPTY_FIND_QUERY, text, ...options });
     if (compiled.kind !== 'pattern') {
         throw new Error(`no pattern for ${text}`);
     }
     return compiled.pattern;
-};
+}
 
 describe('matchesIn', () => {
     test('a literal query is read literally', () => {

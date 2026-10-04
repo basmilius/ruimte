@@ -172,7 +172,7 @@ class RemoteClient {
     }
 }
 
-const waitUntil = async (label: string, ready: () => boolean | Promise<boolean>, timeoutMs = 15_000): Promise<void> => {
+async function waitUntil(label: string, ready: () => boolean | Promise<boolean>, timeoutMs = 15_000): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (!(await ready())) {
         if (Date.now() > deadline) {
@@ -180,23 +180,28 @@ const waitUntil = async (label: string, ready: () => boolean | Promise<boolean>,
         }
         await Bun.sleep(100);
     }
-};
+}
 
 /* What the command wrote on the other machine, for the things no request answers. */
-const inContainer = async (command: string[]): Promise<string> =>
-    (await new Response(Bun.spawn(['docker', 'exec', CONTAINER, ...command], { stderr: 'inherit' }).stdout).text()).trim();
+async function inContainer(command: string[]): Promise<string> {
+    return (await new Response(Bun.spawn(['docker', 'exec', CONTAINER, ...command], { stderr: 'inherit' }).stdout).text()).trim();
+}
 
 /* Starts, stops or pauses the container itself, for the tests about a machine falling away. */
-const docker = async (args: string[]): Promise<void> => {
+async function docker(args: string[]): Promise<void> {
     const exit = await Bun.spawn(['docker', ...args], { stdout: 'ignore', stderr: 'inherit' }).exited;
     if (exit !== 0) {
         throw new Error(`docker ${args.join(' ')} exited with ${exit}`);
     }
-};
+}
 
-const answers = async (url: string): Promise<boolean> => (await fetch(`${url}/health`).catch(() => null))?.ok === true;
+async function answers(url: string): Promise<boolean> {
+    return (await fetch(`${url}/health`).catch(() => null))?.ok === true;
+}
 
-const randomNonce = (): string => crypto.getRandomValues(new Uint8Array(16)).reduce((text, byte) => text + byte.toString(16).padStart(2, '0'), '');
+function randomNonce(): string {
+    return crypto.getRandomValues(new Uint8Array(16)).reduce((text, byte) => text + byte.toString(16).padStart(2, '0'), '');
+}
 
 interface KeyPair {
     publicKey: string;
@@ -222,16 +227,18 @@ afterAll(() => {
 });
 
 /* Who the container is, as the address book lists it: read off its home, never off the door under test. */
-const machineInContainer = async (): Promise<Machine> => {
+async function machineInContainer(): Promise<Machine> {
     const written = JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`])) as Machine;
     return { id: written.id, publicKey: written.publicKey };
-};
+}
 
 /* The app on the container's own machine, which presents the local secret of its home. */
-const connectOwner = async (): Promise<RemoteClient> => RemoteClient.connect(await inContainer(['cat', `${HOME}/local.key`]));
+async function connectOwner(): Promise<RemoteClient> {
+    return RemoteClient.connect(await inContainer(['cat', `${HOME}/local.key`]));
+}
 
 /* A statement v2 as the address book signs one, with this run's key in place of the address book's. */
-const statementFor = (machine: Machine, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement => {
+function statementFor(machine: Machine, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement {
     if (STATEMENT_PRIVATE_KEY === null) {
         throw new Error('No statement key to sign with; run the suite with `bun run --cwd apps/server docker:test`, which makes one');
     }
@@ -254,7 +261,7 @@ const statementFor = (machine: Machine, clientPublicKey: string, overrides: Part
             accessStatementV2Message(base.machineId, base.machinePublicKey, base.accountId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
         )
     };
-};
+}
 
 /* A way to the machine's signals: sends what the client signed, and hands back only what the pinned machine key signed for it. */
 interface SignalLine {
@@ -267,7 +274,7 @@ interface SignalLine {
  * The door on the local network, as the app uses it: a nonce first, the machine's proof checked against
  * the pinned key, and only then the signals, signed by `signer`.
  */
-const doorLine = async (signer: KeyPair, machine: Machine): Promise<SignalLine> => {
+async function doorLine(signer: KeyPair, machine: Machine): Promise<SignalLine> {
     const socket = new WebSocket(lanDoorUrl('127.0.0.1', DOOR_PORT));
     openSockets.push(socket);
     await new Promise<void>((resolve, reject) => {
@@ -316,10 +323,10 @@ const doorLine = async (signer: KeyPair, machine: Machine): Promise<SignalLine> 
         },
         close: () => socket.close()
     };
-};
+}
 
 /* A client on the broker, the way the app signs in: its own key, the host it dialed, every relay signed. */
-const onBroker = async (key: KeyPair) => {
+async function onBroker(key: KeyPair) {
     const socket = new WebSocket(BROKER_URL);
     openSockets.push(socket);
     const relayed: BrokerRelayed[] = [];
@@ -360,10 +367,10 @@ const onBroker = async (key: KeyPair) => {
             listeners.add(listener);
         }
     };
-};
+}
 
 /* The broker as a line: relays to the machine's key and believes only what that key signed, the way the app does. */
-const brokerLine = async (key: KeyPair, machine: Machine): Promise<SignalLine> => {
+async function brokerLine(key: KeyPair, machine: Machine): Promise<SignalLine> {
     const broker = await onBroker(key);
     return {
         send: (envelope) => void broker.peer.relay(machine.publicKey, envelope),
@@ -378,15 +385,17 @@ const brokerLine = async (key: KeyPair, machine: Machine): Promise<SignalLine> =
             }),
         close: () => broker.socket.close()
     };
-};
+}
 
-const keyCredential = (key: KeyPair, machine: Machine): DirectCredential => ({
-    kind: 'key',
-    publicKey: key.publicKey,
-    privateKey: key.privateKey,
-    daemonId: machine.id,
-    daemonPublicKey: machine.publicKey
-});
+function keyCredential(key: KeyPair, machine: Machine): DirectCredential {
+    return {
+        kind: 'key',
+        publicKey: key.publicKey,
+        privateKey: key.privateKey,
+        daemonId: machine.id,
+        daemonPublicKey: machine.publicKey
+    };
+}
 
 interface OfferOptions {
     statement?: AccessStatement;
@@ -395,7 +404,7 @@ interface OfferOptions {
 }
 
 /* A channel offered over `line`; `open()` answers its ticket, or rejects with what the machine said. */
-const offerOver = (line: SignalLine, credential: DirectCredential, options: OfferOptions = {}): DirectClient => {
+function offerOver(line: SignalLine, credential: DirectCredential, options: OfferOptions = {}): DirectClient {
     const client = new DirectClient({
         stunServers: [],
         credential,
@@ -407,7 +416,7 @@ const offerOver = (line: SignalLine, credential: DirectCredential, options: Offe
     openChannels.push(client);
     line.listen((envelope) => client.receiveSignal(envelope));
     return client;
-};
+}
 
 interface LetIn {
     key: KeyPair;
@@ -421,7 +430,7 @@ interface LetIn {
  * A client on another machine as the app is one: a new key gets in on a statement through the door, a
  * key the machine already let in offers without one. The door socket goes once the channel is up.
  */
-const throughDoor = async (options: { key?: KeyPair; ping?: OfferOptions['ping'] } = {}): Promise<LetIn> => {
+async function throughDoor(options: { key?: KeyPair; ping?: OfferOptions['ping'] } = {}): Promise<LetIn> {
     const key = options.key ?? generateKeyPair();
     const machine = await machineInContainer();
     const line = await doorLine(key, machine);
@@ -438,14 +447,14 @@ const throughDoor = async (options: { key?: KeyPair; ping?: OfferOptions['ping']
     } finally {
         line.close();
     }
-};
+}
 
 /* A socket of a client on another machine, on the ticket of a channel through the door that is closed again. */
-const remoteSocket = async (key?: KeyPair): Promise<LetIn & { client: RemoteClient }> => {
+async function remoteSocket(key?: KeyPair): Promise<LetIn & { client: RemoteClient }> {
     const letIn = await throughDoor(key ? { key } : {});
     letIn.channel.close();
     return { ...letIn, client: await RemoteClient.connect(letIn.ticket) };
-};
+}
 
 describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     let client: RemoteClient;
@@ -1509,21 +1518,22 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
 });
 
 /* Runs the suite's broker on this machine until `stop`; the container backs off up to 30 seconds between tries to reach it. */
-const startBroker = async (): Promise<Subprocess> => {
+async function startBroker(): Promise<Subprocess> {
     const broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
         stdout: 'ignore',
         stderr: 'inherit'
     });
     await waitUntil('the broker to answer', async () => (await fetch(BROKER_HEALTH).catch(() => null))?.ok === true);
     return broker;
-};
+}
 
-const machineAnnounced = (): Promise<void> =>
-    waitUntil(
+function machineAnnounced(): Promise<void> {
+    return waitUntil(
         'the machine in the container to announce itself to the broker',
         async () => (((await (await fetch(BROKER_HEALTH)).json()) as { machines: number }).machines ?? 0) >= 1,
         45_000
     );
+}
 
 /*
  * The same channel with no socket to the container at all. A broker runs on this machine, the

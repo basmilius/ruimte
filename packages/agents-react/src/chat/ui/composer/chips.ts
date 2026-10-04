@@ -17,7 +17,7 @@ const choices = Facet.define<ChipChoices, ChipChoices>({ combine: (values) => va
 const mentionMark = Decoration.mark({ class: `${MENTION_TONE} ${CHIP_IN_EDITOR}` });
 const skillMark = Decoration.mark({ class: `${SKILL_TONE} ${CHIP_IN_EDITOR}` });
 
-const chipMarks = (state: EditorState): DecorationSet => {
+function chipMarks(state: EditorState): DecorationSet {
     const { mentions, skills } = state.facet(choices);
     const builder = new RangeSetBuilder<Decoration>();
     // `@a.ts` in backticks is code, not a mention.
@@ -25,7 +25,7 @@ const chipMarks = (state: EditorState): DecorationSet => {
         builder.add(range.from, range.to, range.kind === 'skill' ? skillMark : mentionMark);
     }
     return builder.finish();
-};
+}
 
 const chipField = StateField.define<DecorationSet>({
     create: chipMarks,
@@ -38,4 +38,6 @@ const chipField = StateField.define<DecorationSet>({
 });
 
 /* Draws the chosen `@path` and `$name` tokens as chips; a new `ChipChoices` object is what redraws them. */
-export const chipDecorations = (value: ChipChoices): Extension => [choices.of(value), chipField];
+export function chipDecorations(value: ChipChoices): Extension {
+    return [choices.of(value), chipField];
+}

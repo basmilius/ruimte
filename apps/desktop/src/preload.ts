@@ -8,7 +8,9 @@ const LOCALE_ARGUMENT = '--ruimte-system-locale=';
 const LANGUAGES_ARGUMENT = '--ruimte-system-languages=';
 const DAEMON_URL_ARGUMENT = '--ruimte-daemon-url=';
 
-const argument = (prefix: string): string | undefined => process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) || undefined;
+function argument(prefix: string): string | undefined {
+    return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) || undefined;
+}
 
 /* What the client may ask the shell for. The shape is mirrored in `apps/client/src/desktop/bridge.ts`. */
 contextBridge.exposeInMainWorld('ruimteDesktop', {

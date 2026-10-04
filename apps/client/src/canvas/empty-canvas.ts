@@ -33,7 +33,7 @@ export interface EmptyCanvasInput {
  * from, a layout the canvas has, a drawing or a diagram the project has. A machine without any agent
  * gets the one tile that goes to where agents are set up.
  */
-export const emptyCanvasSections = ({ providers, loaded, hasFolder, layouts, views }: EmptyCanvasInput): EmptyCanvasSections => {
+export function emptyCanvasSections({ providers, loaded, hasFolder, layouts, views }: EmptyCanvasInput): EmptyCanvasSections {
     const installed = providers.filter((provider) => provider.installed);
     const agents: EmptyCanvasTile[] = [
         ...installed
@@ -76,7 +76,7 @@ export const emptyCanvasSections = ({ providers, loaded, hasFolder, layouts, vie
         )
     ];
     return { agents, place, project };
-};
+}
 
 /* Below this a cell draws a row of icons, and below the second only the sentence: the size of the cell counts, not the window's. */
 export const COMPACT_BELOW = { w: 640, h: 460 };
@@ -84,9 +84,9 @@ export const MINIMAL_BELOW = { w: 300, h: 180 };
 
 export type EmptyCanvasSize = 'full' | 'compact' | 'minimal';
 
-export const emptyCanvasSize = (viewport: { w: number; h: number }): EmptyCanvasSize => {
+export function emptyCanvasSize(viewport: { w: number; h: number }): EmptyCanvasSize {
     if (viewport.w < MINIMAL_BELOW.w || viewport.h < MINIMAL_BELOW.h) {
         return 'minimal';
     }
     return viewport.w < COMPACT_BELOW.w || viewport.h < COMPACT_BELOW.h ? 'compact' : 'full';
-};
+}

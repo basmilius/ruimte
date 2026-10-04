@@ -3,26 +3,30 @@ import type { ProjectSummary } from '@ruimte/contracts';
 import type { Endpoint } from '@/state/endpoints';
 import { sidebarSelection } from './sidebar-selection';
 
-const endpoint = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: '',
-    wsBaseUrl: '',
-    daemonId: id,
-    daemonPublicKey: null,
-    reachability: 'lan'
-});
-const summary = (projectId: string, available = true, closedAt: number | null = null): ProjectSummary => ({
-    projectId,
-    name: projectId,
-    available,
-    closedAt,
-    lastOpenedAt: 0,
-    folder: '/repo',
-    color: '#123456',
-    nameSource: 'chosen',
-    icon: { kind: 'initial', value: 'P' }
-});
+function endpoint(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        daemonId: id,
+        daemonPublicKey: null,
+        reachability: 'lan'
+    };
+}
+function summary(projectId: string, available = true, closedAt: number | null = null): ProjectSummary {
+    return {
+        projectId,
+        name: projectId,
+        available,
+        closedAt,
+        lastOpenedAt: 0,
+        folder: '/repo',
+        color: '#123456',
+        nameSource: 'chosen',
+        icon: { kind: 'initial', value: 'P' }
+    };
+}
 
 test('a paired machine without open projects is not part of the sidebar selection', () => {
     const rows = sidebarSelection([{ endpointId: 'mac', summary: summary('Skills') }], [endpoint('mac'), endpoint('vps')], null);

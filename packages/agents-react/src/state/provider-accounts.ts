@@ -31,21 +31,25 @@ export const useProviderAccountsStore = create<ProviderAccountsStore>((set, get)
 }));
 
 /* The accounts of the host in scope, like `useProviders`. */
-export const useProviderAccounts = <T>(select: (row: ProviderAccountsRow) => T): T => {
+export function useProviderAccounts<T>(select: (row: ProviderAccountsRow) => T): T {
     const { id } = useChatScope();
     return useProviderAccountsStore((s) => select(s.byScope[id] ?? NONE));
-};
+}
 
-export const providerAccountsOf = (scopeId: string): ProviderAccountsRow => useProviderAccountsStore.getState().byScope[scopeId] ?? NONE;
+export function providerAccountsOf(scopeId: string): ProviderAccountsRow {
+    return useProviderAccountsStore.getState().byScope[scopeId] ?? NONE;
+}
 
 /* The accounts as `accountFor` takes them: undefined until the host answered, null for one that keeps none. */
-export const knownAccounts = (row: ProviderAccountsRow): ProviderAccounts | null | undefined => (row.loaded ? row.accounts : undefined);
+export function knownAccounts(row: ProviderAccountsRow): ProviderAccounts | null | undefined {
+    return row.loaded ? row.accounts : undefined;
+}
 
 /*
  * Keeps one host's accounts in the store: the whole list on every fresh link, then every change the
  * host announces. Answers the function that stops it.
  */
-export const watchProviderAccounts = (scopeId: string, transport: ChatTransport): (() => void) => {
+export function watchProviderAccounts(scopeId: string, transport: ChatTransport): () => void {
     const store = useProviderAccountsStore.getState();
     // A list asked for before a change arrived is older than that change, so it is dropped.
     let changes = 0;
@@ -80,4 +84,4 @@ export const watchProviderAccounts = (scopeId: string, transport: ChatTransport)
         load();
     }
     return () => off.forEach((stop) => stop());
-};
+}

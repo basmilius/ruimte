@@ -1,36 +1,44 @@
 import { CHAT_REQUEST_LIMITS, type ChatApprovalItem, type ChatQuestionItem, type ChatRequestApproval, type ChatRequestSummary } from '@ruimte/agent-contracts';
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+function str(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
 
 // The keys a tool's input names its subject under, in the order a person would look for one.
 const SUBJECT_KEYS = ['file_path', 'notebook_path', 'path', 'url', 'query', 'pattern', 'skill', 'description'];
 
 /* Cuts text at `max` code units, never between the halves of a surrogate pair. */
-const cut = (text: string, max: number): string => {
+function cut(text: string, max: number): string {
     if (text.length <= max) {
         return text;
     }
     const end = /[\uD800-\uDBFF]/.test(text[max - 1] ?? '') ? max - 1 : max;
     return text.slice(0, end);
-};
+}
 
-const clip = (text: string, max: number): string => (text.length <= max ? text : `${cut(text, max - 1)}…`);
+function clip(text: string, max: number): string {
+    return text.length <= max ? text : `${cut(text, max - 1)}…`;
+}
 
 /* Keeps the end of a path, where its file name is. */
-const clipPath = (path: string, max: number): string => {
+function clipPath(path: string, max: number): string {
     if (path.length <= max) {
         return path;
     }
     const start = path.length - (max - 1);
     return `…${path.slice(/[\uDC00-\uDFFF]/.test(path[start] ?? '') ? start + 1 : start)}`;
-};
+}
 
-const firstLine = (text: string): string => text.trim().split('\n', 1)[0] ?? '';
+function firstLine(text: string): string {
+    return text.trim().split('\n', 1)[0] ?? '';
+}
 
 /* At most `maxLines` lines and `maxLength` code units, cut at a line; a first line longer than that is cut in itself. */
-const clipLines = (lines: readonly string[], maxLines: number, maxLength: number): { text: string; truncated: boolean } => {
+function clipLines(lines: readonly string[], maxLines: number, maxLength: number): { text: string; truncated: boolean } {
     const kept: string[] = [];
     let length = 0;
     for (const line of lines) {
@@ -44,19 +52,21 @@ const clipLines = (lines: readonly string[], maxLines: number, maxLength: number
         kept.push(line);
     }
     return { text: kept.join('\n'), truncated: false };
-};
+}
 
-const splitLines = (text: string): string[] => (text === '' ? [] : text.replace(/\n$/, '').split('\n'));
+function splitLines(text: string): string[] {
+    return text === '' ? [] : text.replace(/\n$/, '').split('\n');
+}
 
 /* The lines a replacement takes out and puts in; a provider's edit is a fragment, so there is no context to show. */
-const replacementLines = (before: string, after: string): string[] => [
-    ...splitLines(before).map((line) => `-${line}`),
-    ...splitLines(after).map((line) => `+${line}`)
-];
+function replacementLines(before: string, after: string): string[] {
+    return [...splitLines(before).map((line) => `-${line}`), ...splitLines(after).map((line) => `+${line}`)];
+}
 
 /* Only what a unified diff changes: its headers and context lines stay in the thread. */
-const changedLines = (diff: string): string[] =>
-    splitLines(diff).filter((line) => (line.startsWith('-') && !line.startsWith('---')) || (line.startsWith('+') && !line.startsWith('+++')));
+function changedLines(diff: string): string[] {
+    return splitLines(diff).filter((line) => (line.startsWith('-') && !line.startsWith('---')) || (line.startsWith('+') && !line.startsWith('+++')));
+}
 
 interface FileChange {
     path: string;
@@ -65,7 +75,7 @@ interface FileChange {
 }
 
 /* The first file a call changes, as Codex's patch or Claude's edit and write tools carry it; null for any other call. */
-const fileChange = (toolName: string, input: Record<string, unknown>): FileChange | null => {
+function fileChange(toolName: string, input: Record<string, unknown>): FileChange | null {
     const patches = Array.isArray(input.changes)
         ? input.changes.filter(
               (change): change is { path: string; diff: string } => isRecord(change) && typeof change.path === 'string' && typeof change.diff === 'string'
@@ -92,15 +102,15 @@ const fileChange = (toolName: string, input: Record<string, unknown>): FileChang
         };
     }
     return null;
-};
+}
 
-const subjectOf = (input: Record<string, unknown>): string => {
+function subjectOf(input: Record<string, unknown>): string {
     const named = SUBJECT_KEYS.map((key) => str(input[key])).find((value) => value !== null && value.trim() !== '');
     const first = named ?? Object.values(input).find((value): value is string => typeof value === 'string' && value.trim() !== '') ?? '';
     return clip(firstLine(first), CHAT_REQUEST_LIMITS.subject);
-};
+}
 
-export const approvalSummary = (item: ChatApprovalItem): ChatRequestApproval => {
+export function approvalSummary(item: ChatApprovalItem): ChatRequestApproval {
     const input = isRecord(item.input) ? item.input : {};
     const change = fileChange(item.toolName, input);
     const command = change === null ? str(input.command) : null;
@@ -131,25 +141,28 @@ export const approvalSummary = (item: ChatApprovalItem): ChatRequestApproval => 
               }
             : {})
     };
-};
+}
 
-const questionSummary = (item: ChatQuestionItem): NonNullable<ChatRequestSummary['question']> => ({
-    questions: item.questions.map((question) => ({
-        id: question.id,
-        header: clip(question.header, CHAT_REQUEST_LIMITS.header),
-        question: clip(question.question, CHAT_REQUEST_LIMITS.question),
-        choices: question.choices.map((choice) => ({ label: choice.label, description: clip(choice.description, CHAT_REQUEST_LIMITS.choiceDescription) })),
-        multiSelect: question.multiSelect
-    })),
-    ...(item.async === undefined ? {} : { async: item.async })
-});
+function questionSummary(item: ChatQuestionItem): NonNullable<ChatRequestSummary['question']> {
+    return {
+        questions: item.questions.map((question) => ({
+            id: question.id,
+            header: clip(question.header, CHAT_REQUEST_LIMITS.header),
+            question: clip(question.question, CHAT_REQUEST_LIMITS.question),
+            choices: question.choices.map((choice) => ({ label: choice.label, description: clip(choice.description, CHAT_REQUEST_LIMITS.choiceDescription) })),
+            multiSelect: question.multiSelect
+        })),
+        ...(item.async === undefined ? {} : { async: item.async })
+    };
+}
 
 /* What a chat waits on, oldest first, as `ChatInfo.requests` carries it. */
-export const requestSummaries = (pending: ReadonlyArray<ChatApprovalItem | ChatQuestionItem>): ChatRequestSummary[] =>
-    pending.slice(0, CHAT_REQUEST_LIMITS.perChat).map((item) => ({
+export function requestSummaries(pending: ReadonlyArray<ChatApprovalItem | ChatQuestionItem>): ChatRequestSummary[] {
+    return pending.slice(0, CHAT_REQUEST_LIMITS.perChat).map((item) => ({
         requestId: item.requestId,
         itemId: item.id,
         kind: item.kind,
         createdAt: item.createdAt,
         ...(item.kind === 'approval' ? { approval: approvalSummary(item) } : { question: questionSummary(item) })
     }));
+}

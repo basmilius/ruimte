@@ -44,16 +44,16 @@ const app = join(outDir, `${name}.app`);
 const executable = 'RuimteComputerUse';
 const entitlements = join(root, 'Resources', 'entitlements.plist');
 
-const run = (command: string[], capture = false): string => {
+function run(command: string[], capture = false): string {
     const result = Bun.spawnSync(command, { cwd: root, stdio: ['ignore', capture ? 'pipe' : 'inherit', 'inherit'] });
     if (result.exitCode !== 0) {
         console.error(`${command.join(' ')} exited with ${result.exitCode}`);
         process.exit(result.exitCode || 1);
     }
     return result.stdout?.toString().trim() ?? '';
-};
+}
 
-const signingIdentity = (): { identity: string; label: string } => {
+function signingIdentity(): { identity: string; label: string } {
     const explicit = values.identity ?? process.env.RUIMTE_COMPUTER_USE_IDENTITY;
     if (explicit) {
         return { identity: explicit, label: explicit === '-' ? 'ad hoc' : explicit };
@@ -65,7 +65,7 @@ const signingIdentity = (): { identity: string; label: string } => {
     }
     console.warn('No Apple Development identity in the keychain, so the helper is signed ad hoc: macOS asks for its grants again after every build.');
     return { identity: '-', label: 'ad hoc' };
-};
+}
 
 const swiftBuild = ['swift', 'build', '-c', 'release', '--arch', swiftArch[values.arch] ?? values.arch];
 const products = development ? [executable, 'cu'] : [executable];

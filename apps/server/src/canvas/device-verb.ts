@@ -4,7 +4,9 @@ import { AGENT_HOLD_IDLE_MS, SWIPE_DEFAULT_MS } from '../devices/agent-driver.ts
 import { defineActionVerb, runAction } from './action-verb.ts';
 import { field, SCOPE_LINE } from './verb.ts';
 
-const yesNo = (value: boolean): string => (value ? 'yes' : 'no');
+function yesNo(value: boolean): string {
+    return value ? 'yes' : 'no';
+}
 
 const NODE_PARAM = { syntax: '<id>', need: 'required', field: 'nodeId', more: 'ruimte-context list names the ones linked to you' } as const;
 
@@ -23,24 +25,26 @@ const COMMON_DETAIL: readonly string[] = [
 ];
 
 /* An x,y pair of the last shot, as a pixel counted from its top-left corner. */
-const pixelPair = (flag: string) =>
-    z
+function pixelPair(flag: string) {
+    return z
         .string({ error: `--${flag} needs a pixel of the last shot, as x,y` })
         .regex(/^\d+(\.\d+)?,\d+(\.\d+)?$/, `--${flag} takes a pixel of the last shot as x,y, two numbers of 0 or more such as 540,1200`)
         .transform((value) => {
             const [x, y] = value.split(',').map(Number);
             return { x: x!, y: y! };
         });
+}
 
-const nodeTuple = (word: string, rest: string) =>
-    z.tuple([z.string().min(1, `device ${word} needs the id of a device node`)], {
+function nodeTuple(word: string, rest: string) {
+    return z.tuple([z.string().min(1, `device ${word} needs the id of a device node`)], {
         error: (issue) => (issue.code === 'too_big' ? `device ${word} takes one node id${rest}` : `device ${word} needs the id of a device node`)
     });
+}
 
 /* Text past this many characters is cut in a state line, which says how long it was. */
 const MAX_TEXT = 200;
 
-const quote = (text: string): string => {
+function quote(text: string): string {
     const clipped = text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT)}…` : text;
     const escaped = clipped
         .replaceAll('\\', '\\\\')
@@ -48,12 +52,12 @@ const quote = (text: string): string => {
         .replace(/\r\n|\r|\n/g, '\\n')
         .replaceAll('\t', '\\t');
     return text.length > MAX_TEXT ? `"${escaped}"(cut: ${text.length} chars)` : `"${escaped}"`;
-};
+}
 
 type TreeElement = NonNullable<ActionOutput<'device.inspect'>['tree']>['elements'][number];
 
 /* One element on one line, as a state of an app on this Mac writes it, indented by its depth. */
-export const elementLine = (element: TreeElement): string => {
+export function elementLine(element: TreeElement): string {
     const parts = [`[${element.handle}]`, element.subrole === null ? element.role : `${element.role}:${element.subrole}`];
     if (element.label !== null) {
         parts.push(quote(element.label));
@@ -73,9 +77,9 @@ export const elementLine = (element: TreeElement): string => {
         parts.push('disabled');
     }
     return `${'  '.repeat(element.depth)}${parts.join(' ')}`;
-};
+}
 
-const treeLines = (state: ActionOutput<'device.inspect'>): string[] => {
+function treeLines(state: ActionOutput<'device.inspect'>): string[] {
     if (state.treeError !== null) {
         return [`tree\tnone\t${field(state.treeError)}`];
     }
@@ -89,12 +93,11 @@ const treeLines = (state: ActionOutput<'device.inspect'>): string[] => {
         ...(tree.truncated ? ['truncated\tyes\tThe tree was cut off after the elements above; use --find for the rest'] : []),
         ...tree.elements.map((element) => `tree\t${field(elementLine(element))}`)
     ];
-};
+}
 
-const doneLine = (word: string, outcome: ActionOutput<'device.tap'>): string[] => [
-    `done\t${word}\t${outcome.nodeId}\t${field(outcome.device)}`,
-    'next\truimte-context device shot <id>\tshows what it did'
-];
+function doneLine(word: string, outcome: ActionOutput<'device.tap'>): string[] {
+    return [`done\t${word}\t${outcome.nodeId}\t${field(outcome.device)}`, 'next\truimte-context device shot <id>\tshows what it did'];
+}
 
 const stateAction = defineActionVerb('device', {
     name: 'state',

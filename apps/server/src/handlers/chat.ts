@@ -22,14 +22,14 @@ export interface ChatForkHandlers {
     continueOn(payload: ChatContinueOnPayload): Promise<ChatContinueOnResult>;
 }
 
-export const registerChatHandlers = (
+export function registerChatHandlers(
     dispatcher: Dispatcher,
     manager: ChatManager,
     providers: ProviderRegistry,
     beforeKill?: BeforeKill,
     stopNode?: (nodeId: string, reason: string) => Promise<void>,
     forks?: ChatForkHandlers
-): void => {
+): void {
     // What the daemon answers differently from a host of chats alone: a task's row stops its node, a stop or a
     // removal first owes the end of the agents a chat opened, and a fork lands on the canvas.
     const {
@@ -84,4 +84,4 @@ export const registerChatHandlers = (
             return {};
         })
     );
-};
+}

@@ -39,20 +39,22 @@ const STATE_PARAM = {
     more: 'the answer then ends in the state lines: only what changed, marked + new, - gone, ~ changed; --state=full for the whole tree'
 } as const;
 
-const wholeFlag = (flag: string, min: number, max: number) =>
-    z
+function wholeFlag(flag: string, min: number, max: number) {
+    return z
         .string()
         .regex(/^\d+$/, `--${flag} takes a whole number`)
         .transform(Number)
         .refine((value) => value >= min && value <= max, `--${flag} is between ${min} and ${max}`)
         .optional();
+}
 
-const pixelFlag = (flag: string) =>
-    z
+function pixelFlag(flag: string) {
+    return z
         .string()
         .regex(/^\d+(\.\d+)?$/, `--${flag} takes a pixel of the last screenshot, a number of 0 or more`)
         .transform(Number)
         .optional();
+}
 
 /* The flags of every call that reads or operates an app: how long it holds for the person, and how its state is cut. */
 const CUT_FLAGS = {
@@ -67,14 +69,16 @@ interface CutInput {
     switches: ReadonlySet<string>;
 }
 
-const cutOf = ({ flags, switches }: CutInput) => ({
-    wait: flags.wait ?? null,
-    front: switches.has('front'),
-    screenshot: !switches.has('no-screenshot'),
-    maxDepth: flags['max-depth'] ?? null,
-    maxElements: flags['max-elements'] ?? null,
-    maxText: flags['max-text'] ?? null
-});
+function cutOf({ flags, switches }: CutInput) {
+    return {
+        wait: flags.wait ?? null,
+        front: switches.has('front'),
+        screenshot: !switches.has('no-screenshot'),
+        maxDepth: flags['max-depth'] ?? null,
+        maxElements: flags['max-elements'] ?? null,
+        maxText: flags['max-text'] ?? null
+    };
+}
 
 /* An action's flags: those of every call, and --state, which may ask for the whole tree. */
 const ACTION_FLAGS = {
@@ -85,38 +89,49 @@ const ACTION_FLAGS = {
 const ACTION_SWITCHES = ['state', 'no-screenshot', 'front'] as const;
 
 /* The same for an action, which answers with the state after it only when --state asks. */
-const thenState = (input: CutInput & { flags: { state?: 'full' } }) => ({
-    withState: input.switches.has('state'),
-    fullState: input.flags.state === 'full',
-    ...cutOf(input)
-});
+function thenState(input: CutInput & { flags: { state?: 'full' } }) {
+    return {
+        withState: input.switches.has('state'),
+        fullState: input.flags.state === 'full',
+        ...cutOf(input)
+    };
+}
 
-const yesNo = (value: boolean): string => (value ? 'yes' : 'no');
+function yesNo(value: boolean): string {
+    return value ? 'yes' : 'no';
+}
 
-const round = (value: number): string => String(Math.round(value * 100) / 100);
+function round(value: number): string {
+    return String(Math.round(value * 100) / 100);
+}
 
-const windowLines = (state: ComputerState): string[] => [
-    `window\t${field(state.window.title)}\t${round(state.window.x)},${round(state.window.y)}\t${round(state.window.width)}x${round(state.window.height)}`,
-    ...(state.window.sheet === null ? [] : [`sheet\t${field(state.window.sheet)}`]),
-    state.screenshot === null
-        ? `shot\tnone\t${field(state.screenshotError ?? '')}`
-        : `shot\t${field(state.screenshot.path)}\t${state.screenshot.width}x${state.screenshot.height}\t${round(state.screenshot.scale)}\t${round(state.screenshot.originX)},${round(state.screenshot.originY)}`
-];
+function windowLines(state: ComputerState): string[] {
+    return [
+        `window\t${field(state.window.title)}\t${round(state.window.x)},${round(state.window.y)}\t${round(state.window.width)}x${round(state.window.height)}`,
+        ...(state.window.sheet === null ? [] : [`sheet\t${field(state.window.sheet)}`]),
+        state.screenshot === null
+            ? `shot\tnone\t${field(state.screenshotError ?? '')}`
+            : `shot\t${field(state.screenshot.path)}\t${state.screenshot.width}x${state.screenshot.height}\t${round(state.screenshot.scale)}\t${round(state.screenshot.originX)},${round(state.screenshot.originY)}`
+    ];
+}
 
-const remarkLines = (state: ComputerState): string[] => [
-    ...(state.truncated === null ? [] : [`truncated\t${field(state.truncated)}`]),
-    ...(state.hidden ? ['hidden\tyes\tIts windows are off screen; computer open shows it'] : []),
-    ...(state.note === null ? [] : [`note\t${field(state.note)}`])
-];
+function remarkLines(state: ComputerState): string[] {
+    return [
+        ...(state.truncated === null ? [] : [`truncated\t${field(state.truncated)}`]),
+        ...(state.hidden ? ['hidden\tyes\tIts windows are off screen; computer open shows it'] : []),
+        ...(state.note === null ? [] : [`note\t${field(state.note)}`])
+    ];
+}
 
-const changeCounts = ({ added, gone, changed }: { added: number; gone: number; changed: number }): string =>
-    added + gone + changed === 0 ? 'none' : `${added} new\t${gone} gone\t${changed} changed`;
+function changeCounts({ added, gone, changed }: { added: number; gone: number; changed: number }): string {
+    return added + gone + changed === 0 ? 'none' : `${added} new\t${gone} gone\t${changed} changed`;
+}
 
 /*
  * A window, its picture and its tree: one row each, the tree a row per element with its indent kept.
  * After an action that is only what changed, since the rest is what the agent read before.
  */
-export const stateLines = (state: ComputerState): string[] => {
+export function stateLines(state: ComputerState): string[] {
     const tree = state.tree.map((line) => `tree\t${field(line)}`);
     if (state.diff !== null && state.diff !== undefined) {
         return [...windowLines(state), ...remarkLines(state), `changes\t${changeCounts(state.diff)}`, ...tree];
@@ -131,10 +146,10 @@ export const stateLines = (state: ComputerState): string[] => {
         ...(state.full === null || state.full === undefined ? [] : [`full\t${field(state.full)}`]),
         ...tree
     ];
-};
+}
 
 /* What an action did, and the state after it when it was asked for. */
-export const outcomeLines = (word: string, outcome: ComputerOutcome): string[] => {
+export function outcomeLines(word: string, outcome: ComputerOutcome): string[] {
     const { target } = outcome;
     return [
         `done\t${word}\t${field(outcome.app?.name ?? '-')}`,
@@ -148,7 +163,7 @@ export const outcomeLines = (word: string, outcome: ComputerOutcome): string[] =
         ...(outcome.stateError === null ? [] : [`state\tnone\t${field(outcome.stateError)}`]),
         ...(outcome.state === null ? [] : stateLines(outcome.state))
     ];
-};
+}
 
 const STATE_PRINTS: readonly string[] = [
     'prints\tapp\tname\tbundle id\tpid',
@@ -217,11 +232,12 @@ const apps = defineActionVerb('computer', {
     }
 });
 
-const appTuple = (word: string) =>
-    z.tuple([z.string().min(1, `computer ${word} needs an app`)], {
+function appTuple(word: string) {
+    return z.tuple([z.string().min(1, `computer ${word} needs an app`)], {
         error: (issue) =>
             issue.code === 'too_big' ? `computer ${word} takes one app; a name with spaces in it is one argument` : `computer ${word} needs an app`
     });
+}
 
 const state = defineActionVerb('computer', {
     name: 'state',
@@ -351,7 +367,7 @@ const X_PARAM = { syntax: '--x PX', need: 'with --y', field: 'x' } as const;
 const Y_PARAM = { syntax: '--y PX', need: 'with --x', field: 'y' } as const;
 
 /* The params and flags of an action that answers with what it did and, with --state, the state after. */
-const actionParams = <
+function actionParams<
     Name extends
         | 'computer.click'
         | 'computer.scroll'
@@ -361,9 +377,9 @@ const actionParams = <
         | 'computer.menu'
         | 'computer.open'
         | 'computer.drag'
->(
-    own: readonly ActionParam<Name>[]
-): ActionParam<Name>[] => [APP_PARAM, ...own, FRONT_PARAM, WAIT_PARAM, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
+>(own: readonly ActionParam<Name>[]): ActionParam<Name>[] {
+    return [APP_PARAM, ...own, FRONT_PARAM, WAIT_PARAM, STATE_PARAM, ...CUT_PARAMS] as ActionParam<Name>[];
+}
 
 const click = defineActionVerb('computer', {
     name: 'click',

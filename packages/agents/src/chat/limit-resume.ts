@@ -4,7 +4,7 @@ import type { ChatItem, ChatTurnItem, ChatTurnLimit } from '@ruimte/agent-contra
 export const LIMIT_RETRY_DELAYS_MS: readonly number[] = [60_000, 5 * 60_000, 15 * 60_000];
 
 /* The last turn of a thread, when it stopped on a limit. */
-export const limitedTurn = (items: readonly ChatItem[]): (ChatTurnItem & { limit: ChatTurnLimit }) | null => {
+export function limitedTurn(items: readonly ChatItem[]): (ChatTurnItem & { limit: ChatTurnLimit }) | null {
     for (let i = items.length - 1; i >= 0; i--) {
         const item = items[i]!;
         if (item.kind === 'turn') {
@@ -12,10 +12,10 @@ export const limitedTurn = (items: readonly ChatItem[]): (ChatTurnItem & { limit
         }
     }
     return null;
-};
+}
 
 /* How many turns in a row, up to and including this one, stopped on a limit: the tries a person did not step in between. */
-const limitedInARow = (items: readonly ChatItem[], turn: ChatTurnItem): number => {
+function limitedInARow(items: readonly ChatItem[], turn: ChatTurnItem): number {
     let count = 0;
     let seen = false;
     for (let i = items.length - 1; i >= 0; i--) {
@@ -33,14 +33,14 @@ const limitedInARow = (items: readonly ChatItem[], turn: ChatTurnItem): number =
         count += 1;
     }
     return count;
-};
+}
 
 /*
  * When the host takes a limited turn up again, or null when it does not: a usage limit at its reset
  * and an overload after 1, 5 and 15 minutes. A usage limit that holds past its reset waits those too,
  * so a reset the plan did not keep never turns into a loop.
  */
-export const limitResumeAt = (items: readonly ChatItem[], turn: ChatTurnItem, now: number): number | null => {
+export function limitResumeAt(items: readonly ChatItem[], turn: ChatTurnItem, now: number): number | null {
     if (turn.state !== 'error' || turn.limit === undefined) {
         return null;
     }
@@ -56,11 +56,11 @@ export const limitResumeAt = (items: readonly ChatItem[], turn: ChatTurnItem, no
         return null;
     }
     return tries === 1 ? turn.limit.resetsAt : Math.max(turn.limit.resetsAt, now + delay);
-};
+}
 
 /* The turn the host opens to take a limited one up again: what the CLI is told, and what a person reads above it. */
-export const limitResumeWake = (kind: ChatTurnLimit['kind']): { text: string; label: string; note: string } =>
-    kind === 'usage'
+export function limitResumeWake(kind: ChatTurnLimit['kind']): { text: string; label: string; note: string } {
+    return kind === 'usage'
         ? {
               text: 'Your previous turn stopped on a usage limit, which has reset now. Continue where you left off.',
               label: 'Usage limit reset',
@@ -71,3 +71,4 @@ export const limitResumeWake = (kind: ChatTurnLimit['kind']): { text: string; la
               label: 'Overloaded model',
               note: 'Tried again after the model was overloaded'
           };
+}

@@ -15,13 +15,13 @@ import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
-export const registerGitHandlers = (
+export function registerGitHandlers(
     dispatcher: Dispatcher,
     worktrees: Worktrees,
     merges: WorktreeMerge,
     statuses: GitStatusWatcher,
     providers: ProviderRegistry
-): void => {
+): void {
     const actions = new GitActions();
 
     dispatcher.register('git.worktree-add', (payload) =>
@@ -172,4 +172,4 @@ export const registerGitHandlers = (
             }
         })
     );
-};
+}

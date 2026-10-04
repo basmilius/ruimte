@@ -226,7 +226,7 @@ export interface TrashedView {
 }
 
 /* What a view list holds of the trashed views: the list without them, and their copies as the list has them now. */
-const splitTrash = (views: ProjectView[], trashed: TrashedView[]): { views: ProjectView[]; trashed: TrashedView[] } => {
+function splitTrash(views: ProjectView[], trashed: TrashedView[]): { views: ProjectView[]; trashed: TrashedView[] } {
     if (trashed.length === 0) {
         return { views, trashed };
     }
@@ -239,7 +239,7 @@ const splitTrash = (views: ProjectView[], trashed: TrashedView[]): { views: Proj
             return current === undefined ? [] : [{ ...entry, view: current }];
         })
     };
-};
+}
 
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
 export type StandaloneRequest =
@@ -248,13 +248,7 @@ export type StandaloneRequest =
     | { kind: 'device'; name: string; id?: string; device: DeviceReference };
 
 /* Null when the name and its source are already there, so a blur that keeps the name claims no edit. */
-const withRenamedNode = (
-    views: readonly ProjectView[],
-    viewId: string,
-    nodeId: string,
-    title: string,
-    source: NodeTitleSource | null
-): ProjectView[] | null => {
+function withRenamedNode(views: readonly ProjectView[], viewId: string, nodeId: string, title: string, source: NodeTitleSource | null): ProjectView[] | null {
     const view = views.find((candidate) => candidate.id === viewId);
     if (!view || !isCanvasView(view)) {
         return null;
@@ -266,7 +260,7 @@ const withRenamedNode = (
     const renamed = { ...node, title, titleSource: source ?? undefined };
     const nodes = view.nodes.map((candidate) => (candidate.id === nodeId ? renamed : candidate));
     return views.map((candidate) => (candidate.id === viewId ? { ...view, nodes } : candidate));
-};
+}
 
 /*
  * The editors of the project, handed in rather than imported, so a test with stores of its own moves
@@ -279,14 +273,15 @@ export interface DocumentPeers {
 }
 
 /* What a view holds right now: its editor while it is on screen, the document's copy otherwise. */
-const canvasOf = (viewId: string | null | undefined, peers: DocumentPeers): CanvasState | null =>
-    (viewId === null || viewId === undefined ? null : peers.canvases.peek(viewId)?.getState()) ?? null;
+function canvasOf(viewId: string | null | undefined, peers: DocumentPeers): CanvasState | null {
+    return (viewId === null || viewId === undefined ? null : peers.canvases.peek(viewId)?.getState()) ?? null;
+}
 
 /*
  * Canvas editors follow the visible views. Drawing and diagram clients own their editors and may
  * still have unsaved file state, so this function only updates their shared focus.
  */
-const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectViewLocal>, open: string[], focus: string | null, peers: DocumentPeers): void => {
+function openEditors(views: ProjectView[], viewLocal: Record<string, ProjectViewLocal>, open: string[], focus: string | null, peers: DocumentPeers): void {
     peers.canvases.keep(open);
     for (const viewId of open) {
         if (peers.canvases.peek(viewId) !== null) {
@@ -303,10 +298,10 @@ const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectView
     peers.canvases.focus(focus);
     peers.drawings.focus(focus);
     peers.diagrams.focus(focus);
-};
+}
 
 /* Where a view on screen stands. A drawing and a diagram keep their camera in their own editor, a canvas in its own. */
-const localOfView = (view: ProjectView | undefined, peers: DocumentPeers): ProjectViewLocal => {
+function localOfView(view: ProjectView | undefined, peers: DocumentPeers): ProjectViewLocal {
     if (view && isDrawingView(view)) {
         return { camera: peers.drawings.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
     }
@@ -319,36 +314,36 @@ const localOfView = (view: ProjectView | undefined, peers: DocumentPeers): Proje
     }
     const locked = Object.values(canvas.locks).some(Boolean);
     return { camera: canvas.viewCamera(), focusedNodeId: canvas.bodyFocusId, ...(locked ? { locks: canvas.locks } : {}) };
-};
+}
 
 /*
  * Where a node lands when it moves to another view: the middle of what that view looks at, live when
  * it stands in a cell and as it was stored otherwise.
  */
-const centerOfView = (
+function centerOfView(
     viewId: string,
     local: ProjectViewLocal | undefined,
     node: { w: number; h: number },
     peers: DocumentPeers
-): { x: number; y: number } | null => {
+): { x: number; y: number } | null {
     const camera = canvasOf(viewId, peers)?.viewCamera() ?? local?.camera ?? null;
     if (camera === null) {
         return null;
     }
     return { x: Math.round(camera.center.x - node.w / 2), y: Math.round(camera.center.y - node.h / 2) };
-};
+}
 
 /*
  * What the document holds beside its views once the grid moved: the layout itself and everything
  * derived from which cell has the focus. Every mutation of the grid goes through here, so the
  * derived fields can never drift from the layout they are read off.
  */
-const settledOn = (
+function settledOn(
     views: ProjectView[],
     viewLocal: Record<string, ProjectViewLocal>,
     layout: SplitLayout | null,
     was: Pick<DocumentState, 'lastCanvasViewId'>
-): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'activeViewId' | 'lastCanvasViewId' | 'bodyFocused'> => {
+): Pick<DocumentState, 'views' | 'viewLocal' | 'layout' | 'activeViewId' | 'lastCanvasViewId' | 'bodyFocused'> {
     const activeViewId = layout === null ? null : focusedViewId(layout);
     const active = views.find((view) => view.id === activeViewId) ?? null;
     const canvas = active !== null && isCanvasView(active);
@@ -362,31 +357,32 @@ const settledOn = (
            The files are in no document, hence the id rather than the view. */
         bodyFocused: activeViewId === FILES_VIEW_ID || (active !== null && !canvas)
     };
-};
+}
 
 /* Whether an id may stand in a cell: an openable view of the document, or the files of this client. */
-const canStandInCell = (views: readonly ProjectView[], id: string): boolean =>
-    id === FILES_VIEW_ID || views.some((view) => view.id === id && isOpenableView(view));
+function canStandInCell(views: readonly ProjectView[], id: string): boolean {
+    return id === FILES_VIEW_ID || views.some((view) => view.id === id && isOpenableView(view));
+}
 
 /* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
-const noticeTarget = (notice: ViewNotice | null): string | null => {
+function noticeTarget(notice: ViewNotice | null): string | null {
     if (notice === null || notice.action === null) {
         return null;
     }
     return notice.action.kind === 'go' ? notice.action.viewId : notice.action.shown.replaced;
-};
+}
 
 /* A banner whose button would open a view the project has not got any more is a door into nothing. */
-const keptNotice = (notice: ViewNotice | null, views: ProjectView[]): ViewNotice | null => {
+function keptNotice(notice: ViewNotice | null, views: ProjectView[]): ViewNotice | null {
     const target = noticeTarget(notice);
     return target === null || views.some((view) => view.id === target) ? notice : null;
-};
+}
 
 /*
  * A manual grid move makes an undo offer stale. A navigation offer survives until the requested
  * view becomes active; neither expires on a timer because the person may still need the action.
  */
-const afterMove = (notice: ViewNotice | null, activeViewId: string | null): ViewNotice | null => {
+function afterMove(notice: ViewNotice | null, activeViewId: string | null): ViewNotice | null {
     if (notice === null || notice.action === null) {
         return notice;
     }
@@ -394,15 +390,15 @@ const afterMove = (notice: ViewNotice | null, activeViewId: string | null): View
         return null;
     }
     return notice.action.viewId === activeViewId ? null : notice;
-};
+}
 
 /*
  * Every view of the project that is open, and which one is on screen. The canvas store edits one
  * canvas view at a time; this store owns the list, hands the canvas its view on a switch and takes
  * the edits back before the next one loads.
  */
-export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentState> =>
-    createStore<DocumentState>((set, get) => {
+export function createDocumentStore(peers: DocumentPeers): StoreApi<DocumentState> {
+    return createStore<DocumentState>((set, get) => {
         /*
          * The one way the grid moves. Every editor on screen writes itself back first, because the
          * cell that is about to close may be holding edits and a camera that are only in that editor;
@@ -962,6 +958,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             }
         };
     });
+}
 
 export const defaultDocumentStore = createDocumentStore({ canvases: defaultCanvases, drawings: defaultDrawings, diagrams: defaultDiagrams });
 
@@ -971,19 +968,21 @@ export const useDocument = storeHook(defaultDocumentStore);
  * Whether the cell a component is drawn in has the focus; true outside a cell. A body that takes the
  * keyboard asks this first, because a DOM focus in a cell beside it moves the grid's focus there.
  */
-export const useCellHasFocus = (): boolean => {
+export function useCellHasFocus(): boolean {
     const cell = useContext(CellViewContext);
     return useDocument((s) => cell === null || s.activeViewId === cell);
-};
+}
 
 /* The view a node sits on, so a jump from anywhere can switch to it first. */
-export const viewOfNode = (views: ProjectView[], nodeId: string): ProjectView | null =>
-    views.find((view) => (isCanvasView(view) ? view.nodes.some((node) => node.id === nodeId) : view.id === nodeId)) ?? null;
+export function viewOfNode(views: ProjectView[], nodeId: string): ProjectView | null {
+    return views.find((view) => (isCanvasView(view) ? view.nodes.some((node) => node.id === nodeId) : view.id === nodeId)) ?? null;
+}
 
-export const activeViewOf = (state: Pick<DocumentState, 'views' | 'activeViewId'>): ProjectView | null =>
-    state.views.find((view) => view.id === state.activeViewId) ?? null;
+export function activeViewOf(state: Pick<DocumentState, 'views' | 'activeViewId'>): ProjectView | null {
+    return state.views.find((view) => view.id === state.activeViewId) ?? null;
+}
 
-export const hasActiveCanvas = (state: Pick<DocumentState, 'views' | 'activeViewId'>): boolean => {
+export function hasActiveCanvas(state: Pick<DocumentState, 'views' | 'activeViewId'>): boolean {
     const view = activeViewOf(state);
     return view !== null && isCanvasView(view);
-};
+}

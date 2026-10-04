@@ -15,34 +15,38 @@ import {
     withoutView
 } from './project-views.ts';
 
-const node = (id: string, kind: ProjectCanvasView['nodes'][number]['kind'] = 'terminal'): ProjectCanvasView['nodes'][number] => ({
-    id,
-    kind,
-    title: id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 80
-});
+function node(id: string, kind: ProjectCanvasView['nodes'][number]['kind'] = 'terminal'): ProjectCanvasView['nodes'][number] {
+    return {
+        id,
+        kind,
+        title: id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 80
+    };
+}
 
-const canvas = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes,
-    texts: [],
-    edges: [],
-    layouts: []
-});
+function canvas(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes,
+        texts: [],
+        edges: [],
+        layouts: []
+    };
+}
 
 // A fresh id per call, so a duplicate is checked on its shape rather than on a counter's state.
-const ids = (): ((prefix: string) => string) => {
+function ids(): (prefix: string) => string {
     let counter = 0;
     return (prefix) => {
         counter += 1;
         return `${prefix}-${counter}`;
     };
-};
+}
 
 describe('adding a view', () => {
     test('lands last, or right under the view it names', () => {

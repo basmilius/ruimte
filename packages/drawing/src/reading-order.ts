@@ -7,10 +7,12 @@ const ROW_TOLERANCE = 24;
 /* How far from an arrow's end a label may sit and still be what the arrow points at. */
 const LABEL_REACH = 48;
 
-const labelOf = (element: DrawingElement): string | null => (element.kind === 'text' || element.kind === 'note' ? element.text.trim() || null : null);
+function labelOf(element: DrawingElement): string | null {
+    return element.kind === 'text' || element.kind === 'note' ? element.text.trim() || null : null;
+}
 
 /* A shape says what it is by the text inside it, which is how a box on a diagram is named. */
-const labelInside = (element: DrawingElement, elements: readonly DrawingElement[]): string | null => {
+function labelInside(element: DrawingElement, elements: readonly DrawingElement[]): string | null {
     for (const candidate of elements) {
         if (candidate.kind !== 'text' || candidate.id === element.id) {
             continue;
@@ -21,10 +23,10 @@ const labelInside = (element: DrawingElement, elements: readonly DrawingElement[
         }
     }
     return null;
-};
+}
 
 /* What an arrow points at: the text at that end, or the shape there and the text it holds. */
-const labelAt = (point: Point, elements: readonly DrawingElement[], arrowId: string): string | null => {
+function labelAt(point: Point, elements: readonly DrawingElement[], arrowId: string): string | null {
     let best: { label: string; distance: number } | null = null;
     for (const element of elements) {
         if (element.id === arrowId || element.kind === 'line' || element.kind === 'freehand') {
@@ -42,13 +44,13 @@ const labelAt = (point: Point, elements: readonly DrawingElement[], arrowId: str
         }
     }
     return best?.label ?? null;
-};
+}
 
 /*
  * A drawing as lines an agent can read: the texts top to bottom and left to right, then every
  * arrow as the two things it connects. A diagram becomes a list without anyone looking at it.
  */
-export const readingOrder = (elements: readonly DrawingElement[]): string[] => {
+export function readingOrder(elements: readonly DrawingElement[]): string[] {
     // A row is measured from its top text, so a staircase of texts cannot chain into one long line.
     const rows: DrawingElement[][] = [];
     const labeled = elements.filter((element) => labelOf(element) !== null).sort((left, right) => left.y - right.y || left.x - right.x);
@@ -77,4 +79,4 @@ export const readingOrder = (elements: readonly DrawingElement[]): string[] => {
         arrows.push(element.arrowEnd ? `${from} -> ${to}` : `${to} -> ${from}`);
     }
     return [...texts, ...arrows];
-};
+}

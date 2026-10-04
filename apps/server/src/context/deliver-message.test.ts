@@ -9,25 +9,27 @@ import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 
 /* Two chats a person opened beside each other, plus a note nothing links to: a message travels only along a line. */
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'chat-other', kind: 'chat', title: 'Builder', x: 600, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'note-1', kind: 'note', title: 'A note', x: 600, y: 700, w: 320, h: 200 }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'chat-other', kind: 'chat', title: 'Builder', x: 600, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'note-1', kind: 'note', title: 'A note', x: 600, y: 700, w: 320, h: 200 }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let root: string;
 let home: string;
@@ -59,40 +61,51 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (): Promise<TestDaemon> => {
+async function boot(): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({ home, store, clock });
     daemon.worker.start();
     running.push(daemon);
     return daemon;
-};
+}
 
-const itemsOf = (daemon: TestDaemon, chatId: string): ChatItem[] => daemon.chats.get(chatId)?.thread.list() ?? [];
+function itemsOf(daemon: TestDaemon, chatId: string): ChatItem[] {
+    return daemon.chats.get(chatId)?.thread.list() ?? [];
+}
 
-const turnsOf = (daemon: TestDaemon, chatId: string): ChatTurnItem[] => itemsOf(daemon, chatId).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(daemon: TestDaemon, chatId: string): ChatTurnItem[] {
+    return itemsOf(daemon, chatId).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 /* What the CLI answered, which is the prompt it was handed echoed back: the message is in there or it never reached it. */
-const repliesOf = (daemon: TestDaemon, chatId: string): string[] => itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
+function repliesOf(daemon: TestDaemon, chatId: string): string[] {
+    return itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
+}
 
 /* A chat with a finished turn behind it, which is a chat a message can open a turn in. */
-const idle = async (daemon: TestDaemon, chatId: string): Promise<void> => {
+async function idle(daemon: TestDaemon, chatId: string): Promise<void> {
     await daemon.chats.create({ chatId, provider: 'claude', cwd: folder });
     await daemon.chats.send(chatId, 'plan the work');
     await daemon.until(() => turnsOf(daemon, chatId).some((turn) => turn.state === 'done'));
-};
+}
 
 /* The line a message travels along; `--to` on a chat draws it both ways, so the two can answer each other. */
-const link = async (daemon: TestDaemon, from: string, to: string): Promise<void> => {
+async function link(daemon: TestDaemon, from: string, to: string): Promise<void> {
     await runVerb(daemon, from, 'link', ['new', '--to', to]);
-};
+}
 
-const notify = async (daemon: TestDaemon, from: string, to: string, text: string): Promise<string[]> => runVerb(daemon, from, 'notify', [to, '--text', text]);
+async function notify(daemon: TestDaemon, from: string, to: string, text: string): Promise<string[]> {
+    return runVerb(daemon, from, 'notify', [to, '--text', text]);
+}
 
 /* The line notify prints, which every answer ends with the same way. */
-const notified = (id: string, at: string, detail: string): string => `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}`;
+function notified(id: string, at: string, detail: string): string {
+    return `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}`;
+}
 
 /* What a person reads in the thread about a message, wherever it was written. */
-const linesAbout = (daemon: TestDaemon, chatId: string, text: string): string[] =>
-    itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'note' && item.text.includes(text) ? [item.text] : []));
+function linesAbout(daemon: TestDaemon, chatId: string, text: string): string[] {
+    return itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'note' && item.text.includes(text) ? [item.text] : []));
+}
 
 describe('a message to a chat', () => {
     test('gives a chat between turns a turn of its own, and the agent reads the message in it', async () => {

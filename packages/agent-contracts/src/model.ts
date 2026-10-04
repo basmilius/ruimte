@@ -138,10 +138,10 @@ export type ProviderListResult = z.infer<typeof ProviderListResultSchema>;
  * a word of its own rather than a substring, since it stands for none, one or several words and a
  * substitution would leave a double space behind where a launch carries no flags at all.
  */
-export const resumeCommandFor = (template: string, agentSessionId: string, flags: string[] = []): string => {
+export function resumeCommandFor(template: string, agentSessionId: string, flags: string[] = []): string {
     const id = `'${agentSessionId.replaceAll("'", `'\\''`)}'`;
     return template
         .split(' ')
         .flatMap((word) => (word === '{flags}' ? flags : [word.replace('{id}', id)]))
         .join(' ');
-};
+}

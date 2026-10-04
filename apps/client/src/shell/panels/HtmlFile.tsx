@@ -27,7 +27,8 @@ const ABORTED = -3;
 const SCROLL_MESSAGE = 'ruimte:preview-scroll:';
 const scrollPositions = new Map<string, { x: number; y: number }>();
 
-const scrollScript = (restore: { x: number; y: number } | undefined): string => `(() => {
+function scrollScript(restore: { x: number; y: number } | undefined): string {
+    return `(() => {
     ${restore ? `scrollTo(${restore.x}, ${restore.y});` : ''}
     if (window.__ruimteScroll) { return; }
     window.__ruimteScroll = true;
@@ -37,6 +38,7 @@ const scrollScript = (restore: { x: number; y: number } | undefined): string => 
         timer = setTimeout(() => console.debug(${JSON.stringify(SCROLL_MESSAGE)} + Math.round(scrollX) + ',' + Math.round(scrollY)), 50);
     }, { passive: true });
 })()`;
+}
 
 interface PreviewWebview extends FindablePage {
     src: string;
@@ -50,10 +52,12 @@ interface FailedLoad {
     isMainFrame: boolean;
 }
 
-const describeFailure = (description: string): string => description.replace(/^ERR_/, '').replaceAll('_', ' ').toLowerCase();
+function describeFailure(description: string): string {
+    return description.replace(/^ERR_/, '').replaceAll('_', ' ').toLowerCase();
+}
 
 /* Scripts cannot satisfy the parent app's CSP in `srcDoc`; the sandbox remains the security boundary if this cleanup misses malformed markup. */
-const staticPreviewDocument = (html: string): string => {
+function staticPreviewDocument(html: string): string {
     const parsed = new DOMParser().parseFromString(html, 'text/html');
     parsed.querySelectorAll('script, meta[http-equiv="refresh" i]').forEach((element) => element.remove());
     for (const element of parsed.querySelectorAll('*')) {
@@ -67,7 +71,7 @@ const staticPreviewDocument = (html: string): string => {
         }
     }
     return htmlPreviewDocument(`<!doctype html>${parsed.documentElement.outerHTML}`);
-};
+}
 
 /* Native clients keep the full file-backed webview; other clients preview the text they already received in an inert iframe. */
 export function HtmlFile({ path, name, read }: { path: string; name: string; read: FsReadText }) {

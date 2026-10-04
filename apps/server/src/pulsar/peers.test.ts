@@ -24,7 +24,9 @@ class FakePeer {
     }
 }
 
-const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
 describe('DirectPeers', () => {
     test('asks for the ICE servers on every offer, so an attempt gets the credentials that are current then', async () => {

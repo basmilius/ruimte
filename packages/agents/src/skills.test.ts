@@ -7,10 +7,10 @@ import { discoverSkills, parseFrontmatter, pluginSkillRoots } from './skills.ts'
 let home = '';
 let project = '';
 
-const writeSkill = async (dir: string, folder: string, body: string): Promise<void> => {
+async function writeSkill(dir: string, folder: string, body: string): Promise<void> {
     await mkdir(join(dir, folder), { recursive: true });
     await writeFile(join(dir, folder, 'SKILL.md'), body);
-};
+}
 
 beforeAll(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-skills-'));

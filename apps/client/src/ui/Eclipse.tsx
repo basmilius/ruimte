@@ -29,7 +29,9 @@ interface EclipseProps {
 }
 
 /* A part centered on the eclipse: a glow, an arc or an orbit, `size` pixels across. */
-const around = (center: number, size: number): CSSProperties => ({ top: center, width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` });
+function around(center: number, size: number): CSSProperties {
+    return { top: center, width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` };
+}
 
 /*
  * The sky of the welcome and of About: stars that twinkle, two glows that breathe, two arcs of

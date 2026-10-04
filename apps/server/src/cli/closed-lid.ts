@@ -18,10 +18,12 @@ export interface ClosedLidCliOptions {
 
 export const CLOSED_LID_USAGE = 'Usage: ruimte closed-lid install|remove';
 
-const asRoot = (script: string): string[] => [SUDO, '/bin/sh', '-c', script];
+function asRoot(script: string): string[] {
+    return [SUDO, '/bin/sh', '-c', script];
+}
 
 /* What the running daemon makes of the rule now, or where to turn the switch on once one runs. */
-const reportDaemon = async (options: ClosedLidCliOptions): Promise<void> => {
+async function reportDaemon(options: ClosedLidCliOptions): Promise<void> {
     const keepAwake = (await options.status())?.keepAwake;
     const lid = keepAwake ? lidLine(keepAwake) : null;
     if (lid === null) {
@@ -29,13 +31,13 @@ const reportDaemon = async (options: ClosedLidCliOptions): Promise<void> => {
         return;
     }
     options.out(`Ruimte on this Mac: ${lid}.`);
-};
+}
 
 /*
  * `ruimte closed-lid install|remove`: the sudoers rule behind keep awake with the lid closed, for a Mac
  * without the app. It prints exactly what it installs, and sudo asks for the password on this terminal.
  */
-export const runClosedLid = async (options: ClosedLidCliOptions): Promise<number> => {
+export async function runClosedLid(options: ClosedLidCliOptions): Promise<number> {
     const { out, err } = options;
     if (options.platform !== 'darwin') {
         err('Only a Mac can stay awake with its lid closed.');
@@ -87,4 +89,4 @@ export const runClosedLid = async (options: ClosedLidCliOptions): Promise<number
             err(CLOSED_LID_USAGE);
             return 1;
     }
-};
+}

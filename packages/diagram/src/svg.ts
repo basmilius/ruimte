@@ -29,15 +29,16 @@ export const DEFAULT_EDGE_TONE: DrawingColor = 'muted';
 // oxlint-disable-next-line no-control-regex
 const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
 
-const escapeXml = (value: string): string =>
-    value.replace(NOT_XML, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+function escapeXml(value: string): string {
+    return value.replace(NOT_XML, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
 
 /*
  * The whole diagram as one SVG string, for an export and for what the daemon hands an agent. The
  * view in the app draws the same layout and the same paths as elements of its own, so the two only
  * differ in where the colors come from.
  */
-export const toSvg = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'groups' | 'edges'>, options: DiagramSvgOptions = {}): string => {
+export function toSvg(document: Pick<DiagramDocument, 'meta' | 'nodes' | 'groups' | 'edges'>, options: DiagramSvgOptions = {}): string {
     const palette = options.palette ?? DEFAULT_PALETTE;
     const paper = options.paper ?? DEFAULT_PAPER;
     const margin = options.margin ?? DEFAULT_DIAGRAM_MARGIN;
@@ -98,4 +99,4 @@ export const toSvg = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'groups
     }
 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${x} ${y} ${w} ${h}" font-family="${font}">${parts.join('')}</svg>`;
-};
+}

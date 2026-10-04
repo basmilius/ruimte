@@ -70,12 +70,14 @@ const BUILD_OUTPUT = new Set([
     '.vs'
 ]);
 
-const isOsNoise = (name: string): boolean => {
+function isOsNoise(name: string): boolean {
     const lower = name.toLowerCase();
     return OS_NOISE.has(lower) || name === 'Icon\r' || OS_NOISE_PATTERNS.some((pattern) => pattern.test(lower));
-};
+}
 
-export const isBuildOutput = (name: string): boolean => BUILD_OUTPUT.has(name);
+export function isBuildOutput(name: string): boolean {
+    return BUILD_OUTPUT.has(name);
+}
 
 export interface ClassifyOptions {
     /* What `git check-ignore` said about this entry. */
@@ -89,7 +91,7 @@ export interface ClassifyOptions {
  * That is the one place the two readings differ, and it is the rare one: a project folder here
  * almost always has a checkout in it.
  */
-export const classifyEntry = (name: string, options: ClassifyOptions = {}): FsVisibility => {
+export function classifyEntry(name: string, options: ClassifyOptions = {}): FsVisibility {
     if (TOOL_STATE.has(name) || isOsNoise(name)) {
         return 'never';
     }
@@ -100,4 +102,4 @@ export const classifyEntry = (name: string, options: ClassifyOptions = {}): FsVi
         return 'shy';
     }
     return 'always';
-};
+}

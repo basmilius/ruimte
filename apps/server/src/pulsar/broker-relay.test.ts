@@ -33,10 +33,12 @@ class FakeSocket {
 }
 
 // Fake timers leave setImmediate alone, so this drains every pending promise without letting a timer run.
-const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function tick(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
 /* Steps the fake clock a millisecond at a time; the bound is fake time, well past the longest backoff with its jitter. */
-const waitUntil = async (ready: () => boolean): Promise<void> => {
+async function waitUntil(ready: () => boolean): Promise<void> {
     await tick();
     for (let elapsed = 0; !ready(); elapsed++) {
         if (elapsed > 100) {
@@ -45,7 +47,7 @@ const waitUntil = async (ready: () => boolean): Promise<void> => {
         jest.advanceTimersByTime(1);
         await tick();
     }
-};
+}
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -59,10 +61,10 @@ const quiet = { log: () => undefined, warn: () => undefined };
 
 let clock = 0;
 
-const setup = async (
+async function setup(
     admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused'>,
     log: Pick<Console, 'log' | 'warn'> = quiet
-) => {
+) {
     const machine = generateKeyPair();
     const paired = generateKeyPair();
     const sockets: FakeSocket[] = [];
@@ -108,16 +110,18 @@ const setup = async (
     expect(socket.sent[2]).toEqual({ type: 'ice', id: expect.stringMatching(/^ice-/) });
     socket.sent.splice(2, 1);
     return { relay, machine, paired, pairedKeys, sockets, socket, received, replies };
-};
+}
 
 const offer: SignalEnvelope = { connectionId: 'attempt-0001', signal: { kind: 'offer', sdp: 'v=0\r\na=fingerprint:sha-256 AA' } };
 
-const relayedFrom = (from: { publicKey: string; privateKey: string }, to: string, envelope: SignalEnvelope, signer = from) => ({
-    type: 'relayed',
-    from: from.publicKey,
-    envelope,
-    signature: signMessage(signer.privateKey, signalMessage(from.publicKey, to, envelope))
-});
+function relayedFrom(from: { publicKey: string; privateKey: string }, to: string, envelope: SignalEnvelope, signer = from) {
+    return {
+        type: 'relayed',
+        from: from.publicKey,
+        envelope,
+        signature: signMessage(signer.privateKey, signalMessage(from.publicKey, to, envelope))
+    };
+}
 
 const TURN = { urls: ['turn:turn.example.com:3478?transport=udp', 'turn:turn.example.com:3478?transport=tcp'], username: '1:m-x', credential: 'one' };
 

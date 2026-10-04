@@ -18,13 +18,13 @@ import { git, runGit, runGitBytes, streamGit, toplevel, GitError } from './run.t
 const MAX_SIDE_BYTES = 1024 * 1024;
 
 /* The files git left unmerged in a checkout, one per path. */
-export const conflictedFiles = async (cwd: string): Promise<string[]> => {
+export async function conflictedFiles(cwd: string): Promise<string[]> {
     const output = await git(['diff', '--name-only', '--diff-filter=U', '-z'], cwd);
     return output === null ? [] : [...new Set(output.split('\0').filter((path) => path !== ''))];
-};
+}
 
 /* Where git keeps a file of its own for this checkout, such as MERGE_HEAD, or null when it has none. */
-export const gitPath = async (cwd: string, name: string): Promise<string | null> => {
+export async function gitPath(cwd: string, name: string): Promise<string | null> {
     const found = (await git(['rev-parse', '--git-path', name], cwd))?.trim();
     if (found === undefined || found === '') {
         return null;
@@ -34,26 +34,31 @@ export const gitPath = async (cwd: string, name: string): Promise<string | null>
         () => path,
         () => null
     );
-};
+}
 
-export const gitPathExists = async (cwd: string, name: string): Promise<boolean> => (await gitPath(cwd, name)) !== null;
+export async function gitPathExists(cwd: string, name: string): Promise<boolean> {
+    return (await gitPath(cwd, name)) !== null;
+}
 
-const readGitFile = async (cwd: string, name: string): Promise<string | null> => {
+async function readGitFile(cwd: string, name: string): Promise<string | null> {
     const path = await gitPath(cwd, name);
     return path === null ? null : await readFile(path, 'utf8').catch(() => null);
-};
+}
 
-export const hasStaged = async (cwd: string): Promise<boolean> => (await runGit(['diff', '--cached', '--quiet'], cwd)).code === 1;
+export async function hasStaged(cwd: string): Promise<boolean> {
+    return (await runGit(['diff', '--cached', '--quiet'], cwd)).code === 1;
+}
 
 // SQUASH_MSG lingers after a commit; only unfinished index work makes it an operation.
-export const squashWaits = async (cwd: string): Promise<boolean> =>
-    (await gitPathExists(cwd, 'SQUASH_MSG')) && ((await conflictedFiles(cwd)).length > 0 || (await hasStaged(cwd)));
+export async function squashWaits(cwd: string): Promise<boolean> {
+    return (await gitPathExists(cwd, 'SQUASH_MSG')) && ((await conflictedFiles(cwd)).length > 0 || (await hasStaged(cwd)));
+}
 
 /*
  * Which operation stopped halfway in this checkout. A rebase writes a directory rather than a file,
  * and which of the two it writes depends on how it was started, so both are asked for.
  */
-export const operationOf = async (cwd: string): Promise<GitOperation | null> => {
+export async function operationOf(cwd: string): Promise<GitOperation | null> {
     if (await gitPathExists(cwd, 'MERGE_HEAD')) {
         return 'merge';
     }
@@ -70,18 +75,20 @@ export const operationOf = async (cwd: string): Promise<GitOperation | null> => 
         return 'merge';
     }
     return null;
-};
+}
 
 /* A name a person recognizes for a commit: the ref that points at it, else its short hash. */
-const nameOf = async (cwd: string, commit: string): Promise<string> => {
+async function nameOf(cwd: string, commit: string): Promise<string> {
     const named = (await git(['name-rev', '--name-only', '--exclude=tags/*', commit], cwd))?.trim();
     if (named !== undefined && named !== '' && named !== 'undefined') {
         return named.replace(/^remotes\//, '').replace(/[~^].*$/, '');
     }
     return (await git(['rev-parse', '--short', commit], cwd))?.trim() || commit;
-};
+}
 
-const firstLine = (text: string | null): string => text?.split('\n')[0]?.trim() ?? '';
+function firstLine(text: string | null): string {
+    return text?.split('\n')[0]?.trim() ?? '';
+}
 
 /*
  * What to call the two sides of this operation. A merge takes what is on the branch against what is
@@ -89,7 +96,7 @@ const firstLine = (text: string | null): string => text?.split('\n')[0]?.trim() 
  * work on the side git calls theirs. Saying "ours" and "theirs" without that would have a person
  * pick the wrong half of their own work.
  */
-const sidesOf = async (cwd: string, operation: GitOperation | null): Promise<{ ours: string; theirs: string }> => {
+async function sidesOf(cwd: string, operation: GitOperation | null): Promise<{ ours: string; theirs: string }> {
     const branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd))?.trim() || 'HEAD';
     if (operation === 'rebase') {
         const onto = firstLine(await readGitFile(cwd, 'rebase-merge/onto'));
@@ -110,7 +117,7 @@ const sidesOf = async (cwd: string, operation: GitOperation | null): Promise<{ o
         return { ours: branch, theirs: subject === '' ? 'incoming' : subject };
     }
     return { ours: branch, theirs: 'incoming' };
-};
+}
 
 interface Stage {
     mode: string;
@@ -122,7 +129,7 @@ interface Stage {
  * and 3 is theirs. A side that deleted the file has no stage at all, which is what tells a delete
  * against a change apart from a change against a change.
  */
-const stagesOf = async (root: string, path?: string): Promise<Map<string, Map<number, Stage>>> => {
+async function stagesOf(root: string, path?: string): Promise<Map<string, Map<number, Stage>>> {
     const output = await git(['ls-files', '-u', '-z', ...(path === undefined ? [] : ['--', path])], root);
     const files = new Map<string, Map<number, Stage>>();
     for (const record of (output ?? '').split('\0')) {
@@ -139,9 +146,9 @@ const stagesOf = async (root: string, path?: string): Promise<Map<string, Map<nu
         files.set(name, entry);
     }
     return files;
-};
+}
 
-const kindOf = (stages: Map<number, Stage>, binary: boolean): GitConflictKind => {
+function kindOf(stages: Map<number, Stage>, binary: boolean): GitConflictKind {
     if ([...stages.values()].some((stage) => stage.mode === '160000')) {
         return 'submodule';
     }
@@ -152,11 +159,11 @@ const kindOf = (stages: Map<number, Stage>, binary: boolean): GitConflictKind =>
         return 'deleted-by-them';
     }
     return binary ? 'binary' : 'text';
-};
+}
 
 /* Everything a checkout waiting halfway holds: what stopped, what the two sides are called, and
    every file left unmerged with the kind of decision it takes. */
-export const readConflicts = async (cwd: string): Promise<GitConflictsResult> => {
+export async function readConflicts(cwd: string): Promise<GitConflictsResult> {
     const root = await toplevel(cwd);
     const operation = await operationOf(root);
     const [sides, stages, numstat] = await Promise.all([sidesOf(root, operation), stagesOf(root), git(['diff', '--numstat', '-z', '--diff-filter=U'], root)]);
@@ -169,22 +176,22 @@ export const readConflicts = async (cwd: string): Promise<GitConflictsResult> =>
         .map(([path, entry]) => ({ path, kind: kindOf(entry, binary.has(path)) }))
         .sort((left, right) => left.path.localeCompare(right.path));
     return { operation, ours: sides.ours, theirs: sides.theirs, files };
-};
+}
 
 /* Written back as the same bytes: a file in another encoding is not text to merge, and a BOM stays in the text. */
 const UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
-const decoded = (bytes: Uint8Array): string | null => {
+function decoded(bytes: Uint8Array): string | null {
     try {
         return UTF8.decode(bytes);
     } catch {
         return null;
     }
-};
+}
 
 /* One side out of the index, or null when that side has none. Binary and oversized sides read null
    as well: what comes back here is only ever text a person could merge by hand. */
-const sideText = async (root: string, stage: Stage | undefined): Promise<{ text: string | null; omitted: 'binary' | 'too-large' | null }> => {
+async function sideText(root: string, stage: Stage | undefined): Promise<{ text: string | null; omitted: 'binary' | 'too-large' | null }> {
     if (stage === undefined) {
         return { text: null, omitted: null };
     }
@@ -198,18 +205,20 @@ const sideText = async (root: string, stage: Stage | undefined): Promise<{ text:
     }
     const text = decoded(blob.stdout);
     return text === null || text.includes('\0') ? { text: null, omitted: 'binary' } : { text, omitted: null };
-};
+}
 
-const digest = (bytes: Uint8Array): string => new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+function digest(bytes: Uint8Array): string {
+    return new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+}
 
 /* The digest of what stands on disk right now, and the empty string for a file that is not there. */
-export const workingDigest = async (root: string, path: string): Promise<string> => {
+export async function workingDigest(root: string, path: string): Promise<string> {
     const bytes = await readFile(join(root, path)).catch(() => null);
     return bytes === null ? '' : digest(bytes);
-};
+}
 
 /* The three versions of one unmerged file, with the digest a resolution is held against. */
-export const readConflict = async (cwd: string, path: string): Promise<GitConflictResult> => {
+export async function readConflict(cwd: string, path: string): Promise<GitConflictResult> {
     const root = await toplevel(cwd);
     const stages = (await stagesOf(root, path)).get(path);
     if (stages === undefined) {
@@ -227,7 +236,7 @@ export const readConflict = async (cwd: string, path: string): Promise<GitConfli
         hash: await workingDigest(root, path),
         ...(omitted === null ? {} : { omitted })
     };
-};
+}
 
 /*
  * A file settled: the merged text written as it stands, or one side taken whole. A write says what
@@ -236,7 +245,7 @@ export const readConflict = async (cwd: string, path: string): Promise<GitConfli
  * iPhone does not. Staging is part of the same step, since git reads an unmerged file as resolved
  * only once it is in the index.
  */
-export const resolveConflict = async (payload: GitResolvePayload): Promise<number> => {
+export async function resolveConflict(payload: GitResolvePayload): Promise<number> {
     const root = await toplevel(payload.cwd);
     const { path } = payload;
     if ((await stagesOf(root, path)).get(path) === undefined) {
@@ -268,7 +277,7 @@ export const resolveConflict = async (payload: GitResolvePayload): Promise<numbe
         throw new GitError('git-failed', staged.stderr.trim() || `git add ${path} failed`);
     }
     return (await conflictedFiles(root)).length;
-};
+}
 
 const CONTINUE: Record<GitOperation, string[]> = {
     merge: ['commit', '--no-edit'],
@@ -289,7 +298,7 @@ const ABORT: Record<GitOperation, string[]> = {
  * writes, so a squash goes back with `reset --merge`, which keeps what the person had changed and
  * not added; the message it prepared goes with it, or it would open as the draft of their next commit.
  */
-export const abortOperation = async (cwd: string): Promise<{ operation: GitOperation; output: string }> => {
+export async function abortOperation(cwd: string): Promise<{ operation: GitOperation; output: string }> {
     const root = await toplevel(cwd);
     const operation = await operationOf(root);
     if (operation === null) {
@@ -307,7 +316,7 @@ export const abortOperation = async (cwd: string): Promise<{ operation: GitOpera
         }
     }
     return { operation, output: `${result.stdout}${result.stderr}`.trim() };
-};
+}
 
 const PHASE: Record<GitOperation, GitActionPhase> = {
     merge: 'merge',
@@ -320,7 +329,7 @@ const PHASE: Record<GitOperation, GitActionPhase> = {
  * Finishing the operation that waits, or taking it back. Nothing here opens an editor: a message git
  * would otherwise ask about is the one it already wrote, and a daemon has no terminal to ask in.
  */
-export const runOperation = async (cwd: string, action: 'continue' | 'abort', actionId: string, sink: ProgressSink): Promise<GitActionResult> => {
+export async function runOperation(cwd: string, action: 'continue' | 'abort', actionId: string, sink: ProgressSink): Promise<GitActionResult> {
     const root = await toplevel(cwd);
     const operation = await operationOf(root);
     if (operation === null) {
@@ -353,4 +362,4 @@ export const runOperation = async (cwd: string, action: 'continue' | 'abort', ac
     const summary = conflicts.length > 0 ? `${conflicts.length} file${conflicts.length === 1 ? '' : 's'} conflict.` : `Finished the ${operation}.`;
     sink('done', summary);
     return { actionId, summary, output, ...(conflicts.length > 0 ? { conflicts } : {}) };
-};
+}

@@ -25,23 +25,26 @@ let turnSent: (() => void) | null = null;
 let modelPage: ((params: Record<string, unknown>) => unknown) | null;
 
 const png = { name: 'shot.png', mime: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=' };
-const turnInputs = () => requests.filter((request) => request.method === 'turn/start').map((request) => request.params.input as Array<Record<string, unknown>>);
+function turnInputs() {
+    return requests.filter((request) => request.method === 'turn/start').map((request) => request.params.input as Array<Record<string, unknown>>);
+}
 
 // The device of the session this line was written for; the Claude test asserts against the same call.
 const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 18 Pro Max' }];
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-const makeManager = (extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) =>
-    new ChatManager({ providers, store, attachments, spawn: codex.spawn, env: { PATH: process.env.PATH, HOME: home }, ...extra });
+function makeManager(extra: Partial<ConstructorParameters<typeof ChatManager>[0]> = {}) {
+    return new ChatManager({ providers, store, attachments, spawn: codex.spawn, env: { PATH: process.env.PATH, HOME: home }, ...extra });
+}
 
 // A chat's CLI outlives a shutdown; only a dispose ends it.
-const retire = async (target: ChatManager): Promise<void> => {
+async function retire(target: ChatManager): Promise<void> {
     await target.shutdown();
     for (const info of target.list()) {
         target.get(info.chatId)?.dispose();
     }
-};
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-codex-'));
@@ -79,15 +82,19 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const idle = () => recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
+function idle() {
+    return recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
+}
 
-const needsYou = () => recorder.info?.status === 'needs-you';
+function needsYou() {
+    return recorder.info?.status === 'needs-you';
+}
 
-const open = async (chatId: string, extra: Record<string, unknown> = {}): Promise<ChatInfo> => {
+async function open(chatId: string, extra: Record<string, unknown> = {}): Promise<ChatInfo> {
     const info = await manager.create({ chatId, provider: 'codex', cwd: home, ...extra });
     manager.attach(chatId, 'c1');
     return info;
-};
+}
 
 describe('ChatManager with Codex', () => {
     test.each(['Inspect these', ''])('sends actual image inputs with prompt %j and keeps originals in the thread', async (text) => {

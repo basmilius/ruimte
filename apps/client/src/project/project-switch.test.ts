@@ -3,7 +3,7 @@ import { TransportError } from '@/transport/transport';
 import { ProjectSwitch, REVEAL_DELAY_MS, type SwitchClock, type SwitchContext, type SwitchRun, type SwitchTarget } from './project-switch';
 
 /* A clock that only moves when a test says so. */
-const fakeClock = (): SwitchClock & { advance(ms: number): void } => {
+function fakeClock(): SwitchClock & { advance(ms: number): void } {
     let now = 0;
     let timers: { at: number; run: () => void }[] = [];
     return {
@@ -23,10 +23,10 @@ const fakeClock = (): SwitchClock & { advance(ms: number): void } => {
             }
         }
     };
-};
+}
 
 /* A run whose steps wait on the test: `connect` ends the machine step, `open` the project step. */
-const controlledRun = () => {
+function controlledRun() {
     const log: string[] = [];
     let connected!: (failure?: string) => void;
     let opened!: (failure?: string) => void;
@@ -49,16 +49,16 @@ const controlledRun = () => {
         }
     };
     return { run, log, connect: (failure?: string) => connected(failure), open: (failure?: string) => opened(failure) };
-};
+}
 
 const target: SwitchTarget = { endpointId: 'studio', summary: null, folder: null, name: null };
 
 /* Lets the awaits between steps run. */
-const flush = async (): Promise<void> => {
+async function flush(): Promise<void> {
     for (let i = 0; i < 5; i += 1) {
         await Promise.resolve();
     }
-};
+}
 
 describe('switching to a project', () => {
     test('starts idle', () => {

@@ -53,6 +53,10 @@ export interface TaskOutbox {
     wake(target: string): void;
 }
 
-export const isBackgroundLimit = (entry: AnyOutboxEntry): entry is BackgroundLimitEntry => entry.kind === 'background-limit';
+export function isBackgroundLimit(entry: AnyOutboxEntry): entry is BackgroundLimitEntry {
+    return entry.kind === 'background-limit';
+}
 
-export const isGiveTask = (entry: AnyOutboxEntry): entry is GiveTaskEntry => entry.kind === 'give-task';
+export function isGiveTask(entry: AnyOutboxEntry): entry is GiveTaskEntry {
+    return entry.kind === 'give-task';
+}

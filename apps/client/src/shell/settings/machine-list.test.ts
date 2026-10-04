@@ -5,37 +5,43 @@ import { currentPick, mergeMachines, nameOf, pickForTarget, reachLabel } from '.
 
 const KEY = 'A'.repeat(43);
 
-const local = (daemonId: string | null): Endpoint => ({
-    id: LOCAL_ENDPOINT_ID,
-    label: 'This MacBook Pro',
-    httpBaseUrl: 'http://127.0.0.1:4210',
-    wsBaseUrl: 'ws://127.0.0.1:4210',
-    reachability: 'loopback',
-    daemonId,
-    daemonPublicKey: null
-});
+function local(daemonId: string | null): Endpoint {
+    return {
+        id: LOCAL_ENDPOINT_ID,
+        label: 'This MacBook Pro',
+        httpBaseUrl: 'http://127.0.0.1:4210',
+        wsBaseUrl: 'ws://127.0.0.1:4210',
+        reachability: 'loopback',
+        daemonId,
+        daemonPublicKey: null
+    };
+}
 
-const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id,
-    label: `Row ${id}`,
-    httpBaseUrl: '',
-    wsBaseUrl: '',
-    reachability: 'public',
-    daemonId: id,
-    daemonPublicKey: KEY,
-    pairedBy: 'statement',
-    ...overrides
-});
+function row(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: `Row ${id}`,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        reachability: 'public',
+        daemonId: id,
+        daemonPublicKey: KEY,
+        pairedBy: 'statement',
+        ...overrides
+    };
+}
 
-const machine = (id: string, overrides: Partial<Machine> = {}): Machine => ({
-    id,
-    name: `Account ${id}`,
-    icon: null,
-    publicKey: KEY,
-    brokerUrl: 'wss://broker.example.com',
-    lastSeenAt: null,
-    ...overrides
-});
+function machine(id: string, overrides: Partial<Machine> = {}): Machine {
+    return {
+        id,
+        name: `Account ${id}`,
+        icon: null,
+        publicKey: KEY,
+        brokerUrl: 'wss://broker.example.com',
+        lastSeenAt: null,
+        ...overrides
+    };
+}
 
 describe('mergeMachines', () => {
     test('signed out, the list is this client rows with the local one first', () => {

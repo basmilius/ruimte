@@ -38,10 +38,12 @@ export const useComputer = create<ComputerStore>((set, get) => ({
     }
 }));
 
-export const computerApprovalsOf = (endpointId: string): readonly ComputerApproval[] => useComputer.getState().approvals[endpointId] ?? NONE;
+export function computerApprovalsOf(endpointId: string): readonly ComputerApproval[] {
+    return useComputer.getState().approvals[endpointId] ?? NONE;
+}
 
 /* The cards of one chat or terminal, oldest first, which is the order the machine sends them in. */
-export const useNodeComputerApprovals = (endpointId: string, nodeId: string): readonly ComputerApproval[] => {
+export function useNodeComputerApprovals(endpointId: string, nodeId: string): readonly ComputerApproval[] {
     const all = useComputer((s) => s.approvals[endpointId] ?? NONE);
     return useMemo(() => (all.some((approval) => approval.nodeId === nodeId) ? all.filter((approval) => approval.nodeId === nodeId) : NONE), [all, nodeId]);
-};
+}

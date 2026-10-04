@@ -37,7 +37,7 @@ export interface TaskCoordinatorDeps {
 }
 
 // A child's answer is its last word of the turn; the thinking and the tools before it are not the result.
-const answerOf = (items: readonly ChatItem[], turnId: string): string | null => {
+function answerOf(items: readonly ChatItem[], turnId: string): string | null {
     for (let i = items.length - 1; i >= 0; i--) {
         const item = items[i]!;
         if (item.kind === 'assistant' && item.turnId === turnId && !item.parentToolUseId && item.text.trim() !== '') {
@@ -45,9 +45,9 @@ const answerOf = (items: readonly ChatItem[], turnId: string): string | null => 
         }
     }
     return null;
-};
+}
 
-const lastNote = (items: readonly ChatItem[], turnId: string, levels: readonly string[]): string | null => {
+function lastNote(items: readonly ChatItem[], turnId: string, levels: readonly string[]): string | null {
     for (let i = items.length - 1; i >= 0; i--) {
         const item = items[i]!;
         if (item.kind === 'note' && item.turnId === turnId && levels.includes(item.level)) {
@@ -55,17 +55,22 @@ const lastNote = (items: readonly ChatItem[], turnId: string, levels: readonly s
         }
     }
     return null;
-};
+}
 
-const commandList = (commands: readonly string[]): string => commands.map((command) => `\`${command}\``).join(', ');
+function commandList(commands: readonly string[]): string {
+    return commands.map((command) => `\`${command}\``).join(', ');
+}
 
-const outlastedNote = (commands: readonly string[]): string =>
-    `The task settled after ${BACKGROUND_COMMAND_LIMIT_MS / 60_000} minutes while this still ran in the background: ${commandList(commands)}.`;
+function outlastedNote(commands: readonly string[]): string {
+    return `The task settled after ${BACKGROUND_COMMAND_LIMIT_MS / 60_000} minutes while this still ran in the background: ${commandList(commands)}.`;
+}
 
-const restartedNote = (commands: readonly string[]): string => `The machine restarted while this still ran in the background: ${commandList(commands)}.`;
+function restartedNote(commands: readonly string[]): string {
+    return `The machine restarted while this still ran in the background: ${commandList(commands)}.`;
+}
 
 /* What a settled turn of a child makes of its task. */
-export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at: number): { status: 'done' | 'failed'; result: TaskResult } => {
+export function resultOfTurn(turn: ChatTurnItem, items: readonly ChatItem[], at: number): { status: 'done' | 'failed'; result: TaskResult } {
     if (turn.state === 'done') {
         return { status: 'done', result: { text: answerOf(items, turn.id) ?? 'It ended its turn without an answer.', source: 'turn', at } };
     }
@@ -76,7 +81,7 @@ export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at:
         return { status: 'failed', result: { text, source: 'turn', at } };
     }
     return { status: 'failed', result: { text: lastNote(items, turn.id, ['error']) ?? 'Its turn ended in an error.', source: 'turn', at } };
-};
+}
 
 /*
  * Settles tasks from what children do and does nothing else: it writes the task store and owes wakes

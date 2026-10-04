@@ -11,26 +11,28 @@ let project: string;
 let outside: string;
 let worktreesRoot: string;
 
-const boundary = (worktrees: string[] = []): WriteBoundary => ({
-    folders: [project],
-    worktreesOf: async () => worktrees,
-    worktreesRoot
-});
+function boundary(worktrees: string[] = []): WriteBoundary {
+    return {
+        folders: [project],
+        worktreesOf: async () => worktrees,
+        worktreesRoot
+    };
+}
 
-const put = async (path: string, content: string | Buffer): Promise<{ path: string; mtime: number }> => {
+async function put(path: string, content: string | Buffer): Promise<{ path: string; mtime: number }> {
     await writeFile(path, content);
     return { path, mtime: Math.round((await stat(path)).mtimeMs) };
-};
+}
 
 /* The code a failed write carries, which is what the wire hands the client. */
-const codeOf = async (work: Promise<unknown>): Promise<string | undefined> => {
+async function codeOf(work: Promise<unknown>): Promise<string | undefined> {
     try {
         await work;
         return undefined;
     } catch (e) {
         return (e as { code?: string }).code;
     }
-};
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-fs-write-'));

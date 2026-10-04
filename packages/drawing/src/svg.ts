@@ -70,18 +70,21 @@ export const DEFAULT_EDGE: Record<DrawingColor, string> = {
 // oxlint-disable-next-line no-control-regex
 const NOT_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
 
-const escapeXml = (value: string): string =>
-    value.replace(NOT_XML, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+function escapeXml(value: string): string {
+    return value.replace(NOT_XML, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
 
-const round = (value: number): number => Math.round(value * 100) / 100;
+function round(value: number): number {
+    return Math.round(value * 100) / 100;
+}
 
-const transformOf = (element: DrawingElement): string => {
+function transformOf(element: DrawingElement): string {
     const center = centerOf(boundsOf(element));
     const turn = element.angle ? ` rotate(${round((element.angle * 180) / Math.PI)} ${round(center.x)} ${round(center.y)})` : '';
     return `translate(${round(element.x)} ${round(element.y)})${turn}`;
-};
+}
 
-const textSvg = (element: WrittenElement, options: SvgOptions): string => {
+function textSvg(element: WrittenElement, options: SvgOptions): string {
     const family = options.fonts?.[fontOf(element.font)] ?? DEFAULT_FONT_STACKS[fontOf(element.font)];
     const anchor = element.align === 'center' ? 'middle' : element.align === 'right' ? 'end' : 'start';
     const frame = writingFrameOf(element);
@@ -91,9 +94,9 @@ const textSvg = (element: WrittenElement, options: SvgOptions): string => {
         .map((line, index) => `<tspan x="${round(dx)}" y="${round(frame.y + (index + 0.8) * element.size * LINE_HEIGHT)}">${escapeXml(line)}</tspan>`)
         .join('');
     return `<text font-family="${escapeXml(family)}" font-size="${element.size}" fill="${options.palette[element.stroke]}" text-anchor="${anchor}">${lines}</text>`;
-};
+}
 
-const elementSvg = (element: DrawingElement, options: SvgOptions): string => {
+function elementSvg(element: DrawingElement, options: SvgOptions): string {
     const note = element.kind === 'note';
     const paper = options.paper ?? DEFAULT_PAPER;
     const edge = options.edge ?? DEFAULT_EDGE;
@@ -119,13 +122,13 @@ const elementSvg = (element: DrawingElement, options: SvgOptions): string => {
     // The paper is drawn first and the note's own words go on top of it.
     const written = note ? textSvg(element, options) : '';
     return `<g transform="${transformOf(element)}">${body}${written}</g>`;
-};
+}
 
 /*
  * The whole drawing as one SVG, in the colors of the theme it is exported from. Fonts are named,
  * never embedded: a file that opens outside the app falls back to a system face.
  */
-export const toSvg = (elements: readonly DrawingElement[], options: SvgOptions): string => {
+export function toSvg(elements: readonly DrawingElement[], options: SvgOptions): string {
     const margin = options.margin ?? DEFAULT_SVG_MARGIN;
     const bounds: Rect = boundsOfElements(elements) ?? { x: 0, y: 0, w: 1, h: 1 };
     const x = round(bounds.x - margin);
@@ -135,4 +138,4 @@ export const toSvg = (elements: readonly DrawingElement[], options: SvgOptions):
     const paper = options.background ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${options.background}"/>` : '';
     const body = elements.map((element) => elementSvg(element, options)).join('');
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${x} ${y} ${w} ${h}">${paper}${body}</svg>`;
-};
+}

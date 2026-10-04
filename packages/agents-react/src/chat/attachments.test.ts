@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { CHAT_ATTACHMENTS_MAX_BYTES, CHAT_ATTACHMENTS_MAX_COUNT } from '@ruimte/agent-contracts';
 import { checkAttachmentLimits, fileBadge, formatBytes, isImageAttachment, uploadBytes } from './attachments';
 
-const file = (name: string, mime: string, bytes: number) => ({ name, mime, bytes });
+function file(name: string, mime: string, bytes: number) {
+    return { name, mime, bytes };
+}
 
 describe('checkAttachmentLimits', () => {
     test('takes any file type now, so a PDF and a zip go through', () => {

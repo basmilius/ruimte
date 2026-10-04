@@ -2,20 +2,22 @@ import { describe, expect, test } from 'bun:test';
 import { groupsFor, indexTree, ownFamilyOf, ruimteTotals } from './tree.ts';
 import { identityOf, type ProcessRate, type RawProcess, type RawSample } from './sampler.ts';
 
-const proc = (pid: number, ppid: number, name: string, path: string | null = null, overrides: Partial<RawProcess> = {}): RawProcess => ({
-    pid,
-    ppid,
-    uid: 501,
-    startTime: pid * 1000,
-    name,
-    path,
-    readable: true,
-    cpuNs: 0,
-    memory: pid,
-    diskRead: 0,
-    diskWrite: 0,
-    ...overrides
-});
+function proc(pid: number, ppid: number, name: string, path: string | null = null, overrides: Partial<RawProcess> = {}): RawProcess {
+    return {
+        pid,
+        ppid,
+        uid: 501,
+        startTime: pid * 1000,
+        name,
+        path,
+        readable: true,
+        cpuNs: 0,
+        memory: pid,
+        diskRead: 0,
+        diskWrite: 0,
+        ...overrides
+    };
+}
 
 const TABLE: RawProcess[] = [
     proc(1, 0, 'launchd', '/sbin/launchd'),
@@ -48,8 +50,8 @@ const SAMPLE: RawSample = {
 
 const ROOTS = { daemonPid: 100, sessions: [{ id: 'term-1', pid: 200 }], chats: [{ id: 'chat-1', pid: 300 }] };
 
-const rates = (cpu: Record<number, number>): Map<string, ProcessRate> =>
-    new Map(
+function rates(cpu: Record<number, number>): Map<string, ProcessRate> {
+    return new Map(
         TABLE.map((process) => [
             identityOf(process.pid, process.startTime),
             {
@@ -61,6 +63,7 @@ const rates = (cpu: Record<number, number>): Map<string, ProcessRate> =>
             }
         ])
     );
+}
 
 describe('the families', () => {
     test('a native CLI names itself in its path, one on a runtime in its script', () => {

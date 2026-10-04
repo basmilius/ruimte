@@ -21,11 +21,11 @@ export interface ProofCredentials {
     label: string;
 }
 
-const hmac = async (secret: string, message: string): Promise<string> => {
+async function hmac(secret: string, message: string): Promise<string> {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
-};
+}
 
 /*
  * What this client answers a channel's challenge with. A row of the account first checks that the
@@ -33,7 +33,7 @@ const hmac = async (secret: string, message: string): Promise<string> => {
  * The row of this machine proves the local secret with an HMAC over the binding, so the secret never
  * crosses a channel it cannot check the other end of.
  */
-export const proveChallenge = async (credentials: ProofCredentials, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> => {
+export async function proveChallenge(credentials: ProofCredentials, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> {
     const { daemon } = challenge;
     const { pinned } = credentials;
     if (pinned !== null) {
@@ -58,10 +58,10 @@ export const proveChallenge = async (credentials: ProofCredentials, challenge: D
         };
     }
     throw new Error(i18next.t('machines:direct.needsPairedKey'));
-};
+}
 
 /* The proof for one row, with what this client holds for it right now. */
-export const directProof = async (endpointId: string, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> => {
+export async function directProof(endpointId: string, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> {
     const endpoint = endpointById(endpointId);
     if (!endpoint) {
         throw new Error(i18next.t('machines:link.notInList'));
@@ -72,4 +72,4 @@ export const directProof = async (endpointId: string, challenge: DirectChallenge
         challenge,
         binding
     );
-};
+}

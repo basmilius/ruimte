@@ -15,49 +15,59 @@ import {
 import type { ChatState } from '@ruimte/agents-react/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
-const pass = (input: Partial<AttentionPass>): AttentionPass => ({
-    working: new Set(),
-    previous: new Set(),
-    needsYou: new Set(),
-    seen: new Set(),
-    unseen: new Set(),
-    known: new Set(['local:a', 'local:b']),
-    ...input
-});
+function pass(input: Partial<AttentionPass>): AttentionPass {
+    return {
+        working: new Set(),
+        previous: new Set(),
+        needsYou: new Set(),
+        seen: new Set(),
+        unseen: new Set(),
+        known: new Set(['local:a', 'local:b']),
+        ...input
+    };
+}
 
-const agent = (status: AgentStatus, live = true): AgentInfo => ({
-    kind: 'claude',
-    agentSessionId: 'a1',
-    transcriptPath: null,
-    status,
-    live,
-    updatedAt: 0
-});
-
-const session = (agentInfo?: AgentInfo, attached = true): SessionState => ({ attached, agent: agentInfo });
-
-const chat = (status: AgentStatus): ChatState => ({
-    info: {
-        chatId: 'c1',
-        provider: 'claude',
-        cwd: '/',
-        agentSessionId: null,
-        model: null,
-        selection: { model: 'claude-sonnet-5', options: {} },
-        runtimeMode: 'full-access',
+function agent(status: AgentStatus, live = true): AgentInfo {
+    return {
+        kind: 'claude',
+        agentSessionId: 'a1',
+        transcriptPath: null,
         status,
-        running: true,
-        activeTurnId: null,
-        slashCommands: [],
-        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
-        createdAt: 0
-    },
-    items: {},
-    structure: {},
-    order: []
-});
+        live,
+        updatedAt: 0
+    };
+}
 
-const node = (id: string, size = 200): { id: string; x: number; y: number; w: number; h: number } => ({ id, x: 0, y: 0, w: size, h: size });
+function session(agentInfo?: AgentInfo, attached = true): SessionState {
+    return { attached, agent: agentInfo };
+}
+
+function chat(status: AgentStatus): ChatState {
+    return {
+        info: {
+            chatId: 'c1',
+            provider: 'claude',
+            cwd: '/',
+            agentSessionId: null,
+            model: null,
+            selection: { model: 'claude-sonnet-5', options: {} },
+            runtimeMode: 'full-access',
+            status,
+            running: true,
+            activeTurnId: null,
+            slashCommands: [],
+            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+            createdAt: 0
+        },
+        items: {},
+        structure: {},
+        order: []
+    };
+}
+
+function node(id: string, size = 200): { id: string; x: number; y: number; w: number; h: number } {
+    return { id, x: 0, y: 0, w: size, h: size };
+}
 
 describe('what a person can read on a canvas', () => {
     const canvas = { camera: { x: 0, y: 0, zoom: 1 }, viewport: { w: 1000, h: 800 }, nodes: [node('a'), { ...node('b'), x: 4000 }] };

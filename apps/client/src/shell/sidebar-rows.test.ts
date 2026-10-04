@@ -16,59 +16,74 @@ import {
     type SidebarView
 } from './sidebar-rows';
 
-const node = (id: string, status: AgentStatus | null = null): SidebarNode => ({ id, title: id, kind: 'terminal', provider: null, status, draft: false });
+function node(id: string, status: AgentStatus | null = null): SidebarNode {
+    return { id, title: id, kind: 'terminal', provider: null, status, draft: false };
+}
 
-const view = (id: string, nodes: SidebarNode[] = []): SidebarView => ({
-    id,
-    name: id,
-    kind: 'canvas',
-    icon: null,
-    provider: null,
-    path: null,
-    shared: false,
-    nodes,
-    self: null
-});
+function view(id: string, nodes: SidebarNode[] = []): SidebarView {
+    return {
+        id,
+        name: id,
+        kind: 'canvas',
+        icon: null,
+        provider: null,
+        path: null,
+        shared: false,
+        nodes,
+        self: null
+    };
+}
 
-const separator = (id: string): SidebarView => ({
-    id,
-    name: '',
-    kind: 'separator',
-    icon: null,
-    provider: null,
-    path: null,
-    shared: false,
-    nodes: [],
-    self: null
-});
+function separator(id: string): SidebarView {
+    return {
+        id,
+        name: '',
+        kind: 'separator',
+        icon: null,
+        provider: null,
+        path: null,
+        shared: false,
+        nodes: [],
+        self: null
+    };
+}
 
-const subheader = (id: string): SidebarView => ({ ...separator(id), kind: 'subheader', name: 'Agents' });
+function subheader(id: string): SidebarView {
+    return { ...separator(id), kind: 'subheader', name: 'Agents' };
+}
 
-const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', icon: null, provider: null, path: null, shared: false, nodes: [], self: null });
+function drawing(id: string): SidebarView {
+    return { id, name: id, kind: 'drawing', icon: null, provider: null, path: null, shared: false, nodes: [], self: null };
+}
 
-const standalone = (id: string, status: AgentStatus | null = null): SidebarView => ({
-    id,
-    icon: null,
-    name: id,
-    kind: 'chat',
-    provider: null,
-    path: null,
-    shared: false,
-    nodes: [],
-    self: { id, title: id, kind: 'chat', provider: null, status, draft: true }
-});
+function standalone(id: string, status: AgentStatus | null = null): SidebarView {
+    return {
+        id,
+        icon: null,
+        name: id,
+        kind: 'chat',
+        provider: null,
+        path: null,
+        shared: false,
+        nodes: [],
+        self: { id, title: id, kind: 'chat', provider: null, status, draft: true }
+    };
+}
 
 const backend = view('backend', [node('shell'), node('claude', 'needs-you'), node('docs', 'running')]);
 const frontend = view('frontend', [node('composer', 'idle')]);
 
-const project = (views: SidebarView[], activeViewId: string | null): SidebarProject => ({
-    views,
-    activeViewId,
-    openViewIds: activeViewId === null ? [] : [activeViewId]
-});
+function project(views: SidebarView[], activeViewId: string | null): SidebarProject {
+    return {
+        views,
+        activeViewId,
+        openViewIds: activeViewId === null ? [] : [activeViewId]
+    };
+}
 
-const build = (views: SidebarView[], activeViewId: string | null, expanded: string[]) =>
-    buildSidebar({ project: project(views, activeViewId), expandedIds: new Set(expanded) });
+function build(views: SidebarView[], activeViewId: string | null, expanded: string[]) {
+    return buildSidebar({ project: project(views, activeViewId), expandedIds: new Set(expanded) });
+}
 
 describe('buildSidebar', () => {
     test('the views come in project order, with the nodes of the canvas that is open under it', () => {
@@ -222,27 +237,29 @@ describe('what counts as a session', () => {
     });
 });
 
-const group = (endpointId: string, collapsed = false): SidebarGroup => ({
-    key: JSON.stringify([endpointId, 'project']),
-    endpointId,
-    summary: {
-        projectId: 'project',
-        name: endpointId,
-        color: '#123456',
-        folder: '/repo',
-        lastOpenedAt: 0,
-        closedAt: null,
-        available: true,
-        icon: { kind: 'initial', value: 'P' },
-        nameSource: 'chosen'
-    },
-    machineLabel: endpointId,
-    active: false,
-    collapsed,
-    state: 'ready',
-    expandedIds: new Set(['main']),
-    project: { activeViewId: null, openViewIds: [], views: [view('main', [node('same-node', 'needs-you')])] }
-});
+function group(endpointId: string, collapsed = false): SidebarGroup {
+    return {
+        key: JSON.stringify([endpointId, 'project']),
+        endpointId,
+        summary: {
+            projectId: 'project',
+            name: endpointId,
+            color: '#123456',
+            folder: '/repo',
+            lastOpenedAt: 0,
+            closedAt: null,
+            available: true,
+            icon: { kind: 'initial', value: 'P' },
+            nameSource: 'chosen'
+        },
+        machineLabel: endpointId,
+        active: false,
+        collapsed,
+        state: 'ready',
+        expandedIds: new Set(['main']),
+        project: { activeViewId: null, openViewIds: [], views: [view('main', [node('same-node', 'needs-you')])] }
+    };
+}
 
 describe('combined sidebar', () => {
     test('collapsed projects still contribute to the single attention section', () => {

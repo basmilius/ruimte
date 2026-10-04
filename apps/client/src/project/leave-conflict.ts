@@ -9,7 +9,7 @@ export const useLeaveConflict = create<{ answer: ((leave: boolean) => void) | nu
  * open nothing saves, so leaving then drops every edit made since. Without a conflict the answer is
  * yes at once.
  */
-export const confirmLeavingConflict = (): Promise<boolean> => {
+export function confirmLeavingConflict(): Promise<boolean> {
     if (useProject.getState().conflict === null) {
         return Promise.resolve(true);
     }
@@ -24,4 +24,4 @@ export const confirmLeavingConflict = (): Promise<boolean> => {
         };
         useLeaveConflict.setState({ answer });
     });
-};
+}

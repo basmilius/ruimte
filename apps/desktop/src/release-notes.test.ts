@@ -22,15 +22,17 @@ const BODY_0_0_8 = `## 🚀 Features
 **Full Changelog:** https://github.com/basmilius/ruimte/compare/v0.0.7...v0.0.8
 `;
 
-const release = (tag: string, patch: Record<string, unknown> = {}) => ({
-    tag_name: tag,
-    draft: false,
-    prerelease: false,
-    published_at: '2026-09-14T07:52:45Z',
-    html_url: `https://github.com/basmilius/ruimte/releases/tag/${tag}`,
-    body: null,
-    ...patch
-});
+function release(tag: string, patch: Record<string, unknown> = {}) {
+    return {
+        tag_name: tag,
+        draft: false,
+        prerelease: false,
+        published_at: '2026-09-14T07:52:45Z',
+        html_url: `https://github.com/basmilius/ruimte/releases/tag/${tag}`,
+        body: null,
+        ...patch
+    };
+}
 
 describe('releasesFrom', () => {
     test('takes the Full Changelog line off a real body and keeps its link', () => {

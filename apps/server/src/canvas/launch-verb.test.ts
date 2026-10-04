@@ -9,50 +9,56 @@ import { verbNamed } from './verbs.ts';
 
 const noun = verbNamed('launches') as Noun;
 
-const status = (launchId: string, overrides: Partial<LaunchStatus> = {}): LaunchStatus => ({
-    projectId: 'p1',
-    launchId,
-    sessionId: `launch:p1:${launchId}`,
-    kind: 'service',
-    state: 'running',
-    exitCode: null,
-    startedAt: 0,
-    endedAt: null,
-    port: 5173,
-    url: 'http://localhost:5173',
-    stopped: false,
-    ...overrides
-});
+function status(launchId: string, overrides: Partial<LaunchStatus> = {}): LaunchStatus {
+    return {
+        projectId: 'p1',
+        launchId,
+        sessionId: `launch:p1:${launchId}`,
+        kind: 'service',
+        state: 'running',
+        exitCode: null,
+        startedAt: 0,
+        endedAt: null,
+        port: 5173,
+        url: 'http://localhost:5173',
+        stopped: false,
+        ...overrides
+    };
+}
 
-const reading = (launchId: string, overrides: Partial<LaunchReading> = {}): LaunchReading => ({
-    launchId,
-    name: launchId,
-    kind: 'service',
-    approved: true,
-    url: null,
-    port: null,
-    members: [],
-    status: null,
-    ...overrides
-});
+function reading(launchId: string, overrides: Partial<LaunchReading> = {}): LaunchReading {
+    return {
+        launchId,
+        name: launchId,
+        kind: 'service',
+        approved: true,
+        url: null,
+        port: null,
+        members: [],
+        status: null,
+        ...overrides
+    };
+}
 
 let launches: LaunchReading[];
 let startResult: LaunchStartResult;
 let calls: string[];
 let host: CanvasHost;
 
-const launchHost = (): LaunchHost => ({
-    list: async () => launches,
-    text: async (_projectId, launchId) => (launchId === 'dev' ? 'one\ntwo\nthree' : null),
-    start: async (_projectId, launchId, restart) => {
-        calls.push(`${restart ? 'restart' : 'start'} ${launchId}`);
-        return startResult;
-    },
-    stop: async (_projectId, launchId) => {
-        calls.push(`stop ${launchId}`);
-        return launchId === 'dev' ? 1 : 0;
-    }
-});
+function launchHost(): LaunchHost {
+    return {
+        list: async () => launches,
+        text: async (_projectId, launchId) => (launchId === 'dev' ? 'one\ntwo\nthree' : null),
+        start: async (_projectId, launchId, restart) => {
+            calls.push(`${restart ? 'restart' : 'start'} ${launchId}`);
+            return startResult;
+        },
+        stop: async (_projectId, launchId) => {
+            calls.push(`stop ${launchId}`);
+            return launchId === 'dev' ? 1 : 0;
+        }
+    };
+}
 
 beforeEach(() => {
     launches = [
@@ -68,7 +74,7 @@ beforeEach(() => {
     } as unknown as CanvasHost;
 });
 
-const run = async (argv: string[]): Promise<string[]> => {
+async function run(argv: string[]): Promise<string[]> {
     try {
         return await noun.run(argv, { caller: 'chat-1', host });
     } catch (error) {
@@ -77,7 +83,7 @@ const run = async (argv: string[]): Promise<string[]> => {
         }
         throw error;
     }
-};
+}
 
 describe('ruimte-context launches', () => {
     test('lists every launch with its state and whether a person approved it', async () => {

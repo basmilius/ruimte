@@ -6,23 +6,31 @@
  */
 
 /* A field that goes into a tab-separated line; a tab or a newline in a title would split the row. */
-export const field = (value: string): string => value.replace(/[\t\r\n]+/g, ' ');
+export function field(value: string): string {
+    return value.replace(/[\t\r\n]+/g, ' ');
+}
 
-const row = (line: string): string => line.replace(/[\r\n]+/g, ' ');
+function row(line: string): string {
+    return line.replace(/[\r\n]+/g, ' ');
+}
 
-const rows = (code: string, message: string, lines: readonly string[]): string[] => [`${field(code)}\t${field(message)}`, ...lines.map(row)];
+function rows(code: string, message: string, lines: readonly string[]): string[] {
+    return [`${field(code)}\t${field(message)}`, ...lines.map(row)];
+}
 
 /* What a verb is refused with, whole: the `refused` row and what to do instead under it. */
-export const refusalBody = (code: string, message: string, lines: readonly string[] = []): string => {
+export function refusalBody(code: string, message: string, lines: readonly string[] = []): string {
     const [first, ...rest] = rows(code, message, lines);
     return [`refused\t${first}`, ...rest].join('\n');
-};
+}
 
 /*
  * The same without the word that names it, which is what Ruimte's daemon answers a refused read with:
  * `ruimte-context` puts the prefix on, so a CLI of an older build still prints one refusal.
  */
-export const refusalRows = (code: string, message: string, lines: readonly string[] = []): string => rows(code, message, lines).join('\n');
+export function refusalRows(code: string, message: string, lines: readonly string[] = []): string {
+    return rows(code, message, lines).join('\n');
+}
 
 export interface ParsedRefusal {
     code: string;
@@ -31,7 +39,7 @@ export interface ParsedRefusal {
 }
 
 /* Reads either form back. Null when the text is no refusal at all, which is not the same as one without advice. */
-export const parseRefusalBody = (text: string): ParsedRefusal | null => {
+export function parseRefusalBody(text: string): ParsedRefusal | null {
     const [first = '', ...lines] = text.split('\n').filter((line) => line.trim() !== '');
     const parts = first.split('\t');
     const [code, message] = parts[0] === 'refused' ? parts.slice(1) : parts;
@@ -39,4 +47,4 @@ export const parseRefusalBody = (text: string): ParsedRefusal | null => {
         return null;
     }
     return { code, message, lines };
-};
+}

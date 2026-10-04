@@ -5,7 +5,9 @@ import { join } from 'node:path';
 import type { ChatEvent } from '@ruimte/agent-contracts';
 import { ChatLog, parseLog } from './chat-log.ts';
 
-const delta = (text: string): ChatEvent => ({ type: 'delta', itemId: 'a1', text });
+function delta(text: string): ChatEvent {
+    return { type: 'delta', itemId: 'a1', text };
+}
 
 let dir: string;
 let path: string;

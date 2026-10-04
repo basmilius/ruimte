@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { nodesOverBrowsers, stackingOrder, type StackedNode } from '@/canvas/stacking';
 
-const at = (kind: StackedNode['kind'], x: number, y: number): StackedNode => ({ kind, x, y, w: 100, h: 100 });
+function at(kind: StackedNode['kind'], x: number, y: number): StackedNode {
+    return { kind, x, y, w: 100, h: 100 };
+}
 
 describe('stackingOrder', () => {
     test('counts from one in the order given', () => {

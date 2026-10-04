@@ -16,7 +16,7 @@ export interface StatusOptions {
  * `ruimte status`: how clients reach the daemon running on this machine, asked on the local secret of
  * its home. Exits 0 when it answers and 1 when it does not, so a script can wait on it.
  */
-export const runStatus = async (options: StatusOptions): Promise<number> => {
+export async function runStatus(options: StatusOptions): Promise<number> {
     const out = options.out ?? ((line: string) => console.log(line));
     const err = options.err ?? ((line: string) => console.error(line));
     const secret = await (options.readSecret ?? readLocalSecret)(options.home).catch(() => null);
@@ -41,4 +41,4 @@ export const runStatus = async (options: StatusOptions): Promise<number> => {
     }
     statusLines(answer.status, options.port).forEach(out);
     return 0;
-};
+}

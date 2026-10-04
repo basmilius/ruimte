@@ -48,14 +48,16 @@ interface LiteLlmEntry {
     mode?: unknown;
 }
 
-const rate = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null);
+function rate(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
 
 /*
  * The LiteLLM table as this app needs it: the Anthropic and OpenAI chat and responses models, keyed
  * by the lowercase name and by the bare name behind a provider prefix. A model priced on one side
  * only is dropped, because half a price reads as a cheap model rather than an unknown one.
  */
-export const parsePriceTable = (document: unknown): PriceTable => {
+export function parsePriceTable(document: unknown): PriceTable {
     const table: PriceTable = new Map();
     if (typeof document !== 'object' || document === null) {
         return table;
@@ -90,20 +92,20 @@ export const parsePriceTable = (document: unknown): PriceTable => {
         }
     }
     return table;
-};
+}
 
 /* `claude-opus-4-5-20251101` is the same model as `claude-opus-4-5`, dated. */
-const withoutDate = (key: string): string | null => {
+function withoutDate(key: string): string | null {
     const match = /^(.*)-\d{6,8}$/.exec(key);
     return match === null ? null : match[1]!;
-};
+}
 
 /*
  * Exact first, then the same name without its date, then the longest family the table knows. A name
  * nobody prices is left unpriced rather than guessed at: `$0.00` for a model that costs money is a
  * worse answer than a question mark.
  */
-export const lookupPrice = (table: PriceTable, model: string): PriceLookup => {
+export function lookupPrice(table: PriceTable, model: string): PriceLookup {
     const key = model.trim().toLowerCase().split('[')[0]!;
     const bare = key.slice(key.lastIndexOf('/') + 1);
     if (bare === '' || AMBIGUOUS.has(bare)) {
@@ -126,19 +128,24 @@ export const lookupPrice = (table: PriceTable, model: string): PriceLookup => {
         }
     }
     return { price: null, basis: 'unknown', pricedAs: null };
-};
+}
 
 /* Reasoning tokens are a part of the output and are never charged a second time. */
-export const costOf = (totals: UsageTotals, price: ModelPrice): number =>
-    totals.input * price.input +
-    totals.cacheRead * price.cacheRead +
-    Math.max(0, totals.cacheWrite - totals.cacheWrite1h) * price.cacheWrite +
-    totals.cacheWrite1h * price.cacheWrite1h +
-    totals.output * price.output;
+export function costOf(totals: UsageTotals, price: ModelPrice): number {
+    return (
+        totals.input * price.input +
+        totals.cacheRead * price.cacheRead +
+        Math.max(0, totals.cacheWrite - totals.cacheWrite1h) * price.cacheWrite +
+        totals.cacheWrite1h * price.cacheWrite1h +
+        totals.output * price.output
+    );
+}
 
 /* What reading from the cache saved against sending the same tokens again. The premium a write
    costs is not taken off: it was paid for the turn that wrote, not for the ones that read. */
-export const cacheSavingsOf = (totals: UsageTotals, price: ModelPrice): number => totals.cacheRead * (price.input - price.cacheRead);
+export function cacheSavingsOf(totals: UsageTotals, price: ModelPrice): number {
+    return totals.cacheRead * (price.input - price.cacheRead);
+}
 
 interface Snapshot {
     fetchedAt: number;

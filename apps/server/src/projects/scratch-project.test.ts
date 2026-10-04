@@ -11,10 +11,13 @@ import { dropEmptyMark, newScratchChat, reusableChat, scratchFolderOf } from './
 let root: string;
 let store: ProjectStore;
 
-const isFolder = async (path: string): Promise<boolean> => (await stat(path).catch(() => null))?.isDirectory() ?? false;
+async function isFolder(path: string): Promise<boolean> {
+    return (await stat(path).catch(() => null))?.isDirectory() ?? false;
+}
 
-const chatViews = async (projectId: string): Promise<ProjectChatView[]> =>
-    (await store.read(projectId)).views.filter((view): view is ProjectChatView => view.kind === 'chat');
+async function chatViews(projectId: string): Promise<ProjectChatView[]> {
+    return (await store.read(projectId)).views.filter((view): view is ProjectChatView => view.kind === 'chat');
+}
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-scratch-')));

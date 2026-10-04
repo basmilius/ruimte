@@ -11,26 +11,28 @@ import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
 type Daemon = TestDaemon;
 
 /* A lead, a chat and a terminal of the person's own and a note: everything a task may not go to. */
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'chat-other', kind: 'chat', title: 'Notes of a person', x: 600, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'term-own', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 },
-                { id: 'note-1', kind: 'note', title: 'A note', x: 600, y: 700, w: 320, h: 200 }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'chat-other', kind: 'chat', title: 'Notes of a person', x: 600, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'term-own', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 },
+                    { id: 'note-1', kind: 'note', title: 'A note', x: 600, y: 700, w: 320, h: 200 }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let root: string;
 let home: string;
@@ -62,42 +64,46 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (): Promise<Daemon> => {
+async function boot(): Promise<Daemon> {
     const daemon = await bootTestDaemon({ home, store, clock });
     running.push(daemon);
     return daemon;
-};
+}
 
 const verb = runVerb;
 
-const turnsOf = (daemon: Daemon, chatId: string): ChatTurnItem[] =>
-    (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(daemon: Daemon, chatId: string): ChatTurnItem[] {
+    return (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 /* The turns naming this task id, which is how a turn says what it is for. */
-const turnsFor = (daemon: Daemon, chatId: string, taskId: string): ChatTurnItem[] =>
-    turnsOf(daemon, chatId).filter((turn) => (turn.taskIds ?? []).includes(taskId));
+function turnsFor(daemon: Daemon, chatId: string, taskId: string): ChatTurnItem[] {
+    return turnsOf(daemon, chatId).filter((turn) => (turn.taskIds ?? []).includes(taskId));
+}
 
 /* The lead with a finished turn behind it, which is a chat a wake can open a turn in. */
-const leadIdle = async (daemon: Daemon): Promise<void> => {
+async function leadIdle(daemon: Daemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'plan the work');
     await daemon.until(() => turnsOf(daemon, 'chat-lead').some((turn) => turn.state === 'done'));
-};
+}
 
 /* An agent the lead opens without a task, as a chat that is asked something later. */
-const opened = async (daemon: Daemon, prompt: string, terminal = false): Promise<string> => {
+async function opened(daemon: Daemon, prompt: string, terminal = false): Promise<string> {
     const [line] = await verb(daemon, 'chat-lead', 'agent', ['claude', ...(terminal ? ['--terminal'] : []), '--prompt', prompt]);
     const childId = line!.split('\t')[0]!;
     await daemon.until(() => (terminal ? daemon.sessions.get(childId) !== undefined : daemon.chats.get(childId) !== undefined));
     return childId;
-};
+}
 
-const give = async (daemon: Daemon, childId: string, argv: string[]): Promise<{ lines: string[]; taskId: string }> => {
+async function give(daemon: Daemon, childId: string, argv: string[]): Promise<{ lines: string[]; taskId: string }> {
     const lines = await verb(daemon, 'chat-lead', 'task', ['new', childId, ...argv]);
     return { lines, taskId: lines[0]!.split('\t')[1]! };
-};
+}
 
-const taskOf = (daemon: Daemon, taskId: string): Task => daemon.tasks.get(taskId)!;
+function taskOf(daemon: Daemon, taskId: string): Task {
+    return daemon.tasks.get(taskId)!;
+}
 
 describe('a task given to an agent that is already open', () => {
     test('runs in a turn of its own and wakes the chat that gave it exactly once', async () => {

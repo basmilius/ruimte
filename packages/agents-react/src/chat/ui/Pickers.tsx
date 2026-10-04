@@ -13,7 +13,9 @@ const triggerClass =
 /* A model row, or the one row that folds the legacy models open. Both take a turn in the arrow keys. */
 type PickerEntry = { kind: 'model'; provider: ProviderInfo; model: ModelInfo } | { kind: 'legacy'; count: number };
 
-const matches = (model: ModelInfo, query: string): boolean => model.name.toLowerCase().includes(query) || model.slug.toLowerCase().includes(query);
+function matches(model: ModelInfo, query: string): boolean {
+    return model.name.toLowerCase().includes(query) || model.slug.toLowerCase().includes(query);
+}
 
 interface ModelPickerProps {
     /* Whose models may be picked: every installed chat CLI before the first message, the chat's own after it. */
@@ -172,7 +174,9 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                     <Menu.Check kind="radio" checked={chosen} />
                                     <span className="min-w-0 truncate">{entry.model.name}</span>
                                     {entry.model.badge && (
-                                        <span className="rounded bg-accent-soft px-1 text-[11px] leading-5 font-medium uppercase text-accent">{entry.model.badge}</span>
+                                        <span className="rounded bg-accent-soft px-1 text-[11px] leading-5 font-medium uppercase text-accent">
+                                            {entry.model.badge}
+                                        </span>
                                     )}
                                     <span className="grow" />
                                     {entry.model.legacy && <span className="text-xs text-text-faint">{t('pickers.model.legacy')}</span>}

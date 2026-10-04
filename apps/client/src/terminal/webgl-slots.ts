@@ -16,7 +16,9 @@ interface Member {
     blocked: boolean;
 }
 
-const nothing = (): SlotChange => ({ granted: [], revoked: [] });
+function nothing(): SlotChange {
+    return { granted: [], revoked: [] };
+}
 
 /**
  * Hands a fixed number of WebGL contexts to the terminals that deserve them most, the focused one

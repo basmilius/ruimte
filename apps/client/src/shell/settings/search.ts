@@ -19,7 +19,9 @@ interface SearchEntry {
     available?: () => boolean;
 }
 
-const hasOpenedMachine = (): boolean => useEndpoints.getState().endpoints.some((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID || hasLocalMachine());
+function hasOpenedMachine(): boolean {
+    return useEndpoints.getState().endpoints.some((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID || hasLocalMachine());
+}
 
 /*
  * The rows a search can find. A pane draws only while it is open, so the rows cannot be read off the
@@ -251,27 +253,29 @@ export interface SearchResult {
 }
 
 /* Case and accents fold away, so "e" finds "é" and a capital in the query changes nothing. */
-const fold = (text: string): string =>
-    text
+function fold(text: string): string {
+    return text
         .normalize('NFD')
         .replace(/\p{Diacritic}/gu, '')
         .toLowerCase();
+}
 
 // An interpolation the index cannot fill in reads as nothing rather than as its braces.
-const words = (key: string): string =>
-    i18next
+function words(key: string): string {
+    return i18next
         .t(key)
         .replace(/\{\{\w+\}\}/g, '')
         .trim();
+}
 
-const matches = (terms: readonly string[], ...texts: string[]): boolean => {
+function matches(terms: readonly string[], ...texts: string[]): boolean {
     const haystack = fold(texts.join(' '));
     return terms.every((term) => haystack.includes(term));
-};
+}
 
 /* One result per shortcut, found by its label, its category and its keys as this platform prints them. */
-export const shortcutSearchRows = (groups: readonly ShortcutGroup[], apple: boolean): SearchResult[] =>
-    groups.flatMap((group) =>
+export function shortcutSearchRows(groups: readonly ShortcutGroup[], apple: boolean): SearchResult[] {
+    return groups.flatMap((group) =>
         group.shortcuts.map((row, index) => ({
             section: 'keyboard' as const,
             id: shortcutRowId(group.id, index),
@@ -282,12 +286,13 @@ export const shortcutSearchRows = (groups: readonly ShortcutGroup[], apple: bool
             })
         }))
     );
+}
 
 /*
  * Every pane and row whose words hold each word of the query, panes first, in the order of the
  * navigation. `built` holds the rows whose words exist only at run time, like the shortcuts.
  */
-export const searchSettings = (query: string, built: readonly SearchResult[] = []): SearchResult[] => {
+export function searchSettings(query: string, built: readonly SearchResult[] = []): SearchResult[] {
     const terms = fold(query).split(/\s+/).filter(Boolean);
     if (terms.length === 0) {
         return [];
@@ -309,4 +314,4 @@ export const searchSettings = (query: string, built: readonly SearchResult[] = [
         .filter((result) => matches(terms, result.label, result.description))
         .sort((a, b) => order.indexOf(a.section) - order.indexOf(b.section));
     return [...panes, ...rows];
-};
+}

@@ -18,7 +18,7 @@ interface ViewRef {
  * The names stay with the caller. `REQUEST_SCHEMAS` types every payload and every result on its own,
  * and a handler that took the name as an argument could only satisfy that table by casting past it.
  */
-export const viewFileHandlers = <TDocument, TContent>(store: ViewFileRequests<TDocument, TContent>) => {
+export function viewFileHandlers<TDocument, TContent>(store: ViewFileRequests<TDocument, TContent>) {
     return {
         /* The scene, already drawn, for a client with no renderer of its own; it paints the result, not the document. */
         scene: <TScene>(payload: ViewRef, render: (document: TDocument) => TScene): Promise<TScene> =>
@@ -42,4 +42,4 @@ export const viewFileHandlers = <TDocument, TContent>(store: ViewFileRequests<TD
                 return {};
             })
     };
-};
+}

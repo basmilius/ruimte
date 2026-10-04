@@ -20,35 +20,40 @@ export { absoluteOf, isAbsolutePath, relativeTo, resolveStoredPath, storedPathOf
 
 /* A path the files panel can bring into view is one inside the folder that panel lists; a worktree
    or another checkout on the same machine is not. */
-export const revealableInFiles = (folder: string | null, path: string): boolean =>
-    folder !== null && (path === folder || path.startsWith(`${folder}/`) || path.startsWith(`${folder}\\`));
+export function revealableInFiles(folder: string | null, path: string): boolean {
+    return folder !== null && (path === folder || path.startsWith(`${folder}/`) || path.startsWith(`${folder}\\`));
+}
 
 /*
  * A path as the chat mention the composer writes for a row dragged out of the files panel: relative
  * to the project folder, unquoted. Null outside the folder, where a mention would name nothing.
  */
-export const mentionOf = (folder: string | null, path: string): string | null => {
+export function mentionOf(folder: string | null, path: string): string | null {
     if (folder === null) {
         return null;
     }
     const relative = relativeTo(folder, path);
     return relative === path || relative === '' ? null : chipText({ kind: 'mention', path: relative.replace(/\/$/, '') });
-};
+}
 
 /* The tree marks a directory with a trailing slash, on a row and in a git status entry alike. */
-export const isDirectoryPath = (treePath: string): boolean => treePath.endsWith('/');
+export function isDirectoryPath(treePath: string): boolean {
+    return treePath.endsWith('/');
+}
 
 /* The last segment of a path, whichever separator the daemon's machine uses. */
-export const basenameOf = (path: string): string => path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
+export function basenameOf(path: string): string {
+    return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
+}
 
 /* The folder a path sits in, which is what `fs.changed` names when something in it moves. */
-export const dirnameOf = (path: string): string => {
+export function dirnameOf(path: string): string {
     const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
     return cut > 0 ? path.slice(0, cut) : path.slice(0, cut + 1);
-};
+}
 
 /* Every directory on the way to a row, outermost first, the way the tree names one. */
-export const ancestorDirsOf = (treePath: string): string[] => {
+export function ancestorDirsOf(treePath: string): string[] {
     const segments = treePath.split('/').filter((segment) => segment !== '');
     segments.pop();
     const dirs: string[] = [];
@@ -58,12 +63,12 @@ export const ancestorDirsOf = (treePath: string): string[] => {
         dirs.push(prefix);
     }
     return dirs;
-};
+}
 
-export const treePathOf = (root: string, entry: FsEntry): string => {
+export function treePathOf(root: string, entry: FsEntry): string {
     const relative = relativeTo(root, entry.path);
     return entry.kind === 'directory' ? `${relative}/` : relative;
-};
+}
 
 /*
  * The whole model in one pass over the cache. A directory that has been listed contributes its
@@ -72,7 +77,7 @@ export const treePathOf = (root: string, entry: FsEntry): string => {
  * placeholder that keeps its chevron. Hidden entries are filtered here, so the eye button rebuilds
  * from what is already loaded instead of asking the daemon again.
  */
-export const buildTreeInput = (root: string, cache: EntryCache, showHidden: boolean): TreeInput => {
+export function buildTreeInput(root: string, cache: EntryCache, showHidden: boolean): TreeInput {
     const paths: string[] = [];
     const ignored: string[] = [];
     const visible = (entries: readonly FsEntry[]): readonly FsEntry[] => (showHidden ? entries : entries.filter((entry) => !entry.hidden));
@@ -98,7 +103,7 @@ export const buildTreeInput = (root: string, cache: EntryCache, showHidden: bool
     };
     walk(root);
     return { paths, ignored };
-};
+}
 
 /*
  * The open set without a branch that hangs under a closed directory. The tree keeps a child of a
@@ -107,19 +112,22 @@ export const buildTreeInput = (root: string, cache: EntryCache, showHidden: bool
  * folder, open another, and the first stands open. A path whose directories the tree has not heard
  * of yet stays, since nothing closed those.
  */
-export const withoutClosedBranches = (open: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> =>
-    new Set([...open].filter((path) => ancestorDirsOf(path).every((dir) => open.has(dir) || !known.has(dir))));
+export function withoutClosedBranches(open: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> {
+    return new Set([...open].filter((path) => ancestorDirsOf(path).every((dir) => open.has(dir) || !known.has(dir))));
+}
 
 /* The directories that opened since the last snapshot. The tree has no expand event, so the panel
    diffs what it knows against what the model says and loads the difference. */
-export const newlyExpanded = (before: ReadonlySet<string>, after: ReadonlySet<string>): string[] => [...after].filter((path) => !before.has(path));
+export function newlyExpanded(before: ReadonlySet<string>, after: ReadonlySet<string>): string[] {
+    return [...after].filter((path) => !before.has(path));
+}
 
 /*
  * What is open after the tree reported itself: the directories it says are open, plus the ones it
  * has not heard of yet. A directory remembered from the last visit is not in the tree until its
  * parent has been listed, and dropping it there would collapse it the moment the listing arrives.
  */
-export const mergeExpanded = (remembered: ReadonlySet<string>, reported: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> => {
+export function mergeExpanded(remembered: ReadonlySet<string>, reported: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> {
     const merged = new Set(reported);
     for (const path of remembered) {
         if (!known.has(path)) {
@@ -127,7 +135,7 @@ export const mergeExpanded = (remembered: ReadonlySet<string>, reported: Readonl
         }
     }
     return merged;
-};
+}
 
 export interface SortRow {
     isDirectory: boolean;
@@ -136,7 +144,7 @@ export interface SortRow {
 }
 
 // Compare whole path segments because loaded directories may have no row of their own in the flat list.
-export const compareRows = (left: SortRow, right: SortRow): number => {
+export function compareRows(left: SortRow, right: SortRow): number {
     const shared = Math.min(left.segments.length, right.segments.length);
     for (let i = 0; i < shared; i++) {
         const leftSegment = left.segments[i]!;
@@ -154,14 +162,14 @@ export const compareRows = (left: SortRow, right: SortRow): number => {
     }
     // One path is the head of the other, so the shorter one is the directory the longer one sits in.
     return left.segments.length - right.segments.length;
-};
+}
 
 /*
  * A porcelain letter as the tree names the same thing. The tree knows five states and git writes
  * more than five letters, so a type change, a copy and a conflict all read as a modification: the
  * dot says the file differs from HEAD, and the git panel next to it says how.
  */
-export const treeGitStatus = (status: string): GitStatus => {
+export function treeGitStatus(status: string): GitStatus {
     if (status.startsWith('?')) {
         return 'untracked';
     }
@@ -175,7 +183,7 @@ export const treeGitStatus = (status: string): GitStatus => {
         return 'renamed';
     }
     return 'modified';
-};
+}
 
 /*
  * What git says about the checkout, in the rows the tree marks. Paths come from the repository
@@ -183,7 +191,7 @@ export const treeGitStatus = (status: string): GitStatus => {
  * project is a subdirectory of) has no row here and is left out. The tree marks the directories
  * on the way itself, from these entries.
  */
-export const gitStatusEntries = (folder: string, root: string | null, files: readonly GitFile[]): GitStatusEntry[] => {
+export function gitStatusEntries(folder: string, root: string | null, files: readonly GitFile[]): GitStatusEntry[] {
     if (root === null) {
         return [];
     }
@@ -198,4 +206,4 @@ export const gitStatusEntries = (folder: string, root: string | null, files: rea
         entries.push({ path: treePath, status: treeGitStatus(file.status) });
     }
     return entries;
-};
+}

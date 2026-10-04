@@ -32,10 +32,14 @@ export interface PowerState {
 /* Only a Mac turns sleep off this way. */
 export const closedLidAvailable = keepAwakeAvailable;
 
-export const sleepCommand = (disabled: boolean): string[] => [PMSET, '-a', 'disablesleep', disabled ? '1' : '0'];
+export function sleepCommand(disabled: boolean): string[] {
+    return [PMSET, '-a', 'disablesleep', disabled ? '1' : '0'];
+}
 
 /* `-n` fails instead of asking for a password, so a missing rule is an answer and never a prompt nobody sees. */
-export const sudoSleepCommand = (disabled: boolean): string[] => [SUDO, '-n', ...sleepCommand(disabled)];
+export function sudoSleepCommand(disabled: boolean): string[] {
+    return [SUDO, '-n', ...sleepCommand(disabled)];
+}
 
 export interface ClosedLidFacts {
     setting: ClosedLidSetting;
@@ -49,7 +53,7 @@ export interface ClosedLidFacts {
  * Holds only while keep awake itself would, and never without a power reading: on the adapter, or on
  * battery when keep awake may hold there and the charge is not below the floor.
  */
-export const closedLidHolds = (facts: ClosedLidFacts): boolean => {
+export function closedLidHolds(facts: ClosedLidFacts): boolean {
     if (!closedLidAvailable(facts.platform) || !facts.rule || !facts.setting.lidClosed || !keepAwakeWanted(facts.setting, facts.working, facts.platform)) {
         return false;
     }
@@ -60,16 +64,18 @@ export const closedLidHolds = (facts: ClosedLidFacts): boolean => {
         return true;
     }
     return facts.setting.onBattery && facts.power.percent !== null && facts.power.percent >= CLOSED_LID_BATTERY_FLOOR;
-};
+}
 
 /* sudo skips a file in its includedir whose name has a dot, so the rule is named after the uid and not the user. */
-export const closedLidRulePath = (uid: number): string => `/etc/sudoers.d/ruimte-closed-lid-${uid}`;
+export function closedLidRulePath(uid: number): string {
+    return `/etc/sudoers.d/ruimte-closed-lid-${uid}`;
+}
 
 // A macOS short name. Anything else would need quoting in sudoers, and the rule refuses it rather than guess.
 const SHORT_NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/;
 
 /* The whole rule, as it lands in `/etc/sudoers.d` and as the command line and the app show it. */
-export const closedLidRule = (user: string): string => {
+export function closedLidRule(user: string): string {
     if (!SHORT_NAME.test(user)) {
         throw new ClosedLidError('closed-lid-failed', `${user} is not a user name a sudoers rule takes as it is`);
     }
@@ -79,15 +85,17 @@ export const closedLidRule = (user: string): string => {
         `${user} ALL = (root) NOPASSWD: ${sleepCommand(true).join(' ')}, ${sleepCommand(false).join(' ')}`,
         ''
     ].join('\n');
-};
+}
 
-const shellQuote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
+function shellQuote(value: string): string {
+    return `'${value.replaceAll("'", `'\\''`)}'`;
+}
 
 /*
  * Runs as root. The rule is written under a name with a dot, which sudo skips, checked by visudo and
  * only then moved into place, so sudo never reads half a rule or one that would break it.
  */
-export const installRuleScript = (user: string, uid: number): string => {
+export function installRuleScript(user: string, uid: number): string {
     const path = closedLidRulePath(uid);
     const next = shellQuote(`${path}.new`);
     const lines = closedLidRule(user).trimEnd().split('\n');
@@ -100,26 +108,32 @@ export const installRuleScript = (user: string, uid: number): string => {
         `/bin/chmod 0440 ${next}`,
         `/bin/mv -f ${next} ${shellQuote(path)}`
     ].join('\n');
-};
+}
 
 /* Runs as root. Sleep goes back on first: once the rule is gone, nothing of this user can turn it on again. */
-export const removeRuleScript = (uid: number): string => [sleepCommand(false).join(' '), `/bin/rm -f ${shellQuote(closedLidRulePath(uid))}`].join('\n');
+export function removeRuleScript(uid: number): string {
+    return [sleepCommand(false).join(' '), `/bin/rm -f ${shellQuote(closedLidRulePath(uid))}`].join('\n');
+}
 
 /* macOS's own administrator dialog. The script and the line it shows go in as arguments, so neither is ever quoted into AppleScript. */
-export const adminCommand = (script: string, prompt: string): string[] => [
-    '/usr/bin/osascript',
-    '-e',
-    'on run argv',
-    '-e',
-    'do shell script (item 1 of argv) with prompt (item 2 of argv) with administrator privileges',
-    '-e',
-    'end run',
-    script,
-    prompt
-];
+export function adminCommand(script: string, prompt: string): string[] {
+    return [
+        '/usr/bin/osascript',
+        '-e',
+        'on run argv',
+        '-e',
+        'do shell script (item 1 of argv) with prompt (item 2 of argv) with administrator privileges',
+        '-e',
+        'end run',
+        script,
+        prompt
+    ];
+}
 
 /* The dialog's answer when the person pressed Cancel. */
-export const adminCancelled = (stderr: string): boolean => stderr.includes('(-128)');
+export function adminCancelled(stderr: string): boolean {
+    return stderr.includes('(-128)');
+}
 
 export const DEFAULT_ADMIN_PROMPT = {
     install: 'Ruimte wants to let this Mac stay awake with its lid closed. It installs a rule that lets it turn sleep off and on again, and nothing else.',
@@ -132,14 +146,14 @@ export const DEFAULT_ADMIN_PROMPT = {
  * a SIGKILL or a crash included, since the kernel closes its side. It ignores the signals a terminal
  * sends its whole group, so a Ctrl+C stops the daemon and not this; the daemon dismisses it with a SIGKILL.
  */
-export const watchdogCommand = (release: readonly string[] = sudoSleepCommand(false)): string[] => [
-    '/bin/sh',
-    '-c',
-    `trap '' HUP INT TERM; while read -r line; do :; done; exec ${release.map(shellQuote).join(' ')}`
-];
+export function watchdogCommand(release: readonly string[] = sudoSleepCommand(false)): string[] {
+    return ['/bin/sh', '-c', `trap '' HUP INT TERM; while read -r line; do :; done; exec ${release.map(shellQuote).join(' ')}`];
+}
 
 /* `SleepDisabled` among the system-wide settings `pmset -g` prints; false when it is not there. */
-export const sleepDisabledIn = (output: string): boolean => /^\s*SleepDisabled\s+1\b/m.test(output);
+export function sleepDisabledIn(output: string): boolean {
+    return /^\s*SleepDisabled\s+1\b/m.test(output);
+}
 
 /* Writes the power source once it starts and again on every change of it, the battery's charge included. */
 export const POWER_STREAM_COMMAND = [PMSET, '-g', 'pslog'];

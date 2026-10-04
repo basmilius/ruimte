@@ -34,7 +34,7 @@ const EDGE_FIELDS: Record<keyof typeof DiagramEdgeSchema.shape, string> = {
 };
 
 /* What a field takes, read off its schema, so a shape or a tone added in contracts shows up here without an edit. */
-export const typeOf = (schema: z.ZodType): string => {
+export function typeOf(schema: z.ZodType): string {
     if (schema instanceof z.ZodOptional) {
         return typeOf(schema.unwrap() as z.ZodType);
     }
@@ -60,12 +60,13 @@ export const typeOf = (schema: z.ZodType): string => {
         return 'number';
     }
     return 'value';
-};
+}
 
-export const fieldLines = (prefix: string, shape: Record<string, z.ZodType>, about: Record<string, string>): string[] =>
-    Object.entries(shape).map(
+export function fieldLines(prefix: string, shape: Record<string, z.ZodType>, about: Record<string, string>): string[] {
+    return Object.entries(shape).map(
         ([key, schema]) => `field\t${prefix}${key}\t${schema instanceof z.ZodOptional ? 'optional' : 'required'}\t${typeOf(schema)}\t${about[key]}`
     );
+}
 
 /* A document that passes, so an agent has one shape to start from; a test holds it to the schema. */
 export const DIAGRAM_EXAMPLE = JSON.stringify({

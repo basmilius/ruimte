@@ -31,8 +31,8 @@ export interface OnboardingFacts {
     computer: ComputerSetupPhase;
 }
 
-export const cliRowsOf = (providers: readonly ProviderInfo[], accounts: ProviderAccounts | null): CliRow[] =>
-    providers
+export function cliRowsOf(providers: readonly ProviderInfo[], accounts: ProviderAccounts | null): CliRow[] {
+    return providers
         .filter((provider) => provider.installed && provider.kind !== 'apple')
         .map((provider) => {
             const entries = accountsOfKind(accounts, provider.kind);
@@ -44,23 +44,28 @@ export const cliRowsOf = (providers: readonly ProviderInfo[], accounts: Provider
                 loginAccount: entries.find((entry) => entry.account.enabled !== false) ?? null
             };
         });
+}
 
 /* The CLIs the machine knows of and did not find, which the providers task names in one row. */
-export const missingClisOf = (providers: readonly ProviderInfo[]): string[] =>
-    providers.filter((provider) => !provider.installed && provider.kind !== 'apple').map((provider) => provider.name);
+export function missingClisOf(providers: readonly ProviderInfo[]): string[] {
+    return providers.filter((provider) => !provider.installed && provider.kind !== 'apple').map((provider) => provider.name);
+}
 
-export const factsOf = (introSeen: boolean, rows: readonly CliRow[], computer: ComputerSetupPhase): OnboardingFacts => ({
-    introSeen,
-    loggedIn: rows.filter((row) => row.loggedIn !== null).map((row) => row.provider.name),
-    notLoggedIn: rows.filter((row) => row.canLogIn && row.loggedIn === null).map((row) => row.provider.name),
-    computer
-});
+export function factsOf(introSeen: boolean, rows: readonly CliRow[], computer: ComputerSetupPhase): OnboardingFacts {
+    return {
+        introSeen,
+        loggedIn: rows.filter((row) => row.loggedIn !== null).map((row) => row.provider.name),
+        notLoggedIn: rows.filter((row) => row.canLogIn && row.loggedIn === null).map((row) => row.provider.name),
+        computer
+    };
+}
 
 /* Computer use only where it can be: a Mac with the helper app, which a Linux machine or a daemon from npm lacks. */
-export const tasksOf = (computer: ComputerSetupPhase): OnboardingTask[] =>
-    ORDER.filter((task) => task !== 'computer' || (computer !== 'unsupported' && computer !== 'unavailable'));
+export function tasksOf(computer: ComputerSetupPhase): OnboardingTask[] {
+    return ORDER.filter((task) => task !== 'computer' || (computer !== 'unsupported' && computer !== 'unavailable'));
+}
 
-export const isDone = (task: OnboardingTask, facts: OnboardingFacts): boolean => {
+export function isDone(task: OnboardingTask, facts: OnboardingFacts): boolean {
     switch (task) {
         case 'intro':
             return facts.introSeen;
@@ -69,36 +74,43 @@ export const isDone = (task: OnboardingTask, facts: OnboardingFacts): boolean =>
         case 'computer':
             return facts.computer === 'ready';
     }
-};
+}
 
-export const doneCount = (tasks: readonly OnboardingTask[], facts: OnboardingFacts): number => tasks.filter((task) => isDone(task, facts)).length;
+export function doneCount(tasks: readonly OnboardingTask[], facts: OnboardingFacts): number {
+    return tasks.filter((task) => isDone(task, facts)).length;
+}
 
 /* Where the hub opens: the first task not done yet, or the end once every one is. */
-export const firstPlace = (tasks: readonly OnboardingTask[], facts: OnboardingFacts): OnboardingPlace => tasks.find((task) => !isDone(task, facts)) ?? 'done';
+export function firstPlace(tasks: readonly OnboardingTask[], facts: OnboardingFacts): OnboardingPlace {
+    return tasks.find((task) => !isDone(task, facts)) ?? 'done';
+}
 
 /* Where leaving a task leads: the next one not done yet, then the earlier ones, and the end once no other is left. */
-export const placeAfter = (tasks: readonly OnboardingTask[], current: OnboardingTask, facts: OnboardingFacts): OnboardingPlace => {
+export function placeAfter(tasks: readonly OnboardingTask[], current: OnboardingTask, facts: OnboardingFacts): OnboardingPlace {
     const index = tasks.indexOf(current);
     const others = [...tasks.slice(index + 1), ...tasks.slice(0, Math.max(0, index))];
     return others.find((task) => !isDone(task, facts)) ?? 'done';
-};
+}
 
-const t = (key: string, values?: Record<string, unknown>): string => i18next.t(`onboarding:${key}`, values ?? {});
+function t(key: string, values?: Record<string, unknown>): string {
+    return i18next.t(`onboarding:${key}`, values ?? {});
+}
 
 /* Names as a sentence lists them: `Gemini CLI and Copilot`, `A, B and C`. */
-export const joinNames = (names: readonly string[]): string =>
-    names.length <= 1 ? (names[0] ?? '') : t('list', { rest: names.slice(0, -1).join(', '), last: names[names.length - 1] });
+export function joinNames(names: readonly string[]): string {
+    return names.length <= 1 ? (names[0] ?? '') : t('list', { rest: names.slice(0, -1).join(', '), last: names[names.length - 1] });
+}
 
 /* The line under a task in the list, which says how far it is. */
-export const taskLine = (task: OnboardingTask, facts: OnboardingFacts): string => {
+export function taskLine(task: OnboardingTask, facts: OnboardingFacts): string {
     if (!isDone(task, facts)) {
         return t(`tasks.${task}.sub`);
     }
     return task === 'providers' ? t('tasks.providers.done', { clis: joinNames(facts.loggedIn) }) : t(`tasks.${task}.done`);
-};
+}
 
 /* What the end of the walk says: what is done, then what is left and where it waits. */
-export const summaryOf = (tasks: readonly OnboardingTask[], facts: OnboardingFacts): string => {
+export function summaryOf(tasks: readonly OnboardingTask[], facts: OnboardingFacts): string {
     const offersComputer = tasks.includes('computer');
     const computerOn = offersComputer && facts.computer === 'ready';
     const loggedIn = { clis: joinNames(facts.loggedIn), count: facts.loggedIn.length };
@@ -117,4 +129,4 @@ export const summaryOf = (tasks: readonly OnboardingTask[], facts: OnboardingFac
         sentences.push(t('done.summary.computerLater'));
     }
     return sentences.join(' ');
-};
+}

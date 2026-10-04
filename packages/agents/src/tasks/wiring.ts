@@ -79,7 +79,7 @@ export interface TaskWiring {
  * The tasks of a host in one place, so the host only hands in what it has: the coordinator that
  * settles, the work the outbox runs, the notes in a parent's thread and what the verbs reach.
  */
-export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
+export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const now = deps.now ?? Date.now;
     const { chats, outbox } = deps;
     const enqueue = (projectId: string, target: string, work: TaskWork, notBefore?: number): Promise<void> =>
@@ -228,4 +228,4 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
             coordinator.cancelled(await deps.tasks.prune(projectId, ids, now()));
         }
     };
-};
+}

@@ -23,23 +23,27 @@ export const PROTOCOL_REFUSED_CLOSE_CODE = 4406;
 /* Which side is behind. A daemon that says no version is from before versions existed, so it is the older one. */
 export type ProtocolMismatch = 'daemon-older' | 'daemon-newer';
 
-export const protocolMismatch = (daemon: number | null | undefined, client: number = PROTOCOL_VERSION): ProtocolMismatch | null => {
+export function protocolMismatch(daemon: number | null | undefined, client: number = PROTOCOL_VERSION): ProtocolMismatch | null {
     if (daemon === null || daemon === undefined || daemon < client) {
         return 'daemon-older';
     }
     return daemon > client ? 'daemon-newer' : null;
-};
+}
 
 /*
  * Whether the daemon takes a socket that offered this value. A client from before versions offers
  * none and is let in: it could not read the refusal, and the client that can read one always sends it.
  */
-export const acceptsOfferedProtocol = (offered: string | null, daemon: number = PROTOCOL_VERSION): boolean => offered === null || Number(offered) === daemon;
+export function acceptsOfferedProtocol(offered: string | null, daemon: number = PROTOCOL_VERSION): boolean {
+    return offered === null || Number(offered) === daemon;
+}
 
-export const protocolRefusalReason = (daemon: number = PROTOCOL_VERSION): string => `protocol ${daemon}`;
+export function protocolRefusalReason(daemon: number = PROTOCOL_VERSION): string {
+    return `protocol ${daemon}`;
+}
 
 /* The daemon's version out of a close reason, or null for a reason that is not a refusal. */
-export const protocolOfRefusal = (reason: string): number | null => {
+export function protocolOfRefusal(reason: string): number | null {
     const match = /^protocol (\d+)$/.exec(reason);
     return match ? Number(match[1]) : null;
-};
+}

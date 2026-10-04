@@ -56,7 +56,9 @@ import { TaskStore } from '@ruimte/agents/tasks/task-store';
 import { freeBranch } from '../git/worktrees.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 
-const nounNamed = (name: string): Noun => VERBS.find((entry): entry is Noun => entry.served === 'noun' && entry.name === name)!;
+function nounNamed(name: string): Noun {
+    return VERBS.find((entry): entry is Noun => entry.served === 'noun' && entry.name === name)!;
+}
 
 const VIEW_SUBS = nounNamed('view').actions;
 
@@ -94,39 +96,43 @@ let madeWorktrees: Worktree[];
 let removedWorktrees: string[];
 
 /* A change the store's own check refuses after the verb had its say: `note-1` a second time, on the board. */
-const withRepeatedId = (current: ProjectContent): ProjectContent => ({
-    ...current,
-    views: current.views.map((view) =>
-        view.id === 'board' && view.kind === 'canvas'
-            ? { ...view, nodes: [...view.nodes, { id: 'note-1', kind: 'note', title: 'Twin', x: 0, y: 0, w: 320, h: 240 }] }
-            : view
-    )
-});
+function withRepeatedId(current: ProjectContent): ProjectContent {
+    return {
+        ...current,
+        views: current.views.map((view) =>
+            view.id === 'board' && view.kind === 'canvas'
+                ? { ...view, nodes: [...view.nodes, { id: 'note-1', kind: 'note', title: 'Twin', x: 0, y: 0, w: 320, h: 240 }] }
+                : view
+        )
+    };
+}
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'term-1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360 },
-                { id: 'note-1', kind: 'note', title: 'Plan\twith a tab', x: 0.4, y: 600.6, w: 320, h: 240, body: 'x' }
-            ],
-            texts: [{ id: 'text-1', x: 0, y: 0, text: 'hi', size: 16 }],
-            edges: [],
-            layouts: []
-        },
-        { kind: 'separator', id: 'sep-1' },
-        { kind: 'canvas', id: 'board', name: 'Board', nodes: [], texts: [], edges: [], layouts: [] },
-        { kind: 'chat', id: 'chat-1', name: 'Planner', node: {} },
-        { kind: 'drawing', id: 'sketch-1', name: 'Sketch' }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'term-1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360 },
+                    { id: 'note-1', kind: 'note', title: 'Plan\twith a tab', x: 0.4, y: 600.6, w: 320, h: 240, body: 'x' }
+                ],
+                texts: [{ id: 'text-1', x: 0, y: 0, text: 'hi', size: 16 }],
+                edges: [],
+                layouts: []
+            },
+            { kind: 'separator', id: 'sep-1' },
+            { kind: 'canvas', id: 'board', name: 'Board', nodes: [], texts: [], edges: [], layouts: [] },
+            { kind: 'chat', id: 'chat-1', name: 'Planner', node: {} },
+            { kind: 'drawing', id: 'sketch-1', name: 'Sketch' }
+        ]
+    };
+}
 
 beforeEach(async () => {
     alerts = [];
@@ -185,95 +191,101 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const host = (): CanvasHost => ({
-    hiddenAgents: store.hiddenAgents,
-    locate: (id) => store.index.locate(id),
-    read: (id) => store.read(id),
-    revision: (id) => store.revision(id),
-    mutate: (id, apply, expectedRev) =>
-        store.mutate(
-            id,
-            async (current) => {
-                const mutation = await apply(current);
-                return breakWrites && mutation.content ? { ...mutation, content: withRepeatedId(mutation.content) } : mutation;
+function host(): CanvasHost {
+    return {
+        hiddenAgents: store.hiddenAgents,
+        locate: (id) => store.index.locate(id),
+        read: (id) => store.read(id),
+        revision: (id) => store.revision(id),
+        mutate: (id, apply, expectedRev) =>
+            store.mutate(
+                id,
+                async (current) => {
+                    const mutation = await apply(current);
+                    return breakWrites && mutation.content ? { ...mutation, content: withRepeatedId(mutation.content) } : mutation;
+                },
+                expectedRev
+            ),
+        worktreePaths: async () => worktrees,
+        branchesOf: async () => branches,
+        addWorktree: async (_folder, want) => {
+            const taken = new Set([...(branches ?? []), ...madeWorktrees.map((made) => made.branch)]);
+            const branch = 'branch' in want ? want.branch : freeBranch(want.fresh, taken);
+            const made = { path: join(worktree, branch), branch };
+            madeWorktrees.push(made);
+            return { worktree: made, created: true };
+        },
+        removeWorktree: async (_folder, path) => {
+            removedWorktrees.push(path);
+        },
+        claimWorktree: async () => undefined,
+        modeOf: (nodeId) => modes[nodeId] ?? 'full-access',
+        terminalModePreference: () => terminalPreference,
+        installedAgents: async () => installed,
+        holdPrompt: async (projectId, nodeId, prompt) => {
+            held.push({ projectId, nodeId, prompt });
+        },
+        startAgent: async (start) => {
+            started.push(start);
+            await onStart?.(start);
+        },
+        depthOf: (nodeId) => lineage.depthOf(nodeId),
+        openedCount: (callerId) => lineage.openedCount(callerId),
+        recordMade: (record) => lineage.put(record),
+        madeBy: (nodeId) => lineage.madeBy(nodeId),
+        agentsDeleteAnyView: () => deleteAnyView,
+        showView: (projectId, viewId, by) => store.showView(projectId, viewId, by),
+        endSession: async (kind, nodeId) => {
+            ended.push(`${kind}\t${nodeId}`);
+        },
+        alert: (nodeId, text) => {
+            alerts.push({ nodeId, text });
+        },
+        notify: async (notice) => {
+            notified.push(notice);
+            return delivery;
+        },
+        writeDiagram: (projectId, viewId, content) => diagrams.write(projectId, viewId, content),
+        tasks: {
+            open: (record) => tasks.open(record, 1),
+            give: (record) => tasks.open(record, 1),
+            // Every chat of these tests is one the daemon could open a turn in; the real states are in the task tests.
+            chatState: async () => 'idle',
+            done: async (childId, text) => {
+                const open = tasks.openFor(childId);
+                return open ? tasks.settle(open.id, 'done', { text, source: 'done', at: 2 }, 2) : null;
             },
-            expectedRev
-        ),
-    worktreePaths: async () => worktrees,
-    branchesOf: async () => branches,
-    addWorktree: async (_folder, want) => {
-        const taken = new Set([...(branches ?? []), ...madeWorktrees.map((made) => made.branch)]);
-        const branch = 'branch' in want ? want.branch : freeBranch(want.fresh, taken);
-        const made = { path: join(worktree, branch), branch };
-        madeWorktrees.push(made);
-        return { worktree: made, created: true };
-    },
-    removeWorktree: async (_folder, path) => {
-        removedWorktrees.push(path);
-    },
-    claimWorktree: async () => undefined,
-    modeOf: (nodeId) => modes[nodeId] ?? 'full-access',
-    terminalModePreference: () => terminalPreference,
-    installedAgents: async () => installed,
-    holdPrompt: async (projectId, nodeId, prompt) => {
-        held.push({ projectId, nodeId, prompt });
-    },
-    startAgent: async (start) => {
-        started.push(start);
-        await onStart?.(start);
-    },
-    depthOf: (nodeId) => lineage.depthOf(nodeId),
-    openedCount: (callerId) => lineage.openedCount(callerId),
-    recordMade: (record) => lineage.put(record),
-    madeBy: (nodeId) => lineage.madeBy(nodeId),
-    agentsDeleteAnyView: () => deleteAnyView,
-    showView: (projectId, viewId, by) => store.showView(projectId, viewId, by),
-    endSession: async (kind, nodeId) => {
-        ended.push(`${kind}\t${nodeId}`);
-    },
-    alert: (nodeId, text) => {
-        alerts.push({ nodeId, text });
-    },
-    notify: async (notice) => {
-        notified.push(notice);
-        return delivery;
-    },
-    writeDiagram: (projectId, viewId, content) => diagrams.write(projectId, viewId, content),
-    tasks: {
-        open: (record) => tasks.open(record, 1),
-        give: (record) => tasks.open(record, 1),
-        // Every chat of these tests is one the daemon could open a turn in; the real states are in the task tests.
-        chatState: async () => 'idle',
-        done: async (childId, text) => {
-            const open = tasks.openFor(childId);
-            return open ? tasks.settle(open.id, 'done', { text, source: 'done', at: 2 }, 2) : null;
+            involving: (nodeId) => tasks.involving(nodeId)
         },
-        involving: (nodeId) => tasks.involving(nodeId)
-    },
-    plans: { read: async () => [], create: unusedPlans, apply: unusedPlans, delete: unusedPlans },
-    browsers: {
-        drive: async (browserId, action) => {
-            driven.push({ browserId, action });
-            return pageOpen ? { state: pageStand(browserId) } : null;
-        },
-        shot: async (browserId) => (pageOpen ? { path: shotPath, state: pageStand(browserId) } : null)
-    }
-});
+        plans: { read: async () => [], create: unusedPlans, apply: unusedPlans, delete: unusedPlans },
+        browsers: {
+            drive: async (browserId, action) => {
+                driven.push({ browserId, action });
+                return pageOpen ? { state: pageStand(browserId) } : null;
+            },
+            shot: async (browserId) => (pageOpen ? { path: shotPath, state: pageStand(browserId) } : null)
+        }
+    };
+}
 
 /* Where the fake page stands: enough for a test to read every column the verb prints. */
-const pageStand = (browserId: string): BrowserPageState => ({
-    browserId,
-    url: 'https://example.com/two',
-    title: 'Two',
-    loading: false,
-    canGoBack: true,
-    canGoForward: false,
-    error: null
-});
+function pageStand(browserId: string): BrowserPageState {
+    return {
+        browserId,
+        url: 'https://example.com/two',
+        title: 'Two',
+        loading: false,
+        canGoBack: true,
+        canGoForward: false,
+        error: null
+    };
+}
 
-const unusedPlans = (): Promise<never> => Promise.reject(new Error('no plans in these tests'));
+function unusedPlans(): Promise<never> {
+    return Promise.reject(new Error('no plans in these tests'));
+}
 
-const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
+async function post(verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> {
     const path = `${CANVAS_PATH}/${verb}`;
     const response = await handleCanvasRequest(
         new Request(`http://127.0.0.1${path}`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ argv }) }),
@@ -282,51 +294,62 @@ const post = async (verb: string, argv: string[], token = 'term'): Promise<{ sta
     );
     const body = await response.text();
     return { status: response.status, lines: body === '' ? [] : body.replace(/\n$/, '').split('\n') };
-};
+}
 
-const onDisk = (): Promise<ProjectDocument> => documentOnDisk(folder);
+function onDisk(): Promise<ProjectDocument> {
+    return documentOnDisk(folder);
+}
 
-const canvasOnDisk = async (id = 'main'): Promise<ProjectCanvasView> => (await onDisk()).views.find((view) => view.id === id) as ProjectCanvasView;
+async function canvasOnDisk(id = 'main'): Promise<ProjectCanvasView> {
+    return (await onDisk()).views.find((view) => view.id === id) as ProjectCanvasView;
+}
 
 const CANVAS_LINES = ['canvas\tmain\tCanvas', 'canvas\tboard\tBoard'];
 
 /* A view the caller made itself, which is the only kind `view delete` takes away by default. */
-const made = async (name: string, argv: string[] = [], token = 'term'): Promise<string> =>
-    (await post('view', ['new', name, ...argv], token)).lines[0]!.split('\t')[0]!;
+async function made(name: string, argv: string[] = [], token = 'term'): Promise<string> {
+    return (await post('view', ['new', name, ...argv], token)).lines[0]!.split('\t')[0]!;
+}
 
 /* The last column of `views`, per view id: whether `view delete` would remove it for this caller. */
-const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
-    Object.fromEntries(
+async function deleteColumn(token = 'term'): Promise<Record<string, string>> {
+    return Object.fromEntries(
         (await post('view', ['list'], token)).lines
             .filter((line) => !line.startsWith('self\t') && !line.startsWith('revision\t'))
             .map((line) => line.split('\t'))
             .map(([id, , , may]) => [id!, may!])
     );
+}
 
 /* The reason column beside it, which is what makes a yes or a no read as more than an opinion. */
-const deleteWhy = async (token = 'term'): Promise<Record<string, string>> =>
-    Object.fromEntries(
+async function deleteWhy(token = 'term'): Promise<Record<string, string>> {
+    return Object.fromEntries(
         (await post('view', ['list'], token)).lines
             .filter((line) => !line.startsWith('self\t') && !line.startsWith('revision\t'))
             .map((line) => line.split('\t'))
             .map(([id, , , , why]) => [id!, why!])
     );
+}
 
-const viewOnDisk = async (id: string): Promise<ProjectView | undefined> => (await onDisk()).views.find((view) => view.id === id);
+async function viewOnDisk(id: string): Promise<ProjectView | undefined> {
+    return (await onDisk()).views.find((view) => view.id === id);
+}
 
 /* What the root of `help` and an unknown verb print, one row per entry of the registry. */
-const rootRows = (): string[] =>
-    VERBS.map((entry) =>
+function rootRows(): string[] {
+    return VERBS.map((entry) =>
         entry.served === 'noun'
             ? `noun\t${entry.name}\t${entry.actions.map((action) => action.word).join('|')}\t${entry.summary}`
             : `verb\t${entry.name}\t${entry.usage}\t${entry.summary}`
     );
+}
 
 const HELP_LINE = 'detail\truimte-context help\tevery verb and noun, with what each takes';
 
 /* Every action of every noun with its noun, so a test walks the whole tree. */
-const allActions = (): Array<{ noun: Noun; action: Noun['actions'][number] }> =>
-    VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => ({ noun: entry, action })) : []));
+function allActions(): Array<{ noun: Noun; action: Noun['actions'][number] }> {
+    return VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => ({ noun: entry, action })) : []));
+}
 
 describe('the route', () => {
     test('answers 405 to anything but POST and 401 to an unknown token', async () => {
@@ -2418,24 +2441,28 @@ describe('view open', () => {
 });
 
 /* Nodes put on the main canvas beside the two the fixture has, for the verbs that move what is there. */
-const seed = async (...nodes: ProjectNode[]): Promise<void> => {
+async function seed(...nodes: ProjectNode[]): Promise<void> {
     const next = content();
     (next.views[0] as ProjectCanvasView).nodes.push(...nodes);
     await store.mutate(projectId, () => ({ content: next, result: null }));
-};
+}
 
-const box = (id: string, x: number, y: number, extra: Partial<ProjectNode> = {}): ProjectNode => ({
-    id,
-    kind: 'note',
-    title: id,
-    x,
-    y,
-    w: 200,
-    h: 100,
-    ...extra
-});
+function box(id: string, x: number, y: number, extra: Partial<ProjectNode> = {}): ProjectNode {
+    return {
+        id,
+        kind: 'note',
+        title: id,
+        x,
+        y,
+        w: 200,
+        h: 100,
+        ...extra
+    };
+}
 
-const nodeOnDisk = async (id: string): Promise<ProjectNode | undefined> => (await canvasOnDisk()).nodes.find((node) => node.id === id);
+async function nodeOnDisk(id: string): Promise<ProjectNode | undefined> {
+    return (await canvasOnDisk()).nodes.find((node) => node.id === id);
+}
 
 describe('node group', () => {
     test('draws the frame a person grouping the same selection would have drawn', async () => {

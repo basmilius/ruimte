@@ -15,7 +15,7 @@ import { LIMITS, overAnyLimit } from './rate-limit.ts';
 import { authenticate } from './sessions.ts';
 
 // `POST /v1/statements`
-export const issueStatement = async (request: Request, env: Env): Promise<Response> => {
+export async function issueStatement(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return failure('unauthorized', 'Sign in again');
@@ -75,4 +75,4 @@ export const issueStatement = async (request: Request, env: Env): Promise<Respon
         ).bind(session.account.id, machineId, clientPublicKey, session.id, ip, issuedAt, expiresAt)
     ]);
     return json(statement);
-};
+}

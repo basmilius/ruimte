@@ -19,10 +19,10 @@ export interface LoopbackLogin {
     cancel(): void;
 }
 
-const page = (response: ServerResponse, status: number, text: string): void => {
+function page(response: ServerResponse, status: number, text: string): void {
     response.writeHead(status, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
     response.end(`${text}\n`);
-};
+}
 
 /*
  * A listener on a random loopback port for the one redirect a login ends in. A loopback listener
@@ -31,8 +31,8 @@ const page = (response: ServerResponse, status: number, text: string): void => {
  * 127.0.0.1 only, it takes the first request on the callback path and closes, so the code is read
  * once and the port is gone before anything else could ask.
  */
-export const listenForLogin = (options: { timeoutMs?: number } = {}): Promise<LoopbackLogin> =>
-    new Promise((resolveListening, rejectListening) => {
+export function listenForLogin(options: { timeoutMs?: number } = {}): Promise<LoopbackLogin> {
+    return new Promise((resolveListening, rejectListening) => {
         let settle: { resolve(value: LoginCallback): void; reject(reason: Error): void } | null = null;
         const callback = new Promise<LoginCallback>((resolve, reject) => {
             settle = { resolve, reject };
@@ -90,3 +90,4 @@ export const listenForLogin = (options: { timeoutMs?: number } = {}): Promise<Lo
             });
         });
     });
+}

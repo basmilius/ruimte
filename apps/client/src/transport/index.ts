@@ -25,24 +25,26 @@ export type { ConnectionState, SignalRoute, Transport, TransportStatus } from '.
 export { TransportError } from './transport';
 
 /* What a direct connection to a row needs whatever carries its signals. */
-const directOptions = (endpointId: () => string): Omit<WebRtcLinkOptions, 'signaling'> => ({
-    iceServers: iceServersFrom(useSettings.getState().directStunServers),
-    prove: (challenge, binding) => directProof(endpointId(), challenge, binding),
-    accepted: (ticket) => {
-        if (ticket !== null) {
-            rememberTicket(endpointId(), ticket);
-        }
-        useEndpoints.getState().settleStatement(endpointId());
-    },
-    // The next attempt carries a statement again, which is how a client comes back once the machine forgot it.
-    unknownKey: () => useEndpoints.getState().requireStatement(endpointId())
-});
+function directOptions(endpointId: () => string): Omit<WebRtcLinkOptions, 'signaling'> {
+    return {
+        iceServers: iceServersFrom(useSettings.getState().directStunServers),
+        prove: (challenge, binding) => directProof(endpointId(), challenge, binding),
+        accepted: (ticket) => {
+            if (ticket !== null) {
+                rememberTicket(endpointId(), ticket);
+            }
+            useEndpoints.getState().settleStatement(endpointId());
+        },
+        // The next attempt carries a statement again, which is how a client comes back once the machine forgot it.
+        unknownKey: () => useEndpoints.getState().requireStatement(endpointId())
+    };
+}
 
 /*
  * How the signals to a machine of the account may travel: its doors on the local network, which the
  * row learned from `endpoint.info`, and the broker it announces itself to.
  */
-const routesOf = (endpoint: Endpoint): { lan: SignalingOpener[]; broker: SignalingOpener | null } => {
+function routesOf(endpoint: Endpoint): { lan: SignalingOpener[]; broker: SignalingOpener | null } {
     const machineKey = endpoint.daemonPublicKey;
     if (machineKey === null) {
         return { lan: [], broker: null };
@@ -56,7 +58,7 @@ const routesOf = (endpoint: Endpoint): { lan: SignalingOpener[]; broker: Signali
         ),
         broker: route ? brokerSignaling({ brokerUrl: route.brokerUrl, machineKey, key: clientKey, verify: verifySignature, ...access }) : null
     };
-};
+}
 
 /*
  * Which link a machine's next connection opens. The row of this machine opens a WebSocket on its own
@@ -65,9 +67,8 @@ const routesOf = (endpoint: Endpoint): { lan: SignalingOpener[]; broker: Signali
  * broker. Decided per attempt rather than per transport, so a change of route reconnects the
  * transport every session and chat client is already built on instead of replacing it.
  */
-const linkFor =
-    (endpointId: () => string): LinkOpener =>
-    (url, events) => {
+function linkFor(endpointId: () => string): LinkOpener {
+    return (url, events) => {
         const endpoint = endpointById(endpointId());
         if (!endpoint || (endpoint.id === LOCAL_ENDPOINT_ID && endpoint.direct !== true)) {
             return socketLink(url, events);
@@ -85,14 +86,16 @@ const linkFor =
             link: (signaling) => webRtcLink({ ...options, signaling: () => signaling })
         })(url, events);
     };
+}
 
 /*
  * Where a machine's next connection opens. The row of this machine opens on its own address, with a
  * ticket signed for over HTTP. Every other machine is reached through a route, which asks nothing of
  * an address that from another network is not there to ask, so the broker URL only names the attempt.
  */
-export const connectionAddressFor = (endpointId: string): Promise<string> =>
-    endpointId === LOCAL_ENDPOINT_ID ? socketAddressFor(endpointId) : Promise.resolve(endpointById(endpointId)?.brokerUrl ?? '');
+export function connectionAddressFor(endpointId: string): Promise<string> {
+    return endpointId === LOCAL_ENDPOINT_ID ? socketAddressFor(endpointId) : Promise.resolve(endpointById(endpointId)?.brokerUrl ?? '');
+}
 
 /*
  * One connection per daemon, each with its own reconnect loop; nothing here opens one until it is
@@ -123,12 +126,18 @@ export const transport: Transport = new ActiveTransport({
  * link opens only for a hold (a workspace with a project, a dialog about the machine) or through
  * `ensureMachine`, so a call site that means to reach a machine takes one of those first.
  */
-export const transportFor = (endpointId: string): Transport | null => pool.peek(endpointId);
+export function transportFor(endpointId: string): Transport | null {
+    return pool.peek(endpointId);
+}
 
 const machineTransports = new MachineTransports(pool);
 
 /* One machine as a transport that outlives its link; see `MachineTransports`. */
-export const machineTransport = (endpointId: string): Transport => machineTransports.of(endpointId);
+export function machineTransport(endpointId: string): Transport {
+    return machineTransports.of(endpointId);
+}
 
 /* Before `pool.rekey`, so the clients on the transport of a row that learned its daemon id keep their link. */
-export const rekeyMachineTransport = (oldId: string, newId: string): void => machineTransports.rekey(oldId, newId);
+export function rekeyMachineTransport(oldId: string, newId: string): void {
+    return machineTransports.rekey(oldId, newId);
+}

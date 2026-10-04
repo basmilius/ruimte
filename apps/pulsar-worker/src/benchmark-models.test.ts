@@ -19,16 +19,16 @@ const PROVIDERS = join(import.meta.dir, '../../../packages/agents/src/providers'
 // Asked for in the prompt itself, so Artificial Analysis has nothing that measures them.
 const PROMPT_ONLY = ['ultrathink', 'ultra'];
 
-const effortsOf = (options: ManifestOption[]): string[] => {
+function effortsOf(options: ManifestOption[]): string[] {
     const effort = options.find((option) => option.id === 'effort');
     if (effort) {
         return (effort.choices ?? []).map((choice) => choice.id).filter((id) => !PROMPT_ONLY.includes(id));
     }
     const thinking = options.find((option) => option.id === 'thinking' && option.type === 'boolean');
     return thinking ? ['off', thinking.id] : [];
-};
+}
 
-const manifestModels = (provider: BenchmarkProvider) => {
+function manifestModels(provider: BenchmarkProvider) {
     const manifest = JSON.parse(readFileSync(join(PROVIDERS, `${provider}-models.json`), 'utf8')) as Manifest;
     return manifest.models.map((model) => ({
         slug: model.slug,
@@ -37,7 +37,7 @@ const manifestModels = (provider: BenchmarkProvider) => {
         legacy: model.legacy === true,
         efforts: effortsOf(manifest.profiles[model.profile]?.options ?? [])
     }));
-};
+}
 
 describe('the benchmark table', () => {
     test('knows every model the app offers, with its efforts, and nothing else', () => {

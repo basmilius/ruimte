@@ -1,4 +1,4 @@
-import { ActionRefusal, revisionConflict, type ActionName, type ActionRevisionCheck } from '@ruimte/actions';
+import { ActionRefusal, revisionConflict, type ActionName, type ActionCall } from '@ruimte/actions';
 import type { ServerActionContext } from './context.ts';
 
 /*
@@ -29,7 +29,11 @@ export const PROJECT_WRITES: ReadonlySet<ActionName> = new Set<ActionName>([
  * Refuses before anything happens, so a start that makes a worktree first makes none. The write
  * itself checks again under the lock (`serverActionCall`), which is what closes the gap in between.
  */
-export const checkProjectRevision: ActionRevisionCheck<ServerActionContext> = async (name, _input, call) => {
+export async function checkProjectRevision(
+    name: ActionName,
+    _input: unknown,
+    call: ActionCall<ServerActionContext> & { expectedRevision: number }
+): Promise<void> {
     if (!PROJECT_WRITES.has(name)) {
         throw new ActionRefusal('no-revision', `${name} writes no project file, so it takes no revision`);
     }
@@ -37,4 +41,4 @@ export const checkProjectRevision: ActionRevisionCheck<ServerActionContext> = as
     if (current !== call.expectedRevision) {
         throw revisionConflict('The project', call.expectedRevision, current);
     }
-};
+}

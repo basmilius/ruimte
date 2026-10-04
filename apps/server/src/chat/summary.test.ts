@@ -9,26 +9,33 @@ import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 import { SUMMARY_MAX_BYTES, summaryNoteId, summaryPrompt, summaryTexts } from './summary.ts';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
-const turnsOf = (items: readonly ChatItem[]): ChatTurnItem[] => items.filter((item): item is ChatTurnItem => item.kind === 'turn');
-const summaryNotes = (items: readonly ChatItem[]): ChatNoteItem[] =>
-    items.filter((item): item is ChatNoteItem => item.kind === 'note' && item.from !== undefined);
-const assistantTexts = (items: readonly ChatItem[]): string[] => items.flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
+function turnsOf(items: readonly ChatItem[]): ChatTurnItem[] {
+    return items.filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
+function summaryNotes(items: readonly ChatItem[]): ChatNoteItem[] {
+    return items.filter((item): item is ChatNoteItem => item.kind === 'note' && item.from !== undefined);
+}
+function assistantTexts(items: readonly ChatItem[]): string[] {
+    return items.flatMap((item) => (item.kind === 'assistant' ? [item.text] : []));
+}
 
 describe('a fork summarizing for its original', () => {
     let root: string;

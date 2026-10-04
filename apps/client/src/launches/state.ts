@@ -87,7 +87,7 @@ export interface ProjectLaunches {
 }
 
 /* The launches of the project on screen, with the state of each. */
-export const useProjectLaunches = (): ProjectLaunches => {
+export function useProjectLaunches(): ProjectLaunches {
     const endpointId = useEndpointId();
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -96,13 +96,13 @@ export const useProjectLaunches = (): ProjectLaunches => {
     const statuses = useLaunches((s) => (key === null ? NO_STATUSES : (s.statuses[key] ?? NO_STATUSES)));
     const views = useMemo(() => launchViews(document ?? EMPTY_DOCUMENT, statuses), [document, statuses]);
     return { key, projectId, folder, document, statuses, views };
-};
+}
 
 /* A project on another machine answers on that machine's localhost, which a page here cannot reach. */
-export const useAddressReachable = (): boolean => {
+export function useAddressReachable(): boolean {
     const endpointId = useEndpointId();
     return endpointId === LOCAL_ENDPOINT_ID && hasLocalMachine();
-};
+}
 
 export interface LaunchSuggestions {
     /* Null while the machine looks. */
@@ -111,7 +111,7 @@ export interface LaunchSuggestions {
 }
 
 /* What the machine finds in the project to import, asked again each time a surface that shows it mounts. */
-export const useLaunchSuggestions = (projectId: string | null): LaunchSuggestions => {
+export function useLaunchSuggestions(projectId: string | null): LaunchSuggestions {
     const transport = useTransport();
     const [found, setFound] = useState<{ projectId: string; suggestions: readonly LaunchSuggestion[] | null; failed: boolean } | null>(null);
 
@@ -138,4 +138,4 @@ export const useLaunchSuggestions = (projectId: string | null): LaunchSuggestion
     }, [transport, projectId]);
 
     return found === null || found.projectId !== projectId ? { suggestions: null, failed: false } : found;
-};
+}

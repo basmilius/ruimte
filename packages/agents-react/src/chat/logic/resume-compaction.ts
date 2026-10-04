@@ -15,7 +15,7 @@ export interface ResumeCompactionOffer {
     tokens: number;
 }
 
-const lastTurn = (items: readonly ChatItem[]): Extract<ChatItem, { kind: 'turn' }> | null => {
+function lastTurn(items: readonly ChatItem[]): Extract<ChatItem, { kind: 'turn' }> | null {
     for (let i = items.length - 1; i >= 0; i--) {
         const item = items[i]!;
         if (item.kind === 'turn') {
@@ -23,13 +23,13 @@ const lastTurn = (items: readonly ChatItem[]): Extract<ChatItem, { kind: 'turn' 
         }
     }
     return null;
-};
+}
 
 /*
  * Whether to offer compacting before the next message. The caller passes `now`, so this stays pure
  * and the test needs no clock.
  */
-export const resumeCompactionOffer = ({
+export function resumeCompactionOffer({
     info,
     compaction,
     items,
@@ -42,7 +42,7 @@ export const resumeCompactionOffer = ({
     items: readonly ChatItem[];
     dismissedTurnId: string | null;
     now: number;
-}): ResumeCompactionOffer | null => {
+}): ResumeCompactionOffer | null {
     if (compaction === undefined || compaction === 'none') {
         return null;
     }
@@ -68,4 +68,4 @@ export const resumeCompactionOffer = ({
         return null;
     }
     return { turnId: turn.id, tokens: info.usage.contextTokens };
-};
+}

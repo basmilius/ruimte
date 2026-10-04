@@ -6,24 +6,26 @@ import { identityOf, processRates } from './sampler.ts';
 
 const onMac = process.platform === 'darwin';
 
-const run = async (command: string[]): Promise<string> => {
+async function run(command: string[]): Promise<string> {
     const child = Bun.spawn(command, { stdout: 'pipe', stderr: 'ignore' });
     const text = await new Response(child.stdout).text();
     await child.exited;
     return text;
-};
+}
 
 /* `ps` writes CPU time as `[[dd-]hh:]mm:ss.cc`. */
-const psSeconds = (text: string): number => text.split(':').reduce((sum, part) => sum * 60 + Number.parseFloat(part), 0);
+function psSeconds(text: string): number {
+    return text.split(':').reduce((sum, part) => sum * 60 + Number.parseFloat(part), 0);
+}
 
 /* `top` writes memory as `12M`, `1024K` or `2G`, with a `+` or `-` behind it when it moved. */
-const topBytes = (text: string): number => {
+function topBytes(text: string): number {
     const match = /([\d.]+)([BKMG])/.exec(text);
     if (!match) {
         return Number.NaN;
     }
     return Number(match[1]) * { B: 1, K: 1024, M: 1024 ** 2, G: 1024 ** 3 }[match[2] as 'B' | 'K' | 'M' | 'G'];
-};
+}
 
 describe.skipIf(!onMac)('the libproc sampler against ps', async () => {
     const { DarwinSampler } = await import('./darwin.ts');

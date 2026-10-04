@@ -8,13 +8,13 @@ export const PROJECTS_PATH = '/projects';
  * `GET /projects/<projectId>/icon?v=<version>&theme=dark`: the image a project's folder declares.
  * Behind the same access rules as the socket, so a client sends the ticket its channel handed out.
  */
-export const handleProjectRequest = async (
+export async function handleProjectRequest(
     request: Request,
     url: URL,
     remoteAddress: string,
     options: AccessOptions,
     projects: ProjectStore
-): Promise<Response> => {
+): Promise<Response> {
     const parts = url.pathname.slice(PROJECTS_PATH.length + 1).split('/');
     if (parts.length !== 2 || parts[1] !== 'icon' || parts[0] === '') {
         return new Response('Not found', { status: 404 });
@@ -33,4 +33,4 @@ export const handleProjectRequest = async (
         return new Response('No icon', { status: 404 });
     }
     return bytesResponse({ mime: file.mime, size: bytes.size, body: bytes }, { inline: true });
-};
+}

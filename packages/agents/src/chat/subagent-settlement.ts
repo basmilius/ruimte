@@ -3,7 +3,9 @@ import { open, stat } from 'node:fs/promises';
 // The end of a transcript is all the question needs; a final line longer than this reads as undecided.
 const TAIL_BYTES = 1024 * 1024;
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /* How a subagent's own transcript says it ended: when, and the text of its last message. */
 export interface SubagentSettlement {
@@ -12,7 +14,7 @@ export interface SubagentSettlement {
 }
 
 /* The report an agent handed back with `SubagentHandback` before its last message, which then only points at it. */
-const handbackBefore = (lines: string[], end: number): string | null => {
+function handbackBefore(lines: string[], end: number): string | null {
     for (let i = end - 1; i >= 0; i--) {
         let entry: unknown;
         try {
@@ -30,7 +32,7 @@ const handbackBefore = (lines: string[], end: number): string | null => {
         }
     }
     return null;
-};
+}
 
 /*
  * Whether the end of a Claude subagent transcript shows an agent that finished: the last line that
@@ -39,7 +41,7 @@ const handbackBefore = (lines: string[], end: number): string | null => {
  * still being written, a file cut off in the middle of a line) is not an answer, and null leaves the
  * row as it was. `text` starts on a line boundary.
  */
-export const settlementOf = (text: string): SubagentSettlement | null => {
+export function settlementOf(text: string): SubagentSettlement | null {
     if (!text.endsWith('\n')) {
         return null;
     }
@@ -74,13 +76,13 @@ export const settlementOf = (text: string): SubagentSettlement | null => {
         return { finishedAt: Number.isFinite(time) ? time : null, report: report === '' ? null : report };
     }
     return null;
-};
+}
 
 /*
  * Reads the end of a transcript and asks `settlementOf`. The file has to be the same size and age
  * after the read as before it: a transcript that grew in between belongs to an agent still writing.
  */
-export const readSubagentSettlement = async (path: string): Promise<SubagentSettlement | null> => {
+export async function readSubagentSettlement(path: string): Promise<SubagentSettlement | null> {
     let before: { size: number; mtimeMs: number };
     try {
         before = await stat(path);
@@ -106,4 +108,4 @@ export const readSubagentSettlement = async (path: string): Promise<SubagentSett
         text = start < 0 ? '' : text.slice(start + 1);
     }
     return text === '' ? null : settlementOf(text);
-};
+}

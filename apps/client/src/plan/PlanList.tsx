@@ -86,10 +86,10 @@ const TOGGLE_ROW = 'focus-ring cursor-default rounded-md hover:bg-surface-hover 
 // The length of `.plan-step-revealed` in `styles.css`, which also ends the mark with motion turned off.
 const REVEAL_MS = 1600;
 
-const whenText = (at: string): string => {
+function whenText(at: string): string {
     const date = new Date(at);
     return Number.isNaN(date.getTime()) ? '' : formatMoment(date);
-};
+}
 
 interface PlanListProps {
     endpointId: string;
@@ -232,24 +232,26 @@ function Caret({ collapsed }: { collapsed: boolean }) {
  * What makes the row of a section or parent step fold like a button. A click on a control inside
  * it (a note, a link, a tooltip's trigger) or one that ends a text selection is left alone.
  */
-const toggleRowProps = (collapsed: boolean, onToggle: () => void) => ({
-    role: 'button',
-    tabIndex: 0,
-    'aria-expanded': !collapsed,
-    onClick: (event: ReactMouseEvent<HTMLElement>): void => {
-        const control = event.target instanceof Element ? event.target.closest('a, button, input, textarea, [role="button"]') : null;
-        if ((control !== null && control !== event.currentTarget) || window.getSelection()?.isCollapsed === false) {
-            return;
-        }
-        onToggle();
-    },
-    onKeyDown: (event: ReactKeyboardEvent<HTMLElement>): void => {
-        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
-            event.preventDefault();
+function toggleRowProps(collapsed: boolean, onToggle: () => void) {
+    return {
+        role: 'button',
+        tabIndex: 0,
+        'aria-expanded': !collapsed,
+        onClick: (event: ReactMouseEvent<HTMLElement>): void => {
+            const control = event.target instanceof Element ? event.target.closest('a, button, input, textarea, [role="button"]') : null;
+            if ((control !== null && control !== event.currentTarget) || window.getSelection()?.isCollapsed === false) {
+                return;
+            }
             onToggle();
+        },
+        onKeyDown: (event: ReactKeyboardEvent<HTMLElement>): void => {
+            if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                onToggle();
+            }
         }
-    }
-});
+    };
+}
 
 function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     if (row.type === 'section') {

@@ -21,14 +21,16 @@ export const REVEAL_MAX_HELD_WORD = 32;
 // The span mounts a commit after the frame that grew the text, so its fade ends a little later than that frame plus the duration.
 const FADE_SETTLE_MS = REVEAL_FADE_MS + 50;
 
-const isSpace = (text: string, index: number): boolean => index >= 0 && index < text.length && /\s/.test(text[index]);
+function isSpace(text: string, index: number): boolean {
+    return index >= 0 && index < text.length && /\s/.test(text[index]);
+}
 
 /*
  * Where the reveal stands `elapsedMs` after it stood at `position`, with `target` characters
  * received. The exponential part composes over frames, so the pace does not depend on the refresh
  * rate of the screen.
  */
-export const advanceReveal = (position: number, target: number, elapsedMs: number, finished: boolean): number => {
+export function advanceReveal(position: number, target: number, elapsedMs: number, finished: boolean): number {
     if (position >= target) {
         return target;
     }
@@ -36,7 +38,7 @@ export const advanceReveal = (position: number, target: number, elapsedMs: numbe
     const eased = (target - position) * (1 - Math.exp(-elapsed / REVEAL_TAU_MS));
     const floor = ((finished ? REVEAL_FINISH_MIN_CPS : REVEAL_MIN_CPS) * elapsed) / 1000;
     return Math.min(target, position + Math.max(eased, floor));
-};
+}
 
 /*
  * How much of `text` to draw for a reveal at `position`: back to the last word boundary, because a
@@ -44,7 +46,7 @@ export const advanceReveal = (position: number, target: number, elapsedMs: numbe
  * reached. The last word of a text that is still arriving may still grow, so it waits for the
  * whitespace after it.
  */
-export const revealBoundary = (text: string, position: number, complete: boolean): number => {
+export function revealBoundary(text: string, position: number, complete: boolean): number {
     const end = Math.min(text.length, Math.max(0, Math.floor(position)));
     if (end === text.length && complete) {
         return end;
@@ -59,7 +61,7 @@ export const revealBoundary = (text: string, position: number, complete: boolean
     // Half of a surrogate pair renders as a replacement box.
     const last = text.charCodeAt(end - 1);
     return last >= 0xd800 && last <= 0xdbff ? end - 1 : end;
-};
+}
 
 export interface RevealedText {
     text: string;
@@ -72,7 +74,7 @@ export interface RevealedText {
  * at whatever was there on mount, so reopening a thread mid-reply does not replay it, and a text that
  * was already done on mount is shown whole at once.
  */
-export const useRevealedText = (text: string, streaming: boolean): RevealedText => {
+export function useRevealedText(text: string, streaming: boolean): RevealedText {
     const [active, setActive] = useState(streaming);
     const [shown, setShown] = useState(() => revealBoundary(text, text.length, !streaming));
     const latest = useRef({ text, streaming });
@@ -130,4 +132,4 @@ export const useRevealedText = (text: string, streaming: boolean): RevealedText 
         return { text, active: false };
     }
     return { text: text.slice(0, Math.min(shown, text.length)), active: true };
-};
+}

@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { mergeIceServers, relayedFromStats } from './ice';
 
-const report = (entries: Array<Record<string, unknown>>) => new Map(entries.map((entry, i) => [String(entry.id ?? `E${i}`), entry]));
+function report(entries: Array<Record<string, unknown>>) {
+    return new Map(entries.map((entry, i) => [String(entry.id ?? `E${i}`), entry]));
+}
 
 describe('mergeIceServers', () => {
     test('keeps the own STUN servers first and adds what the route handed out, a STUN URL only once', () => {

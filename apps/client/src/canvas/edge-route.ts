@@ -81,28 +81,37 @@ export const SIDE_NORMAL: Record<Side, Point> = {
     left: { x: -1, y: 0 }
 };
 
-const isVertical = (side: Side): boolean => side === 'top' || side === 'bottom';
+function isVertical(side: Side): boolean {
+    return side === 'top' || side === 'bottom';
+}
 
-const push = (point: Point, side: Side, distance: number): Point => ({
-    x: point.x + SIDE_NORMAL[side].x * distance,
-    y: point.y + SIDE_NORMAL[side].y * distance
-});
+function push(point: Point, side: Side, distance: number): Point {
+    return {
+        x: point.x + SIDE_NORMAL[side].x * distance,
+        y: point.y + SIDE_NORMAL[side].y * distance
+    };
+}
 
-const grow = (rect: Rect, margin: number): Bounds => ({
-    minX: rect.x - margin,
-    minY: rect.y - margin,
-    maxX: rect.x + rect.w + margin,
-    maxY: rect.y + rect.h + margin
-});
+function grow(rect: Rect, margin: number): Bounds {
+    return {
+        minX: rect.x - margin,
+        minY: rect.y - margin,
+        maxX: rect.x + rect.w + margin,
+        maxY: rect.y + rect.h + margin
+    };
+}
 
 /* The middle of a side, which is where a connector meets the node itself. */
-export const sidePoint = (rect: Rect, side: Side): Point =>
-    isVertical(side)
+export function sidePoint(rect: Rect, side: Side): Point {
+    return isVertical(side)
         ? { x: rect.x + rect.w / 2, y: side === 'top' ? rect.y : rect.y + rect.h }
         : { x: side === 'left' ? rect.x : rect.x + rect.w, y: rect.y + rect.h / 2 };
+}
 
 /* Where the dot of a connector on this side sits: the gap out from the node. */
-export const portPoint = (rect: Rect, side: Side): Point => push(sidePoint(rect, side), side, NODE_GAP);
+export function portPoint(rect: Rect, side: Side): Point {
+    return push(sidePoint(rect, side), side, NODE_GAP);
+}
 
 /*
  * The route between two nodes: out of a side, around whatever lies between, into the facing one.
@@ -111,15 +120,16 @@ export const portPoint = (rect: Rect, side: Side): Point => push(sidePoint(rect,
  * would draw. Only when something is in the way do the other sides of the two nodes get a turn: a
  * line that has to go around a node reads better leaving over the top than squeezing past its side.
  */
-export const routeEdge = (a: Rect, b: Rect, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute =>
-    route({ rect: a, gap: NODE_GAP }, { rect: b, gap: NODE_GAP }, obstacles, fixed);
+export function routeEdge(a: Rect, b: Rect, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute {
+    return route({ rect: a, gap: NODE_GAP }, { rect: b, gap: NODE_GAP }, obstacles, fixed);
+}
 
 /*
  * A line being drawn: it leaves its node the way a finished one does and ends under the pointer,
  * which is the one endpoint that keeps no gap. A node under the pointer is where the line is about
  * to land, so it is no longer in the way.
  */
-export const routeDraft = (a: Rect, point: Point, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute => {
+export function routeDraft(a: Rect, point: Point, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute {
     const end = outsideOf(grow(a, NODE_GAP), point);
     return route(
         { rect: a, gap: NODE_GAP },
@@ -127,10 +137,10 @@ export const routeDraft = (a: Rect, point: Point, obstacles: readonly Obstacle[]
         obstacles.filter((obstacle) => !contains(obstacle, end)),
         fixed
     );
-};
+}
 
 /* The point itself, or where it leaves the box the nearest way: a line has no way to a pointer over its own node. */
-const outsideOf = (box: Bounds, point: Point): Point => {
+function outsideOf(box: Bounds, point: Point): Point {
     if (point.x <= box.minX || point.x >= box.maxX || point.y <= box.minY || point.y >= box.maxY) {
         return point;
     }
@@ -143,7 +153,7 @@ const outsideOf = (box: Bounds, point: Point): Point => {
     return exits.reduce((nearest, exit) =>
         Math.hypot(exit.x - point.x, exit.y - point.y) < Math.hypot(nearest.x - point.x, nearest.y - point.y) ? exit : nearest
     );
-};
+}
 
 /* One end of a route: the box it belongs to, and how far out from its border the line stops. */
 interface End {
@@ -151,9 +161,11 @@ interface End {
     gap: number;
 }
 
-const endPoint = (end: End, side: Side): Point => push(sidePoint(end.rect, side), side, end.gap);
+function endPoint(end: End, side: Side): Point {
+    return push(sidePoint(end.rect, side), side, end.gap);
+}
 
-const route = (a: End, b: End, obstacles: readonly Obstacle[], fixed: FixedSides): EdgeRoute => {
+function route(a: End, b: End, obstacles: readonly Obstacle[], fixed: FixedSides): EdgeRoute {
     const blocked = obstacles.map((obstacle) => grow(obstacle, OBSTACLE_MARGIN));
     /* The two nodes the line belongs to are in the way as much as any other: a route that leaves one
        side and comes back over the node it just left is no route. They keep the gap as their margin,
@@ -168,10 +180,10 @@ const route = (a: End, b: End, obstacles: readonly Obstacle[], fixed: FixedSides
     }
     // Nothing works, not even around the two nodes themselves: the line it would have drawn anyway.
     return pathThrough(plainRoute(a, b, candidates[0]!, blocked), candidates[0]!);
-};
+}
 
 /* The cheapest route between the two ends that keeps clear of every node, or `null` when there is none. */
-const search = (a: End, b: End, candidates: readonly SidePair[], blocked: readonly Bounds[], own: readonly Bounds[]): Attempt | null => {
+function search(a: End, b: End, candidates: readonly SidePair[], blocked: readonly Bounds[], own: readonly Bounds[]): Attempt | null {
     const closed = [...blocked, ...own];
     const facing = candidates[0]!;
     const direct = plainRoute(a, b, facing, closed);
@@ -199,10 +211,10 @@ const search = (a: End, b: End, candidates: readonly SidePair[], blocked: readon
         }
     }
     return best;
-};
+}
 
 /* A plain route that keeps clear of every node, and turns nowhere inside the piece either end keeps straight. */
-const fits = (points: readonly Point[], [fromSide, toSide]: SidePair, closed: readonly Bounds[]): boolean => {
+function fits(points: readonly Point[], [fromSide, toSide]: SidePair, closed: readonly Bounds[]): boolean {
     if (!isClear(points, closed)) {
         return false;
     }
@@ -213,18 +225,22 @@ const fits = (points: readonly Point[], [fromSide, toSide]: SidePair, closed: re
         return outFrom(from, fromSide, points[1]!) > 0 && outFrom(to, toSide, points[points.length - 2]!) > 0;
     }
     return outFrom(from, fromSide, points[1]!) >= STUB && outFrom(to, toSide, points[1]!) >= STUB;
-};
+}
 
 /* How far a point lies out from a port, along the way its side faces: negative is behind it. */
-const outFrom = (port: Point, side: Side, point: Point): number => (point.x - port.x) * SIDE_NORMAL[side].x + (point.y - port.y) * SIDE_NORMAL[side].y;
+function outFrom(port: Point, side: Side, point: Point): number {
+    return (point.x - port.x) * SIDE_NORMAL[side].x + (point.y - port.y) * SIDE_NORMAL[side].y;
+}
 
-const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+function contains(rect: Rect, point: Point): boolean {
+    return point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+}
 
 /* Whether a route had to work for it: it turns more than a channel does, or it passes a node close by. */
-const detours = (points: readonly Point[], blocked: readonly Bounds[]): boolean => {
+function detours(points: readonly Point[], blocked: readonly Bounds[]): boolean {
     const straightened = straighten(points);
     return straightened.length > 4 || tight(straightened, blocked) > 0;
-};
+}
 
 /* A route under consideration, by what it costs to read: the line itself plus every turn in it. */
 interface Attempt {
@@ -235,18 +251,18 @@ interface Attempt {
 
 type SidePair = readonly [Side, Side];
 
-const cheaper = (best: Attempt | null, points: Point[], sides: SidePair, blocked: readonly Bounds[]): Attempt => {
+function cheaper(best: Attempt | null, points: Point[], sides: SidePair, blocked: readonly Bounds[]): Attempt {
     const straightened = straighten(points);
     const legs = straightened.slice(1).map((point, index) => Math.hypot(point.x - straightened[index]!.x, point.y - straightened[index]!.y));
     const cost = legs.reduce((total, length) => total + length, 0) + (straightened.length - 2) * BEND_COST + tight(straightened, blocked) * TIGHT_COST;
     return best !== null && best.cost <= cost ? best : { points, sides, cost };
-};
+}
 
 /*
  * The legs that pass a node they do not belong to closer than a gap a person would call room. A line
  * threading between two nodes reads worse than one going round them, however much shorter it is.
  */
-const tight = (points: readonly Point[], blocked: readonly Bounds[]): number => {
+function tight(points: readonly Point[], blocked: readonly Bounds[]): number {
     let count = 0;
     for (let index = 1; index < points.length; index++) {
         const from = points[index - 1]!;
@@ -269,7 +285,7 @@ const tight = (points: readonly Point[], blocked: readonly Bounds[]): number => 
         }
     }
     return count;
-};
+}
 
 const OPPOSITE: Record<Side, Side> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
 
@@ -278,7 +294,7 @@ const OPPOSITE: Record<Side, Side> = { top: 'bottom', bottom: 'top', left: 'righ
  * side it faces the other with and both sides of the other axis: a line that has to go round a row of
  * nodes leaves over the top of it, whichever way the two happen to lie.
  */
-const sideCandidates = (a: Rect, b: Rect, fixed: FixedSides = {}): readonly SidePair[] => {
+function sideCandidates(a: Rect, b: Rect, fixed: FixedSides = {}): readonly SidePair[] {
     const from = centerOf(a);
     const to = centerOf(b);
     const across: SidePair = to.x >= from.x ? ['right', 'left'] : ['left', 'right'];
@@ -288,26 +304,27 @@ const sideCandidates = (a: Rect, b: Rect, fixed: FixedSides = {}): readonly Side
     const fromSides: readonly Side[] = fixed.fromSide ? [fixed.fromSide] : [facing[0], other[0], OPPOSITE[other[0]]];
     const toSides: readonly Side[] = fixed.toSide ? [fixed.toSide] : [facing[1], other[1], OPPOSITE[other[1]]];
     return fromSides.flatMap((fromSide) => toSides.map((toSide): SidePair => [fromSide, toSide]));
-};
+}
 
 /* The pairs whose two ports lie closest, which is as much of the list as the search can pay for. */
-const nearestPairs = (a: End, b: End, candidates: readonly SidePair[]): readonly SidePair[] =>
-    [...candidates].sort((one, other) => reach(a, b, one) - reach(a, b, other)).slice(0, SEARCHED_PAIRS);
+function nearestPairs(a: End, b: End, candidates: readonly SidePair[]): readonly SidePair[] {
+    return [...candidates].sort((one, other) => reach(a, b, one) - reach(a, b, other)).slice(0, SEARCHED_PAIRS);
+}
 
-const reach = (a: End, b: End, [fromSide, toSide]: SidePair): number => {
+function reach(a: End, b: End, [fromSide, toSide]: SidePair): number {
     const from = endPoint(a, fromSide);
     const to = endPoint(b, toSide);
     return Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-};
+}
 
-const plainRoute = (a: End, b: End, [fromSide, toSide]: SidePair, blocked: readonly Bounds[]): Point[] => {
+function plainRoute(a: End, b: End, [fromSide, toSide]: SidePair, blocked: readonly Bounds[]): Point[] {
     const from = endPoint(a, fromSide);
     const to = endPoint(b, toSide);
     return [from, ...between(from, fromSide, to, toSide, blocked), to];
-};
+}
 
 /* The turns between two endpoints: a channel when they face the same axis, one corner when they do not. */
-const between = (from: Point, fromSide: Side, to: Point, toSide: Side, blocked: readonly Bounds[]): Point[] => {
+function between(from: Point, fromSide: Side, to: Point, toSide: Side, blocked: readonly Bounds[]): Point[] {
     const fromStub = push(from, fromSide, STUB);
     const toStub = push(to, toSide, STUB);
     // Two ports straight across from each other: the line between them is the route, however short.
@@ -319,14 +336,14 @@ const between = (from: Point, fromSide: Side, to: Point, toSide: Side, blocked: 
         return channel(fromStub, toStub, blocked, isVertical(fromSide), railWindow([fromStub, fromSide], [toStub, toSide]));
     }
     return [isVertical(fromSide) ? { x: fromStub.x, y: toStub.y } : { x: toStub.x, y: fromStub.y }];
-};
+}
 
 /*
  * Where the rail of a channel may run: past the stub of either end, never between a port and its
  * stub. Two ends leaving the same way have their window on the far side of both, which is what makes
  * a line over a row of nodes step clear of them instead of grazing their tops.
  */
-const railWindow = (...ends: readonly (readonly [Point, Side])[]): Window => {
+function railWindow(...ends: readonly (readonly [Point, Side])[]): Window {
     let min = -Infinity;
     let max = Infinity;
     for (const [stub, side] of ends) {
@@ -338,7 +355,7 @@ const railWindow = (...ends: readonly (readonly [Point, Side])[]): Window => {
         }
     }
     return { min, max };
-};
+}
 
 /* The rails a channel may pick from, which is empty for two nodes with no room between them. */
 interface Window {
@@ -350,15 +367,15 @@ interface Window {
  * A connector onto its own node leaves the right side low and comes back in high, so the loop reads
  * as a run back into the node rather than as a line doubling over itself.
  */
-export const selfRoute = (rect: Rect): EdgeRoute => {
+export function selfRoute(rect: Rect): EdgeRoute {
     const x = rect.x + rect.w + NODE_GAP;
     const from = { x, y: rect.y + (rect.h / 4) * 3 };
     const to = { x, y: rect.y + rect.h / 4 };
     const out = x + STUB * 2;
     return pathThrough([from, { x: out, y: from.y }, { x: out, y: to.y }, to], ['right', 'right']);
-};
+}
 
-const pathThrough = (raw: readonly Point[], [fromSide, toSide]: SidePair): EdgeRoute => {
+function pathThrough(raw: readonly Point[], [fromSide, toSide]: SidePair): EdgeRoute {
     const points = straighten(raw);
     return {
         d: roundedPath(points, CORNER),
@@ -368,14 +385,14 @@ const pathThrough = (raw: readonly Point[], [fromSide, toSide]: SidePair): EdgeR
         toSide,
         mid: halfway(points)
     };
-};
+}
 
 /*
  * The two turns of a route whose ends face the same axis: out to a rail between them, along it, and
  * back in. The rail slides off the middle when a node sits in the way. Ends that already line up
  * have no rail to slide, so that run only steps aside for what blocks the straight shot.
  */
-const channel = (from: Point, to: Point, blocked: readonly Bounds[], vertical: boolean, window: Window): Point[] => {
+function channel(from: Point, to: Point, blocked: readonly Bounds[], vertical: boolean, window: Window): Point[] {
     // The lane is the coordinate a leg keeps as it travels; the rail is the one the turns share.
     const laneOf = (point: Point): number => (vertical ? point.x : point.y);
     const railOf = (point: Point): number => (vertical ? point.y : point.x);
@@ -394,10 +411,10 @@ const channel = (from: Point, to: Point, blocked: readonly Bounds[], vertical: b
 
     const rail = clearRail((railOf(from) + railOf(to)) / 2, from, to, blocked, vertical, window);
     return [at(laneOf(from), rail), at(laneOf(to), rail)];
-};
+}
 
 /* The rail nearest the middle that keeps all three legs clear, trying the far side of every node in the way. */
-const clearRail = (middle: number, from: Point, to: Point, blocked: readonly Bounds[], vertical: boolean, window: Window): number => {
+function clearRail(middle: number, from: Point, to: Point, blocked: readonly Bounds[], vertical: boolean, window: Window): number {
     const clear = (rail: number): boolean => {
         const turn = vertical ? { x: from.x, y: rail } : { x: rail, y: from.y };
         const back = vertical ? { x: to.x, y: rail } : { x: rail, y: to.y };
@@ -415,15 +432,15 @@ const clearRail = (middle: number, from: Point, to: Point, blocked: readonly Bou
         .filter((rail) => window.min > window.max || (rail >= window.min && rail <= window.max))
         .sort((one, other) => Math.abs(one - preferred) - Math.abs(other - preferred));
     return candidates.find(clear) ?? preferred;
-};
+}
 
 /* The nearer side to pass a bundle of blocking nodes on, a step clear of the lane the two ends share. */
-const sidestep = (lane: number, blocking: readonly Bounds[], vertical: boolean): number => {
+function sidestep(lane: number, blocking: readonly Bounds[], vertical: boolean): number {
     const near = Math.min(...blocking.map((box) => (vertical ? box.minX : box.minY)));
     const far = Math.max(...blocking.map((box) => (vertical ? box.maxX : box.maxY)));
     const step = lane - near <= far - lane ? near : far;
     return Math.abs(step - lane) >= STUB ? step : lane + (step < lane ? -STUB : STUB);
-};
+}
 
 /*
  * The way around every node, found on the lanes the nodes themselves draw: the edges of each box and
@@ -431,7 +448,7 @@ const sidestep = (lane: number, blocking: readonly Bounds[], vertical: boolean):
  * fewest bends among the short ones. `null` when there is no way through, or when the canvas is too
  * busy to look for one.
  */
-const routeAround = (from: Point, fromSide: Side, to: Point, toSide: Side, blocked: readonly Bounds[]): Point[] | null => {
+function routeAround(from: Point, fromSide: Side, to: Point, toSide: Side, blocked: readonly Bounds[]): Point[] | null {
     const start = push(from, fromSide, STUB);
     const goal = push(to, toSide, STUB);
     /* The room the route gets. What lies further out than this is not worth going round, and leaving
@@ -544,22 +561,23 @@ const routeAround = (from: Point, fromSide: Side, to: Point, toSide: Side, block
         }
     }
     return null;
-};
+}
 
 /* The coordinates a route may turn on: the two ends and the sides of every node, in order, since the
    search walks them as neighbors. */
-const lanes = (seeds: readonly number[], blocked: readonly Bounds[], horizontal: boolean, low: number, high: number): number[] =>
-    [...new Set([...seeds, ...blocked.flatMap((box) => (horizontal ? [box.minX, box.maxX] : [box.minY, box.maxY]))])]
+function lanes(seeds: readonly number[], blocked: readonly Bounds[], horizontal: boolean, low: number, high: number): number[] {
+    return [...new Set([...seeds, ...blocked.flatMap((box) => (horizontal ? [box.minX, box.maxX] : [box.minY, box.maxY]))])]
         .filter((lane) => lane >= low && lane <= high)
         .sort((one, other) => one - other);
+}
 
-const trace = (cameFrom: Int32Array, state: number, pointAt: (vertex: number) => Point): Point[] => {
+function trace(cameFrom: Int32Array, state: number, pointAt: (vertex: number) => Point): Point[] {
     const points: Point[] = [];
     for (let step = state; step !== -1; step = cameFrom[step]!) {
         points.push(pointAt(Math.floor(step / 2)));
     }
     return points.reverse();
-};
+}
 
 /* The frontier of the search: a binary heap of states, the most promising one first. */
 interface Frontier {
@@ -567,7 +585,7 @@ interface Frontier {
     scores: number[];
 }
 
-const pushState = (frontier: Frontier, state: number, score: number): void => {
+function pushState(frontier: Frontier, state: number, score: number): void {
     frontier.states.push(state);
     frontier.scores.push(score);
     for (let child = frontier.states.length - 1; child > 0;) {
@@ -578,9 +596,9 @@ const pushState = (frontier: Frontier, state: number, score: number): void => {
         swapStates(frontier, parent, child);
         child = parent;
     }
-};
+}
 
-const popState = (frontier: Frontier): number => {
+function popState(frontier: Frontier): number {
     const top = frontier.states[0]!;
     const last = frontier.states.length - 1;
     swapStates(frontier, 0, last);
@@ -602,23 +620,24 @@ const popState = (frontier: Frontier): number => {
         swapStates(frontier, parent, smallest);
         parent = smallest;
     }
-};
+}
 
-const swapStates = (frontier: Frontier, one: number, other: number): void => {
+function swapStates(frontier: Frontier, one: number, other: number): void {
     [frontier.states[one], frontier.states[other]] = [frontier.states[other]!, frontier.states[one]!];
     [frontier.scores[one], frontier.scores[other]] = [frontier.scores[other]!, frontier.scores[one]!];
-};
+}
 
 /* Whether every leg of a run stays clear of every node. */
-const isClear = (points: readonly Point[], blocked: readonly Bounds[]): boolean =>
-    points.every((point, index) => index === 0 || !blocked.some((box) => crosses(points[index - 1]!, point, box)));
+function isClear(points: readonly Point[], blocked: readonly Bounds[]): boolean {
+    return points.every((point, index) => index === 0 || !blocked.some((box) => crosses(points[index - 1]!, point, box)));
+}
 
 /*
  * Whether the run from `a` to `b` passes through a node, by Liang-Barsky clipping: the run is kept
  * where it stays inside every edge's slab, and a slab that clips it away entirely means it misses.
  * A leg along the margin is a miss, which is what lets a route run right beside a node.
  */
-const crosses = (a: Point, b: Point, box: Bounds): boolean => {
+function crosses(a: Point, b: Point, box: Bounds): boolean {
     if (box.maxX <= box.minX || box.maxY <= box.minY) {
         return false;
     }
@@ -647,10 +666,10 @@ const crosses = (a: Point, b: Point, box: Bounds): boolean => {
         }
     }
     return enter < leave;
-};
+}
 
 /* The run without the points that add nothing: a repeat, or a stop in the middle of a straight leg. */
-const straighten = (points: readonly Point[]): Point[] => {
+function straighten(points: readonly Point[]): Point[] {
     const kept: Point[] = [];
     for (const point of points) {
         const last = kept[kept.length - 1];
@@ -664,10 +683,10 @@ const straighten = (points: readonly Point[]): Point[] => {
         kept.push(point);
     }
     return kept;
-};
+}
 
 /* The run through the points with its corners rounded, each bend no wider than the legs it joins. */
-const roundedPath = (points: readonly Point[], radius: number): string => {
+function roundedPath(points: readonly Point[], radius: number): string {
     if (points.length < 2) {
         return '';
     }
@@ -691,10 +710,10 @@ const roundedPath = (points: readonly Point[], radius: number): string => {
     }
     const last = points[points.length - 1]!;
     return `${path} L ${last.x} ${last.y}`;
-};
+}
 
 /* The middle of a route measured along its length, so a label rides the halfway point of the whole run. */
-const halfway = (points: readonly Point[]): Point => {
+function halfway(points: readonly Point[]): Point {
     const legs = points.slice(1).map((point, index) => Math.hypot(point.x - points[index]!.x, point.y - points[index]!.y));
     let left = legs.reduce((total, length) => total + length, 0) / 2;
     for (const [index, length] of legs.entries()) {
@@ -707,4 +726,4 @@ const halfway = (points: readonly Point[]): Point => {
         left -= length;
     }
     return points[0]!;
-};
+}

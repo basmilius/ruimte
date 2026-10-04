@@ -17,19 +17,22 @@ const TestWorkSchema = z.discriminatedUnion('kind', [
 type TestWork = z.infer<typeof TestWorkSchema>;
 
 // Ending holds the lanes of the nodes it ends, and is owed exactly because its target is gone.
-const openStore = (): OutboxStore<TestWork> =>
-    new OutboxStore({
+function openStore(): OutboxStore<TestWork> {
+    return new OutboxStore({
         dataDir: home,
         work: TestWorkSchema,
         lanesOf: (entry) => (entry.kind === 'end' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]),
         outlivesTarget: (entry) => entry.kind === 'end'
     });
+}
 
-const work = (node: 'chat' | 'terminal' = 'chat'): TestWork => ({ kind: 'start', payload: { node } });
+function work(node: 'chat' | 'terminal' = 'chat'): TestWork {
+    return { kind: 'start', payload: { node } };
+}
 
-const unused = (): never => {
+function unused(): never {
     throw new Error('this kind is not owed in this test');
-};
+}
 
 let home: string;
 let store: OutboxStore<TestWork>;
@@ -45,7 +48,9 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const filesOnDisk = async (): Promise<string[]> => readdir(store.dir).catch(() => []);
+async function filesOnDisk(): Promise<string[]> {
+    return readdir(store.dir).catch(() => []);
+}
 
 test('an entry is on disk until its work is done, and then it is gone', async () => {
     const seen: string[] = [];
@@ -219,7 +224,9 @@ test('pruning drops what a project owed for nodes it no longer places', async ()
     expect(await filesOnDisk()).toHaveLength(2);
 });
 
-const wakeWork = (taskId: string): TestWork => ({ kind: 'wake', payload: { taskId } });
+function wakeWork(taskId: string): TestWork {
+    return { kind: 'wake', payload: { taskId } };
+}
 
 test('an entry that waits keeps its file, costs no attempt, holds no lane and runs again only once its target is woken', async () => {
     let busy = true;

@@ -3,7 +3,9 @@ import type { EventMap, EventType, RequestMap, RequestType, Snooze } from '@ruim
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 import { isSnoozed, MAX_TICK_MS, snoozeOf, nextWake, observeWaiting, snoozeUntil, startSnoozeClock, useSnoozes, watchSnoozes, withoutExpired } from './snooze';
 
-const at = (year: number, month: number, day: number, hour: number, minute = 0): number => new Date(year, month - 1, day, hour, minute).getTime();
+function at(year: number, month: number, day: number, hour: number, minute = 0): number {
+    return new Date(year, month - 1, day, hour, minute).getTime();
+}
 
 describe('when a snooze runs out', () => {
     test('ten minutes and an hour count from the moment it was set', () => {
@@ -169,7 +171,9 @@ class FakeTransport implements Transport {
     }
 }
 
-const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
 describe('snoozes a machine keeps', () => {
     let transport: FakeTransport;

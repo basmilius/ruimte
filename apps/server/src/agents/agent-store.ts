@@ -4,7 +4,9 @@ import { AgentInfoSchema, ProviderAccountIdSchema, type AgentInfo } from '@ruimt
 import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 
 // Sits next to the screen snapshot of the same session, so both come back (or go) together.
-const fileName = (sessionId: string): string => `${encodeURIComponent(sessionId)}.agent.json`;
+function fileName(sessionId: string): string {
+    return `${encodeURIComponent(sessionId)}.agent.json`;
+}
 
 export interface AgentRecord {
     agent: AgentInfo;

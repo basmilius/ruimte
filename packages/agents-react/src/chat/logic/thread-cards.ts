@@ -6,7 +6,7 @@ import type { TimelineRow } from './timeline';
  * changed files and forks, a note, a report. The working row closes the thread, so every card goes
  * above it.
  */
-const rowTime = (row: TimelineRow): number | null => {
+function rowTime(row: TimelineRow): number | null {
     switch (row.kind) {
         case 'user':
         case 'assistant':
@@ -29,17 +29,19 @@ const rowTime = (row: TimelineRow): number | null => {
         default:
             return null;
     }
-};
+}
 
 /* Prefixed, so a card never shares a key with a row of the chat's own. */
-const cardRow = (card: ThreadCard): TimelineRow => ({ kind: 'app-card', id: `app-card-${card.id}`, card });
+function cardRow(card: ThreadCard): TimelineRow {
+    return { kind: 'app-card', id: `app-card-${card.id}`, card };
+}
 
 /*
  * The thread's rows with an app's cards among them: a card goes right before the first row that
  * began after it, so in a folded turn it lands under the fold, and in an open one between its calls.
  * Without cards the rows come back as they are, the same array.
  */
-export const withThreadCards = (rows: TimelineRow[], cards: readonly ThreadCard[]): TimelineRow[] => {
+export function withThreadCards(rows: TimelineRow[], cards: readonly ThreadCard[]): TimelineRow[] {
     if (cards.length === 0) {
         return rows;
     }
@@ -59,4 +61,4 @@ export const withThreadCards = (rows: TimelineRow[], cards: readonly ThreadCard[
         merged.push(cardRow(pending[next]!));
     }
     return merged;
-};
+}

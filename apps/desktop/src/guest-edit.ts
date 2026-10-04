@@ -13,8 +13,9 @@ const COMMANDS: Record<GuestEdit, string> = {
 };
 
 /* The frame a right-click landed in while it is still in its page, else the page's main frame. */
-export const editFrameOf = (clicked: ScriptFrame | undefined, main: ScriptFrame): ScriptFrame =>
-    clicked && !clicked.isDestroyed() && !clicked.detached ? clicked : main;
+export function editFrameOf(clicked: ScriptFrame | undefined, main: ScriptFrame): ScriptFrame {
+    return clicked && !clicked.isDestroyed() && !clicked.detached ? clicked : main;
+}
 
 /*
  * Copy or select all in a guest page for a row of the client's own menu. `WebContents.copy()` and
@@ -22,7 +23,7 @@ export const editFrameOf = (clicked: ScriptFrame | undefined, main: ScriptFrame)
  * menu that is the window around the guest, so they would act on the client instead. A command run
  * in the guest's own frame reaches that document whatever has the focus.
  */
-export const runGuestEdit = (frame: ScriptFrame, edit: GuestEdit): void => {
+export function runGuestEdit(frame: ScriptFrame, edit: GuestEdit): void {
     // As a gesture, since a page writes to the clipboard only while a person acts on it.
     void frame.executeJavaScript(`document.execCommand('${COMMANDS[edit]}')`, true).catch(() => undefined);
-};
+}

@@ -23,23 +23,27 @@ import { openReleaseNotes } from '@/state/release-notes';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 
-const focusTowards = (direction: SplitDirection) => (): void => focusCellAction(direction);
+function focusTowards(direction: SplitDirection) {
+    return (): void => focusCellAction(direction);
+}
 
 /* Runs against the view with the focus, and does nothing once it is gone. */
-const withActiveView = (run: (facts: NonNullable<ReturnType<typeof activeViewFacts>>) => void) => (): void => {
-    const facts = activeViewFacts();
-    if (facts !== null) {
-        run(facts);
-    }
-};
+function withActiveView(run: (facts: NonNullable<ReturnType<typeof activeViewFacts>>) => void) {
+    return (): void => {
+        const facts = activeViewFacts();
+        if (facts !== null) {
+            run(facts);
+        }
+    };
+}
 
-const toggleFullscreen = (): void => {
+function toggleFullscreen(): void {
     if (document.fullscreenElement) {
         void document.exitFullscreen().catch(() => undefined);
     } else {
         void document.documentElement.requestFullscreen().catch(() => undefined);
     }
-};
+}
 
 const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     about: () => useUi.getState().setSettings({ open: true, section: 'about' }),
@@ -99,10 +103,12 @@ const MENU_ACTIONS: Record<MenuActionId, () => void> = {
     'launches-edit': () => useLaunches.getState().setDialog({ kind: 'edit', launchId: chosenLaunchId() })
 };
 
-const isMenuActionId = (id: string): id is MenuActionId => Object.hasOwn(MENU_ACTIONS, id);
+function isMenuActionId(id: string): id is MenuActionId {
+    return Object.hasOwn(MENU_ACTIONS, id);
+}
 
 /* A click in the application menu. The palette's rows run through the palette, so both do the same thing. */
-export const runMenuCommand = (id: string): void => {
+export function runMenuCommand(id: string): void {
     if (isMenuActionId(id)) {
         MENU_ACTIONS[id]();
         return;
@@ -123,4 +129,4 @@ export const runMenuCommand = (id: string): void => {
             .find((command) => command.id === id)
             ?.run();
     }
-};
+}

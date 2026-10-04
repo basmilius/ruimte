@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /* An in-memory database with every migration applied, the schema the Worker's D1 has. */
-export const migratedDatabase = (): Database => {
+export function migratedDatabase(): Database {
     const database = new Database(':memory:');
     database.exec('PRAGMA foreign_keys = ON');
     const migrations = join(import.meta.dir, '../../migrations');
@@ -11,15 +11,15 @@ export const migratedDatabase = (): Database => {
         database.exec(readFileSync(join(migrations, file), 'utf8'));
     }
     return database;
-};
+}
 
 interface ShimStatement {
     batched(): { results: unknown[]; meta: { changes: number }; success: true };
 }
 
 // The Worker's real SQL runs on SQLite; only the D1 transport is adapted.
-export const d1 = (database: Database): D1Database =>
-    ({
+export function d1(database: Database): D1Database {
+    return {
         prepare(sql: string) {
             const query = (values: unknown[] = []) => ({
                 bind(...bound: unknown[]) {
@@ -47,4 +47,5 @@ export const d1 = (database: Database): D1Database =>
         async batch(statements: ShimStatement[]) {
             return database.transaction(() => statements.map((statement) => statement.batched()))();
         }
-    }) as unknown as D1Database;
+    } as unknown as D1Database;
+}

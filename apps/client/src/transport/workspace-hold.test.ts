@@ -7,15 +7,17 @@ import { LinkHold } from './workspace-hold';
 
 const GRACE_MS = 30_000;
 
-const endpoint = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: id,
-    daemonPublicKey: null
-});
+function endpoint(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: id,
+        daemonPublicKey: null
+    };
+}
 
 class FakeLink implements PooledTransport {
     readonly status: TransportStatus = 'connecting';
@@ -45,7 +47,7 @@ class FakeLink implements PooledTransport {
     }
 }
 
-const setup = () => {
+function setup() {
     const opened: string[] = [];
     const pool = new TransportPool({
         idleMs: GRACE_MS,
@@ -55,7 +57,7 @@ const setup = () => {
         }
     });
     return { pool, opened, hold: new LinkHold((row) => pool.hold(row)) };
-};
+}
 
 beforeEach(() => {
     jest.useFakeTimers();

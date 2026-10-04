@@ -1,11 +1,11 @@
 import { PROTOCOL_REFUSED_CLOSE_CODE, protocolMismatch, protocolOfRefusal } from '@ruimte/contracts';
-import { LinkTransport, type LinkOpener, type SocketAddress } from './link-transport';
+import { LinkTransport, type Link, type LinkEvents, type SocketAddress } from './link-transport';
 import { protocolGate, protocolRefusal, withProtocol } from './protocol';
 
 export type { SocketAddress } from './link-transport';
 
 /* The wire as it always travelled: one WebSocket per connection, the credential in its URL. */
-export const socketLink: LinkOpener = (url, events) => {
+export function socketLink(url: string, events: LinkEvents): Link {
     const socket = new WebSocket(withProtocol(url));
     socket.binaryType = 'arraybuffer';
     let refused = false;
@@ -36,7 +36,7 @@ export const socketLink: LinkOpener = (url, events) => {
         send: (data) => socket.send(data),
         close: () => socket.close()
     };
-};
+}
 
 export class WebSocketTransport extends LinkTransport {
     constructor(address: SocketAddress) {

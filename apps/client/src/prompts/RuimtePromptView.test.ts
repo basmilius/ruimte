@@ -9,7 +9,7 @@ import { RuimtePromptView } from '@/prompts/RuimtePromptView';
 
 const RISK = 'In Ruimte an agent can do anything you can, at your own risk.';
 
-const computerCard = (bundleId: string, name: string): string => {
+function computerCard(bundleId: string, name: string): string {
     const prompt = computerPrompt('chat-1', {
         requestId: 'computer-1',
         nodeId: 'chat-1',
@@ -43,7 +43,7 @@ const computerCard = (bundleId: string, name: string): string => {
             })
         )
     );
-};
+}
 
 describe('a computer use card', () => {
     test('says that letting an agent into Ruimte itself is at your own risk, packaged and dev', () => {

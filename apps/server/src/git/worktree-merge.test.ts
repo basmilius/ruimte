@@ -16,11 +16,12 @@ let agents: FakeAgents;
 let merges: WorktreeMerge;
 let actions = 0;
 
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
+function exists(path: string): Promise<boolean> {
+    return stat(path).then(
         () => true,
         () => false
     );
+}
 
 class FakeAgents implements WorktreeAgents {
     rows: WorktreeAgent[] = [];
@@ -40,27 +41,32 @@ class FakeAgents implements WorktreeAgents {
     }
 }
 
-const payload = (path: string, extra: Partial<WorktreeMergePayload>): WorktreeMergePayload => ({
-    repo,
-    path,
-    actionId: `merge-${++actions}`,
-    strategy: 'merge',
-    ...extra
-});
+function payload(path: string, extra: Partial<WorktreeMergePayload>): WorktreeMergePayload {
+    return {
+        repo,
+        path,
+        actionId: `merge-${++actions}`,
+        strategy: 'merge',
+        ...extra
+    };
+}
 
-const run = (path: string, extra: Partial<WorktreeMergePayload> = {}) => merges.merge(payload(path, extra), () => undefined);
+function run(path: string, extra: Partial<WorktreeMergePayload> = {}) {
+    return merges.merge(payload(path, extra), () => undefined);
+}
 
-const count = async (range: string, ...flags: string[]): Promise<number> =>
-    Number.parseInt((await gitIn(repo, ['rev-list', '--count', ...flags, range])).trim(), 10);
+async function count(range: string, ...flags: string[]): Promise<number> {
+    return Number.parseInt((await gitIn(repo, ['rev-list', '--count', ...flags, range])).trim(), 10);
+}
 
 /* A worktree off main with a commit of its own. */
-const lexer = async (file = 'lexer.txt', body = 'lexer\n'): Promise<string> => {
+async function lexer(file = 'lexer.txt', body = 'lexer\n'): Promise<string> {
     const { worktree } = await worktrees.add(repo, 'lexer', { madeBy: 'verb', nodeId: 'chat-lexer' });
     await writeFile(join(worktree.path, file), body);
     await gitIn(worktree.path, ['add', '.']);
     await gitIn(worktree.path, ['commit', '--quiet', '--message', 'lexer']);
     return worktree.path;
-};
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-merge', async (dir) => {

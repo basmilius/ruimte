@@ -41,7 +41,7 @@ export interface InProcessCli {
  * stdout is pulled: the exit is reported only after the backend has read every frame written before
  * it, which is the order a real pipe delivers them in and leaves nothing to a clock.
  */
-export const inProcess = (cli: FakeCli): InProcessCli => {
+export function inProcess(cli: FakeCli): InProcessCli {
     const started: StartedFake[] = [];
     let nextPid = 900_000;
     const spawn = (options: ChatSpawnOptions): ChatProcess => {
@@ -163,10 +163,10 @@ export const inProcess = (cli: FakeCli): InProcessCli => {
         };
     };
     return { spawn, started };
-};
+}
 
 /* The same fake as a child process, for the one test that needs real pipes and a real exit code. */
-export const runOverStdio = async (cli: FakeCli): Promise<void> => {
+export async function runOverStdio(cli: FakeCli): Promise<void> {
     const program = cli({
         argv: process.argv.slice(2),
         cwd: process.cwd(),
@@ -196,4 +196,4 @@ export const runOverStdio = async (cli: FakeCli): Promise<void> => {
         }
     }
     process.exit(0);
-};
+}

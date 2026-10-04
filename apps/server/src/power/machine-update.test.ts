@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { MachineUpdates, workEndedByInstall } from './machine-update.ts';
 
-const listen = (updates: MachineUpdates, clientId: string) => {
+function listen(updates: MachineUpdates, clientId: string) {
     const events: SessionEvent[] = [];
     const off = updates.subscribe(clientId, (event) => events.push(event));
     return { events, off };
-};
+}
 
 describe('MachineUpdates', () => {
     test('without an app the machine says so', () => {

@@ -36,15 +36,18 @@ import { failed } from '@/shell/surface-failure';
 
 const DeviceToolsPanel = lazyNamed(() => import('@/devices/DeviceToolsPanel'), 'DeviceToolsPanel');
 
-const referenceOf = (device: DeviceInfo): DeviceReference => ({
-    platform: device.platform,
-    kind: device.kind,
-    name: device.name,
-    runtime: device.runtime
-});
+function referenceOf(device: DeviceInfo): DeviceReference {
+    return {
+        platform: device.platform,
+        kind: device.kind,
+        name: device.name,
+        runtime: device.runtime
+    };
+}
 
-const sameReference = (left: DeviceReference, right: DeviceReference): boolean =>
-    left.platform === right.platform && left.kind === right.kind && left.name === right.name && left.runtime === right.runtime;
+function sameReference(left: DeviceReference, right: DeviceReference): boolean {
+    return left.platform === right.platform && left.kind === right.kind && left.name === right.name && left.runtime === right.runtime;
+}
 
 interface DeviceGroup {
     key: string;
@@ -55,10 +58,11 @@ interface DeviceGroup {
     devices: DeviceInfo[];
 }
 
-const displayRuntime = (device: Pick<DeviceInfo, 'platform' | 'runtime'>): string =>
-    device.platform === 'ios' ? device.runtime.replace(/^iOS\s+/i, '') : device.runtime;
+function displayRuntime(device: Pick<DeviceInfo, 'platform' | 'runtime'>): string {
+    return device.platform === 'ios' ? device.runtime.replace(/^iOS\s+/i, '') : device.runtime;
+}
 
-const groupTitle = (device: DeviceInfo, active: boolean): string => {
+function groupTitle(device: DeviceInfo, active: boolean): string {
     if (active) {
         return device.platform === 'ios' ? i18next.t('panels:devices.group.runningIos') : i18next.t('panels:devices.group.runningAndroid');
     }
@@ -66,9 +70,9 @@ const groupTitle = (device: DeviceInfo, active: boolean): string => {
         return device.platform === 'ios' ? i18next.t('panels:devices.group.iosDevices') : i18next.t('panels:devices.group.androidDevices');
     }
     return device.platform === 'ios' ? i18next.t('panels:devices.group.iosSimulators') : i18next.t('panels:devices.group.androidEmulators');
-};
+}
 
-const groupDevices = (devices: DeviceInfo[]): DeviceGroup[] => {
+function groupDevices(devices: DeviceInfo[]): DeviceGroup[] {
     const groups = new Map<string, DeviceGroup>();
     for (const device of devices) {
         const active = device.kind === 'simulator' && device.state === 'booted';
@@ -85,9 +89,9 @@ const groupDevices = (devices: DeviceInfo[]): DeviceGroup[] => {
         groups.set(key, group);
     }
     return [...groups.values()].sort((left, right) => Number(right.active) - Number(left.active));
-};
+}
 
-const openDeviceView = (device: DeviceInfo): void => {
+function openDeviceView(device: DeviceInfo): void {
     const reference = referenceOf(device);
     const document = useDocument.getState();
     const existing = document.views.find((view) => view.kind === 'device' && sameReference(view.device, reference));
@@ -96,9 +100,9 @@ const openDeviceView = (device: DeviceInfo): void => {
         return;
     }
     void createViewAction('device', { device: reference });
-};
+}
 
-const addDeviceToCanvas = async (device: DeviceInfo): Promise<void> => {
+async function addDeviceToCanvas(device: DeviceInfo): Promise<void> {
     // Without a canvas the view would be made and then have nowhere to go.
     if (!useDocument.getState().views.some(isCanvasView)) {
         return;
@@ -109,7 +113,7 @@ const addDeviceToCanvas = async (device: DeviceInfo): Promise<void> => {
     if (id !== null) {
         placeViewOnCanvasAction(id);
     }
-};
+}
 
 /*
  * What a device row can be asked, shared by the right click on the row and the placement menu in

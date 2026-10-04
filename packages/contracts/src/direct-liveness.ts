@@ -80,4 +80,6 @@ export class ChannelLiveness {
 }
 
 /* The frame a ping is: a request every daemon answers, under an id no transport has pending, so the reply is dropped where it lands. */
-export const directPingFrame = (id: string): string => JSON.stringify({ id, type: 'server.ping', payload: {} });
+export function directPingFrame(id: string): string {
+    return JSON.stringify({ id, type: 'server.ping', payload: {} });
+}

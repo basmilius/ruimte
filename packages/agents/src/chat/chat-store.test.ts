@@ -6,25 +6,31 @@ import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/agent-contracts';
 import { ChatLog } from './chat-log.ts';
 import { ChatStore } from './chat-store.ts';
 
-const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
-    chatId: 'chat',
-    provider: 'claude',
-    cwd: '/',
-    agentSessionId: null,
-    model: null,
-    selection: { model: 'claude-sonnet-5', options: {} },
-    runtimeMode: 'full-access',
-    status: 'idle',
-    running: false,
-    activeTurnId: null,
-    slashCommands: [],
-    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
-    createdAt: 0,
-    ...patch
-});
+function info(patch: Partial<ChatInfo> = {}): ChatInfo {
+    return {
+        chatId: 'chat',
+        provider: 'claude',
+        cwd: '/',
+        agentSessionId: null,
+        model: null,
+        selection: { model: 'claude-sonnet-5', options: {} },
+        runtimeMode: 'full-access',
+        status: 'idle',
+        running: false,
+        activeTurnId: null,
+        slashCommands: [],
+        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+        createdAt: 0,
+        ...patch
+    };
+}
 
-const user = (id: string, text: string): ChatItem => ({ id, kind: 'user', createdAt: 1, turnId: null, text });
-const assistant = (id: string, text: string): ChatItem => ({ id, kind: 'assistant', createdAt: 1, turnId: null, text, streaming: true });
+function user(id: string, text: string): ChatItem {
+    return { id, kind: 'user', createdAt: 1, turnId: null, text };
+}
+function assistant(id: string, text: string): ChatItem {
+    return { id, kind: 'assistant', createdAt: 1, turnId: null, text, streaming: true };
+}
 
 let home: string;
 let store: ChatStore;
@@ -38,14 +44,14 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const logEvents = (events: ChatEvent[], from = 0): ChatLog => {
+function logEvents(events: ChatEvent[], from = 0): ChatLog {
     const log = new ChatLog(store.logPath('chat'), { seq: from, resetSeq: 0, lines: [] });
     for (const event of events) {
         log.append(event, 1);
     }
     log.close();
     return log;
-};
+}
 
 describe('ChatStore', () => {
     test('plays the log over the snapshot from the seq the snapshot holds', async () => {

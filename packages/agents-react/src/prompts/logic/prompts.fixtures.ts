@@ -23,31 +23,37 @@ const checks: ChatQuestion = {
     ]
 };
 const notes: ChatQuestion = { id: 'notes', header: 'Instructions', question: 'What else should the agent keep in mind?', multiSelect: false, choices: [] };
-const base = (id: string) => ({ id: `preview-${id}`, requestId: `preview-${id}`, createdAt: 0, turnId: null });
-const question = (id: string, questions: ChatQuestion[], async = false): ChatQuestionItem => ({
-    ...base(id),
-    kind: 'question',
-    questions,
-    answers: null,
-    state: 'pending',
-    async
-});
-const approval = (long = false): ChatApprovalItem => ({
-    ...base(long ? 'long' : 'edit'),
-    kind: 'approval',
-    toolUseId: null,
-    toolName: 'Edit',
-    description: 'Replace the reconnect loop with the shared backoff and export it for the three endpoints.',
-    input: {
-        file_path: 'src/transport/pool.ts',
-        old_string: 'const retries = 10;',
-        new_string:
-            'const retries = 5;\nexport const backoff = createBackoff({ max: retries });' +
-            (long ? '\n' + Array.from({ length: 90 }, (_, i) => `// Context line ${i + 1}`).join('\n') : '')
-    },
-    canAllowAlways: false,
-    decision: 'pending'
-});
+function base(id: string) {
+    return { id: `preview-${id}`, requestId: `preview-${id}`, createdAt: 0, turnId: null };
+}
+function question(id: string, questions: ChatQuestion[], async = false): ChatQuestionItem {
+    return {
+        ...base(id),
+        kind: 'question',
+        questions,
+        answers: null,
+        state: 'pending',
+        async
+    };
+}
+function approval(long = false): ChatApprovalItem {
+    return {
+        ...base(long ? 'long' : 'edit'),
+        kind: 'approval',
+        toolUseId: null,
+        toolName: 'Edit',
+        description: 'Replace the reconnect loop with the shared backoff and export it for the three endpoints.',
+        input: {
+            file_path: 'src/transport/pool.ts',
+            old_string: 'const retries = 10;',
+            new_string:
+                'const retries = 5;\nexport const backoff = createBackoff({ max: retries });' +
+                (long ? '\n' + Array.from({ length: 90 }, (_, i) => `// Context line ${i + 1}`).join('\n') : '')
+        },
+        canAllowAlways: false,
+        decision: 'pending'
+    };
+}
 
 // These never enter the chat store or the transport; the preview owns their lifetime.
 export const PROMPT_SAMPLES: Array<{ label: string; items: PendingPrompt[] }> = [

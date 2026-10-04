@@ -4,16 +4,18 @@ import { PlanClient, type PlanWriteSink } from '@/plan/plan-client';
 import { findPlan, PlanSync, plansOf, subscribePlanCreated, usePlans } from '@/state/plans';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 
-const planOf = (id: string, createdAt: string, rev = 1): Plan => ({
-    id,
-    rev,
-    createdAt,
-    meta: { title: id, kind: 'steps', checks: 'anyone' },
-    items: [
-        { type: 'step', id: 'one', title: 'One' },
-        { type: 'step', id: 'locked', title: 'Locked', checks: 'agent' }
-    ]
-});
+function planOf(id: string, createdAt: string, rev = 1): Plan {
+    return {
+        id,
+        rev,
+        createdAt,
+        meta: { title: id, kind: 'steps', checks: 'anyone' },
+        items: [
+            { type: 'step', id: 'one', title: 'One' },
+            { type: 'step', id: 'locked', title: 'Locked', checks: 'agent' }
+        ]
+    };
+}
 
 class FakeTransport implements Transport {
     status: TransportStatus = 'closed';
@@ -64,7 +66,9 @@ class FakeTransport implements Transport {
     }
 }
 
-const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
 let transport: FakeTransport;
 

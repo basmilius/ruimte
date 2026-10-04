@@ -19,14 +19,15 @@ let loading: Promise<Highlight> | null = null;
 /* Loads on the first code file, never with the app. The full bundle, not the chat's web one: a
    folder holds Go, Rust and TOML as readily as it holds TypeScript, and a grammar is fetched only
    when a file asks for it. */
-const loadHighlighter = (): Promise<Highlight> => {
+function loadHighlighter(): Promise<Highlight> {
     loading ??= import('shiki').then(({ bundledLanguages, codeToHtml }) => async (code, language, theme) => {
         const lang = language in bundledLanguages ? language : 'text';
         return codeToHtml(code, { lang, theme: shikiThemeOf(theme), transformers: [DROP_LINE_BREAKS] });
     });
     return loading;
-};
+}
 
 /* One block of code as highlighted HTML in a code theme. A language nothing recognizes comes back as plain text. */
-export const highlightCode = (code: string, language: string, theme: string): Promise<string> =>
-    loadHighlighter().then((highlight) => highlight(code, language, theme));
+export function highlightCode(code: string, language: string, theme: string): Promise<string> {
+    return loadHighlighter().then((highlight) => highlight(code, language, theme));
+}

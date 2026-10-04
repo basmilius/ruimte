@@ -4,7 +4,7 @@ import { probeDevServers } from '../browser/dev-servers.ts';
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from './streaming.ts';
 
-export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: BrowserManager, pages: BrowserPages, streamingAllowed: () => boolean): void => {
+export function registerBrowserHandlers(dispatcher: Dispatcher, browsers: BrowserManager, pages: BrowserPages, streamingAllowed: () => boolean): void {
     const requireStreaming = streamingGate(streamingAllowed);
 
     dispatcher.register('browser.open', (payload, client) => {
@@ -63,4 +63,4 @@ export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: Browse
     });
     // Outside the gate: it opens no browser and only reports which local ports answer.
     dispatcher.register('browser.devServers', async (payload) => ({ servers: await probeDevServers(payload.ports) }));
-};
+}

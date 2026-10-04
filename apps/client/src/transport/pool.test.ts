@@ -5,15 +5,17 @@ import { TransportPool, type PooledTransport } from './pool';
 import type { SocketAddress } from './websocket-transport';
 import type { ConnectionState, TransportStatus } from './transport';
 
-const endpoint = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: null,
-    daemonPublicKey: null
-});
+function endpoint(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: null,
+        daemonPublicKey: null
+    };
+}
 
 class FakeTransport implements PooledTransport {
     url: SocketAddress;
@@ -70,7 +72,7 @@ class FakeTransport implements PooledTransport {
     }
 }
 
-const setup = (idleMs = 1) => {
+function setup(idleMs = 1) {
     const opened: FakeTransport[] = [];
     const pool = new TransportPool({
         idleMs,
@@ -81,15 +83,15 @@ const setup = (idleMs = 1) => {
         }
     });
     return { pool, opened };
-};
+}
 
 // Fake timers leave setImmediate alone. Each step runs the timers due in that millisecond, then every promise they started.
-const idle = async (): Promise<void> => {
+async function idle(): Promise<void> {
     for (let i = 0; i < 10; i++) {
         jest.advanceTimersByTime(1);
         await new Promise((resolve) => setImmediate(resolve));
     }
-};
+}
 
 beforeEach(() => {
     jest.useFakeTimers();

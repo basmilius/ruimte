@@ -18,7 +18,9 @@ import { operationIdOf } from './operation-actions.ts';
 
 type TeamRole = { provider: AgentKind; terminal: boolean };
 
-const kindOf = (role: TeamRole): 'chat' | 'terminal' => (!role.terminal && providerFor(role.provider).capabilities.chat ? 'chat' : 'terminal');
+function kindOf(role: TeamRole): 'chat' | 'terminal' {
+    return !role.terminal && providerFor(role.provider).capabilities.chat ? 'chat' : 'terminal';
+}
 
 /*
  * Everything a start enforces lives here, whoever asks: the depth and the count of agents a caller

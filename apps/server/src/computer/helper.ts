@@ -33,15 +33,19 @@ const REQUEST_TIMEOUT_MS = 20_000;
 const START_WAIT_MS = 10_000;
 const START_POLL_MS = 100;
 
-export const helperDirectory = (home: string): string => join(home, 'computer-use');
+export function helperDirectory(home: string): string {
+    return join(home, 'computer-use');
+}
 
-export const helperSocketPath = (home: string): string => join(helperDirectory(home), 'agent.sock');
+export function helperSocketPath(home: string): string {
+    return join(helperDirectory(home), 'agent.sock');
+}
 
 /*
  * Where the helper app is: in Ruimte.app two levels up from the daemon (`Contents/Resources/bin`), in
  * a checkout where `apps/computer-use` builds it. Null on any other platform and for a daemon from npm.
  */
-export const locateHelperApp = (options: { platform: string; compiled: boolean; execPath: string; sourceDir: string }): string | null => {
+export function locateHelperApp(options: { platform: string; compiled: boolean; execPath: string; sourceDir: string }): string | null {
     if (options.platform !== 'darwin') {
         return null;
     }
@@ -49,68 +53,72 @@ export const locateHelperApp = (options: { platform: string; compiled: boolean; 
         ? join(dirname(options.execPath), '..', '..', 'Helpers', 'Ruimte Computer Use.app')
         : resolve(options.sourceDir, '..', '..', 'computer-use', 'dist', 'Ruimte Computer Use Dev.app');
     return existsSync(path) ? path : null;
-};
+}
 
 /* What one typed or pressed key may take: the helper's slowest is a Return behind the person's work, at about 65 ms. */
 const KEY_MS = 100;
 
-const keysOf = (request: HelperRequest): number =>
-    request.command === 'type' ? (request.text?.length ?? 0) : request.command === 'key' ? (request.combos?.length ?? 0) : 0;
+function keysOf(request: HelperRequest): number {
+    return request.command === 'type' ? (request.text?.length ?? 0) : request.command === 'key' ? (request.combos?.length ?? 0) : 0;
+}
 
 /* How long a request may go without an answer: a `wait` gets the time it waits for on top, a `type` or `key` the time its keys take. */
-export const answerWithinMs = (request: HelperRequest, baseMs: number = REQUEST_TIMEOUT_MS): number =>
-    baseMs + (request.timeout ?? 0) * 1000 + keysOf(request) * KEY_MS;
+export function answerWithinMs(request: HelperRequest, baseMs: number = REQUEST_TIMEOUT_MS): number {
+    return baseMs + (request.timeout ?? 0) * 1000 + keysOf(request) * KEY_MS;
+}
 
 /* One request per connection: write the JSON, half-close, read until the helper closes. */
-export const socketTransport = (socketPath: string, timeoutMs: number = REQUEST_TIMEOUT_MS): HelperTransport => ({
-    send: (request) =>
-        new Promise<unknown>((settle, fail) => {
-            const socket = connect(socketPath);
-            const chunks: Buffer[] = [];
-            let connected = false;
-            const limitMs = answerWithinMs(request, timeoutMs);
-            socket.setTimeout(limitMs, () => socket.destroy(new Error(`the computer use helper did not answer within ${limitMs / 1000} s`)));
-            socket.on('connect', () => {
-                connected = true;
-                socket.end(JSON.stringify(request));
-            });
-            socket.on('data', (chunk: Buffer) => chunks.push(chunk));
-            socket.on('error', (error: NodeJS.ErrnoException) => {
-                if (!connected && (error.code === 'ENOENT' || error.code === 'ECONNREFUSED')) {
-                    fail(new HelperUnreachable(error.message));
-                    return;
-                }
-                fail(error);
-            });
-            socket.on('close', () => {
-                if (!connected) {
-                    return;
-                }
-                const text = Buffer.concat(chunks).toString('utf8');
-                try {
-                    settle(JSON.parse(text));
-                } catch {
-                    fail(
-                        new Error(
-                            text === ''
-                                ? 'the computer use helper closed the connection without an answer'
-                                : 'the computer use helper answered with something that is not JSON'
-                        )
-                    );
-                }
-            });
-        })
-});
+export function socketTransport(socketPath: string, timeoutMs: number = REQUEST_TIMEOUT_MS): HelperTransport {
+    return {
+        send: (request) =>
+            new Promise<unknown>((settle, fail) => {
+                const socket = connect(socketPath);
+                const chunks: Buffer[] = [];
+                let connected = false;
+                const limitMs = answerWithinMs(request, timeoutMs);
+                socket.setTimeout(limitMs, () => socket.destroy(new Error(`the computer use helper did not answer within ${limitMs / 1000} s`)));
+                socket.on('connect', () => {
+                    connected = true;
+                    socket.end(JSON.stringify(request));
+                });
+                socket.on('data', (chunk: Buffer) => chunks.push(chunk));
+                socket.on('error', (error: NodeJS.ErrnoException) => {
+                    if (!connected && (error.code === 'ENOENT' || error.code === 'ECONNREFUSED')) {
+                        fail(new HelperUnreachable(error.message));
+                        return;
+                    }
+                    fail(error);
+                });
+                socket.on('close', () => {
+                    if (!connected) {
+                        return;
+                    }
+                    const text = Buffer.concat(chunks).toString('utf8');
+                    try {
+                        settle(JSON.parse(text));
+                    } catch {
+                        fail(
+                            new Error(
+                                text === ''
+                                    ? 'the computer use helper closed the connection without an answer'
+                                    : 'the computer use helper answered with something that is not JSON'
+                            )
+                        );
+                    }
+                });
+            })
+    };
+}
 
 /* `open` hands the app to launchd, so it runs as the person's app and not as a child of the daemon. */
-const openApp = async (appPath: string, home: string): Promise<void> => {
+async function openApp(appPath: string, home: string): Promise<void> {
     const child = Bun.spawn(['open', '-g', appPath, '--args', '--home', home], { stdout: 'ignore', stderr: 'pipe' });
     const code = await child.exited;
     if (code !== 0) {
         const stderr = (await new Response(child.stderr).text()).trim();
         throw new Error(`open exited with ${code}${stderr === '' ? '' : `: ${stderr}`}`);
     }
-};
+}
 
 export interface ComputerHelperOptions {
     home: string;

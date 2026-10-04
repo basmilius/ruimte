@@ -10,14 +10,16 @@ afterEach(() => {
     jest.useRealTimers();
 });
 
-const delta = (itemId: string, text: string): ChatEvent => ({ type: 'delta', itemId, text });
+function delta(itemId: string, text: string): ChatEvent {
+    return { type: 'delta', itemId, text };
+}
 
 const note: ChatItem = { kind: 'note', id: 'n', turnId: null, level: 'info', text: 'hi', createdAt: 0 };
 
-const recorder = () => {
+function recorder() {
     const sent: ChatEvent[] = [];
     return { sent, coalescer: new DeltaCoalescer((event) => sent.push(event), 5) };
-};
+}
 
 describe('DeltaCoalescer', () => {
     test('ten deltas on one item within a tick go out as one delta with the joined text', () => {

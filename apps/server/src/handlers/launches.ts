@@ -3,7 +3,7 @@ import type { LaunchRunner } from '../launches/runner.ts';
 import type { LaunchStore } from '../launches/store.ts';
 
 /* Every request here comes from a client, so it speaks for a person: a start may approve, a stop may force. */
-export const registerLaunchHandlers = (dispatcher: Dispatcher, store: LaunchStore, runner: LaunchRunner): void => {
+export function registerLaunchHandlers(dispatcher: Dispatcher, store: LaunchStore, runner: LaunchRunner): void {
     dispatcher.register('launches.read', (payload) => translate(() => store.read(payload.projectId)));
 
     dispatcher.register('launches.save', (payload) => translate(async () => ({ rev: await store.save(payload.projectId, payload.baseRev, payload.launches) })));
@@ -26,4 +26,4 @@ export const registerLaunchHandlers = (dispatcher: Dispatcher, store: LaunchStor
     );
 
     dispatcher.register('launch.list', () => ({ launches: runner.list() }));
-};
+}

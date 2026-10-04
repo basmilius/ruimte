@@ -2,29 +2,35 @@ import { describe, expect, test } from 'bun:test';
 import type { VoiceCallRecord, VoiceRequestRecord, VoiceSessionRecord } from '@/voice/diagnostics';
 import { median, summarizeVoiceSessions } from '@/voice/diagnostics-summary';
 
-const call = (action: string, result: string | null, durationMs: number | null, target?: VoiceCallRecord['target']): VoiceCallRecord => ({
-    tool: 'tool',
-    action,
-    response: 0,
-    durationMs,
-    result,
-    ...(target ? { target } : {})
-});
+function call(action: string, result: string | null, durationMs: number | null, target?: VoiceCallRecord['target']): VoiceCallRecord {
+    return {
+        tool: 'tool',
+        action,
+        response: 0,
+        durationMs,
+        result,
+        ...(target ? { target } : {})
+    };
+}
 
-const request = (calls: VoiceCallRecord[], totalMs: number | null, responses: number[]): VoiceRequestRecord => ({
-    status: totalMs === null ? 'unfinished' : 'answered',
-    totalMs,
-    responses: responses.map((durationMs) => ({ durationMs, status: 'completed', calls: 0 })),
-    calls
-});
+function request(calls: VoiceCallRecord[], totalMs: number | null, responses: number[]): VoiceRequestRecord {
+    return {
+        status: totalMs === null ? 'unfinished' : 'answered',
+        totalMs,
+        responses: responses.map((durationMs) => ({ durationMs, status: 'completed', calls: 0 })),
+        calls
+    };
+}
 
-const session = (requests: VoiceRequestRecord[], toolBytes = 1_000): VoiceSessionRecord => ({
-    startedAt: 0,
-    domains: ['workspace'],
-    toolCount: 2,
-    toolBytes,
-    requests
-});
+function session(requests: VoiceRequestRecord[], toolBytes = 1_000): VoiceSessionRecord {
+    return {
+        startedAt: 0,
+        domains: ['workspace'],
+        toolCount: 2,
+        toolBytes,
+        requests
+    };
+}
 
 describe('median', () => {
     test('is the middle value, or the mean of the middle two', () => {

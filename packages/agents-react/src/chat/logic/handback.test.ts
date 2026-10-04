@@ -2,18 +2,20 @@ import { expect, test } from 'bun:test';
 import type { ChatToolItem } from '@ruimte/agent-contracts';
 import { handbackReportOf } from './handback';
 
-const call = (id: string, name: string, input: unknown): ChatToolItem => ({
-    id,
-    kind: 'tool',
-    createdAt: 0,
-    turnId: null,
-    toolUseId: id,
-    name,
-    input,
-    output: null,
-    state: 'done',
-    parentToolUseId: null
-});
+function call(id: string, name: string, input: unknown): ChatToolItem {
+    return {
+        id,
+        kind: 'tool',
+        createdAt: 0,
+        turnId: null,
+        toolUseId: id,
+        name,
+        input,
+        output: null,
+        state: 'done',
+        parentToolUseId: null
+    };
+}
 
 test('a handback call carries its report in `message`, and a call without one is only a tool call', () => {
     expect(handbackReportOf(call('1', 'SubagentHandback', { message: '## Review\n\nAll good.' }))).toBe('## Review\n\nAll good.');

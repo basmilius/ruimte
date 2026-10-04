@@ -45,9 +45,8 @@ interface Candidate {
  * first that is ready carries the attempt and the others close, so there is one peer connection per
  * attempt whatever the route. Without a door to try it is the broker alone, as it always was.
  */
-export const raceSignaling =
-    (options: RaceOptions): SignalingOpener =>
-    (connectionId, events) => {
+export function raceSignaling(options: RaceOptions): SignalingOpener {
+    return (connectionId, events) => {
         const clock = options.clock ?? systemClock;
         const candidates: Candidate[] = [];
         let winner: Candidate | null = null;
@@ -180,6 +179,7 @@ export const raceSignaling =
             }
         };
     };
+}
 
 /* Which machines' doors this page leaves alone for now, in memory only: a reload tries the local network again. */
 export class LanSkips {
@@ -213,8 +213,9 @@ export const lanSkips = new LanSkips();
  * The door URLs an attempt tries for a row. None on the station: a page served over https may not
  * open a plain ws:// socket, and least of all to a private address.
  */
-export const lanDoorUrls = (lan: LanDoor | null | undefined, station: boolean): string[] =>
-    station || !lan ? [] : lan.addresses.map((address) => lanDoorUrl(address, lan.port));
+export function lanDoorUrls(lan: LanDoor | null | undefined, station: boolean): string[] {
+    return station || !lan ? [] : lan.addresses.map((address) => lanDoorUrl(address, lan.port));
+}
 
 export interface RoutedLinkOptions {
     /* The machine's own id, which the doors are skipped under. */
@@ -234,9 +235,8 @@ export interface RoutedLinkOptions {
  * network cannot use (a guest network, ICE that does not cross a VPN), so the next attempts go
  * straight to the broker for a while instead of failing the same way again.
  */
-export const routedLink =
-    (options: RoutedLinkOptions): LinkOpener =>
-    (url, events) => {
+export function routedLink(options: RoutedLinkOptions): LinkOpener {
+    return (url, events) => {
         let route: SignalRoute | null = null;
         let opened = false;
         // Without a broker the doors are the only way in, so they are tried whatever happened last time.
@@ -265,3 +265,4 @@ export const routedLink =
             }
         });
     };
+}

@@ -285,7 +285,7 @@ export class DirectClient {
     }
 }
 
-const waitFor = async (ready: () => boolean, timeoutMs: number): Promise<void> => {
+async function waitFor(ready: () => boolean, timeoutMs: number): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (!ready()) {
         if (Date.now() > deadline) {
@@ -293,4 +293,4 @@ const waitFor = async (ready: () => boolean, timeoutMs: number): Promise<void> =
         }
         await wait(10);
     }
-};
+}

@@ -11,20 +11,20 @@ const CODEX_READ_TIMEOUT_MS = 3_000;
 
 export type ProbeResult = ProviderReading | { unavailable: UsageLimitsProvider['unavailable'] };
 
-const failure = (message: string): ProbeResult => ({ unavailable: { reason: 'failed', message } });
+function failure(message: string): ProbeResult {
+    return { unavailable: { reason: 'failed', message } };
+}
 
-const timeoutOf = <T>(work: Promise<T>, ms: number, what: string): Promise<T> => withTimeout(work, ms, `${what} did not answer in time`);
+function timeoutOf<T>(work: Promise<T>, ms: number, what: string): Promise<T> {
+    return withTimeout(work, ms, `${what} did not answer in time`);
+}
 
 /*
  * Asks Claude Code what is left of the plan, without a turn and without a token of our own. A
  * `claude -p` on the stream-json protocol answers `get_usage` before any prompt, but only once it
  * has been initialized: without that first control request the process waits and says nothing.
  */
-export const probeClaude = async (
-    command: readonly string[],
-    env: Record<string, string>,
-    spawn: SpawnChatProcess = spawnChatProcess
-): Promise<ProbeResult> => {
+export async function probeClaude(command: readonly string[], env: Record<string, string>, spawn: SpawnChatProcess = spawnChatProcess): Promise<ProbeResult> {
     let child: ChatProcess;
     try {
         child = spawn({
@@ -86,14 +86,14 @@ export const probeClaude = async (
         child.stdin.end();
         child.kill('SIGTERM');
     }
-};
+}
 
 /* The same question to Codex: the app-server answers it over JSON-RPC right after the handshake. */
-export const probeCodex = async (
+export async function probeCodex(
     command: readonly string[],
     env: Record<string, string>,
     client: CodexClientInfo = DEFAULT_CODEX_CLIENT
-): Promise<ProbeResult> => {
+): Promise<ProbeResult> {
     let transport: CodexTransport | null = null;
     try {
         transport = new CodexTransport({
@@ -117,4 +117,4 @@ export const probeCodex = async (
         transport?.end();
         transport?.kill();
     }
-};
+}

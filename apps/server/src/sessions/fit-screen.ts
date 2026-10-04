@@ -7,13 +7,15 @@ export const SCREEN_MAX_BYTES = 4 * 1024 * 1024;
 // JSON writes a control character as `\u001b`, six bytes for one unit, and nothing costs more than that.
 const MAX_BYTES_PER_UNIT = 6;
 
-const frameBytes = (screen: string): number => Buffer.byteLength(JSON.stringify(screen));
+function frameBytes(screen: string): number {
+    return Buffer.byteLength(JSON.stringify(screen));
+}
 
 /*
  * The screen with as much scrollback as fits in one frame. The oldest lines go first, half of them
  * at a time; what is on screen always stays.
  */
-export const fitScreen = (serialize: (scrollback: number) => string, scrollback: number, maxBytes: number = SCREEN_MAX_BYTES): string => {
+export function fitScreen(serialize: (scrollback: number) => string, scrollback: number, maxBytes: number = SCREEN_MAX_BYTES): string {
     let lines = scrollback;
     let screen = serialize(lines);
     while (lines > 0 && screen.length * MAX_BYTES_PER_UNIT > maxBytes && frameBytes(screen) > maxBytes) {
@@ -21,4 +23,4 @@ export const fitScreen = (serialize: (scrollback: number) => string, scrollback:
         screen = serialize(lines);
     }
     return screen;
-};
+}

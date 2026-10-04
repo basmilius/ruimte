@@ -29,7 +29,7 @@ export interface TreeChildEvents {
 export type TreeLauncher = (udid: string, events: TreeChildEvents) => TreeChild;
 
 /* Runs the bridge's accessibility mode for one simulator and hands its output over line by line; null without a bridge. */
-export const createTreeLauncher = (bridge: string): TreeLauncher | null => {
+export function createTreeLauncher(bridge: string): TreeLauncher | null {
     if (!existsSync(bridge)) {
         return null;
     }
@@ -62,7 +62,7 @@ export const createTreeLauncher = (bridge: string): TreeLauncher | null => {
             kill: () => child.kill('SIGKILL')
         };
     };
-};
+}
 
 interface Waiter {
     resolve(value: SimulatorTreeReply | null): void;
@@ -73,7 +73,7 @@ interface Waiter {
 const READY = 'ready';
 
 /* A failure the bridge names, in the words and codes a device failure reaches an agent with. */
-export const treeErrorOf = (code: string, message: string): DeviceError => {
+export function treeErrorOf(code: string, message: string): DeviceError {
     switch (code) {
         case 'unavailable':
             return new DeviceError('device-tree-unavailable', `The simulator's accessibility cannot be read on this machine: ${message}`);
@@ -84,7 +84,7 @@ export const treeErrorOf = (code: string, message: string): DeviceError => {
         default:
             return new DeviceError('device-tree-failed', `The simulator's accessibility tree could not be read: ${message}`);
     }
-};
+}
 
 /*
  * One simulator's bridge process, kept running between reads so a tree takes tens of milliseconds

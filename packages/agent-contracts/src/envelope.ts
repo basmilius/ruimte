@@ -43,13 +43,17 @@ export type ServerFrame = z.infer<typeof ServerFrameSchema>;
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; message: string };
 
-const toResult = <T>(parsed: z.ZodSafeParseResult<T>): ParseResult<T> => {
+function toResult<T>(parsed: z.ZodSafeParseResult<T>): ParseResult<T> {
     if (parsed.success) {
         return { ok: true, value: parsed.data };
     }
     return { ok: false, message: z.prettifyError(parsed.error) };
-};
+}
 
-export const parseRequest = (input: unknown): ParseResult<Request> => toResult(RequestSchema.safeParse(input));
+export function parseRequest(input: unknown): ParseResult<Request> {
+    return toResult(RequestSchema.safeParse(input));
+}
 
-export const parseServerFrame = (input: unknown): ParseResult<ServerFrame> => toResult(ServerFrameSchema.safeParse(input));
+export function parseServerFrame(input: unknown): ParseResult<ServerFrame> {
+    return toResult(ServerFrameSchema.safeParse(input));
+}

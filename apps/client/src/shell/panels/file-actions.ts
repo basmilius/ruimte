@@ -22,4 +22,6 @@ export interface FileActions {
 export const FileActionsContext = createContext<FileActions | null>(null);
 
 /* Null where a toolbar has no file under it to act on. */
-export const useFileActions = (): FileActions | null => useContext(FileActionsContext);
+export function useFileActions(): FileActions | null {
+    return useContext(FileActionsContext);
+}

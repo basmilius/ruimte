@@ -15,10 +15,10 @@ const behind = [config.trustProxy ? 'a proxy' : null, config.trustCloudflare ? '
 const turn = config.turn.kind === 'none' ? 'no TURN' : config.turn.kind === 'shared-secret' ? `TURN at ${config.turn.urls.join(', ')}` : 'TURN from Cloudflare';
 console.log(`pulsar broker listening on ws://${config.host}:${running.port} (answers to ${names}${behind === '' ? '' : `, behind ${behind}`}, ${turn})`);
 
-const shutdown = (signal: string): void => {
+function shutdown(signal: string): void {
     console.log(`pulsar broker received ${signal}, closing sockets`);
     void running.stop().then(() => process.exit(0));
-};
+}
 
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));

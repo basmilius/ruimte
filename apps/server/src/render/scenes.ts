@@ -25,20 +25,24 @@ import {
 } from '@ruimte/diagram';
 import { LINE_HEIGHT, approximateMeasure, centerOf, fontOf, linesOf, pathsOfElement, rotatePoint, unionOf, writingFrameOf } from '@ruimte/drawing';
 
-const color = (tone: DrawingColor, palette: RenderColor['palette'] = 'ink'): RenderColor => ({ tone, palette });
+function color(tone: DrawingColor, palette: RenderColor['palette'] = 'ink'): RenderColor {
+    return { tone, palette };
+}
 
-const elementAtOrigin = (id: string, paths: RenderPath[], text: RenderText[]): RenderElement => ({
-    id,
-    x: 0,
-    y: 0,
-    angle: 0,
-    centerX: 0,
-    centerY: 0,
-    paths,
-    text
-});
+function elementAtOrigin(id: string, paths: RenderPath[], text: RenderText[]): RenderElement {
+    return {
+        id,
+        x: 0,
+        y: 0,
+        angle: 0,
+        centerX: 0,
+        centerY: 0,
+        paths,
+        text
+    };
+}
 
-export const renderDiagram = (document: DiagramDocument): RenderSceneResult => {
+export function renderDiagram(document: DiagramDocument): RenderSceneResult {
     const layout = layoutOf(document);
     const nodes = new Map(document.nodes.map((node) => [node.id, node]));
     const groups = new Map(document.groups.map((group) => [group.id, group]));
@@ -126,9 +130,9 @@ export const renderDiagram = (document: DiagramDocument): RenderSceneResult => {
         );
     }
     return { rev: document.rev, bounds: layout.bounds, elements };
-};
+}
 
-const drawingText = (element: DrawingElement): RenderText[] => {
+function drawingText(element: DrawingElement): RenderText[] {
     if (element.kind !== 'text' && element.kind !== 'note') {
         return [];
     }
@@ -144,10 +148,10 @@ const drawingText = (element: DrawingElement): RenderText[] => {
         font: fontOf(element.font),
         color: color(element.stroke)
     }));
-};
+}
 
-const drawingPaths = (element: DrawingElement): RenderPath[] =>
-    pathsOfElement(element).map((path) => {
+function drawingPaths(element: DrawingElement): RenderPath[] {
+    return pathsOfElement(element).map((path) => {
         const note = element.kind === 'note';
         if (path.role === 'stroke') {
             return {
@@ -162,8 +166,9 @@ const drawingPaths = (element: DrawingElement): RenderPath[] =>
         const hachure = path.role === 'fill' && path.strokeWidth > 0 && element.fill === 'hachure';
         return { d: path.d, stroke: hachure ? fill : null, fill: hachure ? null : fill, strokeWidth: path.strokeWidth, dash: path.dash };
     });
+}
 
-export const renderDrawing = (document: DrawingDocument): RenderSceneResult => {
+export function renderDrawing(document: DrawingDocument): RenderSceneResult {
     const bounds = unionOf(
         document.elements.flatMap((element) => {
             const center = centerOf(element);
@@ -192,4 +197,4 @@ export const renderDrawing = (document: DrawingDocument): RenderSceneResult => {
             text: drawingText(element)
         }))
     };
-};
+}

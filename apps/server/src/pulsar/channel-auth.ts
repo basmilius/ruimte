@@ -36,10 +36,11 @@ export interface ChannelAuthOptions {
 }
 
 /* The proof a client on the daemon's own machine sends in place of a key signature. */
-export const localSecretProof = (secret: string, daemonId: string, challenge: string, binding: string): string =>
-    createHmac('sha256', secret)
+export function localSecretProof(secret: string, daemonId: string, challenge: string, binding: string): string {
+    return createHmac('sha256', secret)
         .update(localSecretChannelMessage(daemonId, challenge, binding))
         .digest('base64url');
+}
 
 /*
  * The HTTP handshake, run as the first frames of a channel. The daemon speaks first with a challenge
@@ -49,8 +50,8 @@ export const localSecretProof = (secret: string, daemonId: string, challenge: st
  *
  * Answers the access the channel gets, or null when it gets none.
  */
-export const authenticateChannel = (options: ChannelAuthOptions): Promise<ClientAccess | null> =>
-    new Promise((resolve) => {
+export function authenticateChannel(options: ChannelAuthOptions): Promise<ClientAccess | null> {
+    return new Promise((resolve) => {
         const { channel, binding, handshake } = options;
         const issued = handshake.challenge(binding);
         let settled = false;
@@ -134,3 +135,4 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
         }, UNAUTHENTICATED_FRAME_CHARS);
         channel.send(JSON.stringify({ type: 'direct.challenge', protocol: PROTOCOL_VERSION, challenge: issued.challenge, daemon: issued.daemon }));
     });
+}

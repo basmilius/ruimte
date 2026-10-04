@@ -16,7 +16,7 @@ export type StartDecision =
  * Two builds are the same when their ids match. Only when either side has none does the version
  * decide: a local compile of 0.0.0 is not the previous local compile of 0.0.0, and the id says so.
  */
-export const sameBuild = (running: BuildIdentity, expected: BuildIdentity): boolean => {
+export function sameBuild(running: BuildIdentity, expected: BuildIdentity): boolean {
     if (running.build !== null && expected.build !== null) {
         return running.build === expected.build;
     }
@@ -24,15 +24,17 @@ export const sameBuild = (running: BuildIdentity, expected: BuildIdentity): bool
         return false;
     }
     return running.version === expected.version;
-};
+}
 
 /*
  * An older build under the service: restarted at once when nothing runs, asked about otherwise. A
  * daemon that cannot say what runs is asked about too, since a silent restart is the thing to avoid.
  */
-export const decideRestart = (work: MachineWork | null): 'restart' | 'ask' => (work !== null && isIdle(work) ? 'restart' : 'ask');
+export function decideRestart(work: MachineWork | null): 'restart' | 'ask' {
+    return work !== null && isIdle(work) ? 'restart' : 'ask';
+}
 
-export const decideStart = (health: BuildIdentity | null, expected: BuildIdentity, serviceOn: boolean): StartDecision => {
+export function decideStart(health: BuildIdentity | null, expected: BuildIdentity, serviceOn: boolean): StartDecision {
     if (health === null) {
         return serviceOn ? 'start-service' : 'spawn';
     }
@@ -40,4 +42,4 @@ export const decideStart = (health: BuildIdentity | null, expected: BuildIdentit
         return 'attach-external';
     }
     return sameBuild(health, expected) ? 'attach' : 'restart-service';
-};
+}

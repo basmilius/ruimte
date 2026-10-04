@@ -38,13 +38,13 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (): Promise<TestDaemon> => {
+async function boot(): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
     daemons.push(daemon);
     return daemon;
-};
+}
 
-const leadIdle = async (daemon: TestDaemon): Promise<void> => {
+async function leadIdle(daemon: TestDaemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'plan');
     await daemon.until(
@@ -54,14 +54,14 @@ const leadIdle = async (daemon: TestDaemon): Promise<void> => {
                 ?.thread.list()
                 .some((item) => item.kind === 'turn' && item.state === 'done') === true
     );
-};
+}
 
-const delegate = async (daemon: TestDaemon, caller = 'chat-lead', prompt = 'count primes'): Promise<{ childId: string; taskId: string }> => {
+async function delegate(daemon: TestDaemon, caller = 'chat-lead', prompt = 'count primes'): Promise<{ childId: string; taskId: string }> {
     const lines = await runVerb(daemon, caller, 'agent', ['codex', '--model', 'gpt-6.1-sol', '--task', 'Primes', '--prompt', prompt]);
     const fields = lines[0]!.split('\t');
     expect(fields.slice(1, 5)).toEqual(['chat', '-', 'codex', '-']);
     return { childId: fields[0]!, taskId: fields[5]! };
-};
+}
 
 test('a chat view delegates to the requested provider and model without adding a view or canvas', async () => {
     const daemon = await boot();

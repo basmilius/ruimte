@@ -16,7 +16,7 @@ export interface Star {
 }
 
 /* Mulberry32: a few lines, and the same sky on every draw and every machine. */
-const randomFrom = (seed: number): (() => number) => {
+function randomFrom(seed: number): () => number {
     let state = seed >>> 0;
     return () => {
         state = (state + 0x6d2b79f5) >>> 0;
@@ -24,12 +24,14 @@ const randomFrom = (seed: number): (() => number) => {
         mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
         return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
     };
-};
+}
 
-const rounded = (value: number, digits: number): number => Number(value.toFixed(digits));
+function rounded(value: number, digits: number): number {
+    return Number(value.toFixed(digits));
+}
 
 /* The stars of one scene, laid out from a seed: mostly white, a few cool and warm, about one in five a glint. */
-export const starsOf = (count: number, seed: number): Star[] => {
+export function starsOf(count: number, seed: number): Star[] {
     const random = randomFrom(seed);
     return Array.from({ length: count }, (): Star => {
         const left = rounded(random() * 100, 1);
@@ -47,4 +49,4 @@ export const starsOf = (count: number, seed: number): Star[] => {
             delay: -Math.floor(random() * 9)
         };
     });
-};
+}

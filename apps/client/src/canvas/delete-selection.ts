@@ -17,11 +17,11 @@ import type { Transport } from '@/transport/transport';
  * changes is saved before anything is asked. The selection is kept, so the delete that runs after
  * the answer takes what the person picked, not what is selected by then.
  */
-export const deleteSelectionAsking = (
+export function deleteSelectionAsking(
     store: StoreApi<CanvasState>,
     transport: Pick<Transport, 'request'> | null,
     folder: string | null = useProject.getState().current?.folder ?? null
-): Promise<void> => {
+): Promise<void> {
     const { nodes, selection } = store.getState();
     const picked = [...selection];
     const going = picked.flatMap((id) => {
@@ -63,4 +63,4 @@ export const deleteSelectionAsking = (
             void askBeforeEndingAgents(transport, sessions, what, () => deleteNodesAction(store, picked), leftBehind).finally(resolve);
         });
     });
-};
+}

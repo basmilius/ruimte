@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { DEVICE_HELPER_MAGIC, DeviceHelperDecoder, encodeDeviceHelperMessage, type DeviceHelperMessage } from './helper-protocol.ts';
 
-const join = (...chunks: Uint8Array[]): Uint8Array => {
+function join(...chunks: Uint8Array[]): Uint8Array {
     const result = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.byteLength, 0));
     let offset = 0;
     for (const chunk of chunks) {
@@ -9,7 +9,7 @@ const join = (...chunks: Uint8Array[]): Uint8Array => {
         offset += chunk.byteLength;
     }
     return result;
-};
+}
 
 describe('device helper protocol', () => {
     test('decodes split ready and frame messages without base64', () => {

@@ -18,11 +18,11 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const request = async (clientId: string, type: string, payload: unknown): Promise<ServerFrame> => {
+async function request(clientId: string, type: string, payload: unknown): Promise<ServerFrame> {
     const frames: ServerFrame[] = [];
     await dispatcher.handle({ id: clientId, send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
     return frames[0]!;
-};
+}
 
 describe('following a shared terminal', () => {
     test('a phone follows the desktop dimensions and receives the same output', async () => {

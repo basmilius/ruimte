@@ -39,7 +39,7 @@ export interface EditorRegistry<T> {
  * A registry over the store factory of one editor. It owns the subscriptions of what it made, so a
  * reader subscribes once here instead of rewiring itself every time a cell opens or closes.
  */
-export const createEditorRegistry = <T>(create: () => StoreApi<T>, blank: StoreApi<T> = create()): EditorRegistry<T> => {
+export function createEditorRegistry<T>(create: () => StoreApi<T>, blank: StoreApi<T> = create()): EditorRegistry<T> {
     const editors = new Map<string, StoreApi<T>>();
     const offs = new Map<string, () => void>();
     const listeners = new Set<(viewId: string, state: T, previous: T) => void>();
@@ -123,4 +123,4 @@ export const createEditorRegistry = <T>(create: () => StoreApi<T>, blank: StoreA
             };
         }
     };
-};
+}

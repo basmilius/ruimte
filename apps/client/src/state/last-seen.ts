@@ -5,16 +5,18 @@ const LAST_SEEN_KEY = 'ruimte.lastSeen';
 
 type LastSeenStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
-const browserStorage = (): LastSeenStorage | null => (typeof localStorage === 'undefined' ? null : localStorage);
+function browserStorage(): LastSeenStorage | null {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+}
 
-const readStored = (storage: LastSeenStorage | null): Record<string, number> => {
+function readStored(storage: LastSeenStorage | null): Record<string, number> {
     try {
         const parsed = JSON.parse(storage?.getItem(LAST_SEEN_KEY) ?? '{}') as unknown;
         return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, number>) : {};
     } catch {
         return {};
     }
-};
+}
 
 interface LastSeenState {
     /* When each machine last had an open link here, epoch ms. */
@@ -23,13 +25,13 @@ interface LastSeenState {
     forget(endpointId: string): void;
 }
 
-const write = (byEndpoint: Record<string, number>): void => {
+function write(byEndpoint: Record<string, number>): void {
     try {
         browserStorage()?.setItem(LAST_SEEN_KEY, JSON.stringify(byEndpoint));
     } catch {
         // Storage that refuses only costs the "last connected" line after a reload.
     }
-};
+}
 
 /*
  * A machine that is not connected is no longer a failure to report, since most machines are closed
@@ -61,11 +63,11 @@ export interface LastSeenSource {
  * was up for an hour last answered when it closed, not when it opened. `flush` is for a page on its
  * way out, which closes nothing on its own.
  */
-export const watchLastSeen = (
+export function watchLastSeen(
     source: LastSeenSource,
     now: () => number,
     see: (endpointId: string, at: number) => void
-): { stop: () => void; flush: () => void } => {
+): { stop: () => void; flush: () => void } {
     const open = new Set<string>();
     const sync = (): void => {
         const ids = new Set(source.ids());
@@ -92,4 +94,4 @@ export const watchLastSeen = (
             }
         }
     };
-};
+}

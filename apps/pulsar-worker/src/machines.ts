@@ -24,24 +24,28 @@ interface MachineRow {
 
 /* A mark stored by a build that wrote other kinds of mark is decoration nobody can draw any more.
    It comes back as no mark, because a row nobody can validate is still a machine to connect to. */
-const iconOf = (stored: string): MachineIcon | null => {
+function iconOf(stored: string): MachineIcon | null {
     const parsed = MachineIconSchema.safeParse(JSON.parse(stored) as unknown);
     return parsed.success ? parsed.data : null;
-};
+}
 
-const machineOf = (row: MachineRow): Machine => ({
-    id: row.id,
-    name: row.name,
-    icon: row.icon ? iconOf(row.icon) : null,
-    publicKey: row.public_key,
-    brokerUrl: row.broker_url,
-    lastSeenAt: row.last_seen_at
-});
+function machineOf(row: MachineRow): Machine {
+    return {
+        id: row.id,
+        name: row.name,
+        icon: row.icon ? iconOf(row.icon) : null,
+        publicKey: row.public_key,
+        brokerUrl: row.broker_url,
+        lastSeenAt: row.last_seen_at
+    };
+}
 
-const signInAgain = (): Response => failure('unauthorized', 'Sign in again');
+function signInAgain(): Response {
+    return failure('unauthorized', 'Sign in again');
+}
 
 // `GET /v1/machines`
-export const listMachines = async (request: Request, env: Env): Promise<Response> => {
+export async function listMachines(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
@@ -56,10 +60,10 @@ export const listMachines = async (request: Request, env: Env): Promise<Response
         machines: ((machines?.results ?? []) as MachineRow[]).map(machineOf),
         removedMachineIds: ((removed?.results ?? []) as { machine_id: string }[]).map((row) => row.machine_id)
     });
-};
+}
 
 // `POST /v1/machines`
-export const registerMachine = async (request: Request, env: Env): Promise<Response> => {
+export async function registerMachine(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
@@ -94,7 +98,7 @@ export const registerMachine = async (request: Request, env: Env): Promise<Respo
     }
     const stored = await storeMachine(env.DB, session.account.id, { ...payload, brokerUrl: payload.brokerUrl ?? null }, payload.automatic !== true, now);
     return 'response' in stored ? stored.response : json({ machine: stored.machine });
-};
+}
 
 export interface SignedMachine {
     id: string;
@@ -108,13 +112,13 @@ export interface SignedMachine {
  * Puts a machine whose signature already held on an account. A registration a person asked for clears
  * a removal; the caller refuses an automatic one for a removed machine before it gets here.
  */
-export const storeMachine = async (
+export async function storeMachine(
     db: D1Database,
     accountId: string,
     machine: SignedMachine,
     clearsRemoval: boolean,
     now: number
-): Promise<{ machine: Machine } | { response: Response }> => {
+): Promise<{ machine: Machine } | { response: Response }> {
     /*
      * A machine is on one account at a time and only the machine moves itself, so its key on a second
      * account is refused. A row this account already holds for the key keeps updating: two accounts
@@ -151,10 +155,10 @@ export const storeMachine = async (
         return { response: failure('bad-signature', 'This machine is on the account with another key; remove it from the account and add it again') };
     }
     return { machine: machineOf(row) };
-};
+}
 
 // `DELETE /v1/machines/<id>`: off the list only; the machine keeps every pairing it has.
-export const deleteMachine = async (request: Request, env: Env, rawId: string): Promise<Response> => {
+export async function deleteMachine(request: Request, env: Env, rawId: string): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return signInAgain();
@@ -179,4 +183,4 @@ export const deleteMachine = async (request: Request, env: Env, rawId: string): 
         return failure('not-found', 'No machine with that id on this account');
     }
     return noContent();
-};
+}

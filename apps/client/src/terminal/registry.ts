@@ -11,7 +11,7 @@ import { webglBudget } from '@/terminal/webgl-budget';
 const live = new Map<string, Terminal>();
 const lastScreens = new Map<string, string[]>();
 
-export const screenLines = (term: Terminal): string[] => {
+export function screenLines(term: Terminal): string[] {
     const buffer = term.buffer.active;
     const lines: string[] = [];
     for (let i = 0; i < buffer.length; i++) {
@@ -21,9 +21,9 @@ export const screenLines = (term: Terminal): string[] => {
         lines.pop();
     }
     return lines;
-};
+}
 
-export const registerTerminal = (endpointId: string, nodeId: string, term: Terminal): (() => void) => {
+export function registerTerminal(endpointId: string, nodeId: string, term: Terminal): () => void {
     const key = endpointKey(endpointId, nodeId);
     live.set(key, term);
     return () => {
@@ -32,20 +32,22 @@ export const registerTerminal = (endpointId: string, nodeId: string, term: Termi
         }
         lastScreens.set(key, screenLines(term));
     };
-};
+}
 
-export const lastScreenOf = (endpointId: string, nodeId: string): string[] => lastScreens.get(endpointKey(endpointId, nodeId)) ?? [];
+export function lastScreenOf(endpointId: string, nodeId: string): string[] {
+    return lastScreens.get(endpointKey(endpointId, nodeId)) ?? [];
+}
 
 /* What a terminal shows now, or showed when it was last on screen; null for one this window never drew. */
-export const screenOf = (endpointId: string, nodeId: string): string[] | null => {
+export function screenOf(endpointId: string, nodeId: string): string[] | null {
     const key = endpointKey(endpointId, nodeId);
     const term = live.get(key);
     return term ? screenLines(term) : (lastScreens.get(key) ?? null);
-};
+}
 
-export const forgetScreen = (endpointId: string, nodeId: string): void => {
+export function forgetScreen(endpointId: string, nodeId: string): void {
     lastScreens.delete(endpointKey(endpointId, nodeId));
-};
+}
 
 export interface TerminalTestHooks {
     /* The machine defaults to the active one, which is the only one a canvas shows today. */
@@ -69,7 +71,7 @@ declare global {
 }
 
 /* The WebGL renderer leaves no text in the DOM, so an end-to-end test reads the buffer through here. */
-export const exposeTerminalTestHooks = (): void => {
+export function exposeTerminalTestHooks(): void {
     window.ruimte = {
         terminalText(nodeId, endpointId) {
             const term = live.get(endpointKey(endpointId ?? currentEndpointId(), nodeId));
@@ -95,4 +97,4 @@ export const exposeTerminalTestHooks = (): void => {
             return focusedCanvas().getState();
         }
     };
-};
+}

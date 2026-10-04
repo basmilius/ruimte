@@ -7,10 +7,12 @@ import { useDocument } from '@/state/document';
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] };
 
-const entry = (name: string): FsEntry => ({ name, path: `/repo/${name}`, kind: 'file', size: 1, mtime: 0, hidden: false, ignored: false });
+function entry(name: string): FsEntry {
+    return { name, path: `/repo/${name}`, kind: 'file', size: 1, mtime: 0, hidden: false, ignored: false };
+}
 
 /* A machine with a project in /repo: what it was asked, what the preview has open and what was copied. */
-const fakes = (answers: Answers = {}, overrides: Partial<FilesMachine> = {}) => {
+function fakes(answers: Answers = {}, overrides: Partial<FilesMachine> = {}) {
     const asked: { type: string; payload: unknown }[] = [];
     const open = new Map<string, number | null>();
     const copied: string[] = [];
@@ -38,14 +40,14 @@ const fakes = (answers: Answers = {}, overrides: Partial<FilesMachine> = {}) => 
         ...overrides
     };
     return { asked, open, copied, revealed, forgotten, registry: createClientActionRegistry(useDocument, { files: machine }) };
-};
+}
 
-const completed = <Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> => {
+function completed<Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> {
     if (result.status !== 'completed') {
         throw new Error(`Expected a completed action, got ${JSON.stringify(result)}`);
     }
     return result as Extract<Result, { status: 'completed' }>;
-};
+}
 
 beforeEach(() => {
     useDocument.getState().load({ version: 3, rev: 1, name: 'Atlas', color: '#000', views: [] }, null);

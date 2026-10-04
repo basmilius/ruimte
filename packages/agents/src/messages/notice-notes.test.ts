@@ -8,7 +8,9 @@ import { NoticeStore, type Notice } from './notice-store.ts';
 let dataDir: string;
 let store: NoticeStore;
 
-const left = (text: string): Omit<Notice, 'createdAt'> => ({ projectId: 'project-1', targetId: 'chat-2', from: 'chat-1', fromTitle: 'Lead', text });
+function left(text: string): Omit<Notice, 'createdAt'> {
+    return { projectId: 'project-1', targetId: 'chat-2', from: 'chat-1', fromTitle: 'Lead', text };
+}
 
 const words = {
     heard: (notice: Notice): string => `node ${notice.from} sent you: ${notice.text}`,

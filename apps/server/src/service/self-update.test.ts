@@ -59,7 +59,7 @@ describe('the build file', () => {
 });
 
 /* Timers that only run when the test says so. */
-const manualTimers = () => {
+function manualTimers() {
     const intervals: Array<() => void> = [];
     const pending: Array<() => void> = [];
     const timers: SelfUpdateTimers = {
@@ -73,9 +73,9 @@ const manualTimers = () => {
         }
     };
     return { timers, intervals, pending };
-};
+}
 
-const updater = (overrides: Partial<SelfUpdaterOptions> = {}) => {
+function updater(overrides: Partial<SelfUpdaterOptions> = {}) {
     const state = { onDisk: 'build-a', idle: false, exits: 0, logs: [] as string[] };
     const clock = manualTimers();
     const instance = new SelfUpdater({
@@ -91,7 +91,7 @@ const updater = (overrides: Partial<SelfUpdaterOptions> = {}) => {
         ...overrides
     });
     return { instance, state, clock };
-};
+}
 
 describe('SelfUpdater', () => {
     test('exits once when a newer build is on disk and the machine is idle', () => {

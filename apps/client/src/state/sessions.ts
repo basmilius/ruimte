@@ -98,28 +98,30 @@ export const useSessions = create<SessionsStore>((set) => ({
 }));
 
 /* The sink of one daemon's session client: it hands over node ids, this puts them under its machine. */
-export const sessionSinkFor = (endpointId: string): SessionSink => ({
-    setAttached: (nodeId, attached) => useSessions.getState().setAttached(endpointKey(endpointId, nodeId), attached),
-    setExited: (nodeId, exitCode) => useSessions.getState().setExited(endpointKey(endpointId, nodeId), exitCode),
-    setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
-    setHeldCommand: (nodeId, command) => useSessions.getState().setHeldCommand(endpointKey(endpointId, nodeId), command),
-    setAccount: (nodeId, account) => useSessions.getState().setAccount(endpointKey(endpointId, nodeId), account),
-    forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
-});
+export function sessionSinkFor(endpointId: string): SessionSink {
+    return {
+        setAttached: (nodeId, attached) => useSessions.getState().setAttached(endpointKey(endpointId, nodeId), attached),
+        setExited: (nodeId, exitCode) => useSessions.getState().setExited(endpointKey(endpointId, nodeId), exitCode),
+        setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
+        setHeldCommand: (nodeId, command) => useSessions.getState().setHeldCommand(endpointKey(endpointId, nodeId), command),
+        setAccount: (nodeId, account) => useSessions.getState().setAccount(endpointKey(endpointId, nodeId), account),
+        forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
+    };
+}
 
 /* How often a terminal on the machine in scope was started over. */
-export const useSessionRestarts = (nodeId: string): number => {
+export function useSessionRestarts(nodeId: string): number {
     const endpointId = useEndpointId();
     return useSessions((s) => s.restarts[endpointKey(endpointId, nodeId)] ?? 0);
-};
+}
 
 /* One node's session on the machine in scope. The selector keeps a render tied to the field it reads. */
-export const useSessionRow = <T>(nodeId: string, select: (row: SessionState | undefined) => T): T => {
+export function useSessionRow<T>(nodeId: string, select: (row: SessionState | undefined) => T): T {
     const endpointId = useEndpointId();
     return useSessions((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
-};
+}
 
-const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined => {
+function sessionStatus(state: SessionState | undefined): AgentStatus | undefined {
     if (!state) {
         return undefined;
     }
@@ -135,13 +137,13 @@ const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined
         return 'error';
     }
     return state.attached ? 'running' : undefined;
-};
+}
 
 /* What a node needs to have a status. Geometry says nothing about whether something is running. */
 export type StatusOf = Pick<CanvasNode, 'id' | 'kind' | 'status'>;
 
 /* A terminal's status comes from its session, a chat's from its thread; anything else still carries it on the node. */
-export const nodeStatus = (node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): AgentStatus | undefined => {
+export function nodeStatus(node: StatusOf, sessions: SessionsByKey, chats: ChatStatuses, endpointId: string): AgentStatus | undefined {
     if (node.kind === 'terminal') {
         return sessionStatus(sessions[endpointKey(endpointId, node.id)]);
     }
@@ -149,4 +151,4 @@ export const nodeStatus = (node: StatusOf, sessions: SessionsByKey, chats: ChatS
         return chats[endpointKey(endpointId, node.id)]?.info.status;
     }
     return node.status;
-};
+}

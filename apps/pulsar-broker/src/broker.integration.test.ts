@@ -15,14 +15,16 @@ interface TestKey {
     privateKey: KeyObject;
 }
 
-const newKey = (): TestKey => {
+function newKey(): TestKey {
     const pair = generateKeyPairSync('ed25519');
     return { publicKey: (pair.publicKey.export({ format: 'jwk' }) as { x: string }).x, privateKey: pair.privateKey };
-};
+}
 
-const signWith = (key: TestKey, message: string): string => sign(null, Buffer.from(message), key.privateKey).toString('base64url');
+function signWith(key: TestKey, message: string): string {
+    return sign(null, Buffer.from(message), key.privateKey).toString('base64url');
+}
 
-const waitUntil = async (label: string, ready: () => boolean, timeoutMs = 3_000): Promise<void> => {
+async function waitUntil(label: string, ready: () => boolean, timeoutMs = 3_000): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (!ready()) {
         if (Date.now() > deadline) {
@@ -30,7 +32,7 @@ const waitUntil = async (label: string, ready: () => boolean, timeoutMs = 3_000)
         }
         await new Promise((resolve) => setTimeout(resolve, 5));
     }
-};
+}
 
 const running: RunningBroker[] = [];
 const sockets: WebSocket[] = [];
@@ -44,7 +46,7 @@ afterEach(async () => {
     }
 });
 
-const start = (limits: Partial<BrokerLimits> = {}): RunningBroker => {
+function start(limits: Partial<BrokerLimits> = {}): RunningBroker {
     const broker = startBroker({
         host: '127.0.0.1',
         port: 0,
@@ -56,9 +58,9 @@ const start = (limits: Partial<BrokerLimits> = {}): RunningBroker => {
     });
     running.push(broker);
     return broker;
-};
+}
 
-const connect = (broker: RunningBroker, role: BrokerRole, key: TestKey) => {
+function connect(broker: RunningBroker, role: BrokerRole, key: TestKey) {
     const socket = new WebSocket(`ws://127.0.0.1:${broker.port}`);
     sockets.push(socket);
     const state = { frames: [] as BrokerServerFrame[], ready: false };
@@ -83,12 +85,14 @@ const connect = (broker: RunningBroker, role: BrokerRole, key: TestKey) => {
         void peer.receive(String(message.data));
     };
     return { peer, state, key };
-};
+}
 
 const offer: SignalEnvelope = { connectionId: 'attempt-0001', signal: { kind: 'offer', sdp: 'v=0\r\na=fingerprint:sha-256 AA' } };
 const answer: SignalEnvelope = { connectionId: 'attempt-0001', signal: { kind: 'answer', sdp: 'v=0\r\na=fingerprint:sha-256 BB' } };
 
-const relayedTo = (state: { frames: BrokerServerFrame[] }) => state.frames.filter((frame) => frame.type === 'relayed');
+function relayedTo(state: { frames: BrokerServerFrame[] }) {
+    return state.frames.filter((frame) => frame.type === 'relayed');
+}
 
 describe('the broker over real sockets', () => {
     test('a machine and a client announce on the host they dialed, and a signal travels both ways', async () => {

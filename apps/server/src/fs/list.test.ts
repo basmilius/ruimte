@@ -8,7 +8,9 @@ import { ListError, listDirectory } from './list.ts';
 let root: string;
 let outside: string;
 
-const names = (entries: { name: string }[]): string[] => entries.map((entry) => entry.name);
+function names(entries: { name: string }[]): string[] {
+    return entries.map((entry) => entry.name);
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-list-'));

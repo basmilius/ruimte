@@ -7,4 +7,6 @@
 // oxlint-disable-next-line no-control-regex
 const REPLIES = /^(?:\x1b\[[?>=]?[\d;]*\$?[cRnyt]|\x1b\[[IO]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1bP[^\x1b]*\x1b\\)+$/;
 
-export const isTerminalReply = (data: string): boolean => REPLIES.test(data);
+export function isTerminalReply(data: string): boolean {
+    return REPLIES.test(data);
+}

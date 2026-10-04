@@ -6,11 +6,17 @@ import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { watchNodes } from '@/terminal/lifecycle-watch';
 
-const node = (id: string, kind: ProjectNode['kind'] = 'terminal'): ProjectNode => ({ id, kind, title: id, x: 0, y: 0, w: 100, h: 80 });
+function node(id: string, kind: ProjectNode['kind'] = 'terminal'): ProjectNode {
+    return { id, kind, title: id, x: 0, y: 0, w: 100, h: 80 };
+}
 
-const view = (id: string, nodes: ProjectNode[]): ProjectCanvasView => ({ kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] });
+function view(id: string, nodes: ProjectNode[]): ProjectCanvasView {
+    return { kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] };
+}
 
-const project = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 3, rev: 1, name: 'p', color: '#000', views });
+function project(views: ProjectCanvasView[]): ProjectDocument {
+    return { version: 3, rev: 1, name: 'p', color: '#000', views };
+}
 
 const container: Endpoint = {
     id: 'Xk3p',
@@ -26,7 +32,9 @@ let ended: string[] = [];
 let gone: string[] = [];
 let stop: (() => void) | null = null;
 
-const watch = (): (() => void) => watchNodes((endpointId, id, kind, exit) => (exit === 'closed' ? ended : gone).push(`${endpointId} ${kind}:${id}`));
+function watch(): () => void {
+    return watchNodes((endpointId, id, kind, exit) => (exit === 'closed' ? ended : gone).push(`${endpointId} ${kind}:${id}`));
+}
 
 beforeEach(() => {
     ended = [];

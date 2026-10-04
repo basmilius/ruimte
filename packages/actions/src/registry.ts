@@ -144,18 +144,22 @@ export interface ActionRegistryOptions<Context = unknown> {
 
 export const REVISION_CONFLICT = 'rev-conflict';
 
-export const revisionConflictMessage = (document: string, expected: number, current: number): string =>
-    `${document} is at revision ${current}, and this call was decided on ${expected}; read it again and decide anew.`;
+export function revisionConflictMessage(document: string, expected: number, current: number): string {
+    return `${document} is at revision ${current}, and this call was decided on ${expected}; read it again and decide anew.`;
+}
 
 /* The refusal of a write decided on a revision the document has moved on from. */
-export const revisionConflict = (document: string, expected: number, current: number): ActionRefusal =>
-    new ActionRefusal(REVISION_CONFLICT, revisionConflictMessage(document, expected, current));
+export function revisionConflict(document: string, expected: number, current: number): ActionRefusal {
+    return new ActionRefusal(REVISION_CONFLICT, revisionConflictMessage(document, expected, current));
+}
 
 const WRITES: ReadonlySet<string> = new Set(['shared', 'external']);
 
-const sameActor = (left: ActionActor, right: ActionActor): boolean => left.kind === right.kind && left.id === right.id;
+function sameActor(left: ActionActor, right: ActionActor): boolean {
+    return left.kind === right.kind && left.id === right.id;
+}
 
-const remember = <Value>(entries: Map<string, Value>, token: string, value: Value): void => {
+function remember<Value>(entries: Map<string, Value>, token: string, value: Value): void {
     if (entries.size >= TOKEN_LIMIT) {
         const oldest = entries.keys().next().value;
         if (oldest !== undefined) {
@@ -163,10 +167,10 @@ const remember = <Value>(entries: Map<string, Value>, token: string, value: Valu
         }
     }
     entries.set(token, value);
-};
+}
 
 /* Whether this actor may give this value, down to a member of a union that only some actors may pick. */
-const mayGive = (schema: z.ZodType, value: unknown, actor: ActionActorKind): boolean => {
+function mayGive(schema: z.ZodType, value: unknown, actor: ActionActorKind): boolean {
     const actors = fieldActors(schema);
     if (actors !== null && !actors.includes(actor)) {
         return value === null || value === undefined;
@@ -175,13 +179,15 @@ const mayGive = (schema: z.ZodType, value: unknown, actor: ActionActorKind): boo
         return (schema.options as z.ZodType[]).some((option) => option.safeParse(value).success && mayGive(option, value, actor));
     }
     return true;
-};
+}
 
-const failure = (action: ActionName | null, code: string, message: string, details?: unknown): ActionFailed => ({
-    status: 'failed',
-    action,
-    error: { code, message, ...(details === undefined ? {} : { details }) }
-});
+function failure(action: ActionName | null, code: string, message: string, details?: unknown): ActionFailed {
+    return {
+        status: 'failed',
+        action,
+        error: { code, message, ...(details === undefined ? {} : { details }) }
+    };
+}
 
 export class ActionRegistry<Context> {
     readonly #handlers: ActionHandlers<Context>;

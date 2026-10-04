@@ -9,13 +9,17 @@ export type BackgroundWork = ChatSubagentItem | ChatToolItem;
  * `ChatBackgroundTask` in the chat's info, held to `BACKGROUND_COMMAND_LIMIT_MS`; a row the host drew for
  * work it delegated itself (origin `ruimte` on the wire) is that work's own.
  */
-export const isBackgroundWork = (item: ChatItem): item is BackgroundWork =>
-    (item.kind === 'subagent' && item.background && item.origin !== 'ruimte') || (item.kind === 'tool' && item.name === 'Workflow');
+export function isBackgroundWork(item: ChatItem): item is BackgroundWork {
+    return (item.kind === 'subagent' && item.background && item.origin !== 'ruimte') || (item.kind === 'tool' && item.name === 'Workflow');
+}
 
-export const runsInBackground = (item: BackgroundWork): boolean => (item.kind === 'subagent' ? item.status === 'running' : item.state === 'running');
+export function runsInBackground(item: BackgroundWork): boolean {
+    return item.kind === 'subagent' ? item.status === 'running' : item.state === 'running';
+}
 
-export const runningInBackground = (items: readonly ChatItem[]): BackgroundWork[] =>
-    items.filter((item): item is BackgroundWork => isBackgroundWork(item) && runsInBackground(item));
+export function runningInBackground(items: readonly ChatItem[]): BackgroundWork[] {
+    return items.filter((item): item is BackgroundWork => isBackgroundWork(item) && runsInBackground(item));
+}
 
 /*
  * How long a command or a monitor still running in the background holds a child's task once nothing
@@ -23,7 +27,9 @@ export const runningInBackground = (items: readonly ChatItem[]): BackgroundWork[
  */
 export const BACKGROUND_COMMAND_LIMIT_MS = 30 * 60_000;
 
-export const commandLabel = (task: ChatBackgroundTask): string => task.command ?? (task.description === '' ? task.id : task.description);
+export function commandLabel(task: ChatBackgroundTask): string {
+    return task.command ?? (task.description === '' ? task.id : task.description);
+}
 
 /*
  * Whether the CLI opens a turn of its own once its background work ended, to tell what came of it.
@@ -31,4 +37,6 @@ export const commandLabel = (task: ChatBackgroundTask): string => task.command ?
  * started first takes that subagent up again, which then notifies the main agent. Codex 0.156.1
  * reports a spawned agent completed and opens nothing.
  */
-export const reportsOnBackgroundWork = (provider: AgentKind): boolean => provider === 'claude';
+export function reportsOnBackgroundWork(provider: AgentKind): boolean {
+    return provider === 'claude';
+}

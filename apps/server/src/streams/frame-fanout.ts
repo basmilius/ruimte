@@ -13,7 +13,9 @@ interface FrameSubscription {
 }
 
 /* Two ids as one key, for a stream a pair of ids names. */
-export const streamKeyOf = (...parts: string[]): string => JSON.stringify(parts);
+export function streamKeyOf(...parts: string[]): string {
+    return JSON.stringify(parts);
+}
 
 /*
  * Who hears the frames of a live stream over the socket, per stream and per client. A page or a

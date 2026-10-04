@@ -6,16 +6,20 @@ export interface TextSpan {
     readonly text: string;
 }
 
-const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xdbff;
+function isHighSurrogate(code: number): boolean {
+    return code >= 0xd800 && code <= 0xdbff;
+}
 
-const isLowSurrogate = (code: number): boolean => code >= 0xdc00 && code <= 0xdfff;
+function isLowSurrogate(code: number): boolean {
+    return code >= 0xdc00 && code <= 0xdfff;
+}
 
 /*
  * The one stretch that differs between two texts, found from both ends. Replacing only that keeps a
  * cursor, a selection and the scroll where they were anywhere outside it, which setting the whole
  * text would not. Null when the two are the same.
  */
-export const changedSpan = (before: string, after: string): TextSpan | null => {
+export function changedSpan(before: string, after: string): TextSpan | null {
     if (before === after) {
         return null;
     }
@@ -36,4 +40,4 @@ export const changedSpan = (before: string, after: string): TextSpan | null => {
         tail -= 1;
     }
     return { start, end: before.length - tail, text: after.slice(start, after.length - tail) };
-};
+}

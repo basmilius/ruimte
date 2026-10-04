@@ -19,7 +19,7 @@ export const APPLE_TOOL_NAMES = {
     ask_user: 'AskUserQuestion'
 } as const satisfies Record<AppleToolCall['name'], string>;
 
-export const appleToolInput = (call: AppleToolCall): Record<string, unknown> => {
+export function appleToolInput(call: AppleToolCall): Record<string, unknown> {
     const { type: _type, id: _id, name: _name, ...input } = call;
     switch (call.name) {
         case 'read_file':
@@ -33,7 +33,7 @@ export const appleToolInput = (call: AppleToolCall): Record<string, unknown> => 
         default:
             return input;
     }
-};
+}
 
 export interface AppleToolContext {
     env: Record<string, string>;
@@ -49,7 +49,7 @@ export interface AppleToolResult {
     changes?: ChatFileChange[];
 }
 
-export const executeAppleTool = async (cwd: string, call: AppleToolCall, signal?: AbortSignal, context?: AppleToolContext): Promise<AppleToolResult> => {
+export async function executeAppleTool(cwd: string, call: AppleToolCall, signal?: AbortSignal, context?: AppleToolContext): Promise<AppleToolResult> {
     try {
         signal?.throwIfAborted();
         let result: AppleToolResult;
@@ -82,4 +82,4 @@ export const executeAppleTool = async (cwd: string, call: AppleToolCall, signal?
         const message = error instanceof Error && !('code' in error) ? error.message : 'The requested local tool could not complete.';
         return { output: `Tool failed: ${message}`, failed: true };
     }
-};
+}

@@ -36,20 +36,22 @@ export interface BrowserMenuItem {
     disabled?: boolean;
 }
 
-const asLabel = (text: string): string => {
+function asLabel(text: string): string {
     const line = text.trim().replace(/\s+/g, ' ');
     return line.length > 24 ? `${line.slice(0, 24)}…` : line;
-};
+}
 
 // http(s) only, matching the window open handler's rule. A link the page carries itself (file:,
 // data:) is nothing to hand to a new node or the system browser.
-const isWebUrl = (url: string): boolean => /^https?:\/\//i.test(url);
+function isWebUrl(url: string): boolean {
+    return /^https?:\/\//i.test(url);
+}
 
 /*
  * The rows behind a right-click in a page, in groups with a separator between them. Pure on
  * purpose, since what the click landed on decides the whole menu, and that is what the test drives.
  */
-export const buildBrowserMenu = (input: BrowserMenuInput): BrowserMenuItem[][] => {
+export function buildBrowserMenu(input: BrowserMenuInput): BrowserMenuItem[][] {
     // The shell keeps an editable click and pops a native menu over it, so macOS can hang AutoFill,
     // Look Up and Services off it. A shell old enough to still forward one gets no menu at all.
     if (input.isEditable) {
@@ -106,13 +108,13 @@ export const buildBrowserMenu = (input: BrowserMenuInput): BrowserMenuItem[][] =
 
     groups.push([{ id: 'inspect', label: i18next.t('browser:menu.inspect'), icon: Code, action: { kind: 'inspect' } }]);
     return groups;
-};
+}
 
 /*
  * The rows behind a right-click in an HTML file's preview. A preview has no history and nothing in
  * it may leave for the network, so it only copies, selects and hands a web link to a browser node.
  */
-export const buildPreviewMenu = (input: BrowserContextParams): BrowserMenuItem[][] => {
+export function buildPreviewMenu(input: BrowserContextParams): BrowserMenuItem[][] {
     if (input.isEditable) {
         return [];
     }
@@ -138,4 +140,4 @@ export const buildPreviewMenu = (input: BrowserContextParams): BrowserMenuItem[]
         { id: 'select-all', label: i18next.t('common:action.selectAll'), icon: Scan, action: { kind: 'select-all' } }
     ]);
     return groups;
-};
+}

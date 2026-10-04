@@ -210,10 +210,10 @@ export class AddressBookClient {
     }
 }
 
-const safeJson = (text: string): unknown => {
+function safeJson(text: string): unknown {
     try {
         return JSON.parse(text);
     } catch {
         return null;
     }
-};
+}

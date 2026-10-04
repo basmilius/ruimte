@@ -6,12 +6,14 @@ import { useToasts } from '@/state/toasts';
 
 type DocumentStore = Pick<StoreApi<DocumentState>, 'getState' | 'subscribe'>;
 
-const toastOf = (viewId: string): string => `deleted-view-${viewId}`;
+function toastOf(viewId: string): string {
+    return `deleted-view-${viewId}`;
+}
 
 const watched = new WeakSet<DocumentStore>();
 
 /* A trashed view that goes another way (put back, purged on leaving, deleted by another writer) takes its toast along. */
-const watchTrash = (document: DocumentStore): void => {
+function watchTrash(document: DocumentStore): void {
     if (watched.has(document)) {
         return;
     }
@@ -26,13 +28,13 @@ const watchTrash = (document: DocumentStore): void => {
             }
         }
     });
-};
+}
 
 /*
  * Says that a view a person deleted is gone, with the way back. What runs on it keeps running until
  * the toast goes, by running out or by being dismissed, and only then does the file lose the view.
  */
-export const offerViewUndo = (document: DocumentStore, viewId: string, name: string): void => {
+export function offerViewUndo(document: DocumentStore, viewId: string, name: string): void {
     watchTrash(document);
     useToasts.getState().show({
         id: toastOf(viewId),
@@ -47,10 +49,10 @@ export const offerViewUndo = (document: DocumentStore, viewId: string, name: str
         },
         onClose: () => document.getState().purgeTrash(viewId)
     });
-};
+}
 
 /* What the undo key does while a deletion is on offer: the newest comes back first. False when there is none. */
-export const undoLatestDeletion = (document: DocumentStore): boolean => {
+export function undoLatestDeletion(document: DocumentStore): boolean {
     const latest = document.getState().trashed.at(-1);
     return latest !== undefined && document.getState().restoreView(latest.view.id);
-};
+}

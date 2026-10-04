@@ -1,7 +1,7 @@
 import type { ProcessAlert } from '@ruimte/contracts';
 
 /* The sentence a push carries for a process warning; the panel words the same warning with its own measures. */
-export const processAlertBody = (alert: ProcessAlert): string => {
+export function processAlertBody(alert: ProcessAlert): string {
     const name = alert.name ?? 'A process';
     switch (alert.kind) {
         case 'silent':
@@ -17,4 +17,4 @@ export const processAlertBody = (alert: ProcessAlert): string => {
         case 'probe-hung':
             return `${name}, started by Ruimte, keeps running.`;
     }
-};
+}

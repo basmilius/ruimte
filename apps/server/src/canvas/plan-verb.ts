@@ -93,30 +93,34 @@ const REFUSAL_CODES = [
 ].join('\t');
 
 /* What every change prints: the plan and its rev, the steps now active, and states a new sub-step took away. */
-const changedLines = ({ plan, dropped }: ActionOutput<'plan.addNote'>): string[] => {
+function changedLines({ plan, dropped }: ActionOutput<'plan.addNote'>): string[] {
     const active = activeStepIds(plan);
     return [
         `plan\t${plan.id}\trev ${plan.rev}\t${plan.meta.kind}\t${field(plan.meta.title)}\t${field(progressText(plan))}`,
         ...(active.length > 0 ? [`now\t${active.join('\t')}`] : []),
         ...dropped.map((id) => `dropped\t${id}\tgot its first sub-step, so its own state is gone and follows from its sub-steps`)
     ];
-};
+}
 
 /* Every item with the id it has, the item it stands under, its kind and title, in document order. */
-const itemLines = (items: readonly PlanItem[], under = '-'): string[] =>
-    items.flatMap((item) => [
+function itemLines(items: readonly PlanItem[], under = '-'): string[] {
+    return items.flatMap((item) => [
         `item\t${item.id}\t${item.type}\t${under}\t${field(item.title)}`,
         ...itemLines(item.type === 'section' ? item.items : item.type === 'step' ? (item.steps ?? []) : [], item.id)
     ]);
+}
 
 const planFlag = z.string().min(1, '--plan needs the id of a plan; ruimte-context plan read --all lists them').optional();
-const itemId = (verb: string, what = 'an item'): z.ZodTuple =>
-    z.tuple([z.string().min(1, `${verb} needs the id of ${what}`)], {
+function itemId(verb: string, what = 'an item'): z.ZodTuple {
+    return z.tuple([z.string().min(1, `${verb} needs the id of ${what}`)], {
         error: (issue) => (issue.code === 'too_big' ? `${verb} takes one id; everything else is a flag` : `${verb} needs the id of ${what}`)
     });
+}
 const stateFlag = z.enum(PlanStepStateSchema.options, { error: `--state takes one of ${PlanStepStateSchema.options.join(', ')}` });
 const checksFlag = z.enum(PlanChecksSchema.options, { error: `--checks takes one of ${PlanChecksSchema.options.join(', ')}` }).optional();
-const textFlag = (needs: string) => z.string({ error: needs });
+function textFlag(needs: string) {
+    return z.string({ error: needs });
+}
 
 const ITEM_ID = { syntax: '<itemId>', need: 'required', field: 'itemId' } as const;
 

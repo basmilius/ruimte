@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { changedSpan } from './text-span.ts';
 
-const apply = (before: string, after: string): string => {
+function apply(before: string, after: string): string {
     const span = changedSpan(before, after);
     return span === null ? before : before.slice(0, span.start) + span.text + before.slice(span.end);
-};
+}
 
 describe('changedSpan', () => {
     test('is null for the same text', () => {

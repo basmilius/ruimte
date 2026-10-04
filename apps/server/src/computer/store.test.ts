@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { tempHome } from './computer-test-helpers.ts';
 import { ComputerUseStore } from './store.ts';
 
-const grantsFile = async (home: string): Promise<unknown> => JSON.parse(await readFile(join(home, 'computer-use', 'grants.json'), 'utf8'));
+async function grantsFile(home: string): Promise<unknown> {
+    return JSON.parse(await readFile(join(home, 'computer-use', 'grants.json'), 'utf8'));
+}
 
 describe('taking a grant back', () => {
     test('"always" goes from the file, and only for that app', async () => {

@@ -201,7 +201,7 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
  * Where a maximized node stands: over the whole canvas at actual size. It stays inside the camera's
  * transform and undoes it, since moving it out would remount its session or its page.
  */
-const useMaximizedPlace = (id: string): CSSProperties | null => {
+function useMaximizedPlace(id: string): CSSProperties | null {
     const camera = useCanvas((s) => (maximizedNodeOf(s) === id ? s.camera : null));
     const viewport = useCanvas((s) => (maximizedNodeOf(s) === id ? s.viewport : null));
     if (camera === null || viewport === null) {
@@ -214,7 +214,7 @@ const useMaximizedPlace = (id: string): CSSProperties | null => {
         height: viewport.h,
         transform: `scale(${1 / camera.zoom})`
     };
-};
+}
 
 /*
  * The rev is read here and not in the frame, so a save re-renders one boundary per node and not

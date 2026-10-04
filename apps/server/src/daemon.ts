@@ -188,7 +188,7 @@ const MAX_REQUEST_BODY_BYTES = 8 * 1024 * 1024;
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 
 /* Runs the daemon until a signal ends the process. */
-export const startDaemon = async (config: ServerConfig): Promise<void> => {
+export async function startDaemon(config: ServerConfig): Promise<void> {
     // `ruimte-context` lives next to the binary, or next to the source in dev; it goes on the PATH of every shell and chat.
     const binDir = compiled ? dirname(process.execPath) : resolve(import.meta.dir, '..', 'bin');
     const contextUrl = `http://127.0.0.1:${config.port}${CONTEXT_PATH}`;
@@ -1302,4 +1302,4 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     if (lanDoorWanted()) {
         lanDoor.start();
     }
-};
+}

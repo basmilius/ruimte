@@ -16,9 +16,8 @@ export interface BackgroundLimitDeps extends ChatOpenerDeps {
  * or a workflow now holds it, which has no limit; a turn in flight may still answer it, so the limit
  * looks again once that turn ended.
  */
-export const backgroundLimitHandler =
-    (deps: BackgroundLimitDeps) =>
-    async (entry: BackgroundLimitEntry): Promise<OutboxOutcome> => {
+export function backgroundLimitHandler(deps: BackgroundLimitDeps) {
+    return async (entry: BackgroundLimitEntry): Promise<OutboxOutcome> => {
         if (deps.tasks.get(entry.payload.taskId)?.status !== 'open') {
             return;
         }
@@ -36,6 +35,7 @@ export const backgroundLimitHandler =
         const running = (chat.info.background ?? []).map(commandLabel);
         await deps.coordinator.outlasted(entry.target, running.length > 0 ? running : entry.payload.commands, entry.payload.restarted ? 'restart' : 'limit');
     };
+}
 
 export interface RestartedOutbox {
     list(): readonly AnyOutboxEntry[];
@@ -47,24 +47,26 @@ export interface RestartedOutbox {
  * it waits on went down with that run, so nothing is left to wait for: each is due now and fails its
  * task. Call after the outbox loaded and before its worker starts.
  */
-export const restartBackgroundLimits = async (outbox: RestartedOutbox, now: number): Promise<void> => {
+export async function restartBackgroundLimits(outbox: RestartedOutbox, now: number): Promise<void> {
     for (const entry of outbox.list()) {
         if (isBackgroundLimit(entry)) {
             await outbox.update({ ...entry, notBefore: now, payload: { ...entry.payload, restarted: true } });
         }
     }
-};
+}
 
 /* The `background-limit` entries of a host's outbox, one per task at most, as the coordinator owes and drops them. */
-export const backgroundLimits = (outbox: Pick<TaskOutbox, 'list' | 'enqueue' | 'remove'>): TaskCoordinatorDeps['limit'] => ({
-    owed: (taskId) => outbox.list().some((entry) => isBackgroundLimit(entry) && entry.payload.taskId === taskId),
-    owe: (task, commands, at) =>
-        outbox.enqueue(task.projectId, task.childId, { kind: 'background-limit', payload: { taskId: task.id, commands: [...commands] } }, at),
-    lapse: async (taskId) => {
-        for (const entry of outbox.list()) {
-            if (isBackgroundLimit(entry) && entry.payload.taskId === taskId) {
-                await outbox.remove(entry.id);
+export function backgroundLimits(outbox: Pick<TaskOutbox, 'list' | 'enqueue' | 'remove'>): TaskCoordinatorDeps['limit'] {
+    return {
+        owed: (taskId) => outbox.list().some((entry) => isBackgroundLimit(entry) && entry.payload.taskId === taskId),
+        owe: (task, commands, at) =>
+            outbox.enqueue(task.projectId, task.childId, { kind: 'background-limit', payload: { taskId: task.id, commands: [...commands] } }, at),
+        lapse: async (taskId) => {
+            for (const entry of outbox.list()) {
+                if (isBackgroundLimit(entry) && entry.payload.taskId === taskId) {
+                    await outbox.remove(entry.id);
+                }
             }
         }
-    }
-});
+    };
+}

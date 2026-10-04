@@ -17,13 +17,13 @@ export interface ResolvedProject {
  * A checkout that is a worktree keeps its `.git` in a file pointing back into the repository it
  * belongs to. The work done there is the same repository's work, so both fold to the one folder.
  */
-const mainCheckoutOf = async (gitPath: string): Promise<string | null> => {
+async function mainCheckoutOf(gitPath: string): Promise<string | null> {
     const text = await readFile(gitPath, 'utf8');
     const match = /^gitdir:\s*(.+)$/m.exec(text);
     const gitDir = match?.[1]?.trim();
     const at = gitDir?.indexOf('/.git/worktrees/') ?? -1;
     return gitDir !== undefined && at > 0 ? gitDir.slice(0, at) : null;
-};
+}
 
 /*
  * Which folder a directory's work belongs to: the repository it sits in, or the directory itself

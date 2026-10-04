@@ -4,7 +4,9 @@ import { AgentIcon } from '../../agents/AgentIcon';
 import { useChatRow } from '../../state/chats';
 import { dayPartOf } from '../logic/welcome';
 
-const localClock = (): Date => new Date();
+function localClock(): Date {
+    return new Date();
+}
 
 /* What stands over the composer of a chat nobody wrote in yet. The part of the day is read once, when the chat opens. */
 export function WelcomeGreeting({ chatId, now = localClock }: { chatId: string; now?: () => Date }) {

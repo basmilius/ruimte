@@ -26,9 +26,8 @@ export class DeviceHelperFailure extends Error {
     }
 }
 
-export const createDeviceHelperLauncher =
-    (command: string[]): DeviceHelperLauncher =>
-    (deviceId) => {
+export function createDeviceHelperLauncher(command: string[]): DeviceHelperLauncher {
+    return (deviceId) => {
         const child = Bun.spawn({
             cmd: [...command, deviceId],
             env: { ...process.env, RUIMTE_DEVICE_HELPER_PROTOCOL_FD: '3' },
@@ -47,6 +46,7 @@ export const createDeviceHelperLauncher =
             kill: (signal) => child.kill(signal)
         };
     };
+}
 
 export class DeviceHelperSource implements LiveFrameSource {
     readonly format: 'jpeg' | 'hevc';

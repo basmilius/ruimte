@@ -15,7 +15,7 @@ interface ClientLocalRow {
 
 type ClientLocalRows = Record<string, ClientLocalRow>;
 
-const readRows = (storage: ClientLocalStorage | null): ClientLocalRows => {
+function readRows(storage: ClientLocalStorage | null): ClientLocalRows {
     const raw = storage?.getItem(CLIENT_LOCAL_KEY) ?? null;
     if (raw === null) {
         return {};
@@ -38,11 +38,13 @@ const readRows = (storage: ClientLocalStorage | null): ClientLocalRows => {
         }
     }
     return rows;
-};
+}
 
-const isQuotaError = (e: unknown): boolean => (e as { name?: unknown } | null)?.name === 'QuotaExceededError';
+function isQuotaError(e: unknown): boolean {
+    return (e as { name?: unknown } | null)?.name === 'QuotaExceededError';
+}
 
-const oldestKey = (rows: ClientLocalRows, except: string | null): string | null => {
+function oldestKey(rows: ClientLocalRows, except: string | null): string | null {
     let oldest: string | null = null;
     for (const [key, row] of Object.entries(rows)) {
         if (key !== except && (oldest === null || row.at < rows[oldest]!.at)) {
@@ -50,13 +52,13 @@ const oldestKey = (rows: ClientLocalRows, except: string | null): string | null 
         }
     }
     return oldest;
-};
+}
 
 /*
  * A full storage drops the oldest project and tries once more. What this client remembers is a
  * convenience on top of what the machine keeps, so after that it gives up without a word.
  */
-const writeRows = (storage: ClientLocalStorage | null, rows: ClientLocalRows, keep: string | null = null): void => {
+function writeRows(storage: ClientLocalStorage | null, rows: ClientLocalRows, keep: string | null = null): void {
     if (storage === null) {
         return;
     }
@@ -74,22 +76,23 @@ const writeRows = (storage: ClientLocalStorage | null, rows: ClientLocalRows, ke
             // Given up: the machine still has it.
         }
     }
-};
+}
 
 /* Page identity follows this browser client; it must never become the starting point of another one. */
-export const withoutClientBrowserState = (local: ProjectLocal): ProjectLocal => {
+export function withoutClientBrowserState(local: ProjectLocal): ProjectLocal {
     if (!local.panels?.favicons) {
         return local;
     }
     const { favicons: _favicons, ...panels } = local.panels;
     return { ...local, panels };
-};
+}
 
 /* What this client last had of one project on one machine, or null when it never saw it. */
-export const readClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string): ProjectLocal | null =>
-    readRows(storage)[endpointKey(endpointId, projectId)]?.local ?? null;
+export function readClientLocal(storage: ClientLocalStorage | null, endpointId: string, projectId: string): ProjectLocal | null {
+    return readRows(storage)[endpointKey(endpointId, projectId)]?.local ?? null;
+}
 
-export const writeClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string, local: ProjectLocal, now = Date.now()): void => {
+export function writeClientLocal(storage: ClientLocalStorage | null, endpointId: string, projectId: string, local: ProjectLocal, now = Date.now()): void {
     const rows = readRows(storage);
     const key = endpointKey(endpointId, projectId);
     rows[key] = { at: now, local };
@@ -97,10 +100,10 @@ export const writeClientLocal = (storage: ClientLocalStorage | null, endpointId:
         delete rows[oldestKey(rows, key)!];
     }
     writeRows(storage, rows, key);
-};
+}
 
 /* A deleted project leaves nothing behind to come back to. */
-export const dropClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string): void => {
+export function dropClientLocal(storage: ClientLocalStorage | null, endpointId: string, projectId: string): void {
     const rows = readRows(storage);
     const key = endpointKey(endpointId, projectId);
     if (rows[key] === undefined) {
@@ -108,19 +111,19 @@ export const dropClientLocal = (storage: ClientLocalStorage | null, endpointId: 
     }
     delete rows[key];
     writeRows(storage, rows);
-};
+}
 
 /* A forgotten machine takes its projects with it, like every other row about it. */
-export const dropClientLocalOf = (storage: ClientLocalStorage | null, endpointId: string): void => {
+export function dropClientLocalOf(storage: ClientLocalStorage | null, endpointId: string): void {
     const rows = readRows(storage);
     const kept = Object.fromEntries(Object.entries(rows).filter(([key]) => !isOfEndpoint(key, endpointId)));
     if (Object.keys(kept).length !== Object.keys(rows).length) {
         writeRows(storage, kept);
     }
-};
+}
 
 /* An endpoint that moves onto its daemon id keeps where it stood in every project (`rekeyEndpoint`). */
-export const rekeyClientLocal = (storage: ClientLocalStorage | null, oldId: string, newId: string): void => {
+export function rekeyClientLocal(storage: ClientLocalStorage | null, oldId: string, newId: string): void {
     const rows = readRows(storage);
     let moved = false;
     const next: ClientLocalRows = {};
@@ -136,7 +139,7 @@ export const rekeyClientLocal = (storage: ClientLocalStorage | null, oldId: stri
     if (moved) {
         writeRows(storage, next);
     }
-};
+}
 
 /*
  * What this client has wins, and what it never saw comes from the machine. A record for the project
@@ -144,7 +147,7 @@ export const rekeyClientLocal = (storage: ClientLocalStorage | null, oldId: stri
  * looked up on its own, because one made on another screen has no camera here. A favicon follows
  * the client that loaded the page; an old machine-local favicon is discarded during migration.
  */
-export const overlayLocal = (machine: ProjectLocal, client: ProjectLocal | null): ProjectLocal => {
+export function overlayLocal(machine: ProjectLocal, client: ProjectLocal | null): ProjectLocal {
     if (client === null) {
         return withoutClientBrowserState(machine);
     }
@@ -160,4 +163,4 @@ export const overlayLocal = (machine: ProjectLocal, client: ProjectLocal | null)
         ...(client.panels ? { panels: client.panels } : {}),
         ...(client.layout ? { layout: client.layout } : {})
     };
-};
+}

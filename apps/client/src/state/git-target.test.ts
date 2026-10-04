@@ -2,23 +2,27 @@ import { describe, expect, test } from 'bun:test';
 import type { CanvasNode } from './canvas.ts';
 import { gitTarget, gitTargets } from './git-target.ts';
 
-const node = (id: string, over: Partial<CanvasNode> = {}): CanvasNode => ({
-    id,
-    kind: 'terminal',
-    title: id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 100,
-    ...over
-});
+function node(id: string, over: Partial<CanvasNode> = {}): CanvasNode {
+    return {
+        id,
+        kind: 'terminal',
+        title: id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        ...over
+    };
+}
 
 const group = node('g1', { kind: 'group', x: -100, y: -100, w: 600, h: 600, worktree: { path: '/wt/feature', branch: 'feature/x' } });
 const inside = node('n1', { x: 0, y: 0 });
 const outside = node('n2', { x: 2000, y: 2000 });
 const plain = node('g2', { kind: 'group', x: -100, y: -100, w: 600, h: 600 });
 
-const nodes = (...list: CanvasNode[]): Record<string, CanvasNode> => Object.fromEntries(list.map((entry) => [entry.id, entry]));
+function nodes(...list: CanvasNode[]): Record<string, CanvasNode> {
+    return Object.fromEntries(list.map((entry) => [entry.id, entry]));
+}
 
 describe('gitTarget', () => {
     test('without a selection the panel is on the project folder', () => {

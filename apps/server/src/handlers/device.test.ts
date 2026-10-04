@@ -6,15 +6,17 @@ import { DeviceControl } from '../devices/control.ts';
 import { SIMULATOR } from '../devices/device-test-helpers.ts';
 import { registerDeviceControlHandlers, registerDeviceHandlers } from './device.ts';
 
-const request = (type: string, payload: unknown = {}): string => JSON.stringify({ id: type, type, payload });
+function request(type: string, payload: unknown = {}): string {
+    return JSON.stringify({ id: type, type, payload });
+}
 
-const setup = (devices: DeviceManager, allowed: () => boolean) => {
+function setup(devices: DeviceManager, allowed: () => boolean) {
     const dispatcher = new Dispatcher();
     registerDeviceHandlers(dispatcher, devices, allowed);
     const frames: ServerFrame[] = [];
     const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
     return { dispatcher, frames, client };
-};
+}
 
 describe('device handlers', () => {
     test('the machine policy refuses device discovery before touching simctl', async () => {

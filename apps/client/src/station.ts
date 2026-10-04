@@ -22,7 +22,7 @@ export interface StationBootInput {
  * of its own the web client can do nothing before a machine of the account is there, so signing in
  * and then those machines come first.
  */
-export const stationBoot = (input: StationBootInput): StationBoot | null => {
+export function stationBoot(input: StationBootInput): StationBoot | null {
     if (!input.station) {
         return null;
     }
@@ -37,4 +37,4 @@ export const stationBoot = (input: StationBootInput): StationBoot | null => {
         case 'signed-in':
             return input.machines === null ? 'loading' : 'machines';
     }
-};
+}

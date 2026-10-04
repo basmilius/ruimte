@@ -45,28 +45,31 @@ import { matchesShortcut, type Shortcut, isInFloatingLayer } from '@basmilius/de
 import { endpointKey } from '@/state/keys';
 import { windowWorkspace } from '@/state/window';
 
-const workspaceEndpointId = (): string | null => windowWorkspace()?.connection.endpointId ?? null;
+function workspaceEndpointId(): string | null {
+    return windowWorkspace()?.connection.endpointId ?? null;
+}
 
 /* The first entry whose shortcut the event is, so a table reads as one condition. */
-const entryFor = <T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent, apple: boolean): T | null =>
-    (Object.keys(table) as T[]).find((name) => matchesShortcut(table[name], e, apple)) ?? null;
+function entryFor<T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent, apple: boolean): T | null {
+    return (Object.keys(table) as T[]).find((name) => matchesShortcut(table[name], e, apple)) ?? null;
+}
 
 /* The canvas keeps its own keys to itself while a view of its own has the focus; the files are one. */
-const onStandaloneView = (): boolean => {
+function onStandaloneView(): boolean {
     const state = useDocument.getState();
     if (state.activeViewId === FILES_VIEW_ID) {
         return true;
     }
     const view = activeViewOf(state);
     return view !== null && !isCanvasView(view);
-};
+}
 
 /*
  * A view of its own has no canvas to fall back to, so leaving its body puts the keyboard on its row
  * in the sidebar. A chat leaves on Escape; a terminal hands Escape to the program it runs and leaves
  * on the same shortcut a terminal node uses.
  */
-const leaveStandaloneView = (e: KeyboardEvent): void => {
+function leaveStandaloneView(e: KeyboardEvent): void {
     const state = useDocument.getState();
     const view = activeViewOf(state);
     if (view === null || !state.bodyFocused) {
@@ -83,13 +86,15 @@ const leaveStandaloneView = (e: KeyboardEvent): void => {
     e.preventDefault();
     state.setBodyFocused(false);
     focusViewRow(view.id);
-};
+}
 
 /* The tab the files cell has up, or null when another cell has the focus or the cell holds none. */
-const focusedFileTab = (): string | null => (useDocument.getState().activeViewId === FILES_VIEW_ID ? useFiles.getState().active : null);
+function focusedFileTab(): string | null {
+    return useDocument.getState().activeViewId === FILES_VIEW_ID ? useFiles.getState().active : null;
+}
 
 /* The page the keyboard means: a browser view in the focused cell, or the active browser node on its canvas. */
-const focusedBrowserKey = (): string | null => {
+function focusedBrowserKey(): string | null {
     const endpointId = workspaceEndpointId();
     const view = activeViewOf(useDocument.getState());
     if (endpointId === null || view === null) {
@@ -100,10 +105,10 @@ const focusedBrowserKey = (): string | null => {
     }
     const { bodyFocusId, nodes } = focusedCanvas().getState();
     return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'browser' ? endpointKey(endpointId, bodyFocusId) : null;
-};
+}
 
 /* The chat the keyboard is in: a chat view whose body has it, or the active chat node on its canvas. */
-const focusedChatKey = (): string | null => {
+function focusedChatKey(): string | null {
     const endpointId = workspaceEndpointId();
     const documentState = useDocument.getState();
     const view = activeViewOf(documentState);
@@ -115,17 +120,17 @@ const focusedChatKey = (): string | null => {
     }
     const { bodyFocusId, nodes } = focusedCanvas().getState();
     return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'chat' ? endpointKey(endpointId, bodyFocusId) : null;
-};
+}
 
-export const isTypingTarget = (el: EventTarget | null): boolean => {
+export function isTypingTarget(el: EventTarget | null): boolean {
     if (!(el instanceof HTMLElement)) {
         return false;
     }
     return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
-};
+}
 
 /* Bind once per workspace so a split grid does not run the same project shortcut in every canvas. */
-export const useCanvasShortcuts = (): void => {
+export function useCanvasShortcuts(): void {
     useEffect(() => {
         const voiceShortcut = createVoiceShortcut({
             available: () => useVoice.getState().credential?.configured === true,
@@ -480,4 +485,4 @@ export const useCanvasShortcuts = (): void => {
             cancelDictation();
         };
     }, []);
-};
+}

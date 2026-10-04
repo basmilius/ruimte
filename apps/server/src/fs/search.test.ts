@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { forgetSearchCache, fuzzyScore, rankFiles, searchFiles } from './search.ts';
 
-const git = async (cwd: string, ...args: string[]): Promise<void> => {
+async function git(cwd: string, ...args: string[]): Promise<void> {
     const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'ignore', stderr: 'ignore' });
     await proc.exited;
-};
+}
 
-const seed = async (root: string): Promise<void> => {
+async function seed(root: string): Promise<void> {
     await mkdir(join(root, 'src', 'chat'), { recursive: true });
     await mkdir(join(root, 'node_modules', 'left-pad'), { recursive: true });
     await mkdir(join(root, '.hidden'), { recursive: true });
@@ -20,7 +20,7 @@ const seed = async (root: string): Promise<void> => {
     await writeFile(join(root, 'secret.log'), '');
     await writeFile(join(root, 'node_modules', 'left-pad', 'index.js'), '');
     await writeFile(join(root, '.hidden', 'x.ts'), '');
-};
+}
 
 describe('fuzzyScore', () => {
     test('needs every character in order and ignores case', () => {

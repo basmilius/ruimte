@@ -19,7 +19,7 @@ let lastQuery: FindQuery = EMPTY_FIND_QUERY;
  * focus (`find/hosts.ts`), and it keeps what its bar asks. Closing hands the keyboard back to where it
  * was when the bar opened.
  */
-export const useFind = (surface: RefObject<HTMLElement | null>, enabled = true): FindState => {
+export function useFind(surface: RefObject<HTMLElement | null>, enabled = true): FindState {
     const [open, setOpen] = useState(false);
     const [query, setQueryState] = useState<FindQuery>(EMPTY_FIND_QUERY);
     const [summons, setSummons] = useState(0);
@@ -72,4 +72,4 @@ export const useFind = (surface: RefObject<HTMLElement | null>, enabled = true):
     }, [enabled]);
 
     return { open, query, summons, setQuery, close };
-};
+}

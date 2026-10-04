@@ -29,10 +29,10 @@ export const CONTEXT_PATH = '/context';
 export const MAX_SCREEN_LINES = 2000;
 
 /* What `--tail` asks for. */
-const lastLines = (text: string, count: number): string => {
+function lastLines(text: string, count: number): string {
     const lines = text.split('\n');
     return lines.slice(Math.max(0, lines.length - count)).join('\n');
-};
+}
 
 /* A read that found nothing to answer, under the code and the sentence that say why. */
 export class ContextRefusal extends CodedError {}
@@ -75,11 +75,14 @@ interface ContextReaders {
 }
 
 /* The first line of a subagent's report that says something, which is all a line about it has room for. */
-const firstLine = (text: string | null): string =>
-    (text ?? '')
-        .split('\n')
-        .find((line) => line.trim() !== '')
-        ?.trim() ?? '';
+function firstLine(text: string | null): string {
+    return (
+        (text ?? '')
+            .split('\n')
+            .find((line) => line.trim() !== '')
+            ?.trim() ?? ''
+    );
+}
 
 /* The request id stays on a request that no longer waits, so the state beside it is what tells a parent not to answer it. */
 const QUESTION_STATES: Record<ChatQuestionItem['state'], string> = {
@@ -98,20 +101,21 @@ const APPROVAL_STATES: Record<ChatApprovalDecision, string> = {
 };
 
 /* What `ruimte-context answer` needs of one waiting question besides the request: its id and what it may pick. */
-const pendingQuestionLine = (question: ChatQuestion): string => {
+function pendingQuestionLine(question: ChatQuestion): string {
     const how =
         question.choices.length === 0
             ? 'answer in your own words'
             : `choices ${question.choices.map((choice) => choice.label).join(' | ')}${question.multiSelect ? ', one or more' : ''}, or your own words`;
     return `- question ${question.id}: ${how}`;
-};
+}
 
 /* An agent of a workflow, by the id `--subagent` reads its conversation under. */
-const workflowAgentText = (agent: ChatWorkflowAgent): string =>
-    `${agent.label} (${agent.status}, ${agent.agentId === null ? 'not started yet' : workflowAgentRef(agent.agentId)})`;
+function workflowAgentText(agent: ChatWorkflowAgent): string {
+    return `${agent.label} (${agent.status}, ${agent.agentId === null ? 'not started yet' : workflowAgentRef(agent.agentId)})`;
+}
 
 /* What a Workflow call runs, one line per phase, so a parent can follow a child's workflow without opening it. */
-const workflowLines = (workflow: ChatWorkflow): string[] => {
+function workflowLines(workflow: ChatWorkflow): string[] {
     const inPhase = (index: number): ChatWorkflowAgent[] => workflow.agents.filter((agent) => agent.phaseIndex === index);
     const phases = workflow.phases.map((phase) => {
         const agents = inPhase(phase.index);
@@ -123,14 +127,14 @@ const workflowLines = (workflow: ChatWorkflow): string[] => {
         ...phases,
         ...(loose.length === 0 ? [] : [`- outside a phase: ${loose.map(workflowAgentText).join(', ')}`])
     ];
-};
+}
 
 /*
  * A chat thread as an agent should read it: who said what, and what tools ran. A subagent is one line:
  * the work it did inside its row is its own, and printed between the parent's lines it would read as
  * if the parent had done it. Its whole conversation is `read <id> --subagent <toolUseId>`.
  */
-export const renderTranscript = (items: ChatItem[]): string => {
+export function renderTranscript(items: ChatItem[]): string {
     const lines: string[] = [];
     for (const item of items) {
         if ((item.kind === 'tool' || item.kind === 'assistant') && item.parentToolUseId) {
@@ -186,7 +190,7 @@ export const renderTranscript = (items: ChatItem[]): string => {
         }
     }
     return lines.join('\n').trim();
-};
+}
 
 /*
  * What each agent node may read, as its project's document says. Texts carry their content;

@@ -10,7 +10,7 @@ import { textDrafts } from '@/state/text-drafts';
 import { transportFor } from '@/transport';
 
 /* What a view holds, in the words the status needs. The canvas store owns the view that is on screen. */
-export const nodesOfView = (view: ProjectView): (StatusOf & { title: string })[] => {
+export function nodesOfView(view: ProjectView): (StatusOf & { title: string })[] {
     if (isSessionView(view)) {
         // A standalone view is one node without a canvas, under its own id.
         return [{ id: view.id, kind: view.kind, title: view.name }];
@@ -21,19 +21,23 @@ export const nodesOfView = (view: ProjectView): (StatusOf & { title: string })[]
     // A view on screen is held by its editor, wherever in the grid it stands, and that is newer.
     const canvas = liveCanvas(view.id);
     return canvas === null ? view.nodes : canvas.order.map((id) => canvas.nodes[id]!);
-};
+}
 
-const resolved = (stored: readonly string[], folder: string | null): string[] => stored.flatMap((path) => resolveStoredPath(folder, path) ?? []);
+function resolved(stored: readonly string[], folder: string | null): string[] {
+    return stored.flatMap((path) => resolveStoredPath(folder, path) ?? []);
+}
 
-const filesOfNodes = (nodes: readonly ProjectNode[], folder: string | null): string[] =>
-    resolved(
+function filesOfNodes(nodes: readonly ProjectNode[], folder: string | null): string[] {
+    return resolved(
         nodes.flatMap((node) => (node.kind === 'file' && node.path ? [node.path] : [])),
         folder
     );
+}
 
 /* The files a view shows: itself for a file view, its file nodes for a canvas. */
-export const filesOfView = (view: ProjectView, folder: string | null): string[] =>
-    isFileView(view) ? resolved([view.path], folder) : isCanvasView(view) ? filesOfNodes(view.nodes, folder) : [];
+export function filesOfView(view: ProjectView, folder: string | null): string[] {
+    return isFileView(view) ? resolved([view.path], folder) : isCanvasView(view) ? filesOfNodes(view.nodes, folder) : [];
+}
 
 /* What deleting a view reaches beyond the document: the drafts of its files and the agents on the machine. */
 export interface ViewDeletionMachine {
@@ -63,7 +67,7 @@ export interface ViewDeletionFacts {
     ending: (string | null)[];
 }
 
-const titleOfNode = (views: readonly ProjectView[], nodeId: string): string | null => {
+function titleOfNode(views: readonly ProjectView[], nodeId: string): string | null {
     for (const view of views) {
         if (view.id === nodeId && isSessionView(view)) {
             return view.name;
@@ -74,54 +78,61 @@ const titleOfNode = (views: readonly ProjectView[], nodeId: string): string | nu
         }
     }
     return null;
-};
+}
 
-const unsavedOf = (files: readonly string[], machine: ViewDeletionMachine): string[] => [...new Set(files)].filter((path) => machine.isUnsaved(path));
+function unsavedOf(files: readonly string[], machine: ViewDeletionMachine): string[] {
+    return [...new Set(files)].filter((path) => machine.isUnsaved(path));
+}
 
 /* What a delete of these nodes, or of a view holding them, reaches beyond the document. */
-const deletionFacts = async (
+async function deletionFacts(
     nodes: readonly (StatusOf & { title: string })[],
     sessions: readonly string[],
     files: readonly string[],
     views: readonly ProjectView[],
     machine: ViewDeletionMachine
-): Promise<ViewDeletionFacts> => {
+): Promise<ViewDeletionFacts> {
     const ending = await machine.endedBy(sessions);
     return {
         unsaved: unsavedOf(files, machine),
         working: nodes.filter((node) => machine.working(node)).map((node) => node.title),
         ending: ending.map((nodeId) => titleOfNode(views, nodeId))
     };
-};
+}
 
 /* `view` is the exported copy, so a canvas on screen is counted with what its editor holds now. */
-export const viewDeletionFacts = (view: ProjectView, views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> =>
-    deletionFacts(
+export function viewDeletionFacts(view: ProjectView, views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> {
+    return deletionFacts(
         nodesOfView(view),
         sessionNodesOfView(view).map((node) => node.id),
         filesOfView(view, machine.folder()),
         views,
         machine
     );
+}
 
 /* `nodes` are the ones that go, a collapsed group's hidden members included. */
-export const nodeDeletionFacts = (nodes: readonly ProjectNode[], views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> =>
-    deletionFacts(
+export function nodeDeletionFacts(nodes: readonly ProjectNode[], views: readonly ProjectView[], machine: ViewDeletionMachine): Promise<ViewDeletionFacts> {
+    return deletionFacts(
         nodes,
         nodes.flatMap((node) => (node.kind === 'chat' || node.kind === 'terminal' ? [node.id] : [])),
         filesOfNodes(nodes, machine.folder()),
         views,
         machine
     );
+}
 
 /* Saves what is unsaved among these files and resolves the ones that did not save. */
-const saveFiles = async (files: readonly string[], machine: ViewDeletionMachine): Promise<string[]> => {
+async function saveFiles(files: readonly string[], machine: ViewDeletionMachine): Promise<string[]> {
     const unsaved = unsavedOf(files, machine);
     const saved = await Promise.all(unsaved.map((path) => machine.save(path)));
     return unsaved.filter((_path, index) => !saved[index]);
-};
+}
 
-export const saveViewFiles = (view: ProjectView, machine: ViewDeletionMachine): Promise<string[]> => saveFiles(filesOfView(view, machine.folder()), machine);
+export function saveViewFiles(view: ProjectView, machine: ViewDeletionMachine): Promise<string[]> {
+    return saveFiles(filesOfView(view, machine.folder()), machine);
+}
 
-export const saveNodeFiles = (nodes: readonly ProjectNode[], machine: ViewDeletionMachine): Promise<string[]> =>
-    saveFiles(filesOfNodes(nodes, machine.folder()), machine);
+export function saveNodeFiles(nodes: readonly ProjectNode[], machine: ViewDeletionMachine): Promise<string[]> {
+    return saveFiles(filesOfNodes(nodes, machine.folder()), machine);
+}

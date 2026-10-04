@@ -25,18 +25,22 @@ export type UsageTotals = z.infer<typeof UsageTotalsSchema>;
 
 export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 };
 
-export const totalTokensOf = (totals: UsageTotals): number => totals.input + totals.cacheRead + totals.cacheWrite + totals.output;
+export function totalTokensOf(totals: UsageTotals): number {
+    return totals.input + totals.cacheRead + totals.cacheWrite + totals.output;
+}
 
 /* A sum of two rather than a change to either, so a total a client holds stays the one it drew. */
-export const addTotals = (first: UsageTotals, second: UsageTotals): UsageTotals => ({
-    calls: first.calls + second.calls,
-    input: first.input + second.input,
-    cacheRead: first.cacheRead + second.cacheRead,
-    cacheWrite: first.cacheWrite + second.cacheWrite,
-    cacheWrite1h: first.cacheWrite1h + second.cacheWrite1h,
-    output: first.output + second.output,
-    reasoning: first.reasoning + second.reasoning
-});
+export function addTotals(first: UsageTotals, second: UsageTotals): UsageTotals {
+    return {
+        calls: first.calls + second.calls,
+        input: first.input + second.input,
+        cacheRead: first.cacheRead + second.cacheRead,
+        cacheWrite: first.cacheWrite + second.cacheWrite,
+        cacheWrite1h: first.cacheWrite1h + second.cacheWrite1h,
+        output: first.output + second.output,
+        reasoning: first.reasoning + second.reasoning
+    };
+}
 
 /* An account a record can belong to, for the page to filter by and color with. The default account of a CLI has its kind as its id. */
 export const UsageAccountSchema = z.object({

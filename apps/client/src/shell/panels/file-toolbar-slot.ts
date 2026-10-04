@@ -20,7 +20,11 @@ const FileToolbarSlotContext = createContext<FileToolbarSlot>(EMPTY);
 
 export const FileToolbarSlotProvider = FileToolbarSlotContext.Provider;
 
-export const useFileToolbarSlot = (): FileToolbarSlot => useContext(FileToolbarSlotContext);
+export function useFileToolbarSlot(): FileToolbarSlot {
+    return useContext(FileToolbarSlotContext);
+}
 
 /* A node hosts its own controls in its header, so nothing inside it may reach for the window's. */
-export const fixedSlot = (host: HTMLElement | null): FileToolbarSlot => ({ host, mount: null });
+export function fixedSlot(host: HTMLElement | null): FileToolbarSlot {
+    return { host, mount: null };
+}

@@ -1,14 +1,16 @@
 import { asObject, asString, int, type UsageRecord } from '../record.ts';
 
 /* Only a line with this in it can carry counts, which keeps `JSON.parse` off about two thirds of them. */
-export const claudeMightCarryUsage = (line: string): boolean => line.includes('"usage"');
+export function claudeMightCarryUsage(line: string): boolean {
+    return line.includes('"usage"');
+}
 
 /*
  * One line of `~/.claude/projects/**\/*.jsonl`. An assistant line carries `message.usage` with the
  * counts of the call that produced it; every other kind of line has nothing to price. The counts are
  * Anthropic's, so `input_tokens` already excludes what was read from or written to the cache.
  */
-export const parseClaudeLine = (line: string): UsageRecord | null => {
+export function parseClaudeLine(line: string): UsageRecord | null {
     let parsed: unknown;
     try {
         parsed = JSON.parse(line);
@@ -55,4 +57,4 @@ export const parseClaudeLine = (line: string): UsageRecord | null => {
         totals,
         dedupeKey: messageId === '' ? null : messageId
     };
-};
+}

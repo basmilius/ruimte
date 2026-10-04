@@ -25,33 +25,43 @@ import {
 
 const NOW = '2026-09-16T14:30:00Z';
 
-const counterMint = (): (() => string) => {
+function counterMint(): () => string {
     let next = 0;
     return () => `m${++next}`;
-};
+}
 
-const step = (id: string, extra: Partial<PlanStep> = {}): PlanStep => ({ type: 'step', id, title: `Step ${id}`, ...extra });
+function step(id: string, extra: Partial<PlanStep> = {}): PlanStep {
+    return { type: 'step', id, title: `Step ${id}`, ...extra };
+}
 
-const planOf = (items: PlanItem[], meta: Partial<Plan['meta']> = {}): Plan => ({
-    id: 'plan-1',
-    rev: 3,
-    createdAt: '2026-09-16T13:40:00Z',
-    meta: { title: 'Plan', kind: 'steps', checks: 'anyone', ...meta },
-    items
-});
+function planOf(items: PlanItem[], meta: Partial<Plan['meta']> = {}): Plan {
+    return {
+        id: 'plan-1',
+        rev: 3,
+        createdAt: '2026-09-16T13:40:00Z',
+        meta: { title: 'Plan', kind: 'steps', checks: 'anyone', ...meta },
+        items
+    };
+}
 
-const apply = (plan: Plan, ops: PlanOp[], actor: PlanActor): PlanApplied | PlanRefusal => applyPlanOps(plan, ops, { actor, now: NOW, mintId: counterMint() });
+function apply(plan: Plan, ops: PlanOp[], actor: PlanActor): PlanApplied | PlanRefusal {
+    return applyPlanOps(plan, ops, { actor, now: NOW, mintId: counterMint() });
+}
 
-const applied = (result: PlanApplied | PlanRefusal): PlanApplied => {
+function applied(result: PlanApplied | PlanRefusal): PlanApplied {
     if (!result.ok) {
         throw new Error(`Refused ${result.code}: ${result.message}`);
     }
     return result;
-};
+}
 
-const codeOf = (result: { ok: boolean; code?: string }): string | undefined => (result.ok ? undefined : result.code);
+function codeOf(result: { ok: boolean; code?: string }): string | undefined {
+    return result.ok ? undefined : result.code;
+}
 
-const stepIn = (plan: Plan, id: string): PlanStep => findItem(plan, id) as PlanStep;
+function stepIn(plan: Plan, id: string): PlanStep {
+    return findItem(plan, id) as PlanStep;
+}
 
 describe('who may set a step', () => {
     const rows: { checks: PlanChecks; agent: string | undefined; person: string | undefined }[] = [

@@ -26,42 +26,61 @@ export const MAIN_AGENT: SubagentTrail = [];
 
 const NO_ITEMS: readonly string[] = [];
 
-export const crumbOf = (item: ChatSubagentItem): SubagentStep => ({ toolUseId: item.toolUseId, description: item.description });
+export function crumbOf(item: ChatSubagentItem): SubagentStep {
+    return { toolUseId: item.toolUseId, description: item.description };
+}
 
-const stepLabel = (step: SubagentStep): string => step.description || i18next.t('agent-chat:rows.subagent.label');
+function stepLabel(step: SubagentStep): string {
+    return step.description || i18next.t('agent-chat:rows.subagent.label');
+}
 
 /* A row in the main agent's thread or an entry of the flyout opens its conversation straight away. */
-export const openFromMain = (step: SubagentStep): SubagentTrail => [step];
+export function openFromMain(step: SubagentStep): SubagentTrail {
+    return [step];
+}
 
-export const openBelow = (trail: SubagentTrail, step: SubagentStep): SubagentTrail => [...trail, step];
+export function openBelow(trail: SubagentTrail, step: SubagentStep): SubagentTrail {
+    return [...trail, step];
+}
 
-export const trailTo = (trail: SubagentTrail, depth: number): SubagentTrail => (depth <= 0 ? MAIN_AGENT : trail.slice(0, depth));
+export function trailTo(trail: SubagentTrail, depth: number): SubagentTrail {
+    return depth <= 0 ? MAIN_AGENT : trail.slice(0, depth);
+}
 
-export const stepBack = (trail: SubagentTrail): SubagentTrail => trailTo(trail, trail.length - 1);
+export function stepBack(trail: SubagentTrail): SubagentTrail {
+    return trailTo(trail, trail.length - 1);
+}
 
 /*
  * A sub-agent's conversation is read back, so there is nobody to write to. The composer stays, since
  * the chat's own approvals and questions are answered there.
  */
-export const composerWrites = (trail: SubagentTrail): boolean => trail.length === 0;
+export function composerWrites(trail: SubagentTrail): boolean {
+    return trail.length === 0;
+}
 
 /* The crumbs after the chat's own title, which the bar draws as the first crumb and the way back. */
-export const breadcrumbOf = (trail: SubagentTrail): BreadcrumbStep[] =>
-    trail.map((step, index) => ({ label: stepLabel(step), depth: index + 1, current: index === trail.length - 1 }));
+export function breadcrumbOf(trail: SubagentTrail): BreadcrumbStep[] {
+    return trail.map((step, index) => ({ label: stepLabel(step), depth: index + 1, current: index === trail.length - 1 }));
+}
 
 /* A row without a pointer of its own can only be opened by a machine that answers `chat.subagent` for it. */
-export const canOpenSubagent = (item: ChatSubagentItem, machineRefused: boolean): boolean => item.native !== undefined || !machineRefused;
+export function canOpenSubagent(item: ChatSubagentItem, machineRefused: boolean): boolean {
+    return item.native !== undefined || !machineRefused;
+}
 
 /* The row of the call that opened a conversation, a nested one included, since its row is in the thread too. */
-export const subagentOf = (structure: Readonly<Record<string, ChatItem>>, toolUseId: string): ChatSubagentItem | null =>
-    Object.values(structure).find((item): item is ChatSubagentItem => item.kind === 'subagent' && item.toolUseId === toolUseId) ?? null;
+export function subagentOf(structure: Readonly<Record<string, ChatItem>>, toolUseId: string): ChatSubagentItem | null {
+    return Object.values(structure).find((item): item is ChatSubagentItem => item.kind === 'subagent' && item.toolUseId === toolUseId) ?? null;
+}
 
 /* The subagents a chat can open, in the order the thread has them. */
-export const openableSubagents = (order: readonly string[], structure: Record<string, ChatItem>, machineRefused: boolean): ChatSubagentItem[] =>
-    order.flatMap((id) => {
+export function openableSubagents(order: readonly string[], structure: Record<string, ChatItem>, machineRefused: boolean): ChatSubagentItem[] {
+    return order.flatMap((id) => {
         const item = structure[id];
         return item?.kind === 'subagent' && canOpenSubagent(item, machineRefused) ? [item] : [];
     });
+}
 
 interface SubagentViewStore {
     /* Keyed with the scope's `keyOf`; a chat on its main agent has no entry. */
@@ -97,22 +116,22 @@ export const useSubagentView = create<SubagentViewStore>((set, get) => ({
 }));
 
 /* The trail of a chat in the scope this is rendered in, and a way to set it. */
-export const useSubagentTrail = (chatId: string): { trail: SubagentTrail; show(trail: SubagentTrail): void } => {
+export function useSubagentTrail(chatId: string): { trail: SubagentTrail; show(trail: SubagentTrail): void } {
     const key = useChatScope().keyOf(chatId);
     const trail = useSubagentView((s) => s.trails[key] ?? MAIN_AGENT);
     return { trail, show: (next) => useSubagentView.getState().show(key, next) };
-};
+}
 
-export const useOpenableSubagents = (chatId: string): ChatSubagentItem[] => {
+export function useOpenableSubagents(chatId: string): ChatSubagentItem[] {
     const { id } = useChatScope();
     const refused = useSubagentSupport((s) => s.unsupported[id] === true);
     // The structure and not the items, so a delta growing a reply does not walk the thread again.
     const order = useChatRow(chatId, (row) => row?.order);
     const structure = useChatRow(chatId, (row) => row?.structure);
     return useMemo(() => (structure === undefined ? [] : openableSubagents(order ?? NO_ITEMS, structure, refused)), [order, structure, refused]);
-};
+}
 
-export const useSubagentItem = (chatId: string, toolUseId: string): ChatSubagentItem | null => {
+export function useSubagentItem(chatId: string, toolUseId: string): ChatSubagentItem | null {
     const structure = useChatRow(chatId, (row) => row?.structure);
     return useMemo(() => (structure === undefined ? null : subagentOf(structure, toolUseId)), [structure, toolUseId]);
-};
+}

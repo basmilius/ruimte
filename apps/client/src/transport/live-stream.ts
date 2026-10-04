@@ -2,8 +2,8 @@ import type { RefObject } from 'react';
 import type { LiveStreamFrame } from '@ruimte/contracts';
 
 /* Waits out `ms`, or gives up at once when whoever is waiting was called off. */
-export const wait = (ms: number, signal: AbortSignal): Promise<void> =>
-    new Promise((resolve) => {
+export function wait(ms: number, signal: AbortSignal): Promise<void> {
+    return new Promise((resolve) => {
         const timer = window.setTimeout(resolve, ms);
         signal.addEventListener(
             'abort',
@@ -14,6 +14,7 @@ export const wait = (ms: number, signal: AbortSignal): Promise<void> =>
             { once: true }
         );
     });
+}
 
 /* The canvas a stream is painted on and what the surface around it is told about a frame. */
 export interface PaintTarget {

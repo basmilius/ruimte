@@ -13,32 +13,41 @@ const SCRATCH_NAME = 'Chats';
 // Until its first turn renames it, the way any chat view takes the name of what it was asked.
 const NEW_CHAT_NAME = 'New chat';
 
-export const scratchFolderOf = (home: string): string => join(resolve(home), 'scratch');
+export function scratchFolderOf(home: string): string {
+    return join(resolve(home), 'scratch');
+}
 
-const newChatId = (): string => `chat-${randomBytes(6).toString('hex')}`;
+function newChatId(): string {
+    return `chat-${randomBytes(6).toString('hex')}`;
+}
 
 /* Whether a person wrote in a chat yet, as its thread says; a chat this daemon has no thread of never had a message. */
 export type ChatWritten = (chatId: string) => Promise<boolean>;
 
-const notWritten: ChatWritten = () => Promise.resolve(false);
+function notWritten(): Promise<boolean> {
+    return Promise.resolve(false);
+}
 
-const withoutEmptyMark = (view: ProjectView): ProjectView => {
+function withoutEmptyMark(view: ProjectView): ProjectView {
     if (!isEmptyChatView(view)) {
         return view;
     }
     const { empty: _empty, ...rest } = view;
     return rest;
-};
+}
 
 /* The empty chat a new chat goes to instead of making another, of the CLI and account it asks for when it names one. */
-export const reusableChat = (views: readonly ProjectView[], payload: ProjectNewChatPayload): ProjectChatView | null =>
-    views
-        .filter(isEmptyChatView)
-        .find(
-            (view) =>
-                (payload.provider === undefined || view.node.provider === payload.provider) &&
-                (payload.account === undefined || view.node.account === payload.account)
-        ) ?? null;
+export function reusableChat(views: readonly ProjectView[], payload: ProjectNewChatPayload): ProjectChatView | null {
+    return (
+        views
+            .filter(isEmptyChatView)
+            .find(
+                (view) =>
+                    (payload.provider === undefined || view.node.provider === payload.provider) &&
+                    (payload.account === undefined || view.node.account === payload.account)
+            ) ?? null
+    );
+}
 
 /*
  * A chat outside any project. It is a chat view in the machine's scratch project, which the daemon
@@ -47,7 +56,7 @@ export const reusableChat = (views: readonly ProjectView[], payload: ProjectNewC
  * A chat nobody wrote in yet is hidden from the list, so that one is shown again rather than another
  * made beside it, and every client asking gets the same one.
  */
-export const newScratchChat = async (store: ProjectStore, payload: ProjectNewChatPayload, written: ChatWritten = notWritten): Promise<ProjectNewChatResult> => {
+export async function newScratchChat(store: ProjectStore, payload: ProjectNewChatPayload, written: ChatWritten = notWritten): Promise<ProjectNewChatResult> {
     await mkdir(store.home, { recursive: true, mode: 0o700 });
     /* A scratch project inside a checkout would put every chat's folder in someone's repository,
        and its project files in their commits. */
@@ -88,10 +97,10 @@ export const newScratchChat = async (store: ProjectStore, payload: ProjectNewCha
         return { content: { ...content, views: [view, ...views] }, result: id };
     });
     return { summary, viewId };
-};
+}
 
 /* Lists a chat of the Chats project once a person wrote in it. Nothing for any other chat. */
-export const dropEmptyMark = async (store: ProjectStore, chatId: string): Promise<void> => {
+export async function dropEmptyMark(store: ProjectStore, chatId: string): Promise<void> {
     const place = store.index.locate(chatId);
     if (place === null || place.canvasId !== null) {
         return;
@@ -104,4 +113,4 @@ export const dropEmptyMark = async (store: ProjectStore, chatId: string): Promis
             ? { content: { ...content, views: content.views.map((view) => (view.id === chatId ? withoutEmptyMark(view) : view)) }, result: undefined }
             : { content: null, result: undefined }
     );
-};
+}

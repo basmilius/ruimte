@@ -12,24 +12,26 @@ import { ENDED_REASON, wireEndChildren } from './end-children.ts';
 import { OutboxStore } from './outbox.ts';
 import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'term-lead', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'term-lead', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let root: string;
 let home: string;
@@ -61,21 +63,21 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (): Promise<TestDaemon> => {
+async function boot(): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({ home, store, clock });
     running.push(daemon);
     return daemon;
-};
+}
 
 /* The lead in the middle of a turn, as it is while it runs the verbs. */
-const leadWorking = async (daemon: TestDaemon): Promise<void> => {
+async function leadWorking(daemon: TestDaemon): Promise<void> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await daemon.chats.send('chat-lead', 'slow');
     await daemon.until(() => daemon.chats.get('chat-lead')?.info.agentSessionId !== null);
-};
+}
 
 /* A chat child that is still working on its task, and a terminal child whose shell runs. */
-const twoRunningChildren = async (daemon: TestDaemon): Promise<{ chat: string; terminal: string }> => {
+async function twoRunningChildren(daemon: TestDaemon): Promise<{ chat: string; terminal: string }> {
     const [chatLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Slow', '--prompt', 'slow']);
     const [terminalLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--task', 'Shell', '--prompt', 'work']);
     const chat = chatLine!.split('\t')[0]!;
@@ -83,21 +85,25 @@ const twoRunningChildren = async (daemon: TestDaemon): Promise<{ chat: string; t
     await daemon.worker.settled();
     await daemon.until(() => daemon.chats.get(chat)?.info.agentSessionId !== null && daemon.chats.get(chat)?.info.activeTurnId !== null);
     return { chat, terminal };
-};
+}
 
-const turnsOf = (daemon: TestDaemon, chatId: string): ChatTurnItem[] =>
-    (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(daemon: TestDaemon, chatId: string): ChatTurnItem[] {
+    return (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
-const notesOf = (daemon: TestDaemon, chatId: string): string[] =>
-    (daemon.chats.get(chatId)?.thread.list() ?? []).flatMap((item: ChatItem) => (item.kind === 'note' ? [item.text] : []));
+function notesOf(daemon: TestDaemon, chatId: string): string[] {
+    return (daemon.chats.get(chatId)?.thread.list() ?? []).flatMap((item: ChatItem) => (item.kind === 'note' ? [item.text] : []));
+}
 
-const withoutNode = (id: string) => (current: ProjectContent) => ({
-    content: {
-        ...current,
-        views: current.views.map((view) => (view.kind === 'canvas' ? { ...view, nodes: view.nodes.filter((node) => node.id !== id) } : view))
-    },
-    result: null
-});
+function withoutNode(id: string) {
+    return (current: ProjectContent) => ({
+        content: {
+            ...current,
+            views: current.views.map((view) => (view.kind === 'canvas' ? { ...view, nodes: view.nodes.filter((node) => node.id !== id) } : view))
+        },
+        result: null
+    });
+}
 
 describe('stopping or deleting a parent ends the agents it opened', () => {
     test('deleting a lead with two running children ends all three processes, cancels their tasks and wakes nobody', async () => {
@@ -268,7 +274,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
 });
 
 /* A background subagent of the CLI's own that still runs in the lead's thread. */
-const nativeRunning = (daemon: TestDaemon, toolUseId: string): void => {
+function nativeRunning(daemon: TestDaemon, toolUseId: string): void {
     daemon.chats.get('chat-lead')!.thread.upsert({
         id: `1:${toolUseId}`,
         kind: 'subagent',
@@ -288,7 +294,7 @@ const nativeRunning = (daemon: TestDaemon, toolUseId: string): void => {
         lastTool: null,
         itemsTruncated: false
     });
-};
+}
 
 describe("stopping a chat's turn together with its sub-agents", () => {
     test('ends every agent it opened without waking it, marks its own subagents stopped and keeps the chat', async () => {

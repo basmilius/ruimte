@@ -48,16 +48,19 @@ export interface ChannelResult {
     labels: Map<number, Rect>;
 }
 
-const overlaps = (left: Rect, right: Rect): boolean =>
-    left.x < right.x + right.w && right.x < left.x + left.w && left.y < right.y + right.h && right.y < left.y + left.h;
+function overlaps(left: Rect, right: Rect): boolean {
+    return left.x < right.x + right.w && right.x < left.x + left.w && left.y < right.y + right.h && right.y < left.y + left.h;
+}
 
-const inflate = (rect: Rect, by: number): Rect => ({ x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 });
+function inflate(rect: Rect, by: number): Rect {
+    return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+}
 
 /*
  * How badly two orthogonal polylines get in each other's way: a crossing counts once, a stretch where
  * they run on top of each other counts four times, since that is the one a reader cannot follow.
  */
-export const conflictsOf = (left: readonly Point[], right: readonly Point[]): number => {
+export function conflictsOf(left: readonly Point[], right: readonly Point[]): number {
     let total = 0;
     for (let i = 1; i < left.length; i++) {
         const a0 = left[i - 1]!;
@@ -83,15 +86,17 @@ export const conflictsOf = (left: readonly Point[], right: readonly Point[]): nu
         }
     }
     return total;
-};
+}
 
 /* A hop drawn on a track in a channel of unit tracks, only to compare two orders of the tracks. */
-const sketchOf = (hop: ChannelHop, track: number): Point[] => [
-    { x: 0, y: hop.ya },
-    { x: track * TRACK_GAP, y: hop.ya },
-    { x: track * TRACK_GAP, y: hop.yb },
-    { x: TRACK_GAP * 3, y: hop.yb }
-];
+function sketchOf(hop: ChannelHop, track: number): Point[] {
+    return [
+        { x: 0, y: hop.ya },
+        { x: track * TRACK_GAP, y: hop.ya },
+        { x: track * TRACK_GAP, y: hop.yb },
+        { x: TRACK_GAP * 3, y: hop.yb }
+    ];
+}
 
 /*
  * The inside of one channel between two layers. Every hop that changes place across the flow gets a
@@ -99,7 +104,7 @@ const sketchOf = (hop: ChannelHop, track: number): Point[] => [
  * lines; labels go in a lane before the tracks, beside the line their hop leaves on, and the lane
  * grows a column where two labels would otherwise cover each other.
  */
-export const routeChannel = (input: ChannelInput): ChannelResult => {
+export function routeChannel(input: ChannelInput): ChannelResult {
     const vertical = input.hops.filter((hop) => hop.ya !== hop.yb);
     const count = vertical.length;
     const near = (left: ChannelHop, right: ChannelHop): boolean =>
@@ -258,4 +263,4 @@ export const routeChannel = (input: ChannelInput): ChannelResult => {
         labels.set(edge, { ...entry.rect, x: entry.rect.x + (entry.zone === 'before' ? laneStart : middleStart) });
     });
     return { width, trackX, labels };
-};
+}

@@ -272,18 +272,20 @@ export const REVISION_LINE = `flag\t--${REVISION_FLAG} N\toptional\tThe revision
 
 /* What a dry run calls the node it is not making, so the edge it names still has two ends; a team
    puts the role's title in it, since its rows are otherwise the same for two roles of one CLI. */
-export const newNode = (name = 'new node'): string => `<${name}>`;
+export function newNode(name = 'new node'): string {
+    return `<${name}>`;
+}
 
 export const NEW_NODE = newNode();
 
 /* The project the caller is in, from the index of every known project: an open one would miss an agent whose person switched away. */
-export const placeOf = (call: VerbCall): IndexedPlace => {
+export function placeOf(call: VerbCall): IndexedPlace {
     const place = call.host.locate(call.caller);
     if (!place) {
         throw new VerbRefusal('not-in-project', 'This session is not a node or a view of any project on this machine');
     }
     return place;
-};
+}
 
 export { MAX_TITLE_LENGTH } from '@ruimte/actions';
 
@@ -291,44 +293,46 @@ export { MAX_TITLE_LENGTH } from '@ruimte/actions';
 export const TITLE_LINE = `titles\tA name is at most ${MAX_TITLE_LENGTH} characters and is never unique: two nodes may carry the same one, and an id is what names a node`;
 
 /* One title schema for every verb that takes one, so the same limit is refused in the same sentence. */
-export const titleField = (name: string, needs: string): z.ZodString =>
-    z
+export function titleField(name: string, needs: string): z.ZodString {
+    return z
         .string({ error: needs })
         .trim()
         .min(1, needs)
         .max(MAX_TITLE_LENGTH, {
             error: (issue) => `${name} is ${lengthOf(issue.input)} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
         });
+}
 
-export const canvasLines = (content: ProjectContent): string[] =>
-    orNote(
+export function canvasLines(content: ProjectContent): string[] {
+    return orNote(
         content.views.filter(isCanvasView).map((view) => `canvas\t${view.id}\t${field(view.name)}`),
         'This project has no canvas; a node only ever lands on one'
     );
+}
 
 /* What `node new`, `agent` and `team` say when the caller is on no canvas: where the node goes is not all that changes. */
 export const OPENING_OFF_CANVAS =
     'A node opens on a canvas; name which one with --view (ruimte-context view list lists them). A line only joins two nodes of one canvas, so the edge column shows -';
 
 /* The canvas an id names, refused with the canvases there are when it names none. */
-export const canvasNamed = (content: ProjectContent, viewId: string): ProjectCanvasView => {
+export function canvasNamed(content: ProjectContent, viewId: string): ProjectCanvasView {
     const named = content.views.find((candidate) => candidate.id === viewId);
     if (!named || !isCanvasView(named)) {
         throw new VerbRefusal('not-a-canvas', `${viewId} is not a canvas of this project`, canvasLines(content));
     }
     return named;
-};
+}
 
 /*
  * The canvas a verb works on: the one `--view` names, else the one the caller is a node on. Ids
  * only, never names, so an agent cannot aim at a canvas by naming something else after it.
  */
-export const canvasFor = (
+export function canvasFor(
     content: ProjectContent,
     place: IndexedPlace,
     view: string | undefined,
     offCanvas = 'This session is not on a canvas; name one with --view'
-): ProjectCanvasView => {
+): ProjectCanvasView {
     if (view !== undefined) {
         return canvasNamed(content, view);
     }
@@ -337,4 +341,4 @@ export const canvasFor = (
         throw new VerbRefusal('view-required', offCanvas, canvasLines(content));
     }
     return own;
-};
+}

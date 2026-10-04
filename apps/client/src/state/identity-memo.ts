@@ -5,7 +5,7 @@ type Level = WeakMap<object, Level | { value: unknown }>;
  * so a selector that derives from slices runs on every change of the store (a pan included) and
  * gets the earlier answer back until one of its own slices is new. Entries go with their objects.
  */
-export const memoByIdentity = <Args extends object[], Result>(derive: (...args: Args) => Result): ((...args: Args) => Result) => {
+export function memoByIdentity<Args extends object[], Result>(derive: (...args: Args) => Result): (...args: Args) => Result {
     const root: Level = new WeakMap();
     return (...args: Args): Result => {
         let level = root;
@@ -26,4 +26,4 @@ export const memoByIdentity = <Args extends object[], Result>(derive: (...args: 
         level.set(last, { value });
         return value;
     };
-};
+}

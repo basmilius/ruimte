@@ -35,9 +35,13 @@ type Phase =
     | { kind: 'outdated' }
     | { kind: 'failed'; reason: string };
 
-const noop = (): void => undefined;
+function noop(): void {
+    return undefined;
+}
 
-const closeLogin = (): void => useUi.getState().setLogin(null);
+function closeLogin(): void {
+    return useUi.getState().setLogin(null);
+}
 
 /*
  * The CLI's own login in a terminal of its own, for a machine no canvas on screen can hold a terminal

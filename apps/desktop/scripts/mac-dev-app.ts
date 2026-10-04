@@ -7,11 +7,11 @@ const BUNDLE_NAME = 'Ruimte Dev';
 const MICROPHONE_REASON = 'Ruimte uses the microphone only while you test it or run a GPT-Live conversation.';
 const DEV_BUNDLE_REVISION = '2';
 
-const replacePlistString = (plist: string, key: string, value: string): void => {
+function replacePlistString(plist: string, key: string, value: string): void {
     execFileSync('/usr/bin/plutil', ['-replace', key, '-string', value, plist]);
-};
+}
 
-export const prepareMacDevelopmentApp = (electronExecutable: string, outputDirectory: string): string => {
+export function prepareMacDevelopmentApp(electronExecutable: string, outputDirectory: string): string {
     const sourceBundle = resolve(dirname(electronExecutable), '..', '..');
     const targetBundle = join(outputDirectory, `${BUNDLE_NAME}.app`);
     const sourcePlist = join(sourceBundle, 'Contents', 'Info.plist');
@@ -33,4 +33,4 @@ export const prepareMacDevelopmentApp = (electronExecutable: string, outputDirec
     }
 
     return join(targetBundle, 'Contents', 'MacOS', 'Electron');
-};
+}

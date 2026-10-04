@@ -8,7 +8,7 @@ type JsonSchema = { [key: string]: unknown };
 const OPEN_KIND = 'x-open-kind';
 
 /* The values of every enum in what a client reads off a daemon, one line per vocabulary. */
-const vocabularies = (): string[] => {
+function vocabularies(): string[] {
     const found = new Set<string>();
     const walk = (schema: unknown): void => {
         if (!schema || typeof schema !== 'object') {
@@ -49,7 +49,7 @@ const vocabularies = (): string[] => {
         read(schema);
     }
     return [...found].sort();
-};
+}
 
 /*
  * A client validates a reply or an event whole, so one value it never saw refuses all of it: a

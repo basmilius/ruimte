@@ -81,7 +81,7 @@ const connectionHolds = new WeakMap<Connection, LinkHold>();
 const disposed = new WeakSet<Connection>();
 
 /* The store as a project client sees it. Every write names the endpoint it came from. */
-const projectSink = (endpointId: () => string): ProjectSink => {
+function projectSink(endpointId: () => string): ProjectSink {
     const actions = stores.project.getState();
     return {
         setProjects: (projects) => foldList(endpointId(), projects),
@@ -96,9 +96,9 @@ const projectSink = (endpointId: () => string): ProjectSink => {
         setSwitching: actions.setSwitching,
         getState: () => stores.project.getState()
     };
-};
+}
 
-const buildMachine = (endpoint: Endpoint): Machine => {
+function buildMachine(endpoint: Endpoint): Machine {
     const transport = machineTransport(endpoint.id);
     const stopNotifications = transport.on('push.notification', (alert) => notifyRequested(endpoint.id, alert));
     const stopPushAttention = watchPushAttention(endpoint.id, transport);
@@ -129,10 +129,10 @@ const buildMachine = (endpoint: Endpoint): Machine => {
             devices.dispose();
         }
     };
-};
+}
 
 /* One machine's clients, kept until the machine is forgotten; they follow its link as it opens and closes. */
-const machineOn = (endpoint: Endpoint): Machine => {
+function machineOn(endpoint: Endpoint): Machine {
     const existing = machines.get(endpoint.id);
     if (existing) {
         return existing;
@@ -140,7 +140,7 @@ const machineOn = (endpoint: Endpoint): Machine => {
     const machine = buildMachine(endpoint);
     machines.set(machine.endpointId, machine);
     return machine;
-};
+}
 
 /*
  * The sessions and the threads of one daemon, on that daemon's own socket. Every row they write
@@ -148,7 +148,7 @@ const machineOn = (endpoint: Endpoint): Machine => {
  * Null for a machine this client no longer knows. A request meant for a daemon that was forgotten
  * must not land on whichever machine happens to be active.
  */
-export const machineFor = (endpointId: string): Machine | null => {
+export function machineFor(endpointId: string): Machine | null {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
     if (!endpoint) {
         machines.get(endpointId)?.dispose();
@@ -156,10 +156,12 @@ export const machineFor = (endpointId: string): Machine | null => {
         return null;
     }
     return machineOn(endpoint);
-};
+}
 
 /* The active machine always has a row in the endpoint list, so it always has clients. */
-const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
+function activeMachine(): Machine {
+    return machineFor(activeEndpoint().id)!;
+}
 
 /*
  * The clients of one workspace, on the socket of the machine its project comes from, holding that
@@ -167,7 +169,7 @@ const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
  * can hand it the moment before the project is left and the drawing on screen reaches its own file.
  * `onLoad` runs in the tick the project reaches the stores.
  */
-const connect = (endpoint: Endpoint, onLoad: (connection: Connection, summary: ProjectSummary) => void): Connection => {
+function connect(endpoint: Endpoint, onLoad: (connection: Connection, summary: ProjectSummary) => void): Connection {
     const transport = machineOn(endpoint).transport;
     /* Asked again on every save. A row that learns its daemon's id renames the connection under the same clients. */
     const endpointId = (): string => connection.endpointId;
@@ -220,13 +222,13 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection, summary: P
     hold.set(endpoint);
     connectionHolds.set(connection, hold);
     return connection;
-};
+}
 
 /*
  * Lets go of a connection's clients and its hold on the machine's link, which over a broker is a
  * WebRTC channel on both ends. False when that already happened.
  */
-const dropClients = (connection: Connection): boolean => {
+function dropClients(connection: Connection): boolean {
     if (disposed.has(connection)) {
         return false;
     }
@@ -237,19 +239,19 @@ const dropClients = (connection: Connection): boolean => {
     connection.drawings.dispose();
     connection.diagrams.dispose();
     return true;
-};
+}
 
 /*
  * Lets go of everything a connection built. The rows of that machine's sessions and chats go too;
  * they are about the nodes of the project that left, and the next one attaches its own.
  */
-const disposeConnection = (connection: Connection): void => {
+function disposeConnection(connection: Connection): void {
     if (!dropClients(connection)) {
         return;
     }
     useSessions.getState().clear(connection.endpointId);
     useChats.getState().forgetWhere((key) => isOfEndpoint(key, connection.endpointId));
-};
+}
 
 interface ProjectOn {
     endpointId: string;
@@ -257,18 +259,18 @@ interface ProjectOn {
 }
 
 /* The project the stores hold, by the machine it is on. */
-const projectInStores = (): ProjectOn | null => {
+function projectInStores(): ProjectOn | null {
     const { current, currentEndpointId } = stores.project.getState();
     return current && currentEndpointId ? { endpointId: currentEndpointId, projectId: current.projectId } : null;
-};
+}
 
 /* The daemon lets go of a project this window will not show, unless it is the very project `kept` names. */
-const releaseUnless = (connection: Connection, projectId: string, kept: ProjectOn | null): void => {
+function releaseUnless(connection: Connection, projectId: string, kept: ProjectOn | null): void {
     if (kept?.endpointId === connection.endpointId && kept.projectId === projectId) {
         return;
     }
     void connection.transport.request('project.release', { projectId }).catch(() => undefined);
-};
+}
 
 /* Thrown out of an open that a later one overtook, before the stores take its project. */
 class Overtaken extends Error {}
@@ -283,7 +285,7 @@ let shownOpen = 0;
  * project that does not open leaves the window as it was and takes its clients with it. Of two opens
  * on their way at once, the later one ends up on screen whichever machine answers first.
  */
-export const enterWorkspace = async (endpointId: string, request: OpenRequest): Promise<void> => {
+export async function enterWorkspace(endpointId: string, request: OpenRequest): Promise<void> {
     const endpoint = endpointById(endpointId);
     if (!endpoint || !isRealMachine(endpointId)) {
         throw new Error(i18next.t('machines:link.notInList'));
@@ -326,14 +328,14 @@ export const enterWorkspace = async (endpointId: string, request: OpenRequest): 
         }
         throw e;
     }
-};
+}
 
 /*
  * Lets go of the open project for another one. The window keeps showing it until the next project
  * is in, and the stores keep what they hold, but nothing saves any more. The project client wrote
  * what was pending and the daemon was told the project is released.
  */
-export const leaveWorkspace = async (): Promise<void> => {
+export async function leaveWorkspace(): Promise<void> {
     const workspace = windowWorkspace();
     if (!workspace || disposed.has(workspace.connection)) {
         return;
@@ -342,10 +344,10 @@ export const leaveWorkspace = async (): Promise<void> => {
     // Nothing is open under the views on screen now; a drawing client built for the next project must not open theirs.
     stores.project.getState().setSwitching(true);
     disposeConnection(workspace.connection);
-};
+}
 
 /* The start screen, with nothing of the workspace left: no clients, no hold, empty stores, and no project this window keeps from another. */
-export const showStart = (): void => {
+export function showStart(): void {
     const workspace = windowWorkspace();
     if (workspace) {
         disposeConnection(workspace.connection);
@@ -356,30 +358,32 @@ export const showStart = (): void => {
     stores.project.getState().setSwitching(false);
     useWindow.getState().show({ kind: 'start' });
     void claimWindow(null);
-};
+}
 
 /* The workspace on screen as React reads it, and null on the start screen. */
-export const useWorkspace = (): Workspace | null => useWindow((s) => workspaceOf(s.content));
+export function useWorkspace(): Workspace | null {
+    return useWindow((s) => workspaceOf(s.content));
+}
 
 /*
  * The machine a surface outside the workspace works on: the palette, a global dialog. Inside a
  * workspace it is that workspace's; on the start screen it is the active machine.
  */
-export const useFocusedMachine = (): { endpointId: string; transport: Transport } => {
+export function useFocusedMachine(): { endpointId: string; transport: Transport } {
     const inside = useOptionalConnection();
     const workspace = useWorkspace();
     const activeId = useEndpoints((s) => s.activeId);
     const connection = inside ?? workspace?.connection ?? null;
     return connection ?? { endpointId: activeId, transport: machineTransport(activeId) };
-};
+}
 
 /*
  * A stand-in for one of the workspace's clients, so a call site keeps reading as "the daemon this
  * project is on" and holds on to nothing that a switch replaced. Only a surface of the workspace may
  * call one. The start screen has nothing to act on.
  */
-const workspaceClient = <T extends object>(pick: (connection: Connection) => T): T =>
-    new Proxy({} as T, {
+function workspaceClient<T extends object>(pick: (connection: Connection) => T): T {
+    return new Proxy({} as T, {
         get(_target, property) {
             const workspace = windowWorkspace();
             if (!workspace) {
@@ -390,15 +394,17 @@ const workspaceClient = <T extends object>(pick: (connection: Connection) => T):
             return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value;
         }
     });
+}
 
-const activeClient = <T extends object>(pick: () => T): T =>
-    new Proxy({} as T, {
+function activeClient<T extends object>(pick: () => T): T {
+    return new Proxy({} as T, {
         get(_target, property) {
             const client = pick();
             const value = Reflect.get(client, property) as unknown;
             return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value;
         }
     });
+}
 
 export const sessionClient = activeClient(() => activeMachine().sessions);
 export const chatClient = activeClient(() => activeMachine().chats);
@@ -407,16 +413,24 @@ export const drawingClient = workspaceClient((connection) => connection.drawings
 export const diagramClient = workspaceClient((connection) => connection.diagrams);
 
 /* The session client of one machine, for a node that names the daemon it runs on. */
-export const sessionClientFor = (endpointId: string): SessionClient | null => machineFor(endpointId)?.sessions ?? null;
+export function sessionClientFor(endpointId: string): SessionClient | null {
+    return machineFor(endpointId)?.sessions ?? null;
+}
 
-export const chatClientFor = (endpointId: string): ChatClient | null => machineFor(endpointId)?.chats ?? null;
+export function chatClientFor(endpointId: string): ChatClient | null {
+    return machineFor(endpointId)?.chats ?? null;
+}
 
-export const browserClientFor = (endpointId: string): BrowserClient | null => machineFor(endpointId)?.browsers ?? null;
+export function browserClientFor(endpointId: string): BrowserClient | null {
+    return machineFor(endpointId)?.browsers ?? null;
+}
 
-export const deviceClientFor = (endpointId: string): DeviceClient | null => machineFor(endpointId)?.devices ?? null;
+export function deviceClientFor(endpointId: string): DeviceClient | null {
+    return machineFor(endpointId)?.devices ?? null;
+}
 
 /* A machine this client no longer knows under that id (forgotten, or a row that moved onto its daemon id) keeps no clients. */
-const prune = (): void => {
+function prune(): void {
     const known = new Set(useEndpoints.getState().endpoints.map((endpoint) => endpoint.id));
     for (const [endpointId, machine] of [...machines]) {
         if (!known.has(endpointId)) {
@@ -424,20 +438,20 @@ const prune = (): void => {
             machine.dispose();
         }
     }
-};
+}
 
 /* Everything one machine held, for a row that is forgotten or a session that was revoked. */
-export const dropMachine = (endpointId: string): void => {
+export function dropMachine(endpointId: string): void {
     const machine = machines.get(endpointId);
     machines.delete(endpointId);
     machine?.dispose();
-};
+}
 
 /*
  * A row that learned the id of its daemon is the same machine under another name. The transport and
  * the link stayed put, so the workspace keeps its clients and only its name for the machine moves.
  */
-const followRekey = (): void => {
+function followRekey(): void {
     const workspace = windowWorkspace();
     if (!workspace || endpointById(workspace.connection.endpointId)) {
         return;
@@ -462,10 +476,10 @@ const followRekey = (): void => {
     if (projectId) {
         void claimWindow({ endpointId: activeId, projectId });
     }
-};
+}
 
 /* The active machine's clients exist from the first frame. The attention, the plans and the sessions of that machine hang on them. */
-export const startConnections = (): (() => void) => {
+export function startConnections(): () => void {
     activeMachine();
     const offEndpoints = useEndpoints.subscribe((state, before) => {
         if (state.endpoints !== before.endpoints) {
@@ -499,4 +513,4 @@ export const startConnections = (): (() => void) => {
         offChatPreferences();
         offAccounts();
     };
-};
+}

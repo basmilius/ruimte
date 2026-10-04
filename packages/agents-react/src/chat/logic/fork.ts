@@ -17,17 +17,18 @@ export interface ForkPoint {
     prompt: string | null;
 }
 
-const turnsOf = (items: Record<string, ChatItem>, order: readonly string[]): ChatTurnItem[] =>
-    order.flatMap((id) => {
+function turnsOf(items: Record<string, ChatItem>, order: readonly string[]): ChatTurnItem[] {
+    return order.flatMap((id) => {
         const item = items[id];
         return item?.kind === 'turn' ? [item] : [];
     });
+}
 
 /*
  * Why a chat cannot be forked after this turn right now, or null when it can. A turn still running,
  * or any turn in the chat, is a transcript that grows while it would be copied.
  */
-export const forkRefusal = (info: ChatInfo | null, turn: ChatItem | undefined): string | null => {
+export function forkRefusal(info: ChatInfo | null, turn: ChatItem | undefined): string | null {
     if (info === null || turn?.kind !== 'turn') {
         return i18next.t('agent-chat:fork.refusal.notInConversation');
     }
@@ -41,10 +42,10 @@ export const forkRefusal = (info: ChatInfo | null, turn: ChatItem | undefined): 
         return i18next.t('agent-chat:fork.refusal.turnRunning');
     }
     return null;
-};
+}
 
 /* Why a fork cannot write a summary for its original right now, or null when it can. */
-export const summaryRefusal = (state: { busy: boolean; originalPresent: boolean }): string | null => {
+export function summaryRefusal(state: { busy: boolean; originalPresent: boolean }): string | null {
     if (!state.originalPresent) {
         return i18next.t('agent-chat:fork.refusal.originalGone');
     }
@@ -52,10 +53,10 @@ export const summaryRefusal = (state: { busy: boolean; originalPresent: boolean 
         return i18next.t('agent-chat:fork.refusal.turnRunning');
     }
     return null;
-};
+}
 
 /* The forks this client knows of that went on after this turn of this chat, in the order it holds them. */
-export const forkIdsAfter = (infos: Iterable<ChatInfo>, chatId: string, turnId: string): string[] => {
+export function forkIdsAfter(infos: Iterable<ChatInfo>, chatId: string, turnId: string): string[] {
     const ids: string[] = [];
     for (const info of infos) {
         if (info.forkOf?.chatId === chatId && info.forkOf.turnId === turnId) {
@@ -63,10 +64,10 @@ export const forkIdsAfter = (infos: Iterable<ChatInfo>, chatId: string, turnId: 
         }
     }
     return ids;
-};
+}
 
 /* The turns of this chat that at least one fork this client knows of went on after. */
-export const forkedTurnIds = (infos: Iterable<ChatInfo>, chatId: string): Set<string> => {
+export function forkedTurnIds(infos: Iterable<ChatInfo>, chatId: string): Set<string> {
     const turns = new Set<string>();
     for (const info of infos) {
         if (info.forkOf?.chatId === chatId) {
@@ -74,13 +75,14 @@ export const forkedTurnIds = (infos: Iterable<ChatInfo>, chatId: string): Set<st
         }
     }
     return turns;
-};
+}
 
 /* The last turn that ended, which is where a fork from the node's menu goes on after. */
-export const lastSettledTurn = (items: Record<string, ChatItem>, order: readonly string[]): string | null =>
-    turnsOf(items, order).findLast((turn) => turn.state !== 'running')?.id ?? null;
+export function lastSettledTurn(items: Record<string, ChatItem>, order: readonly string[]): string | null {
+    return turnsOf(items, order).findLast((turn) => turn.state !== 'running')?.id ?? null;
+}
 
-export const forkPointOf = (items: Record<string, ChatItem>, order: readonly string[], turnId: string, whole: boolean): ForkPoint | null => {
+export function forkPointOf(items: Record<string, ChatItem>, order: readonly string[], turnId: string, whole: boolean): ForkPoint | null {
     const turns = turnsOf(items, order);
     const index = turns.findIndex((turn) => turn.id === turnId);
     const turn = turns[index];
@@ -95,10 +97,10 @@ export const forkPointOf = (items: Record<string, ChatItem>, order: readonly str
             .find((line) => line.trim() !== '')
             ?.trim() ?? null;
     return { turnId, number: index + 1, total: turns.length, counted: whole, last: index === turns.length - 1, prompt };
-};
+}
 
 /* The line at the top of the dialog: which turn, and what it was about. */
-export const forkPointLabel = (point: ForkPoint, maxPrompt = 60): string => {
+export function forkPointLabel(point: ForkPoint, maxPrompt = 60): string {
     const where = point.last
         ? i18next.t('agent-chat:fork.point.afterLast')
         : point.counted
@@ -109,10 +111,10 @@ export const forkPointLabel = (point: ForkPoint, maxPrompt = 60): string => {
     }
     const prompt = point.prompt.length > maxPrompt ? `${point.prompt.slice(0, maxPrompt - 1)}…` : point.prompt;
     return i18next.t('agent-chat:fork.point.about', { where, prompt });
-};
+}
 
 /* The turn a row of the thread belongs to, which is the turn "Fork from here" on that row goes on after. */
-export const turnIdOfRow = (row: TimelineRow): string | null => {
+export function turnIdOfRow(row: TimelineRow): string | null {
     switch (row.kind) {
         case 'turn-start':
         case 'turn-fold':
@@ -136,13 +138,15 @@ export const turnIdOfRow = (row: TimelineRow): string | null => {
         default:
             return null;
     }
-};
+}
 
 /* What a fork becomes: a chat node on a canvas, or a chat view of its own in the sidebar. */
 export type ForkShape = 'node' | 'view';
 
 /* What the dialog offers, first the default: a view forks into a view, and a node into a node or, when asked, a view. */
-export const forkShapes = (origin: ForkShape): ForkShape[] => (origin === 'view' ? ['view'] : ['node', 'view']);
+export function forkShapes(origin: ForkShape): ForkShape[] {
+    return origin === 'view' ? ['view'] : ['node', 'view'];
+}
 
 /* A worktree the fork works in, on this branch, with or without the files as they were after the turn. */
 export interface ForkWorktreeChoice {
@@ -158,31 +162,33 @@ export interface ForkCliChoice {
     account?: string;
 }
 
-export const forkPayload = (input: {
+export function forkPayload(input: {
     chatId: string;
     turnId: string;
     title: string;
     shape: ForkShape;
     worktree?: ForkWorktreeChoice | null;
     cli?: { original: ForkCliChoice; chosen: ForkCliChoice };
-}): ChatForkPayload => ({
-    chatId: input.chatId,
-    turnId: input.turnId,
-    title: input.title,
-    ...(input.shape === 'view' ? { asView: true } : {}),
-    ...(input.cli && input.cli.chosen.provider !== input.cli.original.provider ? { provider: input.cli.chosen.provider } : {}),
-    ...(input.cli && (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.selection.model !== input.cli.original.selection.model)
-        ? { selection: input.cli.chosen.selection }
-        : {}),
-    ...(input.cli?.chosen.account !== undefined &&
-    (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.account !== input.cli.original.account)
-        ? { account: input.cli.chosen.account }
-        : {}),
-    ...(input.worktree ? { worktree: { branch: input.worktree.branch }, ...(input.worktree.filesAfterTurn ? { filesAfterTurn: true } : {}) } : {})
-});
+}): ChatForkPayload {
+    return {
+        chatId: input.chatId,
+        turnId: input.turnId,
+        title: input.title,
+        ...(input.shape === 'view' ? { asView: true } : {}),
+        ...(input.cli && input.cli.chosen.provider !== input.cli.original.provider ? { provider: input.cli.chosen.provider } : {}),
+        ...(input.cli && (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.selection.model !== input.cli.original.selection.model)
+            ? { selection: input.cli.chosen.selection }
+            : {}),
+        ...(input.cli?.chosen.account !== undefined &&
+        (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.account !== input.cli.original.account)
+            ? { account: input.cli.chosen.account }
+            : {}),
+        ...(input.worktree ? { worktree: { branch: input.worktree.branch }, ...(input.worktree.filesAfterTurn ? { filesAfterTurn: true } : {}) } : {})
+    };
+}
 
 /* Why a branch cannot be the fork's, or null when it can. */
-export const branchRefusal = (branch: string, taken: readonly string[]): string | null => {
+export function branchRefusal(branch: string, taken: readonly string[]): string | null {
     const name = branch.trim();
     if (name === '') {
         return i18next.t('agent-chat:fork.branch.unnamed');
@@ -191,4 +197,4 @@ export const branchRefusal = (branch: string, taken: readonly string[]): string 
         return i18next.t('agent-chat:fork.branch.taken');
     }
     return null;
-};
+}

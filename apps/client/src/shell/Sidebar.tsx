@@ -140,13 +140,13 @@ const ROW_SELECTED = 'bg-surface-active text-text';
 const ROW_BESIDE = 'text-text hover:bg-surface-hover';
 const ROW_PLAIN = 'text-text-muted hover:bg-surface-hover hover:text-text';
 
-const insertionIndex = (list: HTMLElement, clientY: number, viewCount: number): number => {
+function insertionIndex(list: HTMLElement, clientY: number, viewCount: number): number {
     const rows = [...list.querySelectorAll<HTMLElement>('[data-view-index]')].map((row) => {
         const rect = row.getBoundingClientRect();
         return { index: Number(row.dataset.viewIndex), middle: rect.top + rect.height / 2 };
     });
     return gapIndex(rows, clientY, viewCount);
-};
+}
 
 interface RowProps {
     /* The one row Tab reaches: the list is a single stop and the arrows move inside it. */
@@ -213,7 +213,9 @@ const GLOW_ORBITS = [
 ] as const;
 
 /* A part centered on the middle of the sidebar's top edge, `size` pixels across. */
-const atTop = (size: number): CSSProperties => ({ width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` });
+function atTop(size: number): CSSProperties {
+    return { width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` };
+}
 
 /* The eclipse's orbits rising over the top edge, the way the welcome and About draw it. */
 function SidebarGlow() {
@@ -364,12 +366,12 @@ interface ViewRowProps extends RowProps {
 }
 
 /* Up and down walk the list, from whichever row has the keyboard. */
-const arrowStep = (event: ReactKeyboardEvent<HTMLElement>, onArrow: (delta: 1 | -1) => void): void => {
+function arrowStep(event: ReactKeyboardEvent<HTMLElement>, onArrow: (delta: 1 | -1) => void): void {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault();
         onArrow(event.key === 'ArrowDown' ? 1 : -1);
     }
-};
+}
 
 /* All a row with nothing to open offers: a separator, and a view this version cannot draw. */
 function DeleteRowMenu({ onDelete }: { onDelete(): void }) {

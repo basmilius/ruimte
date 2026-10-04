@@ -8,16 +8,18 @@ import type { Transport } from './transport';
  */
 const DRAWABLE = /^(image\/(png|jpeg|gif|webp|avif|heic|heif|bmp|x-icon|tiff|svg\+xml)|(video|audio)\/[\w.+-]+|application\/pdf|text\/plain)$/;
 
-export const blobTypeFor = (mime: string): string => (DRAWABLE.test(mime) ? mime : 'application/octet-stream');
+export function blobTypeFor(mime: string): string {
+    return DRAWABLE.test(mime) ? mime : 'application/octet-stream';
+}
 
-export const decodeBase64 = (data: string): Uint8Array<ArrayBuffer> => {
+export function decodeBase64(data: string): Uint8Array<ArrayBuffer> {
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) {
         bytes[i] = binary.charCodeAt(i);
     }
     return bytes;
-};
+}
 
 /* A piece of a resource with its bytes as they are, however the machine sent them. */
 export interface BytesPiece extends BytesReadHeader {
@@ -25,10 +27,10 @@ export interface BytesPiece extends BytesReadHeader {
 }
 
 /* A piece as a binary reply where the transport reads those, and as base64 in JSON everywhere else. */
-export const readPiece = async (transport: Pick<Transport, 'request' | 'readBytes'>, payload: BytesReadPayload): Promise<BytesPiece> => {
+export async function readPiece(transport: Pick<Transport, 'request' | 'readBytes'>, payload: BytesReadPayload): Promise<BytesPiece> {
     if (transport.readBytes) {
         return transport.readBytes(payload);
     }
     const { data, ...header } = await transport.request('bytes.read', payload);
     return { ...header, bytes: decodeBase64(data) };
-};
+}

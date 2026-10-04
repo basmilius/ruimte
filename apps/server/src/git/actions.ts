@@ -48,12 +48,14 @@ interface Steps {
 }
 
 /* What git wrote, trimmed: the message of a failure and the body of a copy. */
-const textOf = (stdout: string, stderr: string): string => `${stdout}${stderr}`.trim();
+function textOf(stdout: string, stderr: string): string {
+    return `${stdout}${stderr}`.trim();
+}
 
-const summaryOf = (output: string, fallback: string): string => {
+function summaryOf(output: string, fallback: string): string {
     const lines = output.split('\n').filter((line) => line.trim() !== '');
     return lines[lines.length - 1]?.trim() || fallback;
-};
+}
 
 /*
  * Every action the git panel takes, run as a list of git calls whose output is streamed while they
@@ -299,20 +301,22 @@ export class GitActions {
 }
 
 /* A field the kind cannot do without; a client that leaves it out is asking for a failure, not a git. */
-const required = (value: string | undefined, what: string): string => {
+function required(value: string | undefined, what: string): string {
     if (value === undefined || value === '') {
         throw new GitError('git-failed', `This action needs ${what}.`);
     }
     return value;
-};
+}
 
-const stamp = (): string => new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+function stamp(): string {
+    return new Date().toISOString().replace(/[:.]/g, '-').replace(/Z$/, '');
+}
 
 /*
  * Checking out a remote branch means making the local one that follows it, unless a local branch of
  * that name is already there, in which case that is the branch the person means.
  */
-const checkoutArgs = async (top: string, ref: string): Promise<string[]> => {
+async function checkoutArgs(top: string, ref: string): Promise<string[]> {
     const local = (await git(['rev-parse', '--verify', '--quiet', `refs/heads/${ref}`], top))?.trim();
     if (local) {
         return ['checkout', ref];
@@ -324,16 +328,16 @@ const checkoutArgs = async (top: string, ref: string): Promise<string[]> => {
         return existing ? ['checkout', short] : ['checkout', '--track', ref];
     }
     return ['checkout', ref];
-};
+}
 
 /* Whether the branch and its upstream have each gained commits the other lacks. */
-const diverged = async (cwd: string): Promise<boolean> => {
+async function diverged(cwd: string): Promise<boolean> {
     const counts = (await git(['rev-list', '--left-right', '--count', '@{upstream}...HEAD'], cwd))?.trim().split(/\s+/);
     return Number.parseInt(counts?.[0] ?? '', 10) > 0 && Number.parseInt(counts?.[1] ?? '', 10) > 0;
-};
+}
 
 /* Whether the working tree holds anything a checkout would have to carry over or lose. */
-export const isDirty = async (cwd: string): Promise<boolean> => {
+export async function isDirty(cwd: string): Promise<boolean> {
     const { code, stdout } = await runGit(['status', '--porcelain'], cwd);
     return code === 0 && stdout.trim() !== '';
-};
+}

@@ -5,7 +5,7 @@ import { useProject } from '@/state/project';
  * Puts a view of the open project in front once the document has it: the change that adds a view may
  * land just after the reply or the message that names it. A switch to another project ends the wait.
  */
-export const showViewOnceThere = (viewId: string): void => {
+export function showViewOnceThere(viewId: string): void {
     const show = (): boolean => {
         const state = useDocument.getState();
         if (!state.views.some((view) => view.id === viewId)) {
@@ -23,4 +23,4 @@ export const showViewOnceThere = (viewId: string): void => {
             stop();
         }
     });
-};
+}

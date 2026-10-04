@@ -33,7 +33,7 @@ export interface ChatFind {
  * the rows on screen, which the virtualizer swaps as the thread scrolls, so they are drawn again after
  * every change to the rows' DOM.
  */
-export const useChatFind = (options: TimelineFindOptions): ChatFind => {
+export function useChatFind(options: TimelineFindOptions): ChatFind {
     const { chatId, rows, structure, order } = options;
     const find = useFind(options.frame, options.enabled);
     // The structure and not the items, so a streamed word does not search the whole thread again; a reply is searched once it settles.
@@ -248,10 +248,10 @@ export const useChatFind = (options: TimelineFindOptions): ChatFind => {
         hitRows,
         currentRow: currentEntry?.row ?? null
     };
-};
+}
 
 /* The find of a thread as the chat draws it: whether it is open, the bar over the thread, and where its hits are. */
-export const useTimelineFind = (options: TimelineFindOptions): TimelineFind => {
+export function useTimelineFind(options: TimelineFindOptions): TimelineFind {
     const chatFind = useChatFind(options);
     return {
         open: chatFind.find.open,
@@ -266,4 +266,4 @@ export const useTimelineFind = (options: TimelineFindOptions): TimelineFind => {
         hitRows: chatFind.hitRows,
         currentRow: chatFind.currentRow
     };
-};
+}

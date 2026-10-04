@@ -42,7 +42,7 @@ const NOTHING: GrepAnswer = { folder: '', query: '', options: DEFAULT_GREP_OPTIO
 /* The answer as the list shows it. The hits of the search before this one stay up while the next
    answer is on its way: a list that empties on every keystroke flickers, and what is shown is never
    presented as current. */
-export const grepState = (answer: GrepAnswer, folder: string | null, query: string, options: GrepOptions): GrepState => {
+export function grepState(answer: GrepAnswer, folder: string | null, query: string, options: GrepOptions): GrepState {
     const trimmed = query.trim();
     if (folder === null || trimmed === '') {
         return { matches: [], files: 0, truncated: false, failure: null, busy: false };
@@ -54,7 +54,7 @@ export const grepState = (answer: GrepAnswer, folder: string | null, query: stri
         answer.options.wholeWord === options.wholeWord &&
         answer.options.regex === options.regex;
     return { matches: answer.matches, files: answer.files, truncated: answer.truncated, failure: answer.failure, busy: !current };
-};
+}
 
 /* One file's hits under the name they share, in the order the search walked them. */
 export interface GrepGroup {
@@ -64,7 +64,7 @@ export interface GrepGroup {
     matches: FsGrepMatch[];
 }
 
-export const groupByFile = (matches: readonly FsGrepMatch[]): GrepGroup[] => {
+export function groupByFile(matches: readonly FsGrepMatch[]): GrepGroup[] {
     const groups: GrepGroup[] = [];
     for (const [index, match] of matches.entries()) {
         const last = groups.at(-1);
@@ -75,16 +75,18 @@ export const groupByFile = (matches: readonly FsGrepMatch[]): GrepGroup[] => {
         }
     }
     return groups;
-};
+}
 
 /* The line a hit's context opens on, so the block draws its own numbers without counting back. */
-export const firstContextLine = (match: FsGrepMatch): number => match.line - match.before.length;
+export function firstContextLine(match: FsGrepMatch): number {
+    return match.line - match.before.length;
+}
 
 /*
  * What the daemon finds for the query the person is typing. Every keystroke asks again after the
  * debounce, and an answer that a later keystroke has already outrun is dropped rather than shown.
  */
-export const useGrepSearch = (folder: string | null, query: string, options: GrepOptions): GrepState => {
+export function useGrepSearch(folder: string | null, query: string, options: GrepOptions): GrepState {
     const [answer, setAnswer] = useState<GrepAnswer>(NOTHING);
     const generation = useRef(0);
     const { caseSensitive, wholeWord, regex } = options;
@@ -115,4 +117,4 @@ export const useGrepSearch = (folder: string | null, query: string, options: Gre
     }, [folder, query, caseSensitive, wholeWord, regex]);
 
     return grepState(answer, folder, query, options);
-};
+}

@@ -12,21 +12,23 @@ import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lexer', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let template: RepoTemplate;
 let root: string;
@@ -62,21 +64,22 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const turnsOf = (chatId: string): ChatTurnItem[] =>
-    (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(chatId: string): ChatTurnItem[] {
+    return (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 /* Sends and waits until the turn settled with the tree of where it left the files. */
-const say = async (chatId: string, text: string): Promise<void> => {
+async function say(chatId: string, text: string): Promise<void> {
     const before = turnsOf(chatId).length;
     await daemon.chats.send(chatId, text);
     await daemon.until(() => {
         const turns = turnsOf(chatId);
         return daemon.chats.get(chatId)?.info.activeTurnId === null && turns.length === before + 1 && turns.at(-1)?.checkpointAfter !== undefined;
     });
-};
+}
 
 /* Two turns that each write a file, with the transcript Claude Code would have written for them. */
-const twoTurns = async (): Promise<ChatTurnItem[]> => {
+async function twoTurns(): Promise<ChatTurnItem[]> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     await say('chat-lead', 'write: first.txt from turn one');
     await say('chat-lead', 'write: second.txt from turn two');
@@ -91,13 +94,13 @@ const twoTurns = async (): Promise<ChatTurnItem[]> => {
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, `${sessionId}.jsonl`), lines.map((entry) => JSON.stringify(entry)).join('\n'));
     return turns;
-};
+}
 
-const fork = async (payload: Record<string, unknown>): Promise<{ nodeId: string; info: ChatInfo; worktree?: { path: string; branch: string } }> => {
+async function fork(payload: Record<string, unknown>): Promise<{ nodeId: string; info: ChatInfo; worktree?: { path: string; branch: string } }> {
     const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', ...payload });
     expect(answer).toMatchObject({ ok: true });
     return (answer as { result: { nodeId: string; info: ChatInfo; worktree?: { path: string; branch: string } } }).result;
-};
+}
 
 test('a fork after turn 1 in a worktree holds the files after turn 1, with the index on HEAD and the difference unstaged', async () => {
     const turns = await twoTurns();

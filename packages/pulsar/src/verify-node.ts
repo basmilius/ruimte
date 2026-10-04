@@ -8,7 +8,7 @@ import { PublicKeySchema } from './keys.ts';
  * to whether the answer is a boolean or a promise.
  */
 
-const publicKeyObject = (publicKey: string): KeyObject | null => {
+function publicKeyObject(publicKey: string): KeyObject | null {
     if (!PublicKeySchema.safeParse(publicKey).success) {
         return null;
     }
@@ -19,10 +19,10 @@ const publicKeyObject = (publicKey: string): KeyObject | null => {
     } catch {
         return null;
     }
-};
+}
 
 /* Whether a signature over exactly this message was made with the private half of this raw ed25519 key in base64url. */
-export const verifySignature = (publicKey: string, message: string, signature: string): boolean => {
+export function verifySignature(publicKey: string, message: string, signature: string): boolean {
     const key = publicKeyObject(publicKey);
     if (!key) {
         return false;
@@ -32,7 +32,9 @@ export const verifySignature = (publicKey: string, message: string, signature: s
     } catch {
         return false;
     }
-};
+}
 
 /* Whether a string is shaped like a public key at all, so a record is never written with rubbish in it. */
-export const isPublicKey = (value: string): boolean => publicKeyObject(value) !== null;
+export function isPublicKey(value: string): boolean {
+    return publicKeyObject(value) !== null;
+}

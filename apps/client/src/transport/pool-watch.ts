@@ -22,7 +22,7 @@ export interface WatchablePool {
  * One watch over every link the pool holds, opened as a link turns up and ended as it goes. Nothing
  * here opens a link. A watch follows the sockets a hold already brought up.
  */
-export const watchPool = (attach: (link: Transport, endpointId: string) => LinkWatch, source: WatchablePool = pool): (() => void) => {
+export function watchPool(attach: (link: Transport, endpointId: string) => LinkWatch, source: WatchablePool = pool): () => void {
     const watching = new Map<string, () => void>();
 
     const sync = (): void => {
@@ -65,4 +65,4 @@ export const watchPool = (attach: (link: Transport, endpointId: string) => LinkW
         }
         watching.clear();
     };
-};
+}

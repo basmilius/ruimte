@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { runLogout, type LogoutOptions } from './logout.ts';
 
-const harness = (daemon: (request: { path: string; authorization: string | undefined }) => Response | null) => {
+function harness(daemon: (request: { path: string; authorization: string | undefined }) => Response | null) {
     const out: string[] = [];
     const err: string[] = [];
     const options: LogoutOptions = {
@@ -19,7 +19,7 @@ const harness = (daemon: (request: { path: string; authorization: string | undef
         err: (line) => err.push(line)
     };
     return { out, err, run: () => runLogout(options) };
-};
+}
 
 describe('ruimte logout', () => {
     test('takes the machine off its account with the local secret and says how many clients lost access', async () => {

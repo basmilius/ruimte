@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { LiveStreamFrame } from '@ruimte/contracts';
 import { ScrcpySource, type ScrcpyHost } from './scrcpy-source.ts';
 
-const header = (flags: number, size: number, width = 0, height = 0): number[] => {
+function header(flags: number, size: number, width = 0, height = 0): number[] {
     const bytes = new DataView(new ArrayBuffer(12));
     bytes.setUint8(0, flags);
     if (flags & 0x80) {
@@ -12,7 +12,7 @@ const header = (flags: number, size: number, width = 0, height = 0): number[] =>
         bytes.setUint32(8, size);
     }
     return [...new Uint8Array(bytes.buffer)];
-};
+}
 
 const sps = [0, 0, 0, 1, 0x67, 0x42];
 const idr = [0, 0, 0, 1, 0x65, 0x88];

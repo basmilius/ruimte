@@ -19,19 +19,25 @@ import {
     type PowerState
 } from './closed-lid.ts';
 
-const setting = (patch: Partial<ClosedLidSetting> = {}): ClosedLidSetting => ({ mode: 'always', onBattery: false, display: false, lidClosed: true, ...patch });
+function setting(patch: Partial<ClosedLidSetting> = {}): ClosedLidSetting {
+    return { mode: 'always', onBattery: false, display: false, lidClosed: true, ...patch };
+}
 
 const ADAPTER: PowerState = { adapter: true, percent: 80 };
-const battery = (percent: number | null): PowerState => ({ adapter: false, percent });
+function battery(percent: number | null): PowerState {
+    return { adapter: false, percent };
+}
 
-const facts = (patch: Partial<ClosedLidFacts> = {}): ClosedLidFacts => ({
-    setting: setting(),
-    working: false,
-    platform: 'darwin',
-    rule: true,
-    power: ADAPTER,
-    ...patch
-});
+function facts(patch: Partial<ClosedLidFacts> = {}): ClosedLidFacts {
+    return {
+        setting: setting(),
+        working: false,
+        platform: 'darwin',
+        rule: true,
+        power: ADAPTER,
+        ...patch
+    };
+}
 
 describe('closedLidHolds', () => {
     test('holds on the adapter while keep awake holds, the switch is on and the rule is there', () => {
@@ -158,7 +164,7 @@ describe('PowerStreamParser', () => {
 });
 
 /* A Mac that never runs anything: each call is written down in order, and the answers are set by the test. */
-const fakeSystem = () => {
+function fakeSystem() {
     const calls: string[] = [];
     const state = {
         rule: true,
@@ -233,9 +239,9 @@ const fakeSystem = () => {
         }
     };
     return { calls, state, system };
-};
+}
 
-const lidOf = (options: { setting: ClosedLidSetting; working?: boolean }) => {
+function lidOf(options: { setting: ClosedLidSetting; working?: boolean }) {
     const fake = fakeSystem();
     const current = { setting: options.setting, working: options.working ?? false };
     const changes: boolean[] = [];
@@ -259,7 +265,7 @@ const lidOf = (options: { setting: ClosedLidSetting; working?: boolean }) => {
         await lid.settled();
     };
     return { ...fake, current, changes, lid, reading, recheck };
-};
+}
 
 describe('ClosedLid', () => {
     test('holds with the marker and the watchdog up before sleep goes off, and lets go in the reverse order', async () => {

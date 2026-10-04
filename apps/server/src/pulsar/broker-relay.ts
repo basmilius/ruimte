@@ -18,7 +18,7 @@ const ICE_RETRY_MS = 60_000;
  * so the daemon keeps every STUN server (the first still wins) and one TURN URL: UDP when the broker
  * offers it, since a relay over TCP is what a TURN client falls back to anyway.
  */
-export const weriftIceServers = (servers: IceServer[]): IceServer[] => {
+export function weriftIceServers(servers: IceServer[]): IceServer[] {
     const flat = servers.flatMap((server) => (Array.isArray(server.urls) ? server.urls : [server.urls]).map((url) => ({ ...server, urls: url })));
     const stun = flat.filter((server) => /^stuns?:/.test(server.urls as string)).map((server) => ({ urls: server.urls }));
     const turn = flat.filter((server) => /^turns?:/.test(server.urls as string));
@@ -27,7 +27,7 @@ export const weriftIceServers = (servers: IceServer[]): IceServer[] => {
         turn.find((server) => /^turn:[^?]*$/.test(server.urls as string)) ??
         turn[0];
     return chosen ? [...stun, chosen] : stun;
-};
+}
 
 export interface BrokerRelayOptions {
     url: string;

@@ -51,8 +51,8 @@ export type ProjectSidebarResult = z.infer<typeof ProjectSidebarResultSchema>;
 
 /* Keep canvas geometry, note text and embedded files off background sidebar requests. A chat nobody
    wrote in yet is not listed, so the rows a client builds for its own project read the same. */
-export const projectSidebarViews = (views: readonly ProjectView[], shared: readonly string[], flags?: ProjectFlags): ProjectSidebarView[] =>
-    views
+export function projectSidebarViews(views: readonly ProjectView[], shared: readonly string[], flags?: ProjectFlags): ProjectSidebarView[] {
+    return views
         .filter((view): boolean => !isEmptyChatView(view))
         .map((view) => {
             const provider = view.kind === 'chat' || view.kind === 'terminal' ? (view.node.provider ?? null) : null;
@@ -77,3 +77,4 @@ export const projectSidebarViews = (views: readonly ProjectView[], shared: reado
                 self: isSessionView(view) ? { id: view.id, title: view.name, titleSource: view.titleSource, kind: view.kind, provider } : null
             };
         });
+}

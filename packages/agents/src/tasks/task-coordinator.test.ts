@@ -18,8 +18,8 @@ let after: 'reports' | 'silent' | 'gone';
 let commands: Map<string, ChatBackgroundTask[]>;
 let limits: Map<string, { commands: readonly string[]; at: number }>;
 
-const makeCoordinator = (): TaskCoordinator =>
-    new TaskCoordinator({
+function makeCoordinator(): TaskCoordinator {
+    return new TaskCoordinator({
         tasks,
         now: () => 10,
         chatItems: (chatId) => threads.get(chatId) ?? null,
@@ -43,6 +43,7 @@ const makeCoordinator = (): TaskCoordinator =>
             }
         }
     });
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-task-coordinator-'));
@@ -62,45 +63,54 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const turn = (id: string, state: ChatTurnItem['state']): ChatTurnItem => ({ id, kind: 'turn', createdAt: 5, turnId: id, state, endedAt: 9, costUsd: 0 });
+function turn(id: string, state: ChatTurnItem['state']): ChatTurnItem {
+    return { id, kind: 'turn', createdAt: 5, turnId: id, state, endedAt: 9, costUsd: 0 };
+}
 
-const answer = (turnId: string, text: string, parentToolUseId?: string): ChatItem => ({
-    id: `a-${turnId}-${text}`,
-    kind: 'assistant',
-    createdAt: 6,
-    turnId,
-    text,
-    streaming: false,
-    ...(parentToolUseId ? { parentToolUseId } : {})
-});
+function answer(turnId: string, text: string, parentToolUseId?: string): ChatItem {
+    return {
+        id: `a-${turnId}-${text}`,
+        kind: 'assistant',
+        createdAt: 6,
+        turnId,
+        text,
+        streaming: false,
+        ...(parentToolUseId ? { parentToolUseId } : {})
+    };
+}
 
-const workflow = (state: 'running' | 'done' | 'error'): ChatItem => ({
-    id: 'wf',
-    kind: 'tool',
-    createdAt: 6,
-    turnId: 't1',
-    toolUseId: 'toolu_wf',
-    name: 'Workflow',
-    input: {},
-    output: 'Workflow launched in background. Task ID: w1',
-    state,
-    parentToolUseId: null
-});
+function workflow(state: 'running' | 'done' | 'error'): ChatItem {
+    return {
+        id: 'wf',
+        kind: 'tool',
+        createdAt: 6,
+        turnId: 't1',
+        toolUseId: 'toolu_wf',
+        name: 'Workflow',
+        input: {},
+        output: 'Workflow launched in background. Task ID: w1',
+        state,
+        parentToolUseId: null
+    };
+}
 
 /* The events a chat sends as a turn of it ends: the settled turn, then the info that frees it. */
-const ends = (chatId: string, item: ChatTurnItem): void => {
+function ends(chatId: string, item: ChatTurnItem): void {
     coordinator.chatEvent({ event: 'chat.event', payload: { chatId, event: { type: 'item', item } } });
     // Only `activeTurnId` of the info is read, so the rest of it is left out.
     coordinator.chatEvent({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { activeTurnId: null } } } } as unknown as AgentEvent);
-};
+}
 
-const open = (parentId: string, childId: string): Promise<Task> => tasks.open({ projectId: 'p', parentId, childId, title: childId, prompt: 'go' }, 1);
+function open(parentId: string, childId: string): Promise<Task> {
+    return tasks.open({ projectId: 'p', parentId, childId, title: childId, prompt: 'go' }, 1);
+}
 
 /* Resolves once the next wake is owed, which is after the settled task is on disk. */
-const nextOwed = (): Promise<void> =>
-    new Promise((resolve) => {
+function nextOwed(): Promise<void> {
+    return new Promise((resolve) => {
         onOwed = resolve;
     });
+}
 
 describe('the result of a turn', () => {
     test('is the last answer of the child itself, not of a subagent it ran', () => {

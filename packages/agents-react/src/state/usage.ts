@@ -28,7 +28,7 @@ interface Preferences {
 
 const DEFAULTS: Preferences = { period: '7d', metric: 'cost', currency: 'USD' };
 
-const readPreferences = (): Preferences => {
+function readPreferences(): Preferences {
     try {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Preferences>;
         return {
@@ -39,29 +39,35 @@ const readPreferences = (): Preferences => {
     } catch {
         return DEFAULTS;
     }
-};
+}
 
-const persist = (preferences: Preferences): void => {
+function persist(preferences: Preferences): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     } catch {
         // Storage that refuses keeps the choice for this session only.
     }
-};
+}
 
 /* The three stored choices out of the store, so a setter writes the other two back unchanged. */
-const chosen = (state: Preferences): Preferences => ({ period: state.period, metric: state.metric, currency: state.currency });
+function chosen(state: Preferences): Preferences {
+    return { period: state.period, metric: state.metric, currency: state.currency };
+}
 
-const pad = (value: number): string => String(value).padStart(2, '0');
+function pad(value: number): string {
+    return String(value).padStart(2, '0');
+}
 
 /* The viewer's own calendar day; the host may stand in another zone and buckets in this one. */
-export const dayOf = (date: Date): string => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+export function dayOf(date: Date): string {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 /*
  * What a period asks for. Today counts from local midnight in hours, the way the commit log already
  * groups days, so every other period reads as one bar per calendar day.
  */
-export const windowFor = (period: UsagePeriod, now = new Date()): UsageSummaryPayload => {
+export function windowFor(period: UsagePeriod, now = new Date()): UsageSummaryPayload {
     const days = USAGE_PERIODS.find((entry) => entry.id === period)?.days ?? 7;
     const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
     return {
@@ -70,15 +76,17 @@ export const windowFor = (period: UsagePeriod, now = new Date()): UsageSummaryPa
         resolution: period === 'today' ? 'hour' : 'day',
         timeZone: localTimeZone() ?? 'UTC'
     };
-};
+}
 
 /* A period, and only the usage of one account when one is picked; null is every account. */
-export const summaryPayload = (period: UsagePeriod, account: string | null, now = new Date()): UsageSummaryPayload =>
-    account === null ? windowFor(period, now) : { ...windowFor(period, now), accounts: [account] };
+export function summaryPayload(period: UsagePeriod, account: string | null, now = new Date()): UsageSummaryPayload {
+    return account === null ? windowFor(period, now) : { ...windowFor(period, now), accounts: [account] };
+}
 
 /* What was asked, so an answer to the question before this one is never drawn over a newer one. */
-export const askedKey = (payload: UsageSummaryPayload): string =>
-    `${payload.from}\0${payload.to}\0${payload.resolution}\0${payload.timeZone}\0${payload.accounts?.join(',') ?? ''}`;
+export function askedKey(payload: UsageSummaryPayload): string {
+    return `${payload.from}\0${payload.to}\0${payload.resolution}\0${payload.timeZone}\0${payload.accounts?.join(',') ?? ''}`;
+}
 
 /* The numbers of one host: its transcripts, priced by it. */
 interface UsageRow {
@@ -118,9 +126,9 @@ interface UsageStore extends Preferences {
 }
 
 /* Reads the period, metric and currency again, once another window of the same origin wrote them. */
-export const reloadUsagePreferences = (): void => {
+export function reloadUsagePreferences(): void {
     useUsageStore.setState(readPreferences());
-};
+}
 
 export const useUsageStore = create<UsageStore>((set, get) => ({
     ...readPreferences(),
@@ -169,7 +177,7 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
  */
 export type UsageView = Preferences & UsageRow;
 
-export const useUsage = <T>(select: (view: UsageView) => T): T => {
+export function useUsage<T>(select: (view: UsageView) => T): T {
     const { id } = useChatScope();
     return useUsageStore((s) => select({ period: s.period, metric: s.metric, currency: s.currency, ...(s.byScope[id] ?? EMPTY) }));
-};
+}

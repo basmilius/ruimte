@@ -19,10 +19,11 @@ export const TASK_LINES: readonly string[] = [
  * The last line after tasks are given. An agent that is not told to end its turn polls `task list`, links
  * back and reads every child, which costs a call each while the wake comes anyway.
  */
-export const nextLine = (team: boolean): string =>
-    team
+export function nextLine(team: boolean): string {
+    return team
         ? 'next\tEnd your turn now: the results arrive as your next message once every task settled. Do not poll task list, run link new or read the agents for them.'
         : 'next\tEnd your turn once you gave every task you mean to give: the result arrives as your next message once this task settled. Do not poll task list, run link new or read the agent for it.';
+}
 
 const NEEDS_RESULT = '--result needs what came of the task, in quotes';
 

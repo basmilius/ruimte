@@ -76,7 +76,7 @@ const usage: UsageSummaryResult = {
     roots: []
 };
 
-const fake = (overrides: Partial<MachineReach> = {}) => {
+function fake(overrides: Partial<MachineReach> = {}) {
     const requests: { type: string; payload: unknown }[] = [];
     const transport = {
         request: async (type: string, payload: unknown) => {
@@ -115,7 +115,7 @@ const fake = (overrides: Partial<MachineReach> = {}) => {
         })
     );
     return { registry, requests };
-};
+}
 
 describe('machine actions', () => {
     test('reads the busiest processes per node under its title, and says when nothing measures', async () => {

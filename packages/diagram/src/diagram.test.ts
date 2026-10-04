@@ -26,39 +26,52 @@ const example: DiagramDocument = {
 };
 
 /* Edges as `from>to`, which keeps a graph on one line. */
-const graph = (nodes: string[], edges: string[], direction: 'right' | 'down' = 'right'): DiagramDocument => ({
-    version: 1,
-    rev: 0,
-    meta: { title: '', direction },
-    nodes: nodes.map((id): DiagramNode => ({ id, label: id })),
-    groups: [],
-    edges: edges.map((edge): DiagramEdge => {
-        const [from, to] = edge.split('>') as [string, string];
-        return { from, to };
-    })
-});
+function graph(nodes: string[], edges: string[], direction: 'right' | 'down' = 'right'): DiagramDocument {
+    return {
+        version: 1,
+        rev: 0,
+        meta: { title: '', direction },
+        nodes: nodes.map((id): DiagramNode => ({ id, label: id })),
+        groups: [],
+        edges: edges.map((edge): DiagramEdge => {
+            const [from, to] = edge.split('>') as [string, string];
+            return { from, to };
+        })
+    };
+}
 
-const layerList = (document: DiagramDocument): Record<string, number> => Object.fromEntries(layersOf(document.nodes, document.edges));
+function layerList(document: DiagramDocument): Record<string, number> {
+    return Object.fromEntries(layersOf(document.nodes, document.edges));
+}
 
-const contains = (outer: Rect, inner: Rect): boolean =>
-    outer.x <= inner.x && outer.y <= inner.y && outer.x + outer.w >= inner.x + inner.w && outer.y + outer.h >= inner.y + inner.h;
+function contains(outer: Rect, inner: Rect): boolean {
+    return outer.x <= inner.x && outer.y <= inner.y && outer.x + outer.w >= inner.x + inner.w && outer.y + outer.h >= inner.y + inner.h;
+}
 
-const overlaps = (left: Rect, right: Rect): boolean =>
-    left.x < right.x + right.w && right.x < left.x + left.w && left.y < right.y + right.h && right.y < left.y + left.h;
+function overlaps(left: Rect, right: Rect): boolean {
+    return left.x < right.x + right.w && right.x < left.x + left.w && left.y < right.y + right.h && right.y < left.y + left.h;
+}
 
-const whole = (rect: Rect): boolean => [rect.x, rect.y, rect.w, rect.h].every(Number.isInteger);
+function whole(rect: Rect): boolean {
+    return [rect.x, rect.y, rect.w, rect.h].every(Number.isInteger);
+}
 
 /* True when an axis-aligned segment enters the inside of a box, its outline not counted. */
-const cuts = (start: Point, end: Point, box: Rect): boolean =>
-    Math.max(start.x, end.x) > box.x &&
-    Math.min(start.x, end.x) < box.x + box.w &&
-    Math.max(start.y, end.y) > box.y &&
-    Math.min(start.y, end.y) < box.y + box.h;
+function cuts(start: Point, end: Point, box: Rect): boolean {
+    return (
+        Math.max(start.x, end.x) > box.x &&
+        Math.min(start.x, end.x) < box.x + box.w &&
+        Math.max(start.y, end.y) > box.y &&
+        Math.min(start.y, end.y) < box.y + box.h
+    );
+}
 
-const segmentsOf = (points: readonly Point[]): [Point, Point][] => points.slice(1).map((point, index) => [points[index]!, point]);
+function segmentsOf(points: readonly Point[]): [Point, Point][] {
+    return points.slice(1).map((point, index) => [points[index]!, point]);
+}
 
 /* Proper crossings between segments of different edges: a horizontal and a vertical meeting inside both. */
-const crossingsOf = (layout: DiagramLayout): number => {
+function crossingsOf(layout: DiagramLayout): number {
     let count = 0;
     const all = layout.edges.map((edge) => segmentsOf(edge.points));
     for (let i = 0; i < all.length; i++) {
@@ -78,12 +91,14 @@ const crossingsOf = (layout: DiagramLayout): number => {
         }
     }
     return count;
-};
+}
 
-const withDirection = (document: DiagramDocument, direction: 'right' | 'down'): DiagramDocument => ({ ...document, meta: { ...document.meta, direction } });
+function withDirection(document: DiagramDocument, direction: 'right' | 'down'): DiagramDocument {
+    return { ...document, meta: { ...document.meta, direction } };
+}
 
 /* A small deterministic generator, so the graphs below are the same on every run. */
-const randomGraphs = (count: number): DiagramDocument[] => {
+function randomGraphs(count: number): DiagramDocument[] {
     let seed = 7;
     const next = (limit: number): number => {
         seed = (seed * 1103515245 + 12345) % 2147483648;
@@ -105,10 +120,10 @@ const randomGraphs = (count: number): DiagramDocument[] => {
         }
         return document;
     });
-};
+}
 
 /* The promises every layout keeps, checked on one document. */
-const expectReadable = (document: DiagramDocument): void => {
+function expectReadable(document: DiagramDocument): void {
     const layout = layoutOf(document);
     const boxes = new Map(layout.nodes.map((box) => [box.id, box]));
     const labels = layout.edges.flatMap((edge) => (edge.label ? [edge.label] : []));
@@ -160,7 +175,7 @@ const expectReadable = (document: DiagramDocument): void => {
         }
     }
     expect(boxes.size).toBe(document.nodes.length);
-};
+}
 
 describe('layers', () => {
     test('a layer is the longest path from a node without incoming edges', () => {

@@ -103,12 +103,12 @@ const CONTROL_TOOL: VoiceToolDefinition = {
 const UNSUPPORTED_KEYWORDS = new Set(['$schema', 'minLength', 'maxLength', 'actors']);
 
 /* A field, or a member of a union, that the catalog keeps for other actors is none of Voice's business. */
-const forVoice = (schema: unknown): boolean => {
+function forVoice(schema: unknown): boolean {
     const actors = (schema as JsonSchema).actors;
     return !Array.isArray(actors) || actors.includes('voice');
-};
+}
 
-const voiceMembers = (schema: JsonSchema): JsonSchema => {
+function voiceMembers(schema: JsonSchema): JsonSchema {
     if (!Array.isArray(schema.anyOf)) {
         return schema;
     }
@@ -118,9 +118,9 @@ const voiceMembers = (schema: JsonSchema): JsonSchema => {
         return { ...rest, ...members[0] };
     }
     return { ...schema, anyOf: members };
-};
+}
 
-const supported = (schema: unknown): unknown => {
+function supported(schema: unknown): unknown {
     if (Array.isArray(schema)) {
         return schema.map(supported);
     }
@@ -132,11 +132,13 @@ const supported = (schema: unknown): unknown => {
             .filter(([key]) => !UNSUPPORTED_KEYWORDS.has(key))
             .map(([key, value]) => [key, supported(value)])
     );
-};
+}
 
-const isNull = (schema: unknown): boolean => typeof schema === 'object' && schema !== null && (schema as JsonSchema).type === 'null';
+function isNull(schema: unknown): boolean {
+    return typeof schema === 'object' && schema !== null && (schema as JsonSchema).type === 'null';
+}
 
-const withoutNull = (schema: JsonSchema): { schema: JsonSchema; nullable: boolean } => {
+function withoutNull(schema: JsonSchema): { schema: JsonSchema; nullable: boolean } {
     if (Array.isArray(schema.anyOf) && schema.anyOf.some(isNull)) {
         const rest = schema.anyOf.filter((member) => !isNull(member)) as JsonSchema[];
         if (rest.length === 1) {
@@ -155,18 +157,18 @@ const withoutNull = (schema: JsonSchema): { schema: JsonSchema; nullable: boolea
         };
     }
     return { schema, nullable: false };
-};
+}
 
-const nullable = (schema: JsonSchema): JsonSchema => {
+function nullable(schema: JsonSchema): JsonSchema {
     if (typeof schema.type === 'string' && schema.type !== 'object') {
         return { ...schema, type: [schema.type, 'null'], ...(Array.isArray(schema.enum) ? { enum: [...schema.enum, null] } : {}) };
     }
     const { description, ...rest } = schema;
     return { anyOf: [rest, { type: 'null' }], ...(description === undefined ? {} : { description }) };
-};
+}
 
 /* Two actions of one tool may share a field name, so they have to agree on what it holds; enums join. */
-const joined = (field: string, left: JsonSchema, right: JsonSchema): JsonSchema => {
+function joined(field: string, left: JsonSchema, right: JsonSchema): JsonSchema {
     const { description: leftDescription, ...leftShape } = left;
     const { description: rightDescription, ...rightShape } = right;
     const description = leftDescription ?? rightDescription;
@@ -177,21 +179,22 @@ const joined = (field: string, left: JsonSchema, right: JsonSchema): JsonSchema 
         throw new Error(`The field “${field}” has two different shapes in one Voice tool.`);
     }
     return { ...leftShape, ...(description === undefined ? {} : { description }) };
-};
+}
 
-const inputFields = (name: ActionName): [string, { schema: JsonSchema; nullable: boolean }][] => {
+function inputFields(name: ActionName): [string, { schema: JsonSchema; nullable: boolean }][] {
     const schema = z.toJSONSchema(ACTION_DEFINITIONS[name].input) as { properties?: Record<string, JsonSchema> };
     return Object.entries(schema.properties ?? {})
         .filter(([, value]) => forVoice(value))
         .map(([field, value]) => [field, withoutNull(supported(voiceMembers(value)) as JsonSchema)]);
-};
+}
 
-const signature = (name: ActionName): string =>
-    `${name}(${inputFields(name)
+function signature(name: ActionName): string {
+    return `${name}(${inputFields(name)
         .map(([field, entry]) => `${field}${entry.nullable ? '?' : ''}`)
         .join(', ')})`;
+}
 
-const toolOf = (domain: ActionDomain, actions: readonly ActionName[]): VoiceToolDefinition => {
+function toolOf(domain: ActionDomain, actions: readonly ActionName[]): VoiceToolDefinition {
     const fields = new Map<string, { schema: JsonSchema; nullable: boolean; actions: number }>();
     for (const action of actions) {
         for (const [field, entry] of inputFields(action)) {
@@ -222,13 +225,14 @@ const toolOf = (domain: ActionDomain, actions: readonly ActionName[]): VoiceTool
         parameters: { type: 'object', properties, required: Object.keys(properties), additionalProperties: false },
         strict: true
     };
-};
+}
 
-const voiceActionsOf = (domain: ActionDomain): ActionName[] =>
-    (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter((name) => {
+function voiceActionsOf(domain: ActionDomain): ActionName[] {
+    return (Object.keys(ACTION_DEFINITIONS) as ActionName[]).filter((name) => {
         const definition = ACTION_DEFINITIONS[name];
         return definition.domain === domain && definition.actors.includes('voice');
     });
+}
 
 const DOMAIN_ACTIONS = ACTION_DOMAINS.map((domain) => ({ domain, actions: voiceActionsOf(domain) })).filter(({ actions }) => actions.length > 0);
 
@@ -242,7 +246,6 @@ const DOMAIN_DEFINITIONS = DOMAIN_ACTIONS.map(({ domain, actions }) => ({ domain
 export const VOICE_TOOL_DEFINITIONS: readonly VoiceToolDefinition[] = [...DOMAIN_DEFINITIONS.map(({ tool }) => tool), CONTROL_TOOL];
 
 /* The tools of these domains and the control tool; every call is still checked by the registry, whatever was sent. */
-export const voiceToolsFor = (domains: readonly ActionDomain[]): VoiceToolDefinition[] => [
-    ...DOMAIN_DEFINITIONS.filter(({ domain }) => domains.includes(domain)).map(({ tool }) => tool),
-    CONTROL_TOOL
-];
+export function voiceToolsFor(domains: readonly ActionDomain[]): VoiceToolDefinition[] {
+    return [...DOMAIN_DEFINITIONS.filter(({ domain }) => domains.includes(domain)).map(({ tool }) => tool), CONTROL_TOOL];
+}

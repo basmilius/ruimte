@@ -81,7 +81,7 @@ export interface OpenConnection {
  * subscription, torn down again when the channel closes. The ids count up per opener, which is one
  * per daemon, so a handler can attach a session to exactly one client whatever carried it in.
  */
-export const connectionOpener = (services: ConnectionServices): ((channel: ClientChannel, access: ClientAccess) => OpenConnection) => {
+export function connectionOpener(services: ConnectionServices): (channel: ClientChannel, access: ClientAccess) => OpenConnection {
     let nextClientId = 1;
 
     return (channel, access) => {
@@ -176,7 +176,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             }
         };
     };
-};
+}
 
 // A Bun WebSocket as a channel; its `close` and `drain` arrive on the server's handlers, which pass them on here.
 export interface SocketChannel extends ClientChannel {
@@ -184,7 +184,7 @@ export interface SocketChannel extends ClientChannel {
     drained(): void;
 }
 
-export const socketChannel = (ws: ServerWebSocket<ClientAccess>): SocketChannel => {
+export function socketChannel(ws: ServerWebSocket<ClientAccess>): SocketChannel {
     const closeListeners: Array<() => void> = [];
     const drainListeners: Array<() => void> = [];
     return {
@@ -208,4 +208,4 @@ export const socketChannel = (ws: ServerWebSocket<ClientAccess>): SocketChannel 
             }
         }
     };
-};
+}

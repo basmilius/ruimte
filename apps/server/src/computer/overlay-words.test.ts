@@ -6,7 +6,7 @@ import { overlayWords } from './overlay-words.ts';
 const CONFIG_SWIFT = resolve(import.meta.dir, '..', '..', '..', 'computer-use', 'Sources', 'ComputerUseCore', 'OverlayConfig.swift');
 
 /* The keys the helper reads: its string properties, and the keys of the `steps` table. */
-const helperKeys = async (): Promise<{ words: string[]; steps: string[] }> => {
+async function helperKeys(): Promise<{ words: string[]; steps: string[] }> {
     const source = await readFile(CONFIG_SWIFT, 'utf8');
     const table = (name: string): string[] => {
         const body = source.match(new RegExp(`public var ${name}: \\[String: String\\] = \\[([^\\]]*)\\]`))?.[1] ?? '';
@@ -16,7 +16,7 @@ const helperKeys = async (): Promise<{ words: string[]; steps: string[] }> => {
         words: [...source.matchAll(/public var (\w+) = "/g)].map((match) => match[1]!).sort(),
         steps: table('steps')
     };
-};
+}
 
 describe('the words of the overlay', () => {
     test('cover every key the helper reads, in both languages', async () => {

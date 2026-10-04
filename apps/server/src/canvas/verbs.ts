@@ -35,7 +35,9 @@ const REFUSAL_LINE =
 /* Agents repeat ids to people, who know nodes, views and plans only by their titles. */
 const IDS_LINE = 'ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id';
 
-export const verbSummaryLines = (): string[] => summaryLines<VerbCall>(VERBS);
+export function verbSummaryLines(): string[] {
+    return summaryLines<VerbCall>(VERBS);
+}
 
 const helpVerb = defineHelp({
     entries: () => VERBS,
@@ -177,4 +179,6 @@ export const VERBS: readonly VerbEntry[] = [
     computerNoun
 ];
 
-export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);
+export function verbNamed(name: string): VerbEntry | undefined {
+    return VERBS.find((verb) => verb.name === name);
+}

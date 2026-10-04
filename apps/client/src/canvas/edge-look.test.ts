@@ -3,26 +3,38 @@ import type { ProjectEdge } from '@ruimte/contracts';
 import type { EdgeLine } from './edge-lines';
 import { edgeLook, lineMeaning, type EdgeLook } from './edge-look';
 
-const edgeOf = (from: string, to: string, role?: string): ProjectEdge => ({ id: `${from}-${to}`, from, to, ...(role === undefined ? {} : { role }) });
+function edgeOf(from: string, to: string, role?: string): ProjectEdge {
+    return { id: `${from}-${to}`, from, to, ...(role === undefined ? {} : { role }) };
+}
 
-const lineOf = (edge: ProjectEdge, back: ProjectEdge | null = null): EdgeLine => ({
-    edge,
-    back,
-    ids: back === null ? [edge.id] : [edge.id, back.id],
-    label: undefined
-});
+function lineOf(edge: ProjectEdge, back: ProjectEdge | null = null): EdgeLine {
+    return {
+        edge,
+        back,
+        ids: back === null ? [edge.id] : [edge.id, back.id],
+        label: undefined
+    };
+}
 
 // The only nodes in these tests that a line can read: everything else is a page, a note or a device.
-const reads = (nodeId: string): boolean => nodeId === 'agent' || nodeId === 'other-agent';
+function reads(nodeId: string): boolean {
+    return nodeId === 'agent' || nodeId === 'other-agent';
+}
 
 // The nodes an agent works on rather than reads.
-const driven = (nodeId: string): boolean => nodeId === 'page' || nodeId === 'phone';
+function driven(nodeId: string): boolean {
+    return nodeId === 'page' || nodeId === 'phone';
+}
 
 const solo = { pair: false, openTask: false };
 
-const roleOf = (line: EdgeLine): string => lineMeaning(line, reads, driven).role;
+function roleOf(line: EdgeLine): string {
+    return lineMeaning(line, reads, driven).role;
+}
 
-const look = (role: 'context' | 'target' | 'origin' | 'plain', options = solo): EdgeLook => edgeLook({ role, reversed: false }, options);
+function look(role: 'context' | 'target' | 'origin' | 'plain', options = solo): EdgeLook {
+    return edgeLook({ role, reversed: false }, options);
+}
 
 describe('lineMeaning', () => {
     test('a line without a role into an agent still reads, which is every project drawn so far', () => {

@@ -11,22 +11,25 @@ export interface Rect {
 // The room between a node and the one placed next to it; a multiple of the client's 8 px grid.
 export const PLACEMENT_GAP = 40;
 
-const overlaps = (a: Rect, b: Rect): boolean =>
-    a.x < b.x + b.w + PLACEMENT_GAP && b.x < a.x + a.w + PLACEMENT_GAP && a.y < b.y + b.h + PLACEMENT_GAP && b.y < a.y + a.h + PLACEMENT_GAP;
+function overlaps(a: Rect, b: Rect): boolean {
+    return a.x < b.x + b.w + PLACEMENT_GAP && b.x < a.x + a.w + PLACEMENT_GAP && a.y < b.y + b.h + PLACEMENT_GAP && b.y < a.y + a.h + PLACEMENT_GAP;
+}
 
 /* Right of the anchor, top edges level, whatever is there already: the caller named the anchor. */
-export const placeBeside = (anchor: Rect, size: { w: number; h: number }): Rect => ({
-    x: Math.round(anchor.x + anchor.w + PLACEMENT_GAP),
-    y: Math.round(anchor.y),
-    ...size
-});
+export function placeBeside(anchor: Rect, size: { w: number; h: number }): Rect {
+    return {
+        x: Math.round(anchor.x + anchor.w + PLACEMENT_GAP),
+        y: Math.round(anchor.y),
+        ...size
+    };
+}
 
 /*
  * Where a node lands without an anchor that was asked for. Next to the caller it walks right past
  * whatever is in the way, so an agent that adds three nodes gets a row beside itself; without a
  * caller on the canvas it goes right of everything, which cannot overlap anything.
  */
-export const placeFree = (existing: readonly Rect[], size: { w: number; h: number }, caller: Rect | null): Rect => {
+export function placeFree(existing: readonly Rect[], size: { w: number; h: number }, caller: Rect | null): Rect {
     if (caller) {
         const spot = { ...placeBeside(caller, size) };
         for (;;) {
@@ -45,14 +48,16 @@ export const placeFree = (existing: readonly Rect[], size: { w: number; h: numbe
         y: Math.round(Math.min(...existing.map((rect) => rect.y))),
         ...size
     };
-};
+}
 
 // The layouts are the catalog's, since `node.arrange` takes one as input.
 export { ARRANGE_LAYOUTS };
 export type ArrangeLayout = (typeof ARRANGE_LAYOUTS)[number];
 
 /* How many columns a grid takes without being told: as square as the count allows. */
-export const gridColumns = (count: number): number => Math.ceil(Math.sqrt(count));
+export function gridColumns(count: number): number {
+    return Math.ceil(Math.sqrt(count));
+}
 
 /*
  * The same rectangles tidied into a block, in the order they came in. The origin is the top left of
@@ -61,7 +66,7 @@ export const gridColumns = (count: number): number => Math.ceil(Math.sqrt(count)
  * and a row as tall as the tallest, which is what keeps nodes of different sizes from touching
  * without resizing any of them.
  */
-export const arrangeRects = (rects: readonly Rect[], layout: ArrangeLayout, cols?: number): Rect[] => {
+export function arrangeRects(rects: readonly Rect[], layout: ArrangeLayout, cols?: number): Rect[] {
     if (rects.length === 0) {
         return [];
     }
@@ -95,7 +100,7 @@ export const arrangeRects = (rects: readonly Rect[], layout: ArrangeLayout, cols
         w: rect.w,
         h: rect.h
     }));
-};
+}
 
 /* What placing inside a group needs to know about it, so a frame that is not a node yet also fits. */
 type GroupFrame = Pick<ProjectNode, 'x' | 'y' | 'w' | 'h' | 'collapsed' | 'expandedHeight'>;
@@ -105,17 +110,17 @@ type GroupFrame = Pick<ProjectNode, 'x' | 'y' | 'w' | 'h' | 'collapsed' | 'expan
  * document's own rule (`groupMemberIds`), shared with whatever else has to answer it, and this side
  * only needs the nodes back in the order the canvas keeps them.
  */
-export const groupMembers = (group: ProjectNode, nodes: readonly ProjectNode[]): ProjectNode[] => {
+export function groupMembers(group: ProjectNode, nodes: readonly ProjectNode[]): ProjectNode[] {
     const ids = new Set(groupMemberIds(group, nodes));
     return nodes.filter((node) => ids.has(node.id));
-};
+}
 
 /*
  * The group each node stands in, by node id, with nested frames resolved to the innermost one: a
  * node inside a group inside a group is in both by geometry, and the smaller frame is the one a
  * person would say it is in. A node on the canvas itself is not in the map.
  */
-export const containersOf = (nodes: readonly ProjectNode[]): Map<string, ProjectNode> => {
+export function containersOf(nodes: readonly ProjectNode[]): Map<string, ProjectNode> {
     const containers = new Map<string, ProjectNode>();
     const area = (group: ProjectNode): number => {
         const rect = groupRect(group);
@@ -130,14 +135,14 @@ export const containersOf = (nodes: readonly ProjectNode[]): Map<string, Project
         }
     }
     return containers;
-};
+}
 
 /*
  * A free spot inside a group, in rows under its title bar, and the group as it has to become to
  * hold it. The node goes in whether or not the group has room: a refusal over geometry would be a
  * puzzle nobody can solve from a terminal, so the frame grows instead.
  */
-export const placeInGroup = (group: GroupFrame, members: readonly Rect[], size: { w: number; h: number }): { rect: Rect; grown: Rect } => {
+export function placeInGroup(group: GroupFrame, members: readonly Rect[], size: { w: number; h: number }): { rect: Rect; grown: Rect } {
     const rect = groupRect(group);
     const left = Math.round(rect.x + GROUP_PADDING);
     const right = rect.x + rect.w - GROUP_PADDING;
@@ -165,7 +170,7 @@ export const placeInGroup = (group: GroupFrame, members: readonly Rect[], size: 
             h: Math.max(rect.h, spot.y + size.h + GROUP_PADDING - rect.y)
         }
     };
-};
+}
 
 // How wide a team stands before it starts a second row: a full team of sixteen then reads as four rows of four.
 export const TEAM_COLUMNS = 4;
@@ -177,7 +182,7 @@ export const TEAM_COLUMNS = 4;
  * a group put it in the same kind of spot. The rectangles are relative to the group's own corner:
  * the caller decides where the group lands and moves everything by that much.
  */
-export const placeTeam = (sizes: readonly { w: number; h: number }[]): { rects: Rect[]; frame: { w: number; h: number } } => {
+export function placeTeam(sizes: readonly { w: number; h: number }[]): { rects: Rect[]; frame: { w: number; h: number } } {
     const widest = Math.max(...sizes.map((size) => size.w));
     const columns = Math.min(TEAM_COLUMNS, sizes.length);
     let frame = {
@@ -193,4 +198,4 @@ export const placeTeam = (sizes: readonly { w: number; h: number }[]): { rects: 
         frame = { ...frame, w: placed.grown.w, h: placed.grown.h };
     }
     return { rects, frame: { w: frame.w, h: frame.h } };
-};
+}

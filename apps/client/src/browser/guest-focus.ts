@@ -13,7 +13,7 @@ const watched = new Map<HTMLElement, () => void>();
 let installed = false;
 
 // Chromium focus behavior varies, so accept both the shell's guest event and the element's captured focus.
-const install = (): void => {
+function install(): void {
     if (installed || typeof window === 'undefined') {
         return;
     }
@@ -39,10 +39,10 @@ const install = (): void => {
             }
         }
     });
-};
+}
 
 /* Calls `onFocus` whenever this page takes the focus. Answers the way to stop. */
-export const watchGuestFocus = (element: HTMLElement, onFocus: () => void): (() => void) => {
+export function watchGuestFocus(element: HTMLElement, onFocus: () => void): () => void {
     install();
     watched.set(element, onFocus);
     return () => {
@@ -50,13 +50,13 @@ export const watchGuestFocus = (element: HTMLElement, onFocus: () => void): (() 
             watched.delete(element);
         }
     };
-};
+}
 
 /*
  * A page in a view taking the focus is a press in that view's cell. A view of its own also puts the
  * keyboard in its body, the way a press in it would; a page on a canvas leaves the canvas as it is.
  */
-export const focusCellOfView = (viewId: string): void => {
+export function focusCellOfView(viewId: string): void {
     const document = useDocument.getState();
     const at = document.layout === null ? null : locateView(document.layout, viewId);
     if (at === null) {
@@ -68,4 +68,4 @@ export const focusCellOfView = (viewId: string): void => {
     if (viewId === FILES_VIEW_ID || (view !== undefined && !isCanvasView(view))) {
         useDocument.getState().setBodyFocused(true);
     }
-};
+}

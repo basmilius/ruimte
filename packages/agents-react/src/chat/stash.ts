@@ -30,9 +30,11 @@ export interface StashedPrompt {
     createdAt: number;
 }
 
-const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []);
+function strings(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
 
-const attachments = (value: unknown): StashedAttachment[] => {
+function attachments(value: unknown): StashedAttachment[] {
     if (!Array.isArray(value)) {
         return [];
     }
@@ -41,10 +43,10 @@ const attachments = (value: unknown): StashedAttachment[] => {
         mime: typeof entry.mime === 'string' ? entry.mime : '',
         size: typeof entry.size === 'number' ? entry.size : 0
     }));
-};
+}
 
 /* Only the fields we know today, so anything an older or a broken write left behind falls away here. */
-export const parseStash = (raw: string | null): StashedPrompt[] => {
+export function parseStash(raw: string | null): StashedPrompt[] {
     if (raw === null) {
         return [];
     }
@@ -68,13 +70,15 @@ export const parseStash = (raw: string | null): StashedPrompt[] => {
     } catch {
         return [];
     }
-};
+}
 
 /* Newest first, capped: the entry that has been waiting longest is the one nobody comes back for. */
-export const withStashed = (prompts: StashedPrompt[], entry: StashedPrompt): StashedPrompt[] => [entry, ...prompts].slice(0, STASH_LIMIT);
+export function withStashed(prompts: StashedPrompt[], entry: StashedPrompt): StashedPrompt[] {
+    return [entry, ...prompts].slice(0, STASH_LIMIT);
+}
 
 /* What a draft looks like on the shelf, its quote folded into the text; null when there is nothing worth putting there. */
-export const stashedFrom = (draft: ChatDraft, id: string, now: number): StashedPrompt | null => {
+export function stashedFrom(draft: ChatDraft, id: string, now: number): StashedPrompt | null {
     if (isEmptyDraft(draft)) {
         return null;
     }
@@ -86,7 +90,7 @@ export const stashedFrom = (draft: ChatDraft, id: string, now: number): StashedP
         attachments: draft.attachments.map((attachment) => ({ name: attachment.name, mime: attachment.mime, size: uploadBytes(attachment) })),
         createdAt: now
     };
-};
+}
 
 const storage = persistedJson<StashedPrompt[]>(STORAGE_KEY, parseStash, []);
 
@@ -96,21 +100,21 @@ const storage = persistedJson<StashedPrompt[]>(STORAGE_KEY, parseStash, []);
  */
 export const useStash = create<{ prompts: StashedPrompt[] }>(() => ({ prompts: storage.read() }));
 
-const write = (prompts: StashedPrompt[]): void => {
+function write(prompts: StashedPrompt[]): void {
     useStash.setState({ prompts });
     storage.write(prompts);
-};
+}
 
 /* Puts a draft on the shelf; false when the composer held nothing to put there. */
-export const stashDraft = (draft: ChatDraft): boolean => {
+export function stashDraft(draft: ChatDraft): boolean {
     const entry = stashedFrom(draft, `stash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, Date.now());
     if (!entry) {
         return false;
     }
     write(withStashed(useStash.getState().prompts, entry));
     return true;
-};
+}
 
-export const forgetStashed = (id: string): void => {
+export function forgetStashed(id: string): void {
     write(useStash.getState().prompts.filter((entry) => entry.id !== id));
-};
+}

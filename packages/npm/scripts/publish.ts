@@ -49,10 +49,10 @@ for (const dir of dirs) {
     packages.push({ name: manifest.name, dir: join(out, dir) });
 }
 
-const npm = (args: string[], cwd?: string) => {
+function npm(args: string[], cwd?: string) {
     const result = Bun.spawnSync(['npm', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', timeout: 5 * 60_000 });
     return { code: result.exitCode ?? 1, stdout: result.stdout.toString(), stderr: result.stderr.toString() };
-};
+}
 
 const steps = await planPublish(packages, version!, {
     published: async (name, wanted) => publishedFromView(wanted, npm(['view', `${name}@${wanted}`, 'version'])),

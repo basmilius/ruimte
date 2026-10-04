@@ -9,15 +9,15 @@ import { LIMITS, overAnyLimit } from './rate-limit.ts';
 const ATTEMPT_LIFETIME_MS = 10 * 60_000;
 const CODE_LIFETIME_MS = 60_000;
 
-const available = async (request: Request, env: Env): Promise<Response | null> => {
+async function available(request: Request, env: Env): Promise<Response | null> {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
     if (limited) {
         return limited;
     }
     return nativeAppleConfigured(env) ? null : failure('not-configured', 'Signing in with Apple is not configured on this address book yet');
-};
+}
 
-export const startNativeApple = async (request: Request, env: Env): Promise<Response> => {
+export async function startNativeApple(request: Request, env: Env): Promise<Response> {
     const refused = await available(request, env);
     if (refused) {
         return refused;
@@ -33,9 +33,9 @@ export const startNativeApple = async (request: Request, env: Env): Promise<Resp
         .bind(await sha256(attempt), nonce, body.value.codeChallenge, expiresAt)
         .run();
     return json({ attempt, nonce, expiresAt });
-};
+}
 
-export const completeNativeApple = async (request: Request, env: Env): Promise<Response> => {
+export async function completeNativeApple(request: Request, env: Env): Promise<Response> {
     const refused = await available(request, env);
     if (refused) {
         return refused;
@@ -70,4 +70,4 @@ export const completeNativeApple = async (request: Request, env: Env): Promise<R
         .bind(await sha256(code), accountId, APP_REDIRECT_SCHEME_URI, attempt.code_challenge, Date.now() + CODE_LIFETIME_MS)
         .run();
     return json({ code });
-};
+}

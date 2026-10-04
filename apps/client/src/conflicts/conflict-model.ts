@@ -19,7 +19,7 @@ export interface ConflictFile {
 }
 
 /* The three versions git handed back, as the file the overlay draws. */
-export const fileOf = (answer: GitConflictResult): ConflictFile => {
+export function fileOf(answer: GitConflictResult): ConflictFile {
     const whole = answer.kind !== 'text' || answer.ours === null || answer.theirs === null;
     const blocks = whole ? [] : splitBlocks(splitLines(answer.base ?? ''), splitLines(answer.ours ?? ''), splitLines(answer.theirs ?? ''));
     const draft = draftOf(blocks);
@@ -34,16 +34,20 @@ export const fileOf = (answer: GitConflictResult): ConflictFile => {
         hash: answer.hash,
         whole
     };
-};
+}
 
 /* The merged file as it goes to disk: the editor works in plain newlines, the file keeps its own. */
-export const contentOf = (file: ConflictFile, text: string): string => joinLines(text === '' ? [] : text.split('\n'), file.shape);
+export function contentOf(file: ConflictFile, text: string): string {
+    return joinLines(text === '' ? [] : text.split('\n'), file.shape);
+}
 
 /* Every conflict of the file, settled or not, which is what the arrows walk through. */
-export const conflictIndexes = (file: ConflictFile): number[] => file.blocks.flatMap((block, index) => (block.kind === 'conflict' ? [index] : []));
+export function conflictIndexes(file: ConflictFile): number[] {
+    return file.blocks.flatMap((block, index) => (block.kind === 'conflict' ? [index] : []));
+}
 
 /* The conflict after this one, wrapping around at the end so the arrows never run out. */
-export const nextConflict = (indexes: readonly number[], current: number | null, step: 1 | -1): number | null => {
+export function nextConflict(indexes: readonly number[], current: number | null, step: 1 | -1): number | null {
     if (indexes.length === 0) {
         return null;
     }
@@ -55,10 +59,10 @@ export const nextConflict = (indexes: readonly number[], current: number | null,
         return (step === 1 ? indexes.find((index) => index > current) : [...indexes].reverse().find((index) => index < current)) ?? indexes[0] ?? null;
     }
     return indexes[(at + step + indexes.length) % indexes.length] ?? null;
-};
+}
 
 /* Where every line starts, with the end of the text behind the last one. */
-const lineOffsets = (lines: readonly string[]): number[] => {
+function lineOffsets(lines: readonly string[]): number[] {
     const offsets = [0];
     for (const line of lines) {
         offsets.push(offsets[offsets.length - 1]! + line.length + 1);
@@ -66,14 +70,14 @@ const lineOffsets = (lines: readonly string[]): number[] => {
     // The last line carries no break, so the text ends one character earlier than the walk counted.
     offsets[offsets.length - 1] = Math.max(0, offsets[offsets.length - 1]! - 1);
     return offsets;
-};
+}
 
 /*
  * A file with some of its conflicts answered, without an editor. This is what an answer lands in
  * for every file but the one on screen: the same draft the editor would have built, with the
  * answered stretches in place and settled.
  */
-export const draftWith = (file: ConflictFile, answered: ReadonlyMap<number, readonly string[]>): ConflictDraft => {
+export function draftWith(file: ConflictFile, answered: ReadonlyMap<number, readonly string[]>): ConflictDraft {
     const draft = draftOf(file.blocks, answered);
     const offsets = lineOffsets(draft.lines);
     return {
@@ -86,7 +90,7 @@ export const draftWith = (file: ConflictFile, answered: ReadonlyMap<number, read
             settled: span.kind !== 'conflict' || answered.has(span.block)
         }))
     };
-};
+}
 
 /* What `replacementOf` reads of a document, which a CodeMirror `Text` and a wrapped string both have. */
 interface DraftText {
@@ -95,11 +99,11 @@ interface DraftText {
 }
 
 /* The edit that puts `lines` in place of a span of the merged file. */
-export const replacementOf = (
+export function replacementOf(
     doc: DraftText,
     span: { readonly from: number; readonly to: number },
     lines: readonly string[]
-): { from: number; to: number; insert: string } => {
+): { from: number; to: number; insert: string } {
     const ends = span.to >= doc.length;
     if (lines.length === 0) {
         // The last line carries no break of its own, so emptying it takes the one before it along.
@@ -109,14 +113,14 @@ export const replacementOf = (
     // A stretch that holds no line at the end of the file needs the break that would have preceded it.
     const lead = span.from === span.to && span.from === doc.length && doc.length > 0 ? '\n' : '';
     return { from: span.from, to: span.to, insert: `${lead}${lines.join('\n')}${ends ? '' : '\n'}` };
-};
+}
 
 /*
  * Answers put into a file that is not on screen, the way the editor would put them in: only a
  * conflict still open takes one, so what a person already wrote in the file stays as they left it.
  * A file never opened starts from its merged draft.
  */
-export const answerInto = (draft: ConflictDraft | undefined, file: ConflictFile, answered: ReadonlyMap<number, readonly string[]>): ConflictDraft => {
+export function answerInto(draft: ConflictDraft | undefined, file: ConflictFile, answered: ReadonlyMap<number, readonly string[]>): ConflictDraft {
     let { text, spans } = draft ?? draftWith(file, new Map());
     for (const [block, lines] of answered) {
         const span = spans.find((candidate) => candidate.block === block);
@@ -139,27 +143,29 @@ export const answerInto = (draft: ConflictDraft | undefined, file: ConflictFile,
         });
     }
     return { text, spans };
-};
+}
 
 /* The conflicts of a draft that still need a person. */
-export const openInDraft = (draft: ConflictDraft): number[] =>
-    draft.spans.filter((span) => span.kind === 'conflict' && !span.settled).map((span) => span.block);
+export function openInDraft(draft: ConflictDraft): number[] {
+    return draft.spans.filter((span) => span.kind === 'conflict' && !span.settled).map((span) => span.block);
+}
 
 /*
  * The proposals that still fit the file in front of us. A fingerprint that does not match is an
  * answer written for another version of the stretch, which is a proposal to drop rather than to
  * apply somewhere it was never meant.
  */
-export const usableBlocks = (file: ConflictFile, answers: readonly GitResolveBlock[]): { index: number; lines: string[] }[] =>
-    answers
+export function usableBlocks(file: ConflictFile, answers: readonly GitResolveBlock[]): { index: number; lines: string[] }[] {
+    return answers
         .filter((answer) => {
             const block = file.blocks[answer.index];
             return block !== undefined && block.kind === 'conflict' && fingerprint(block) === answer.fingerprint;
         })
         .map((answer) => ({ index: answer.index, lines: answer.lines }));
+}
 
 /* What a person made of one stretch of a draft, as lines. */
-const spanLines = (text: string, span: LiveSpan): string[] => {
+function spanLines(text: string, span: LiveSpan): string[] {
     let slice = text.slice(span.from, span.to);
     // An answer put into an empty stretch at the end of the file carries the break before it.
     if (span.from > 0 && text[span.from - 1] !== '\n' && slice.startsWith('\n')) {
@@ -169,18 +175,21 @@ const spanLines = (text: string, span: LiveSpan): string[] => {
         slice = slice.slice(0, -1);
     }
     return slice === '' ? [] : slice.split('\n');
-};
+}
 
-const sameBlocks = (before: ConflictFile, after: ConflictFile): boolean =>
-    before.blocks.length === after.blocks.length &&
-    before.blocks.every((block, index) => block.kind === after.blocks[index]!.kind && fingerprint(block) === fingerprint(after.blocks[index]!));
+function sameBlocks(before: ConflictFile, after: ConflictFile): boolean {
+    return (
+        before.blocks.length === after.blocks.length &&
+        before.blocks.every((block, index) => block.kind === after.blocks[index]!.kind && fingerprint(block) === fingerprint(after.blocks[index]!))
+    );
+}
 
 /*
  * The work on a file carried over to the same file read again. While git holds the same versions,
  * which a save in an editor or an agent's write leaves alone, the draft stays whole; otherwise only
  * an answered conflict whose stretch is still the same one comes along.
  */
-export const carryDraft = (before: ConflictFile, after: ConflictFile, draft: ConflictDraft): ConflictDraft => {
+export function carryDraft(before: ConflictFile, after: ConflictFile, draft: ConflictDraft): ConflictDraft {
     if (sameBlocks(before, after)) {
         return draft;
     }
@@ -199,7 +208,7 @@ export const carryDraft = (before: ConflictFile, after: ConflictFile, draft: Con
         }
     }
     return answerInto(undefined, after, answered);
-};
+}
 
 /* The overlay's work per file: what was read of it and what a person made of it. */
 export interface ConflictCache {
@@ -214,7 +223,7 @@ export interface ConflictWriter {
 }
 
 /* A file read again, so the next write goes over what stands on disk now. The same versions keep the file as it was, editor and all. */
-export const rereadConflict = async (cache: ConflictCache, path: string, read: ConflictWriter['read']): Promise<void> => {
+export async function rereadConflict(cache: ConflictCache, path: string, read: ConflictWriter['read']): Promise<void> {
     const after = fileOf(await read(path));
     const before = cache.files.get(path);
     if (before === undefined) {
@@ -226,14 +235,14 @@ export const rereadConflict = async (cache: ConflictCache, path: string, read: C
     if (draft !== undefined) {
         cache.drafts.set(path, carryDraft(before, after, draft));
     }
-};
+}
 
 /*
  * One file written as it stands, over the version it was read at. A file that moved on disk since
  * refuses, and is read again before the refusal goes on, so the next try is not refused for the
  * same reason; what a person made of it stays.
  */
-export const writeConflict = async (cache: ConflictCache, path: string, writer: ConflictWriter): Promise<void> => {
+export async function writeConflict(cache: ConflictCache, path: string, writer: ConflictWriter): Promise<void> {
     const target = cache.files.get(path);
     const draft = cache.drafts.get(path);
     if (target === undefined || draft === undefined) {
@@ -247,4 +256,4 @@ export const writeConflict = async (cache: ConflictCache, path: string, writer: 
     }
     cache.files.delete(path);
     cache.drafts.delete(path);
-};
+}

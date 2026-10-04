@@ -5,9 +5,9 @@
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runOverStdio, type FakeCli } from './fake-cli.ts';
+import { runOverStdio, type FakeCli, type FakeIo, type FakeProgram } from './fake-cli.ts';
 
-export const fakeClaude: FakeCli = (io) => {
+export function fakeClaude(io: FakeIo): FakeProgram {
     const args = io.argv;
     const resumeAt = args.indexOf('--resume');
     const sessionId = resumeAt >= 0 ? args[resumeAt + 1]! : `fake-${Math.random().toString(36).slice(2, 8)}`;
@@ -962,16 +962,15 @@ export const fakeClaude: FakeCli = (io) => {
             }
         }
     };
-};
+}
 
 /*
  * The fake, except that resuming one of `sessionIds` stops at once. `missing` is what Claude Code 2.1.281
  * does for a session it has no transcript of: one error result, a line on stderr and exit 1, before it
  * reads any input. `exit` is a CLI that did resume and then went on the first prompt.
  */
-export const claudeStoppingOnResume =
-    (sessionIds: ReadonlySet<string>, how: 'missing' | 'exit'): FakeCli =>
-    (io) => {
+export function claudeStoppingOnResume(sessionIds: ReadonlySet<string>, how: 'missing' | 'exit'): FakeCli {
+    return (io) => {
         const resumeAt = io.argv.indexOf('--resume');
         const sessionId = resumeAt >= 0 ? io.argv[resumeAt + 1] : undefined;
         if (sessionId === undefined || !sessionIds.has(sessionId)) {
@@ -1000,6 +999,7 @@ export const claudeStoppingOnResume =
         io.exit(1);
         return { onLine: () => undefined };
     };
+}
 
 if (import.meta.main) {
     await runOverStdio(fakeClaude);

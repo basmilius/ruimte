@@ -11,7 +11,9 @@ import { Button, EmptyState, Icon } from '@basmilius/desktop-ui';
 import { formatBytes, formatClockDuration } from '@basmilius/desktop-ui/format';
 
 // An empty answer is the only certain no; see `VideoFile`.
-const canPlay = (mime: string): boolean => typeof document !== 'undefined' && document.createElement('audio').canPlayType(mime) !== '';
+function canPlay(mime: string): boolean {
+    return typeof document !== 'undefined' && document.createElement('audio').canPlayType(mime) !== '';
+}
 
 /* Sound in ranges, the way `VideoFile` plays a video. */
 export function AudioFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {

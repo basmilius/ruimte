@@ -5,7 +5,7 @@ import { draftOf, wandLines } from './resolve.ts';
 import { joinLines, shapeOf, splitLines } from './text.ts';
 
 /* What the changes say the other side holds, which has to be that side line for line. */
-const rebuild = (base: readonly string[], other: readonly string[]): string[] => {
+function rebuild(base: readonly string[], other: readonly string[]): string[] {
     const out: string[] = [];
     let at = 0;
     for (const change of diffLines(base, other)) {
@@ -15,10 +15,10 @@ const rebuild = (base: readonly string[], other: readonly string[]): string[] =>
     }
     out.push(...base.slice(at));
     return out;
-};
+}
 
 /* A deterministic shuffle of a file: some lines dropped, some changed, some added. */
-const mutate = (lines: readonly string[], seed: number): string[] => {
+function mutate(lines: readonly string[], seed: number): string[] {
     let state = seed;
     const random = (): number => {
         state = (state + 0x6d2b79f5) | 0;
@@ -42,7 +42,7 @@ const mutate = (lines: readonly string[], seed: number): string[] => {
         out.push(line);
     }
     return out;
-};
+}
 
 describe('diffLines', () => {
     test('an unchanged file has no changes', () => {

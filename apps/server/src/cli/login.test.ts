@@ -25,13 +25,15 @@ interface Recorded {
     err: string[];
 }
 
-const answer = (body: unknown, status = 200): Response => Response.json(body, { status });
+function answer(body: unknown, status = 200): Response {
+    return Response.json(body, { status });
+}
 
 /*
  * A daemon and an address book as one fake fetch: the daemon answers on loopback with signed-looking
  * payloads, the address book walks through the scripted polls.
  */
-const harness = (fakes: Fakes, extra: Partial<LoginOptions> = {}) => {
+function harness(fakes: Fakes, extra: Partial<LoginOptions> = {}) {
     const recorded: Recorded = { registrationFor: [], completes: [], cancels: 0, out: [], err: [] };
     const fetch = async (input: string, init: RequestInit): Promise<Response> => {
         const url = new URL(input);
@@ -107,7 +109,7 @@ const harness = (fakes: Fakes, extra: Partial<LoginOptions> = {}) => {
         ...extra
     };
     return { recorded, run: () => runLogin(options) };
-};
+}
 
 const pending: DeviceLinkPollResult = { status: 'pending', interval: 5, account: null };
 

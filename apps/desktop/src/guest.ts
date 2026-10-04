@@ -10,7 +10,7 @@ const { ipcRenderer } = require('electron') as typeof import('electron');
 
 /* Whether the page would take this horizontal movement itself: something under the pointer can
    still scroll that way, or a scroll container on the way up says overscroll is its own business. */
-const pageTakesHorizontal = (event: WheelEvent): boolean => {
+function pageTakesHorizontal(event: WheelEvent): boolean {
     const root = document.scrollingElement;
     for (const target of event.composedPath()) {
         if (!(target instanceof Element)) {
@@ -35,12 +35,12 @@ const pageTakesHorizontal = (event: WheelEvent): boolean => {
         }
     }
     return false;
-};
+}
 
 /* `momentum` is new in Chromium 151 and not in the DOM typings yet: true once the fingers are off. */
 type MomentumWheelEvent = WheelEvent & { momentum?: boolean };
 
-const onWheel = (event: MomentumWheelEvent): void => {
+function onWheel(event: MomentumWheelEvent): void {
     // Chromium reports a trackpad pinch as a wheel with Ctrl held.
     const pinch = event.ctrlKey;
     const horizontal = event.deltaX !== 0 && event.momentum !== true && !pinch;
@@ -53,7 +53,7 @@ const onWheel = (event: MomentumWheelEvent): void => {
         // Only worth the style walk for a sample that can still start or steer a swipe.
         pageTakes: horizontal && pageTakesHorizontal(event)
     });
-};
+}
 
 let listening = false;
 
@@ -102,7 +102,7 @@ window.addEventListener('keydown', (event) => {
  * in is what shows through a transparent page, so without this a page that leaves its background to
  * the browser stands on the app's ground instead of the white every browser gives it.
  */
-const reportGround = (): void => {
+function reportGround(): void {
     // The system color can only be read off an element in the document, so one is put there for a tick.
     const probe = document.createElement('div');
     probe.style.cssText = 'background-color: Canvas; display: none';
@@ -110,7 +110,7 @@ const reportGround = (): void => {
     const ground = getComputedStyle(probe).backgroundColor;
     probe.remove();
     ipcRenderer.sendToHost('ruimte:ground', ground);
-};
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', reportGround, { once: true });

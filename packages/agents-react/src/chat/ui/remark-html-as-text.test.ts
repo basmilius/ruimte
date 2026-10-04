@@ -11,7 +11,7 @@ interface Rendered {
 }
 
 /* The elements react-markdown hands React, flattened, without rendering them into a DOM. */
-const elementsOf = (node: ReactNode): Rendered[] => {
+function elementsOf(node: ReactNode): Rendered[] {
     if (Array.isArray(node)) {
         return node.flatMap(elementsOf);
     }
@@ -21,10 +21,10 @@ const elementsOf = (node: ReactNode): Rendered[] => {
     const element = node as ReactElement<{ children?: ReactNode }>;
     const own = typeof element.type === 'string' ? [{ type: element.type, children: element.props.children }] : [];
     return [...own, ...elementsOf(element.props.children)];
-};
+}
 
 /* Every string under a node, in order. */
-const textOf = (node: ReactNode): string => {
+function textOf(node: ReactNode): string {
     if (typeof node === 'string') {
         return node;
     }
@@ -35,9 +35,11 @@ const textOf = (node: ReactNode): string => {
         return textOf((node as ReactElement<{ children?: ReactNode }>).props.children);
     }
     return '';
-};
+}
 
-const render = (text: string): ReactNode => ReactMarkdown({ children: text, remarkPlugins: [remarkGfm, remarkHtmlAsText, remarkBreaks] });
+function render(text: string): ReactNode {
+    return ReactMarkdown({ children: text, remarkPlugins: [remarkGfm, remarkHtmlAsText, remarkBreaks] });
+}
 
 describe('remarkHtmlAsText', () => {
     test('keeps an inline tag as the text a person typed', () => {

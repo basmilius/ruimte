@@ -9,7 +9,7 @@ export type ParsedArgv =
  * word, and a flag given twice is refused rather than one of the two silently winning. A name that is
  * both a switch and a flag is on when written bare and takes a value only after `=` (`--state=full`).
  */
-export const parseArgv = (argv: readonly string[], known: readonly string[], switches: readonly string[] = []): ParsedArgv => {
+export function parseArgv(argv: readonly string[], known: readonly string[], switches: readonly string[] = []): ParsedArgv {
     const positionals: string[] = [];
     const flags: Record<string, string> = {};
     const given = new Set<string>();
@@ -58,4 +58,4 @@ export const parseArgv = (argv: readonly string[], known: readonly string[], swi
         flags[name] = value;
     }
     return { ok: true, positionals, flags, switches: given };
-};
+}

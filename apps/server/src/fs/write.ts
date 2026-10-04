@@ -20,19 +20,21 @@ export interface WriteBoundary {
     worktreesRoot: string;
 }
 
-const realOrNull = (path: string): Promise<string | null> => realpath(path).catch(() => null);
+function realOrNull(path: string): Promise<string | null> {
+    return realpath(path).catch(() => null);
+}
 
 /* The boundary as real paths, so neither `..` nor a symlinked folder decides what is inside. */
-export const realRoots = async (boundary: WriteBoundary): Promise<string[]> => {
+export async function realRoots(boundary: WriteBoundary): Promise<string[]> {
     const folders = await Promise.all(boundary.folders.map(realOrNull));
     const worktreesRoot = await realOrNull(boundary.worktreesRoot);
     const listed = worktreesRoot === null ? [] : (await Promise.all(boundary.folders.map(boundary.worktreesOf))).flat();
     const worktrees = (await Promise.all(listed.map(realOrNull))).filter((path) => path !== null && worktreesRoot !== null && isInside(worktreesRoot, path));
     return [...folders, ...worktrees].filter((root): root is string => root !== null);
-};
+}
 
 /* What opening the file for writing may run into after the checks passed, in the codes a read answers with. */
-const openError = (e: unknown, path: string): unknown => {
+function openError(e: unknown, path: string): unknown {
     const code = (e as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') {
         return new ReadError('not-found', 'That file is not there');
@@ -44,14 +46,14 @@ const openError = (e: unknown, path: string): unknown => {
         return new WriteError('not-writable', `${path} cannot be written`);
     }
     return e;
-};
+}
 
 /*
  * Saves text over a file `fs.read` answered as text, and only over that: the file has to be there,
  * still be text by the same sniff, and still carry the mtime the read handed out. Written in place,
  * so the inode, its mode and its hard links stay what they were.
  */
-export const writeTextFile = async (path: string, text: string, expectedMtime: number, boundary: WriteBoundary): Promise<FsWriteResult> => {
+export async function writeTextFile(path: string, text: string, expectedMtime: number, boundary: WriteBoundary): Promise<FsWriteResult> {
     const { file, mime, bom } = await inspect(path);
     const folder = await realOrNull(dirname(file.path));
     if (folder === null) {
@@ -91,4 +93,4 @@ export const writeTextFile = async (path: string, text: string, expectedMtime: n
     } finally {
         await handle.close();
     }
-};
+}

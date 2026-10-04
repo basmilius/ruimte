@@ -14,7 +14,7 @@ export interface ListOptions {
     hidden?: boolean;
 }
 
-const kindOf = (dirent: { isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }): FsEntryKind => {
+function kindOf(dirent: { isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }): FsEntryKind {
     if (dirent.isSymbolicLink()) {
         return 'symlink';
     }
@@ -22,20 +22,20 @@ const kindOf = (dirent: { isDirectory(): boolean; isFile(): boolean; isSymbolicL
         return 'directory';
     }
     return dirent.isFile() ? 'file' : 'other';
-};
+}
 
 // Directories first, then by name the way a person reads them: `item2` before `item10`.
-const compare = (left: FsEntry, right: FsEntry): number => {
+function compare(left: FsEntry, right: FsEntry): number {
     const rank = (entry: FsEntry): number => (entry.kind === 'directory' ? 0 : 1);
     return rank(left) - rank(right) || left.name.localeCompare(right.name, undefined, { numeric: true });
-};
+}
 
 /*
  * The checkout a directory sits in, or null outside one. A submodule and a repository sitting
  * beside the project have their own, and git must be asked there: the folder above answers about
  * terrain that is not its own.
  */
-const repositoryRootOf = async (dir: string, cache: Map<string, string | null>): Promise<string | null> => {
+async function repositoryRootOf(dir: string, cache: Map<string, string | null>): Promise<string | null> {
     const known = cache.get(dir);
     if (known !== undefined) {
         return known;
@@ -45,9 +45,9 @@ const repositoryRootOf = async (dir: string, cache: Map<string, string | null>):
     const found = here !== null ? dir : parent === dir ? null : await repositoryRootOf(parent, cache);
     cache.set(dir, found);
     return found;
-};
+}
 
-const readEntries = async (dir: string, includeHidden: boolean, inRepository: boolean): Promise<FsEntry[]> => {
+async function readEntries(dir: string, includeHidden: boolean, inRepository: boolean): Promise<FsEntry[]> {
     const dirents = await readdir(dir, { withFileTypes: true });
     const entries = await Promise.all(
         dirents.map(async (dirent): Promise<FsEntry | null> => {
@@ -71,7 +71,7 @@ const readEntries = async (dir: string, includeHidden: boolean, inRepository: bo
         })
     );
     return entries.filter((entry) => entry !== null).sort(compare);
-};
+}
 
 /*
  * Never follow a symlink or anything git ignores while expanding
@@ -79,7 +79,7 @@ const readEntries = async (dir: string, includeHidden: boolean, inRepository: bo
  * status is asked once per level per checkout, and what git ignores is hidden: the project says
  * itself what is generated.
  */
-export const listDirectory = async (path: string, options: ListOptions = {}): Promise<FsListResult> => {
+export async function listDirectory(path: string, options: ListOptions = {}): Promise<FsListResult> {
     const root = resolve(path);
     const depth = options.depth ?? 1;
     const includeHidden = options.hidden ?? false;
@@ -155,4 +155,4 @@ export const listDirectory = async (path: string, options: ListOptions = {}): Pr
     };
     emit(root);
     return { path: root, entries, truncated };
-};
+}

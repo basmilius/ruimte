@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { portHints, takenPorts } from './port-hints';
 
-const node = (id: string, x: number, y: number) => ({ id, x, y, w: 100, h: 100 });
+function node(id: string, x: number, y: number) {
+    return { id, x, y, w: 100, h: 100 };
+}
 const nodes = [node('a', 0, 0), node('b', 400, 0)];
 
 describe('the ports offered to a pointer', () => {

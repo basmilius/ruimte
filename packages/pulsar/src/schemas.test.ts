@@ -26,7 +26,9 @@ const nonce = 'n'.repeat(22);
 const envelope = { connectionId: 'attempt-1', signal: { kind: 'offer' as const, sdp: 'v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\n' } };
 
 // Through JSON and back, the way a frame really travels.
-const roundTrip = <T>(schema: { parse(value: unknown): T }, value: T): T => schema.parse(JSON.parse(JSON.stringify(value)));
+function roundTrip<T>(schema: { parse(value: unknown): T }, value: T): T {
+    return schema.parse(JSON.parse(JSON.stringify(value)));
+}
 
 describe('broker frames', () => {
     const peerFrames: BrokerPeerFrame[] = [

@@ -39,15 +39,17 @@ const registry = createClientActionRegistry(useDocument, {
 let ended: string[] = [];
 let stop: (() => void) | null = null;
 
-const deleteBoard = async (call: ActionCall<void> = PERSON_ACTION_CALL) => {
+async function deleteBoard(call: ActionCall<void> = PERSON_ACTION_CALL) {
     const asked = await registry.execute('view.delete', { viewId: 'board' }, call);
     if (asked.status !== 'needs_confirmation') {
         throw new Error('Expected confirmation');
     }
     return registry.confirm(asked.confirmationToken, true, call);
-};
+}
 
-const viewIds = (): string[] => useDocument.getState().views.map((view) => view.id);
+function viewIds(): string[] {
+    return useDocument.getState().views.map((view) => view.id);
+}
 
 beforeEach(() => {
     jest.useFakeTimers();

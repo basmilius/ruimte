@@ -16,16 +16,19 @@ export type TranscriptCutPoint = { lastUuid: string } | { turns: number } | 'who
 
 type Line = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is Line => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Line {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const formatRefusal = (detail: string): ChatError =>
-    new ChatError(
+function formatRefusal(detail: string): ChatError {
+    return new ChatError(
         'transcript-format',
         `Claude Code's conversation file has a shape this machine does not know (${detail}; checked against Claude Code ${CLAUDE_TRANSCRIPT_CHECKED}), so it cannot be forked`
     );
+}
 
 /* A prompt of the person or a wake, as opposed to a tool result, an injected skill or the summary a compaction leaves. */
-const isSpokenPrompt = (line: Line): boolean => {
+function isSpokenPrompt(line: Line): boolean {
     if (line.type !== 'user' || line.isSidechain === true || line.isMeta === true || line.isCompactSummary === true) {
         return false;
     }
@@ -39,13 +42,13 @@ const isSpokenPrompt = (line: Line): boolean => {
         content.some((block) => isRecord(block) && block.type === 'text') &&
         !content.some((block) => isRecord(block) && block.type === 'tool_result')
     );
-};
+}
 
 /*
  * Claude Code 2.1.273 resumes a copied transcript cut after the chosen answer. Keep that turn's
  * trailing metadata, drop the next prompt's queued lines, and rewrite every retained session id.
  */
-export const cutTranscript = (text: string, at: TranscriptCutPoint, sessionId: string, newSessionId: string): string => {
+export function cutTranscript(text: string, at: TranscriptCutPoint, sessionId: string, newSessionId: string): string {
     const lines: Line[] = [];
     for (const raw of text.split('\n')) {
         if (raw.trim() === '') {
@@ -94,10 +97,10 @@ export const cutTranscript = (text: string, at: TranscriptCutPoint, sessionId: s
         .filter((line, index) => !(index > lastMessage && line.type === 'queue-operation'))
         .map((line) => `${JSON.stringify('sessionId' in line ? { ...line, sessionId: newSessionId } : line)}\n`)
         .join('');
-};
+}
 
 /* The transcript of a session: in the folder of the chat's directory, else wherever the session id alone finds it. */
-const findTranscript = async (projectsDir: string, cwd: string, sessionId: string): Promise<string | null> => {
+async function findTranscript(projectsDir: string, cwd: string, sessionId: string): Promise<string | null> {
     const own = join(projectsDir, claudeProjectSlug(cwd), `${sessionId}.jsonl`);
     if (existsSync(own)) {
         return own;
@@ -112,7 +115,7 @@ const findTranscript = async (projectsDir: string, cwd: string, sessionId: strin
         throw e;
     }
     return dirs.map((dir) => join(projectsDir, dir, `${sessionId}.jsonl`)).find((candidate) => existsSync(candidate)) ?? null;
-};
+}
 
 export interface ClaudeForkInput {
     projectsDir: string;
@@ -125,7 +128,7 @@ export interface ClaudeForkInput {
 }
 
 /* Writes the fork's transcript and answers how to take it back when a later step of the fork is refused. */
-export const forkClaudeTranscript = async (input: ClaudeForkInput): Promise<{ path: string; undo(): Promise<void> }> => {
+export async function forkClaudeTranscript(input: ClaudeForkInput): Promise<{ path: string; undo(): Promise<void> }> {
     if (input.projectsDir === '' || /[/\\]|\.\./.test(input.sessionId)) {
         throw new ChatError('transcript-missing', 'Claude Code keeps no conversations on this machine');
     }
@@ -142,4 +145,4 @@ export const forkClaudeTranscript = async (input: ClaudeForkInput): Promise<{ pa
     await mkdir(dir, { recursive: true, mode: 0o700 });
     await writeAtomic(path, copy);
     return { path, undo: () => rm(path, { force: true }) };
-};
+}

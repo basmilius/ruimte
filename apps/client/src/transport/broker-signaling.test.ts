@@ -8,19 +8,20 @@ import type { Signal, SignalingEvents } from './signaling';
 const BROKER_URL = 'wss://broker.example.com';
 const NONCE = 'n'.repeat(32);
 
-const newKey = () => {
+function newKey() {
     const pair = generateKeyPairSync('ed25519');
     const publicKey = (pair.publicKey.export({ format: 'jwk' }) as { x: string }).x;
     return { publicKey, sign: (message: string) => sign(null, Buffer.from(message), pair.privateKey).toString('base64url') };
-};
+}
 
-const verifies = async (publicKey: string, message: string, signature: string): Promise<boolean> =>
-    verify(
+async function verifies(publicKey: string, message: string, signature: string): Promise<boolean> {
+    return verify(
         null,
         Buffer.from(message),
         createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicKey }, format: 'jwk' }),
         Buffer.from(signature, 'base64url')
     );
+}
 
 class FakeSocket {
     readonly sent: BrokerPeerFrame[] = [];
@@ -43,9 +44,11 @@ class FakeSocket {
     }
 }
 
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
-const setup = (access?: (key: ClientKey) => Promise<SignalAccess>) => {
+function setup(access?: (key: ClientKey) => Promise<SignalAccess>) {
     const client = newKey();
     const machine = newKey();
     const sockets: FakeSocket[] = [];
@@ -97,7 +100,7 @@ const setup = (access?: (key: ClientKey) => Promise<SignalAccess>) => {
         signature: signer.sign(signalMessage(machine.publicKey, client.publicKey, envelope))
     });
     return { client, machine, sockets, attempt, announce, answerFrom };
-};
+}
 
 describe('brokerSignaling', () => {
     test('announces the client key, signs the offer for the machine, and passes on an answer the machine signed', async () => {

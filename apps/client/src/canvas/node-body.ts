@@ -3,4 +3,6 @@
  * `data-node-body`. With the selection as the only state a canvas has, that is what tells a press
  * meant for a terminal or a thread from one meant for the canvas around it.
  */
-export const isInNodeBody = (el: EventTarget | null): boolean => el instanceof HTMLElement && el.closest('[data-node-body]') !== null;
+export function isInNodeBody(el: EventTarget | null): boolean {
+    return el instanceof HTMLElement && el.closest('[data-node-body]') !== null;
+}

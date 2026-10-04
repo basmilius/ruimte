@@ -2,9 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import type { AgentInfo } from '@ruimte/contracts';
 import { KeepAwake, agentsWorking, keepAwakeCommand, type HeldProcess, type KeepAwakeSetting, type KeepAwakeWork } from './keep-awake.ts';
 
-const setting = (patch: Partial<KeepAwakeSetting> = {}): KeepAwakeSetting => ({ mode: 'always', onBattery: false, display: false, ...patch });
+function setting(patch: Partial<KeepAwakeSetting> = {}): KeepAwakeSetting {
+    return { mode: 'always', onBattery: false, display: false, ...patch };
+}
 
-const agent = (status: AgentInfo['status'], live = true): AgentInfo => ({ kind: 'claude', status, live }) as AgentInfo;
+function agent(status: AgentInfo['status'], live = true): AgentInfo {
+    return { kind: 'claude', status, live } as AgentInfo;
+}
 
 const idle: KeepAwakeWork = { sessions: [], chats: [] };
 
@@ -48,7 +52,7 @@ describe('keepAwakeCommand', () => {
 });
 
 /* Processes that never run: each records its command and resolves `exited` when it is killed or ends by itself. */
-const fakeSpawner = () => {
+function fakeSpawner() {
     const started: { command: string[]; killed: boolean; end(): void }[] = [];
     const spawn = (command: string[]): HeldProcess => {
         let end = (): void => undefined;
@@ -66,7 +70,7 @@ const fakeSpawner = () => {
         };
     };
     return { started, spawn };
-};
+}
 
 describe('KeepAwake', () => {
     const holder = (state: { setting: KeepAwakeSetting; work: KeepAwakeWork }, spawn: (command: string[]) => HeldProcess) =>

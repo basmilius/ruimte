@@ -46,7 +46,7 @@ const BLOCK_TAGS = new Set([
 // What never shows as text, and a screen reader's heading the eye never sees.
 const SKIPPED = 'script, style, template, .sr-only';
 
-export const readDomText = (root: Element): DomText => {
+export function readDomText(root: Element): DomText {
     const nodes: Text[] = [];
     const starts: number[] = [];
     let text = '';
@@ -65,10 +65,10 @@ export const readDomText = (root: Element): DomText => {
         node = walker.nextNode();
     }
     return { text, nodes, starts };
-};
+}
 
 /* The node an offset falls in and where in it; an offset on a seam belongs to the node it starts. */
-export const locateOffset = (starts: readonly number[], offset: number): { index: number; offset: number } => {
+export function locateOffset(starts: readonly number[], offset: number): { index: number; offset: number } {
     let low = 0;
     let high = starts.length - 1;
     let found = 0;
@@ -82,10 +82,10 @@ export const locateOffset = (starts: readonly number[], offset: number): { index
         }
     }
     return { index: found, offset: offset - (starts[found] ?? 0) };
-};
+}
 
 /* The ranges of the matches, for the page's highlights and for scrolling one into view. */
-export const rangesOf = (dom: DomText, matches: readonly TextMatch[]): Range[] => {
+export function rangesOf(dom: DomText, matches: readonly TextMatch[]): Range[] {
     if (dom.nodes.length === 0) {
         return [];
     }
@@ -101,9 +101,9 @@ export const rangesOf = (dom: DomText, matches: readonly TextMatch[]): Range[] =
         range.setEnd(endNode, Math.min(end.offset + 1, endNode.length));
         return range;
     });
-};
+}
 
-export const findRanges = (root: Element, pattern: RegExp): Range[] => {
+export function findRanges(root: Element, pattern: RegExp): Range[] {
     const dom = readDomText(root);
     return rangesOf(dom, matchesIn(dom.text, pattern));
-};
+}

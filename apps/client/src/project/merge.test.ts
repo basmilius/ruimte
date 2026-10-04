@@ -2,41 +2,47 @@ import { describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectChatView, ProjectContent, ProjectNode, ProjectView } from '@ruimte/contracts';
 import { mergeProject, type CanvasPatch, type ProjectMerge } from './merge';
 
-const node = (id: string, patch: Partial<ProjectNode> = {}): ProjectNode => ({
-    id,
-    kind: 'note',
-    title: id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 100,
-    ...patch
-});
+function node(id: string, patch: Partial<ProjectNode> = {}): ProjectNode {
+    return {
+        id,
+        kind: 'note',
+        title: id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        ...patch
+    };
+}
 
-const canvas = (id: string, patch: Partial<ProjectCanvasView> = {}): ProjectCanvasView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes: [],
-    texts: [],
-    edges: [],
-    layouts: [],
-    ...patch
-});
+function canvas(id: string, patch: Partial<ProjectCanvasView> = {}): ProjectCanvasView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes: [],
+        texts: [],
+        edges: [],
+        layouts: [],
+        ...patch
+    };
+}
 
-const content = (views: ProjectView[], patch: Partial<ProjectContent> = {}): ProjectContent => ({
-    name: 'p',
-    color: '#000',
-    views,
-    ...patch
-});
+function content(views: ProjectView[], patch: Partial<ProjectContent> = {}): ProjectContent {
+    return {
+        name: 'p',
+        color: '#000',
+        views,
+        ...patch
+    };
+}
 
-const canvasOf = (merge: ProjectMerge, id: string): ProjectCanvasView => {
+function canvasOf(merge: ProjectMerge, id: string): ProjectCanvasView {
     if (!merge.ok) {
         throw new Error(`merge refused: ${merge.reason}`);
     }
     return merge.content.views.find((view) => view.id === id) as ProjectCanvasView;
-};
+}
 
 describe('what is additive', () => {
     test('a node the daemon added lands beside the edit in progress', () => {

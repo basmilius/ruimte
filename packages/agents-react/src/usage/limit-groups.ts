@@ -37,8 +37,8 @@ export interface LimitGroup {
  * so an account that is on but signed out comes from the account list, where it can say why it has
  * no numbers. An account that is off is left out, unless the machine still reads it (a CLI's default).
  */
-export const limitGroups = (snapshot: UsageLimitsSnapshot, accounts: ProviderAccounts | null): LimitGroup[] =>
-    USAGE_PROVIDERS.flatMap((kind) => {
+export function limitGroups(snapshot: UsageLimitsSnapshot, accounts: ProviderAccounts | null): LimitGroup[] {
+    return USAGE_PROVIDERS.flatMap((kind) => {
         const known = accountsOfKind(accounts, kind);
         const read = snapshot.providers
             .filter((entry) => entry.kind === kind)
@@ -67,14 +67,19 @@ export const limitGroups = (snapshot: UsageLimitsSnapshot, accounts: ProviderAcc
         const rows = [...read, ...unread];
         return rows.length === 0 ? [] : [{ kind, accounts: rows }];
     });
+}
 
 /* Whether any CLI has more than one account, which is when the limits name the account of every row. */
-export const hasSeveralAccounts = (groups: readonly LimitGroup[]): boolean => groups.some((group) => group.accounts.length > 1);
+export function hasSeveralAccounts(groups: readonly LimitGroup[]): boolean {
+    return groups.some((group) => group.accounts.length > 1);
+}
 
-export const isSignedOut = (account: LimitAccount): boolean => account.status?.state === 'signed-out';
+export function isSignedOut(account: LimitAccount): boolean {
+    return account.status?.state === 'signed-out';
+}
 
 /* The window that resets first from now, the one reset a line per window has no room to repeat. */
-export const nextReset = (windows: readonly UsageWindow[], now: number): (UsageWindow & { resetsAt: number }) | null => {
+export function nextReset(windows: readonly UsageWindow[], now: number): (UsageWindow & { resetsAt: number }) | null {
     let next: (UsageWindow & { resetsAt: number }) | null = null;
     for (const window of windows) {
         if (window.resetsAt !== null && window.resetsAt > now && (next === null || window.resetsAt < next.resetsAt)) {
@@ -82,20 +87,20 @@ export const nextReset = (windows: readonly UsageWindow[], now: number): (UsageW
         }
     }
     return next;
-};
+}
 
 /* When the numbers came in and from where: a read of the machine's own, or a turn that reported them. Null before the first read. */
-export const checkedLabel = (entry: UsageLimitsProvider, now: number): string | null => {
+export function checkedLabel(entry: UsageLimitsProvider, now: number): string | null {
     if (entry.checkedAt <= 0) {
         return null;
     }
     const past = now - entry.checkedAt;
     const when = past < MINUTE ? i18next.t('agent-usage:limits.checked.now') : i18next.t('agent-usage:limits.checked.ago', { duration: formatDuration(past) });
     return entry.source === 'event' ? i18next.t('agent-usage:limits.checked.fromTurn', { when }) : when;
-};
+}
 
 /* Why a read account has no bars, or null when it has them. */
-export const explain = (provider: UsageLimitsProvider): string | null => {
+export function explain(provider: UsageLimitsProvider): string | null {
     if (provider.unavailable === null) {
         return provider.windows.length === 0 ? i18next.t('agent-usage:limits.none') : null;
     }
@@ -106,8 +111,9 @@ export const explain = (provider: UsageLimitsProvider): string | null => {
         return i18next.t('agent-usage:limits.noSubscription');
     }
     return provider.unavailable.message ?? i18next.t('agent-usage:limits.unreachable');
-};
+}
 
 /* Why an account has no bars, or null when it has them. An account the machine does not read says what its login is doing. */
-export const accountNote = (account: LimitAccount): string | null =>
-    account.entry === null ? accountStatusLine(account.status, true).text : explain(account.entry);
+export function accountNote(account: LimitAccount): string | null {
+    return account.entry === null ? accountStatusLine(account.status, true).text : explain(account.entry);
+}

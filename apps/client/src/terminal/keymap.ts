@@ -8,7 +8,9 @@ export interface PlatformShortcut {
     other: Shortcut;
 }
 
-export const platformShortcut = (pair: PlatformShortcut, apple: boolean): Shortcut => (apple ? pair.mac : pair.other);
+export function platformShortcut(pair: PlatformShortcut, apple: boolean): Shortcut {
+    return apple ? pair.mac : pair.other;
+}
 
 /*
  * Escape belongs to the program in the terminal (Claude Code interrupts on it, vim lives on it), so
@@ -19,17 +21,22 @@ export const LEAVE_NODE_SHORTCUT: PlatformShortcut = { mac: shortcut('Meta+Escap
 /* Clearing is Cmd+K, what every macOS terminal does; off macOS Ctrl+K is readline's kill-line. */
 export const CLEAR_SHORTCUT: PlatformShortcut = { mac: shortcut('Meta+K'), other: shortcut('Ctrl+Shift+K') };
 
-export const isLeaveNodeShortcut = (event: KeyLike, apple: boolean): boolean => matchesShortcut(platformShortcut(LEAVE_NODE_SHORTCUT, apple), event, apple);
+export function isLeaveNodeShortcut(event: KeyLike, apple: boolean): boolean {
+    return matchesShortcut(platformShortcut(LEAVE_NODE_SHORTCUT, apple), event, apple);
+}
 
-export const isClearShortcut = (event: KeyLike, apple: boolean): boolean => matchesShortcut(platformShortcut(CLEAR_SHORTCUT, apple), event, apple);
+export function isClearShortcut(event: KeyLike, apple: boolean): boolean {
+    return matchesShortcut(platformShortcut(CLEAR_SHORTCUT, apple), event, apple);
+}
 
 /*
  * Off macOS Ctrl+V pastes this machine's clipboard. Written as ^V it reaches the program instead, and a CLI
  * that reads ^V as paste (Claude Code, Codex, PowerShell) pastes the clipboard of the machine it runs on.
  * The letter the layout types, not the physical key, the way the browser's own paste reads it.
  */
-export const isTerminalPaste = (event: KeyLike, apple: boolean): boolean =>
-    !apple && event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'v';
+export function isTerminalPaste(event: KeyLike, apple: boolean): boolean {
+    return !apple && event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'v';
+}
 
 /*
  * The shortcuts a focused terminal hands back to the app, the ones that move between views, cells, panels
@@ -63,25 +70,31 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
    Ctrl+T transpose, Ctrl+\ SIGQUIT), so the terminal keeps them there. */
 const PTY_CONTROL_SHORTCUTS: readonly Shortcut[] = [APP_SHORTCUTS.sidebar, CANVAS_SHORTCUTS.newView, CANVAS_SHORTCUTS.splitRight, CANVAS_SHORTCUTS.closeCell];
 
-const matchesAny = (shortcuts: readonly Shortcut[], event: KeyLike, apple: boolean): boolean =>
-    shortcuts.some((candidate) => matchesShortcut(candidate, event, apple));
+function matchesAny(shortcuts: readonly Shortcut[], event: KeyLike, apple: boolean): boolean {
+    return shortcuts.some((candidate) => matchesShortcut(candidate, event, apple));
+}
 
-export const isAppShortcut = (event: KeyLike, apple: boolean): boolean =>
-    TERMINAL_HANDED_BACK.some((candidate) => (apple || !PTY_CONTROL_SHORTCUTS.includes(candidate)) && matchesShortcut(candidate, event, apple));
+export function isAppShortcut(event: KeyLike, apple: boolean): boolean {
+    return TERMINAL_HANDED_BACK.some((candidate) => (apple || !PTY_CONTROL_SHORTCUTS.includes(candidate)) && matchesShortcut(candidate, event, apple));
+}
 
 /*
  * What a text field that stops its own keys (the chat composer, the file editor) hands back, everything
  * a terminal does, the Ctrl shortcuts a terminal keeps off macOS (a text field has no program behind
  * it), the palette, find in files and the find bar. Ctrl+B stays out of it off macOS, as it always has.
  */
-export const shellShortcuts = (apple: boolean): readonly Shortcut[] => [
-    ...TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
-    APP_SHORTCUTS.palette,
-    APP_SHORTCUTS.findInFiles,
-    CANVAS_SHORTCUTS.find
-];
+export function shellShortcuts(apple: boolean): readonly Shortcut[] {
+    return [
+        ...TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
+        APP_SHORTCUTS.palette,
+        APP_SHORTCUTS.findInFiles,
+        CANVAS_SHORTCUTS.find
+    ];
+}
 
-export const isShellShortcut = (event: KeyLike, apple: boolean): boolean => matchesAny(shellShortcuts(apple), event, apple);
+export function isShellShortcut(event: KeyLike, apple: boolean): boolean {
+    return matchesAny(shellShortcuts(apple), event, apple);
+}
 
 /* Home and End in both forms the application cursor keys mode (DECCKM) asks for. */
 const HOME_NORMAL = '\x1b[H';
@@ -99,7 +112,7 @@ const KILL_LINE_BACK = '\x15';
  * or the end of the line, Option a word, Cmd+Backspace kills back to the start. Returns the bytes to
  * write, or null when the shortcut is none of them and xterm should handle the key itself.
  */
-export const macMotionSequence = (event: KeyLike, applicationCursorKeys: boolean): string | null => {
+export function macMotionSequence(event: KeyLike, applicationCursorKeys: boolean): string | null {
     if (event.ctrlKey) {
         return null;
     }
@@ -124,4 +137,4 @@ export const macMotionSequence = (event: KeyLike, applicationCursorKeys: boolean
         }
     }
     return null;
-};
+}

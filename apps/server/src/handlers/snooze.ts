@@ -2,7 +2,7 @@ import type { SnoozeStore } from '../push/snoozes.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 
 /* `locate` is the project index's; a snooze is kept against the project its node is in. */
-export const registerSnoozeHandlers = (dispatcher: Dispatcher, snoozes: SnoozeStore, locate: (nodeId: string) => { projectId: string } | null): void => {
+export function registerSnoozeHandlers(dispatcher: Dispatcher, snoozes: SnoozeStore, locate: (nodeId: string) => { projectId: string } | null): void {
     dispatcher.register('snooze.list', () => ({ snoozes: snoozes.list() }));
     dispatcher.register('snooze.set', ({ nodeId, until }) => {
         const place = locate(nodeId);
@@ -16,4 +16,4 @@ export const registerSnoozeHandlers = (dispatcher: Dispatcher, snoozes: SnoozeSt
         snoozes.clear(nodeId);
         return {};
     });
-};
+}

@@ -27,18 +27,18 @@ type Load =
     | { status: 'failed'; reason: 'unavailable' | 'unreachable' };
 
 /* How long ago the address book last read the numbers, in the words of the interface. */
-const updatedLabel = (fetchedAt: number, now: number): string => {
+function updatedLabel(fetchedAt: number, now: number): string {
     const past = Math.max(0, now - fetchedAt);
     const [unit, size] = past < HOUR ? (['minutes', MINUTE] as const) : past < DAY ? (['hours', HOUR] as const) : (['days', DAY] as const);
     const count = Math.floor(past / size);
     return count === 0 ? i18next.t('models:footer.justNow') : i18next.t(`models:footer.${unit}`, { count, value: formatNumber(count) });
-};
+}
 
 /*
  * Asked every time the dialog opens and kept nowhere else: the numbers are the address book's, and it
  * reads them again every few hours. An answer that says there is nothing yet is not a failure to reach it.
  */
-const useBenchmarks = (): [load: Load, retry: () => void] => {
+function useBenchmarks(): [load: Load, retry: () => void] {
     const [load, setLoad] = useState<Load>({ status: 'loading' });
     const [attempt, setAttempt] = useState(0);
     useEffect(() => {
@@ -65,7 +65,7 @@ const useBenchmarks = (): [load: Load, retry: () => void] => {
         setAttempt((count) => count + 1);
     };
     return [load, retry];
-};
+}
 
 function Comparison({ result, receivedAt, scale }: { result: ModelBenchmarksResult; receivedAt: number; scale: CostScale }) {
     const { t } = useTranslation('models');

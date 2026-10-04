@@ -8,8 +8,9 @@ export type ChatPlans = readonly Plan[];
 
 const NO_PLANS: ChatPlans = [];
 
-const newestFirst = (plans: readonly Plan[]): Plan[] =>
-    [...plans].sort((one, other) => other.createdAt.localeCompare(one.createdAt) || other.id.localeCompare(one.id));
+function newestFirst(plans: readonly Plan[]): Plan[] {
+    return [...plans].sort((one, other) => other.createdAt.localeCompare(one.createdAt) || other.id.localeCompare(one.id));
+}
 
 interface PlansStore {
     /* Keyed with `endpointKey(endpointId, chatId)`. */
@@ -98,36 +99,40 @@ export const usePlans = create<PlansStore>((set, get) => ({
     }
 }));
 
-export const plansOf = (endpointId: string, chatId: string): ChatPlans => usePlans.getState().byChat[endpointKey(endpointId, chatId)] ?? NO_PLANS;
+export function plansOf(endpointId: string, chatId: string): ChatPlans {
+    return usePlans.getState().byChat[endpointKey(endpointId, chatId)] ?? NO_PLANS;
+}
 
 /* One plan of a chat; undefined while the machine has not answered yet, null once it has and the plan is not there. */
-export const findPlan = (endpointId: string, chatId: string, planId: string): Plan | null | undefined => {
+export function findPlan(endpointId: string, chatId: string, planId: string): Plan | null | undefined {
     const found = plansOf(endpointId, chatId).find((plan) => plan.id === planId);
     if (found) {
         return found;
     }
     return usePlans.getState().loaded[endpointId] ? null : undefined;
-};
+}
 
 /* The plans of a chat on the machine in scope. The stored array itself, so a render only follows that chat. */
-export const useChatPlans = (chatId: string): ChatPlans => {
+export function useChatPlans(chatId: string): ChatPlans {
     const endpointId = useEndpointId();
     return usePlans((s) => s.byChat[endpointKey(endpointId, chatId)] ?? NO_PLANS);
-};
+}
 
-export const useHasPlans = (chatId: string): boolean => useChatPlans(chatId).length > 0;
+export function useHasPlans(chatId: string): boolean {
+    return useChatPlans(chatId).length > 0;
+}
 
 type CreatedListener = (endpointId: string, chatId: string, planId: string) => void;
 
 const createdListeners = new Set<CreatedListener>();
 
 /* `plan.created`, which is the one event the panel's anchor moves on; a change to a plan never moves it. */
-export const subscribePlanCreated = (listener: CreatedListener): (() => void) => {
+export function subscribePlanCreated(listener: CreatedListener): () => void {
     createdListeners.add(listener);
     return () => {
         createdListeners.delete(listener);
     };
-};
+}
 
 /*
  * The plans of one machine, kept in step with it. The daemon tells every socket about every plan, so

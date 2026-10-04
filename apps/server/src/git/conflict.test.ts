@@ -12,14 +12,18 @@ let root: string;
 let repo: string;
 let actions: GitActions;
 
-const run = (args: string[]): Promise<string> => gitIn(repo, args);
+function run(args: string[]): Promise<string> {
+    return gitIn(repo, args);
+}
 
 const phases: GitActionPhase[] = [];
-const sink = (phase: GitActionPhase): void => {
+function sink(phase: GitActionPhase): void {
     phases.push(phase);
-};
+}
 
-const merge = async (ref: string) => await actions.run({ cwd: repo, actionId: 'merge-1', kind: 'merge', ref }, () => undefined);
+async function merge(ref: string) {
+    return await actions.run({ cwd: repo, actionId: 'merge-1', kind: 'merge', ref }, () => undefined);
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-conflict', async (dir) => {

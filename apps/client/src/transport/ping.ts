@@ -17,11 +17,13 @@ export const usePing = create<PingStore>((set, get) => ({
 }));
 
 /* What the round trip to one machine is, as a component reads it. */
-export const useLatency = (endpointId: string): number | null => usePing((s) => s.byEndpoint[endpointId] ?? null);
+export function useLatency(endpointId: string): number | null {
+    return usePing((s) => s.byEndpoint[endpointId] ?? null);
+}
 
 const monitors = new Map<string, PingMonitor>();
 
-const start = (endpointId: string): void => {
+function start(endpointId: string): void {
     const monitor = new PingMonitor({
         // The reply carries the daemon's clock, which two machines never share; only the round trip is ours to read.
         send: () => pool.peek(endpointId)?.request('server.ping', {}) ?? Promise.reject(new Error('no socket')),
@@ -31,10 +33,10 @@ const start = (endpointId: string): void => {
     });
     monitors.set(endpointId, monitor);
     monitor.start();
-};
+}
 
 /* One measurement loop per daemon that answers. A latency belongs to a machine, not to the client. */
-const sync = (): void => {
+function sync(): void {
     for (const [endpointId, monitor] of [...monitors]) {
         if (pool.statusOf(endpointId).status !== 'open') {
             monitor.stop();
@@ -46,10 +48,10 @@ const sync = (): void => {
             start(endpointId);
         }
     }
-};
+}
 
 /* Measures while a socket is open, and never while it is not. A closed socket has nothing to time. */
-export const startPing = (): (() => void) => {
+export function startPing(): () => void {
     const unsubscribe = pool.subscribe(sync);
     sync();
     return () => {
@@ -59,9 +61,9 @@ export const startPing = (): (() => void) => {
         }
         monitors.clear();
     };
-};
+}
 
 /* An extra measurement of the active machine, for whoever is about to read the value. */
-export const pingNow = (): void => {
+export function pingNow(): void {
     void monitors.get(useEndpoints.getState().activeId)?.measure();
-};
+}

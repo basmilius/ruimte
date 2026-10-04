@@ -6,7 +6,10 @@ export interface Transcript {
 }
 export const EMPTY_TRANSCRIPT: Transcript = { settled: '', pending: '' };
 
-export const applyChunk = (_previous: Transcript, chunk: DictationChunk): Transcript =>
-    chunk.final ? { settled: chunk.text, pending: '' } : { settled: '', pending: chunk.text };
+export function applyChunk(_previous: Transcript, chunk: DictationChunk): Transcript {
+    return chunk.final ? { settled: chunk.text, pending: '' } : { settled: '', pending: chunk.text };
+}
 
-export const transcriptText = (transcript: Transcript): string => transcript.settled || transcript.pending;
+export function transcriptText(transcript: Transcript): string {
+    return transcript.settled || transcript.pending;
+}

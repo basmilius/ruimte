@@ -41,13 +41,13 @@ export interface BuildIdentity {
 }
 
 /* Null for anything that is not a daemon's `/health`, an empty build read as none. */
-export const buildIdentityOf = (body: unknown): BuildIdentity | null => {
+export function buildIdentityOf(body: unknown): BuildIdentity | null {
     const parsed = HealthResultSchema.safeParse(body);
     if (!parsed.success) {
         return null;
     }
     return { version: parsed.data.version, build: parsed.data.build ?? null };
-};
+}
 
 const CountSchema = z.number().int().nonnegative();
 
@@ -64,12 +64,14 @@ export const MachineWorkSchema = z.object({
 export type MachineWork = z.infer<typeof MachineWorkSchema>;
 
 /* Null for a daemon from before this route, which answers 404 with a body of its own. */
-export const machineWorkOf = (body: unknown): MachineWork | null => {
+export function machineWorkOf(body: unknown): MachineWork | null {
     const parsed = MachineWorkSchema.safeParse(body);
     return parsed.success ? parsed.data : null;
-};
+}
 
-export const isIdle = (work: MachineWork): boolean => work.terminals === 0 && work.agents === 0;
+export function isIdle(work: MachineWork): boolean {
+    return work.terminals === 0 && work.agents === 0;
+}
 
 /*
  * How clients reach a daemon, which `ruimte status` asks on the local secret: what the app shows under
@@ -116,17 +118,19 @@ export const MachineProofResultSchema = z.object({ proof: z.string().min(1) });
  * The port is covered too, so a daemon of the same home on another port cannot answer for whatever
  * holds this one. The first line keeps the HMAC from ever meaning anything else signed with the secret.
  */
-const proofMessage = (port: number, nonce: string): string => `ruimte machine proof v1\n${port}\n${nonce}`;
+function proofMessage(port: number, nonce: string): string {
+    return `ruimte machine proof v1\n${port}\n${nonce}`;
+}
 
 /* HMAC-SHA256 under the local secret, in base64url, with WebCrypto so the daemon and the shell compute the same bytes. */
-export const localProofOf = async (secret: string, port: number, nonce: string): Promise<string> => {
+export async function localProofOf(secret: string, port: number, nonce: string): Promise<string> {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(proofMessage(port, nonce))));
-};
+}
 
 /* Whether a reply to the proof request was made with this secret, for this port and this nonce. */
-export const isLocalProof = async (body: unknown, secret: string, port: number, nonce: string): Promise<boolean> => {
+export async function isLocalProof(body: unknown, secret: string, port: number, nonce: string): Promise<boolean> {
     const parsed = MachineProofResultSchema.safeParse(body);
     return parsed.success && parsed.data.proof === (await localProofOf(secret, port, nonce));
-};
+}

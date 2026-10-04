@@ -2,18 +2,20 @@ import { describe, expect, test } from 'bun:test';
 import { pageStateOf } from './page-hold';
 import type { BrowserState } from './registry';
 
-const row = (patch: Partial<BrowserState> = {}): BrowserState => ({
-    url: 'https://example.com',
-    title: 'Example',
-    loading: false,
-    canGoBack: true,
-    canGoForward: false,
-    favicon: 'data:image/png;base64,AA==',
-    error: null,
-    streamError: null,
-    streamId: null,
-    ...patch
-});
+function row(patch: Partial<BrowserState> = {}): BrowserState {
+    return {
+        url: 'https://example.com',
+        title: 'Example',
+        loading: false,
+        canGoBack: true,
+        canGoForward: false,
+        favicon: 'data:image/png;base64,AA==',
+        error: null,
+        streamError: null,
+        streamId: null,
+        ...patch
+    };
+}
 
 describe('pageStateOf', () => {
     test('what the machine is told about a page is the page, not what this client draws it with', () => {

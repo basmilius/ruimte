@@ -16,14 +16,14 @@ const request = {
     expiresAt: 600_007
 };
 
-const machine = (accepted = true) => {
+function machine(accepted = true) {
     const calls: unknown[][] = [];
     const answer = async (requestId: string, choice: ComputerApprovalChoice): Promise<boolean> => {
         calls.push([requestId, choice]);
         return accepted;
     };
     return { calls, answer };
-};
+}
 
 describe('a computer use card', () => {
     const card: PromptSubject = { kind: 'host', nodeId: 'chat-1', prompt: computerPrompt('chat-1', request) };

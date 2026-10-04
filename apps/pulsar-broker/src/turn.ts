@@ -32,10 +32,10 @@ export const noTurn: TurnProvider = {
  * seconds and a label, the password the base64 HMAC-SHA1 of that username under the shared secret.
  * The label carries the role and the start of the key, so coturn's log says whose allocation it is.
  */
-export const turnCredential = (secret: string, peer: TurnPeer, expiresAtSeconds: number): { username: string; credential: string } => {
+export function turnCredential(secret: string, peer: TurnPeer, expiresAtSeconds: number): { username: string; credential: string } {
     const username = `${expiresAtSeconds}:${peer.role === 'machine' ? 'm' : 'c'}-${peer.publicKey.slice(0, 16)}`;
     return { username, credential: createHmac('sha1', secret).update(username).digest('base64') };
-};
+}
 
 export interface SharedSecretTurnOptions {
     /* A file holding the secret coturn has as `static-auth-secret`; read on every request, so a rotation needs no restart. */
@@ -47,16 +47,18 @@ export interface SharedSecretTurnOptions {
     read?(path: string): Promise<string>;
 }
 
-export const sharedSecretTurn = (options: SharedSecretTurnOptions): TurnProvider => ({
-    iceServersFor: async (peer) => {
-        const secret = (await (options.read ?? ((path) => readFile(path, 'utf8')))(options.secretFile)).trim();
-        if (secret === '') {
-            throw new Error(`The TURN secret in ${options.secretFile} is empty`);
+export function sharedSecretTurn(options: SharedSecretTurnOptions): TurnProvider {
+    return {
+        iceServersFor: async (peer) => {
+            const secret = (await (options.read ?? ((path) => readFile(path, 'utf8')))(options.secretFile)).trim();
+            if (secret === '') {
+                throw new Error(`The TURN secret in ${options.secretFile} is empty`);
+            }
+            const expiresAtSeconds = Math.floor((options.now ?? Date.now)() / 1000) + options.ttlSeconds;
+            return { servers: [{ urls: options.urls, ...turnCredential(secret, peer, expiresAtSeconds) }], expiresAt: expiresAtSeconds * 1000 };
         }
-        const expiresAtSeconds = Math.floor((options.now ?? Date.now)() / 1000) + options.ttlSeconds;
-        return { servers: [{ urls: options.urls, ...turnCredential(secret, peer, expiresAtSeconds) }], expiresAt: expiresAtSeconds * 1000 };
-    }
-});
+    };
+}
 
 export interface CloudflareTurnOptions {
     keyId: string;
@@ -71,14 +73,15 @@ export interface CloudflareTurnOptions {
 // A request to Cloudflare that hangs must not hold a peer's answer past its own connect timeout.
 const CLOUDFLARE_TIMEOUT_MS = 5_000;
 
-const isIceServer = (value: unknown): value is IceServer =>
-    typeof value === 'object' && value !== null && (typeof (value as IceServer).urls === 'string' || Array.isArray((value as IceServer).urls));
+function isIceServer(value: unknown): value is IceServer {
+    return typeof value === 'object' && value !== null && (typeof (value as IceServer).urls === 'string' || Array.isArray((value as IceServer).urls));
+}
 
 /*
  * Cloudflare's TURN service. Its credentials are not bound to a key, so one set serves every peer
  * until two thirds of its lifetime, so the API is asked once per that stretch however many peers ask.
  */
-export const cloudflareTurn = (options: CloudflareTurnOptions): TurnProvider => {
+export function cloudflareTurn(options: CloudflareTurnOptions): TurnProvider {
     const now = options.now ?? Date.now;
     let cached: { grant: IceGrant; refreshAt: number } | null = null;
     let pending: Promise<IceGrant> | null = null;
@@ -122,4 +125,4 @@ export const cloudflareTurn = (options: CloudflareTurnOptions): TurnProvider => 
             return pending;
         }
     };
-};
+}

@@ -1,7 +1,9 @@
 import { asObject, asString, int, type UsageRecord } from '../record.ts';
 
 /* A `token_count` line carries the counts; the other two carry the model and the directory they belong to. */
-export const codexMightCarryUsage = (line: string): boolean => line.includes('token_count') || line.includes('turn_context') || line.includes('session_meta');
+export function codexMightCarryUsage(line: string): boolean {
+    return line.includes('token_count') || line.includes('turn_context') || line.includes('session_meta');
+}
 
 /* A fork replays its ancestors' events into the new file the moment it is created, so anything this
    close to the file's own start is a copy of work that was already counted somewhere else. */
@@ -34,28 +36,34 @@ export interface CodexParserState {
     lastSignature: string | null;
 }
 
-export const createCodexState = (): CodexParserState => ({
-    model: null,
-    sessionId: '',
-    cwd: '',
-    total: null,
-    sawSessionMeta: false,
-    suppressing: false,
-    anchorMs: 0,
-    lastSignature: null
-});
+export function createCodexState(): CodexParserState {
+    return {
+        model: null,
+        sessionId: '',
+        cwd: '',
+        total: null,
+        sawSessionMeta: false,
+        suppressing: false,
+        anchorMs: 0,
+        lastSignature: null
+    };
+}
 
-export const cloneCodexState = (state: CodexParserState): CodexParserState => ({ ...state, total: state.total === null ? null : { ...state.total } });
+export function cloneCodexState(state: CodexParserState): CodexParserState {
+    return { ...state, total: state.total === null ? null : { ...state.total } };
+}
 
-const countsOf = (usage: Record<string, unknown>): CodexCounts => ({
-    input: int(usage.input_tokens),
-    cached: int(usage.cached_input_tokens),
-    cacheWrite: int(usage.cache_write_input_tokens),
-    output: int(usage.output_tokens),
-    reasoning: int(usage.reasoning_output_tokens)
-});
+function countsOf(usage: Record<string, unknown>): CodexCounts {
+    return {
+        input: int(usage.input_tokens),
+        cached: int(usage.cached_input_tokens),
+        cacheWrite: int(usage.cache_write_input_tokens),
+        output: int(usage.output_tokens),
+        reasoning: int(usage.reasoning_output_tokens)
+    };
+}
 
-const deltaOf = (total: CodexCounts, previous: CodexCounts | null): CodexCounts | null => {
+function deltaOf(total: CodexCounts, previous: CodexCounts | null): CodexCounts | null {
     if (previous === null) {
         return total;
     }
@@ -68,16 +76,16 @@ const deltaOf = (total: CodexCounts, previous: CodexCounts | null): CodexCounts 
     };
     // A compaction or a resume restarts the count, so anything falling is not a delta at all.
     return delta.input < 0 || delta.cached < 0 || delta.cacheWrite < 0 || delta.output < 0 || delta.reasoning < 0 ? null : delta;
-};
+}
 
 /* A thread that was forked or spawned repeats its parent's events before its own work starts. */
-const isForkOrSubagent = (payload: Record<string, unknown>): boolean => {
+function isForkOrSubagent(payload: Record<string, unknown>): boolean {
     if (typeof payload.forked_from_id === 'string' || typeof payload.parent_thread_id === 'string') {
         return true;
     }
     const spawn = asObject(asObject(payload.source)?.subagent)?.thread_spawn;
     return typeof asObject(spawn)?.parent_thread_id === 'string';
-};
+}
 
 /*
  * One line of `~/.codex/sessions/**\/*.jsonl`, against the state of the file it came from. Codex
@@ -86,7 +94,7 @@ const isForkOrSubagent = (payload: Record<string, unknown>): boolean => {
  * counts cache reads and writes inside `input_tokens`, unlike Anthropic, so what is left after
  * taking both out is the input that was actually paid for at the full rate.
  */
-export const parseCodexLine = (line: string, state: CodexParserState): UsageRecord | null => {
+export function parseCodexLine(line: string, state: CodexParserState): UsageRecord | null {
     let parsed: unknown;
     try {
         parsed = JSON.parse(line);
@@ -185,4 +193,4 @@ export const parseCodexLine = (line: string, state: CodexParserState): UsageReco
         // Fork copies are gone by here, so every event that is left is a call of its own.
         dedupeKey: null
     };
-};
+}

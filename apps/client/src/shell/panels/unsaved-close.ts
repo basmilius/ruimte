@@ -14,7 +14,7 @@ export const useUnsavedClose = create<{ pending: PendingClose | null }>(() => ({
  * Closes a tab, a view or a node once what it shows is on disk. A file with unsaved changes is saved
  * first, and only one that will not save (it moved on disk, or the machine said no) is a question.
  */
-export const closeAfterSaving = (endpointId: string, paths: readonly string[], run: () => void): void => {
+export function closeAfterSaving(endpointId: string, paths: readonly string[], run: () => void): void {
     const unsaved = [...new Set(paths)].filter((path) => textDrafts.isUnsaved(endpointId, path));
     if (unsaved.length === 0) {
         run();
@@ -28,12 +28,12 @@ export const closeAfterSaving = (endpointId: string, paths: readonly string[], r
         }
         useUnsavedClose.setState({ pending: { endpointId, paths: failed, run } });
     });
-};
+}
 
 /* The answer to that question: the drafts go, the files stay as they are on disk. */
-export const closeWithoutSaving = (pending: PendingClose): void => {
+export function closeWithoutSaving(pending: PendingClose): void {
     for (const path of pending.paths) {
         textDrafts.discard(pending.endpointId, path);
     }
     pending.run();
-};
+}

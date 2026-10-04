@@ -20,7 +20,7 @@ import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { forgetTicket } from './credentials';
 
 /* Forgetting the machine the open project is on takes the window back to the start screen first, so nothing is left on a daemon nothing talks to. */
-export const forgetEndpoint = async (id: string): Promise<void> => {
+export async function forgetEndpoint(id: string): Promise<void> {
     if (windowWorkspace()?.connection.endpointId === id) {
         await leaveWorkspace().catch(() => undefined);
         showStart();
@@ -30,10 +30,10 @@ export const forgetEndpoint = async (id: string): Promise<void> => {
     dropMachine(id);
     pool.drop(id);
     forgetEndpointState(id);
-};
+}
 
 /* Everything this client kept about a machine it no longer knows. */
-const forgetEndpointState = (id: string): void => {
+function forgetEndpointState(id: string): void {
     useProjectList.getState().forgetProjects(id);
     forgetCachedList(id);
     useSessions.getState().clear(id);
@@ -48,4 +48,4 @@ const forgetEndpointState = (id: string): void => {
     useLastSeen.getState().forget(id);
     useSnoozes.getState().forget(id);
     dropClientLocalOf(browserStorage(), id);
-};
+}

@@ -6,7 +6,7 @@ interface Deferred {
     reject(e: Error): void;
 }
 
-const setup = (maxIdleBytes = 1_000) => {
+function setup(maxIdleBytes = 1_000) {
     const live = new Set<string>();
     let next = 1;
     const cache = new BlobCache({
@@ -29,11 +29,15 @@ const setup = (maxIdleBytes = 1_000) => {
         });
     };
     return { cache, live, loads, pending, load };
-};
+}
 
-const bytes = (size: number): Blob => new Blob([new Uint8Array(size)]);
+function bytes(size: number): Blob {
+    return new Blob([new Uint8Array(size)]);
+}
 
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('BlobCache', () => {
     test('two users of one key share one load and one URL', async () => {

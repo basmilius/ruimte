@@ -3,9 +3,13 @@ import type { GitDiffFile } from '@ruimte/contracts';
 import { diffFileParts, diffKindOf, firstFile, folderParts, pickedFile } from './commit-tree.ts';
 import type { GitTreeRow } from './git-tree.ts';
 
-const file = (path: string, extra: Partial<GitDiffFile> = {}): GitDiffFile => ({ path, diff: '', added: 0, deleted: 0, binary: false, ...extra });
+function file(path: string, extra: Partial<GitDiffFile> = {}): GitDiffFile {
+    return { path, diff: '', added: 0, deleted: 0, binary: false, ...extra };
+}
 
-const patch = (header: string): string => `diff --git a/x b/x\n${header}\n@@ -1 +1 @@\n-old\n+new\n`;
+function patch(header: string): string {
+    return `diff --git a/x b/x\n${header}\n@@ -1 +1 @@\n-old\n+new\n`;
+}
 
 describe('what a file of a commit went through', () => {
     test('the daemon says so', () => {

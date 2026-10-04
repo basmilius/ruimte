@@ -21,7 +21,7 @@ export const EMPTY_TARGET: TimelineTarget = { selection: '', row: null, code: nu
  * The rows with the text a reply or a thought holds now. Rows are derived from the structure of a
  * thread, which a delta leaves alone, so a row still carries the text it was derived with.
  */
-export const withCurrentText = (rows: TimelineRow[], items: Record<string, ChatItem> | undefined): TimelineRow[] => {
+export function withCurrentText(rows: TimelineRow[], items: Record<string, ChatItem> | undefined): TimelineRow[] {
     if (!items) {
         return rows;
     }
@@ -35,10 +35,10 @@ export const withCurrentText = (rows: TimelineRow[], items: Record<string, ChatI
         }
         return row;
     });
-};
+}
 
 /* The row a click landed in is the one whose id it sits under; the rest comes from the same walk up. */
-export const readTimelineTarget = (element: HTMLElement, scroller: HTMLElement | null, rows: TimelineRow[]): TimelineTarget => {
+export function readTimelineTarget(element: HTMLElement, scroller: HTMLElement | null, rows: TimelineRow[]): TimelineTarget {
     const id = element.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
     const file = element.closest<HTMLElement>('[data-file-path]');
     const line = Number(file?.dataset.fileLine);
@@ -49,4 +49,4 @@ export const readTimelineTarget = (element: HTMLElement, scroller: HTMLElement |
         path: file?.dataset.filePath ?? null,
         line: Number.isFinite(line) && line > 0 ? line : null
     };
-};
+}

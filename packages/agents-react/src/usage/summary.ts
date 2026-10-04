@@ -17,7 +17,7 @@ export interface ProviderTotal {
 }
 
 /* Three or four round numbers up the side. The one piece of arithmetic a chart library would bring. */
-export const niceScale = (max: number, ticks = 4): { max: number; step: number } => {
+export function niceScale(max: number, ticks = 4): { max: number; step: number } {
     if (!Number.isFinite(max) || max <= 0) {
         return { max: 1, step: 1 };
     }
@@ -26,7 +26,7 @@ export const niceScale = (max: number, ticks = 4): { max: number; step: number }
     const normalized = rough / magnitude;
     const step = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
     return { max: Math.ceil(max / step) * step, step };
-};
+}
 
 export interface DerivedUsage {
     slots: ChartSlot[];
@@ -38,13 +38,15 @@ export interface DerivedUsage {
     cacheSavingsUsd: number;
 }
 
-const pad = (value: number): string => String(value).padStart(2, '0');
+function pad(value: number): string {
+    return String(value).padStart(2, '0');
+}
 
 /*
  * Every slot the period has, whether anything happened in it or not: an empty day keeps its place on
  * the axis, so a gap in the work reads as a gap and not as a shorter week.
  */
-export const enumerateSlots = (summary: Pick<UsageSummaryResult, 'from' | 'to' | 'resolution'>): string[] => {
+export function enumerateSlots(summary: Pick<UsageSummaryResult, 'from' | 'to' | 'resolution'>): string[] {
     if (summary.resolution === 'hour') {
         return Array.from({ length: 24 }, (_, hour) => `${summary.to}T${pad(hour)}`);
     }
@@ -57,16 +59,18 @@ export const enumerateSlots = (summary: Pick<UsageSummaryResult, 'from' | 'to' |
         at.setDate(at.getDate() + 1);
     }
     return slots;
-};
+}
 
 /* How often an x label fits: every third hour, every day, every week, every fortnight. */
-export const labelEveryFor = (slots: number): number => (slots <= 10 ? 1 : slots <= 24 ? 3 : slots <= 31 ? 7 : 15);
+export function labelEveryFor(slots: number): number {
+    return slots <= 10 ? 1 : slots <= 24 ? 3 : slots <= 31 ? 7 : 15;
+}
 
 /*
  * The buckets folded into what the page draws. The daemon sends one bucket per slot, provider and
  * model, which is the smallest thing every part of the page can be summed out of.
  */
-export const deriveUsage = (summary: UsageSummaryResult, metric: UsageMetric): DerivedUsage => {
+export function deriveUsage(summary: UsageSummaryResult, metric: UsageMetric): DerivedUsage {
     const bySlot = new Map<string, ChartSlot>();
     for (const slot of enumerateSlots(summary)) {
         bySlot.set(slot, { slot, byProvider: {}, total: 0 });
@@ -101,7 +105,7 @@ export const deriveUsage = (summary: UsageSummaryResult, metric: UsageMetric): D
         costUsd,
         cacheSavingsUsd
     };
-};
+}
 
 /* One row of the Day table, what each provider cost that day, and what the day moved in all. */
 export interface UsageDay {
@@ -118,7 +122,7 @@ export interface UsageDay {
  * happened in is left out, since the chart already shows the gap, and a quiet fortnight would otherwise
  * be fourteen rows of zeroes between the days worth reading.
  */
-export const deriveDays = (summary: UsageSummaryResult): UsageDay[] => {
+export function deriveDays(summary: UsageSummaryResult): UsageDay[] {
     const rows = new Map<string, UsageDay>();
     for (const bucket of summary.buckets) {
         const day = bucket.slot.slice(0, 10);
@@ -130,4 +134,4 @@ export const deriveDays = (summary: UsageSummaryResult): UsageDay[] => {
         rows.set(day, row);
     }
     return [...rows.values()].sort((a, b) => b.slot.localeCompare(a.slot));
-};
+}

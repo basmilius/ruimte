@@ -11,17 +11,19 @@ import {
     type Endpoint
 } from './endpoints';
 
-const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}:4210`,
-    wsBaseUrl: `ws://${id}:4210`,
-    reachability: 'lan',
-    daemonId: id,
-    daemonPublicKey: null,
-    pairedBy: 'statement',
-    ...overrides
-});
+function row(id: string, overrides: Partial<Endpoint> = {}): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}:4210`,
+        wsBaseUrl: `ws://${id}:4210`,
+        reachability: 'lan',
+        daemonId: id,
+        daemonPublicKey: null,
+        pairedBy: 'statement',
+        ...overrides
+    };
+}
 
 describe('endpoints', () => {
     test('the row for this machine says what the machine is, and falls back to saying nothing more', () => {

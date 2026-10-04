@@ -40,7 +40,7 @@ const NAMED: Readonly<Record<string, keyof typeof KeyCode>> = {
     ArrowDown: 'DownArrow'
 };
 
-const codeOf = (key: string): keyof typeof KeyCode | null => {
+function codeOf(key: string): keyof typeof KeyCode | null {
     if (/^[A-Z]$/.test(key)) {
         return `Key${key}` as keyof typeof KeyCode;
     }
@@ -51,14 +51,14 @@ const codeOf = (key: string): keyof typeof KeyCode | null => {
         return key as keyof typeof KeyCode;
     }
     return NAMED[key] ?? null;
-};
+}
 
 /*
  * The Monaco keybinding a shortcut is, or null for one Monaco cannot name the same way (`+`, `-` and
  * `=` are matched on the character, which sits on another key per layout). Monaco's `CtrlCmd` is the
  * client's `mod`; the physical Ctrl and Meta swap between it and `WinCtrl` by platform.
  */
-export const monacoKeyOf = (chord: KeyChord, apple: boolean): MonacoKey | null => {
+export function monacoKeyOf(chord: KeyChord, apple: boolean): MonacoKey | null {
     const code = codeOf(chord.key);
     if (code === null) {
         return null;
@@ -77,4 +77,4 @@ export const monacoKeyOf = (chord: KeyChord, apple: boolean): MonacoKey | null =
         modifiers.add('Shift');
     }
     return { modifiers: [...modifiers], code };
-};
+}

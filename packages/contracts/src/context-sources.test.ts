@@ -3,16 +3,18 @@ import { deriveContextSources, deriveProjectContextSources } from './context-sou
 import type { ContextSource } from './context.ts';
 import type { ProjectNode, ProjectView } from './project.ts';
 
-const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode => ({
-    id,
-    kind,
-    title: id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 100,
-    ...extra
-});
+function node(id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode {
+    return {
+        id,
+        kind,
+        title: id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        ...extra
+    };
+}
 
 describe('deriveContextSources', () => {
     const nodes = {

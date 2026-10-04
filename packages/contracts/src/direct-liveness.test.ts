@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ChannelLiveness, directPingFrame } from './direct-liveness.ts';
 
-const setup = () => {
+function setup() {
     let clock = 0;
     const pings: string[] = [];
     let dead = 0;
@@ -23,7 +23,7 @@ const setup = () => {
             liveness.tick();
         }
     };
-};
+}
 
 describe('ChannelLiveness', () => {
     test('a connection that keeps talking is never pinged', () => {

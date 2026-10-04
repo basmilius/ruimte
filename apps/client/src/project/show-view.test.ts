@@ -3,15 +3,17 @@ import type { ProjectView } from '@ruimte/contracts';
 
 import { callerName, showViewNotice } from './show-view';
 
-const canvas = (id: string, nodes: { id: string; title: string }[]): ProjectView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes: nodes.map((node) => ({ ...node, kind: 'terminal' as const, x: 0, y: 0, w: 100, h: 80 })),
-    texts: [],
-    edges: [],
-    layouts: []
-});
+function canvas(id: string, nodes: { id: string; title: string }[]): ProjectView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes: nodes.map((node) => ({ ...node, kind: 'terminal' as const, x: 0, y: 0, w: 100, h: 80 })),
+        texts: [],
+        edges: [],
+        layouts: []
+    };
+}
 
 describe('callerName', () => {
     const views: ProjectView[] = [canvas('main', [{ id: 'term-1', title: 'Refactor' }]), { kind: 'chat', id: 'chat-1', name: 'Planner', node: {} }];

@@ -8,8 +8,9 @@ import type { DeliverWaitingEntry, TaskWork } from './task-work.ts';
 /* What a child waits on: an answer anyone may give, or an approval only a person gives. */
 export type WaitingRequest = ChatQuestionItem | ChatApprovalItem;
 
-export const isPendingRequest = (item: ChatItem | null | undefined): item is WaitingRequest =>
-    (item?.kind === 'question' && item.state === 'pending') || (item?.kind === 'approval' && item.decision === 'pending');
+export function isPendingRequest(item: ChatItem | null | undefined): item is WaitingRequest {
+    return (item?.kind === 'question' && item.state === 'pending') || (item?.kind === 'approval' && item.decision === 'pending');
+}
 
 /* What the chats of agent nodes ask and wait on, which a verb such as `answer` reaches. */
 export interface ChatRequests {
@@ -22,26 +23,30 @@ export interface ChatRequests {
 }
 
 /* Read off the chats the host has loaded: a chat nobody loaded since a restart waits on nothing. */
-export const chatRequests = (chats: Pick<ChatCore, 'get' | 'answer'>): ChatRequests => ({
-    request: (nodeId, requestId) => {
-        // The projector writes each under the kind it is.
-        const thread = chats.get(nodeId)?.thread;
-        const item = thread?.get(`question-${requestId}`) ?? thread?.get(`approval-${requestId}`);
-        return item?.kind === 'question' || item?.kind === 'approval' ? item : null;
-    },
-    waiting: (nodeId) => (chats.get(nodeId)?.thread.list() ?? []).filter(isPendingRequest),
-    answer: (nodeId, requestId, answers) => {
-        try {
-            chats.answer(nodeId, requestId, answers);
-            return true;
-        } catch {
-            return false;
+export function chatRequests(chats: Pick<ChatCore, 'get' | 'answer'>): ChatRequests {
+    return {
+        request: (nodeId, requestId) => {
+            // The projector writes each under the kind it is.
+            const thread = chats.get(nodeId)?.thread;
+            const item = thread?.get(`question-${requestId}`) ?? thread?.get(`approval-${requestId}`);
+            return item?.kind === 'question' || item?.kind === 'approval' ? item : null;
+        },
+        waiting: (nodeId) => (chats.get(nodeId)?.thread.list() ?? []).filter(isPendingRequest),
+        answer: (nodeId, requestId, answers) => {
+            try {
+                chats.answer(nodeId, requestId, answers);
+                return true;
+            } catch {
+                return false;
+            }
         }
-    }
-});
+    };
+}
 
 /* The id of the note one request of one child leaves in its parent, so delivering it twice leaves one. */
-export const waitingNoteId = (childId: string, requestId: string): string => `waiting-${childId}-${requestId}`;
+export function waitingNoteId(childId: string, requestId: string): string {
+    return `waiting-${childId}-${requestId}`;
+}
 
 /*
  * How long a request may wait before its parent hears of it. A person watching the child settles one
@@ -103,25 +108,27 @@ export class WaitingObserver {
     }
 }
 
-const quoted = (text: string): string => JSON.stringify(text.replace(/\s+/g, ' ').trim());
+function quoted(text: string): string {
+    return JSON.stringify(text.replace(/\s+/g, ' ').trim());
+}
 
 /* The one line a note shows before "Show more": a question longer than that is read in the node. */
 const NOTE_QUESTION_LENGTH = 200;
 
-const quotedShort = (text: string): string => {
+function quotedShort(text: string): string {
     const line = text.replace(/\s+/g, ' ').trim();
     return JSON.stringify(line.length > NOTE_QUESTION_LENGTH ? `${clipText(line, NOTE_QUESTION_LENGTH - 1)}…` : line);
-};
+}
 
 /* One question as the parent's CLI reads it, with the choices it may pick from. */
-const questionLine = (question: ChatQuestionItem['questions'][number]): string => {
+function questionLine(question: ChatQuestionItem['questions'][number]): string {
     const choices = question.choices.map((choice) => (choice.description === '' ? choice.label : `${choice.label} (${choice.description})`));
     const how =
         choices.length === 0
             ? 'answer in your own words'
             : `choices: ${choices.join(' | ')}; ${question.multiSelect ? 'pick one or more' : 'pick one'}, or answer in your own words`;
     return `- question ${question.id}: ${quoted(question.question)} (${how})`;
-};
+}
 
 /*
  * The words a host speaks in: its name, at the head of what a parent's CLI hears, and the command an
@@ -133,20 +140,20 @@ export interface WaitingWords {
 }
 
 /* The call that answers it, in the shape the verb takes for this many questions. */
-const answerCall = (cli: string, childId: string, item: ChatQuestionItem): string => {
+function answerCall(cli: string, childId: string, item: ChatQuestionItem): string {
     if (item.questions.length === 1) {
         const multi = item.questions[0]!.multiSelect ? ', several labels in one --answer separated by a comma' : '';
         return `${cli} answer ${childId} ${item.requestId} --answer '<a choice label as written, or your own words>'${multi}`;
     }
     const shape = Object.fromEntries(item.questions.map((question) => [question.id, '...']));
     return `${cli} answer ${childId} ${item.requestId} --answers '${JSON.stringify(shape)}', one answer per question id`;
-};
+}
 
 /*
  * What the parent's thread shows and what its CLI hears, from one request of one child. The note's
  * first line is what a person sees at a glance; under it, what the CLI hears in front of its next turn.
  */
-export const waitingTexts = (child: { id: string; title: string }, item: WaitingRequest, words: WaitingWords): { note: string; preamble: string } => {
+export function waitingTexts(child: { id: string; title: string }, item: WaitingRequest, words: WaitingWords): { note: string; preamble: string } {
     const who = `${child.title} (node ${child.id})`;
     if (item.kind === 'approval') {
         const what = item.description === null ? item.toolName : `${item.toolName}: ${item.description}`;
@@ -170,7 +177,7 @@ export const waitingTexts = (child: { id: string; title: string }, item: Waiting
             ...how
         ].join('\n')
     };
-};
+}
 
 export interface DeliverWaitingDeps {
     request: ChatRequests['request'];
@@ -183,9 +190,8 @@ export interface DeliverWaitingDeps {
  * Leaves the note in the parent, once. A request that no longer waits (answered, allowed, taken back
  * by its CLI, or cancelled by a restart) is news about nothing, so it says nothing.
  */
-export const deliverWaitingHandler =
-    (deps: DeliverWaitingDeps) =>
-    async (entry: DeliverWaitingEntry): Promise<OutboxOutcome> => {
+export function deliverWaitingHandler(deps: DeliverWaitingDeps) {
+    return async (entry: DeliverWaitingEntry): Promise<OutboxOutcome> => {
         const { childId, requestId } = entry.payload;
         const item = deps.request(childId, requestId);
         if (!isPendingRequest(item)) {
@@ -194,3 +200,4 @@ export const deliverWaitingHandler =
         const texts = waitingTexts({ id: childId, title: deps.titleFor(childId) ?? childId }, item, deps.words);
         await deps.deliver(entry.target, { noteId: waitingNoteId(childId, requestId), ...texts });
     };
+}

@@ -1,12 +1,14 @@
 import type { EditorState, TransactionSpec } from '@codemirror/state';
 
-const isSpace = (text: string): boolean => /^\s/.test(text);
+function isSpace(text: string): boolean {
+    return /^\s/.test(text);
+}
 
 /*
  * Text an app puts in the draft, over the selection, as if it were typed there. A space keeps it apart
  * from a word it would touch, and one after it at the end of the text lets the person type on.
  */
-export const insertAtSelection = (state: EditorState, text: string): TransactionSpec => {
+export function insertAtSelection(state: EditorState, text: string): TransactionSpec {
     if (text === '') {
         return {};
     }
@@ -17,4 +19,4 @@ export const insertAtSelection = (state: EditorState, text: string): Transaction
     const trail = (after === '' || !isSpace(after)) && !/\s$/.test(text) ? ' ' : '';
     const insert = `${lead}${text}${trail}`;
     return { changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true, userEvent: 'input' };
-};
+}

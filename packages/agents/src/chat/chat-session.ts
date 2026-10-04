@@ -112,9 +112,13 @@ export interface ResumeWords {
 }
 
 /* One per limited turn, so a second fork of the same turn writes no second note. */
-const continuedNoteId = (turnId: string): string => `continued-${turnId}`;
+function continuedNoteId(turnId: string): string {
+    return `continued-${turnId}`;
+}
 
-const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function newId(prefix: string): string {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 /*
  * Item and request ids carry the generation of the CLI that made them, and a restart of the host
@@ -122,13 +126,14 @@ const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random
  * the ones before it, as long as it handed out fewer than one per millisecond it ran.
  */
 let lastGeneration = Date.now();
-const nextGeneration = (): number => {
+function nextGeneration(): number {
     lastGeneration = Math.max(lastGeneration + 1, Date.now());
     return lastGeneration;
-};
+}
 
-const sameFolders = (first: readonly string[], second: readonly string[]): boolean =>
-    first.length === second.length && first.every((folder, i) => folder === second[i]);
+function sameFolders(first: readonly string[], second: readonly string[]): boolean {
+    return first.length === second.length && first.every((folder, i) => folder === second[i]);
+}
 
 /*
  * Provider-neutral chat state. Backends live between turns and resume by CLI session id after a
@@ -1697,7 +1702,7 @@ export interface ResumeDecision {
 }
 
 // Whatever was open when the host went down: nobody is going to answer it now.
-const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem => {
+function settleStoredItem(item: ChatItem, resumeTurnId: string | null): ChatItem {
     if (item.kind === 'assistant' && item.streaming) {
         return { ...item, streaming: false };
     }
@@ -1715,4 +1720,4 @@ const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem
         return { ...item, state: 'aborted', endedAt: item.endedAt ?? item.createdAt };
     }
     return item;
-};
+}

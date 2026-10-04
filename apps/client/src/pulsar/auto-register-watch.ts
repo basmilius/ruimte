@@ -19,7 +19,7 @@ export const useRegistrationFailures = create<{ byMachine: Record<string, string
  * itself change, and once more when
  * the earliest machine that failed may be asked again.
  */
-export const startAutoRegistration = (): (() => void) => {
+export function startAutoRegistration(): () => void {
     const registrar = new AutoRegistrar({
         sign: async (endpointId, accountId) => {
             const link = transportFor(endpointId);
@@ -152,4 +152,4 @@ export const startAutoRegistration = (): (() => void) => {
             clearTimeout(retryTimer);
         }
     };
-};
+}

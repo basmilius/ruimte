@@ -3,19 +3,22 @@ import { useEndingAgents } from '@/agents/end-children';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { createCanvasStore, type CanvasNode } from '@/state/canvas';
 
-const node = (id: string, kind: CanvasNode['kind'], x: number): CanvasNode => ({ id, kind, title: id === 'lead' ? 'Lead' : id, x, y: 0, w: 200, h: 100 });
+function node(id: string, kind: CanvasNode['kind'], x: number): CanvasNode {
+    return { id, kind, title: id === 'lead' ? 'Lead' : id, x, y: 0, w: 200, h: 100 };
+}
 
 /* A canvas holding these nodes, loaded the way a view opens. */
-const canvasWith = (...nodes: CanvasNode[]) => {
+function canvasWith(...nodes: CanvasNode[]) {
     const store = createCanvasStore();
     store.getState().loadView({ kind: 'canvas', id: 'view', name: 'Canvas', nodes, texts: [], edges: [], layouts: [] }, null);
     return store;
-};
+}
 
-const machine = (children: Record<string, string[]>) =>
-    ({
+function machine(children: Record<string, string[]>) {
+    return {
         request: async (_type: string, payload: { nodeId: string }) => ({ nodeIds: children[payload.nodeId] ?? [] })
-    }) as never;
+    } as never;
+}
 
 beforeEach(() => {
     useEndingAgents.setState({ pending: null });

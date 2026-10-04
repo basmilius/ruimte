@@ -42,5 +42,9 @@ export const LIVE_VOICES = ['marin', 'cedar'] as const;
 export type VoiceLanguage = (typeof VOICE_LANGUAGES)[number]['id'];
 export type LiveVoice = (typeof LIVE_VOICES)[number];
 
-export const isVoiceLanguage = (value: unknown): value is VoiceLanguage => VOICE_LANGUAGES.some((language) => language.id === value);
-export const isLiveVoice = (value: unknown): value is LiveVoice => LIVE_VOICES.some((voice) => voice === value);
+export function isVoiceLanguage(value: unknown): value is VoiceLanguage {
+    return VOICE_LANGUAGES.some((language) => language.id === value);
+}
+export function isLiveVoice(value: unknown): value is LiveVoice {
+    return LIVE_VOICES.some((voice) => voice === value);
+}

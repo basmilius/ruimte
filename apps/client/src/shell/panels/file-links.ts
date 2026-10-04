@@ -95,7 +95,7 @@ const TRAILING_PUNCTUATION = /[.,;:!?]+$/;
 
 /* `path:42`, `path:42:7` and `path#L42` all name a line; the column is read and dropped, since the
    viewer scrolls to lines. */
-const parseLineSuffix = (text: string): { path: string; line?: number } => {
+function parseLineSuffix(text: string): { path: string; line?: number } {
     const hash = /^(.+?)#L(\d+)$/.exec(text);
     if (hash) {
         return { path: hash[1]!, line: Number(hash[2]) };
@@ -105,17 +105,19 @@ const parseLineSuffix = (text: string): { path: string; line?: number } => {
         return { path: colon[1]!, line: Number(colon[2]) };
     }
     return { path: text };
-};
+}
 
 /* A name that is nothing but a dot and one word is a dotfile (`.env`, `.gitignore`), not an extension. */
-const isDotfile = (name: string): boolean => name.length > 1 && name.startsWith('.') && !name.slice(1).includes('.');
+function isDotfile(name: string): boolean {
+    return name.length > 1 && name.startsWith('.') && !name.slice(1).includes('.');
+}
 
 /*
  * The file an agent wrote down, or null where the text is just text. Text becomes a link on its
  * shape alone: nothing here asks the daemon whether the file is there, since a read costs a whole
  * file and the viewer already says so when it cannot open one.
  */
-export const parseFileRef = (text: string): FileRef | null => {
+export function parseFileRef(text: string): FileRef | null {
     const token = text.trim().replace(TRAILING_PUNCTUATION, '');
     // A home-relative path resolves on the daemon's machine and against a home this side cannot name.
     if (token === '' || token.startsWith('~') || NOT_IN_A_PATH.test(token) || URL_SCHEME.test(token)) {
@@ -135,21 +137,21 @@ export const parseFileRef = (text: string): FileRef | null => {
     const separated = /[\\/]/.test(normalized);
     const known = isDotfile(name) || EXTENSIONLESS_FILES.has(name.toLowerCase()) || (extension !== undefined && (separated || FILE_EXTENSIONS.has(extension)));
     return known ? { path: normalized, ...(line === undefined ? {} : { line }), directory: false } : null;
-};
+}
 
 /* Where the file sits on the daemon's machine, or null when only a folder would say and none is known. */
-export const resolveFileRef = (cwd: string | null, ref: FileRef): string | null => {
+export function resolveFileRef(cwd: string | null, ref: FileRef): string | null {
     if (isAbsolutePath(ref.path)) {
         return ref.path.replace(/[\\/]+$/, '') || ref.path;
     }
     return cwd === null ? null : absoluteOf(cwd, ref.path);
-};
+}
 
 /*
  * A reference followed: a file opens as a tab in the preview, a folder is brought into view in the
  * files panel, which is the only one of the two that can draw a directory.
  */
-export const openFileLink = async (cwd: string | null, ref: FileRef): Promise<void> => {
+export async function openFileLink(cwd: string | null, ref: FileRef): Promise<void> {
     const path = resolveFileRef(cwd, ref);
     if (path === null) {
         return;
@@ -159,4 +161,4 @@ export const openFileLink = async (cwd: string | null, ref: FileRef): Promise<vo
         return;
     }
     await runAsPerson('file.preview', { path, line: ref.line ?? null });
-};
+}

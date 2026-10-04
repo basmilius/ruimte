@@ -29,9 +29,9 @@ export interface ClientConnection {
     sendBinary?(frame: Uint8Array): void;
 }
 
-export const sendEvent = <E extends EventType>(client: ClientConnection, event: E, payload: EventMap[E]): void => {
+export function sendEvent<E extends EventType>(client: ClientConnection, event: E, payload: EventMap[E]): void {
     client.send({ type: 'event', event, payload });
-};
+}
 
 /* A result that goes out as one binary frame, which only a handler whose client has `sendBinary` hands back. */
 export class BinaryReply {
@@ -54,8 +54,8 @@ export class RequestError extends CodedError {}
  * What a handler runs its work through: a failure that carries a code answers under it, and anything
  * else stays an internal error for the dispatcher to report.
  */
-export const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
+export function translate<T>(work: () => T | Promise<T>): Promise<T> {
+    return Promise.resolve()
         .then(work)
         .catch((e: unknown) => {
             if (e instanceof CodedError) {
@@ -63,12 +63,15 @@ export const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             }
             throw e;
         });
+}
 
-const errorReply = (id: string | null, code: string, message: string): ReplyError => ({
-    id,
-    ok: false,
-    error: { code, message }
-});
+function errorReply(id: string | null, code: string, message: string): ReplyError {
+    return {
+        id,
+        ok: false,
+        error: { code, message }
+    };
+}
 
 export class Dispatcher {
     private readonly handlers = new Map<RequestType, Handler<RequestType>>();

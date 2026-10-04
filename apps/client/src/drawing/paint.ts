@@ -37,8 +37,8 @@ interface CachedPaths {
  * Everything about an element that changes the shape of its paths. Moving it does not: the paths
  * are drawn in the element's own frame, so a drag repaints without asking rough for anything.
  */
-const shapeKey = (element: DrawingElement): string =>
-    JSON.stringify([
+function shapeKey(element: DrawingElement): string {
+    return JSON.stringify([
         element.kind,
         Math.round(element.w),
         Math.round(element.h),
@@ -53,11 +53,12 @@ const shapeKey = (element: DrawingElement): string =>
         'arrowStart' in element ? element.arrowStart : null,
         'arrowEnd' in element ? element.arrowEnd : null
     ]);
+}
 
 const cache = new Map<string, CachedPaths>();
 
 /* The paths of an element, made once per shape. Rough is deterministic per seed, so this is safe. */
-const pathsOf = (element: DrawingElement): CachedPaths['paths'] => {
+function pathsOf(element: DrawingElement): CachedPaths['paths'] {
     const key = shapeKey(element);
     const known = cache.get(element.id);
     if (known && known.key === key) {
@@ -66,57 +67,63 @@ const pathsOf = (element: DrawingElement): CachedPaths['paths'] => {
     const paths = pathsOfElement(element).map((path) => ({ ...path, path: new Path2D(path.d) }));
     cache.set(element.id, { key, paths });
     return paths;
-};
+}
 
 /* Frees what a drawing left behind; called when another one is loaded. */
-export const clearPathCache = (): void => cache.clear();
+export function clearPathCache(): void {
+    return cache.clear();
+}
 
-export const fontOfElement = (element: WrittenElement, fonts: Record<DrawingFont, string>): string => `${element.size}px ${fonts[fontOf(element.font)]}`;
+export function fontOfElement(element: WrittenElement, fonts: Record<DrawingFont, string>): string {
+    return `${element.size}px ${fonts[fontOf(element.font)]}`;
+}
 
 let scratch: CanvasRenderingContext2D | null = null;
 
-const scratchContext = (): CanvasRenderingContext2D | null => {
+function scratchContext(): CanvasRenderingContext2D | null {
     if (typeof document === 'undefined') {
         return null;
     }
     scratch ??= document.createElement('canvas').getContext('2d');
     return scratch;
-};
+}
 
 /* The box a text needs, measured off screen: what a text element takes as its width and height. */
-export const textSize = (element: WrittenElement, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
+export function textSize(element: WrittenElement, fonts: Record<DrawingFont, string>): { w: number; h: number } {
     const ctx = scratchContext();
     return ctx ? measureText(ctx, element, fonts) : { w: element.w, h: element.h };
-};
+}
 
 /* A line measure in the element's font, for wrapping the way the screen paints it; null without a DOM. */
-export const measureLineIn = (element: WrittenElement, fonts: Record<DrawingFont, string>): MeasureLine | null => {
+export function measureLineIn(element: WrittenElement, fonts: Record<DrawingFont, string>): MeasureLine | null {
     const ctx = scratchContext();
     if (!ctx) {
         return null;
     }
     ctx.font = fontOfElement(element, fonts);
     return (line) => ctx.measureText(line).width;
-};
+}
 
-const linesOn = (ctx: CanvasRenderingContext2D, element: WrittenElement): string[] => linesOf(element, (line) => ctx.measureText(line).width);
+function linesOn(ctx: CanvasRenderingContext2D, element: WrittenElement): string[] {
+    return linesOf(element, (line) => ctx.measureText(line).width);
+}
 
 /* The box a text needs for the size it is set in; the caller decides what to do with it. */
-export const measureText = (ctx: CanvasRenderingContext2D, element: WrittenElement, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
+export function measureText(ctx: CanvasRenderingContext2D, element: WrittenElement, fonts: Record<DrawingFont, string>): { w: number; h: number } {
     ctx.save();
     ctx.font = fontOfElement(element, fonts);
     const lines = linesOn(ctx, element);
     const w = Math.max(1, ...lines.map((line) => ctx.measureText(line).width));
     ctx.restore();
     return { w: Math.ceil(w), h: Math.ceil(lines.length * element.size * LINE_HEIGHT) };
-};
+}
 
 /*
  * The box a text takes for what it says: the glyphs' own box until the person dragged one, and
  * from then on that width, with the height the wrapped lines come to. Without a DOM (the store's
  * tests) the box stays as it is.
  */
-export const fitTextBox = (element: WrittenElement, text = element.text): { w: number; h: number } => {
+export function fitTextBox(element: WrittenElement, text = element.text): { w: number; h: number } {
     if (typeof document === 'undefined') {
         return { w: element.w, h: element.h };
     }
@@ -126,9 +133,9 @@ export const fitTextBox = (element: WrittenElement, text = element.text): { w: n
         return { w: element.w, h: Math.max(element.h, fitted.h + NOTE_PADDING * 2) };
     }
     return element.sized ? { w: element.w, h: fitted.h } : fitted;
-};
+}
 
-const paintText = (ctx: CanvasRenderingContext2D, element: WrittenElement, options: PaintOptions): void => {
+function paintText(ctx: CanvasRenderingContext2D, element: WrittenElement, options: PaintOptions): void {
     ctx.font = fontOfElement(element, options.fonts);
     ctx.fillStyle = options.palette[element.stroke];
     ctx.textAlign = element.align === 'center' ? 'center' : element.align === 'right' ? 'right' : 'left';
@@ -138,9 +145,9 @@ const paintText = (ctx: CanvasRenderingContext2D, element: WrittenElement, optio
     for (const [index, line] of linesOn(ctx, element).entries()) {
         ctx.fillText(line, dx, frame.y + (index + 0.8) * element.size * LINE_HEIGHT);
     }
-};
+}
 
-export const paintElement = (ctx: CanvasRenderingContext2D, element: DrawingElement, options: PaintOptions): void => {
+export function paintElement(ctx: CanvasRenderingContext2D, element: DrawingElement, options: PaintOptions): void {
     ctx.save();
     ctx.globalAlpha = options.fading?.has(element.id) ? FADED : 1;
     ctx.translate(element.x, element.y);
@@ -187,26 +194,28 @@ export const paintElement = (ctx: CanvasRenderingContext2D, element: DrawingElem
         paintText(ctx, element, options);
     }
     ctx.restore();
-};
+}
 
-export const paintElements = (ctx: CanvasRenderingContext2D, elements: readonly DrawingElement[], options: PaintOptions): void => {
+export function paintElements(ctx: CanvasRenderingContext2D, elements: readonly DrawingElement[], options: PaintOptions): void {
     for (const element of elements) {
         paintElement(ctx, element, options);
     }
-};
+}
 
 /* What the painter needs from the theme right now, for a caller that has no reason to know more. */
-export const paintOptions = (): Pick<PaintOptions, 'palette' | 'paper' | 'edge' | 'fonts'> => ({
-    palette: readPalette(),
-    paper: readPaper(),
-    edge: readEdge(),
-    fonts: readFontStacks()
-});
+export function paintOptions(): Pick<PaintOptions, 'palette' | 'paper' | 'edge' | 'fonts'> {
+    return {
+        palette: readPalette(),
+        paper: readPaper(),
+        edge: readEdge(),
+        fonts: readFontStacks()
+    };
+}
 
 /*
  * Puts the camera on a context: world units in, device pixels out, so every element paints in the
  * coordinates it is stored in.
  */
-export const applyCamera = (ctx: CanvasRenderingContext2D, camera: { x: number; y: number; zoom: number }, dpr: number): void => {
+export function applyCamera(ctx: CanvasRenderingContext2D, camera: { x: number; y: number; zoom: number }, dpr: number): void {
     ctx.setTransform(camera.zoom * dpr, 0, 0, camera.zoom * dpr, camera.x * dpr, camera.y * dpr);
-};
+}

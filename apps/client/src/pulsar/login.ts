@@ -29,12 +29,12 @@ export interface SignInOptions {
  * system browser, and the redirect checked against the state. Answers the code with the verifier and
  * the redirect it belongs to, for whichever route trades it.
  */
-const loginInBrowser = async (options: {
+async function loginInBrowser(options: {
     redirect: LoginRedirect;
     addressBookUrl: string;
     provider: ProviderId;
     link?: string;
-}): Promise<IdentityLinkCompletePayload> => {
+}): Promise<IdentityLinkCompletePayload> {
     const pkce = await createPkce();
     const state = createLoginState();
     const { redirectUri } = await options.redirect.listen();
@@ -55,13 +55,13 @@ const loginInBrowser = async (options: {
     }
     const code = codeFromCallback(await options.redirect.callback(), state);
     return { code, codeVerifier: pkce.verifier, redirectUri };
-};
+}
 
 /* Signing in: the code is traded by the keeper, which keeps the refresh token that comes back. */
-export const signIn = async (options: SignInOptions): Promise<SessionView> => {
+export async function signIn(options: SignInOptions): Promise<SessionView> {
     const login = await loginInBrowser({ redirect: options.redirect, addressBookUrl: options.addressBookUrl, provider: options.provider ?? 'github' });
     return options.keeper.exchange({ ...login, label: clipText(options.label, 80) });
-};
+}
 
 export interface LinkIdentityOptions<T> {
     redirect: LoginRedirect;
@@ -74,7 +74,7 @@ export interface LinkIdentityOptions<T> {
 }
 
 /* Adding a provider to the signed-in account: the same login, started with a link token and ended with the session rather than the keeper. */
-export const linkIdentity = async <T>(options: LinkIdentityOptions<T>): Promise<T> => {
+export async function linkIdentity<T>(options: LinkIdentityOptions<T>): Promise<T> {
     const link = await options.requestLink();
     return options.complete(await loginInBrowser({ redirect: options.redirect, addressBookUrl: options.addressBookUrl, provider: options.provider, link }));
-};
+}

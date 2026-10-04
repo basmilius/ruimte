@@ -15,22 +15,24 @@ let store: AttachmentStore;
 let png: ChatAttachment;
 let zip: ChatAttachment;
 
-const lookup = (chatId: string, id: string): ChatAttachment | null => {
+function lookup(chatId: string, id: string): ChatAttachment | null {
     if (chatId !== 'node-1') {
         return null;
     }
     return [png, zip].find((attachment) => attachment.id === id) ?? null;
-};
+}
 
-const ask = (chatId: string, id: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
+function ask(chatId: string, id: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> {
     const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/${encodeURIComponent(chatId)}/${id}`);
     return handleAttachmentRequest(new Request(url, asLocal(init)), url, remote, OPTIONS, lookup);
-};
+}
 // Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
-const asLocal = (init?: RequestInit): RequestInit => ({
-    ...init,
-    headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
-});
+function asLocal(init?: RequestInit): RequestInit {
+    return {
+        ...init,
+        headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
+    };
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-attach-route-'));

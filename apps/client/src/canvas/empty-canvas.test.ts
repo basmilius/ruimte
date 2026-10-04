@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import type { ProjectView, ProviderInfo } from '@ruimte/contracts';
 import { emptyCanvasSections, emptyCanvasSize, type EmptyCanvasInput } from './empty-canvas';
 
-const provider = (kind: ProviderInfo['kind'], patch: { installed?: boolean; chat?: boolean; terminal?: boolean } = {}): ProviderInfo =>
-    ({
+function provider(kind: ProviderInfo['kind'], patch: { installed?: boolean; chat?: boolean; terminal?: boolean } = {}): ProviderInfo {
+    return {
         kind,
         name: kind,
         installed: patch.installed ?? true,
@@ -12,18 +12,23 @@ const provider = (kind: ProviderInfo['kind'], patch: { installed?: boolean; chat
         defaultModel: null,
         capabilities: { chat: patch.chat ?? true, terminal: patch.terminal ?? true },
         resumeCommand: ''
-    }) as unknown as ProviderInfo;
+    } as unknown as ProviderInfo;
+}
 
-const input = (patch: Partial<EmptyCanvasInput> = {}): EmptyCanvasInput => ({
-    providers: [],
-    loaded: true,
-    hasFolder: false,
-    layouts: [],
-    views: [],
-    ...patch
-});
+function input(patch: Partial<EmptyCanvasInput> = {}): EmptyCanvasInput {
+    return {
+        providers: [],
+        loaded: true,
+        hasFolder: false,
+        layouts: [],
+        views: [],
+        ...patch
+    };
+}
 
-const ids = (tiles: { id: string }[]): string[] => tiles.map((tile) => tile.id);
+function ids(tiles: { id: string }[]): string[] {
+    return tiles.map((tile) => tile.id);
+}
 
 describe('the tiles of an empty canvas', () => {
     test('an agent that is installed gets a tile per kind of node it runs in, and the chat with a model picker stays beside them', () => {

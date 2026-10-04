@@ -5,34 +5,42 @@ import { AutoRegistrar, REGISTER_RETRY_MAX_MS, REGISTER_RETRY_MIN_MS, announcedR
 
 const KEY = 'A'.repeat(43);
 
-const registrationFor = (machineId: string): RegisterMachinePayload => ({
-    id: machineId,
-    name: machineId,
-    icon: null,
-    publicKey: KEY,
-    issuedAt: 0,
-    signature: 'S'.repeat(86)
-});
+function registrationFor(machineId: string): RegisterMachinePayload {
+    return {
+        id: machineId,
+        name: machineId,
+        icon: null,
+        publicKey: KEY,
+        issuedAt: 0,
+        signature: 'S'.repeat(86)
+    };
+}
 
-const recordOf = (overrides: Partial<MachineRecord> = {}): MachineRecord => ({
-    name: 'Studio',
-    icon: { kind: 'lucide', value: 'server' },
-    brokerUrl: null,
-    publicKey: KEY,
-    ...overrides
-});
+function recordOf(overrides: Partial<MachineRecord> = {}): MachineRecord {
+    return {
+        name: 'Studio',
+        icon: { kind: 'lucide', value: 'server' },
+        brokerUrl: null,
+        publicKey: KEY,
+        ...overrides
+    };
+}
 
 const emptyList: AccountList = { records: new Map(), removed: new Set() };
 
-const listWith = (machineId: string, record: MachineRecord): AccountList => ({ records: new Map([[machineId, record]]), removed: new Set() });
+function listWith(machineId: string, record: MachineRecord): AccountList {
+    return { records: new Map([[machineId, record]]), removed: new Set() };
+}
 
 // What a machine answers when it will not sign: the code a transport error carries.
-const refusal = (code: string): Error => Object.assign(new Error(`Refused with ${code}`), { code });
+function refusal(code: string): Error {
+    return Object.assign(new Error(`Refused with ${code}`), { code });
+}
 
-const setup = (
+function setup(
     register: (payload: RegisterMachinePayload) => Promise<void> = async () => undefined,
     sign: (endpointId: string) => Promise<void> = async () => undefined
-) => {
+) {
     let now = 1_000_000;
     const signed: string[] = [];
     const posted: RegisterMachinePayload[] = [];
@@ -57,7 +65,7 @@ const setup = (
             now += ms;
         }
     };
-};
+}
 
 describe('AutoRegistrar', () => {
     test('registers a machine it reaches once, marked automatic, however often it connects', async () => {

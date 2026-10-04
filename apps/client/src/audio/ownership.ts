@@ -3,13 +3,13 @@ import { desktop } from '@/desktop/bridge';
 let owner: { release(): void } | null = null;
 let hearsOtherWindows = false;
 
-const releaseOwner = (): void => {
+function releaseOwner(): void {
     const previous = owner;
     owner = null;
     previous?.release();
-};
+}
 
-export const claimMicrophone = (release: () => void): (() => void) => {
+export function claimMicrophone(release: () => void): () => void {
     releaseOwner();
     const claim = { release };
     owner = claim;
@@ -24,4 +24,4 @@ export const claimMicrophone = (release: () => void): (() => void) => {
             owner = null;
         }
     };
-};
+}

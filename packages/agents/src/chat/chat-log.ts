@@ -20,7 +20,7 @@ const LineSchema = z.object({ seq: z.number().int().positive(), at: z.number(), 
  * The lines of a log as they were written. A line that does not parse is left out: a crash in the
  * middle of an append leaves a torn last line, and what came before it is still good.
  */
-export const parseLog = (raw: string): ChatLogLine[] => {
+export function parseLog(raw: string): ChatLogLine[] {
     const lines: ChatLogLine[] = [];
     for (const text of raw.split('\n')) {
         if (text === '') {
@@ -37,7 +37,7 @@ export const parseLog = (raw: string): ChatLogLine[] => {
         }
     }
     return lines;
-};
+}
 
 export interface ChatLogState {
     // The last seq anything on disk accounts for, the snapshot or the log.

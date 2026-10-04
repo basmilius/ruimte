@@ -38,15 +38,15 @@ blocked.addSubnet('2001:db8::', 32, 'ipv6');
 blocked.addSubnet('2001::', 32, 'ipv6');
 blocked.addSubnet('2002::', 16, 'ipv6');
 
-export const isPublicWebAddress = (address: string): boolean => {
+export function isPublicWebAddress(address: string): boolean {
     const family = isIP(address);
     if (family === 4) {
         return !blocked.check(address, 'ipv4');
     }
     return family === 6 && publicV6.check(address, 'ipv6') && !blocked.check(address, 'ipv6');
-};
+}
 
-export const publicWebUrl = (value: string): URL => {
+export function publicWebUrl(value: string): URL {
     const url = new URL(value);
     if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) {
         throw new Error('Use an HTTP or HTTPS URL without embedded credentials.');
@@ -59,9 +59,9 @@ export const publicWebUrl = (value: string): URL => {
         throw new Error('Private, loopback, and reserved network addresses are unavailable.');
     }
     return url;
-};
+}
 
-export const requestPublicWeb: AppleWebRequest = async (initial, signal, headers = {}) => {
+export async function requestPublicWeb(initial: URL, signal: AbortSignal, headers: Record<string, string> = {}): Promise<AppleWebResponse> {
     let url = publicWebUrl(initial.href);
     for (let redirect = 0; redirect <= 5; redirect++) {
         signal.throwIfAborted();
@@ -124,9 +124,9 @@ export const requestPublicWeb: AppleWebRequest = async (initial, signal, headers
         return { url: url.href, ...response };
     }
     throw new Error('The page redirected more than five times.');
-};
+}
 
-export const limitAppleText = (text: string, bytes = 5200): { text: string; truncated: boolean } => {
+export function limitAppleText(text: string, bytes = 5200): { text: string; truncated: boolean } {
     const buffer = Buffer.from(text);
     if (buffer.length <= bytes) {
         return { text, truncated: false };
@@ -136,9 +136,9 @@ export const limitAppleText = (text: string, bytes = 5200): { text: string; trun
         end--;
     }
     return { text: buffer.subarray(0, end).toString('utf8'), truncated: true };
-};
+}
 
-export const extractApplePage = (page: AppleWebResponse): { title: string; text: string } => {
+export function extractApplePage(page: AppleWebResponse): { title: string; text: string } {
     if (page.status < 200 || page.status >= 300) {
         throw new Error(`The page returned HTTP ${page.status}.`);
     }
@@ -162,4 +162,4 @@ export const extractApplePage = (page: AppleWebResponse): { title: string; text:
         throw new Error('Only text, HTML, JSON, and XML pages are supported.');
     }
     return { title: '', text: page.text.trim() };
-};
+}

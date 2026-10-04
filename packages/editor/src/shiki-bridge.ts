@@ -17,8 +17,9 @@ export interface MonacoLanguages {
 }
 
 /* `@shikijs/monaco` types its theme against `monaco-editor-core`, which is the same editor under another name and not installed here. */
-export const monacoTheme = (highlighter: Highlighter, theme: ShikiTheme): editor.IStandaloneThemeData =>
-    textmateThemeToMonacoTheme(highlighter.getTheme(theme)) as editor.IStandaloneThemeData;
+export function monacoTheme(highlighter: Highlighter, theme: ShikiTheme): editor.IStandaloneThemeData {
+    return textmateThemeToMonacoTheme(highlighter.getTheme(theme)) as editor.IStandaloneThemeData;
+}
 
 interface Grammar {
     /* The Shiki grammar the Monaco language is drawn with. */

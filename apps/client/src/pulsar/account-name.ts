@@ -10,21 +10,28 @@ import { PROVIDER_NAMES, type Account, type Identity, type ProviderId } from '@r
 export const PROVIDER_ORDER: readonly ProviderId[] = ['github', 'apple'];
 
 /* The person's name when a provider told it, else "someone" for a GitHub login, else "your Apple ID". */
-export const accountName = (account: Account): string => account.displayName ?? account.login ?? i18next.t(`machines:account.yours.${account.provider}`);
+export function accountName(account: Account): string {
+    return account.displayName ?? account.login ?? i18next.t(`machines:account.yours.${account.provider}`);
+}
 
 /* The login rather than the name, since the login is what tells one identity from another. */
-export const signedInLabel = (account: Account): string =>
-    account.login === null
+export function signedInLabel(account: Account): string {
+    return account.login === null
         ? i18next.t('machines:account.signedInWithProvider', { provider: PROVIDER_NAMES[account.provider] })
         : i18next.t('machines:account.signedInAsLogin', { login: account.login });
+}
 
 /* The line under an identity's row: its login, or what it is when there is none. */
-export const identityDetail = (identity: Identity): string => identity.login ?? i18next.t(`machines:account.noun.${identity.provider}`);
+export function identityDetail(identity: Identity): string {
+    return identity.login ?? i18next.t(`machines:account.noun.${identity.provider}`);
+}
 
 /* The warning under a signed-in account, naming every identity that opens it. */
-export const takeoverWarning = (providers: readonly ProviderId[]): string => {
+export function takeoverWarning(providers: readonly ProviderId[]): string {
     const names = PROVIDER_ORDER.filter((provider) => providers.includes(provider)).map((provider) => i18next.t(`machines:account.this.${provider}`));
     return i18next.t('machines:account.takeover.warning', { names: names.join(` ${i18next.t('machines:account.takeover.or')} `) });
-};
+}
 
-export const offeredProviders = (listed: readonly string[]): ProviderId[] => PROVIDER_ORDER.filter((provider) => listed.includes(provider));
+export function offeredProviders(listed: readonly string[]): ProviderId[] {
+    return PROVIDER_ORDER.filter((provider) => listed.includes(provider));
+}

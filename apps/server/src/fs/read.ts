@@ -15,7 +15,9 @@ export const SNIFF_BYTES = 8 * 1024;
 const CONTROL_RATIO = 0.1;
 
 /* Tab, newline, carriage return and form feed belong in text; escape does too, since a log full of ANSI is still readable. */
-const isTextControl = (byte: number): boolean => byte === 0x09 || byte === 0x0a || byte === 0x0c || byte === 0x0d || byte === 0x1b;
+function isTextControl(byte: number): boolean {
+    return byte === 0x09 || byte === 0x0a || byte === 0x0c || byte === 0x0d || byte === 0x1b;
+}
 
 /*
  * Whether the head of a file reads as text. A NUL settles it (that is what UTF-16 and every
@@ -23,7 +25,7 @@ const isTextControl = (byte: number): boolean => byte === 0x09 || byte === 0x0a 
  * bytes is the last tell for the formats that pass both. A head cut off at the sniff length can
  * split a multi-byte character in half, so its last three bytes are not evidence of anything.
  */
-export const looksBinary = (bytes: Uint8Array, truncated = false): boolean => {
+export function looksBinary(bytes: Uint8Array, truncated = false): boolean {
     if (bytes.length === 0) {
         return false;
     }
@@ -45,7 +47,7 @@ export const looksBinary = (bytes: Uint8Array, truncated = false): boolean => {
     } catch {
         return true;
     }
-};
+}
 
 const LANGUAGES: Record<string, string> = {
     astro: 'astro',
@@ -118,13 +120,15 @@ const BY_NAME: Record<string, string> = {
 };
 
 /* The highlighter id for a file name, or undefined when nothing here recognizes it. */
-export const languageOf = (name: string): string | undefined => {
+export function languageOf(name: string): string | undefined {
     const lower = name.toLowerCase();
     const dot = lower.lastIndexOf('.');
     return LANGUAGES[dot > 0 ? lower.slice(dot + 1) : ''] ?? BY_NAME[lower];
-};
+}
 
-const baseName = (path: string): string => path.split(/[/\\]/).pop() ?? path;
+function baseName(path: string): string {
+    return path.split(/[/\\]/).pop() ?? path;
+}
 
 // The device and inode say which file was looked at, so a write can tell that file from one swapped in under its name.
 export interface FileStat {
@@ -140,7 +144,7 @@ export interface FileStat {
  * is never walked into one either, so a link inside a folder cannot hand the viewer a file that
  * folder does not hold.
  */
-const statFile = async (path: string): Promise<FileStat> => {
+async function statFile(path: string): Promise<FileStat> {
     if (path.includes('\0') || !isAbsolute(path)) {
         throw new ReadError('bad-path', 'A file is read by its absolute path');
     }
@@ -156,17 +160,19 @@ const statFile = async (path: string): Promise<FileStat> => {
         throw new ReadError('not-a-file', 'That path is not a file');
     }
     return { path: resolved, size: stats.size, mtime: Math.round(stats.mtimeMs), dev: stats.dev, ino: stats.ino };
-};
+}
 
 export const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
-const startsWithBom = (head: Uint8Array): boolean => UTF8_BOM.every((byte, index) => head[index] === byte);
+function startsWithBom(head: Uint8Array): boolean {
+    return UTF8_BOM.every((byte, index) => head[index] === byte);
+}
 
 /*
  * What the head of a file says it is, before anything decides to read the rest of it. A null mime is
  * text. `bom` is whether it opens with a UTF-8 byte order mark, which decoding drops and a save puts back.
  */
-export const inspect = async (path: string): Promise<{ file: FileStat; mime: string | null; bom: boolean }> => {
+export async function inspect(path: string): Promise<{ file: FileStat; mime: string | null; bom: boolean }> {
     const file = await statFile(path);
     const head = new Uint8Array(await Bun.file(file.path).slice(0, SNIFF_BYTES).arrayBuffer());
     const bom = startsWithBom(head);
@@ -178,24 +184,24 @@ export const inspect = async (path: string): Promise<{ file: FileStat; mime: str
         return { file, mime: 'application/octet-stream', bom };
     }
     return { file, mime: looksLikeSvg(head) ? 'image/svg+xml' : null, bom };
-};
+}
 
 /* The whole file as text, or null when a byte past the head is not UTF-8 after all; text with
    replacement characters in it would be saved over the original. */
-const decodeWhole = (bytes: Uint8Array): string | null => {
+function decodeWhole(bytes: Uint8Array): string | null {
     try {
         return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     } catch {
         return null;
     }
-};
+}
 
 /*
  * One file for the viewer. Text comes back decoded, an image or another known format comes back as
  * its mime alone (the bytes travel over `GET /fs/file`), and a text file past the cap comes back as
  * its size and mtime, so the client fetches the bytes over that route instead of one frame on the socket.
  */
-export const readFile = async (path: string): Promise<FsReadResult> => {
+export async function readFile(path: string): Promise<FsReadResult> {
     const { file, mime } = await inspect(path);
     if (mime) {
         return { kind: 'binary', mime, size: file.size, mtime: file.mtime };
@@ -215,13 +221,13 @@ export const readFile = async (path: string): Promise<FsReadResult> => {
         mtime: file.mtime,
         language: languageOf(baseName(file.path))
     };
-};
+}
 
 // Whatever its name says, so an HTML file the route serves never runs in the origin of the page that asked.
 export const SERVED_TEXT_MIME = 'text/plain; charset=utf-8';
 
 /* The same file as bytes, for the file route and `bytes.read`: an image, video, sound, a PDF or text. Null for any other binary. */
-export const readServedFile = async (path: string): Promise<{ mime: string; size: number; bytes: Blob } | null> => {
+export async function readServedFile(path: string): Promise<{ mime: string; size: number; bytes: Blob } | null> {
     const { file, mime } = await inspect(path);
     if (mime === null) {
         return { mime: SERVED_TEXT_MIME, size: file.size, bytes: Bun.file(file.path) };
@@ -230,4 +236,4 @@ export const readServedFile = async (path: string): Promise<{ mime: string; size
         return null;
     }
     return { mime, size: file.size, bytes: Bun.file(file.path) };
-};
+}

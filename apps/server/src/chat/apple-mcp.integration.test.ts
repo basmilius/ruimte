@@ -55,15 +55,15 @@ afterEach(async () => {
     await rm(cwd, { recursive: true, force: true });
 });
 
-const alive = (pid: number): boolean => {
+function alive(pid: number): boolean {
     try {
         process.kill(pid, 0);
         return true;
     } catch {
         return false;
     }
-};
-const eventually = async (condition: () => Promise<boolean> | boolean): Promise<void> => {
+}
+async function eventually(condition: () => Promise<boolean> | boolean): Promise<void> {
     for (let attempt = 0; attempt < 200; attempt++) {
         if (await condition()) {
             return;
@@ -71,9 +71,13 @@ const eventually = async (condition: () => Promise<boolean> | boolean): Promise<
         await new Promise((resolve) => setTimeout(resolve, 10));
     }
     throw new Error('The MCP fixture did not reach the expected state.');
-};
-const server = (env: Record<string, string> = {}): AppleMcpServer => ({ command: process.execPath, args: [join(cwd, 'fixture.mjs')], env });
-const exists = (name: string): Promise<boolean> => Bun.file(join(cwd, name)).exists();
+}
+function server(env: Record<string, string> = {}): AppleMcpServer {
+    return { command: process.execPath, args: [join(cwd, 'fixture.mjs')], env };
+}
+function exists(name: string): Promise<boolean> {
+    return Bun.file(join(cwd, name)).exists();
+}
 
 describe('Apple MCP real stdio connection', () => {
     test('initializes, lists, calls, isolates account variables, and closes descendants', async () => {

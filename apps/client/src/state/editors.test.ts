@@ -7,9 +7,13 @@ interface Counter {
     bump(): void;
 }
 
-const counter = (): StoreApi<Counter> => createStore<Counter>((set) => ({ value: 0, bump: () => set((state) => ({ value: state.value + 1 })) }));
+function counter(): StoreApi<Counter> {
+    return createStore<Counter>((set) => ({ value: 0, bump: () => set((state) => ({ value: state.value + 1 })) }));
+}
 
-const registry = (): ReturnType<typeof createEditorRegistry<Counter>> => createEditorRegistry(counter);
+function registry(): ReturnType<typeof createEditorRegistry<Counter>> {
+    return createEditorRegistry(counter);
+}
 
 describe('an editor per view', () => {
     test('the same view is the same editor, a different view is a different one', () => {

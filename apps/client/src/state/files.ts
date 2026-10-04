@@ -26,15 +26,16 @@ export interface TabState {
 }
 
 /* A base diff of the checkout itself rather than of a file in it: everything a worktree holds over where it came from. */
-export const isCheckoutDiff = (path: string, view: FileTabView | undefined): boolean =>
-    view !== undefined && view.commit === undefined && view.scope === 'base' && path === view.cwd;
+export function isCheckoutDiff(path: string, view: FileTabView | undefined): boolean {
+    return view !== undefined && view.commit === undefined && view.scope === 'base' && path === view.cwd;
+}
 
 /*
  * A file and its diff are two tabs of one path, so the view is part of what names them apart. A
  * commit is named after the commit and not after the path, because two commits of one repository
  * would otherwise be one tab.
  */
-export const tabKey = (path: string, view?: FileTabView): string => {
+export function tabKey(path: string, view?: FileTabView): string {
     if (view?.commit !== undefined) {
         return `commit:${view.commit}`;
     }
@@ -42,7 +43,7 @@ export const tabKey = (path: string, view?: FileTabView): string => {
         return `checkout:${path}`;
     }
     return view ? `diff:${path}` : path;
-};
+}
 
 /*
  * A tab per open file, the way a preview tab works in an editor: the oldest unpinned one makes room
@@ -50,7 +51,7 @@ export const tabKey = (path: string, view?: FileTabView): string => {
  * a file could close the file it just opened, and neither is one `keeps` holds on to, such as a file
  * with unsaved changes.
  */
-export const openTab = (state: TabState, path: string, limit: number, view?: FileTabView, keeps: (tab: FileTab) => boolean = () => false): TabState => {
+export function openTab(state: TabState, path: string, limit: number, view?: FileTabView, keeps: (tab: FileTab) => boolean = () => false): TabState {
     const key = tabKey(path, view);
     const open = state.tabs.find((tab) => tab.key === key);
     if (open) {
@@ -77,10 +78,10 @@ export const openTab = (state: TabState, path: string, limit: number, view?: Fil
         tabs.splice(index, 1);
     }
     return { tabs, active: key };
-};
+}
 
 /* The neighbor takes over when the active tab closes: the one to its right, or the one before it. */
-export const closeTab = (state: TabState, key: string): TabState => {
+export function closeTab(state: TabState, key: string): TabState {
     const index = state.tabs.findIndex((tab) => tab.key === key);
     if (index < 0) {
         return state;
@@ -90,12 +91,14 @@ export const closeTab = (state: TabState, key: string): TabState => {
         return { tabs, active: state.active };
     }
     return { tabs, active: tabs[Math.min(index, tabs.length - 1)]?.key ?? null };
-};
+}
 
-export const pinTab = (state: TabState, key: string, pinned: boolean): TabState => ({
-    tabs: state.tabs.map((tab) => (tab.key === key ? { ...tab, pinned } : tab)),
-    active: state.active
-});
+export function pinTab(state: TabState, key: string, pinned: boolean): TabState {
+    return {
+        tabs: state.tabs.map((tab) => (tab.key === key ? { ...tab, pinned } : tab)),
+        active: state.active
+    };
+}
 
 export interface RevealLineRequest {
     /* The tab this is about; a file that is not the one up ignores it. */
@@ -117,8 +120,9 @@ export interface RevealRequest {
 export const RECENT_FILES_LIMIT = 5;
 
 /* A file tab that closed goes on top of the files to open again; a diff or a commit is not a file to go back to. */
-export const rememberClosed = (recent: readonly string[], tab: FileTab | undefined): string[] =>
-    tab === undefined || tab.view !== undefined ? [...recent] : [tab.path, ...recent.filter((path) => path !== tab.path)].slice(0, RECENT_FILES_LIMIT);
+export function rememberClosed(recent: readonly string[], tab: FileTab | undefined): string[] {
+    return tab === undefined || tab.view !== undefined ? [...recent] : [tab.path, ...recent.filter((path) => path !== tab.path)].slice(0, RECENT_FILES_LIMIT);
+}
 
 export interface OpenOptions {
     /* False leaves the keyboard where it is; the files cell takes it otherwise. */

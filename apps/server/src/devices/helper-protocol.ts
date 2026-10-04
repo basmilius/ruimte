@@ -31,7 +31,7 @@ const MessageKind = {
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
-export const encodeDeviceHelperMessage = (message: DeviceHelperMessage): Uint8Array => {
+export function encodeDeviceHelperMessage(message: DeviceHelperMessage): Uint8Array {
     const kind = MessageKind[message.type];
     let payload: Uint8Array;
     if (message.type === 'ready') {
@@ -58,7 +58,7 @@ export const encodeDeviceHelperMessage = (message: DeviceHelperMessage): Uint8Ar
     header.setUint32(1, payload.byteLength);
     encoded.set(payload, DEVICE_HELPER_HEADER_BYTES);
     return encoded;
-};
+}
 
 export class DeviceHelperDecoder {
     private buffer = new Uint8Array();
@@ -134,7 +134,7 @@ export class DeviceHelperDecoder {
     }
 }
 
-const decodeFrame = (payload: Uint8Array): LiveStreamFrame => {
+function decodeFrame(payload: Uint8Array): LiveStreamFrame {
     if (payload.byteLength < LIVE_STREAM_FRAME_HEADER_BYTES) {
         throw new Error('Invalid device helper frame');
     }
@@ -151,4 +151,4 @@ const decodeFrame = (payload: Uint8Array): LiveStreamFrame => {
         height,
         data: payload.slice(LIVE_STREAM_FRAME_HEADER_BYTES)
     };
-};
+}

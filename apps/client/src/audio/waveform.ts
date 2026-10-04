@@ -4,7 +4,7 @@ export const WAVEFORM_BAND_COUNT = 40;
 export const SPEECH_SPECTRUM_BAND_COUNT = 5;
 
 /* Logarithmic bands separate the voice's low tones and higher consonants without amplifying silence. */
-export const spectrumBands = (decibels: Float32Array, sampleRate: number): number[] => {
+export function spectrumBands(decibels: Float32Array, sampleRate: number): number[] {
     const binHz = sampleRate / (decibels.length * 2);
     const lowHz = 100;
     const highHz = Math.min(6000, sampleRate / 2);
@@ -17,11 +17,12 @@ export const spectrumBands = (decibels: Float32Array, sampleRate: number): numbe
         }
         return Math.min(1, Math.max(0, (peak + 70) / 50));
     });
-};
+}
 
 /* Bars fall slower than they rise, so a voice reads as a voice instead of as a flicker. */
-export const easeBands = (previous: readonly number[], next: readonly number[]): number[] =>
-    next.map((level, index) => {
+export function easeBands(previous: readonly number[], next: readonly number[]): number[] {
+    return next.map((level, index) => {
         const before = previous[index] ?? 0;
         return before + (level - before) * (level > before ? 0.38 : 0.16);
     });
+}

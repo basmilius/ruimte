@@ -20,32 +20,32 @@ const CLOCK_SKEW_S = 60;
 let signingKey: { secret: string; key: Promise<CryptoKey> } | null = null;
 
 // The .p8 file as Apple hands it out: PKCS #8 in PEM, standard base64 between the armor lines.
-const importP8 = async (pem: string): Promise<CryptoKey> => {
+async function importP8(pem: string): Promise<CryptoKey> {
     const body = pem.replace(/-----(BEGIN|END) PRIVATE KEY-----/g, '').replace(/\s+/g, '');
     const der = Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
     return crypto.subtle.importKey('pkcs8', der, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
-};
+}
 
-const signingKeyOf = (secret: string): Promise<CryptoKey> => {
+function signingKeyOf(secret: string): Promise<CryptoKey> {
     if (signingKey?.secret !== secret) {
         signingKey = { secret, key: importP8(secret) };
     }
     return signingKey.key;
-};
+}
 
 // Apple has no static client secret: every token request carries a JWT signed with the key from the portal.
-export const appleClientSecret = async (env: Env, now = Date.now(), clientId = env.APPLE_CLIENT_ID): Promise<string> => {
+export async function appleClientSecret(env: Env, now = Date.now(), clientId = env.APPLE_CLIENT_ID): Promise<string> {
     const issuedAt = Math.floor(now / 1000);
     return signEs256Jwt(
         await signingKeyOf(env.APPLE_PRIVATE_KEY ?? ''),
         { kid: env.APPLE_KEY_ID },
         { iss: env.APPLE_TEAM_ID, iat: issuedAt, exp: issuedAt + CLIENT_SECRET_LIFETIME_S, aud: APPLE_ISSUER, sub: clientId }
     );
-};
+}
 
 let keys: { fetchedAt: number; keys: JsonWebKey[] } | null = null;
 
-const fetchKeys = async (): Promise<JsonWebKey[]> => {
+async function fetchKeys(): Promise<JsonWebKey[]> {
     const response = await fetch(KEYS_URL, { headers: { accept: 'application/json' } });
     const body = (await response.json().catch(() => null)) as { keys?: unknown } | null;
     if (!response.ok || !Array.isArray(body?.keys)) {
@@ -53,14 +53,16 @@ const fetchKeys = async (): Promise<JsonWebKey[]> => {
     }
     keys = { fetchedAt: Date.now(), keys: body.keys as JsonWebKey[] };
     return keys.keys;
-};
+}
 
-const keyWithId = (set: JsonWebKey[], kid: string): JsonWebKey | undefined => set.find((key) => (key as { kid?: unknown }).kid === kid);
+function keyWithId(set: JsonWebKey[], kid: string): JsonWebKey | undefined {
+    return set.find((key) => (key as { kid?: unknown }).kid === kid);
+}
 
-const appleKey = async (kid: string): Promise<JsonWebKey | undefined> => {
+async function appleKey(kid: string): Promise<JsonWebKey | undefined> {
     const cached = keys && Date.now() - keys.fetchedAt < KEYS_LIFETIME_MS ? keyWithId(keys.keys, kid) : undefined;
     return cached ?? keyWithId(await fetchKeys(), kid);
-};
+}
 
 /*
  * The `id_token` from the token endpoint, checked the way Apple's documentation asks: a signature from one
@@ -68,7 +70,7 @@ const appleKey = async (kid: string): Promise<JsonWebKey | undefined> => {
  * login sent. The token came straight from Apple over TLS, but checking it anyway costs one cached fetch.
  * A null nonce is for a code the app authorized without one, which no login of this address book started.
  */
-export const verifyAppleIdToken = async (idToken: string, input: { audiences: readonly string[]; nonce: string | null; now?: number }): Promise<string> => {
+export async function verifyAppleIdToken(idToken: string, input: { audiences: readonly string[]; nonce: string | null; now?: number }): Promise<string> {
     const jwt = decodeJwt(idToken);
     if (!jwt || jwt.header.alg !== 'RS256' || typeof jwt.header.kid !== 'string') {
         throw new Error('Apple answered with an id_token this address book cannot read');
@@ -93,11 +95,13 @@ export const verifyAppleIdToken = async (idToken: string, input: { audiences: re
         throw new Error('The id_token names nobody');
     }
     return claims.sub;
-};
+}
 
-export const nativeAppleConfigured = (env: Env): boolean => Boolean(env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY);
+export function nativeAppleConfigured(env: Env): boolean {
+    return Boolean(env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY);
+}
 
-export const identifyNativeApple = async (env: Env, input: { identityToken: string; authorizationCode: string; nonce: string }): Promise<string> => {
+export async function identifyNativeApple(env: Env, input: { identityToken: string; authorizationCode: string; nonce: string }): Promise<string> {
     const verify = async (token: string): Promise<string> => {
         if (decodeJwt(token)?.payload.aud !== APPLE_NATIVE_CLIENT_ID) {
             throw new Error('The native Apple token is for another app');
@@ -121,7 +125,7 @@ export const identifyNativeApple = async (env: Env, input: { identityToken: stri
         throw new Error('Apple did not confirm this sign-in');
     }
     return subject;
-};
+}
 
 /*
  * Ends Ruimte's authorization of an Apple ID at Apple. The address book keeps no Apple token, so the iOS app
@@ -130,7 +134,7 @@ export const identifyNativeApple = async (env: Env, input: { identityToken: stri
  * than `subject`, which is then left alone.
  * https://developer.apple.com/documentation/signinwithapplerestapi/revoke-tokens
  */
-export const revokeNativeApple = async (env: Env, authorizationCode: string, subject: string): Promise<'revoked' | 'other-identity'> => {
+export async function revokeNativeApple(env: Env, authorizationCode: string, subject: string): Promise<'revoked' | 'other-identity'> {
     const clientSecret = await appleClientSecret(env, Date.now(), APPLE_NATIVE_CLIENT_ID);
     const response = await fetch(TOKEN_URL, {
         method: 'POST',
@@ -163,14 +167,14 @@ export const revokeNativeApple = async (env: Env, authorizationCode: string, sub
         throw new Error(`Apple did not revoke the token: ${revoked.status}`);
     }
     return 'revoked';
-};
+}
 
 /*
  * The `user` field Apple posts beside the code, only on the first authorization of an Apple ID for this
  * app. Nothing signs it, but it arrives in the same post as the signed id_token and only ever names that
  * identity, so the worst a forged one does is misname the person's own account to themselves.
  */
-export const appleUserName = (field: string | null): string | null => {
+export function appleUserName(field: string | null): string | null {
     if (field === null) {
         return null;
     }
@@ -186,7 +190,7 @@ export const appleUserName = (field: string | null): string | null => {
     }
     const { firstName, lastName } = name as { firstName?: unknown; lastName?: unknown };
     return cleanDisplayName([firstName, lastName].filter((part) => typeof part === 'string').join(' '));
-};
+}
 
 /*
  * Apple web login uses a form post to keep the code out of URL logs. Apple has no web PKCE, so the

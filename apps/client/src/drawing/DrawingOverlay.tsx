@@ -28,10 +28,12 @@ interface Camera {
     zoom: number;
 }
 
-const toScreen = (camera: Camera, x: number, y: number): { left: number; top: number } => ({
-    left: x * camera.zoom + camera.x,
-    top: y * camera.zoom + camera.y
-});
+function toScreen(camera: Camera, x: number, y: number): { left: number; top: number } {
+    return {
+        left: x * camera.zoom + camera.x,
+        top: y * camera.zoom + camera.y
+    };
+}
 
 /*
  * What sits above the two canvases: the selection with its handles, the marquee, and the text

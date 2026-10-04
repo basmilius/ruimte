@@ -13,7 +13,7 @@ const STATUS: MachineStatus = {
     lanDoorFixed: false
 };
 
-const run = async (answer: (input: string, init: RequestInit) => Promise<Response>, port = 4210) => {
+async function run(answer: (input: string, init: RequestInit) => Promise<Response>, port = 4210) {
     const out: string[] = [];
     const err: string[] = [];
     const code = await runStatus({
@@ -25,7 +25,7 @@ const run = async (answer: (input: string, init: RequestInit) => Promise<Respons
         err: (line) => err.push(line)
     });
     return { code, out, err };
-};
+}
 
 describe('ruimte status', () => {
     test('asks the daemon on the local secret and prints one line per way in', async () => {

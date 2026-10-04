@@ -12,7 +12,7 @@ afterEach(async () => {
     await rm(cwd, { recursive: true, force: true });
 });
 
-const eventually = async (condition: () => Promise<boolean> | boolean): Promise<void> => {
+async function eventually(condition: () => Promise<boolean> | boolean): Promise<void> {
     for (let attempt = 0; attempt < 200; attempt++) {
         if (await condition()) {
             return;
@@ -20,16 +20,16 @@ const eventually = async (condition: () => Promise<boolean> | boolean): Promise<
         await new Promise((resolve) => setTimeout(resolve, 10));
     }
     throw new Error('The child process did not reach the expected state.');
-};
+}
 
-const alive = (pid: number): boolean => {
+function alive(pid: number): boolean {
     try {
         process.kill(pid, 0);
         return true;
     } catch {
         return false;
     }
-};
+}
 
 describe('Apple local command real process', () => {
     test('runs from the project directory with closed stdin and an explicit environment', async () => {

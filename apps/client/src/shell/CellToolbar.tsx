@@ -28,7 +28,7 @@ const UNFOLD_MARGIN = 24;
  * its glyph and the actions still do not fit. The width where that happened is remembered, since a
  * folded bar fits by definition and can no longer tell by overflowing when there is room again.
  */
-const useFolded = (bar: React.RefObject<HTMLElement | null>, actions: React.RefObject<HTMLElement | null>, enabled: boolean): boolean => {
+function useFolded(bar: React.RefObject<HTMLElement | null>, actions: React.RefObject<HTMLElement | null>, enabled: boolean): boolean {
     const [foldedAt, setFoldedAt] = useState<number | null>(null);
 
     useEffect(() => {
@@ -59,7 +59,7 @@ const useFolded = (bar: React.RefObject<HTMLElement | null>, actions: React.RefO
 
     // A view that brings no actions has nothing to fold, whatever the bar measured before it changed.
     return enabled && foldedAt !== null;
-};
+}
 
 /*
  * The bar over one cell of the grid. With the views side by side the window's toolbar goes back to

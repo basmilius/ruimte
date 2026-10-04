@@ -11,8 +11,8 @@ import type { TimelineRow } from './timeline';
  * purpose: it is a letter in half the identifiers an agent writes, and no italic is worth mangling
  * `file_path`.
  */
-export const stripMarkdown = (text: string): string =>
-    text
+export function stripMarkdown(text: string): string {
+    return text
         .replace(/^ *```[^\n]*\n?/gm, '')
         .replace(/^ *(#{1,6}) +/gm, '')
         .replace(/^ *> ?/gm, '')
@@ -22,12 +22,15 @@ export const stripMarkdown = (text: string): string =>
         .replace(/\*(?=\S)([^*\n]*\S)\*/g, '$1')
         .replace(/`+([^`]+)`+/g, '$1')
         .trim();
+}
 
 /* What a tool call has to show for itself: what it answered, or what it has answered so far. */
-const outputOf = (tool: { output: string | null; progress?: { output: string | null } }): string | null => tool.output ?? tool.progress?.output ?? null;
+function outputOf(tool: { output: string | null; progress?: { output: string | null } }): string | null {
+    return tool.output ?? tool.progress?.output ?? null;
+}
 
 /* The whole item under the pointer as plain text, or null for a row that carries no message. */
-export const messageTextOf = (row: TimelineRow): string | null => {
+export function messageTextOf(row: TimelineRow): string | null {
     switch (row.kind) {
         case 'user':
             return row.item.text || null;
@@ -52,8 +55,9 @@ export const messageTextOf = (row: TimelineRow): string | null => {
         default:
             return null;
     }
-};
+}
 
 /* The markdown an answer was written in; every other row has none to copy. */
-export const markdownOf = (row: TimelineRow): string | null =>
-    row.kind === 'assistant' ? row.item.text || null : row.kind === 'report' ? row.text || null : null;
+export function markdownOf(row: TimelineRow): string | null {
+    return row.kind === 'assistant' ? row.item.text || null : row.kind === 'report' ? row.text || null : null;
+}

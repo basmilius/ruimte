@@ -4,19 +4,21 @@ import { EMPTY_FIND_QUERY, type FindQuery } from '@/find/query';
 import { hitRow, indexRows, placeOfHit, searchChat } from './search';
 import { deriveTimelineRows } from '@ruimte/agents-react/chat/logic/timeline';
 
-const tool = (id: string, input: unknown, output: string, extra: Partial<ChatToolItem> = {}): ChatToolItem => ({
-    id,
-    kind: 'tool',
-    createdAt: 1,
-    turnId: 't1',
-    toolUseId: id,
-    name: 'Bash',
-    input,
-    output,
-    state: 'done',
-    parentToolUseId: null,
-    ...extra
-});
+function tool(id: string, input: unknown, output: string, extra: Partial<ChatToolItem> = {}): ChatToolItem {
+    return {
+        id,
+        kind: 'tool',
+        createdAt: 1,
+        turnId: 't1',
+        toolUseId: id,
+        name: 'Bash',
+        input,
+        output,
+        state: 'done',
+        parentToolUseId: null,
+        ...extra
+    };
+}
 
 const thread: ChatItem[] = [
     { id: 't1', kind: 'turn', createdAt: 1000, turnId: 't1', state: 'done', endedAt: 13_000, costUsd: 0 },
@@ -26,10 +28,13 @@ const thread: ChatItem[] = [
     { id: 'a1', kind: 'assistant', createdAt: 5000, turnId: 't1', text: 'The sidebar reads sidebar-rows.ts.', streaming: false }
 ];
 
-const query = (text: string, options: Partial<FindQuery> = {}): FindQuery => ({ ...EMPTY_FIND_QUERY, text, ...options });
+function query(text: string, options: Partial<FindQuery> = {}): FindQuery {
+    return { ...EMPTY_FIND_QUERY, text, ...options };
+}
 
-const keys = (items: readonly ChatItem[], asked: FindQuery): string[] =>
-    searchChat(items, asked).hits.map((hit) => `${hit.itemId}:${hit.field}:${hit.occurrence}`);
+function keys(items: readonly ChatItem[], asked: FindQuery): string[] {
+    return searchChat(items, asked).hits.map((hit) => `${hit.itemId}:${hit.field}:${hit.occurrence}`);
+}
 
 describe('searchChat', () => {
     test('finds in messages, in the line of a tool call and in its output, in thread order', () => {

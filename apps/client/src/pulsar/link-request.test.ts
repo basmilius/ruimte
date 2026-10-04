@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { forgetLink, linkRequestOf, linkStep, rememberLink, rememberedLink, typedCode } from './link-request';
 import type { LoginStorage } from './web';
 
-const memoryStorage = (): LoginStorage & { items: Map<string, string> } => {
+function memoryStorage(): LoginStorage & { items: Map<string, string> } {
     const items = new Map<string, string>();
     return {
         items,
@@ -14,7 +14,7 @@ const memoryStorage = (): LoginStorage & { items: Map<string, string> } => {
             items.delete(key);
         }
     };
-};
+}
 
 describe('the /link address', () => {
     test('carries the code as the terminal printed it, or none', () => {

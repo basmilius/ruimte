@@ -18,34 +18,40 @@ import {
     type OpenListSource
 } from './list';
 
-const summary = (projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary => ({
-    projectId,
-    name: projectId,
-    color: '#000',
-    folder: `/repo/${projectId}`,
-    lastOpenedAt,
-    closedAt,
-    available: true,
-    icon: { kind: 'initial', value: projectId[0]!.toUpperCase() },
-    nameSource: 'chosen'
-});
+function summary(projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary {
+    return {
+        projectId,
+        name: projectId,
+        color: '#000',
+        folder: `/repo/${projectId}`,
+        lastOpenedAt,
+        closedAt,
+        available: true,
+        icon: { kind: 'initial', value: projectId[0]!.toUpperCase() },
+        nameSource: 'chosen'
+    };
+}
 
-const endpoint = (id: string, label: string): Endpoint => ({
-    id,
-    label,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: id,
-    daemonPublicKey: null
-});
+function endpoint(id: string, label: string): Endpoint {
+    return {
+        id,
+        label,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: id,
+        daemonPublicKey: null
+    };
+}
 
 /* The three calls the list makes on the storage it is given, over a map a test can read. */
-const fakeStorage = (storage: Map<string, string>) => ({
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => void storage.set(key, value),
-    removeItem: (key: string) => void storage.delete(key)
-});
+function fakeStorage(storage: Map<string, string>) {
+    return {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => void storage.set(key, value),
+        removeItem: (key: string) => void storage.delete(key)
+    };
+}
 
 beforeEach(() => {
     useProjectList.setState({ projects: [] });
@@ -221,7 +227,7 @@ describe('the list a machine is remembered by', () => {
 });
 
 /* The part of the pool the list reads, with links a test opens and closes by hand. */
-const fakeLinks = () => {
+function fakeLinks() {
     const states = new Map<string, TransportStatus>();
     const listeners = new Set<() => void>();
     const source: OpenListSource = {
@@ -246,7 +252,7 @@ const fakeLinks = () => {
         }
     };
     return { source, set };
-};
+}
 
 describe('the list and the links', () => {
     test('closing a cached project needs no link and leaves other projects in the switcher', () => {

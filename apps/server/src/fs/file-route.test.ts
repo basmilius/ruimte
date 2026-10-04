@@ -18,15 +18,17 @@ const OPTIONS = { localSecret: LOCAL_SECRET, tickets: { ticketAccess: async () =
 let root: string;
 let machineHome: MachineHome;
 
-const ask = (path: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
+function ask(path: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> {
     const url = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}?v=1-1&path=${encodeURIComponent(join(root, path))}`);
     return handleFsFileRequest(new Request(url, asLocal(init)), url, remote, OPTIONS, machineHome);
-};
+}
 // Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
-const asLocal = (init?: RequestInit): RequestInit => ({
-    ...init,
-    headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
-});
+function asLocal(init?: RequestInit): RequestInit {
+    return {
+        ...init,
+        headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
+    };
+}
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-fs-file-route-'));

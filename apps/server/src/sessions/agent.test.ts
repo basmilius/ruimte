@@ -14,11 +14,11 @@ let harness: Harness;
 // The transcript of the agent the hooks below report; the daemon resumes only what is still on disk.
 let transcript: string;
 
-const freshHarness = async (extra: Partial<SessionManagerOptions> = {}): Promise<void> => {
+async function freshHarness(extra: Partial<SessionManagerOptions> = {}): Promise<void> {
     harness = await makeHarness(extra);
     transcript = join(harness.home, 'transcript.jsonl');
     await writeFile(transcript, '');
-};
+}
 
 beforeEach(async () => {
     await freshHarness();
@@ -28,33 +28,39 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const create = (sessionId: string, command?: string) => harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, command });
+function create(sessionId: string, command?: string) {
+    return harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, command });
+}
 
-const createAgent = (sessionId: string, agent: AgentLaunch) => harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent });
+function createAgent(sessionId: string, agent: AgentLaunch) {
+    return harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent });
+}
 
-const codeOf = async (work: () => Promise<void>): Promise<string> => {
+async function codeOf(work: () => Promise<void>): Promise<string> {
     try {
         await work();
     } catch (e) {
         return e instanceof SessionError ? e.code : 'not-a-session-error';
     }
     return 'nothing-was-thrown';
-};
+}
 
-const hook = (event: string, extra: Record<string, unknown> = {}) => ({
-    session_id: 'claude-1',
-    transcript_path: transcript,
-    hook_event_name: event,
-    ...extra
-});
+function hook(event: string, extra: Record<string, unknown> = {}) {
+    return {
+        session_id: 'claude-1',
+        transcript_path: transcript,
+        hook_event_name: event,
+        ...extra
+    };
+}
 
 /* A shell that ends on its own, with every agent record the exit wrote already on disk. */
-const endShell = async (sessionId: string, exitCode = 0): Promise<void> => {
+async function endShell(sessionId: string, exitCode = 0): Promise<void> {
     const pty = harness.adapter.forSession(sessionId);
     pty.exit(exitCode);
     await pty.exited;
     await harness.agents.settled();
-};
+}
 
 describe('agent status via hooks', () => {
     test('the shell gets the hook variables and a matching token routes a hook to the session', async () => {

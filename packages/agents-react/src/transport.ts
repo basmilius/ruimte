@@ -39,11 +39,12 @@ export class ChatTransportError extends Error {
 }
 
 /* The code of a refusal from any transport, this package's or the app's own: every one of them carries it the same way. */
-export const errorCode = (error: unknown): string | null =>
-    typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : null;
+export function errorCode(error: unknown): string | null {
+    return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : null;
+}
 
 /* Whether a request failed because the link was down rather than because the host refused it; the reconnect asks again. */
-export const isConnectionError = (error: unknown): boolean => {
+export function isConnectionError(error: unknown): boolean {
     const code = errorCode(error);
     return code === 'not-connected' || code === 'disconnected';
-};
+}

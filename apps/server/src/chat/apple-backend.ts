@@ -534,7 +534,7 @@ export class AppleBackend implements ChatBackend {
     }
 }
 
-const approvalDescription = (call: AppleToolCall): string => {
+function approvalDescription(call: AppleToolCall): string {
     switch (call.name) {
         case 'list_files':
             return 'List this project directory?';
@@ -559,4 +559,4 @@ const approvalDescription = (call: AppleToolCall): string => {
         case 'ask_user':
             return 'Ask this question?';
     }
-};
+}

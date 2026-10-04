@@ -15,7 +15,9 @@ export const SYSTEMD_UNIT_NAME = 'ruimte-daemon.service';
  * The one log to look in, whichever installed the service. launchd only, as the spec says: systemd
  * writes to the journal and its unit never reads this path.
  */
-export const serviceLogFile = (home: string): string => join(home, 'Library', 'Logs', 'Ruimte', 'daemon.log');
+export function serviceLogFile(home: string): string {
+    return join(home, 'Library', 'Logs', 'Ruimte', 'daemon.log');
+}
 
 export interface ServiceSpec {
     /* The launchd label; the unit name has no use for one. */
@@ -30,15 +32,19 @@ export interface ServiceSpec {
     logFile: string;
 }
 
-const xmlText = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function xmlText(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-const plistString = (value: string, indent: string): string => `${indent}<string>${xmlText(value)}</string>`;
+function plistString(value: string, indent: string): string {
+    return `${indent}<string>${xmlText(value)}</string>`;
+}
 
 /*
  * `KeepAlive` retries after the app releases the port. `ProcessType=Interactive` avoids launchd
  * throttling, and a generated plist can include the login PATH and a home-directory log path.
  */
-export const launchAgentPlist = (spec: ServiceSpec): string => {
+export function launchAgentPlist(spec: ServiceSpec): string {
     const lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -75,23 +81,23 @@ export const launchAgentPlist = (spec: ServiceSpec): string => {
         ''
     );
     return lines.join('\n');
-};
+}
 
 /* systemd expands `%` specifiers everywhere and `$` variables in a command line, so both are doubled; quotes keep a space in a path. */
-const unitWord = (value: string, command: boolean): string => {
+function unitWord(value: string, command: boolean): string {
     let escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/%/g, '%%');
     if (command) {
         escaped = escaped.replace(/\$/g, '$$$$');
     }
     return `"${escaped}"`;
-};
+}
 
 /*
  * `Restart=always` is launchd's KeepAlive, including the handover of the port when the app quits.
  * `default.target` starts it with the person's session; after logout it only runs with lingering,
  * which is a step the app offers and never takes by itself.
  */
-export const systemdUnit = (spec: ServiceSpec): string => {
+export function systemdUnit(spec: ServiceSpec): string {
     const lines = [
         '[Unit]',
         'Description=Ruimte machine',
@@ -110,13 +116,16 @@ export const systemdUnit = (spec: ServiceSpec): string => {
         ''
     ];
     return lines.join('\n');
-};
+}
 
 /*
  * Whether a definition on disk starts this program. The desktop app and `ruimte service` write the
  * same label and unit name, so each checks this before it rewrites or removes the other's service.
  */
-export const definitionRunsProgram = (definition: string, program: string): boolean =>
-    definition.includes(`<string>${xmlText(program)}</string>`) ||
-    definition.includes(`ExecStart=${unitWord(program, true)} `) ||
-    definition.includes(`ExecStart=${unitWord(program, true)}\n`);
+export function definitionRunsProgram(definition: string, program: string): boolean {
+    return (
+        definition.includes(`<string>${xmlText(program)}</string>`) ||
+        definition.includes(`ExecStart=${unitWord(program, true)} `) ||
+        definition.includes(`ExecStart=${unitWord(program, true)}\n`)
+    );
+}

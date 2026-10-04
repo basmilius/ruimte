@@ -15,7 +15,7 @@ interface ProcessEvents {
  * A werift STUN transaction error. It carries no message; its `str` getter is the one description,
  * a string literal that survives a minified build where class names and file paths do not.
  */
-export const isWeriftTransactionFailure = (error: unknown): boolean => {
+export function isWeriftTransactionFailure(error: unknown): boolean {
     if (typeof error !== 'object' || error === null) {
         return false;
     }
@@ -28,13 +28,13 @@ export const isWeriftTransactionFailure = (error: unknown): boolean => {
         // `TransactionFailed.str` reads the response it failed on, which may not be there.
     }
     return error instanceof Error && /[\\/]werift[\\/]lib[\\/]ice[\\/]/.test(error.stack ?? '');
-};
+}
 
-export const guardWeriftTurn = (
+export function guardWeriftTurn(
     target: ProcessEvents,
     log: Pick<Console, 'warn' | 'error'> = console,
     exit: (code: number) => void = (code) => process.exit(code)
-): void => {
+): void {
     const handle = (error: unknown): void => {
         if (isWeriftTransactionFailure(error)) {
             log.warn('A direct connection lost its ICE server (TURN or STUN) and the daemon carries on:', errorText(error));
@@ -45,4 +45,4 @@ export const guardWeriftTurn = (
     };
     target.on('uncaughtException', handle);
     target.on('unhandledRejection', handle);
-};
+}

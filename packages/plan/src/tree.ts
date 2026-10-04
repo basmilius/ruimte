@@ -23,7 +23,9 @@ export interface PlanRefusal {
     message: string;
 }
 
-export const refuse = (code: PlanRefusalCode, message: string): PlanRefusal => ({ ok: false, code, message });
+export function refuse(code: PlanRefusalCode, message: string): PlanRefusal {
+    return { ok: false, code, message };
+}
 
 /* Where an item stands: the array that holds it, so an operation can splice it, and the step or section around it. */
 export interface PlanLocation {
@@ -35,7 +37,7 @@ export interface PlanLocation {
     depth: number;
 }
 
-const childrenOf = (item: PlanItem): PlanItem[] => {
+function childrenOf(item: PlanItem): PlanItem[] {
     if (item.type === 'section') {
         return item.items;
     }
@@ -43,9 +45,9 @@ const childrenOf = (item: PlanItem): PlanItem[] => {
         return item.steps ?? [];
     }
     return [];
-};
+}
 
-export const locateItem = (plan: Pick<Plan, 'items'>, id: string): PlanLocation | null => {
+export function locateItem(plan: Pick<Plan, 'items'>, id: string): PlanLocation | null {
     const search = (siblings: PlanItem[], parent: PlanSection | PlanStep | null, depth: number): PlanLocation | null => {
         for (let index = 0; index < siblings.length; index++) {
             const item = siblings[index]!;
@@ -61,24 +63,36 @@ export const locateItem = (plan: Pick<Plan, 'items'>, id: string): PlanLocation 
         return null;
     };
     return search(plan.items, null, 0);
-};
+}
 
-export const findItem = (plan: Pick<Plan, 'items'>, id: string): PlanItem | null => locateItem(plan, id)?.item ?? null;
+export function findItem(plan: Pick<Plan, 'items'>, id: string): PlanItem | null {
+    return locateItem(plan, id)?.item ?? null;
+}
 
 /* Every item in document order, parents before their children. */
-export const allItems = (items: readonly PlanItem[]): PlanItem[] => items.flatMap((item) => [item, ...allItems(childrenOf(item))]);
+export function allItems(items: readonly PlanItem[]): PlanItem[] {
+    return items.flatMap((item) => [item, ...allItems(childrenOf(item))]);
+}
 
-export const allSteps = (items: readonly PlanItem[]): PlanStep[] => allItems(items).filter((item): item is PlanStep => item.type === 'step');
+export function allSteps(items: readonly PlanItem[]): PlanStep[] {
+    return allItems(items).filter((item): item is PlanStep => item.type === 'step');
+}
 
-export const isParentStep = (step: PlanStep): boolean => (step.steps?.length ?? 0) > 0;
+export function isParentStep(step: PlanStep): boolean {
+    return (step.steps?.length ?? 0) > 0;
+}
 
 /* Unlocked wins over everything: a person lifted the lock and no one puts it back. */
-export const effectiveChecks = (plan: Pick<Plan, 'meta'>, step: PlanStep): PlanChecks => (step.unlocked ? 'anyone' : (step.checks ?? plan.meta.checks));
+export function effectiveChecks(plan: Pick<Plan, 'meta'>, step: PlanStep): PlanChecks {
+    return step.unlocked ? 'anyone' : (step.checks ?? plan.meta.checks);
+}
 
-export const isFinishedOutcome = (state: PlanStepState): boolean => state === 'done' || state === 'skipped' || state === 'warning' || state === 'info';
+export function isFinishedOutcome(state: PlanStepState): boolean {
+    return state === 'done' || state === 'skipped' || state === 'warning' || state === 'info';
+}
 
 /* A warning bubbles up so a parent does not look clean; info is only worth reading on the step itself. */
-export const deriveState = (states: readonly PlanStepState[]): PlanStepState => {
+export function deriveState(states: readonly PlanStepState[]): PlanStepState {
     if (states.includes('failed')) {
         return 'failed';
     }
@@ -93,10 +107,12 @@ export const deriveState = (states: readonly PlanStepState[]): PlanStepState => 
         return 'active';
     }
     return 'open';
-};
+}
 
 /* A leaf's own state, or for a parent the state its children add up to. */
-export const stepState = (step: PlanStep): PlanStepState => (isParentStep(step) ? deriveState(step.steps!.map(stepState)) : (step.state ?? 'open'));
+export function stepState(step: PlanStep): PlanStepState {
+    return isParentStep(step) ? deriveState(step.steps!.map(stepState)) : (step.state ?? 'open');
+}
 
 export interface PlanProgress {
     /* Leaf steps only: a parent is its children. */
@@ -113,7 +129,7 @@ export interface PlanProgress {
     finished: number;
 }
 
-export const planProgress = (items: readonly PlanItem[]): PlanProgress => {
+export function planProgress(items: readonly PlanItem[]): PlanProgress {
     const progress: PlanProgress = { total: 0, open: 0, active: 0, done: 0, failed: 0, skipped: 0, blocked: 0, warning: 0, info: 0, finished: 0 };
     for (const step of leafSteps(items)) {
         const state = step.state ?? 'open';
@@ -124,25 +140,29 @@ export const planProgress = (items: readonly PlanItem[]): PlanProgress => {
         }
     }
     return progress;
-};
+}
 
 /*
  * The steps that carry a state, in document order. A step with steps under it has no state of its
  * own: it is a heading, and what it says about progress is whatever its leaves say.
  */
-export const leafSteps = (items: readonly PlanItem[]): PlanStep[] => allSteps(items).filter((step) => !isParentStep(step));
+export function leafSteps(items: readonly PlanItem[]): PlanStep[] {
+    return allSteps(items).filter((step) => !isParentStep(step));
+}
 
-export const activeStepIds = (plan: Pick<Plan, 'items'>): string[] =>
-    leafSteps(plan.items)
+export function activeStepIds(plan: Pick<Plan, 'items'>): string[] {
+    return leafSteps(plan.items)
         .filter((step) => step.state === 'active')
         .map((step) => step.id);
+}
 
 /* True when the item, or any step under it, carries a state a person set. */
-export const holdsPersonState = (item: PlanItem): boolean =>
-    allItems([item]).some((entry) => entry.type === 'step' && !isParentStep(entry) && entry.by === 'person' && entry.state !== undefined);
+export function holdsPersonState(item: PlanItem): boolean {
+    return allItems([item]).some((entry) => entry.type === 'step' && !isParentStep(entry) && entry.by === 'person' && entry.state !== undefined);
+}
 
 /* The rules of a plan the schema cannot say, because they need the whole tree. */
-export const structureProblem = (plan: Pick<Plan, 'items'>): PlanRefusal | null => {
+export function structureProblem(plan: Pick<Plan, 'items'>): PlanRefusal | null {
     const ids = new Set<string>();
     let count = 0;
     const walk = (items: readonly PlanItem[], depth: number, inside: 'top' | 'section' | 'step'): PlanRefusal | null => {
@@ -183,4 +203,4 @@ export const structureProblem = (plan: Pick<Plan, 'items'>): PlanRefusal | null 
         return null;
     };
     return walk(plan.items, 0, 'top');
-};
+}

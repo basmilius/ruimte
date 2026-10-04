@@ -177,7 +177,7 @@ function FoundInProject({ document }: { document: LaunchesDocument }) {
 }
 
 /* What a row says beside the name: only a state worth a look, never what the launch runs. */
-const rowHint = (view: LaunchView, now: number, t: (key: string, options?: Record<string, unknown>) => string): string | null => {
+function rowHint(view: LaunchView, now: number, t: (key: string, options?: Record<string, unknown>) => string): string | null {
     const { phase, status } = view;
     if (phase === 'held') {
         return t('phase.held');
@@ -190,7 +190,7 @@ const rowHint = (view: LaunchView, now: number, t: (key: string, options?: Recor
         return t(`phase.${phase}`);
     }
     return null;
-};
+}
 
 function LaunchRow({ view }: { view: LaunchView }) {
     const { t } = useTranslation('launches');

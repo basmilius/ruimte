@@ -11,11 +11,13 @@ import {
     type ClientLocalStorage
 } from './client-local';
 
-const memory = (map = new Map<string, string>()): ClientLocalStorage & { map: Map<string, string> } => ({
-    map,
-    getItem: (key) => map.get(key) ?? null,
-    setItem: (key, value) => void map.set(key, value)
-});
+function memory(map = new Map<string, string>()): ClientLocalStorage & { map: Map<string, string> } {
+    return {
+        map,
+        getItem: (key) => map.get(key) ?? null,
+        setItem: (key, value) => void map.set(key, value)
+    };
+}
 
 const layout = {
     columns: [

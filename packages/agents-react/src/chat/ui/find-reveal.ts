@@ -12,7 +12,7 @@ export interface FindReveal {
 export const FindRevealContext = createContext<FindReveal | null>(null);
 
 /* Opens a fold of this item while the find bar is on a hit inside it; it stays open once the bar moves on, as if a person opened it. */
-export const useOpenForFind = (itemId: string, field: ChatFindField, setOpen: (open: boolean) => void): void => {
+export function useOpenForFind(itemId: string, field: ChatFindField, setOpen: (open: boolean) => void): void {
     const reveal = useContext(FindRevealContext);
     const wanted = reveal !== null && reveal.itemId === itemId && reveal.field === field;
     useEffect(() => {
@@ -20,4 +20,4 @@ export const useOpenForFind = (itemId: string, field: ChatFindField, setOpen: (o
             setOpen(true);
         }
     }, [wanted, reveal, setOpen]);
-};
+}

@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { settledBlocksText, splitMarkdownBlocks } from './markdown-blocks';
 
-const texts = (text: string): string[] => splitMarkdownBlocks(text).map((block) => block.text);
+function texts(text: string): string[] {
+    return splitMarkdownBlocks(text).map((block) => block.text);
+}
 
 describe('splitMarkdownBlocks', () => {
     test('splits at blank lines and joins back into the text', () => {

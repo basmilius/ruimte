@@ -13,13 +13,18 @@ let repo: string;
 let home: string;
 let worktrees: Worktrees;
 
-const git = (args: string[]): Promise<string> => gitIn(repo, args);
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
+function git(args: string[]): Promise<string> {
+    return gitIn(repo, args);
+}
+function exists(path: string): Promise<boolean> {
+    return stat(path).then(
         () => true,
         () => false
     );
-const branchList = async (): Promise<string[]> => (await git(['branch', '--list', '--format=%(refname:short)'])).split('\n').filter(Boolean).sort();
+}
+async function branchList(): Promise<string[]> {
+    return (await git(['branch', '--list', '--format=%(refname:short)'])).split('\n').filter(Boolean).sort();
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-git', (dir) => initRepo(join(dir, 'repo'), { 'README.md': 'hi', '.gitignore': 'build/\n' }));

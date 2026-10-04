@@ -39,21 +39,25 @@ const tests: LaunchConfigEntry = { id: 'run-tests', name: 'Run tests', kind: 'ta
 const dev: LaunchConfigEntry = { id: 'dev', name: 'Dev', kind: 'service', command: 'bun run dev', url: 'http://localhost:5173', shared: true };
 const stack: LaunchConfigEntry = { id: 'stack', name: 'Full stack', kind: 'group', launches: ['run-server', 'dev'], shared: true };
 
-const ptyOf = (launchId: string) => adapter.forSession(launchSessionIdOf('p1', launchId));
-const lastOf = (launchId: string): LaunchStatus | undefined => statuses.findLast((status) => status.launchId === launchId);
+function ptyOf(launchId: string) {
+    return adapter.forSession(launchSessionIdOf('p1', launchId));
+}
+function lastOf(launchId: string): LaunchStatus | undefined {
+    return statuses.findLast((status) => status.launchId === launchId);
+}
 // Lets the promises a step started settle, the exit a signal causes among them.
-const flush = async (): Promise<void> => {
+async function flush(): Promise<void> {
     for (let i = 0; i < 10; i++) {
         await Promise.resolve();
     }
     await Bun.sleep(0);
-};
+}
 // For a step behind file reads, which take as long as the disk does: a cap on the turns would race a slow runner.
-const until = async (done: () => boolean): Promise<void> => {
+async function until(done: () => boolean): Promise<void> {
     while (!done()) {
         await flush();
     }
-};
+}
 
 beforeEach(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-runner-')));

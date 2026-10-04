@@ -31,7 +31,7 @@ export interface GitEntry {
  * its box moves it in and out of the index without moving the row. A file git has never committed
  * stays among the unversioned ones once it is staged, for the same reason.
  */
-export const entriesOf = (files: readonly GitFile[]): GitEntry[] => {
+export function entriesOf(files: readonly GitFile[]): GitEntry[] {
     const added = new Set(files.filter((file) => file.state === 'staged' && file.status === 'A').map((file) => file.path));
     const entries = new Map<string, GitEntry>();
     for (const file of files) {
@@ -46,11 +46,13 @@ export const entriesOf = (files: readonly GitFile[]): GitEntry[] => {
         entries.set(key, entry);
     }
     return [...entries.values()];
-};
+}
 
-export const checkOf = (entry: GitEntry): CheckState => (entry.staged === null ? 'unchecked' : entry.worktree === null ? 'checked' : 'mixed');
+export function checkOf(entry: GitEntry): CheckState {
+    return entry.staged === null ? 'unchecked' : entry.worktree === null ? 'checked' : 'mixed';
+}
 
-export const checkOfAll = (entries: readonly GitEntry[]): CheckState => {
+export function checkOfAll(entries: readonly GitEntry[]): CheckState {
     let checked = false;
     let unchecked = false;
     for (const entry of entries) {
@@ -62,24 +64,29 @@ export const checkOfAll = (entries: readonly GitEntry[]): CheckState => {
         unchecked ||= state === 'unchecked';
     }
     return checked && unchecked ? 'mixed' : checked ? 'checked' : 'unchecked';
-};
+}
 
 /* What ticking a box does: one that is not wholly checked stages all of it, a checked one unstages
    all of it. Only the paths that move are named. */
-export const toggleOf = (entries: readonly GitEntry[]): { staged: boolean; paths: string[] } => {
+export function toggleOf(entries: readonly GitEntry[]): { staged: boolean; paths: string[] } {
     const staged = checkOfAll(entries) !== 'checked';
     return { staged, paths: movingPaths(entries, staged) };
-};
+}
 
 /* The paths staging (or unstaging) moves; the rest already stand where it puts them. */
-export const movingPaths = (entries: readonly GitEntry[], staged: boolean): string[] =>
-    entries.filter((entry) => (staged ? entry.worktree !== null : entry.staged !== null)).map((entry) => entry.path);
+export function movingPaths(entries: readonly GitEntry[], staged: boolean): string[] {
+    return entries.filter((entry) => (staged ? entry.worktree !== null : entry.staged !== null)).map((entry) => entry.path);
+}
 
 /* The side a row opens and is measured by: the working tree while it has changes the index lacks, else the index. */
-export const shownFile = (entry: GitEntry): GitFile => (entry.worktree ?? entry.staged)!;
+export function shownFile(entry: GitEntry): GitFile {
+    return (entry.worktree ?? entry.staged)!;
+}
 
 /* The letter a row carries. The index says what happened to the file since HEAD; a change on top of it does not rename it back. */
-export const statusOf = (entry: GitEntry): string => (entry.staged ?? entry.worktree)!.status;
+export function statusOf(entry: GitEntry): string {
+    return (entry.staged ?? entry.worktree)!.status;
+}
 
 /* The colors the whole app gives the same news, which the rows here carry on the letter alone. */
 const STATUS_COLORS: Record<string, string> = {
@@ -91,7 +98,9 @@ const STATUS_COLORS: Record<string, string> = {
     ignored: 'var(--text-faint)'
 };
 
-export const statusColor = (status: string): string => STATUS_COLORS[treeGitStatus(status)] ?? 'var(--text-muted)';
+export function statusColor(status: string): string {
+    return STATUS_COLORS[treeGitStatus(status)] ?? 'var(--text-muted)';
+}
 
 /* The tree draws inside a shadow root, which a custom property reaches and a utility class does not. */
 const ADDED_COLOR = 'var(--color-term-green)';
@@ -105,10 +114,12 @@ export interface DecorationPart {
 
 /* The checkbox a row starts with. Its color is the color of the mark, and the name of the property
    is what the tree's stylesheet draws the box by (`GitFileList`). */
-export const checkPart = (state: CheckState): DecorationPart => ({ text: '', color: `var(--git-check-${state})` });
+export function checkPart(state: CheckState): DecorationPart {
+    return { text: '', color: `var(--git-check-${state})` };
+}
 
 /* A changed file's row after its name: the lines it adds and removes, and its letter when it has one. */
-export const changeParts = (added: number, deleted: number, status: string | null): DecorationPart[] => {
+export function changeParts(added: number, deleted: number, status: string | null): DecorationPart[] {
     const parts: DecorationPart[] = [];
     if (added > 0) {
         parts.push({ text: `+${added}`, color: ADDED_COLOR });
@@ -120,30 +131,41 @@ export const changeParts = (added: number, deleted: number, status: string | nul
         parts.push({ text: status, color: statusColor(status) });
     }
     return parts;
-};
+}
 
 /* The counts are the ones of the diff the row opens. */
-export const entryParts = (entry: GitEntry): DecorationPart[] => {
+export function entryParts(entry: GitEntry): DecorationPart[] {
     const file = shownFile(entry);
     return changeParts(file.added, file.deleted, statusOf(entry));
-};
+}
 
-export const decorationOfParts = (parts: DecorationPart[]): FileTreeRowDecoration => ({ text: parts.map((part) => part.text).join(' '), parts });
+export function decorationOfParts(parts: DecorationPart[]): FileTreeRowDecoration {
+    return { text: parts.map((part) => part.text).join(' '), parts };
+}
 
 /* Every entry under a folder of a tree, however deep, which is what a folder's box and menu act on. */
-export const entriesUnder = <T extends { path: string }>(entries: readonly T[], dir: string): T[] =>
-    entries.filter((entry) => entry.path.startsWith(`${dir}/`));
+export function entriesUnder<T extends { path: string }>(entries: readonly T[], dir: string): T[] {
+    return entries.filter((entry) => entry.path.startsWith(`${dir}/`));
+}
 
 // JSON keeps checkout paths out of the directory prefix used to fold descendants.
-export const gitTreeScope = (checkout: string, group: GitGroup): string => JSON.stringify([checkout, group]);
+export function gitTreeScope(checkout: string, group: GitGroup): string {
+    return JSON.stringify([checkout, group]);
+}
 
 /* A group and a repository fold too, under keys no folder key starts with: a folder key opens with
    the scope, whose first element is an absolute path. */
-export const groupKey = (group: GitGroup): string => JSON.stringify(['group', group]);
+export function groupKey(group: GitGroup): string {
+    return JSON.stringify(['group', group]);
+}
 
-export const repoKey = (checkout: string, group: GitGroup): string => JSON.stringify(['repo', checkout, group]);
+export function repoKey(checkout: string, group: GitGroup): string {
+    return JSON.stringify(['repo', checkout, group]);
+}
 
-export const collapseKey = (scope: string, dir: string): string => (scope === '' ? dir : `${scope}/${dir}`);
+export function collapseKey(scope: string, dir: string): string {
+    return scope === '' ? dir : `${scope}/${dir}`;
+}
 
 /*
  * What joins a chain of folders into the name of one row. It reads as the slash the tree puts
@@ -177,7 +199,7 @@ interface Trie {
  * repository together with a lone folder under it; this folds the folders of one checkout only.
  * An untracked folder git names whole (`inner/`) is a file of the list.
  */
-export const flattenPaths = (paths: readonly string[]): FlatNode[] => {
+export function flattenPaths(paths: readonly string[]): FlatNode[] {
     const root: Trie = { dirs: new Map(), files: [] };
     for (const path of paths) {
         const whole = path.endsWith('/');
@@ -216,7 +238,7 @@ export const flattenPaths = (paths: readonly string[]): FlatNode[] => {
     };
     walk(root, '', null);
     return nodes;
-};
+}
 
 /* A changed file of one checkout. */
 export interface GitItem {
@@ -257,10 +279,12 @@ export interface GitTreeSource {
     entries: readonly GitEntry[];
 }
 
-export const fileId = (cwd: string, path: string): string => `${cwd}\u0000${path}`;
+export function fileId(cwd: string, path: string): string {
+    return `${cwd}\u0000${path}`;
+}
 
 /* A segment can hold no slash, and two repositories that read the same still need a row each. */
-const syntheticSegments = (labels: readonly string[]): string[] => {
+function syntheticSegments(labels: readonly string[]): string[] {
     const taken = new Set<string>();
     return labels.map((label) => {
         let segment = `${SYNTHETIC_PREFIX}${label.replaceAll('/', FOLDER_JOIN)}`;
@@ -270,7 +294,7 @@ const syntheticSegments = (labels: readonly string[]): string[] => {
         taken.add(segment);
         return segment;
     });
-};
+}
 
 /*
  * The whole list as one tree: a row per group, under it a row per repository while the folder holds
@@ -278,7 +302,7 @@ const syntheticSegments = (labels: readonly string[]): string[] => {
  * repository are rows of the tree like a folder, so one selection and one keyboard run through all
  * of it. A row's name is its path segment, which is why a group's segment is its label.
  */
-export const buildGitTree = (sources: readonly GitTreeSource[], labelOf: (group: GitGroup) => string): GitTreeLayout => {
+export function buildGitTree(sources: readonly GitTreeSource[], labelOf: (group: GitGroup) => string): GitTreeLayout {
     const named = sources.length > 1;
     const paths: string[] = [];
     const nodes = new Map<string, GitTreeNode>();
@@ -326,13 +350,15 @@ export const buildGitTree = (sources: readonly GitTreeSource[], labelOf: (group:
         }
     });
     return { paths, nodes, files, ranks, synthetic: named ? 2 : 1 };
-};
+}
 
 /* The row a tree path stands for; the tree names a directory with a trailing slash. */
-export const nodeOf = (layout: GitTreeLayout, rowPath: string): GitTreeNode | undefined => layout.nodes.get(dirPathOf(rowPath));
+export function nodeOf(layout: GitTreeLayout, rowPath: string): GitTreeNode | undefined {
+    return layout.nodes.get(dirPathOf(rowPath));
+}
 
 /* Groups and repositories in the order they are listed in, and below them the order of the Files panel. */
-export const compareGitRows = (layout: GitTreeLayout, left: SortRow, right: SortRow): number => {
+export function compareGitRows(layout: GitTreeLayout, left: SortRow, right: SortRow): number {
     const depth = Math.min(layout.synthetic, left.segments.length, right.segments.length);
     for (let i = 0; i < depth; i++) {
         const leftSegment = left.segments[i]!;
@@ -342,10 +368,10 @@ export const compareGitRows = (layout: GitTreeLayout, left: SortRow, right: Sort
         }
     }
     return compareRows(left, right);
-};
+}
 
 /* The changed files a set of rows stands for, each once: a row that folds is every file under it. */
-export const itemsOfNodes = (nodes: readonly GitTreeNode[]): GitItem[] => {
+export function itemsOfNodes(nodes: readonly GitTreeNode[]): GitItem[] {
     const found = new Map<string, GitItem>();
     for (const node of nodes) {
         for (const item of node.kind === 'file' ? [node.item] : node.items) {
@@ -353,10 +379,10 @@ export const itemsOfNodes = (nodes: readonly GitTreeNode[]): GitItem[] => {
         }
     }
     return [...found.values()];
-};
+}
 
 /* The items split by checkout, in the order they first show up, since staging is one request per checkout. */
-export const byCheckout = (items: readonly GitItem[]): [cwd: string, entries: GitEntry[]][] => {
+export function byCheckout(items: readonly GitItem[]): [cwd: string, entries: GitEntry[]][] {
     const split = new Map<string, GitEntry[]>();
     for (const item of items) {
         const entries = split.get(item.cwd) ?? [];
@@ -364,28 +390,29 @@ export const byCheckout = (items: readonly GitItem[]): [cwd: string, entries: Gi
         split.set(item.cwd, entries);
     }
     return [...split];
-};
+}
 
 /* A box over rows of the list. A conflict has none, so it takes no part in what a box says or does. */
-export const checkOfItems = (items: readonly GitItem[]): CheckState =>
-    checkOfAll(items.filter((item) => item.entry.group !== 'conflicts').map((item) => item.entry));
+export function checkOfItems(items: readonly GitItem[]): CheckState {
+    return checkOfAll(items.filter((item) => item.entry.group !== 'conflicts').map((item) => item.entry));
+}
 
 /* What ticking the boxes of a set of rows does, split per checkout: the same as one box over all of them. */
-export const toggleItems = (items: readonly GitItem[]): { staged: boolean; work: { cwd: string; paths: string[] }[] } => {
+export function toggleItems(items: readonly GitItem[]): { staged: boolean; work: { cwd: string; paths: string[] }[] } {
     const boxed = items.filter((item) => item.entry.group !== 'conflicts');
     const staged = checkOfItems(boxed) !== 'checked';
     const work = byCheckout(boxed)
         .map(([cwd, entries]) => ({ cwd, paths: movingPaths(entries, staged) }))
         .filter((step) => step.paths.length > 0);
     return { staged, work };
-};
+}
 
 /*
  * Every folder the paths hold as the list draws them, by the key the collapse set names it with. It
  * is what "collapse all" writes and what "expand all" clears, over every group at once: the folders
  * of the list are one set, so folding it up is one act and not one per group.
  */
-export const allCollapseKeys = (files: readonly GitFile[], checkout: string): string[] => {
+export function allCollapseKeys(files: readonly GitFile[], checkout: string): string[] {
     const keys: string[] = [];
     for (const group of GIT_GROUPS) {
         const paths = entriesOf(files)
@@ -395,24 +422,29 @@ export const allCollapseKeys = (files: readonly GitFile[], checkout: string): st
         keys.push(...flattenPaths(paths).flatMap((node) => (node.kind === 'folder' ? [collapseKey(scope, node.path)] : [])));
     }
     return keys;
-};
+}
 
 /* The tree names a directory with a trailing slash and the collapse set does not. */
-export const dirPathOf = (rowPath: string): string => (rowPath.endsWith('/') ? rowPath.slice(0, -1) : rowPath);
+export function dirPathOf(rowPath: string): string {
+    return rowPath.endsWith('/') ? rowPath.slice(0, -1) : rowPath;
+}
 
 /* The key the collapse set names a row by, or null for a row that does not fold there. */
 export type FoldKeyOf = (rowPath: string) => string | null;
 
-const plainKey: FoldKeyOf = (rowPath) => dirPathOf(rowPath);
+function plainKey(rowPath: string): string | null {
+    return dirPathOf(rowPath);
+}
 
 /* The rows that stand folded up, which is what a panel remembers between visits. */
-export const collapsedPathsOf = (rows: readonly GitTreeRow[], keyOf: FoldKeyOf = plainKey): string[] =>
-    rows.flatMap((row) => {
+export function collapsedPathsOf(rows: readonly GitTreeRow[], keyOf: FoldKeyOf = plainKey): string[] {
+    return rows.flatMap((row) => {
         const key = row.kind === 'directory' && !row.isExpanded ? keyOf(row.path) : null;
         return key === null ? [] : [key];
     });
+}
 
-export const mergeCollapsedPaths = (current: string[], rows: readonly GitTreeRow[], keyOf: FoldKeyOf = plainKey): string[] => {
+export function mergeCollapsedPaths(current: string[], rows: readonly GitTreeRow[], keyOf: FoldKeyOf = plainKey): string[] {
     const known = new Set(rows.flatMap((row) => (row.kind === 'directory' ? [keyOf(row.path)] : [])));
     const folded = new Set(collapsedPathsOf(rows, keyOf));
     const next = current.filter((dir) => !known.has(dir) || folded.has(dir));
@@ -424,14 +456,14 @@ export const mergeCollapsedPaths = (current: string[], rows: readonly GitTreeRow
     }
     // Selection also notifies subscribers; unchanged folds must not restart the shared-state cycle.
     return next.length === current.length && next.every((dir, index) => dir === current[index]) ? current : next;
-};
+}
 
 /*
  * The folders under the ones that just folded, however deep, that do not stand folded yet, as tree
  * paths. The tree keeps a folder under a closed one open, so it would open again together with its
  * parent. A group or a repository that folds keeps the folders under it as they were.
  */
-export const foldedBranches = (layout: GitTreeLayout, before: readonly string[], after: readonly string[]): string[] => {
+export function foldedBranches(layout: GitTreeLayout, before: readonly string[], after: readonly string[]): string[] {
     const had = new Set(before);
     const folded = new Set(after);
     const fresh = new Set(after.filter((key) => !had.has(key)));
@@ -452,14 +484,14 @@ export const foldedBranches = (layout: GitTreeLayout, before: readonly string[],
         }
     }
     return branches;
-};
+}
 
 /* Which rows have to move for a tree to stand the way the collapse set says. */
-export const expansionChanges = (
+export function expansionChanges(
     rows: readonly GitTreeRow[],
     collapsed: ReadonlySet<string>,
     keyOf: FoldKeyOf = plainKey
-): { collapse: string[]; expand: string[] } => {
+): { collapse: string[]; expand: string[] } {
     const changes: { collapse: string[]; expand: string[] } = { collapse: [], expand: [] };
     for (const row of rows) {
         const key = row.kind === 'directory' ? keyOf(row.path) : null;
@@ -475,16 +507,16 @@ export const expansionChanges = (
         }
     }
     return changes;
-};
+}
 
 /*
  * Which changed file the preview is showing and which checkout it belongs to, so the list of that
  * repository can mark the row a person is reading. A tab that is not a diff marks nothing.
  */
-export const activeDiff = (tab: FileTab | undefined): { cwd: string; path: string } | null => {
+export function activeDiff(tab: FileTab | undefined): { cwd: string; path: string } | null {
     const root = tab?.view?.cwd;
     if (tab === undefined || root === undefined) {
         return null;
     }
     return tab.path.startsWith(`${root}/`) ? { cwd: root, path: tab.path.slice(root.length + 1) } : null;
-};
+}

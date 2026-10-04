@@ -5,7 +5,7 @@ import { viewLines } from '../canvas/views.ts';
 import type { ServerActionContext } from './context.ts';
 
 /* Whether an id names a view or a node of this project; a view id and a node id are one namespace. */
-const targetOf = (content: ProjectContent, id: string): 'view' | 'node' => {
+function targetOf(content: ProjectContent, id: string): 'view' | 'node' {
     if (content.views.some((view) => view.id === id)) {
         return 'view';
     }
@@ -16,7 +16,7 @@ const targetOf = (content: ProjectContent, id: string): 'view' | 'node' => {
         ...viewLines(content.views),
         'note\tflag takes an id, never a name; ruimte-context node list lists the nodes of a canvas'
     ]);
-};
+}
 
 export const flagActions: ActionHandlers<ServerActionContext> = {
     'flag.set': async ({ ids, color }, { context }) =>

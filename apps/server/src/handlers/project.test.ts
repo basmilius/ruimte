@@ -57,7 +57,7 @@ afterEach(async () => {
 });
 
 /* Two clients of one daemon. A socket and, beside it, a channel that got in the way a direct connection does. */
-const twoClients = () => {
+function twoClients() {
     const dispatcher = new Dispatcher();
     registerProjectHandlers(dispatcher, store);
     const services: ConnectionServices = {
@@ -81,12 +81,12 @@ const twoClients = () => {
         a: { channel: socket, connection: open(socket, { reachability: 'loopback', sessionId: null }) },
         b: { channel: direct, connection: open(direct, { reachability: 'lan', sessionId: 'paired-1' }) }
     };
-};
+}
 
 let nextId = 1;
 
 /* The store writes to a real temp folder, so the loop yields until the reply is in; no clock decides. */
-const request = async <T>(client: { channel: FakeChannel; connection: OpenConnection }, type: string, payload: unknown): Promise<T> => {
+async function request<T>(client: { channel: FakeChannel; connection: OpenConnection }, type: string, payload: unknown): Promise<T> {
     const id = `r${nextId++}`;
     client.connection.receive(JSON.stringify({ id, type, payload }));
     for (;;) {
@@ -99,19 +99,24 @@ const request = async <T>(client: { channel: FakeChannel; connection: OpenConnec
         }
         await new Promise((resolve) => setImmediate(resolve));
     }
-};
+}
 
-const changesIn = (channel: FakeChannel): ProjectDocument[] =>
-    channel.frames.flatMap((frame) =>
+function changesIn(channel: FakeChannel): ProjectDocument[] {
+    return channel.frames.flatMap((frame) =>
         'event' in frame && frame.event === 'project.changed' ? [(frame.payload as { document: ProjectDocument }).document] : []
     );
+}
 
-const contentOf = ({ version: _version, rev: _rev, ...content }: ProjectDocument): ProjectContent => content;
+function contentOf({ version: _version, rev: _rev, ...content }: ProjectDocument): ProjectContent {
+    return content;
+}
 
-const canvas = (id: string, name: string): ProjectCanvasView => ({ kind: 'canvas', id, name, nodes: [], texts: [], edges: [], layouts: [] });
+function canvas(id: string, name: string): ProjectCanvasView {
+    return { kind: 'canvas', id, name, nodes: [], texts: [], edges: [], layouts: [] };
+}
 
 /* Both clients open the same project with two views; what comes back is the rev and content they start from. */
-const openOnBoth = async (clients: ReturnType<typeof twoClients>) => {
+async function openOnBoth(clients: ReturnType<typeof twoClients>) {
     const opened = await request<{ summary: { projectId: string }; document: ProjectDocument }>(clients.a, 'project.open', { folder });
     const projectId = opened.summary.projectId;
     const start = { ...contentOf(opened.document), views: [canvas('main', 'Main'), canvas('notes', 'Notes')] };
@@ -120,7 +125,7 @@ const openOnBoth = async (clients: ReturnType<typeof twoClients>) => {
     clients.a.channel.frames.length = 0;
     clients.b.channel.frames.length = 0;
     return { projectId, rev, start };
-};
+}
 
 describe('a save in one client', () => {
     test('a renamed view reaches the other client, and not the one that saved it', async () => {

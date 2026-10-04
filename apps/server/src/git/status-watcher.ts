@@ -15,7 +15,9 @@ const SLOW_STATUS_MS = 1000;
 const MAX_TRACKED_FILES = 5000;
 
 /* Loose objects and lock files move on every git command and say nothing about the status. */
-const isNoise = (path: string): boolean => path.includes(`${sep}objects${sep}`) || path.endsWith('.lock') || path.endsWith('~');
+function isNoise(path: string): boolean {
+    return path.includes(`${sep}objects${sep}`) || path.endsWith('.lock') || path.endsWith('~');
+}
 
 interface Watch {
     cwd: string;

@@ -29,7 +29,9 @@ export interface LanSignalingOptions {
     nonce?(): string;
 }
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 /*
  * The signals over the machine's door on the local network. The client opens with a nonce and says
@@ -37,9 +39,8 @@ const messageOf = (e: unknown): string => (e instanceof Error ? e.message : Stri
  * somebody else's on another network, and that somebody learns nothing of this client. From then on
  * the frames are the signed envelopes a broker relays, believed only when the pinned key signed them.
  */
-export const lanSignaling =
-    (options: LanSignalingOptions): SignalingOpener =>
-    (connectionId, events) => {
+export function lanSignaling(options: LanSignalingOptions): SignalingOpener {
+    return (connectionId, events) => {
         const nonce = options.nonce?.() ?? randomToken(NONCE_BYTES);
         let socket: WebSocket | null = null;
         let signer: ClientKey | null = null;
@@ -178,3 +179,4 @@ export const lanSignaling =
             }
         };
     };
+}

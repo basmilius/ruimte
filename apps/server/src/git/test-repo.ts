@@ -16,17 +16,17 @@ const TEST_GIT_CONFIG = {
 };
 
 /* Runs git in a test repository and answers what it wrote to stdout; a failure throws with its stderr. */
-export const gitIn = async (cwd: string, args: string[]): Promise<string> => {
+export async function gitIn(cwd: string, args: string[]): Promise<string> {
     const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ...IDENTITY, ...TEST_GIT_CONFIG } });
     const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
     if (code !== 0) {
         throw new Error(`git ${args.join(' ')}: ${stderr}`);
     }
     return stdout;
-};
+}
 
 /* A repository on `main` with these files in one commit. */
-export const initRepo = async (repo: string, files: Record<string, string>): Promise<void> => {
+export async function initRepo(repo: string, files: Record<string, string>): Promise<void> {
     await mkdir(repo, { recursive: true });
     await gitIn(repo, ['init', '--quiet', '--initial-branch=main']);
     for (const [name, body] of Object.entries(files)) {
@@ -34,7 +34,7 @@ export const initRepo = async (repo: string, files: Record<string, string>): Pro
     }
     await gitIn(repo, ['add', '.']);
     await gitIn(repo, ['commit', '--quiet', '--message', 'init']);
-};
+}
 
 export interface RepoTemplate {
     /* A fresh folder holding a copy of everything the template built, for one test to change. */
@@ -47,7 +47,7 @@ export interface RepoTemplate {
  * fixture rebuilt with git before each test pushed single tests past Bun's five seconds. The fixture
  * is built once per file and copied per test, which costs no process at all.
  */
-export const repoTemplate = async (prefix: string, build: (root: string) => Promise<void>): Promise<RepoTemplate> => {
+export async function repoTemplate(prefix: string, build: (root: string) => Promise<void>): Promise<RepoTemplate> {
     // Git reports real paths, and the temp dir sits behind a symlink on macOS (/var to /private/var).
     const template = await realpath(await mkdtemp(join(tmpdir(), `${prefix}-template-`)));
     await build(template);
@@ -61,4 +61,4 @@ export const repoTemplate = async (prefix: string, build: (root: string) => Prom
             await rm(template, { recursive: true, force: true });
         }
     };
-};
+}

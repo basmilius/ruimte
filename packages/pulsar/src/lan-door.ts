@@ -74,4 +74,6 @@ export const LanDoorMachineFrameSchema = z.discriminatedUnion('type', [LanDoorPr
 export type LanDoorMachineFrame = z.infer<typeof LanDoorMachineFrameSchema>;
 
 /* The socket URL of a door at one address the machine reported; an IPv6 address goes in brackets. */
-export const lanDoorUrl = (address: string, port: number): string => `ws://${address.includes(':') ? `[${address}]` : address}:${port}${LAN_DOOR_PATH}`;
+export function lanDoorUrl(address: string, port: number): string {
+    return `ws://${address.includes(':') ? `[${address}]` : address}:${port}${LAN_DOOR_PATH}`;
+}

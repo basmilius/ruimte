@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { voiceToolsFor } from '@ruimte/actions';
 import { VoiceDiagnosticsRecorder, voiceActionOf, voiceResultOf, type VoiceRequestRecord } from '@/voice/diagnostics';
 
-const clock = () => {
+function clock() {
     let time = 1_000;
     return {
         now: () => time,
@@ -10,16 +10,16 @@ const clock = () => {
             time += ms;
         }
     };
-};
+}
 
-const recording = () => {
+function recording() {
     const time = clock();
     const ended: VoiceRequestRecord[] = [];
     const recorder = new VoiceDiagnosticsRecorder(['workspace', 'views'], time.now, (request) => {
         ended.push(request);
     });
     return { time, recorder, ended, latest: () => recorder.session };
-};
+}
 
 describe('what a Voice call is recorded as', () => {
     test('an action is kept only when its tool has it', () => {

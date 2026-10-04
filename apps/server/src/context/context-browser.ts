@@ -7,7 +7,7 @@ import { BROWSER_TEXT_MAX_CHARS } from '@ruimte/contracts';
  * another visit and a page behind a login would answer something else entirely. A `tail` counts the
  * lines of the page and leaves the address standing, the way a drawing's tail leaves its picture out.
  */
-export const renderPage = (url: string, text: string | null, tail: number | null = null, open: boolean = text !== null): string => {
+export function renderPage(url: string, text: string | null, tail: number | null = null, open: boolean = text !== null): string {
     if (url === '') {
         return ['# Page', '', 'This node has no address yet, so there is nothing to read. `ruimte-context browser go <id> --url <address>` gives it one.'].join(
             '\n'
@@ -30,4 +30,4 @@ export const renderPage = (url: string, text: string | null, tail: number | null
     // A page that ran into the cap is cut off mid sentence; saying so keeps an agent from reading the end as the end.
     const cut = text.length >= BROWSER_TEXT_MAX_CHARS ? ['', `The page is longer than this: these are its first ${BROWSER_TEXT_MAX_CHARS} characters.`] : [];
     return [heading, '', text, ...cut].join('\n');
-};
+}

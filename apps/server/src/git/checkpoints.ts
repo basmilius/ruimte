@@ -13,20 +13,22 @@ export interface CheckpointService {
 }
 
 /* The name of the index file a checkout's turns are written through; removing a worktree removes it too. */
-export const checkpointIndexFile = (top: string): string => `${basename(top)}-${createHash('sha1').update(top).digest('hex').slice(0, 8)}.index`;
+export function checkpointIndexFile(top: string): string {
+    return `${basename(top)}-${createHash('sha1').update(top).digest('hex').slice(0, 8)}.index`;
+}
 
 // One index per repository, and one turn at a time in it: two chats in the same folder would
 // otherwise fight over the lock file git writes next to it.
 const queues = new Map<string, Promise<unknown>>();
 
-const serialize = <T>(key: string, work: () => Promise<T>): Promise<T> => {
+function serialize<T>(key: string, work: () => Promise<T>): Promise<T> {
     const next = (queues.get(key) ?? Promise.resolve()).then(work, work);
     queues.set(
         key,
         next.catch(() => undefined)
     );
     return next;
-};
+}
 
 /*
  * Capture each turn as a git tree through a private `GIT_INDEX_FILE`, leaving the person's index,

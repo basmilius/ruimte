@@ -14,7 +14,9 @@ const EFFORT: ModelOptionDescriptor = {
 };
 const FAST: ModelOptionDescriptor = { id: 'fast', label: 'Fast', type: 'boolean', defaultValue: true };
 
-const modelWith = (options: ModelOptionDescriptor[]): ModelInfo => ({ slug: 'next', name: 'Next', legacy: false, isDefault: false, options });
+function modelWith(options: ModelOptionDescriptor[]): ModelInfo {
+    return { slug: 'next', name: 'Next', legacy: false, isDefault: false, options };
+}
 
 describe('optionValue', () => {
     test('answers the picked value', () => {

@@ -67,23 +67,27 @@ interface AccountState {
 }
 
 // Asked on every start of a CLI under an account, which is one stat and never worth an await in the way of a spawn.
-const isFolder = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isDirectory() === true;
+function isFolder(path: string): boolean {
+    return statSync(path, { throwIfNoEntry: false })?.isDirectory() === true;
+}
 
-const sleep = (ms: number): Promise<void> =>
-    new Promise((resolve) => {
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
         setTimeout(resolve, ms).unref();
     });
+}
 
 /* The part of a label an id can hold: `Work (EU)` becomes `work-eu`. */
-const slugOf = (label: string): string =>
-    label
+function slugOf(label: string): string {
+    return label
         .normalize('NFKD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
+}
 
-const sensitiveNames = (entry: unknown): string[] => {
+function sensitiveNames(entry: unknown): string[] {
     const variables = typeof entry === 'object' && entry !== null ? (entry as { env?: unknown }).env : undefined;
     if (!Array.isArray(variables)) {
         return [];
@@ -92,11 +96,12 @@ const sensitiveNames = (entry: unknown): string[] => {
         const { name, sensitive } = (variable ?? {}) as { name?: unknown; sensitive?: unknown };
         return sensitive === true && typeof name === 'string' ? [name] : [];
     });
-};
+}
 
 /* A status without the moment it was drawn, to tell whether anything a person reads changed. */
-const sameStatus = (left: ProviderAccountStatus, right: ProviderAccountStatus): boolean =>
-    JSON.stringify({ ...left, checkedAt: 0 }) === JSON.stringify({ ...right, checkedAt: 0 });
+function sameStatus(left: ProviderAccountStatus, right: ProviderAccountStatus): boolean {
+    return JSON.stringify({ ...left, checkedAt: 0 }) === JSON.stringify({ ...right, checkedAt: 0 });
+}
 
 /*
  * The accounts of every agent CLI on this machine: the list a person keeps in `providers.json`, and

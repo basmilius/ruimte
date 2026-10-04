@@ -25,11 +25,13 @@ type GrepErrorCode = 'invalid-query';
 
 export class GrepError extends CodedError<GrepErrorCode> {}
 
-const escapeLiteral = (query: string): string => query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function escapeLiteral(query: string): string {
+    return query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 /* The query as a regular expression, whatever the person typed it as. Throws what the client shows
    when the pattern itself is the problem. */
-const toRegExp = (query: string, options: GrepOptions): RegExp => {
+function toRegExp(query: string, options: GrepOptions): RegExp {
     const source = options.regex ? query : escapeLiteral(query);
     const pattern = options.wholeWord ? `\\b(?:${source})\\b` : source;
     try {
@@ -37,13 +39,13 @@ const toRegExp = (query: string, options: GrepOptions): RegExp => {
     } catch {
         throw new GrepError('invalid-query', 'That is not a valid search pattern');
     }
-};
+}
 
 /*
  * The lines a hit is read in. `before` runs nearest last and `after` nearest first, and a line the
  * source does not have (the top or the bottom of the file) is simply absent.
  */
-const contextOf = (lineOf: (line: number) => string | undefined, line: number): Pick<FsGrepMatch, 'before' | 'after'> => {
+function contextOf(lineOf: (line: number) => string | undefined, line: number): Pick<FsGrepMatch, 'before' | 'after'> {
     const before: string[] = [];
     const after: string[] = [];
     for (let offset = FS_GREP_CONTEXT_LINES; offset >= 1; offset -= 1) {
@@ -59,19 +61,19 @@ const contextOf = (lineOf: (line: number) => string | undefined, line: number): 
         }
     }
     return { before, after };
-};
+}
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
 /* Ripgrep counts in bytes and the viewer draws in UTF-16 units, which are the same thing until a
    line holds something outside ASCII. */
-const toUnits = (text: string, byteOffset: number): number => {
+function toUnits(text: string, byteOffset: number): number {
     if (byteOffset === 0) {
         return 0;
     }
     return decoder.decode(encoder.encode(text).slice(0, byteOffset)).length;
-};
+}
 
 interface RipgrepLineData {
     path?: { text?: string };
@@ -88,8 +90,8 @@ interface Collected {
 }
 
 /* One file's hits and the lines around them, turned into the matches the wire carries. */
-const matchesOfFile = (path: string, hits: Collected[], lines: Map<number, string>): FsGrepMatch[] =>
-    hits.map((hit) => {
+function matchesOfFile(path: string, hits: Collected[], lines: Map<number, string>): FsGrepMatch[] {
+    return hits.map((hit) => {
         const text = clipText(hit.text, MAX_LINE_LENGTH);
         const column = toUnits(hit.text, hit.start);
         return {
@@ -101,13 +103,14 @@ const matchesOfFile = (path: string, hits: Collected[], lines: Map<number, strin
             ...contextOf((line) => lines.get(line), hit.line)
         };
     });
+}
 
 /*
  * Ripgrep's JSON stream, one event per line: `begin` opens a file, `match` and `context` carry a
  * line each, `end` closes it. Both line kinds are kept, because the context of one hit is another
  * hit as often as not. The walk stops at the limit and the process is killed where it stands.
  */
-const searchWithRipgrep = async (binary: string, cwd: string, query: string, options: GrepOptions, limit: number): Promise<FsGrepResult> => {
+async function searchWithRipgrep(binary: string, cwd: string, query: string, options: GrepOptions, limit: number): Promise<FsGrepResult> {
     const args = [
         binary,
         '--json',
@@ -209,11 +212,11 @@ const searchWithRipgrep = async (binary: string, cwd: string, query: string, opt
         throw new Error(`ripgrep stopped with code ${proc.exitCode} before it searched`);
     }
     return { matches: matches.slice(0, limit), files: files.size, truncated };
-};
+}
 
 /* The same search without ripgrep: over the file list `fs.search` already keeps, one file at a
    time. Slower on a large tree, and the only way a machine without the binary searches at all. */
-const searchInJs = async (cwd: string, query: string, options: GrepOptions, limit: number): Promise<FsGrepResult> => {
+async function searchInJs(cwd: string, query: string, options: GrepOptions, limit: number): Promise<FsGrepResult> {
     const now = options.now ?? (() => performance.now());
     const started = now();
     let sliceStarted = started;
@@ -269,14 +272,14 @@ const searchInJs = async (cwd: string, query: string, options: GrepOptions, limi
         }
     }
     return { matches, files: files.size, truncated: truncated || outOfTime };
-};
+}
 
 /*
  * Every line under `cwd` that answers to the query, with the lines around it. Ripgrep does the work
  * where it is installed, because nothing in JavaScript comes close on a tree of any size; the
  * fallback searches the same files the fuzzy file search already lists.
  */
-export const grepFiles = async (cwd: string, query: string, options: GrepOptions = {}): Promise<FsGrepResult> => {
+export async function grepFiles(cwd: string, query: string, options: GrepOptions = {}): Promise<FsGrepResult> {
     const trimmed = query.trim();
     if (trimmed === '') {
         return { matches: [], files: 0, truncated: false };
@@ -294,4 +297,4 @@ export const grepFiles = async (cwd: string, query: string, options: GrepOptions
     } catch {
         return searchInJs(cwd, trimmed, options, limit);
     }
-};
+}

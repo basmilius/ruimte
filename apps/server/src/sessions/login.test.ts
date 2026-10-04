@@ -40,14 +40,15 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const request = async (clientId: string, type: string, payload: unknown): Promise<ServerFrame> => {
+async function request(clientId: string, type: string, payload: unknown): Promise<ServerFrame> {
     const frames: ServerFrame[] = [];
     await dispatcher.handle({ id: clientId, send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
     return frames[0]!;
-};
+}
 
-const login = (clientId: string, sessionId: string, kind: AgentKind, account?: string): Promise<ServerFrame> =>
-    request(clientId, 'session.login', { sessionId, kind, cols: 80, rows: 24, ...(account === undefined ? {} : { account }) });
+function login(clientId: string, sessionId: string, kind: AgentKind, account?: string): Promise<ServerFrame> {
+    return request(clientId, 'session.login', { sessionId, kind, cols: 80, rows: 24, ...(account === undefined ? {} : { account }) });
+}
 
 describe('a login outside every project', () => {
     test('types the CLI login in the home folder at once, though no project approved it', async () => {

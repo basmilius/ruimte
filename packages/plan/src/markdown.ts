@@ -22,16 +22,26 @@ const MARKER_STATES: Record<string, PlanStepState | undefined> = {
 /* What the reader takes for a heading, a rule, a list item or a quote at the start of a line, and the escape itself. */
 const MARKUP = /^(#{1,6}\s|(-{3,}|\*{3,}|_{3,})$|[-*+]\s|>|\\)/;
 
-const escapeLine = (line: string): string => (MARKUP.test(line.trimStart()) ? `\\${line}` : line);
+function escapeLine(line: string): string {
+    return MARKUP.test(line.trimStart()) ? `\\${line}` : line;
+}
 
-const escapeText = (text: string): string => text.split('\n').map(escapeLine).join('\n');
+function escapeText(text: string): string {
+    return text.split('\n').map(escapeLine).join('\n');
+}
 
-const escapeBold = (title: string): string => title.replace(/[\\*]/g, '\\$&');
+function escapeBold(title: string): string {
+    return title.replace(/[\\*]/g, '\\$&');
+}
 
 /* A later line of a text block that starts in bold would start a text block of its own. */
-const escapeQuoted = (line: string): string => (/^(\*\*|\\)/.test(line.trimStart()) ? `\\${line}` : line);
+function escapeQuoted(line: string): string {
+    return /^(\*\*|\\)/.test(line.trimStart()) ? `\\${line}` : line;
+}
 
-const dropEscape = (line: string): string => (line.trimStart().startsWith('\\') ? line.replace('\\', '') : line);
+function dropEscape(line: string): string {
+    return line.trimStart().startsWith('\\') ? line.replace('\\', '') : line;
+}
 
 /*
  * A plan as a GFM task list: `#` the title, `##` a section, `> **Title**` a text block, `- [ ]` a
@@ -39,7 +49,7 @@ const dropEscape = (line: string): string => (line.trimStart().startsWith('\\') 
  * `plan read`, and a `>` line under a step is its note. Ids, who set a state and the locks stay out.
  * A line of text the reader would take for markup starts with a backslash, which the reader drops.
  */
-export const planToMarkdown = (plan: Plan): string => {
+export function planToMarkdown(plan: Plan): string {
     const blocks: string[] = [`# ${plan.meta.title}`];
     if (plan.meta.summary) {
         blocks.push(escapeText(plan.meta.summary));
@@ -111,9 +121,9 @@ export const planToMarkdown = (plan: Plan): string => {
     }
     flushLoose();
     return `${blocks.join('\n\n')}\n`;
-};
+}
 
-const indentOf = (line: string): number => {
+function indentOf(line: string): number {
     let width = 0;
     for (const char of line) {
         if (char === ' ') {
@@ -125,15 +135,17 @@ const indentOf = (line: string): number => {
         }
     }
     return width;
-};
+}
 
-const appendLine = (value: string | undefined, line: string, blanks = 0): string => (value === undefined ? line : `${value}\n${'\n'.repeat(blanks)}${line}`);
+function appendLine(value: string | undefined, line: string, blanks = 0): string {
+    return value === undefined ? line : `${value}\n${'\n'.repeat(blanks)}${line}`;
+}
 
 /*
  * Reads a GFM task list into a draft for `plan new`. Lenient where Markdown is (a list item without a
  * checkbox is an open step), strict where a line cannot belong to anything.
  */
-export const parsePlanMarkdown = (markdown: string): { ok: true; draft: PlanDraft } | PlanRefusal => {
+export function parsePlanMarkdown(markdown: string): { ok: true; draft: PlanDraft } | PlanRefusal {
     const draft: PlanDraft = { items: [] };
     let section: PlanDraftSection | null = null;
     let stack: { indent: number; step: PlanDraftStep }[] = [];
@@ -260,4 +272,4 @@ export const parsePlanMarkdown = (markdown: string): { ok: true; draft: PlanDraf
     };
     clearParents(draft.items);
     return { ok: true, draft };
-};
+}

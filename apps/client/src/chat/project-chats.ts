@@ -10,8 +10,8 @@ export interface ChatSource {
 }
 
 /* Every chat of the project under the name it has right now, node or view, in sidebar order. */
-export const projectChats = (source: ChatSource): ProjectChat[] =>
-    source.views.flatMap((view): ProjectChat[] => {
+export function projectChats(source: ChatSource): ProjectChat[] {
+    return source.views.flatMap((view): ProjectChat[] => {
         if (view.kind === 'chat') {
             return [{ id: view.id, title: view.name }];
         }
@@ -20,9 +20,10 @@ export const projectChats = (source: ChatSource): ProjectChat[] =>
         }
         return (source.canvases[view.id] ?? view.nodes).filter((node) => node.kind === 'chat').map((node) => ({ id: node.id, title: node.title }));
     });
+}
 
 /* The chats of the open project, renamed the moment a node on a live canvas is. */
-export const useProjectChats = (): ProjectChat[] => {
+export function useProjectChats(): ProjectChat[] {
     const source = useSidebarSource();
     return useMemo(() => projectChats(source), [source]);
-};
+}

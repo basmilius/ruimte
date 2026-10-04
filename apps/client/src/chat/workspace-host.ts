@@ -22,7 +22,7 @@ import { isShellShortcut } from '@/terminal/keymap';
  * cards the machine raises beside a chat's own prompts, and the ways to a file or another chat of the
  * project. Handed over when the workspace chunk loads, before anything in it renders.
  */
-export const connectWorkspaceChatHost = (): void => {
+export function connectWorkspaceChatHost(): void {
     setChatHost({
         isAppShortcut: (event) => isShellShortcut(event, isApplePlatform()),
         ReadImage,
@@ -48,4 +48,4 @@ export const connectWorkspaceChatHost = (): void => {
         useChatPlace,
         useContextSources
     });
-};
+}

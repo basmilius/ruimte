@@ -26,7 +26,9 @@ const SERVICED: Readonly<Record<string, MonacoLanguage>> = {
 };
 
 /* Any other Shiki id is its own Monaco id, with nothing but its colors and the words in the file. */
-export const monacoLanguageOf = (shikiId: string): MonacoLanguage => SERVICED[shikiId] ?? { id: shikiId, grammar: shikiId };
+export function monacoLanguageOf(shikiId: string): MonacoLanguage {
+    return SERVICED[shikiId] ?? { id: shikiId, grammar: shikiId };
+}
 
 export type WorkerKind = 'editor' | 'typescript' | 'css' | 'json' | 'html';
 
@@ -43,14 +45,16 @@ const WORKER_LABELS: Readonly<Record<string, WorkerKind>> = {
 };
 
 /* Which worker a label Monaco asks for runs in; its own base worker takes every label no language service uses. */
-export const workerFor = (label: string): WorkerKind => WORKER_LABELS[label] ?? 'editor';
+export function workerFor(label: string): WorkerKind {
+    return WORKER_LABELS[label] ?? 'editor';
+}
 
 /*
  * Where a model lives. The path goes in whole so a language service reads the dialect off its
  * extension, under a segment of its own per model: two editors on one file are two models, and
  * Monaco refuses a second model at a URI it already holds.
  */
-export const modelPath = (sequence: number, path: string | undefined): string => {
+export function modelPath(sequence: number, path: string | undefined): string {
     const file = path === undefined || path === '' ? '' : path.startsWith('/') ? path : `/${path}`;
     return `/${sequence}${file}`;
-};
+}

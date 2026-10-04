@@ -11,34 +11,37 @@ const AGENTS_PREFIX = '@ruimte/agents-react/';
 
 const PACKAGES: ReadonlyArray<{ prefix: string; source: string }> = [{ prefix: AGENTS_PREFIX, source: join(HERE, '../../../packages/agents-react/src') }];
 
-const fileOf = (path: string): string => {
+function fileOf(path: string): string {
     const owner = PACKAGES.find(({ prefix }) => path.startsWith(prefix));
     return owner === undefined ? join(HERE, path) : join(owner.source, path.slice(owner.prefix.length));
-};
+}
 
-const sources = (): { path: string; text: string }[] =>
-    [
+function sources(): { path: string; text: string }[] {
+    return [
         ...new Glob('**/*.{ts,tsx}').scanSync(HERE),
         ...PACKAGES.flatMap(({ prefix, source }) => [...new Glob('**/*.{ts,tsx}').scanSync(source)].map((path) => `${prefix}${path}`))
     ]
         .filter((path) => !path.endsWith('.test.ts'))
         .sort()
         .map((path) => ({ path, text: readFileSync(fileOf(path), 'utf8') }));
+}
 
 type Tree = JSXElement | JSXFragment;
 
 const programs = new Map<string, Program>();
 
-const programOf = (path: string, text?: string): Program => {
+function programOf(path: string, text?: string): Program {
     let program = programs.get(path);
     if (program === undefined) {
         program = parseSync(path, text ?? readFileSync(fileOf(path), 'utf8')).program;
         programs.set(path, program);
     }
     return program;
-};
+}
 
-const lineOf = (text: string, offset: number): number => text.slice(0, offset).split('\n').length;
+function lineOf(text: string, offset: number): number {
+    return text.slice(0, offset).split('\n').length;
+}
 
 /* Where a key may be heard on the window, and why there. */
 const KEY_LISTENERS: Record<string, string> = {
@@ -76,7 +79,7 @@ const UNGUARDED: Record<string, string> = {
     WindowContent: 'the window itself, under the last resort: the start screen has no page to lose, and a workspace guards each of its own surfaces'
 };
 
-const nameOf = (name: JSXElementName): string => {
+function nameOf(name: JSXElementName): string {
     switch (name.type) {
         case 'JSXIdentifier':
             return name.name;
@@ -85,10 +88,10 @@ const nameOf = (name: JSXElementName): string => {
         case 'JSXMemberExpression':
             return `${nameOf(name.object)}.${name.property.name}`;
     }
-};
+}
 
 /* The outermost elements inside an expression, such as the one in `{open && <Dialog />}`. */
-const elementsIn = (node: unknown): Tree[] => {
+function elementsIn(node: unknown): Tree[] {
     if (Array.isArray(node)) {
         return node.flatMap(elementsIn);
     }
@@ -99,13 +102,13 @@ const elementsIn = (node: unknown): Tree[] => {
         return [node as Tree];
     }
     return Object.entries(node).flatMap(([key, value]) => (key === 'parent' ? [] : elementsIn(value)));
-};
+}
 
 /*
  * Every component a tree draws, and whether a boundary holds it alone. A DOM element, a provider or a
  * Suspense draws nothing of its own, so what is inside it is looked at instead.
  */
-const surfacesIn = (node: Tree, guarded: boolean): { name: string; guarded: boolean }[] => {
+function surfacesIn(node: Tree, guarded: boolean): { name: string; guarded: boolean }[] {
     const children = elementsIn(node.children);
     if (node.type === 'JSXFragment') {
         return children.flatMap((child) => surfacesIn(child, false));
@@ -118,20 +121,21 @@ const surfacesIn = (node: Tree, guarded: boolean): { name: string; guarded: bool
         return children.flatMap((child) => surfacesIn(child, false));
     }
     return [{ name, guarded }];
-};
+}
 
 /* What a component returns, from the statements of its own body and not from a function inside it. */
-const returnedBy = (program: Program, component: string): Tree[] =>
-    program.body.flatMap((statement) => {
+function returnedBy(program: Program, component: string): Tree[] {
+    return program.body.flatMap((statement) => {
         const declaration = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement;
         if (declaration?.type !== 'FunctionDeclaration' || declaration.id?.name !== component || !declaration.body) {
             return [];
         }
         return declaration.body.body.flatMap((inner) => (inner.type === 'ReturnStatement' ? elementsIn(inner.argument) : []));
     });
+}
 
 /* Every node under one, in the order of the source. */
-const nodesIn = (node: unknown): { type: string }[] => {
+function nodesIn(node: unknown): { type: string }[] {
     if (Array.isArray(node)) {
         return node.flatMap(nodesIn);
     }
@@ -140,10 +144,10 @@ const nodesIn = (node: unknown): { type: string }[] => {
     }
     const children = Object.entries(node).flatMap(([key, value]) => (key === 'parent' ? [] : nodesIn(value)));
     return 'type' in node && typeof node.type === 'string' ? [node as { type: string }, ...children] : children;
-};
+}
 
 /* The file a component is imported from, statically or through a lazy `import()`. */
-const moduleOf = (program: Program, component: string): string | null => {
+function moduleOf(program: Program, component: string): string | null {
     const sourceOf = (): unknown => {
         for (const statement of program.body) {
             if (statement.type === 'ImportDeclaration' && statement.specifiers.some((specifier) => specifier.local.name === component)) {
@@ -166,9 +170,9 @@ const moduleOf = (program: Program, component: string): string | null => {
     }
     const path = source.startsWith('@/') ? source.slice(2) : source.startsWith(AGENTS_PREFIX) ? source : null;
     return path === null ? null : ([`${path}.tsx`, `${path}.ts`].find((candidate) => existsSync(fileOf(candidate))) ?? null);
-};
+}
 
-const drawsBoundary = (path: string): boolean => {
+function drawsBoundary(path: string): boolean {
     let found = false;
     new Visitor({
         JSXOpeningElement(node) {
@@ -176,11 +180,11 @@ const drawsBoundary = (path: string): boolean => {
         }
     }).visit(programOf(path));
     return found;
-};
+}
 
 /* Every class a `className` can carry, from a plain string, a template or the arguments of `clsx`. */
-const classesIn = (value: unknown): string =>
-    nodesIn(value)
+function classesIn(value: unknown): string {
+    return nodesIn(value)
         .flatMap((node) => {
             if (node.type === 'Literal' && 'value' in node && typeof node.value === 'string') {
                 return [node.value];
@@ -191,6 +195,7 @@ const classesIn = (value: unknown): string =>
             return [];
         })
         .join(' ');
+}
 
 /* A segment of a control or a row that toggles says what it is with one of these, and a row of a list
    with its left-aligned text; neither is a Button. */
@@ -209,20 +214,23 @@ const OFF_SCALE_ICON = new Set([13, 15, 17, 18]);
 /* The app icon is a picture sized to the type beside it, not a glyph on the icon scale. */
 const NOT_AN_ICON = new Set(['BrandSymbol']);
 
-const isIconButton = (classes: string): boolean => classes.split(/\s+/).includes('icon-btn');
+function isIconButton(classes: string): boolean {
+    return classes.split(/\s+/).includes('icon-btn');
+}
 
-const attributeOf = (node: JSXElement, name: string): unknown =>
-    node.openingElement.attributes.find(
+function attributeOf(node: JSXElement, name: string): unknown {
+    return node.openingElement.attributes.find(
         (attribute) => attribute.type === 'JSXAttribute' && attribute.name.type === 'JSXIdentifier' && attribute.name.name === name
     );
+}
 
-const classesOf = (node: JSXElement): string => {
+function classesOf(node: JSXElement): string {
     const attribute = attributeOf(node, 'className') as { value: unknown } | undefined;
     return classesIn(attribute?.value);
-};
+}
 
 /* The size an icon is drawn at, when the source says it as a number: 16 when it says nothing, null when it is computed. */
-const iconSizeOf = (node: JSXElement): number | null => {
+function iconSizeOf(node: JSXElement): number | null {
     const attribute = attributeOf(node, 'size') as { value: unknown } | undefined;
     if (attribute === undefined) {
         return 16;
@@ -231,11 +239,11 @@ const iconSizeOf = (node: JSXElement): number | null => {
     return value?.type === 'JSXExpressionContainer' && value.expression?.type === 'Literal' && typeof value.expression.value === 'number'
         ? value.expression.value
         : null;
-};
+}
 
 /* The icons a button draws itself, not those of a button inside it. */
-const iconsIn = (node: Tree): JSXElement[] =>
-    elementsIn(node.children).flatMap((child) => {
+function iconsIn(node: Tree): JSXElement[] {
+    return elementsIn(node.children).flatMap((child) => {
         if (child.type === 'JSXElement' && nameOf(child.openingElement.name) === 'Icon') {
             return [child];
         }
@@ -244,6 +252,7 @@ const iconsIn = (node: Tree): JSXElement[] =>
         }
         return iconsIn(child);
     });
+}
 
 /* The window's own tree and the workspace's, which is where a failure would reach every parked page. */
 const SHELLS = [
@@ -251,8 +260,9 @@ const SHELLS = [
     ['shell/WorkspaceShell.tsx', 'WorkspaceShell']
 ] as const;
 
-const surfacesOf = (path: string, component: string): { name: string; guarded: boolean }[] =>
-    returnedBy(programOf(path), component).flatMap((root) => surfacesIn(root, false));
+function surfacesOf(path: string, component: string): { name: string; guarded: boolean }[] {
+    return returnedBy(programOf(path), component).flatMap((root) => surfacesIn(root, false));
+}
 
 describe('the conventions of the client', () => {
     test('a key is heard on the window only where a shortcut may be bound', () => {

@@ -4,9 +4,13 @@ import { FILES_VIEW_ID } from '@/shell/files-view';
 import { viewIdsIn } from '@/shell/split';
 import { useDocument } from './document.ts';
 
-const tab = (path: string, pinned = false): FileTab => ({ key: path, path, pinned });
+function tab(path: string, pinned = false): FileTab {
+    return { key: path, path, pinned };
+}
 
-const state = (paths: string[], active: string | null): TabState => ({ tabs: paths.map((path) => tab(path)), active });
+function state(paths: string[], active: string | null): TabState {
+    return { tabs: paths.map((path) => tab(path)), active };
+}
 
 describe('openTab', () => {
     test('activates a file that is already open instead of opening it twice', () => {

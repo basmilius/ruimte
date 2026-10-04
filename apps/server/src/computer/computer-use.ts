@@ -66,39 +66,42 @@ const HELD_WORDS: Record<HeldCode, string> = {
 const STOPPED_WORDS = 'The person stopped you; ask them before you operate an app again, and once they agree start with computer state';
 
 /* One agent operates the Mac at a time; the words name the one that does, by the title the person sees. */
-const busyRefusal = (nodeTitle: string | null): ComputerRefusal =>
-    new ComputerRefusal(
+function busyRefusal(nodeTitle: string | null): ComputerRefusal {
+    return new ComputerRefusal(
         'busy',
         `Another agent operates this Mac now${nodeTitle === null ? '' : `, from "${nodeTitle}"`}; call again with --wait 60, which holds until it is free, or go on with work that needs no app`
     );
+}
 
-const offRefusal = (): ComputerRefusal => new ComputerRefusal('computer-use-off', 'Computer use is off on this machine; only a person turns it on, in Ruimte');
+function offRefusal(): ComputerRefusal {
+    return new ComputerRefusal('computer-use-off', 'Computer use is off on this machine; only a person turns it on, in Ruimte');
+}
 
-const declinedRefusal = (name: string): ComputerRefusal =>
-    new ComputerRefusal('declined', `The person did not let you operate ${name}; leave it alone unless they ask you to`);
+function declinedRefusal(name: string): ComputerRefusal {
+    return new ComputerRefusal('declined', `The person did not let you operate ${name}; leave it alone unless they ask you to`);
+}
 
-const terminalRefusal = (name: string): ComputerRefusal =>
-    new ComputerRefusal(
+function terminalRefusal(name: string): ComputerRefusal {
+    return new ComputerRefusal(
         'terminal',
         `${name} runs shells, and an agent never operates a terminal, not even with a person's yes; run commands in your own shell instead`
     );
+}
 
 /* Where the helper looks for an app by name; the same folders, so a name the daemon finds is the app the helper opens. */
-const applicationFolders = (): string[] => [
-    '/Applications',
-    '/Applications/Utilities',
-    '/System/Applications',
-    '/System/Applications/Utilities',
-    join(homedir(), 'Applications')
-];
+function applicationFolders(): string[] {
+    return ['/Applications', '/Applications/Utilities', '/System/Applications', '/System/Applications/Utilities', join(homedir(), 'Applications')];
+}
 
-const plistValue = async (plist: string, key: string): Promise<string | null> => {
+async function plistValue(plist: string, key: string): Promise<string | null> {
     const child = Bun.spawn(['plutil', '-extract', key, 'raw', '-o', '-', plist], { stdout: 'pipe', stderr: 'ignore' });
     const text = (await new Response(child.stdout).text()).trim();
     return (await child.exited) === 0 && text !== '' ? text : null;
-};
+}
 
-const fileNameOf = (bundle: string): string => basename(bundle).replace(/\.app$/i, '');
+function fileNameOf(bundle: string): string {
+    return basename(bundle).replace(/\.app$/i, '');
+}
 
 export interface InstalledAppSources {
     folders?: string[];
@@ -109,7 +112,7 @@ export interface InstalledAppSources {
  * An app that does not run yet, for `open`: by the file name of its bundle, or else by the name it
  * shows (`CFBundleDisplayName`), which differs for some apps. Only the second reads every bundle.
  */
-export const findInstalledApp = async (name: string, sources: InstalledAppSources = {}): Promise<AppRef | null> => {
+export async function findInstalledApp(name: string, sources: InstalledAppSources = {}): Promise<AppRef | null> {
     const read = sources.read ?? plistValue;
     const wanted = name
         .trim()
@@ -134,7 +137,7 @@ export const findInstalledApp = async (name: string, sources: InstalledAppSource
         }
     }
     return null;
-};
+}
 
 export type AppAccess = 'always' | 'this-time' | 'ask' | 'terminal' | 'no-bundle-id';
 
@@ -154,7 +157,7 @@ export type Resolved = { kind: 'running'; app: RunningApp } | { kind: 'ambiguous
  * The app a query names, the way the helper reads one: a pid, a bundle id, or a name with or without
  * `.app`. The name is the one it shows, which macOS localizes, or the file name of its bundle, which it does not.
  */
-export const resolveApp = (query: string, apps: readonly RunningApp[]): Resolved => {
+export function resolveApp(query: string, apps: readonly RunningApp[]): Resolved {
     const wanted = query.trim().toLowerCase();
     if (/^\d+$/.test(wanted)) {
         const byPid = apps.find((app) => app.pid === Number(wanted));
@@ -170,9 +173,11 @@ export const resolveApp = (query: string, apps: readonly RunningApp[]): Resolved
         return { kind: 'ambiguous', matches: byName };
     }
     return byName.length === 1 ? { kind: 'running', app: byName[0]! } : { kind: 'none' };
-};
+}
 
-const appLine = (app: RunningApp): string => `app\t${app.name}\t${app.bundleId ?? '-'}\t${app.pid}`;
+function appLine(app: RunningApp): string {
+    return `app\t${app.name}\t${app.bundleId ?? '-'}\t${app.pid}`;
+}
 
 const APPS_SEE = 'see\truimte-context computer apps\tevery app that runs, with its bundle id and pid';
 
@@ -180,10 +185,11 @@ const APPS_SEE = 'see\truimte-context computer apps\tevery app that runs, with i
  * The helper words its errors for `cu`, its own command line; an agent runs this CLI instead, and a
  * missing grant is a person's to give.
  */
-export const agentWords = (message: string): string =>
-    message
+export function agentWords(message: string): string {
+    return message
         .replace(/run `cu doctor`/g, 'a person grants it to Ruimte Computer Use in System Settings')
         .replace(/`cu ([a-z-]+)/g, '`ruimte-context computer $1');
+}
 
 export interface ComputerUseOptions {
     home: string;

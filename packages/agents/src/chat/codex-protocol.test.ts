@@ -11,16 +11,18 @@ import { codexProvider } from '../providers/codex-provider.ts';
 
 const ids = { threadId: 't1', turnId: 'ct1' };
 
-const message = (id: string, text: string, extra: Record<string, unknown> = {}) => ({
-    type: 'agentMessage',
-    id,
-    text,
-    phase: 'final_answer',
-    memoryCitation: null,
-    delivery: null,
-    questions: null,
-    ...extra
-});
+function message(id: string, text: string, extra: Record<string, unknown> = {}) {
+    return {
+        type: 'agentMessage',
+        id,
+        text,
+        phase: 'final_answer',
+        memoryCitation: null,
+        delivery: null,
+        questions: null,
+        ...extra
+    };
+}
 
 describe('CodexProtocol', () => {
     for (const [method, params] of [

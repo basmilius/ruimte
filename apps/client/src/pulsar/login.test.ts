@@ -8,7 +8,7 @@ const REDIRECT = 'http://127.0.0.1:53682/pulsar/callback';
 const account = { id: 'account-1', provider: 'github' as const, login: 'someone' };
 
 /* The browser and the address book in one: it reads the start URL and answers the redirect it was told to. */
-const fakeRoute = (answer: (state: string) => LoginCallback) => {
+function fakeRoute(answer: (state: string) => LoginCallback) {
     const opened: string[] = [];
     let cancelled = 0;
     let state = '';
@@ -34,7 +34,7 @@ const fakeRoute = (answer: (state: string) => LoginCallback) => {
         signOut: async () => undefined
     };
     return { redirect, keeper, opened, exchanged, cancelled: () => cancelled };
-};
+}
 
 describe('signIn', () => {
     test('opens the start URL with a challenge and trades the code with the verifier that belongs to it', async () => {

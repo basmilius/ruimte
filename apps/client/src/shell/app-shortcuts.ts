@@ -24,7 +24,7 @@ export interface ShortcutContext {
  * focus: these work from anywhere, a node's content or a text field included. A focused terminal is the
  * exception, and it stops the shortcuts it owns before this listener (`terminal/keymap.ts`).
  */
-export const appShortcutFor = (e: KeyLike, { inNode, apple, settingsOpen, windows = false }: ShortcutContext): AppShortcut | null => {
+export function appShortcutFor(e: KeyLike, { inNode, apple, settingsOpen, windows = false }: ShortcutContext): AppShortcut | null {
     if (matchesShortcut(APP_SHORTCUTS.palette, e, apple)) {
         return 'palette';
     }
@@ -48,10 +48,10 @@ export const appShortcutFor = (e: KeyLike, { inNode, apple, settingsOpen, window
         return 'sidebar';
     }
     return null;
-};
+}
 
 /* What a window shortcut does, for the key and for a button that offers the same thing. */
-export const runAppShortcut = (shortcut: AppShortcut): void => {
+export function runAppShortcut(shortcut: AppShortcut): void {
     const ui = useUi.getState();
     if (shortcut === 'palette') {
         if (ui.paletteOpen) {
@@ -83,10 +83,10 @@ export const runAppShortcut = (shortcut: AppShortcut): void => {
         return;
     }
     ui.toggleSidebar();
-};
+}
 
 /* Mounted once by the app; a second listener would toggle the palette open and shut again. */
-export const useAppShortcuts = (): void => {
+export function useAppShortcuts(): void {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
             const shortcut = appShortcutFor(e, {
@@ -104,4 +104,4 @@ export const useAppShortcuts = (): void => {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
-};
+}

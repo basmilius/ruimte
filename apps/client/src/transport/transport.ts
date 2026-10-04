@@ -50,5 +50,6 @@ export class TransportError extends Error {
  * Only the transport throws these two, so only the transport gets to say which they are. A client
  * that asked while the socket was gone waits for the reconnect and asks again, and tells nobody.
  */
-export const isConnectionError = (error: unknown): boolean =>
-    error instanceof TransportError && (error.code === 'not-connected' || error.code === 'disconnected');
+export function isConnectionError(error: unknown): boolean {
+    return error instanceof TransportError && (error.code === 'not-connected' || error.code === 'disconnected');
+}

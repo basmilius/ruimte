@@ -14,7 +14,7 @@ export interface RunningBroker {
     stop(): Promise<void>;
 }
 
-export const turnProviderFor = (turn: TurnConfig): TurnProvider => {
+export function turnProviderFor(turn: TurnConfig): TurnProvider {
     switch (turn.kind) {
         case 'none':
             return noTurn;
@@ -23,10 +23,10 @@ export const turnProviderFor = (turn: TurnConfig): TurnProvider => {
         case 'cloudflare':
             return cloudflareTurn(turn);
     }
-};
+}
 
 /* The broker on a Bun server: `/health` for a monitor, and a WebSocket upgrade on any other path. */
-export const startBroker = (config: BrokerConfig): RunningBroker => {
+export function startBroker(config: BrokerConfig): RunningBroker {
     const broker = new Broker(config.limits, Date.now, turnProviderFor(config.turn));
 
     const server = Bun.serve<SocketData>({
@@ -109,4 +109,4 @@ export const startBroker = (config: BrokerConfig): RunningBroker => {
             await server.stop(true);
         }
     };
-};
+}

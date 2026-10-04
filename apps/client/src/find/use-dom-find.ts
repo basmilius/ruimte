@@ -15,27 +15,27 @@ export interface DomFind {
 }
 
 /* Centers a match that stands outside the scroller, and leaves one that is in view where it is. */
-const bringIntoView = (scroller: HTMLElement, range: Range): void => {
+function bringIntoView(scroller: HTMLElement, range: Range): void {
     const box = scroller.getBoundingClientRect();
     const rect = range.getBoundingClientRect();
     if (rect.top >= box.top && rect.bottom <= box.bottom) {
         return;
     }
     scroller.scrollBy({ top: rect.top - (box.top + (box.height - rect.height) / 2) });
-};
+}
 
-const markOf = (scroller: HTMLElement, range: Range): number => {
+function markOf(scroller: HTMLElement, range: Range): number {
     const box = scroller.getBoundingClientRect();
     const top = range.getBoundingClientRect().top - box.top + scroller.scrollTop;
     return Math.round((top / Math.max(1, scroller.scrollHeight)) * scroller.clientHeight);
-};
+}
 
 /*
  * Find over a rendered document, a markdown preview: what the reader sees is what is searched. The
  * matches are ranges over the document's own text nodes, so they are read again whenever it renders.
  * `content` sits directly in the element that scrolls it.
  */
-export const useDomFind = (find: FindState, content: RefObject<HTMLElement | null>): DomFind => {
+export function useDomFind(find: FindState, content: RefObject<HTMLElement | null>): DomFind {
     const owner = useId();
     const compiled = useMemo(() => compileFind(find.query), [find.query]);
     const pattern = find.open && compiled.kind === 'pattern' ? compiled.pattern : null;
@@ -131,4 +131,4 @@ export const useDomFind = (find: FindState, content: RefObject<HTMLElement | nul
     };
 
     return { total, current, invalid: find.open && compiled.kind === 'invalid', step, marks, currentMark };
-};
+}

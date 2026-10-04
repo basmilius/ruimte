@@ -199,16 +199,18 @@ export class DirectPeers {
 }
 
 // Enough of the id to follow one connection through the log without printing the whole of it.
-const tagOf = (connectionId: string): string => connectionId.slice(0, 8);
+function tagOf(connectionId: string): string {
+    return connectionId.slice(0, 8);
+}
 
-const until = async (ready: () => boolean): Promise<void> => {
+async function until(ready: () => boolean): Promise<void> {
     while (!ready()) {
         await new Promise((resolve) => setTimeout(resolve, 5));
     }
-};
+}
 
-const gathered = (peer: RTCPeerConnection): Promise<void> =>
-    new Promise((resolve) => {
+function gathered(peer: RTCPeerConnection): Promise<void> {
+    return new Promise((resolve) => {
         if (peer.iceGatheringState === 'complete') {
             resolve();
             return;
@@ -225,12 +227,13 @@ const gathered = (peer: RTCPeerConnection): Promise<void> =>
             }
         });
     });
+}
 
 /* The address the nominated candidate pair talks to, which is all `reachability` goes on; never proof of anything. */
-const remoteAddressOf = (peer: RTCPeerConnection): string | null => {
+function remoteAddressOf(peer: RTCPeerConnection): string | null {
     try {
         return peer.iceTransports[0]?.connection.nominated?.remoteAddr[0] ?? null;
     } catch {
         return null;
     }
-};
+}

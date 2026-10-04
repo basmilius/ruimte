@@ -56,23 +56,27 @@ describe('the diagram store', () => {
     });
 });
 
-const doc = (rev: number, ...nodes: DiagramNode[]): DiagramDocument => ({
-    version: 1,
-    rev,
-    meta: { title: '', direction: 'right' },
-    nodes,
-    groups: [],
-    edges: [{ from: 'a', to: 'b' }]
-});
+function doc(rev: number, ...nodes: DiagramNode[]): DiagramDocument {
+    return {
+        version: 1,
+        rev,
+        meta: { title: '', direction: 'right' },
+        nodes,
+        groups: [],
+        edges: [{ from: 'a', to: 'b' }]
+    };
+}
 
 /* A store with a small graph loaded, the way the client hands one to a cell. */
-const loaded = () => {
+function loaded() {
     const store = createDiagramStore();
     store.getState().load('view-1', doc(3, { id: 'a', label: 'Client' }, { id: 'b', label: 'Daemon' }), null);
     return store;
-};
+}
 
-const nodeOf = (store: ReturnType<typeof loaded>, id: string): DiagramNode => store.getState().content.nodes.find((node) => node.id === id)!;
+function nodeOf(store: ReturnType<typeof loaded>, id: string): DiagramNode {
+    return store.getState().content.nodes.find((node) => node.id === id)!;
+}
 
 describe('the handles of the diagram store', () => {
     test('dragging a node writes whole numbers into pos, and the layout puts the box there', () => {

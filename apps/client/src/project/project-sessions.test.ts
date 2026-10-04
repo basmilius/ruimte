@@ -2,9 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectNode, ProjectView } from '@ruimte/contracts';
 import { closeWarning, closingCount, sessionNodesOf } from './project-sessions';
 
-const node = (id: string, kind: ProjectNode['kind']): ProjectNode => ({ id, kind, x: 0, y: 0, w: 100, h: 100, title: id });
+function node(id: string, kind: ProjectNode['kind']): ProjectNode {
+    return { id, kind, x: 0, y: 0, w: 100, h: 100, title: id };
+}
 
-const canvas = (id: string, nodes: ProjectNode[]): ProjectCanvasView => ({ kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] });
+function canvas(id: string, nodes: ProjectNode[]): ProjectCanvasView {
+    return { kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] };
+}
 
 describe('sessionNodesOf', () => {
     test('takes the terminals and the chats of every view, and nothing that only draws', () => {

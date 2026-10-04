@@ -10,10 +10,14 @@ import { WorktreeRegister, type WorktreeRecord } from './worktree-register.ts';
 import { ClientSinks } from '../client-sinks.ts';
 
 // Branch names carry slashes; the folder name must not.
-const safeName = (branch: string): string => branch.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
+function safeName(branch: string): string {
+    return branch.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
+}
 
 /* The folder of one repository under the worktrees root; the name predates the register, so it stays. */
-const repoFolderName = (main: string): string => `${basename(main)}-${createHash('sha1').update(main).digest('hex').slice(0, 8)}`;
+function repoFolderName(main: string): string {
+    return `${basename(main)}-${createHash('sha1').update(main).digest('hex').slice(0, 8)}`;
+}
 
 // The files git leaves in a worktree's git dir while an operation waits halfway, with the word a person knows it by.
 const OPERATIONS: ReadonlyArray<{ path: string; name: string }> = [
@@ -63,13 +67,14 @@ export interface Listed {
     prunable: boolean;
 }
 
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
+function exists(path: string): Promise<boolean> {
+    return stat(path).then(
         () => true,
         () => false
     );
+}
 
-const parsePorcelain = (output: string): Listed[] => {
+function parsePorcelain(output: string): Listed[] {
     const entries: Listed[] = [];
     let current: Listed | null = null;
     for (const line of output.split('\n')) {
@@ -89,10 +94,10 @@ const parsePorcelain = (output: string): Listed[] => {
         }
     }
     return entries;
-};
+}
 
 /* Tracked changes and untracked files out of `status --porcelain=v2 -z`, one per file. */
-export const countStatus = (output: string): { changed: number; untracked: number } => {
+export function countStatus(output: string): { changed: number; untracked: number } {
     const fields = output.split('\0');
     let changed = 0;
     let untracked = 0;
@@ -109,9 +114,9 @@ export const countStatus = (output: string): { changed: number; untracked: numbe
         }
     }
     return { changed, untracked };
-};
+}
 
-const workSentence = (branch: string, work: WorktreeWork, target: string | null): string => {
+function workSentence(branch: string, work: WorktreeWork, target: string | null): string {
     const parts = [
         `${work.changed} uncommitted ${work.changed === 1 ? 'file' : 'files'}`,
         `${work.untracked} new ${work.untracked === 1 ? 'file' : 'files'}`,
@@ -119,10 +124,10 @@ const workSentence = (branch: string, work: WorktreeWork, target: string | null)
     ];
     const operation = work.operation === undefined ? '' : `, and a ${work.operation} stopped halfway`;
     return `${branch} holds ${parts[0]}, ${parts[1]} and ${parts[2]}${operation}`;
-};
+}
 
 /* The first of base, base-2, base-3 that is not taken yet. */
-export const freeBranch = (base: string, taken: ReadonlySet<string>): string => {
+export function freeBranch(base: string, taken: ReadonlySet<string>): string {
     if (!taken.has(base)) {
         return base;
     }
@@ -132,9 +137,11 @@ export const freeBranch = (base: string, taken: ReadonlySet<string>): string => 
             return candidate;
         }
     }
-};
+}
 
-export const hasWork = (work: WorktreeWork): boolean => work.changed + work.untracked + work.ahead > 0 || work.operation !== undefined;
+export function hasWork(work: WorktreeWork): boolean {
+    return work.changed + work.untracked + work.ahead > 0 || work.operation !== undefined;
+}
 
 /*
  * Worktrees of a repository, kept under the app data dir so the repository itself stays clean:
@@ -514,9 +521,11 @@ export class Worktrees {
     }
 }
 
-const recordFields = (record: WorktreeRecord): Pick<Worktree, 'from' | 'projectId' | 'nodeId' | 'madeAt'> => ({
-    from: record.from,
-    ...(record.projectId === undefined ? {} : { projectId: record.projectId }),
-    ...(record.nodeId === undefined ? {} : { nodeId: record.nodeId }),
-    madeAt: record.madeAt
-});
+function recordFields(record: WorktreeRecord): Pick<Worktree, 'from' | 'projectId' | 'nodeId' | 'madeAt'> {
+    return {
+        from: record.from,
+        ...(record.projectId === undefined ? {} : { projectId: record.projectId }),
+        ...(record.nodeId === undefined ? {} : { nodeId: record.nodeId }),
+        madeAt: record.madeAt
+    };
+}

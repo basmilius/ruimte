@@ -4,12 +4,14 @@ export type Theme = 'light' | 'dark' | 'system';
 
 export const THEME_STORAGE_KEY = 'ruimte.theme';
 
-const systemTheme = (): 'light' | 'dark' => (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+function systemTheme(): 'light' | 'dark' {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
-const apply = (theme: Theme): void => {
+function apply(theme: Theme): void {
     const resolved = theme === 'system' ? systemTheme() : theme;
     document.documentElement.dataset.theme = resolved;
-};
+}
 
 interface ThemeState {
     theme: Theme;

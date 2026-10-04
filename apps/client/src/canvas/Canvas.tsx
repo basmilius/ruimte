@@ -52,7 +52,7 @@ const DROP_STEP = NODE_SIZE.file.w + 24;
  * captured by the canvas during a drag, so the element under it is looked up rather than read off
  * the event.
  */
-const linkTargetUnder = (clientX: number, clientY: number): { id: string; side?: NodeSide } | null => {
+function linkTargetUnder(clientX: number, clientY: number): { id: string; side?: NodeSide } | null {
     /* Everything under the pointer, not only the top one: a line drawn across another line must not
        lose the node it is over to the line's own hit area. */
     for (const element of document.elementsFromPoint(clientX, clientY)) {
@@ -66,16 +66,18 @@ const linkTargetUnder = (clientX: number, clientY: number): { id: string; side?:
         }
     }
     return null;
-};
+}
 
-const linkTargetAt = (state: CanvasState, from: string, clientX: number, clientY: number): string | null => {
+function linkTargetAt(state: CanvasState, from: string, clientX: number, clientY: number): string | null {
     const id = linkTargetUnder(clientX, clientY)?.id ?? null;
     // A target that would take no line says nothing either.
     return id !== null && canLink(state.edges, from, id) ? id : null;
-};
+}
 
 /* Hands the keyboard back to the page, so the node that had it stops answering keys. */
-const blurActive = (): void => (document.activeElement as HTMLElement | null)?.blur();
+function blurActive(): void {
+    return (document.activeElement as HTMLElement | null)?.blur();
+}
 
 export function Canvas() {
     /* The editor of this cell. Everything below a render (an effect, a gesture, a menu) goes through

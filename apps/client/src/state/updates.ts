@@ -31,10 +31,12 @@ export const useUpdates = create<UpdatesStore>(() => ({
 }));
 
 /* The green button in the toolbar. There is something to do, and one click leads to it. */
-export const hasUpdate = (state: UpdateState): boolean => state.status === 'available' || state.status === 'downloading' || state.status === 'ready';
+export function hasUpdate(state: UpdateState): boolean {
+    return state.status === 'available' || state.status === 'downloading' || state.status === 'ready';
+}
 
 /* The line About leads with. The detail is empty where the headline says it all. */
-export const describeUpdate = (state: UpdateState): { headline: string; detail: string } => {
+export function describeUpdate(state: UpdateState): { headline: string; detail: string } {
     const version = state.version ?? i18next.t('state:update.unknownVersion');
     switch (state.status) {
         case 'unsupported':
@@ -55,34 +57,38 @@ export const describeUpdate = (state: UpdateState): { headline: string; detail: 
         default:
             return { headline: i18next.t('state:update.current'), detail: '' };
     }
-};
+}
 
-const apply = (state: UpdateState): void => useUpdates.setState({ ...state, supported: state.status !== 'unsupported' });
+function apply(state: UpdateState): void {
+    return useUpdates.setState({ ...state, supported: state.status !== 'unsupported' });
+}
 
 /* Whether the shell downloads on its own. Pushed again whenever the setting changes. */
-export const setAutoDownload = async (autoDownload: boolean): Promise<void> => {
+export async function setAutoDownload(autoDownload: boolean): Promise<void> {
     await desktop()?.configureUpdates?.(autoDownload);
-};
+}
 
 // Not a setting. The settings store travels with everything that reads and writes preferences.
 const SEEN_VERSION_KEY = 'ruimte.seenVersion';
 
 export type VersionChange = 'first' | 'updated' | 'same' | 'older';
 
-export const seenVersionChange = (seen: string | null, current: string): VersionChange => {
+export function seenVersionChange(seen: string | null, current: string): VersionChange {
     if (seen === null || !isVersion(seen)) {
         return 'first';
     }
     const order = compareVersions(current, seen);
     return order > 0 ? 'updated' : order === 0 ? 'same' : 'older';
-};
+}
 
 type SeenVersionStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
-const browserStorage = (): SeenVersionStorage | null => (typeof localStorage === 'undefined' ? null : localStorage);
+function browserStorage(): SeenVersionStorage | null {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+}
 
 /* One toast after an update. The version is written at once, so an ignored toast does not come back on the next start. */
-export const noteVersionChange = (current: string, storage: SeenVersionStorage | null = browserStorage()): VersionChange => {
+export function noteVersionChange(current: string, storage: SeenVersionStorage | null = browserStorage()): VersionChange {
     let seen: string | null = null;
     try {
         seen = storage?.getItem(SEEN_VERSION_KEY) ?? null;
@@ -119,7 +125,7 @@ export const noteVersionChange = (current: string, storage: SeenVersionStorage |
         });
     }
     return change;
-};
+}
 
 /*
  * Wires the store to the shell. The state it already has and every change after it. The first check
@@ -127,7 +133,7 @@ export const noteVersionChange = (current: string, storage: SeenVersionStorage |
  * someone who turned it off. This computer's machine hears every step, so another client sees the
  * update and can ask for it. Returns the unsubscribe, or null where there is no shell to talk to.
  */
-export const startUpdates = (autoDownload: boolean): (() => void) | null => {
+export function startUpdates(autoDownload: boolean): (() => void) | null {
     const bridge = desktop();
     if (!bridge?.updateState || !bridge.onUpdateState) {
         return null;
@@ -156,4 +162,4 @@ export const startUpdates = (autoDownload: boolean): (() => void) | null => {
         await bridge.checkForUpdate?.();
     });
     return stop;
-};
+}

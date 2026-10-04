@@ -10,15 +10,18 @@ export const ENDPOINTS_STORAGE_KEY = 'ruimte.endpoints';
 const STORAGE_VERSION = 4;
 export const LOCAL_ENDPOINT_ID = 'local';
 /* What the row for this machine says when nothing better is known about it. */
-export const localEndpointLabel = (): string => i18next.t('state:localMachine');
+export function localEndpointLabel(): string {
+    return i18next.t('state:localMachine');
+}
 
 /*
  * The same row once the daemon has said what it runs on: "This MacBook Pro", "This Raspberry Pi 4
  * Model B". A name someone typed wins over both, and a machine that keeps its model to itself
  * (a container, a board without SMBIOS, a platform nothing here can read) keeps the plain label.
  */
-export const localMachineLabel = (model: string | null): string =>
-    model === null || model.trim() === '' ? localEndpointLabel() : i18next.t('state:localMachineWithModel', { model: model.trim() });
+export function localMachineLabel(model: string | null): string {
+    return model === null || model.trim() === '' ? localEndpointLabel() : i18next.t('state:localMachineWithModel', { model: model.trim() });
+}
 
 export interface Endpoint {
     /* The daemon's own id from `endpoint.info`, or `local` for the daemon that served this page. */
@@ -95,7 +98,7 @@ interface EndpointsStore {
 }
 
 /* The machine the desktop app started, or the page's own origin: the daemon or, in dev, the Vite origin that proxies to it. */
-const localEndpoint = (): Endpoint => {
+function localEndpoint(): Endpoint {
     const origin = desktop()?.daemonUrl ?? (typeof location === 'undefined' ? 'http://127.0.0.1:4210' : location.origin);
     return {
         id: LOCAL_ENDPOINT_ID,
@@ -106,14 +109,14 @@ const localEndpoint = (): Endpoint => {
         daemonId: null,
         daemonPublicKey: null
     };
-};
+}
 
 /*
  * The remembered rows, without the local one, which is rebuilt from this page's own origin. A row
  * from a pairing link is dropped: the machine lets nobody in that way any more, and the account list
  * opens a machine on the account again under the same id. What is left is reached directly.
  */
-export const parseStoredEndpoints = (raw: string | null): { endpoints: Endpoint[]; activeId: string | null; migrated: boolean } => {
+export function parseStoredEndpoints(raw: string | null): { endpoints: Endpoint[]; activeId: string | null; migrated: boolean } {
     if (raw === null) {
         return { endpoints: [], activeId: null, migrated: false };
     }
@@ -131,18 +134,18 @@ export const parseStoredEndpoints = (raw: string | null): { endpoints: Endpoint[
     } catch {
         return { endpoints: [], activeId: null, migrated: false };
     }
-};
+}
 
 /* The local row is rebuilt from the page's origin on every start, so the one choice a person makes about it is kept beside the list. */
-export const storedLocalDirect = (raw: string | null): boolean => {
+export function storedLocalDirect(raw: string | null): boolean {
     try {
         return raw !== null && (JSON.parse(raw) as { localDirect?: unknown }).localDirect === true;
     } catch {
         return false;
     }
-};
+}
 
-const persist = (state: { endpoints: Endpoint[]; activeId: string }): void => {
+function persist(state: { endpoints: Endpoint[]; activeId: string }): void {
     try {
         localStorage.setItem(
             ENDPOINTS_STORAGE_KEY,
@@ -156,9 +159,9 @@ const persist = (state: { endpoints: Endpoint[]; activeId: string }): void => {
     } catch {
         // Storage that refuses keeps the endpoints for this session only.
     }
-};
+}
 
-const read = (): { endpoints: Endpoint[]; activeId: string } => {
+function read(): { endpoints: Endpoint[]; activeId: string } {
     const local = localEndpoint();
     let raw: string | null = null;
     try {
@@ -173,7 +176,7 @@ const read = (): { endpoints: Endpoint[]; activeId: string } => {
         persist({ endpoints, activeId });
     }
     return { endpoints, activeId };
-};
+}
 
 /* Every daemon this client knows and which one it talks to; the loopback one is always there. */
 export const useEndpoints = create<EndpointsStore>((set, get) => ({
@@ -302,35 +305,38 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
  * believe its signals by. The row of this machine never takes it, since it has no pinned key and its
  * own address is always there.
  */
-export const brokerRouteOf = (endpoint: Endpoint): { brokerUrl: string; machineKey: string } | null => {
+export function brokerRouteOf(endpoint: Endpoint): { brokerUrl: string; machineKey: string } | null {
     if (endpoint.direct !== true || endpoint.id === LOCAL_ENDPOINT_ID || !endpoint.brokerUrl || endpoint.daemonPublicKey === null) {
         return null;
     }
     return { brokerUrl: endpoint.brokerUrl, machineKey: endpoint.daemonPublicKey };
-};
+}
 
 /* One machine by id, for code that is about a row rather than about the machine being worked on. */
-export const endpointById = (id: string): Endpoint | null => useEndpoints.getState().endpoints.find((entry) => entry.id === id) ?? null;
+export function endpointById(id: string): Endpoint | null {
+    return useEndpoints.getState().endpoints.find((entry) => entry.id === id) ?? null;
+}
 
 /*
  * The row this daemon is, whatever address it sits on. Only the local row holds a daemon id that is
  * not its own key, so a match is either the row keyed on that id or the machine this page came from.
  * `exceptId` leaves the row asking out of it, which is what makes it a duplicate check.
  */
-export const endpointForDaemon = (daemonId: string, exceptId?: string): Endpoint | null =>
-    useEndpoints.getState().endpoints.find((entry) => entry.id !== exceptId && (entry.id === daemonId || entry.daemonId === daemonId)) ?? null;
+export function endpointForDaemon(daemonId: string, exceptId?: string): Endpoint | null {
+    return useEndpoints.getState().endpoints.find((entry) => entry.id !== exceptId && (entry.id === daemonId || entry.daemonId === daemonId)) ?? null;
+}
 
-export const activeEndpoint = (): Endpoint => {
+export function activeEndpoint(): Endpoint {
     const { endpoints, activeId } = useEndpoints.getState();
     return endpoints.find((entry) => entry.id === activeId) ?? endpoints[0]!;
-};
+}
 
 /*
  * The socket address for an endpoint. The credential rides in the query because a browser cannot
  * put a header on a WebSocket handshake; what makes that bearable is that a ticket is what normally
  * sits there, good for one connection and for nothing on any other machine.
  */
-export const socketUrlFor = (endpoint: Pick<Endpoint, 'id' | 'wsBaseUrl'>): string => {
+export function socketUrlFor(endpoint: Pick<Endpoint, 'id' | 'wsBaseUrl'>): string {
     const credential = credentialFor(endpoint);
     return `${endpoint.wsBaseUrl}/ws${credential ? `?token=${encodeURIComponent(credential)}` : ''}`;
-};
+}

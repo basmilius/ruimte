@@ -18,8 +18,8 @@ export interface RunProcessOptions {
 }
 
 /* One short command to its end, with what it printed. A command that cannot start rejects. */
-export const runProcess = (command: readonly string[], options: RunProcessOptions = {}): Promise<ProcessResult> =>
-    new Promise((resolve, reject) => {
+export function runProcess(command: readonly string[], options: RunProcessOptions = {}): Promise<ProcessResult> {
+    return new Promise((resolve, reject) => {
         const [executable, ...args] = command;
         if (executable === undefined) {
             reject(new Error('No command to run'));
@@ -58,3 +58,4 @@ export const runProcess = (command: readonly string[], options: RunProcessOption
             child.stdin.end(options.stdin);
         }
     });
+}

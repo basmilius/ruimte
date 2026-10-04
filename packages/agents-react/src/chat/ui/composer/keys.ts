@@ -28,7 +28,7 @@ export interface EnterContext {
 const LIST_ITEM = /^([ \t]*)(?:([-*+])|(\d{1,9})([.)]))([ \t]+)(\[[ xX]\](?:[ \t]+|$))?/;
 
 /* The list item a line starts, if it starts one. */
-export const listItemAt = (line: string): ListItem | null => {
+export function listItemAt(line: string): ListItem | null {
     const match = LIST_ITEM.exec(line);
     if (match === null) {
         return null;
@@ -36,14 +36,14 @@ export const listItemAt = (line: string): ListItem | null => {
     const [prefix, indent, bullet, number, delimiter, space, task] = match;
     const marker = bullet ?? `${Number(number) + 1}${delimiter}`;
     return { prefix, next: `${indent}${marker}${space}${task ? '[ ] ' : ''}`, empty: line.slice(prefix.length).trim() === '' };
-};
+}
 
 /*
  * Enter sends, except where whoever types is still writing: inside a fence nobody has closed yet
  * it adds a line, and in a list it starts the next item, or leaves the list from an empty one, so
  * a second Enter breaks out. Shift adds a plain line and Mod sends from anywhere.
  */
-export const enterAction = (keys: EnterKeys, { inOpenFence, list, column }: EnterContext): EnterAction => {
+export function enterAction(keys: EnterKeys, { inOpenFence, list, column }: EnterContext): EnterAction {
     if (keys.mod) {
         return 'send';
     }
@@ -58,20 +58,20 @@ export const enterAction = (keys: EnterKeys, { inOpenFence, list, column }: Ente
         return 'newline';
     }
     return list.empty ? 'leave-list' : 'continue-list';
-};
+}
 
 /* Whether `pos` sits inside a fenced code block that has an opening fence and no closing one yet. */
-export const inOpenFence = (tree: Tree, pos: number): boolean => {
+export function inOpenFence(tree: Tree, pos: number): boolean {
     for (let node: SyntaxNode | null = tree.resolveInner(pos, -1); node !== null; node = node.parent) {
         if (node.name === 'FencedCode') {
             return pos > node.from && node.getChildren('CodeMark').length < 2;
         }
     }
     return false;
-};
+}
 
 /* Whether `pos` sits in the body of a fenced code block, open or closed: below its opening line and before its end. */
-export const inFenceBody = (tree: Tree, text: string, pos: number): boolean => {
+export function inFenceBody(tree: Tree, text: string, pos: number): boolean {
     for (let node: SyntaxNode | null = tree.resolveInner(pos, -1); node !== null; node = node.parent) {
         if (node.name === 'FencedCode') {
             const openingEnd = text.indexOf('\n', node.from);
@@ -79,10 +79,12 @@ export const inFenceBody = (tree: Tree, text: string, pos: number): boolean => {
         }
     }
     return false;
-};
+}
 
 /* The spaces Tab inserts at `column`, up to the next stop of four, the way a code editor lines up. */
-export const tabSpaces = (column: number): string => ' '.repeat(4 - (column % 4));
+export function tabSpaces(column: number): string {
+    return ' '.repeat(4 - (column % 4));
+}
 
 const INLINE_BLOCK = /^(Paragraph|ATXHeading\d|SetextHeading\d)$/;
 
@@ -91,7 +93,7 @@ const INLINE_BLOCK = /^(Paragraph|ATXHeading\d|SetextHeading\d)$/;
  * span code once it is closed, so a backtick nobody has closed yet earlier in the same paragraph
  * counts as well: whoever types after it is writing code.
  */
-export const inCode = (tree: Tree, text: string, pos: number): boolean => {
+export function inCode(tree: Tree, text: string, pos: number): boolean {
     let blockFrom: number | null = null;
     for (let node: SyntaxNode | null = tree.resolveInner(pos, -1); node !== null; node = node.parent) {
         if (node.name === 'FencedCode') {
@@ -115,7 +117,7 @@ export const inCode = (tree: Tree, text: string, pos: number): boolean => {
         }
     });
     return /(^|[^\\])`/.test(text.slice(from, pos));
-};
+}
 
 export interface RecallContext {
     key: string;
@@ -131,7 +133,7 @@ export interface RecallContext {
  * Only an empty box or an unedited recall walks, so an arrow in a prompt being written never
  * throws it away.
  */
-export const recallDirection = ({ key, text, from, to, recalled }: RecallContext): -1 | 1 | null => {
+export function recallDirection({ key, text, from, to, recalled }: RecallContext): -1 | 1 | null {
     if (key === 'ArrowUp' && (text === '' || (recalled && from === 0))) {
         return -1;
     }
@@ -139,4 +141,4 @@ export const recallDirection = ({ key, text, from, to, recalled }: RecallContext
         return 1;
     }
     return null;
-};
+}

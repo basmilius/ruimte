@@ -18,17 +18,21 @@ interface BrowseOptions {
 }
 
 /* Without a repository to ask, a name is all there is to go on, which is what `browse` has. */
-const visible = (name: string, showHidden: boolean): boolean => {
+function visible(name: string, showHidden: boolean): boolean {
     const visibility = classifyEntry(name);
     return visibility !== 'never' && (showHidden || visibility === 'always');
-};
+}
 
-const endsWithSeparator = (path: string): boolean => path.endsWith('/') || path.endsWith('\\');
+function endsWithSeparator(path: string): boolean {
+    return path.endsWith('/') || path.endsWith('\\');
+}
 
-const looksWindows = (path: string): boolean => /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('\\\\');
+function looksWindows(path: string): boolean {
+    return /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('\\\\');
+}
 
 /* `~` becomes the home directory; a relative path counts from `cwd`; anything else is taken as is. */
-export const resolveBrowsePath = (partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): string => {
+export function resolveBrowsePath(partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): string {
     const home = options.home ?? homedir();
     const platform = options.platform ?? process.platform;
     const trimmed = partialPath.trim();
@@ -45,7 +49,7 @@ export const resolveBrowsePath = (partialPath: string, cwd: string | undefined, 
         return resolve(cwd, trimmed);
     }
     return isAbsolute(trimmed) ? resolve(trimmed) : resolve(cwd ?? home, trimmed);
-};
+}
 
 /*
  * Directories that complete what was typed. A path ending in a separator lists that directory;
@@ -55,7 +59,7 @@ export const resolveBrowsePath = (partialPath: string, cwd: string | undefined, 
  * cannot be read lists as empty, not as an error, and `exists` is what tells that apart from one
  * that is not there.
  */
-export const browseDirectories = async (partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): Promise<FsBrowseResult> => {
+export async function browseDirectories(partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): Promise<FsBrowseResult> {
     const trimmed = partialPath.trim();
     const target = resolveBrowsePath(trimmed, cwd, options);
     const wholeDirectory = endsWithSeparator(trimmed) || trimmed === '~' || trimmed === '.' || trimmed === '..';
@@ -78,24 +82,26 @@ export const browseDirectories = async (partialPath: string, cwd: string | undef
         })
     );
     return { parentPath: trimTrailing(parentPath), entries, exists: true };
-};
+}
 
 /* A separator on the end says "list this", which the answer no longer means; the root keeps its. */
-const trimTrailing = (path: string): string => (path.endsWith(sep) && path.length > 1 ? path.slice(0, -1) : path);
+function trimTrailing(path: string): string {
+    return path.endsWith(sep) && path.length > 1 ? path.slice(0, -1) : path;
+}
 
-const exists = async (path: string): Promise<boolean> => {
+async function exists(path: string): Promise<boolean> {
     try {
         await stat(path);
         return true;
     } catch {
         return false;
     }
-};
+}
 
-const isDirectory = async (path: string): Promise<boolean> => {
+async function isDirectory(path: string): Promise<boolean> {
     try {
         return (await stat(path)).isDirectory();
     } catch {
         return false;
     }
-};
+}

@@ -90,12 +90,12 @@ type ProjectErrorCode =
 
 export class ProjectError extends CodedError<ProjectErrorCode> {}
 
-const asProjectError = (e: unknown): unknown => {
+function asProjectError(e: unknown): unknown {
     if (e instanceof ProjectWriteRaced) {
         return new ProjectError('rev-conflict', e.message);
     }
     return e instanceof ProjectWriteStuck ? new ProjectError('project-invalid', e.message) : e;
-};
+}
 
 const RegistryEntrySchema = z.object({
     projectId: z.string().min(1),
@@ -125,11 +125,15 @@ const RegistrySchema = z.object({
 const WATCH_SETTLE_MS = 150;
 
 // The only file in `.ruimte` besides the canvas that the daemon has a use for.
-const isIconFile = (filename: string): boolean => filename.startsWith('icon.');
+function isIconFile(filename: string): boolean {
+    return filename.startsWith('icon.');
+}
 
 const DEFAULT_COLOR = '#7c74ff';
 
-const newId = (): string => randomBytes(6).toString('base64url');
+function newId(): string {
+    return randomBytes(6).toString('base64url');
+}
 
 /*
  * What a store of view files (the drawings, the diagrams) needs to hear from this one. It is an
@@ -199,12 +203,17 @@ export type SessionEnder = (kind: 'terminal' | 'chat', nodeId: string) => Promis
 export type SaveListener = (folder: string, before: readonly ProjectView[], after: readonly ProjectView[]) => Promise<void>;
 
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
-const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> =>
-    new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
+function viewIdsIn(views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> {
+    return new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
+}
 
-const drawingIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'drawing');
+function drawingIdsIn(views: ProjectView[]): Set<string> {
+    return viewIdsIn(views, 'drawing');
+}
 
-const diagramIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'diagram');
+function diagramIdsIn(views: ProjectView[]): Set<string> {
+    return viewIdsIn(views, 'diagram');
+}
 
 /*
  * Projects live in `<folder>/.ruimte/project.json`. Machine state stays out of the shared file.
@@ -1278,21 +1287,24 @@ export class ProjectStore {
     }
 }
 
-const imageIcon = (icon: DerivedIcon): ProjectIcon => ({ kind: 'image', value: icon.from, version: icon.version });
+function imageIcon(icon: DerivedIcon): ProjectIcon {
+    return { kind: 'image', value: icon.from, version: icon.version };
+}
 
-const sameIcon = (left: ProjectIcon | null, right: ProjectIcon | null): boolean =>
-    left === right || (left !== null && right !== null && left.kind === right.kind && left.value === right.value);
+function sameIcon(left: ProjectIcon | null, right: ProjectIcon | null): boolean {
+    return left === right || (left !== null && right !== null && left.kind === right.kind && left.value === right.value);
+}
 
 /*
  * A name that still matches the folder's own is the folder's, not a decision; the client says so
  * under the icon picker. Renaming to exactly that string reads as the folder's too, which is the
  * honest answer: there is nothing on disk that says otherwise.
  */
-const nameSourceOf = (name: string, folder: string): ProjectNameSource => {
+function nameSourceOf(name: string, folder: string): ProjectNameSource {
     return name === basename(folder) ? 'folder' : 'chosen';
-};
+}
 
-const decodeImage = (base64: string): Uint8Array => {
+function decodeImage(base64: string): Uint8Array {
     // Base64 carries three bytes per four characters; the cap is checked before decoding a blob.
     if (Math.ceil(base64.length / 4) * 3 > ICON_MAX_BYTES) {
         throw new ProjectError('bad-icon', 'That image is larger than 256 KB');
@@ -1302,21 +1314,21 @@ const decodeImage = (base64: string): Uint8Array => {
         throw new ProjectError('bad-icon', 'That image is empty or larger than 256 KB');
     }
     return bytes;
-};
+}
 
-const exists = async (path: string): Promise<boolean> => {
+async function exists(path: string): Promise<boolean> {
     try {
         await stat(path);
         return true;
     } catch {
         return false;
     }
-};
+}
 
-const isDirectory = async (path: string): Promise<boolean> => {
+async function isDirectory(path: string): Promise<boolean> {
     try {
         return (await stat(path)).isDirectory();
     } catch {
         return false;
     }
-};
+}

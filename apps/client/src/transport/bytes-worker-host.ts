@@ -13,7 +13,7 @@ let started = false;
  * page asks the machine over the channel only it holds. Only a machine this page reaches directly is
  * asked, and only for a file, which the daemon serves only as an image, a video or sound.
  */
-const answer = (event: MessageEvent<unknown>): void => {
+function answer(event: MessageEvent<unknown>): void {
     const port = event.ports[0];
     if (!port || typeof event.data !== 'object' || event.data === null) {
         return;
@@ -31,20 +31,22 @@ const answer = (event: MessageEvent<unknown>): void => {
         (result) => reply({ ok: true, result }),
         (e: unknown) => reply({ ok: false, message: e instanceof Error ? e.message : String(e) })
     );
-};
+}
 
 /*
  * Once, by the first workspace, so the start screen registers nothing. The listener is in place
  * before any video can ask, since a message nobody listens for is dropped.
  */
-export const startBytesWorker = (): void => {
+export function startBytesWorker(): void {
     if (started || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
         return;
     }
     started = true;
     navigator.serviceWorker.addEventListener('message', answer);
     navigator.serviceWorker.register(BYTES_WORKER_SCRIPT).catch((e: unknown) => console.warn('The bytes worker did not register', e));
-};
+}
 
 /* Not before the worker controls the page, which it does not after a hard reload; a video plays from a blob then. */
-export const bytesWorkerReady = (): boolean => started && navigator.serviceWorker.controller !== null;
+export function bytesWorkerReady(): boolean {
+    return started && navigator.serviceWorker.controller !== null;
+}

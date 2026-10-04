@@ -1,13 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { modeOfHook, normalizeHook, settleWaiting } from './hooks.ts';
 
-const hook = (event: string, extra: Record<string, unknown> = {}) => ({
-    session_id: 'abc',
-    transcript_path: '/tmp/t.jsonl',
-    cwd: '/tmp',
-    hook_event_name: event,
-    ...extra
-});
+function hook(event: string, extra: Record<string, unknown> = {}) {
+    return {
+        session_id: 'abc',
+        transcript_path: '/tmp/t.jsonl',
+        cwd: '/tmp',
+        hook_event_name: event,
+        ...extra
+    };
+}
 
 describe('normalizeHook', () => {
     test('maps the lifecycle to running, needs-you, idle and gone', () => {

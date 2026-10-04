@@ -7,7 +7,7 @@ import type { Signal, SignalingEvents, SignalingOpener } from './signaling';
 import type { SignalRoute } from './transport';
 
 /* One route an attempt may take: it records what the race asked of it and lets the test answer for it. */
-const fakeRoute = () => {
+function fakeRoute() {
     const route = {
         opened: 0,
         closed: false,
@@ -29,10 +29,10 @@ const fakeRoute = () => {
         signal: (signal: Signal) => route.events!.signal(signal)
     };
     return route;
-};
+}
 
 /* A clock that only moves when the test says so. */
-const fakeClock = () => {
+function fakeClock() {
     let now = 0;
     const timers: Array<{ at: number; run: () => void; cancelled: boolean }> = [];
     const clock: RaceClock = {
@@ -52,9 +52,9 @@ const fakeClock = () => {
         }
     };
     return { clock, advance };
-};
+}
 
-const recorder = () => {
+function recorder() {
     const log = { ready: [] as Array<IceServer[] | undefined>, signals: [] as Signal[], failures: [] as string[], routes: [] as SignalRoute[] };
     const events: SignalingEvents = {
         ready: (servers) => log.ready.push(servers),
@@ -62,7 +62,7 @@ const recorder = () => {
         fail: (reason) => log.failures.push(reason)
     };
     return { log, events, onRoute: (route: SignalRoute) => log.routes.push(route) };
-};
+}
 
 describe('raceSignaling', () => {
     test('the first door that is ready carries the attempt, the others close and the broker is never asked', () => {
@@ -174,7 +174,7 @@ describe('raceSignaling', () => {
 });
 
 /* A link that runs on the race's signals and lets the test say whether its channel opened or failed. */
-const fakeLink = () => {
+function fakeLink() {
     const link = {
         events: null as LinkEvents | null,
         signals: recorder(),
@@ -186,9 +186,9 @@ const fakeLink = () => {
             }) as (signaling: SignalingOpener) => LinkOpener
     };
     return link;
-};
+}
 
-const linkEvents = () => {
+function linkEvents() {
     const log = { opened: [] as Array<SignalRoute | undefined>, closed: [] as Array<string | null> };
     const events: LinkEvents = {
         open: (signaled) => log.opened.push(signaled),
@@ -196,7 +196,7 @@ const linkEvents = () => {
         close: (failure) => log.closed.push(failure)
     };
     return { log, events };
-};
+}
 
 describe('routedLink', () => {
     test('an open link says which route its signals took', () => {

@@ -27,7 +27,9 @@ const OWN_KEYS = new Set(['info', 'items', 'seq', 'resetSeq', 'preambles']);
 /* What a host keeps in a chat's record beside the thread; it never reaches the wire. */
 export type ChatRecordExtras = Record<string, unknown>;
 
-const extrasOf = (record: Record<string, unknown>): ChatRecordExtras => Object.fromEntries(Object.entries(record).filter(([key]) => !OWN_KEYS.has(key)));
+function extrasOf(record: Record<string, unknown>): ChatRecordExtras {
+    return Object.fromEntries(Object.entries(record).filter(([key]) => !OWN_KEYS.has(key)));
+}
 
 /* A thread as it stood when the host last wrote down anything about it: the snapshot with the log played over it. */
 export interface ChatRecord {
@@ -47,12 +49,17 @@ export interface ChatSeq {
     resetSeq: number;
 }
 
-const logName = (chatId: string): string => `${encodeURIComponent(chatId)}.log`;
+function logName(chatId: string): string {
+    return `${encodeURIComponent(chatId)}.log`;
+}
 
-const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[], extras: ChatRecordExtras): string =>
-    JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }), ...withoutOwnKeys(extras) });
+function recordBody(info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[], extras: ChatRecordExtras): string {
+    return JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }), ...withoutOwnKeys(extras) });
+}
 
-const withoutOwnKeys = (extras: ChatRecordExtras): ChatRecordExtras => Object.fromEntries(Object.entries(extras).filter(([key]) => !OWN_KEYS.has(key)));
+function withoutOwnKeys(extras: ChatRecordExtras): ChatRecordExtras {
+    return Object.fromEntries(Object.entries(extras).filter(([key]) => !OWN_KEYS.has(key)));
+}
 
 export interface ChatStoreOptions {
     attachments?: AttachmentStore | null;
@@ -205,7 +212,7 @@ export class ChatStore {
 
 const UNREADABLE = Symbol('unreadable');
 
-const exists = async (path: string): Promise<boolean> => {
+async function exists(path: string): Promise<boolean> {
     try {
         await stat(path);
         return true;
@@ -215,9 +222,9 @@ const exists = async (path: string): Promise<boolean> => {
         }
         throw e;
     }
-};
+}
 
-const readOrNull = async (path: string): Promise<string | null> => {
+async function readOrNull(path: string): Promise<string | null> {
     try {
         return await readFile(path, 'utf8');
     } catch (e) {
@@ -226,7 +233,7 @@ const readOrNull = async (path: string): Promise<string | null> => {
         }
         throw e;
     }
-};
+}
 
 /*
  * A chat whose first snapshot never reached the disk (the host went down within moments of its
@@ -234,7 +241,7 @@ const readOrNull = async (path: string): Promise<string | null> => {
  * is. Otherwise the chat starts over, and its stream goes on after the last seq the log handed out
  * with a reset marked there, so a client holding a seq from before cannot be answered from after.
  */
-const fromLogAlone = (lines: ChatLogLine[]): ChatRecord | null => {
+function fromLogAlone(lines: ChatLogLine[]): ChatRecord | null {
     if (lines.length === 0) {
         return null;
     }
@@ -251,4 +258,4 @@ const fromLogAlone = (lines: ChatLogLine[]): ChatRecord | null => {
         }
     }
     return { ...thread.snapshot(), seq: 0, resetSeq, preambles: [], extras: {}, lines };
-};
+}

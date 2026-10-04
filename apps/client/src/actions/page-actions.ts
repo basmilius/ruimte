@@ -22,7 +22,9 @@ export interface PageMachine {
     drive(nodeId: string, drive: PageDrive): void;
 }
 
-const keyOf = (nodeId: string): string => endpointKey(currentEndpointId(), nodeId);
+function keyOf(nodeId: string): string {
+    return endpointKey(currentEndpointId(), nodeId);
+}
 
 const LIVE_MACHINE: PageMachine = {
     holds: (nodeId) => (isDesktop() ? browserRegistry.has(keyOf(nodeId)) : browserClientFor(currentEndpointId()) !== null),

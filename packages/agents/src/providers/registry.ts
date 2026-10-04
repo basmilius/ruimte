@@ -29,26 +29,30 @@ const NO_CAPABILITIES: ProviderCapabilities = {
 };
 
 /* A CLI of a kind the host does not offer: a record or an account may still name one, and it starts nothing. */
-export const unofferedProvider = (kind: AgentKind): ChatProvider => ({
-    kind,
-    name: kind,
-    catalog: new ModelCatalog({ defaultModel: '', profiles: {}, models: [] }),
-    capabilities: NO_CAPABILITIES,
-    command: [kind],
-    resumeCommand: '',
-    detect: () => Promise.resolve({ installed: false, version: null }),
-    firstPromptArgs: () => {
-        throw new Error(`${kind} is not offered here`);
-    },
-    createBackend: () => {
-        throw new Error(`${kind} is not offered here`);
-    }
-});
+export function unofferedProvider(kind: AgentKind): ChatProvider {
+    return {
+        kind,
+        name: kind,
+        catalog: new ModelCatalog({ defaultModel: '', profiles: {}, models: [] }),
+        capabilities: NO_CAPABILITIES,
+        command: [kind],
+        resumeCommand: '',
+        detect: () => Promise.resolve({ installed: false, version: null }),
+        firstPromptArgs: () => {
+            throw new Error(`${kind} is not offered here`);
+        },
+        createBackend: () => {
+            throw new Error(`${kind} is not offered here`);
+        }
+    };
+}
 
 const BUILT_IN_PROVIDERS: readonly ChatProvider[] = [claudeProvider, codexProvider];
 
 /* The provider of a kind, for the places that have no registry at hand. */
-export const providerFor = (kind: AgentKind): ChatProvider => BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? unofferedProvider(kind);
+export function providerFor(kind: AgentKind): ChatProvider {
+    return BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? unofferedProvider(kind);
+}
 
 export interface ProviderRegistryOptions {
     // The CLIs a host offers, in the order every menu lists them; absent, the chat CLIs this package ships.

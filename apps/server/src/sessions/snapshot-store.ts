@@ -7,7 +7,9 @@ const SNAPSHOT_INTERVAL_MS = 30_000;
 
 // The id is chosen by the client, so it is encoded before it becomes a file name: a slash or a
 // `..` in an id must never leave the sessions directory.
-const fileName = (sessionId: string): string => `${encodeURIComponent(sessionId)}.txt`;
+function fileName(sessionId: string): string {
+    return `${encodeURIComponent(sessionId)}.txt`;
+}
 
 export class SnapshotStore {
     readonly dir: string;
@@ -56,7 +58,7 @@ interface SnapshotSchedule {
 }
 
 // One snapshot pass in flight at a time: the timer and the shutdown path may both ask for it.
-export const scheduleSnapshots = (source: SnapshotSource, store: SnapshotStore, intervalMs: number = SNAPSHOT_INTERVAL_MS): SnapshotSchedule => {
+export function scheduleSnapshots(source: SnapshotSource, store: SnapshotStore, intervalMs: number = SNAPSHOT_INTERVAL_MS): SnapshotSchedule {
     let inFlight: Promise<void> | null = null;
 
     const flush = (): Promise<void> => {
@@ -102,4 +104,4 @@ export const scheduleSnapshots = (source: SnapshotSource, store: SnapshotStore, 
             clearInterval(timer);
         }
     };
-};
+}

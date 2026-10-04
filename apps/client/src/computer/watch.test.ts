@@ -37,17 +37,19 @@ class FakeLink implements Transport {
     }
 }
 
-const poolOf = (links: Record<string, FakeLink>): WatchablePool => ({
-    ids: () => Object.keys(links),
-    peek: (endpointId) => links[endpointId] ?? null,
-    subscribe: () => () => undefined
-});
+function poolOf(links: Record<string, FakeLink>): WatchablePool {
+    return {
+        ids: () => Object.keys(links),
+        peek: (endpointId) => links[endpointId] ?? null,
+        subscribe: () => () => undefined
+    };
+}
 
-const settle = async (): Promise<void> => {
+async function settle(): Promise<void> {
     for (let turn = 0; turn < 5; turn++) {
         await Promise.resolve();
     }
-};
+}
 
 const stops: (() => void)[] = [];
 afterEach(() => {

@@ -74,10 +74,14 @@ export interface ComputerApprovalsOptions {
     cardMs?: number;
 }
 
-const keyOf = (callerId: string, bundleId: string): string => `${callerId}\n${bundleId}`;
+function keyOf(callerId: string, bundleId: string): string {
+    return `${callerId}\n${bundleId}`;
+}
 
 /* The statuses of an agent in the middle of a turn: waiting on the person is still that turn. */
-const inTurn = (status: AgentStatus | undefined): boolean => status === 'running' || status === 'needs-you';
+function inTurn(status: AgentStatus | undefined): boolean {
+    return status === 'running' || status === 'needs-you';
+}
 
 /*
  * Which apps each agent may operate, and the cards that ask a person about the rest. A card is one

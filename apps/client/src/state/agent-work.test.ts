@@ -4,38 +4,44 @@ import { agentsWorking, nodeWork, nodeWorking } from '@/state/agent-work';
 import type { ChatState } from '@ruimte/agents-react/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
-const agent = (status: AgentStatus, live = true): AgentInfo => ({
-    kind: 'claude',
-    agentSessionId: 'a1',
-    transcriptPath: null,
-    status,
-    live,
-    updatedAt: 0
-});
-
-const session = (agentInfo?: AgentInfo, attached = true): SessionState => ({ attached, agent: agentInfo });
-
-const chat = (status: AgentStatus, delegating?: boolean): ChatState => ({
-    info: {
-        chatId: 'c1',
-        provider: 'claude',
-        cwd: '/',
-        agentSessionId: null,
-        model: null,
-        selection: { model: 'claude-sonnet-5', options: {} },
-        runtimeMode: 'full-access',
+function agent(status: AgentStatus, live = true): AgentInfo {
+    return {
+        kind: 'claude',
+        agentSessionId: 'a1',
+        transcriptPath: null,
         status,
-        running: true,
-        activeTurnId: null,
-        slashCommands: [],
-        delegating,
-        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
-        createdAt: 0
-    },
-    items: {},
-    structure: {},
-    order: []
-});
+        live,
+        updatedAt: 0
+    };
+}
+
+function session(agentInfo?: AgentInfo, attached = true): SessionState {
+    return { attached, agent: agentInfo };
+}
+
+function chat(status: AgentStatus, delegating?: boolean): ChatState {
+    return {
+        info: {
+            chatId: 'c1',
+            provider: 'claude',
+            cwd: '/',
+            agentSessionId: null,
+            model: null,
+            selection: { model: 'claude-sonnet-5', options: {} },
+            runtimeMode: 'full-access',
+            status,
+            running: true,
+            activeTurnId: null,
+            slashCommands: [],
+            delegating,
+            usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+            createdAt: 0
+        },
+        items: {},
+        structure: {},
+        order: []
+    };
+}
 
 describe('what counts as an agent working', () => {
     test('a shell somebody is typing in does not, however attached it is', () => {

@@ -25,8 +25,9 @@ interface ModelCatalogFeedOptions {
     now?: () => number;
 }
 
-const fromAddressBook = (): Promise<ModelCatalogsResult> =>
-    new AddressBookClient({ fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }) }).modelCatalogs();
+function fromAddressBook(): Promise<ModelCatalogsResult> {
+    return new AddressBookClient({ fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }) }).modelCatalogs();
+}
 
 /*
  * The model catalogs of the chat CLIs, newer than the ones the app shipped with once the address book

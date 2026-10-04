@@ -46,15 +46,19 @@ export const usePlanViewPrefs = create<PlanViewPrefs>((set, get) => ({
     }
 }));
 
-export const planViewKey = (endpointId: string, chatId: string, planId: string): string => `${endpointKey(endpointId, chatId)}:${planId}`;
+export function planViewKey(endpointId: string, chatId: string, planId: string): string {
+    return `${endpointKey(endpointId, chatId)}:${planId}`;
+}
 
-export const collapseAll = (planKey: string, plan: Pick<Plan, 'items'>): void => usePlanViewPrefs.getState().setCollapsed(planKey, foldableIds(plan));
+export function collapseAll(planKey: string, plan: Pick<Plan, 'items'>): void {
+    return usePlanViewPrefs.getState().setCollapsed(planKey, foldableIds(plan));
+}
 
 /* Collapse done would keep finished groups folded, and "all" has to mean all. */
-export const expandAll = (planKey: string): void => {
+export function expandAll(planKey: string): void {
     usePlanViewPrefs.getState().setCollapsed(planKey, NO_IDS);
     usePlanViewPrefs.getState().setCollapseDone(false);
-};
+}
 
 interface PlanReveal {
     /* The step the list scrolls to and lights up; the nonce makes a second click on the same step count. */
@@ -70,7 +74,7 @@ export const usePlanReveal = create<PlanReveal>((set, get) => ({
 }));
 
 /* Opens what hides a step in the list, then asks the list to bring it into view. */
-export const revealPlanStep = (planKey: string, plan: Pick<Plan, 'items'>, stepId: string): void => {
+export function revealPlanStep(planKey: string, plan: Pick<Plan, 'items'>, stepId: string): void {
     const prefs = usePlanViewPrefs.getState();
     const current = { filter: prefs.filter, collapseDone: prefs.collapseDone, collapsed: new Set(collapsedOf(prefs.collapsed, planKey)) };
     const next = revealOptions(plan, current, stepId);
@@ -84,12 +88,14 @@ export const revealPlanStep = (planKey: string, plan: Pick<Plan, 'items'>, stepI
         prefs.setCollapsed(planKey, [...next.collapsed]);
     }
     usePlanReveal.getState().reveal(planKey, stepId);
-};
+}
 
-export const collapsedOf = (collapsed: PlanViewPrefs['collapsed'], planKey: string): readonly string[] => collapsed[planKey] ?? NO_IDS;
+export function collapsedOf(collapsed: PlanViewPrefs['collapsed'], planKey: string): readonly string[] {
+    return collapsed[planKey] ?? NO_IDS;
+}
 
 /* The keyboard and the eye to a chat: its cell when it stands in one, else the camera to its node. */
-export const focusChat = (chatId: string): void => {
+export function focusChat(chatId: string): void {
     const { views, layout, setActiveView } = useDocument.getState();
     if (views.some((view) => view.kind === 'chat' && view.id === chatId)) {
         showView(chatId);
@@ -103,42 +109,42 @@ export const focusChat = (chatId: string): void => {
         return;
     }
     revealNode(chatId);
-};
+}
 
-export const copyPlanMarkdown = (plan: Plan): void => {
+export function copyPlanMarkdown(plan: Plan): void {
     copyText(planToMarkdown(plan));
     useToasts.getState().show({ kind: 'success', title: i18next.t('plan:toast.copied') });
-};
+}
 
 /*
  * Puts the failed and blocked steps in the chat's prompt, and never sends it: the person does. The
  * chat comes into focus as well, so the text is in front of them.
  */
-export const sendResultsToChat = (chatId: string, plan: Plan): void => {
+export function sendResultsToChat(chatId: string, plan: Plan): void {
     const text = resultsText(plan);
     if (text === null) {
         return;
     }
     offerDraft(chatId, text);
     focusChat(chatId);
-};
+}
 
 /* The tick already showed; a refusal put the plan back, and this says why. */
-const notChanged = (error: unknown): void => {
+function notChanged(error: unknown): void {
     useToasts
         .getState()
         .show({ kind: 'error', title: i18next.t('plan:toast.notChanged'), description: error instanceof Error ? error.message : String(error) });
-};
+}
 
-export const setPlanStepsAction = (chatId: string, planId: string, stepIds: string[], state: PlanStepState): void => {
+export function setPlanStepsAction(chatId: string, planId: string, stepIds: string[], state: PlanStepState): void {
     performAsPerson('plan.setStepState', { chatId, planId, stepIds, state, note: null }).catch(notChanged);
-};
+}
 
-export const notePlanStepAction = (chatId: string, planId: string, stepId: string, text: string): void => {
+export function notePlanStepAction(chatId: string, planId: string, stepId: string, text: string): void {
     performAsPerson('plan.addNote', { chatId, planId, stepId, text }).catch(notChanged);
-};
+}
 
 /* Null lifts the lock of every step of the plan. */
-export const unlockPlanStepsAction = (chatId: string, planId: string, stepIds: string[] | null): void => {
+export function unlockPlanStepsAction(chatId: string, planId: string, stepIds: string[] | null): void {
     performAsPerson('plan.unlock', { chatId, planId, stepIds }).catch(notChanged);
-};
+}

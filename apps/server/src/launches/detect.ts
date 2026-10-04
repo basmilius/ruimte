@@ -18,7 +18,9 @@ const SKIPPED_DIRECTORIES = new Set(['node_modules', 'vendor', 'dist', 'build', 
 // Hidden folders are tooling and a leading tilde is a backup copy; these hold run configurations.
 const RUN_FILE_FOLDERS = new Set(['.run', '.idea', 'runConfigurations']);
 
-const walksInto = (name: string): boolean => RUN_FILE_FOLDERS.has(name) || (!SKIPPED_DIRECTORIES.has(name) && !name.startsWith('.') && !name.startsWith('~'));
+function walksInto(name: string): boolean {
+    return RUN_FILE_FOLDERS.has(name) || (!SKIPPED_DIRECTORIES.has(name) && !name.startsWith('.') && !name.startsWith('~'));
+}
 
 // Scripts a package manager runs by itself around an install or a publish, which nobody launches.
 const LIFECYCLE_SCRIPTS = new Set([
@@ -49,17 +51,18 @@ const ENTITIES: Record<string, string> = { quot: '"', amp: '&', lt: '<', gt: '>'
 const TAG = /<(\/?)([A-Za-z_][\w.:-]*)((?:\s+[\w.:-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/g;
 const ATTRIBUTE = /([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 
-const decodeEntities = (text: string): string =>
-    text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, entity: string) => {
+function decodeEntities(text: string): string {
+    return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, entity: string) => {
         if (entity.startsWith('#')) {
             const code = entity[1] === 'x' || entity[1] === 'X' ? Number.parseInt(entity.slice(2), 16) : Number.parseInt(entity.slice(1), 10);
             return Number.isNaN(code) ? whole : String.fromCodePoint(code);
         }
         return ENTITIES[entity.toLowerCase()] ?? whole;
     });
+}
 
 /* Elements and attributes only: a run configuration keeps everything it says in attributes. */
-export const parseXml = (text: string): XmlElement => {
+export function parseXml(text: string): XmlElement {
     const root: XmlElement = { name: '#document', attributes: {}, children: [] };
     const stack = [root];
     const body = text.replace(/<!--[\s\S]*?-->/g, '').replace(/<\?[\s\S]*?\?>/g, '');
@@ -83,28 +86,41 @@ export const parseXml = (text: string): XmlElement => {
         }
     }
     return root;
-};
+}
 
-const childrenOf = (element: XmlElement, name: string): XmlElement[] => element.children.filter((child) => child.name === name);
+function childrenOf(element: XmlElement, name: string): XmlElement[] {
+    return element.children.filter((child) => child.name === name);
+}
 
-const childOf = (element: XmlElement, name: string): XmlElement | undefined => element.children.find((child) => child.name === name);
+function childOf(element: XmlElement, name: string): XmlElement | undefined {
+    return element.children.find((child) => child.name === name);
+}
 
-const descendantsOf = (element: XmlElement, name: string): XmlElement[] =>
-    element.children.flatMap((child) => [...(child.name === name ? [child] : []), ...descendantsOf(child, name)]);
+function descendantsOf(element: XmlElement, name: string): XmlElement[] {
+    return element.children.flatMap((child) => [...(child.name === name ? [child] : []), ...descendantsOf(child, name)]);
+}
 
 /* `<option name="…" value="…"/>`, the way most run configuration types store their fields. */
-const optionOf = (element: XmlElement, name: string): string | undefined =>
-    childrenOf(element, 'option').find((option) => option.attributes.name === name)?.attributes.value;
+function optionOf(element: XmlElement, name: string): string | undefined {
+    return childrenOf(element, 'option').find((option) => option.attributes.name === name)?.attributes.value;
+}
 
-const shellQuote = (value: string): string => (/^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`);
+function shellQuote(value: string): string {
+    return /^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
+}
 
-export const slugOf = (name: string): string =>
-    name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'launch';
+export function slugOf(name: string): string {
+    return (
+        name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'launch'
+    );
+}
 
-const kindOfScript = (name: string): LaunchConfigKind => (SERVICE_NAME.test(name) ? 'service' : 'task');
+function kindOfScript(name: string): LaunchConfigKind {
+    return SERVICE_NAME.test(name) ? 'service' : 'task';
+}
 
 /* Where the paths of one launch are read from and what they point at. */
 class PathScope {
@@ -153,14 +169,14 @@ interface RunFileContext {
 
 type Built = { launch: LaunchConfig; detail: string; outside: boolean; unsupported?: string };
 
-const envOf = (configuration: XmlElement, scope: PathScope): LaunchConfigEnv | undefined => {
+function envOf(configuration: XmlElement, scope: PathScope): LaunchConfigEnv | undefined {
     const entries = childrenOf(childOf(configuration, 'envs') ?? { name: '', attributes: {}, children: [] }, 'env').flatMap((env) =>
         env.attributes.name === undefined ? [] : [[env.attributes.name, scope.expand(env.attributes.value ?? '')] as const]
     );
     return entries.length === 0 ? undefined : Object.fromEntries(entries);
-};
+}
 
-const phpServer = (configuration: XmlElement, context: RunFileContext): Built => {
+function phpServer(configuration: XmlElement, context: RunFileContext): Built {
     const attributes = configuration.attributes;
     const scope = new PathScope(context.folder, context.projectDir, context.projectDir);
     const host = attributes.host === undefined || attributes.host === '' ? 'localhost' : attributes.host;
@@ -187,9 +203,9 @@ const phpServer = (configuration: XmlElement, context: RunFileContext): Built =>
         detail: attributes.factoryName ?? 'PHP Built-in Web Server',
         outside: scope.outside
     };
-};
+}
 
-const pestTests = (configuration: XmlElement, context: RunFileContext): Built => {
+function pestTests(configuration: XmlElement, context: RunFileContext): Built {
     const runner = childOf(configuration, 'PestRunner')?.attributes ?? {};
     const scope = new PathScope(context.folder, context.projectDir, context.projectDir);
     const parts = ['vendor/bin/pest'];
@@ -208,9 +224,9 @@ const pestTests = (configuration: XmlElement, context: RunFileContext): Built =>
         detail: runner.parallel_testing_enabled === 'true' ? 'Pest, parallel' : 'Pest',
         outside: scope.outside
     };
-};
+}
 
-const npmScript = (configuration: XmlElement, context: RunFileContext): Built => {
+function npmScript(configuration: XmlElement, context: RunFileContext): Built {
     const scope = new PathScope(context.folder, context.projectDir, context.projectDir);
     const packageJson = childOf(configuration, 'package-json')?.attributes.value;
     const cwd = packageJson === undefined ? context.projectDir : dirname(resolve(context.projectDir, scope.expand(packageJson)));
@@ -231,9 +247,9 @@ const npmScript = (configuration: XmlElement, context: RunFileContext): Built =>
         detail: configuration.attributes.factoryName ?? 'npm',
         outside: !isInside(context.folder, cwd) || inCwd.outside
     };
-};
+}
 
-const shellScript = (configuration: XmlElement, context: RunFileContext): Built => {
+function shellScript(configuration: XmlElement, context: RunFileContext): Built {
     const scope = new PathScope(context.folder, context.projectDir, context.projectDir);
     const workingDirectory = optionOf(configuration, 'SCRIPT_WORKING_DIRECTORY');
     const scriptPath = optionOf(configuration, 'SCRIPT_PATH') ?? '';
@@ -260,7 +276,7 @@ const shellScript = (configuration: XmlElement, context: RunFileContext): Built 
         detail: configuration.attributes.factoryName ?? 'Shell Script',
         outside: !isInside(context.folder, cwd) || inCwd.outside
     };
-};
+}
 
 const RUN_TYPES: Record<string, (configuration: XmlElement, context: RunFileContext) => Built> = {
     PhpBuiltInWebServerConfigurationType: phpServer,
@@ -270,8 +286,8 @@ const RUN_TYPES: Record<string, (configuration: XmlElement, context: RunFileCont
 };
 
 /* Every configuration in one file; a type the import cannot read comes back with the reason. */
-export const readRunFile = (text: string, context: RunFileContext): Built[] =>
-    descendantsOf(parseXml(text), 'configuration')
+export function readRunFile(text: string, context: RunFileContext): Built[] {
+    return descendantsOf(parseXml(text), 'configuration')
         .filter((configuration) => configuration.attributes.default !== 'true' && configuration.attributes.type !== undefined)
         .map((configuration) => {
             const type = configuration.attributes.type!;
@@ -287,14 +303,16 @@ export const readRunFile = (text: string, context: RunFileContext): Built[] =>
                 unsupported: described
             };
         });
+}
 
-const exists = async (path: string): Promise<boolean> =>
-    stat(path)
+async function exists(path: string): Promise<boolean> {
+    return stat(path)
         .then(() => true)
         .catch(() => false);
+}
 
 /* The package manager of a folder by its lockfile, looked for up to the project folder for a workspace. */
-const packageRunner = async (folder: string, cwd: string): Promise<string> => {
+async function packageRunner(folder: string, cwd: string): Promise<string> {
     for (let at = cwd; ; at = dirname(at)) {
         if ((await exists(join(at, 'bun.lock'))) || (await exists(join(at, 'bun.lockb')))) {
             return 'bun run';
@@ -309,10 +327,10 @@ const packageRunner = async (folder: string, cwd: string): Promise<string> => {
             return 'npm run';
         }
     }
-};
+}
 
 /* The address a dev server script answers on, when the tool says it without reading its config. */
-export const scriptAddress = (script: string): string | undefined => {
+export function scriptAddress(script: string): string | undefined {
     const port = /--port[= ](\d+)/.exec(script)?.[1];
     if (/^vite preview\b/.test(script)) {
         return `http://localhost:${port ?? '4173'}`;
@@ -324,26 +342,26 @@ export const scriptAddress = (script: string): string | undefined => {
         return `http://localhost:${port ?? '3000'}`;
     }
     return port === undefined ? undefined : `http://localhost:${port}`;
-};
+}
 
-const readJson = async (path: string): Promise<Record<string, unknown> | null> => {
+async function readJson(path: string): Promise<Record<string, unknown> | null> {
     try {
         const value: unknown = JSON.parse(await readFile(path, 'utf8'));
         return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
     } catch {
         return null;
     }
-};
+}
 
-const scriptsOf = (manifest: Record<string, unknown> | null): [string, string][] => {
+function scriptsOf(manifest: Record<string, unknown> | null): [string, string][] {
     const scripts = manifest?.scripts;
     if (typeof scripts !== 'object' || scripts === null) {
         return [];
     }
     return Object.entries(scripts).flatMap(([name, value]) => (typeof value === 'string' ? [[name, value] as [string, string]] : []));
-};
+}
 
-const packageScripts = async (folder: string, directory: string): Promise<Built[]> => {
+async function packageScripts(folder: string, directory: string): Promise<Built[]> {
     const scripts = scriptsOf(await readJson(join(directory, 'package.json')));
     if (scripts.length === 0) {
         return [];
@@ -371,26 +389,29 @@ const packageScripts = async (folder: string, directory: string): Promise<Built[
                 outside: false
             };
         });
-};
+}
 
-const composerScripts = async (directory: string): Promise<Built[]> =>
-    scriptsOf(await readJson(join(directory, 'composer.json')))
-        // Composer's own events (`post-install-cmd`, `pre-autoload-dump`) run by themselves.
-        .filter(([name]) => !/^(pre|post)-/.test(name))
-        .map(([name]) => ({
-            launch: {
-                id: '',
-                name: name.charAt(0).toUpperCase() + name.slice(1),
-                kind: kindOfScript(name),
-                cwd: directory,
-                command: `composer run ${shellQuote(name)}`
-            },
-            detail: name,
-            outside: false
-        }));
+async function composerScripts(directory: string): Promise<Built[]> {
+    return (
+        scriptsOf(await readJson(join(directory, 'composer.json')))
+            // Composer's own events (`post-install-cmd`, `pre-autoload-dump`) run by themselves.
+            .filter(([name]) => !/^(pre|post)-/.test(name))
+            .map(([name]) => ({
+                launch: {
+                    id: '',
+                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    kind: kindOfScript(name),
+                    cwd: directory,
+                    command: `composer run ${shellQuote(name)}`
+                },
+                detail: name,
+                outside: false
+            }))
+    );
+}
 
 /* The run configuration files under a directory, not descending into another root that is walked on its own. */
-const runFilesUnder = async (root: string, roots: ReadonlySet<string>, budget: { directories: number }): Promise<string[]> => {
+async function runFilesUnder(root: string, roots: ReadonlySet<string>, budget: { directories: number }): Promise<string[]> {
     const found: string[] = [];
     const walk = async (directory: string, depth: number): Promise<void> => {
         if (budget.directories <= 0) {
@@ -409,10 +430,10 @@ const runFilesUnder = async (root: string, roots: ReadonlySet<string>, budget: {
     };
     await walk(root, RUN_FILE_DEPTH);
     return found;
-};
+}
 
 /* What `$PROJECT_DIR$` stands for: the folder that holds the settings the file belongs to, else its checkout. */
-const projectDirOf = async (file: string, root: string): Promise<string> => {
+async function projectDirOf(file: string, root: string): Promise<string> {
     for (let at = dirname(file); isInside(root, at); at = dirname(at)) {
         if (await exists(join(at, '.idea'))) {
             return at;
@@ -422,13 +443,13 @@ const projectDirOf = async (file: string, root: string): Promise<string> => {
         }
     }
     return root;
-};
+}
 
 /*
  * Suggestions from the project folder and each checkout in it. Ids are unique among the suggestions;
  * the client makes them unique against the launches the project already has.
  */
-export const detectLaunches = async (folder: string, checkouts: readonly string[]): Promise<LaunchSuggestion[]> => {
+export async function detectLaunches(folder: string, checkouts: readonly string[]): Promise<LaunchSuggestion[]> {
     const roots = [folder, ...checkouts.filter((path) => path !== folder && isInside(folder, path))];
     const rootSet = new Set(roots);
     const budget = { directories: MAX_DIRECTORIES };
@@ -478,4 +499,4 @@ export const detectLaunches = async (folder: string, checkouts: readonly string[
             ...(built.unsupported === undefined ? {} : { unsupported: built.unsupported })
         };
     });
-};
+}

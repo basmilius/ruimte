@@ -46,7 +46,9 @@ const NOTIFICATION_STATUS: Record<string, AgentStatus> = {
 };
 
 /* A field a CLI wrote in its hook payload; an empty one says as little as a missing one. */
-export const asString = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+export function asString(value: unknown): string | null {
+    return typeof value === 'string' && value !== '' ? value : null;
+}
 
 // Events to install a hook for; the receiver ignores anything else, so an extra event costs nothing but a POST.
 // A kind without an entry has no normalizer yet: it launches in a terminal and reports no agent status.
@@ -70,7 +72,9 @@ export const HOOK_EVENTS: Partial<Record<AgentKind, string[]>> = {
 };
 
 /* Whether the daemon understands this CLI's hooks at all; the receiver turns the others away. */
-export const hasHooks = (kind: AgentKind): boolean => HOOK_EVENTS[kind] !== undefined;
+export function hasHooks(kind: AgentKind): boolean {
+    return HOOK_EVENTS[kind] !== undefined;
+}
 
 /*
  * Whether a hook's answer reaches this CLI's model. Claude Code and Codex 0.154 both fold
@@ -78,10 +82,12 @@ export const hasHooks = (kind: AgentKind): boolean => HOOK_EVENTS[kind] !== unde
  * (Codex as a developer message, measured); any other CLI's hooks are one way, so anything meant
  * for the agent itself has to go on the screen instead of waiting for a turn that cannot carry it.
  */
-export const takesHookContext = (kind: AgentKind): boolean => kind === 'claude' || kind === 'codex';
+export function takesHookContext(kind: AgentKind): boolean {
+    return kind === 'claude' || kind === 'codex';
+}
 
 /* Turns one hook payload into a status; null when the payload says nothing about status or is not a hook at all. */
-export const normalizeHook = (body: unknown): HookOutcome | null => {
+export function normalizeHook(body: unknown): HookOutcome | null {
     if (typeof body !== 'object' || body === null) {
         return null;
     }
@@ -113,7 +119,7 @@ export const normalizeHook = (body: unknown): HookOutcome | null => {
         // Claude Code 2.1.282 and Codex 0.157 name the subagent on every hook fired inside one, under the parent's session id (measured).
         subagentId: asString(hook.agent_id)
     };
-};
+}
 
 // The agent the person talks to, as a key beside the subagents' ids.
 const MAIN_AGENT = '';
@@ -126,7 +132,7 @@ const SETTLING_EVENTS: ReadonlySet<string> = new Set(['SessionStart', 'UserPromp
  * a wait of its own agent: a background subagent working on does not answer the question the main
  * agent asked, and the main agent's tools do not answer a subagent's approval.
  */
-export const settleWaiting = (waiting: ReadonlySet<string>, outcome: HookOutcome): { waiting: Set<string>; status: AgentStatus | null } => {
+export function settleWaiting(waiting: ReadonlySet<string>, outcome: HookOutcome): { waiting: Set<string>; status: AgentStatus | null } {
     const source = outcome.subagentId ?? MAIN_AGENT;
     const next = new Set(source === MAIN_AGENT && SETTLING_EVENTS.has(outcome.event) ? [] : waiting);
     if (outcome.status === 'needs-you') {
@@ -138,7 +144,7 @@ export const settleWaiting = (waiting: ReadonlySet<string>, outcome: HookOutcome
         return { waiting: new Set(), status: null };
     }
     return { waiting: next, status: next.size > 0 ? 'needs-you' : outcome.status };
-};
+}
 
 /*
  * Claude Code 2.1.273 names its modes on `UserPromptSubmit`, `Stop` and the tool events (measured; not
@@ -160,7 +166,7 @@ const PERMISSION_MODES: Record<string, RuntimeMode> = {
  * `bypassPermissions` (measured), and launches every asking mode with the same flags, so its
  * `default` cannot tell those apart: the mode it was launched in stands, unless that was full access.
  */
-export const modeOfHook = (kind: AgentKind, permissionMode: string | null, launched: RuntimeMode): RuntimeMode | null => {
+export function modeOfHook(kind: AgentKind, permissionMode: string | null, launched: RuntimeMode): RuntimeMode | null {
     if (permissionMode === null) {
         return null;
     }
@@ -168,4 +174,4 @@ export const modeOfHook = (kind: AgentKind, permissionMode: string | null, launc
         return launched === 'full-access' ? 'supervised' : launched;
     }
     return PERMISSION_MODES[permissionMode] ?? 'supervised';
-};
+}

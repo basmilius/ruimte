@@ -8,7 +8,7 @@ const NEEDS_IDS = 'answer takes the id of the agent that asked and the id of its
 const ANSWERS_SHAPE = `{"<question id>":"<answer>",...}`;
 
 /* `--answers` as the map `chat.answer` takes, refused by name when it is not one. */
-const parseAnswers = (text: string): Record<string, string> => {
+function parseAnswers(text: string): Record<string, string> {
     let parsed: unknown;
     try {
         parsed = JSON.parse(text);
@@ -19,7 +19,7 @@ const parseAnswers = (text: string): Record<string, string> => {
         throw new VerbRefusal('bad-answers-json', `--answers takes one object of strings, ${ANSWERS_SHAPE}`);
     }
     return parsed as Record<string, string>;
-};
+}
 
 export const answerVerb = defineStandaloneActionVerb({
     name: 'answer',

@@ -8,7 +8,9 @@ const MAX_OUTPUT_BYTES = 6000;
 const MAX_FILE_BYTES = 256 * 1024;
 const VISIBLE_DOTFILES = new Set(['.gitignore', '.gitattributes', '.editorconfig']);
 const PROTECTED_NAMES = /^(?:credentials?(?:\..*)?|secrets?(?:\..*)?|auth\.json|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?|.*\.(?:pem|key|p12|pfx|keystore))$/i;
-const permittedName = (name: string): boolean => (!name.startsWith('.') || VISIBLE_DOTFILES.has(name)) && !PROTECTED_NAMES.test(name);
+function permittedName(name: string): boolean {
+    return (!name.startsWith('.') || VISIBLE_DOTFILES.has(name)) && !PROTECTED_NAMES.test(name);
+}
 
 type FileCall = Extract<AppleToolCall, { name: 'list_files' | 'read_file' | 'search_files' | 'edit_file' | 'write_file' }>;
 interface CheckedPath {
@@ -17,7 +19,7 @@ interface CheckedPath {
     path: string;
 }
 
-const checkedPath = async (cwd: string, path: string, signal?: AbortSignal, create = false): Promise<CheckedPath> => {
+async function checkedPath(cwd: string, path: string, signal?: AbortSignal, create = false): Promise<CheckedPath> {
     signal?.throwIfAborted();
     if (!path || isAbsolute(path) || path.includes('\\') || path.includes('\0') || Buffer.byteLength(path) > 1024) {
         throw new Error('Use a relative project path of at most 1024 bytes.');
@@ -40,27 +42,34 @@ const checkedPath = async (cwd: string, path: string, signal?: AbortSignal, crea
     await verifyPath(root, create ? dirname(target) : target);
     signal?.throwIfAborted();
     return { root, target, path: parts.join('/') || '.' };
-};
+}
 
-const verifyPath = async (root: string, target: string): Promise<void> => {
+async function verifyPath(root: string, target: string): Promise<void> {
     const resolved = await realpath(target);
     const local = relative(root, resolved);
     if (local === '..' || local.startsWith(`..${sep}`) || isAbsolute(local) || resolved !== target) {
         throw new Error('The path changed or leaves the project folder.');
     }
-};
+}
 
-const sameFile = (before: Stats, after: Stats): boolean =>
-    before.dev === after.dev && before.ino === after.ino && before.size === after.size && before.mtimeMs === after.mtimeMs && before.ctimeMs === after.ctimeMs;
+function sameFile(before: Stats, after: Stats): boolean {
+    return (
+        before.dev === after.dev &&
+        before.ino === after.ino &&
+        before.size === after.size &&
+        before.mtimeMs === after.mtimeMs &&
+        before.ctimeMs === after.ctimeMs
+    );
+}
 
-const textFromBytes = (bytes: Uint8Array): string => {
+function textFromBytes(bytes: Uint8Array): string {
     if (bytes.some((byte) => (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) || byte === 127)) {
         throw new Error('Binary files are unavailable.');
     }
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-};
+}
 
-const readOpened = async (handle: FileHandle, signal?: AbortSignal): Promise<{ text: string; metadata: Stats }> => {
+async function readOpened(handle: FileHandle, signal?: AbortSignal): Promise<{ text: string; metadata: Stats }> {
     const before = await handle.stat();
     if (!before.isFile() || before.size > MAX_FILE_BYTES) {
         throw new Error('Only regular text files of at most 256 KiB are available.');
@@ -80,9 +89,9 @@ const readOpened = async (handle: FileHandle, signal?: AbortSignal): Promise<{ t
     }
     signal?.throwIfAborted();
     return { text: textFromBytes(buffer.subarray(0, length)), metadata: before };
-};
+}
 
-const readSnapshot = async (checked: CheckedPath, signal?: AbortSignal): Promise<{ text: string; metadata: Stats }> => {
+async function readSnapshot(checked: CheckedPath, signal?: AbortSignal): Promise<{ text: string; metadata: Stats }> {
     const handle = await open(checked.target, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     try {
         const snapshot = await readOpened(handle, signal);
@@ -95,9 +104,9 @@ const readSnapshot = async (checked: CheckedPath, signal?: AbortSignal): Promise
     } finally {
         await handle.close();
     }
-};
+}
 
-const listFiles = async (cwd: string, path: string, signal?: AbortSignal): Promise<string> => {
+async function listFiles(cwd: string, path: string, signal?: AbortSignal): Promise<string> {
     const checked = await checkedPath(cwd, path, signal);
     const directory = await opendir(checked.target);
     const entries: Array<{ name: string; kind: 'directory' | 'file' }> = [];
@@ -126,9 +135,9 @@ const listFiles = async (cwd: string, path: string, signal?: AbortSignal): Promi
     signal?.throwIfAborted();
     entries.sort((left, right) => left.name.localeCompare(right.name));
     return JSON.stringify({ path: checked.path, entries, truncated });
-};
+}
 
-const readFile = async (cwd: string, path: string, offset: number, limit = 100, signal?: AbortSignal): Promise<string> => {
+async function readFile(cwd: string, path: string, offset: number, limit = 100, signal?: AbortSignal): Promise<string> {
     if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
         throw new Error('Use a nonnegative line offset and a line limit from 1 through 100.');
     }
@@ -160,7 +169,7 @@ const readFile = async (cwd: string, path: string, offset: number, limit = 100, 
     }
     signal?.throwIfAborted();
     return result();
-};
+}
 
 interface IgnoreRule {
     base: string;
@@ -168,7 +177,7 @@ interface IgnoreRule {
     basenameOnly: boolean;
 }
 
-const readIgnores = async (cwd: string, path: string, signal?: AbortSignal): Promise<IgnoreRule[]> => {
+async function readIgnores(cwd: string, path: string, signal?: AbortSignal): Promise<IgnoreRule[]> {
     try {
         const checked = await checkedPath(cwd, path === '.' ? '.gitignore' : `${path}/.gitignore`, signal);
         const { text } = await readSnapshot(checked, signal);
@@ -197,9 +206,9 @@ const readIgnores = async (cwd: string, path: string, signal?: AbortSignal): Pro
         signal?.throwIfAborted();
         return [];
     }
-};
+}
 
-const searchFiles = async (cwd: string, call: Extract<FileCall, { name: 'search_files' }>, signal?: AbortSignal): Promise<string> => {
+async function searchFiles(cwd: string, call: Extract<FileCall, { name: 'search_files' }>, signal?: AbortSignal): Promise<string> {
     if (!call.query || Buffer.byteLength(call.query) > 1024) {
         throw new Error('Use a nonempty literal query of at most 1024 bytes.');
     }
@@ -276,9 +285,9 @@ const searchFiles = async (cwd: string, call: Extract<FileCall, { name: 'search_
     }
     signal?.throwIfAborted();
     return JSON.stringify({ matches, truncated, scannedFiles: files, skippedFiles: skipped });
-};
+}
 
-const writeFile = async (cwd: string, call: Extract<FileCall, { name: 'write_file' }>, signal?: AbortSignal): Promise<AppleToolResult> => {
+async function writeFile(cwd: string, call: Extract<FileCall, { name: 'write_file' }>, signal?: AbortSignal): Promise<AppleToolResult> {
     const bytes = Buffer.from(call.content);
     if (bytes.length > MAX_FILE_BYTES) {
         throw new Error('New text files are limited to 256 KiB.');
@@ -306,9 +315,9 @@ const writeFile = async (cwd: string, call: Extract<FileCall, { name: 'write_fil
         failed: false,
         changes: [{ path: checked.path, kind: 'add', diff: '' }]
     };
-};
+}
 
-const editFile = async (cwd: string, call: Extract<FileCall, { name: 'edit_file' }>, signal?: AbortSignal): Promise<AppleToolResult> => {
+async function editFile(cwd: string, call: Extract<FileCall, { name: 'edit_file' }>, signal?: AbortSignal): Promise<AppleToolResult> {
     if (!call.oldText) {
         throw new Error('An edit must name nonempty text to replace exactly once.');
     }
@@ -353,9 +362,9 @@ const editFile = async (cwd: string, call: Extract<FileCall, { name: 'edit_file'
         failed: false,
         changes: [{ path: checked.path, kind: 'update', diff: '' }]
     };
-};
+}
 
-export const executeAppleFileTool = async (cwd: string, call: FileCall, signal?: AbortSignal): Promise<AppleToolResult> => {
+export async function executeAppleFileTool(cwd: string, call: FileCall, signal?: AbortSignal): Promise<AppleToolResult> {
     switch (call.name) {
         case 'list_files':
             return { output: await listFiles(cwd, call.path, signal), failed: false };
@@ -368,4 +377,4 @@ export const executeAppleFileTool = async (cwd: string, call: FileCall, signal?:
         case 'edit_file':
             return editFile(cwd, call, signal);
     }
-};
+}

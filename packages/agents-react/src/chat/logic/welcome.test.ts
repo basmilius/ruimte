@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { dayPartOf } from './welcome';
 
-const at = (hour: number, minute = 0): Date => new Date(2026, 9, 1, hour, minute);
+function at(hour: number, minute = 0): Date {
+    return new Date(2026, 9, 1, hour, minute);
+}
 
 describe('the part of the day a greeting names', () => {
     test('follows the local clock, each part from its first minute', () => {

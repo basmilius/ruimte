@@ -33,27 +33,29 @@ const TEAM = [
     { title: 'Docs', prompt: 'write the docs', provider: 'claude' }
 ];
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 /* A stand-in for a folder in the project, pointed wherever a test says. */
-const link = async (path: string, to: string): Promise<void> => {
+async function link(path: string, to: string): Promise<void> {
     await rm(path, { force: true });
     await symlink(to, path);
-};
+}
 
 /* One run of the daemon over a home. The stores read from disk, the managers empty, nothing kept from a run before. */
 interface Daemon {
@@ -102,7 +104,7 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (): Promise<Daemon> => {
+async function boot(): Promise<Daemon> {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
     const lineage = new AgentLineageStore(home);
@@ -250,10 +252,10 @@ const boot = async (): Promise<Daemon> => {
     };
     running.push(daemon);
     return daemon;
-};
+}
 
 /* A team verb run by the lead chat, the way `ruimte-context team` posts it. */
-const openTeam = async (daemon: Daemon, extra: string[] = []): Promise<string[]> => {
+async function openTeam(daemon: Daemon, extra: string[] = []): Promise<string[]> {
     const path = `${CANVAS_PATH}/team`;
     const response = await handleCanvasRequest(
         new Request(`http://127.0.0.1${path}`, {
@@ -267,16 +269,22 @@ const openTeam = async (daemon: Daemon, extra: string[] = []): Promise<string[]>
     expect(response.status).toBe(200);
     const lines = (await response.text()).trim().split('\n');
     return lines.slice(1).map((line) => line.split('\t')[0]!);
-};
+}
 
-const userTexts = (items: readonly ChatItem[]): string[] => items.flatMap((item) => (item.kind === 'user' ? [item.text] : []));
+function userTexts(items: readonly ChatItem[]): string[] {
+    return items.flatMap((item) => (item.kind === 'user' ? [item.text] : []));
+}
 
-const firstTurnDone = (daemon: Daemon, chatId: string) => (): boolean => {
-    const info = daemon.chats.get(chatId)?.info;
-    return info !== undefined && info.usage.turns === 1 && info.activeTurnId === null;
-};
+function firstTurnDone(daemon: Daemon, chatId: string) {
+    return (): boolean => {
+        const info = daemon.chats.get(chatId)?.info;
+        return info !== undefined && info.usage.turns === 1 && info.activeTurnId === null;
+    };
+}
 
-const hook = (event: string) => ({ session_id: 'claude-lexer', hook_event_name: event });
+function hook(event: string) {
+    return { session_id: 'claude-lexer', hook_event_name: event };
+}
 
 describe('a team the daemon starts on its own', () => {
     test('all three agents run their first turn with the view open in no window, and a client that mounts later joins them', async () => {

@@ -28,7 +28,9 @@ const TABLE = '-mx-2 flex flex-col';
 const TABS: readonly Breakdown[] = ['models', 'projects', 'day'];
 
 /* A share of the biggest row, never under one pixel. A row that did something has to be visible. */
-const barWidth = (value: number, top: number): number => (value <= 0 || top <= 0 ? 0 : Math.max(1, Math.round((value / top) * 100)));
+function barWidth(value: number, top: number): number {
+    return value <= 0 || top <= 0 ? 0 : Math.max(1, Math.round((value / top) * 100));
+}
 
 function ProviderMark({ provider }: { provider: UsageProvider }) {
     return (

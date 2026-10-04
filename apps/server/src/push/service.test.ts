@@ -32,7 +32,7 @@ let sessionId: string;
 let pushes: PushEnvelope[];
 let service: PushService;
 
-const decrypt = (push: PushEnvelope): unknown => {
+function decrypt(push: PushEnvelope): unknown {
     if (push.pushType === 'liveactivity') {
         throw new Error('Expected alert');
     }
@@ -46,7 +46,7 @@ const decrypt = (push: PushEnvelope): unknown => {
     decipher.setAAD(Buffer.from(pushRoutingMessage(push)), { plaintextLength: encrypted.length - 16 });
     decipher.setAuthTag(encrypted.subarray(-16));
     return JSON.parse(Buffer.concat([decipher.update(encrypted.subarray(0, -16)), decipher.final()]).toString());
-};
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-push-'));
@@ -73,14 +73,15 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const status = (value: AgentStatus, nodeId = 'node', destination = service): void =>
-    destination.consume({
+function status(value: AgentStatus, nodeId = 'node', destination = service): void {
+    return destination.consume({
         event: 'session.status',
         payload: {
             sessionId: nodeId,
             agent: { kind: 'codex', agentSessionId: 'cli', transcriptPath: null, status: value, suggestedTitle: 'Secret project', live: true, updatedAt: NOW }
         }
     });
+}
 
 describe('offline push delivery', () => {
     for (const target of ['terminal', 'chat'] as const) {

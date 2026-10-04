@@ -12,7 +12,9 @@ const MAX_PROMPT_BYTES = 24 * 1024;
 // A CLI that has not answered by now is one the person is waiting on for nothing.
 const TIMEOUT_MS = 120_000;
 
-const block = (label: string, lines: readonly string[]): string => `${label}:\n${lines.length === 0 ? '(nothing)' : lines.join('\n')}`;
+function block(label: string, lines: readonly string[]): string {
+    return `${label}:\n${lines.length === 0 ? '(nothing)' : lines.join('\n')}`;
+}
 
 /*
  * What the CLI is asked. Every conflict is numbered and handed over with the version both sides
@@ -20,7 +22,7 @@ const block = (label: string, lines: readonly string[]): string => `${label}:\n$
  * sees. JSON, because a model left to write freely opens with a sentence about what it is about to
  * do, and that sentence would end up in the code.
  */
-export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], ours: string, theirs: string): ResolvePrompt => {
+export function buildResolvePrompt(path: string, blocks: readonly MergeBlock[], ours: string, theirs: string): ResolvePrompt {
     const parts: string[] = [
         `Resolve the merge conflicts in ${path}.`,
         '',
@@ -70,7 +72,7 @@ export const buildResolvePrompt = (path: string, blocks: readonly MergeBlock[], 
         asked.push(index);
     }
     return { prompt: parts.join('\n'), asked, skipped };
-};
+}
 
 export interface ResolvePrompt {
     prompt: string;
@@ -81,16 +83,16 @@ export interface ResolvePrompt {
 }
 
 /* How a one-shot CLI gets its prompt: on stdin where it reads it there, since an argument is capped and shows in the process list. */
-export const oneShotRun = (provider: ChatProvider, prompt: string): { args: string[]; stdin?: string } | null => {
+export function oneShotRun(provider: ChatProvider, prompt: string): { args: string[]; stdin?: string } | null {
     if (provider.oneShotStdinArgs) {
         return { args: [...provider.oneShotStdinArgs], stdin: prompt };
     }
     const args = provider.oneShotArgs?.(prompt) ?? null;
     return args === null ? null : { args };
-};
+}
 
 /* The blocks out of whatever the CLI wrote around them; anything that is not a stretch of lines is dropped. */
-export const parseResolution = (output: string): { index: number; lines: string[] }[] => {
+export function parseResolution(output: string): { index: number; lines: string[] }[] {
     const start = output.indexOf('{');
     const end = output.lastIndexOf('}');
     if (start < 0 || end <= start) {
@@ -120,7 +122,7 @@ export const parseResolution = (output: string): { index: number; lines: string[
         }
     }
     return answers;
-};
+}
 
 export interface ResolveOptions {
     provider?: AgentKind;
@@ -133,13 +135,13 @@ export interface ResolveOptions {
  * chat, no session, no SDK. What comes back is a proposal per stretch, checked against the stretch it
  * was written for; nothing is written to the file here, since a person accepts the answer, not this.
  */
-export const resolveWithAgent = async (
+export async function resolveWithAgent(
     cwd: string,
     path: string,
     sides: { ours: string; theirs: string },
     registry: ProviderRegistry,
     options: ResolveOptions = {}
-): Promise<GitResolveAiResult> => {
+): Promise<GitResolveAiResult> {
     const top = await toplevel(cwd);
     const conflict = await readConflict(top, path);
     if (conflict.kind !== 'text' || conflict.ours === null || conflict.theirs === null) {
@@ -192,4 +194,4 @@ export const resolveWithAgent = async (
     } finally {
         clearTimeout(timer);
     }
-};
+}

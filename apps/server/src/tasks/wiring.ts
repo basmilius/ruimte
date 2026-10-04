@@ -50,7 +50,7 @@ export interface TaskWiring {
  * Ruimte's binding of the tasks in @ruimte/agents: its terminals beside the chats, the rows a task draws
  * in its parent, the words of `ruimte-context`, and a note about work the outbox gave up on.
  */
-export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
+export function wireTasks(deps: TaskWiringDeps): TaskWiring {
     const core = wireTaskCore({
         tasks: deps.tasks,
         chats: deps.chats,
@@ -92,4 +92,4 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         },
         prune: core.prune
     };
-};
+}

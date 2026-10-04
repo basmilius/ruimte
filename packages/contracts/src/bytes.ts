@@ -61,7 +61,7 @@ export const BYTES_REPLY_MAX_BYTES = BYTES_CHUNK_MAX + 16 * 1024;
  * length of a JSON header as a big-endian uint32, the header (`{ id, result }`, the result without
  * `data`), then the piece's bytes as they are. An error still answers in JSON.
  */
-export const encodeBytesReply = (id: string, header: BytesReadHeader, bytes: Uint8Array): Uint8Array<ArrayBuffer> => {
+export function encodeBytesReply(id: string, header: BytesReadHeader, bytes: Uint8Array): Uint8Array<ArrayBuffer> {
     const head = new TextEncoder().encode(JSON.stringify({ id, result: header }));
     const frame = new Uint8Array(REPLY_PREFIX_BYTES + head.byteLength + bytes.byteLength);
     frame[0] = BYTES_REPLY_KIND;
@@ -69,7 +69,7 @@ export const encodeBytesReply = (id: string, header: BytesReadHeader, bytes: Uin
     frame.set(head, REPLY_PREFIX_BYTES);
     frame.set(bytes, REPLY_PREFIX_BYTES + head.byteLength);
     return frame;
-};
+}
 
 export interface BytesReply {
     id: string;
@@ -78,7 +78,7 @@ export interface BytesReply {
 }
 
 /* A binary reply read back, or null for a frame that is not one this version knows. */
-export const decodeBytesReply = (frame: Uint8Array): BytesReply | null => {
+export function decodeBytesReply(frame: Uint8Array): BytesReply | null {
     if (frame.byteLength < REPLY_PREFIX_BYTES || frame[0] !== BYTES_REPLY_KIND) {
         return null;
     }
@@ -94,4 +94,4 @@ export const decodeBytesReply = (frame: Uint8Array): BytesReply | null => {
     }
     const head = BytesReplyHeadSchema.safeParse(json);
     return head.success ? { id: head.data.id, result: head.data.result, bytes: frame.slice(headEnd) } : null;
-};
+}

@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { easeBands, spectrumBands } from '@/audio/waveform';
 
-const filled = (length: number, value: number): Float32Array => Float32Array.from({ length }, () => value);
+function filled(length: number, value: number): Float32Array {
+    return Float32Array.from({ length }, () => value);
+}
 
 describe('easing the bars', () => {
     test('rises faster than it falls', () => {

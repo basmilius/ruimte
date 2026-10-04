@@ -11,11 +11,11 @@ export interface StackedNode extends Rect {
  * The z-index of every node, one apart and counting from one. A group paints under everything else
  * whatever its place in the order, since a group is a frame under its own nodes.
  */
-export const stackingOrder = (nodes: Record<string, StackedNode>, order: string[]): Record<string, number> => {
+export function stackingOrder(nodes: Record<string, StackedNode>, order: string[]): Record<string, number> {
     const groups = order.filter((id) => nodes[id]?.kind === 'group');
     const rest = order.filter((id) => nodes[id]?.kind !== 'group');
     return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
-};
+}
 
 /* The corner of a node frame (`rounded-xl` in `canvas/NodeFrame.tsx`). */
 const NODE_RADIUS_PX = 12;
@@ -29,13 +29,13 @@ const RING_PX = 2;
  * page is parked in a layer over the whole canvas and cannot be drawn under anything the canvas
  * draws, so the page cuts a hole for every node over it instead (`browser/page-clip.ts`).
  */
-export const nodesOverBrowsers = (
+export function nodesOverBrowsers(
     nodes: Record<string, StackedNode>,
     order: string[],
     hidden: ReadonlySet<string>,
     /* Nodes drawing a ring right now: the selection and whatever a line is being aimed at. */
     ringed: ReadonlySet<string>
-): Record<string, PageHole[]> => {
+): Record<string, PageHole[]> {
     const stacking = stackingOrder(nodes, order);
     const over: Record<string, PageHole[]> = {};
     for (const id of order) {
@@ -66,4 +66,4 @@ export const nodesOverBrowsers = (
         }
     }
     return over;
-};
+}

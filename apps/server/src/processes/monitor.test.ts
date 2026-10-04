@@ -7,20 +7,22 @@ import { type ProcessSampler, type RawProcess, type RawSample } from './sampler.
 
 const MACHINE: RawSample['machine'] = { cores: 4, cpuBusy: 0, cpuTotal: 0, memoryUsed: 1000, memoryTotal: 4000, diskFree: null, diskTotal: null };
 
-const proc = (pid: number, ppid: number, cpuNs: number, overrides: Partial<RawProcess> = {}): RawProcess => ({
-    pid,
-    ppid,
-    uid: 501,
-    startTime: pid * 1000,
-    name: `p${pid}`,
-    path: null,
-    readable: true,
-    cpuNs,
-    memory: 10,
-    diskRead: 0,
-    diskWrite: 0,
-    ...overrides
-});
+function proc(pid: number, ppid: number, cpuNs: number, overrides: Partial<RawProcess> = {}): RawProcess {
+    return {
+        pid,
+        ppid,
+        uid: 501,
+        startTime: pid * 1000,
+        name: `p${pid}`,
+        path: null,
+        readable: true,
+        cpuNs,
+        memory: 10,
+        diskRead: 0,
+        diskWrite: 0,
+        ...overrides
+    };
+}
 
 /* A machine whose clock and CPU move only when the test says so. */
 class FakeSampler implements ProcessSampler {
@@ -59,8 +61,8 @@ class FakeSampler implements ProcessSampler {
     }
 }
 
-const monitorWith = (sampler: ProcessSampler | null, signals: [number, string][] = []) =>
-    new ProcessMonitor({
+function monitorWith(sampler: ProcessSampler | null, signals: [number, string][] = []) {
+    return new ProcessMonitor({
         sampler,
         sessions: () => [{ id: 'term-1', pid: 200, exited: false, agent: null }],
         chats: () => [],
@@ -71,11 +73,12 @@ const monitorWith = (sampler: ProcessSampler | null, signals: [number, string][]
         uid: 501,
         signal: (pid, signal) => signals.push([pid, signal])
     });
+}
 
-const recorder = () => {
+function recorder() {
     const events: SessionEvent[] = [];
     return { events, sink: (event: SessionEvent) => events.push(event) };
-};
+}
 
 describe('the tempo and the series', () => {
     test('a panel that opens gets the coarse day at once and a fine point from the next tick on', () => {

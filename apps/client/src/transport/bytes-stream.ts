@@ -50,12 +50,13 @@ export interface StreamOptions {
 }
 
 // The URL carries no credential: access was decided when the direct connection was let in.
-export const bytesStreamUrl = (file: StreamedFile): string =>
-    `${BYTES_STREAM_PATH}?${new URLSearchParams({ machine: file.machine, path: file.path, v: `${file.mtime}-${file.size}` }).toString()}`;
+export function bytesStreamUrl(file: StreamedFile): string {
+    return `${BYTES_STREAM_PATH}?${new URLSearchParams({ machine: file.machine, path: file.path, v: `${file.mtime}-${file.size}` }).toString()}`;
+}
 
 const VERSION = /^(\d+)-(\d+)$/;
 
-const fileOf = (url: URL): StreamedFile | null => {
+function fileOf(url: URL): StreamedFile | null {
     const machine = url.searchParams.get('machine');
     const path = url.searchParams.get('path');
     const version = VERSION.exec(url.searchParams.get('v') ?? '');
@@ -63,10 +64,10 @@ const fileOf = (url: URL): StreamedFile | null => {
         return null;
     }
     return { machine, path, mtime: Number(version[1]), size: Number(version[2]) };
-};
+}
 
 /* `bytes=X-` or `bytes=X-Y`, the forms a media element sends. HTTP lets any other form be answered whole. */
-export const parseRange = (header: string | null): { start: number; end: number | null } | null => {
+export function parseRange(header: string | null): { start: number; end: number | null } | null {
     const match = header === null ? null : /^bytes=(\d+)-(\d*)$/.exec(header.trim());
     if (!match) {
         return null;
@@ -74,13 +75,13 @@ export const parseRange = (header: string | null): { start: number; end: number 
     const start = Number(match[1]);
     const end = match[2] === '' ? null : Number(match[2]);
     return end !== null && end < start ? null : { start, end };
-};
+}
 
 // The file viewer rounds a file's mtime and `bytes.read` truncates it, so the same file may differ by a millisecond.
-const sameVersion = (version: string, file: StreamedFile): boolean => {
+function sameVersion(version: string, file: StreamedFile): boolean {
     const match = VERSION.exec(version);
     return match !== null && Number(match[2]) === file.size && Math.abs(Number(match[1]) - file.mtime) <= 1;
-};
+}
 
 // The answer has this page's origin, so it may never be read as a document, whatever the file says it is.
 const GUARDED = {
@@ -89,23 +90,26 @@ const GUARDED = {
     'cache-control': 'no-store'
 };
 
-const refuse = (status: number, message: string, headers: Record<string, string> = {}): Response =>
-    new Response(message, { status, headers: { ...GUARDED, 'content-type': 'text/plain', ...headers } });
+function refuse(status: number, message: string, headers: Record<string, string> = {}): Response {
+    return new Response(message, { status, headers: { ...GUARDED, 'content-type': 'text/plain', ...headers } });
+}
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+function messageOf(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+}
 
 /*
  * The body from `start` to `last`, piece by piece. A few pieces are asked ahead so the round trips
  * overlap, and only as the player reads, so a player that stops reading stops the asking too.
  */
-const streamPieces = (
+function streamPieces(
     file: StreamedFile,
     first: BytesPiece,
     start: number,
     last: number,
     ask: AskPiece,
     ahead: number
-): ReadableStream<Uint8Array<ArrayBuffer>> => {
+): ReadableStream<Uint8Array<ArrayBuffer>> {
     const lengthAt = (offset: number): number => Math.min(STREAM_PIECE_BYTES, last + 1 - offset);
     const pending: Promise<BytesPiece>[] = [];
     let next = start + lengthAt(start);
@@ -159,14 +163,14 @@ const streamPieces = (
         },
         { highWaterMark: 0 }
     );
-};
+}
 
 /*
  * The service worker's answer to a request for its path. A range becomes pieces of `bytes.read` and
  * the answer streams as they arrive. The first piece is asked before answering, so a file that is
  * gone or changed is a status the player sees at once, and the type comes from the machine.
  */
-export const answerRange = async (request: RangeRequest, ask: AskPiece, options: StreamOptions = {}): Promise<Response> => {
+export async function answerRange(request: RangeRequest, ask: AskPiece, options: StreamOptions = {}): Promise<Response> {
     if (request.mode === 'navigate') {
         return refuse(400, 'Not a page');
     }
@@ -201,4 +205,4 @@ export const answerRange = async (request: RangeRequest, ask: AskPiece, options:
         return new Response(body, { status: 200, headers });
     }
     return new Response(body, { status: 206, headers: { ...headers, 'content-range': `bytes ${start}-${last}/${file.size}` } });
-};
+}

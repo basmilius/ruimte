@@ -1,13 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { cacheSavingsOf, costOf, lookupPrice, parsePriceTable } from './pricing.ts';
 
-const entry = (input: number, output: number, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
-    litellm_provider: 'anthropic',
-    mode: 'chat',
-    input_cost_per_token: input,
-    output_cost_per_token: output,
-    ...extra
-});
+function entry(input: number, output: number, extra: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        litellm_provider: 'anthropic',
+        mode: 'chat',
+        input_cost_per_token: input,
+        output_cost_per_token: output,
+        ...extra
+    };
+}
 
 const table = parsePriceTable({
     'claude-opus-4-5': entry(0.000005, 0.000025, { cache_read_input_token_cost: 0.0000005, cache_creation_input_token_cost: 0.00000625 }),

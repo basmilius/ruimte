@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { claimWindow, type WindowAddress } from './window-claim';
 
-const fakeAddress = (initial: string): WindowAddress & { writes: string[] } => {
+function fakeAddress(initial: string): WindowAddress & { writes: string[] } {
     let search = initial;
     const writes: string[] = [];
     return {
@@ -12,7 +12,7 @@ const fakeAddress = (initial: string): WindowAddress & { writes: string[] } => {
             writes.push(next);
         }
     };
-};
+}
 
 describe('claimWindow', () => {
     test('asks the shell for the key of the project and follows it in the address', async () => {

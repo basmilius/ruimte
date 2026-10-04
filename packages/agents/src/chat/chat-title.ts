@@ -15,14 +15,16 @@ export interface ChatTitleInput {
     answer: string;
 }
 
-const cap = (text: string, limit: number): string => (text.length <= limit ? text : `${text.slice(0, limit)}...`);
+function cap(text: string, limit: number): string {
+    return text.length <= limit ? text : `${text.slice(0, limit)}...`;
+}
 
 /*
  * What the CLI is asked. JSON again, as for a commit message: a model left to write freely opens
  * with a sentence, and that sentence would become the name of the node.
  */
-export const buildTitlePrompt = (prompt: string, answer: string): string =>
-    [
+export function buildTitlePrompt(prompt: string, answer: string): string {
+    return [
         'Write a short title for the conversation below, as a person would name it in a list of chats.',
         '',
         'Rules:',
@@ -37,13 +39,14 @@ export const buildTitlePrompt = (prompt: string, answer: string): string =>
         'The assistant answered:',
         answer.trim() === '' ? '(nothing yet)' : cap(answer.trim(), MAX_ANSWER_CHARS)
     ].join('\n');
+}
 
 /*
  * The title out of what the CLI printed, or null. Strict on purpose, unlike a commit message: a run
  * that holds no `{"title": "..."}` object printed something other than a title, and a derived name
  * is better than a stray line of it.
  */
-export const parseTitle = (output: string): string | null => {
+export function parseTitle(output: string): string | null {
     const start = [...output.matchAll(/\{\s*"title"/g)].at(-1)?.index;
     const end = output.lastIndexOf('}');
     if (start === undefined || end < start) {
@@ -60,19 +63,19 @@ export const parseTitle = (output: string): string | null => {
     }
     const title = cleanTitle(parsed.title);
     return title === null ? null : cleanTitle(title.replace(/^["'`]+|["'`.]+$/g, ''));
-};
+}
 
 /*
  * A title for a chat whose CLI names nothing itself, from the agent CLI the host already has in
  * its one-shot print mode. Null when no CLI here answers a single prompt, when it fails or when it
  * takes too long: the name the client derived from the prompt then stays.
  */
-export const suggestChatTitle = async (
+export async function suggestChatTitle(
     registry: ProviderRegistry,
     preferred: AgentKind,
     input: ChatTitleInput,
     env?: Record<string, string>
-): Promise<string | null> => {
+): Promise<string | null> {
     const provider = await registry.oneShotProvider(preferred);
     const args = provider?.oneShotArgs?.(buildTitlePrompt(input.prompt, input.answer)) ?? null;
     if (provider === null || args === null) {
@@ -84,4 +87,4 @@ export const suggestChatTitle = async (
     } catch {
         return null;
     }
-};
+}

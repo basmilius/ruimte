@@ -69,14 +69,16 @@ const DEFAULT_RESULTS = 50;
 const MAX_LISTED = 200;
 const MAX_READ_CHARACTERS = 40_000;
 
-const hasParentStep = (path: string): boolean => path.split(/[\\/]/).includes('..');
+function hasParentStep(path: string): boolean {
+    return path.split(/[\\/]/).includes('..');
+}
 
 /*
  * What a file action names, as the absolute path the daemon takes. A person names any file a node or
  * a view can show; anyone else stays inside the project folder, since a read hands the bytes to a
  * model outside this machine.
  */
-export const projectPathOf = (folder: string | null, path: string, actor: ActionActorKind): string => {
+export function projectPathOf(folder: string | null, path: string, actor: ActionActorKind): string {
     const absolute = isAbsolutePath(path) ? path : folder === null ? null : absoluteOf(folder, path);
     if (absolute === null) {
         throw new ActionRefusal('no-folder', 'This project has no folder, so a path has to be absolute.');
@@ -85,15 +87,17 @@ export const projectPathOf = (folder: string | null, path: string, actor: Action
         throw new ActionRefusal('outside-project', `“${path}” is not inside the project folder.`);
     }
     return absolute;
-};
+}
 
-const resolvedPath = (machine: FilesMachine, path: string, actor: ActionActorKind): string => projectPathOf(machine.folder(), path, actor);
+function resolvedPath(machine: FilesMachine, path: string, actor: ActionActorKind): string {
+    return projectPathOf(machine.folder(), path, actor);
+}
 
 /* The paths named, once each, without those inside a folder that is named too. */
-const outermostPaths = (machine: FilesMachine, paths: readonly string[], actor: ActionActorKind): string[] => {
+function outermostPaths(machine: FilesMachine, paths: readonly string[], actor: ActionActorKind): string[] {
     const absolutes = [...new Set(paths.map((path) => resolvedPath(machine, path, actor)))];
     return absolutes.filter((path) => !absolutes.some((other) => path.startsWith(`${other}/`)));
-};
+}
 
 /*
  * What a person does with the files of a project, as actions: the files panel, its search, find in

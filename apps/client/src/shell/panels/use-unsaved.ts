@@ -8,10 +8,10 @@ import { useUnsaved } from '@/state/text-drafts';
  * stored one, relative to the project folder; a row of another project names a file this window
  * does not edit, so it never has any.
  */
-export const useUnsavedStoredPath = (stored: string | null, owner?: { endpointId: string; projectId: string }): boolean => {
+export function useUnsavedStoredPath(stored: string | null, owner?: { endpointId: string; projectId: string }): boolean {
     const endpointId = useEndpointId();
     const current = useProject((s) => s.current);
     const ours = owner === undefined || (owner.endpointId === endpointId && owner.projectId === current?.projectId);
     const path = ours && stored !== null ? resolveStoredPath(current?.folder ?? null, stored) : null;
     return useUnsaved(endpointId, path);
-};
+}

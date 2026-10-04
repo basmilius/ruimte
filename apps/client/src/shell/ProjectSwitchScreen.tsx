@@ -15,10 +15,11 @@ import { useEndpointConnection } from '@/transport/status';
 import { Button, Icon } from '@basmilius/desktop-ui';
 
 /* What is being opened, in the words a person picked it by. */
-const titleOf = (target: SwitchTarget, machine: string): string =>
-    target.summary?.name ?? target.name ?? (target.folder !== null ? basenameOf(target.folder) || target.folder : machine);
+function titleOf(target: SwitchTarget, machine: string): string {
+    return target.summary?.name ?? target.name ?? (target.folder !== null ? basenameOf(target.folder) || target.folder : machine);
+}
 
-const lineOf = (state: Exclude<SwitchState, { kind: 'idle' }>, title: string, machine: string): string => {
+function lineOf(state: Exclude<SwitchState, { kind: 'idle' }>, title: string, machine: string): string {
     switch (state.kind) {
         case 'connecting':
             return i18next.t('shell:switch.connecting', { machine });
@@ -29,7 +30,7 @@ const lineOf = (state: Exclude<SwitchState, { kind: 'idle' }>, title: string, ma
         case 'failed':
             return state.reason;
     }
-};
+}
 
 interface StatusCardProps {
     glyph: ReactNode;

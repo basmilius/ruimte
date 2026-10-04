@@ -9,7 +9,7 @@ export type UpdatePreview = 'off' | 'current' | 'available' | 'downloading' | 'r
  * made-up state in the store, on the newest release the shell's notes know, so the notes link and the
  * release date read as they would. No updater listens in a checkout, so nothing overwrites it.
  */
-export const previewUpdate = (preview: UpdatePreview): void => {
+export function previewUpdate(preview: UpdatePreview): void {
     if (preview === 'off') {
         useUpdates.setState({ status: 'unsupported', currentVersion: '', version: undefined, percent: undefined, error: null, supported: false });
         return;
@@ -25,4 +25,4 @@ export const previewUpdate = (preview: UpdatePreview): void => {
         error: preview === 'error' ? 'The update server could not be reached.' : null
     };
     useUpdates.setState({ ...state, supported: true });
-};
+}

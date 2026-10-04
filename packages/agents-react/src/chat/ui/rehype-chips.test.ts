@@ -9,7 +9,7 @@ interface Rendered {
 }
 
 /* The elements react-markdown hands React, flattened, without rendering them into a DOM. */
-const elementsOf = (node: ReactNode): Rendered[] => {
+function elementsOf(node: ReactNode): Rendered[] {
     if (Array.isArray(node)) {
         return node.flatMap(elementsOf);
     }
@@ -19,12 +19,13 @@ const elementsOf = (node: ReactNode): Rendered[] => {
     const element = node as ReactElement<Rendered['props']>;
     const own = typeof element.type === 'string' ? [{ type: element.type, props: element.props }] : [];
     return [...own, ...elementsOf(element.props.children)];
-};
+}
 
-const chips = (text: string, options: ChipOptions): { chip?: string; value?: string; text: ReactNode }[] =>
-    elementsOf(ReactMarkdown({ children: text, rehypePlugins: [[rehypeChips, options]] }))
+function chips(text: string, options: ChipOptions): { chip?: string; value?: string; text: ReactNode }[] {
+    return elementsOf(ReactMarkdown({ children: text, rehypePlugins: [[rehypeChips, options]] }))
         .filter((element) => element.props['data-chip'] !== undefined)
         .map((element) => ({ chip: element.props['data-chip'], value: element.props['data-value'], text: element.props.children }));
+}
 
 describe('rehypeChips', () => {
     test('cuts the picked mentions and skills out of the text', () => {

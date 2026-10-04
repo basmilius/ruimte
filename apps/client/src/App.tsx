@@ -22,7 +22,9 @@ import { ChatScopeProvider } from '@/transport/ChatScopeProvider';
 import { ErrorBoundary, ShortcutHints, UIProvider, lazyDialog, lazyNamed, prefetcher } from '@basmilius/desktop-ui';
 import { formatSource } from '@/format/source';
 
-const loadWorkspaceShell = () => import('@/shell/WorkspaceShell');
+function loadWorkspaceShell() {
+    return import('@/shell/WorkspaceShell');
+}
 const WorkspaceShell = lazyNamed(loadWorkspaceShell, 'WorkspaceShell');
 const CommandPalette = lazyDialog(
     () => import('@/shell/CommandPalette'),

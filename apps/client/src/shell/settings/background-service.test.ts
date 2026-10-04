@@ -2,14 +2,16 @@ import { describe, expect, test } from 'bun:test';
 import type { BackgroundServiceState } from '@/desktop/bridge';
 import { backgroundServiceRow } from './background-service';
 
-const state = (patch: Partial<BackgroundServiceState> = {}): BackgroundServiceState => ({
-    support: 'supported',
-    keepRunning: true,
-    owner: 'service',
-    failure: null,
-    linger: null,
-    ...patch
-});
+function state(patch: Partial<BackgroundServiceState> = {}): BackgroundServiceState {
+    return {
+        support: 'supported',
+        keepRunning: true,
+        owner: 'service',
+        failure: null,
+        linger: null,
+        ...patch
+    };
+}
 
 describe('backgroundServiceRow', () => {
     test('the service runs the machine: a switch that is on and a way to stop it', () => {

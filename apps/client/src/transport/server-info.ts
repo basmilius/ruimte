@@ -11,7 +11,7 @@ import { watchOpenMachines } from './open-machines';
  * onto the daemon's own id here, and every store keyed on the endpoint would otherwise fill under
  * the id that row is about to leave.
  */
-const load = (endpointId: string): void => {
+function load(endpointId: string): void {
     const link = transportFor(endpointId);
     if (!link) {
         return;
@@ -57,7 +57,7 @@ const load = (endpointId: string): void => {
             adoptMachineName(settled, info.label, info.nameSource ?? null);
         })
         .catch(() => undefined);
-};
+}
 
 /*
  * A name a person gave a machine is the machine's own, so the endpoint row this client keeps takes
@@ -65,7 +65,7 @@ const load = (endpointId: string): void => {
  * own label ("This MacBook Pro", or the name the account lists) reads better than. Clearing the name
  * lands here too, which is why the row for this machine is written back rather than left alone.
  */
-export const adoptMachineName = (endpointId: string, label: string, nameSource: EndpointNameSource | null): void => {
+export function adoptMachineName(endpointId: string, label: string, nameSource: EndpointNameSource | null): void {
     if (nameSource === 'chosen') {
         useEndpoints.getState().setLabel(endpointId, label);
         return;
@@ -73,11 +73,11 @@ export const adoptMachineName = (endpointId: string, label: string, nameSource: 
     if (endpointId === LOCAL_ENDPOINT_ID) {
         useEndpoints.getState().setLabel(endpointId, localMachineLabel(serverInfoOf(endpointId).model));
     }
-};
+}
 
 /* Asks every machine who it is on every connection it opens and whenever it changed; the answer feeds labels, icons and the account record. */
-export const startServerInfo = (): (() => void) =>
-    watchOpenMachines(
+export function startServerInfo(): () => void {
+    return watchOpenMachines(
         {
             ids: () => pool.ids(),
             statusOf: (endpointId) => pool.statusOf(endpointId),
@@ -86,3 +86,4 @@ export const startServerInfo = (): (() => void) =>
         },
         load
     );
+}

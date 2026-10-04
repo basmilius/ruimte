@@ -5,7 +5,7 @@ export interface CliDetection {
     version: string | null;
 }
 
-const definedOnly = (env: Record<string, string | undefined>): Record<string, string> => {
+function definedOnly(env: Record<string, string | undefined>): Record<string, string> {
     const defined: Record<string, string> = {};
     for (const [key, value] of Object.entries(env)) {
         if (value !== undefined) {
@@ -13,14 +13,14 @@ const definedOnly = (env: Record<string, string | undefined>): Record<string, st
         }
     }
     return defined;
-};
+}
 
 /* Asks a CLI for its version; a missing binary is a plain "not installed", never an error. */
-export const detectCli = async (
+export async function detectCli(
     command: string,
     env: Record<string, string | undefined> = process.env,
     spawn: SpawnChatProcess = spawnChatProcess
-): Promise<CliDetection> => {
+): Promise<CliDetection> {
     try {
         let exited: (code: number | null) => void = () => undefined;
         const code = new Promise<number | null>((resolve) => {
@@ -37,4 +37,4 @@ export const detectCli = async (
     } catch {
         return { installed: false, version: null };
     }
-};
+}

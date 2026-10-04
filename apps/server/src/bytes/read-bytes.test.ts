@@ -36,7 +36,7 @@ afterAll(async () => {
     await rm(folder, { recursive: true, force: true });
 });
 
-const readAll = async (resource: ByteResource): Promise<Uint8Array> => {
+async function readAll(resource: ByteResource): Promise<Uint8Array> {
     const parts: Uint8Array[] = [];
     let offset = 0;
     let size = Number.POSITIVE_INFINITY;
@@ -52,7 +52,7 @@ const readAll = async (resource: ByteResource): Promise<Uint8Array> => {
     expect(versions.size).toBe(1);
     expect(parts.length).toBe(3);
     return Buffer.concat(parts);
-};
+}
 
 describe('readBytes', () => {
     test('a file comes back whole, one piece at a time', async () => {

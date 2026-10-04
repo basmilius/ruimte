@@ -4,23 +4,29 @@ import { arrowHead, boundsOfElements, elementAt, elementsIn, hitsElement, rectFr
 
 const base = { stroke: 'ink', strokeWidth: 2, seed: 1 } as const;
 
-const rect = (id: string, x = 0, y = 0, w = 100, h = 60): DrawingElement => ({ kind: 'rect', id, x, y, w, h, ...base });
+function rect(id: string, x = 0, y = 0, w = 100, h = 60): DrawingElement {
+    return { kind: 'rect', id, x, y, w, h, ...base };
+}
 
-const ellipse = (id: string): DrawingElement => ({ kind: 'ellipse', id, x: 0, y: 0, w: 100, h: 100, ...base });
+function ellipse(id: string): DrawingElement {
+    return { kind: 'ellipse', id, x: 0, y: 0, w: 100, h: 100, ...base };
+}
 
-const line = (id: string): DrawingElement => ({
-    kind: 'line',
-    id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 100,
-    ...base,
-    points: [
-        [0, 0],
-        [100, 100]
-    ]
-});
+function line(id: string): DrawingElement {
+    return {
+        kind: 'line',
+        id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        ...base,
+        points: [
+            [0, 0],
+            [100, 100]
+        ]
+    };
+}
 
 describe('hit tests', () => {
     test('an empty shape is hit on its outline, not in the middle', () => {

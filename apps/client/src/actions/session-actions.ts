@@ -68,7 +68,9 @@ export interface SessionMachine {
     restartTerminal(terminalId: string, resume: string | null): Promise<void>;
 }
 
-const endpointTransport = (): Requester | null => machineFor(currentEndpointId())?.transport ?? null;
+function endpointTransport(): Requester | null {
+    return machineFor(currentEndpointId())?.transport ?? null;
+}
 
 const livePlans = new PlanClient((endpointId) => machineFor(endpointId)?.transport ?? null);
 
@@ -115,7 +117,7 @@ const LIVE_MACHINE: SessionMachine = {
 };
 
 /* Read from the exported views, so a node on any canvas on screen counts with what its editor holds. */
-export const sessionTitle = (document: StoreApi<DocumentState>, id: string, kind: 'chat' | 'terminal'): string | null => {
+export function sessionTitle(document: StoreApi<DocumentState>, id: string, kind: 'chat' | 'terminal'): string | null {
     for (const view of document.getState().exportViews()) {
         if (view.kind === kind && view.id === id) {
             return view.name;
@@ -128,9 +130,11 @@ export const sessionTitle = (document: StoreApi<DocumentState>, id: string, kind
         }
     }
     return null;
-};
+}
 
-const plural = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`;
+function plural(count: number, noun: string): string {
+    return `${count} ${count === 1 ? noun : `${noun}s`}`;
+}
 
 const DEFAULT_TERMINAL_LINES = 40;
 const MAX_TERMINAL_CHARACTERS = 12_000;
@@ -138,7 +142,7 @@ const DEFAULT_SUBAGENT_MESSAGES = 20;
 const SUBAGENT_PAGE = 100;
 
 /* The newest lines that fit, so a screen of long lines still reads as its end rather than its start. */
-const lastLines = (lines: readonly string[], limit: number): { lines: string[]; truncated: boolean } => {
+function lastLines(lines: readonly string[], limit: number): { lines: string[]; truncated: boolean } {
     const kept: string[] = [];
     let characters = 0;
     for (const line of lines.slice(-limit).toReversed()) {
@@ -149,15 +153,20 @@ const lastLines = (lines: readonly string[], limit: number): { lines: string[]; 
         characters += line.length;
     }
     return { lines: kept, truncated: kept.length < lines.length };
-};
+}
 
-const threadOf = (row: ChatState): ChatItem[] => row.order.flatMap((id) => (row.structure[id] === undefined ? [] : [row.structure[id]]));
+function threadOf(row: ChatState): ChatItem[] {
+    return row.order.flatMap((id) => (row.structure[id] === undefined ? [] : [row.structure[id]]));
+}
 
-const pendingQuestion = (row: ChatState | null, match: (item: ChatQuestionItem) => boolean): ChatQuestionItem | null =>
-    row === null ? null : (threadOf(row).find((item): item is ChatQuestionItem => item.kind === 'question' && item.state === 'pending' && match(item)) ?? null);
+function pendingQuestion(row: ChatState | null, match: (item: ChatQuestionItem) => boolean): ChatQuestionItem | null {
+    return row === null
+        ? null
+        : (threadOf(row).find((item): item is ChatQuestionItem => item.kind === 'question' && item.state === 'pending' && match(item)) ?? null);
+}
 
 /* What the fresh shell of a restarted terminal runs, which is what Voice asks about first: an agent CLI on a new session is a start. */
-const startsAgain = (host: Pick<NodeHost, 'command' | 'provider' | 'runtimeMode'> | null, providerName: string | null): string => {
+function startsAgain(host: Pick<NodeHost, 'command' | 'provider' | 'runtimeMode'> | null, providerName: string | null): string {
     if (host?.provider) {
         return `${providerName ?? host.provider} starts again on a new session${host.runtimeMode ? `, in ${host.runtimeMode} mode` : ''}.`;
     }
@@ -165,9 +174,11 @@ const startsAgain = (host: Pick<NodeHost, 'command' | 'provider' | 'runtimeMode'
         return `It runs “${host.command}” again.`;
     }
     return 'A fresh shell starts.';
-};
+}
 
-const quotedList = (items: readonly string[]): string => (items.length === 0 ? 'none' : items.map((item) => `“${item}”`).join(', '));
+function quotedList(items: readonly string[]): string {
+    return items.length === 0 ? 'none' : items.map((item) => `“${item}”`).join(', ');
+}
 
 /*
  * What a person does to a chat or a terminal, as actions: the composer, the prompt cards, the thread's

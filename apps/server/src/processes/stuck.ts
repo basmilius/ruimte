@@ -100,7 +100,7 @@ const IDLE_BASELINE_POINTS = 30;
 const AGENT_KINDS = new Set(['claude', 'codex', 'gemini', 'copilot']);
 
 /* The points that cover the last `windowMs`, or null when the series does not reach back that far. */
-const covering = <T extends { at: number; durationMs: number }>(points: readonly T[], at: number, windowMs: number, slackMs: number): T[] | null => {
+function covering<T extends { at: number; durationMs: number }>(points: readonly T[], at: number, windowMs: number, slackMs: number): T[] | null {
     const start = at - windowMs;
     const inside = points.filter((point) => point.at > start);
     const first = inside[0];
@@ -108,14 +108,16 @@ const covering = <T extends { at: number; durationMs: number }>(points: readonly
         return null;
     }
     return inside;
-};
+}
 
-const weighted = (points: readonly { durationMs: number; value: number }[]): number => {
+function weighted(points: readonly { durationMs: number; value: number }[]): number {
     const total = points.reduce((sum, point) => sum + point.durationMs, 0);
     return total === 0 ? 0 : points.reduce((sum, point) => sum + point.value * point.durationMs, 0) / total;
-};
+}
 
-const alertId = (kind: ProcessAlertKind, nodeId: string | null, identity: string | null): string => `${kind}:${nodeId ?? ''}:${identity ?? ''}`;
+function alertId(kind: ProcessAlertKind, nodeId: string | null, identity: string | null): string {
+    return `${kind}:${nodeId ?? ''}:${identity ?? ''}`;
+}
 
 export class StuckJudge {
     private readonly thresholds: StuckThresholds;

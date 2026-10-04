@@ -267,10 +267,13 @@ export type AuthRegisterKeyResult = z.infer<typeof AuthRegisterKeyResultSchema>;
  * machine proves nothing to another, and the client's public key is in its own message, so a
  * challenge answered for one key cannot be handed in under another.
  */
-export const daemonChallengeMessage = (daemonId: string, challenge: string): string => `ruimte-daemon-v1\n${daemonId}\n${challenge}`;
+export function daemonChallengeMessage(daemonId: string, challenge: string): string {
+    return `ruimte-daemon-v1\n${daemonId}\n${challenge}`;
+}
 
-export const clientAuthMessage = (daemonId: string, challenge: string, publicKey: string): string =>
-    `ruimte-client-v1\n${daemonId}\n${challenge}\n${publicKey}`;
+export function clientAuthMessage(daemonId: string, challenge: string, publicKey: string): string {
+    return `ruimte-client-v1\n${daemonId}\n${challenge}\n${publicKey}`;
+}
 
 /*
  * `endpoint.signRegistration`: the daemon's agreement to join one address book account, which the

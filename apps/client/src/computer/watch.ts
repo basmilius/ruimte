@@ -8,8 +8,8 @@ import { watchPool, type WatchablePool } from '@/transport/pool-watch';
  * tells every socket the whole of each whenever it changes; a socket that opens asks once.
  * A machine with computer use on hears when the interface language changes, so its overlay speaks it.
  */
-export const startComputerWatch = (source: WatchablePool = pool): (() => void) =>
-    watchPool((link, endpointId) => {
+export function startComputerWatch(source: WatchablePool = pool): () => void {
+    return watchPool((link, endpointId) => {
         let language = i18next.language;
         const onLanguage = (next: string): void => {
             // A region change redraws with the same language, which the overlay does not need to hear.
@@ -45,3 +45,4 @@ export const startComputerWatch = (source: WatchablePool = pool): (() => void) =
             ]
         };
     }, source);
+}

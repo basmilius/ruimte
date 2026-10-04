@@ -6,17 +6,19 @@ import { followOtherWindows } from '@/state/other-windows';
 import { machineTransport, pool } from '@/transport';
 import { SidebarWatch, type SidebarMachineSnapshot } from './sidebar-watch';
 
-export const sidebarProjectKey = (endpointId: string, projectId: string): string => JSON.stringify([endpointId, projectId]);
+export function sidebarProjectKey(endpointId: string, projectId: string): string {
+    return JSON.stringify([endpointId, projectId]);
+}
 
 export const SIDEBAR_PROJECTS_STORAGE_KEY = 'ruimte.sidebar.projects';
-const readCollapsed = (): string[] => {
+function readCollapsed(): string[] {
     try {
         const value: unknown = JSON.parse(localStorage.getItem(SIDEBAR_PROJECTS_STORAGE_KEY) ?? '[]');
         return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
     } catch {
         return [];
     }
-};
+}
 
 export const useSidebarProjects = create<{
     order: string[];
@@ -55,7 +57,7 @@ export const useSidebarProjects = create<{
 // Loaded with the sidebar, which only a workspace draws, so the start screen does not listen for it.
 followOtherWindows(SIDEBAR_PROJECTS_STORAGE_KEY, () => useSidebarProjects.getState().reload());
 
-export const useSidebarMachines = (enabled: boolean, endpointIds: readonly string[]): Record<string, SidebarMachineSnapshot> => {
+export function useSidebarMachines(enabled: boolean, endpointIds: readonly string[]): Record<string, SidebarMachineSnapshot> {
     const ids = [...endpointIds].sort().join('\0');
     const [store] = useState(() => createStore<{ snapshots: Record<string, SidebarMachineSnapshot> }>(() => ({ snapshots: {} })));
     const snapshots = useStore(store, (state) => state.snapshots);
@@ -88,4 +90,4 @@ export const useSidebarMachines = (enabled: boolean, endpointIds: readonly strin
         };
     }, [enabled, ids, store]);
     return snapshots;
-};
+}

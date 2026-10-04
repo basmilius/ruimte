@@ -19,15 +19,17 @@ import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
 import { isInFloatingLayer, Icon, IconButton, Input, Tile, ContextMenu, Menu } from '@basmilius/desktop-ui';
 
-const isChrome = (target: EventTarget | null): boolean =>
-    isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);
+function isChrome(target: EventTarget | null): boolean {
+    return isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);
+}
 
 /* Screen pixels a press on a node may travel before it is a drag rather than a click. */
 const DRAG_THRESHOLD = 3;
 
 /* The node a pointer event landed on, by the mark `DiagramScene` puts on every node. */
-const nodeIdAt = (target: EventTarget | null): string | null =>
-    target instanceof Element ? (target.closest('[data-diagram-node]')?.getAttribute('data-diagram-node') ?? null) : null;
+function nodeIdAt(target: EventTarget | null): string | null {
+    return target instanceof Element ? (target.closest('[data-diagram-node]')?.getAttribute('data-diagram-node') ?? null) : null;
+}
 
 /* A press on a node: where it started on screen and where the node stood, so a drag moves it by the difference. */
 interface NodeDrag {

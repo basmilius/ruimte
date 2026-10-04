@@ -5,7 +5,9 @@ import { isNotFound, writeAtomic } from '@ruimte/agents/fs';
 
 export const LOCAL_SECRET_FILE = 'local.key';
 
-export const localSecretPath = (home: string): string => join(home, LOCAL_SECRET_FILE);
+export function localSecretPath(home: string): string {
+    return join(home, LOCAL_SECRET_FILE);
+}
 
 /*
  * What a process on this machine presents instead of its source address. Behind a tunnel or a
@@ -13,7 +15,7 @@ export const localSecretPath = (home: string): string => join(home, LOCAL_SECRET
  * read a file only this account can read does. It belongs to a home rather than to a machine,
  * because a dev daemon and an installed one each have a home of their own.
  */
-export const readLocalSecret = async (home: string): Promise<string | null> => {
+export async function readLocalSecret(home: string): Promise<string | null> {
     try {
         const secret = (await readFile(localSecretPath(home), 'utf8')).trim();
         return secret === '' ? null : secret;
@@ -23,13 +25,13 @@ export const readLocalSecret = async (home: string): Promise<string | null> => {
         }
         throw e;
     }
-};
+}
 
 /**
  * The secret of a home, minted on the first start. It survives restarts, so a desktop app or a
  * `ruimte login` that read it once does not have to know that the daemon came back.
  */
-export const readOrCreateLocalSecret = async (home: string): Promise<string> => {
+export async function readOrCreateLocalSecret(home: string): Promise<string> {
     const existing = await readLocalSecret(home);
     if (existing !== null) {
         return existing;
@@ -38,9 +40,13 @@ export const readOrCreateLocalSecret = async (home: string): Promise<string> => 
     await mkdir(home, { recursive: true, mode: 0o700 });
     await writeAtomic(localSecretPath(home), `${secret}\n`, 0o600);
     return secret;
-};
+}
 
-const digest = (value: string): Buffer => createHash('sha256').update(value).digest();
+function digest(value: string): Buffer {
+    return createHash('sha256').update(value).digest();
+}
 
 /** Compares in constant time; hashing first keeps a length difference from ending the compare early. */
-export const sameSecret = (presented: string, secret: string): boolean => timingSafeEqual(digest(presented), digest(secret));
+export function sameSecret(presented: string, secret: string): boolean {
+    return timingSafeEqual(digest(presented), digest(secret));
+}

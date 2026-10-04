@@ -310,8 +310,10 @@ const DEFAULT_HOST: ChatHost = {
 
 let host: ChatHost = DEFAULT_HOST;
 
-export const setChatHost = (patch: Partial<ChatHost>): void => {
+export function setChatHost(patch: Partial<ChatHost>): void {
     host = { ...host, ...patch };
-};
+}
 
-export const chatHost = (): ChatHost => host;
+export function chatHost(): ChatHost {
+    return host;
+}

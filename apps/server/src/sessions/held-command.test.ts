@@ -40,19 +40,22 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const create = (sessionId: string, command: string) =>
-    harness.manager.create({ sessionId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: harness.home, command });
+function create(sessionId: string, command: string) {
+    return harness.manager.create({ sessionId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: harness.home, command });
+}
 
-const typed = (sessionId: string): string => harness.adapter.forSession(sessionId).typed;
+function typed(sessionId: string): string {
+    return harness.adapter.forSession(sessionId).typed;
+}
 
 /* A request as a client sends it, answered by the handlers the daemon registers. */
-const request = async (type: string, payload: unknown): Promise<ServerFrame> => {
+async function request(type: string, payload: unknown): Promise<ServerFrame> {
     const dispatcher = new Dispatcher();
     registerSessionHandlers(dispatcher, harness.manager);
     const frames: ServerFrame[] = [];
     await dispatcher.handle({ id: 'c1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
     return frames[0]!;
-};
+}
 
 describe('a command from a project file', () => {
     test('is held until a person says yes, then written down and typed, once', async () => {
@@ -119,9 +122,13 @@ describe('a command from a project file', () => {
     });
 });
 
-const terminal = (id: string, command?: string) => ({ id, kind: 'terminal' as const, title: id, x: 0, y: 0, w: 560, h: 360, ...(command ? { command } : {}) });
+function terminal(id: string, command?: string) {
+    return { id, kind: 'terminal' as const, title: id, x: 0, y: 0, w: 560, h: 360, ...(command ? { command } : {}) };
+}
 
-const canvasOf = (...nodes: ReturnType<typeof terminal>[]): ProjectView => ({ ...emptyCanvasView('main', 'Canvas'), nodes });
+function canvasOf(...nodes: ReturnType<typeof terminal>[]): ProjectView {
+    return { ...emptyCanvasView('main', 'Canvas'), nodes };
+}
 
 describe('commandsSet', () => {
     test('names a command that is new or changed, on a canvas and on a view of its own, and nothing else', () => {

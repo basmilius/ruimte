@@ -12,7 +12,9 @@ import { readClipboardText } from '@basmilius/desktop-ui';
 
 type DrawingStore = StoreApi<DrawingState>;
 
-const viewOf = (store: DrawingStore): string | null => store.getState().viewId;
+function viewOf(store: DrawingStore): string | null {
+    return store.getState().viewId;
+}
 
 const NO_STYLE: NonNullable<ActionInput<'drawing.updateElements'>['style']> = {
     stroke: null,
@@ -27,82 +29,82 @@ const NO_STYLE: NonNullable<ActionInput<'drawing.updateElements'>['style']> = {
     align: null
 };
 
-export const deleteSelection = async (store: DrawingStore): Promise<void> => {
+export async function deleteSelection(store: DrawingStore): Promise<void> {
     const viewId = viewOf(store);
     if (viewId !== null) {
         await runAsPerson('drawing.deleteElements', { viewId, elementIds: null });
     }
-};
+}
 
-export const duplicateSelection = (store: DrawingStore): void => {
+export function duplicateSelection(store: DrawingStore): void {
     const viewId = viewOf(store);
     if (viewId !== null) {
         void runAsPerson('drawing.duplicateElements', { viewId, elementIds: null });
     }
-};
+}
 
-export const reorderSelection = (store: DrawingStore, to: 'front' | 'back'): void => {
+export function reorderSelection(store: DrawingStore, to: 'front' | 'back'): void {
     const viewId = viewOf(store);
     if (viewId !== null) {
         void runAsPerson('drawing.reorderElements', { viewId, elementIds: null, to });
     }
-};
+}
 
 /* Locks what is selected, or unlocks it when all of it already is. */
-export const toggleLockSelection = (store: DrawingStore): void => {
+export function toggleLockSelection(store: DrawingStore): void {
     const { viewId, elements, selection } = store.getState();
     if (viewId === null) {
         return;
     }
     const locked = elements.some((element) => selection.includes(element.id) && !element.locked);
     void runAsPerson('drawing.lockElements', { viewId, elementIds: null, locked });
-};
+}
 
-export const unlockEverything = (store: DrawingStore): void => {
+export function unlockEverything(store: DrawingStore): void {
     const { viewId, elements } = store.getState();
     const locked = elements.filter((element) => element.locked).map((element) => element.id);
     if (viewId !== null && locked.length > 0) {
         void runAsPerson('drawing.lockElements', { viewId, elementIds: locked, locked: false });
     }
-};
+}
 
 /* Paints the selection and becomes what the next element is drawn with, the way the dock always did. */
-export const styleSelection = (store: DrawingStore, patch: Partial<DrawingStyle>): void => {
+export function styleSelection(store: DrawingStore, patch: Partial<DrawingStyle>): void {
     const viewId = viewOf(store);
     if (viewId !== null) {
         void runAsPerson('drawing.updateElements', { viewId, elementIds: null, style: { ...NO_STYLE, ...patch }, text: null, dx: null, dy: null });
     }
-};
+}
 
-export const moveSelection = (store: DrawingStore, dx: number, dy: number): void => {
+export function moveSelection(store: DrawingStore, dx: number, dy: number): void {
     const viewId = viewOf(store);
     if (viewId !== null) {
         void runAsPerson('drawing.updateElements', { viewId, elementIds: null, style: null, text: null, dx, dy });
     }
-};
+}
 
-export const copyDrawing = async (store: DrawingStore, format: 'png' | 'svg' | 'elements'): Promise<boolean> => {
+export async function copyDrawing(store: DrawingStore, format: 'png' | 'svg' | 'elements'): Promise<boolean> {
     const viewId = viewOf(store);
     return viewId !== null && (await runAsPerson('drawing.copy', { viewId, format })) !== null;
-};
+}
 
-export const cutSelection = async (store: DrawingStore): Promise<void> => {
+export async function cutSelection(store: DrawingStore): Promise<void> {
     if (await copyDrawing(store, 'elements')) {
         await deleteSelection(store);
     }
-};
+}
 
-export const pasteInto = async (store: DrawingStore): Promise<void> => {
+export async function pasteInto(store: DrawingStore): Promise<void> {
     const viewId = viewOf(store);
     const copies = readDrawingElements(await readClipboardText());
     if (viewId !== null && copies !== null && copies.length > 0) {
         await runAsPerson('drawing.addElements', { viewId, elements: null, copies });
     }
-};
+}
 
-export const exportDrawing = (store: DrawingStore, format: 'png' | 'svg'): void => {
+export function exportDrawing(store: DrawingStore, format: 'png' | 'svg'): void {
     const viewId = viewOf(store);
     if (viewId !== null) {
         void runAsPerson('drawing.export', { viewId, format });
     }
-};
+}

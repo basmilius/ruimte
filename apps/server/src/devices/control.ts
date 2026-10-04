@@ -20,22 +20,27 @@ interface Entry {
 }
 
 /* The person holds the device. The words steer the agent to wait or to stop, never to find another way in. */
-const heldWords = (mode: Exclude<Mode, 'running'>, name: string): string =>
-    mode === 'paused'
+function heldWords(mode: Exclude<Mode, 'running'>, name: string): string {
+    return mode === 'paused'
         ? `The person paused you on ${name}. Wait a while and call again, which works once they resume, and take a shot first: they may have changed the screen. Or stop here and tell them what is left`
         : `The person took over ${name} and operates it by hand. Wait a while and call again, which works once they hand it back, and take a shot first: they may have changed the screen. Or stop here and tell them what is left`;
+}
 
 const HELD_CODES: Record<Exclude<Mode, 'running'>, string> = { paused: 'paused', takenOver: 'taken-over' };
 
-const held = (mode: Exclude<Mode, 'running'>, device: DeviceInfo): { code: string; message: string } => ({
-    code: HELD_CODES[mode],
-    message: heldWords(mode, device.name)
-});
+function held(mode: Exclude<Mode, 'running'>, device: DeviceInfo): { code: string; message: string } {
+    return {
+        code: HELD_CODES[mode],
+        message: heldWords(mode, device.name)
+    };
+}
 
-const keyOf = (device: Target): string => `${device.backendId}\u0000${device.deviceId}`;
+function keyOf(device: Target): string {
+    return `${device.backendId}\u0000${device.deviceId}`;
+}
 
 /* A step in the words a client that does not know its kind still shows. */
-export const describeStep = (step: AgentStep): string => {
+export function describeStep(step: AgentStep): string {
     switch (step.kind) {
         case 'button':
             return `button ${step.button}`;
@@ -44,9 +49,9 @@ export const describeStep = (step: AgentStep): string => {
         default:
             return step.kind;
     }
-};
+}
 
-const wireStep = (step: AgentStep, seq: number): DeviceAgentStep => {
+function wireStep(step: AgentStep, seq: number): DeviceAgentStep {
     const target = step.kind === 'button' ? step.button : step.kind === 'launch' ? step.app : undefined;
     return {
         kind: step.kind,
@@ -55,15 +60,17 @@ const wireStep = (step: AgentStep, seq: number): DeviceAgentStep => {
         ...(step.kind === 'tap' ? { x: step.x, y: step.y } : {}),
         seq
     };
-};
+}
 
-const payloadOf = (entry: Entry, state: DeviceOperated['state'] = entry.mode): DeviceOperated => ({
-    backendId: entry.backendId,
-    deviceId: entry.deviceId,
-    nodeId: entry.nodeId,
-    state,
-    step: entry.step
-});
+function payloadOf(entry: Entry, state: DeviceOperated['state'] = entry.mode): DeviceOperated {
+    return {
+        backendId: entry.backendId,
+        deviceId: entry.deviceId,
+        nodeId: entry.nodeId,
+        state,
+        step: entry.step
+    };
+}
 
 /*
  * Who has each device an agent operates, in memory: the agent, or the person who paused it or took

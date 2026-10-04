@@ -16,7 +16,7 @@ export interface BackgroundServiceRow {
     lingerOn: boolean;
 }
 
-export const backgroundServiceRow = (state: BackgroundServiceState): BackgroundServiceRow => {
+export function backgroundServiceRow(state: BackgroundServiceState): BackgroundServiceRow {
     if (state.support !== 'supported' || state.commandLineService === true) {
         return {
             toggle: null,
@@ -43,4 +43,4 @@ export const backgroundServiceRow = (state: BackgroundServiceState): BackgroundS
         offerLinger: state.keepRunning && state.linger === false,
         lingerOn: state.keepRunning && state.linger === true
     };
-};
+}

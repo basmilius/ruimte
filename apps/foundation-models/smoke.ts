@@ -28,8 +28,8 @@ let finalText = '';
 let nativeSession: string | null = null;
 let readPages: Array<{ path: string; offset: number; content: string; totalLines: number; nextOffset: number | null }> = [];
 const contextNotes: string[] = [];
-const makeBackend = (resume: string | null, generation: number) =>
-    new AppleBackend(
+function makeBackend(resume: string | null, generation: number) {
+    return new AppleBackend(
         {
             command: [command],
             cwd: project,
@@ -80,6 +80,7 @@ const makeBackend = (resume: string | null, generation: number) =>
             }
         }
     );
+}
 
 backend = makeBackend(null, 1);
 

@@ -36,20 +36,24 @@ const LOGIN_CODE_LIFETIME_MS = 60_000;
  */
 const BROWSER_COOKIE = '__Host-pulsar-login';
 
-const callbackUrl = (env: Env, provider: OAuthProvider): string => `${env.PUBLIC_ORIGIN}/auth/${provider.id}/callback`;
+function callbackUrl(env: Env, provider: OAuthProvider): string {
+    return `${env.PUBLIC_ORIGIN}/auth/${provider.id}/callback`;
+}
 
-const notConfigured = (provider: OAuthProvider): Response =>
-    failure('not-configured', `Signing in with ${PROVIDER_NAMES[provider.id]} is not configured on this address book yet`);
+function notConfigured(provider: OAuthProvider): Response {
+    return failure('not-configured', `Signing in with ${PROVIDER_NAMES[provider.id]} is not configured on this address book yet`);
+}
 
 /*
  * `SameSite=None` only for a provider that answers with a cross-site form post, where a `Lax` cookie
  * would stay behind. Still `__Host-`, `Secure` and `HttpOnly`, and the callback needs the single-use
  * state beside it, so a forged post finds nothing to finish.
  */
-const loginCookie = (provider: OAuthProvider, value: string, maxAgeSeconds: number): string =>
-    `${BROWSER_COOKIE}=${value}; Path=/; Secure; HttpOnly; SameSite=${provider.callbackMethod === 'POST' ? 'None' : 'Lax'}; Max-Age=${maxAgeSeconds}`;
+function loginCookie(provider: OAuthProvider, value: string, maxAgeSeconds: number): string {
+    return `${BROWSER_COOKIE}=${value}; Path=/; Secure; HttpOnly; SameSite=${provider.callbackMethod === 'POST' ? 'None' : 'Lax'}; Max-Age=${maxAgeSeconds}`;
+}
 
-const cookieOf = (request: Request, name: string): string | null => {
+function cookieOf(request: Request, name: string): string | null {
     for (const part of (request.headers.get('cookie') ?? '').split(';')) {
         const [key, ...value] = part.trim().split('=');
         if (key === name) {
@@ -57,11 +61,11 @@ const cookieOf = (request: Request, name: string): string | null => {
         }
     }
     return null;
-};
+}
 
 // Shown in the browser when there is no app to send the browser back to.
-const loginPage = (status: number, message: string): Response =>
-    new Response(`${message}\n`, {
+function loginPage(status: number, message: string): Response {
+    return new Response(`${message}\n`, {
         status,
         headers: {
             'content-type': 'text/plain; charset=utf-8',
@@ -69,9 +73,10 @@ const loginPage = (status: number, message: string): Response =>
             'set-cookie': `${BROWSER_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`
         }
     });
+}
 
-const redirectToApp = (appRedirectUri: string, params: Record<string, string>): Response =>
-    new Response(null, {
+function redirectToApp(appRedirectUri: string, params: Record<string, string>): Response {
+    return new Response(null, {
         status: 302,
         headers: {
             location: `${appRedirectUri}?${new URLSearchParams(params).toString()}`,
@@ -79,9 +84,10 @@ const redirectToApp = (appRedirectUri: string, params: Record<string, string>): 
             'set-cookie': `${BROWSER_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`
         }
     });
+}
 
 // `GET /auth/<provider>/start`, opened by the app in the system browser.
-export const startLogin = async (request: Request, env: Env, provider: OAuthProvider): Promise<Response> => {
+export async function startLogin(request: Request, env: Env, provider: OAuthProvider): Promise<Response> {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
     if (limited) {
         return limited;
@@ -133,7 +139,7 @@ export const startLogin = async (request: Request, env: Env, provider: OAuthProv
             'set-cookie': loginCookie(provider, browser, LOGIN_ATTEMPT_LIFETIME_MS / 1000)
         }
     });
-};
+}
 
 interface LoginAttemptRow {
     provider: ProviderId;
@@ -148,16 +154,16 @@ interface LoginAttemptRow {
 }
 
 // The provider's answer: in the query for a redirect, in the body for a form post.
-const callbackParams = async (request: Request): Promise<URLSearchParams> => {
+async function callbackParams(request: Request): Promise<URLSearchParams> {
     if (request.method !== 'POST') {
         return new URL(request.url).searchParams;
     }
     const text = await request.text();
     return new URLSearchParams(text.length > 16 * 1024 ? '' : text);
-};
+}
 
 // `GET` or `POST /auth/<provider>/callback`, where the provider sends the browser.
-export const finishLogin = async (request: Request, env: Env, provider: OAuthProvider): Promise<Response> => {
+export async function finishLogin(request: Request, env: Env, provider: OAuthProvider): Promise<Response> {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:login`, LIMITS.loginIp]]);
     if (limited) {
         return limited;
@@ -208,10 +214,10 @@ export const finishLogin = async (request: Request, env: Env, provider: OAuthPro
         .bind(await sha256(loginCode), accountId, attempt.app_redirect_uri, attempt.app_code_challenge, Date.now() + LOGIN_CODE_LIFETIME_MS)
         .run();
     return redirectToApp(attempt.app_redirect_uri, { code: loginCode, state: attempt.app_state });
-};
+}
 
 // `POST /v1/session`: the app trades the code from the redirect for a session.
-export const exchangeLoginCode = async (request: Request, env: Env): Promise<Response> => {
+export async function exchangeLoginCode(request: Request, env: Env): Promise<Response> {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:session`, LIMITS.sessionIp]]);
     if (limited) {
         return limited;
@@ -251,10 +257,10 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
     }
     const account: AccountRow = { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name };
     return json(await createSession(env.DB, account, label ?? null, sessionKey));
-};
+}
 
 // `POST /v1/session/refresh`
-export const refreshSession = async (request: Request, env: Env): Promise<Response> => {
+export async function refreshSession(request: Request, env: Env): Promise<Response> {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:session`, LIMITS.sessionIp]]);
     if (limited) {
         return limited;
@@ -268,20 +274,20 @@ export const refreshSession = async (request: Request, env: Env): Promise<Respon
         return failure('clock-skew', clockSkewMessage(Date.now() - body.value.issuedAt));
     }
     return result ? json(result) : failure('unauthorized', 'Sign in again');
-};
+}
 
 /* What a person reads when the clock of their device is off: by how much, and which way. */
-export const clockSkewMessage = (offMs: number): string => {
+export function clockSkewMessage(offMs: number): string {
     const minutes = Math.round(Math.abs(offMs) / 60_000);
     return `The clock of this device is ${minutes} minutes ${offMs > 0 ? 'behind' : 'ahead'}. Set it right and try again.`;
-};
+}
 
 // `DELETE /v1/session`
-export const endSession = async (request: Request, env: Env): Promise<Response> => {
+export async function endSession(request: Request, env: Env): Promise<Response> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return failure('unauthorized', 'Sign in again');
     }
     await revokeSession(env.DB, session.id);
     return noContent();
-};
+}

@@ -18,23 +18,28 @@ interface TestKey {
     privateKey: KeyObject;
 }
 
-const newKey = (): TestKey => {
+function newKey(): TestKey {
     const pair = generateKeyPairSync('ed25519');
     return { publicKey: (pair.publicKey.export({ format: 'jwk' }) as { x: string }).x, privateKey: pair.privateKey };
-};
+}
 
-const signWith = (key: TestKey, message: string): string => sign(null, Buffer.from(message), key.privateKey).toString('base64url');
+function signWith(key: TestKey, message: string): string {
+    return sign(null, Buffer.from(message), key.privateKey).toString('base64url');
+}
 
-const verifies = (publicKey: string, message: string, signature: string): boolean =>
-    verify(
+function verifies(publicKey: string, message: string, signature: string): boolean {
+    return verify(
         null,
         Buffer.from(message),
         createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicKey }, format: 'jwk' }),
         Buffer.from(signature, 'base64url')
     );
+}
 
 // The broker schedules nothing and signing is synchronous, so one turn of the event loop settles every exchange.
-const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
 const BROKER_NAME = 'broker.example.com';
 
@@ -59,13 +64,14 @@ class FakeSocket implements PeerSocket {
 }
 
 /* A broker on a clock that stands still, so no rate limit refills halfway through a test. */
-const newBroker = (limits: Partial<BrokerLimits> = {}, turn?: TurnProvider): Broker =>
-    new Broker({ ...DEFAULT_LIMITS, ...limits }, () => 0, turn, { warn: () => undefined });
+function newBroker(limits: Partial<BrokerLimits> = {}, turn?: TurnProvider): Broker {
+    return new Broker({ ...DEFAULT_LIMITS, ...limits }, () => 0, turn, { warn: () => undefined });
+}
 
 let nextAddress = 1;
 
 /* One peer on a fake socket, driven by the same `BrokerPeer` a daemon and a client use: every frame it hears, and how the socket closed. */
-const connect = (broker: Broker, role: BrokerRole, key: TestKey, options: { signer?: TestKey; ip?: string } = {}) => {
+function connect(broker: Broker, role: BrokerRole, key: TestKey, options: { signer?: TestKey; ip?: string } = {}) {
     const socket = new FakeSocket();
     const handle: Peer = broker.open(socket, options.ip ?? `192.0.2.${nextAddress++}`, BROKER_NAME);
     const state = {
@@ -97,13 +103,14 @@ const connect = (broker: Broker, role: BrokerRole, key: TestKey, options: { sign
     };
     peer.start();
     return { handle, socket, peer, state, key };
-};
+}
 
 const offer: SignalEnvelope = { connectionId: 'attempt-0001', signal: { kind: 'offer', sdp: 'v=0\r\na=fingerprint:sha-256 AA' } };
 const answer: SignalEnvelope = { connectionId: 'attempt-0001', signal: { kind: 'answer', sdp: 'v=0\r\na=fingerprint:sha-256 BB' } };
 
-const framesOf = <T extends BrokerServerFrame['type']>(state: { frames: BrokerServerFrame[] }, type: T): Extract<BrokerServerFrame, { type: T }>[] =>
-    state.frames.filter((frame): frame is Extract<BrokerServerFrame, { type: T }> => frame.type === type);
+function framesOf<T extends BrokerServerFrame['type']>(state: { frames: BrokerServerFrame[] }, type: T): Extract<BrokerServerFrame, { type: T }>[] {
+    return state.frames.filter((frame): frame is Extract<BrokerServerFrame, { type: T }> => frame.type === type);
+}
 
 describe('the broker between peers', () => {
     test('a machine and a client announce, and a signal travels both ways with the sender filled in', async () => {

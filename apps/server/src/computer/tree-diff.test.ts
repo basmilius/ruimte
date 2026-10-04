@@ -2,14 +2,16 @@ import { describe, expect, test } from 'bun:test';
 import type { StateResult } from './helper-protocol.ts';
 import { diffTree, handleOf, rememberTree } from './tree-diff.ts';
 
-const stateOf = (tree: string[], extra: { sheet?: string; instance?: string; pid?: number } = {}): StateResult => ({
-    app: { name: 'Mail', pid: extra.pid ?? 42, bundleId: 'com.example.mail' },
-    window: { title: 'Inbox', frame: { x: 0, y: 0, width: 800, height: 600 }, ...(extra.sheet === undefined ? {} : { sheet: extra.sheet }) },
-    screenshot: {},
-    elements: tree.length,
-    tree,
-    instance: extra.instance ?? 'run-1'
-});
+function stateOf(tree: string[], extra: { sheet?: string; instance?: string; pid?: number } = {}): StateResult {
+    return {
+        app: { name: 'Mail', pid: extra.pid ?? 42, bundleId: 'com.example.mail' },
+        window: { title: 'Inbox', frame: { x: 0, y: 0, width: 800, height: 600 }, ...(extra.sheet === undefined ? {} : { sheet: extra.sheet }) },
+        screenshot: {},
+        elements: tree.length,
+        tree,
+        instance: extra.instance ?? 'run-1'
+    };
+}
 
 const INBOX = [
     '[0] Window:StandardWindow "Inbox" (0,0 800x600)',

@@ -5,15 +5,18 @@ import { AGENTS_LOCALES, AGENTS_NAMESPACES } from './locales';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
-const namespacesOn = (language: string): string[] =>
-    readdirSync(join(HERE, 'locales', language))
+function namespacesOn(language: string): string[] {
+    return readdirSync(join(HERE, 'locales', language))
         .filter((name) => name.endsWith('.json'))
         .map((name) => name.slice(0, -'.json'.length))
         .sort();
+}
 
-const read = (language: string, namespace: string): unknown => JSON.parse(readFileSync(join(HERE, 'locales', language, `${namespace}.json`), 'utf8'));
+function read(language: string, namespace: string): unknown {
+    return JSON.parse(readFileSync(join(HERE, 'locales', language, `${namespace}.json`), 'utf8'));
+}
 
-const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
+function strings(value: unknown, prefix = ''): Array<[string, string]> {
     if (typeof value === 'string') {
         return [[prefix, value]];
     }
@@ -21,9 +24,11 @@ const strings = (value: unknown, prefix = ''): Array<[string, string]> => {
         return [[prefix, '']];
     }
     return Object.entries(value).flatMap(([key, child]) => strings(child, prefix === '' ? key : `${prefix}.${key}`));
-};
+}
 
-const placeholders = (text: string): string[] => [...text.matchAll(/\{\{\s*(\w+)[^}]*\}\}/g)].map((match) => match[1]!).sort();
+function placeholders(text: string): string[] {
+    return [...text.matchAll(/\{\{\s*(\w+)[^}]*\}\}/g)].map((match) => match[1]!).sort();
+}
 
 describe('the words of @ruimte/agents-react', () => {
     test('every namespace has a file in every language, and every file a namespace', () => {

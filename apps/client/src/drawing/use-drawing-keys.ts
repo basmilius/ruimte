@@ -47,17 +47,18 @@ const TOOL_KEYS: Record<string, DrawingTool> = {
     '0': 'eraser'
 };
 
-const isTypingTarget = (el: EventTarget | null): boolean =>
-    el instanceof HTMLElement && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+function isTypingTarget(el: EventTarget | null): boolean {
+    return el instanceof HTMLElement && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
 
 /* Whether anything else on screen has a claim on the keyboard right now. */
-const somethingElseHasIt = (target: EventTarget | null): boolean => {
+function somethingElseHasIt(target: EventTarget | null): boolean {
     const ui = useUi.getState();
     return isTypingTarget(target) || isInFloatingLayer(target) || ui.settings.open || ui.paletteOpen || ui.viewDialog !== null || ui.layoutDialogOpen;
-};
+}
 
 /* Escape clears one thing at a time, in the order the canvas uses: the draft first, the tool last. */
-const clearOne = (store: StoreApi<DrawingState>): boolean => {
+function clearOne(store: StoreApi<DrawingState>): boolean {
     const state = store.getState();
     if (state.draft) {
         state.cancelDraft();
@@ -76,11 +77,11 @@ const clearOne = (store: StoreApi<DrawingState>): boolean => {
         return true;
     }
     return false;
-};
+}
 
 /* The tools of the drawing in one cell. The store is the cell's own, never the focused one: the
    listener sits on the window, so the drawing it acts on has to be decided where it is drawn. */
-export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): void => {
+export function useDrawingKeys(store: StoreApi<DrawingState>, active: boolean): void {
     useEffect(() => {
         if (!active) {
             return;
@@ -207,4 +208,4 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [active, store]);
-};
+}

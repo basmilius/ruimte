@@ -6,5 +6,6 @@ import type { NodeKind } from '@ruimte/contracts';
  * content, so a terminal types and a simulator reads the trackpad without a second press. A group
  * holds nothing to type in, and a press that adds to the selection is about moving several nodes.
  */
-export const framePressHandsKeyboard = (kind: NodeKind | 'unknown' | undefined, additive: boolean): boolean =>
-    kind !== undefined && kind !== 'group' && !additive;
+export function framePressHandsKeyboard(kind: NodeKind | 'unknown' | undefined, additive: boolean): boolean {
+    return kind !== undefined && kind !== 'group' && !additive;
+}

@@ -102,11 +102,11 @@ class FakePage implements BrowserPage {
 }
 
 /* Turns the event loop until the fake page's chain of work got where a test looks; bounded by turns, never by time. */
-const until = async (reached: () => boolean): Promise<void> => {
+async function until(reached: () => boolean): Promise<void> {
     for (let turn = 0; turn < 500 && !reached(); turn++) {
         await Bun.sleep(0);
     }
-};
+}
 
 describe('BrowserManager', () => {
     test('keeps a page alive while control clients attach and streams only with a viewer', async () => {

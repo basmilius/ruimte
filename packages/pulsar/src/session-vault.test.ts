@@ -5,11 +5,13 @@ import { SESSION_REFRESH_MAX_SKEW_MS, type SessionResult } from './address-book.
 import { SessionVault, type SessionSigner, type SessionStore, type StoredSession } from './session-vault.ts';
 import { sessionKeyMessage, sessionRefreshMessage } from './signing.ts';
 
-const token = (seed: string): string => seed.repeat(43).slice(0, 43);
+function token(seed: string): string {
+    return seed.repeat(43).slice(0, 43);
+}
 const account = { id: 'account-1', provider: 'github' as const, login: 'someone' };
 const NOW = 1_800_000_000_000;
 
-const memoryStore = (): SessionStore & { held: StoredSession | null; writes: number } => {
+function memoryStore(): SessionStore & { held: StoredSession | null; writes: number } {
     const store = {
         held: null as StoredSession | null,
         writes: 0,
@@ -20,24 +22,27 @@ const memoryStore = (): SessionStore & { held: StoredSession | null; writes: num
         }
     };
     return store;
-};
+}
 
-const newSigner = (): SessionSigner => {
+function newSigner(): SessionSigner {
     const pair = generateKeyPairSync('ed25519');
     return {
         publicKey: pair.publicKey.export({ format: 'jwk' }).x ?? '',
         sign: async (message) => sign(null, Buffer.from(message), pair.privateKey).toString('base64url')
     };
-};
+}
 
-const verifies = (publicKey: string, message: string, signature: unknown): boolean =>
-    typeof signature === 'string' &&
-    verify(
-        null,
-        Buffer.from(message),
-        createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicKey }, format: 'jwk' }),
-        Buffer.from(signature, 'base64url')
+function verifies(publicKey: string, message: string, signature: unknown): boolean {
+    return (
+        typeof signature === 'string' &&
+        verify(
+            null,
+            Buffer.from(message),
+            createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicKey }, format: 'jwk' }),
+            Buffer.from(signature, 'base64url')
+        )
     );
+}
 
 interface Recorded {
     method: string;
@@ -47,7 +52,7 @@ interface Recorded {
 }
 
 /* The address book's session routes, rotating one refresh token at a time the way the Worker does. */
-const fakeAddressBook = () => {
+function fakeAddressBook() {
     const calls: Recorded[] = [];
     let generation = 0;
     let liveRefresh: string | null = null;
@@ -97,13 +102,15 @@ const fakeAddressBook = () => {
             reachable = value;
         }
     };
-};
+}
 
 const exchange = { code: token('c'), codeVerifier: 'v'.repeat(43), redirectUri: 'http://127.0.0.1:5000/pulsar/callback', label: 'Laptop' };
 
 // One key for the whole test unless it says otherwise, the way a device keeps one.
 const deviceSigner = newSigner();
-const keyed = async (): Promise<SessionSigner | null> => deviceSigner;
+async function keyed(): Promise<SessionSigner | null> {
+    return deviceSigner;
+}
 
 describe('SessionVault', () => {
     test('a login code becomes a session whose refresh token is kept and never handed out', async () => {
@@ -199,7 +206,7 @@ describe('SessionVault', () => {
 });
 
 /* `navigator.locks` for one name: whoever asks waits for everyone before. */
-const fakeLock = () => {
+function fakeLock() {
     let tail: Promise<unknown> = Promise.resolve();
     let holding = 0;
     let mostAtOnce = 0;
@@ -222,7 +229,7 @@ const fakeLock = () => {
             return mostAtOnce;
         }
     };
-};
+}
 
 describe('SessionVaults over one store', () => {
     test('two tabs refreshing at once take turns, so each token is spent once and the session survives', async () => {

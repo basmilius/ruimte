@@ -24,12 +24,12 @@ const PERMISSION_MODE: Record<RuntimeMode, string | null> = {
     'full-access': 'bypassPermissions'
 };
 
-export const claudeRuntimeMode = (mode: string): RuntimeMode | undefined => {
+export function claudeRuntimeMode(mode: string): RuntimeMode | undefined {
     if (mode === 'default') {
         return 'supervised';
     }
     return (Object.keys(PERMISSION_MODE) as RuntimeMode[]).find((key) => PERMISSION_MODE[key] === mode);
-};
+}
 
 interface ClaudeLaunch {
     selection: ModelSelection;
@@ -40,7 +40,7 @@ interface ClaudeLaunch {
 }
 
 /* The argument list for one Claude Code chat process. */
-export const claudeArgs = (launch: ClaudeLaunch): string[] => {
+export function claudeArgs(launch: ClaudeLaunch): string[] {
     // The `=` form matters, since the flag is variadic and would swallow a prompt argument after it (measured on Claude Code 2.1.274).
     const args = [
         ...CLAUDE_CHAT_ARGS,
@@ -78,7 +78,7 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
         args.push('--resume', launch.resume);
     }
     return args;
-};
+}
 
 /*
  * Leaving out `[1m]` does not cap a model the CLI runs natively on 1M on a subscription (Fable,
@@ -86,8 +86,9 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
  * variable holds a 200k pick (measured on Claude Code 2.1.280). It holds it only with auto-compact
  * on, which `claudeArgs` sees to.
  */
-export const claudeEnv = (selection: ModelSelection): Record<string, string> =>
-    selection.options.contextWindow === '200k' ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: '200000' } : {};
+export function claudeEnv(selection: ModelSelection): Record<string, string> {
+    return selection.options.contextWindow === '200k' ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: '200000' } : {};
+}
 
 // What the CLI can do, as far as a client has to know.
 export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
@@ -117,4 +118,6 @@ export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
 export const CLAUDE_RESUME_COMMAND = 'claude {flags} --resume {id}';
 
 /* Words the model reads as instructions, prepended to the prompt for options the CLI has no flag for. */
-export const promptPrefix = (selection: ModelSelection): string => (selection.options.effort === 'ultrathink' ? 'ultrathink\n\n' : '');
+export function promptPrefix(selection: ModelSelection): string {
+    return selection.options.effort === 'ultrathink' ? 'ultrathink\n\n' : '';
+}

@@ -25,12 +25,14 @@ export const useReleaseNotes = create<ReleaseNotesStore>(() => ({
     previousSeen: null
 }));
 
-export const canShowReleaseNotes = (): boolean => typeof desktop()?.releaseNotes === 'function';
+export function canShowReleaseNotes(): boolean {
+    return typeof desktop()?.releaseNotes === 'function';
+}
 
 let pending: Promise<void> | null = null;
 let running = 0;
 
-export const loadReleaseNotes = (refresh: boolean): Promise<void> => {
+export function loadReleaseNotes(refresh: boolean): Promise<void> {
     const bridge = desktop();
     if (!bridge?.releaseNotes) {
         return Promise.resolve();
@@ -62,30 +64,30 @@ export const loadReleaseNotes = (refresh: boolean): Promise<void> => {
     const current = run();
     pending = current;
     return current;
-};
+}
 
 /* The list from the shell's copy, once a session, for whether About has a link to show. */
-export const ensureReleaseNotes = (): void => {
+export function ensureReleaseNotes(): void {
     const state = useReleaseNotes.getState();
     if (state.notes !== null || state.loading) {
         return;
     }
     void loadReleaseNotes(false);
-};
+}
 
 /* Opening asks GitHub again, so a version the cached list does not know yet gets its one refetch. */
-export const openReleaseNotes = (version: string | null): void => {
+export function openReleaseNotes(version: string | null): void {
     useReleaseNotes.setState({ open: true, version });
     void loadReleaseNotes(true);
-};
+}
 
-export const closeReleaseNotes = (): void => {
+export function closeReleaseNotes(): void {
     useReleaseNotes.setState({ open: false });
-};
+}
 
-export const setPreviousSeenVersion = (version: string | null): void => {
+export function setPreviousSeenVersion(version: string | null): void {
     useReleaseNotes.setState({ previousSeen: version });
-};
+}
 
 export type NoteRole = 'upcoming' | 'installed' | 'older';
 
@@ -106,7 +108,7 @@ export interface NotesView {
 
 /* Read when a view is built rather than when this module loads, or the words would be the ones the
    app started in and never the ones a person switched to. */
-const updateBadge = (status: UpdateState['status']): string | null => {
+function updateBadge(status: UpdateState['status']): string | null {
     switch (status) {
         case 'available':
         case 'downloading':
@@ -115,9 +117,9 @@ const updateBadge = (status: UpdateState['status']): string | null => {
         default:
             return null;
     }
-};
+}
 
-export const notesView = (releases: Release[], currentVersion: string, updateState: UpdateState, previousSeen: string | null): NotesView => {
+export function notesView(releases: Release[], currentVersion: string, updateState: UpdateState, previousSeen: string | null): NotesView {
     const update = hasUpdate(updateState) && updateState.version ? updateState.version : null;
     const entries = releases.map((release): NoteEntry => {
         const order = compareVersions(release.version, currentVersion);
@@ -142,12 +144,12 @@ export const notesView = (releases: Release[], currentVersion: string, updateSta
         }
     }
     return { entries, link };
-};
+}
 
 /* The line the dialog shows for a version it was opened on and cannot find, once asking again is over. */
-export const missingNotesNotice = (releases: Release[], version: string | null, loading: boolean): { text: string; url: string } | null => {
+export function missingNotesNotice(releases: Release[], version: string | null, loading: boolean): { text: string; url: string } | null {
     if (version === null || loading || releases.some((release) => release.version === version)) {
         return null;
     }
     return { text: `Notes for version ${version} are not available yet`, url: `${RELEASES_PAGE}/tag/v${version}` };
-};
+}

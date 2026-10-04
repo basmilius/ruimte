@@ -13,7 +13,7 @@ const LOG_FORMAT = ['%H', '%h', '%an', '%at', '%ct', '%D', '%s'].join(FIELD);
  * one character a commit subject cannot hold. `%D` is the names pointing at the commit, comma
  * separated, with the arrow of `HEAD -> main` written out.
  */
-export const parseLog = (output: string): GitCommit[] => {
+export function parseLog(output: string): GitCommit[] {
     const commits: GitCommit[] = [];
     for (const record of output.split('\0')) {
         if (record === '') {
@@ -38,14 +38,14 @@ export const parseLog = (output: string): GitCommit[] => {
         });
     }
     return commits;
-};
+}
 
 /*
  * A page of the commit log of the checkout's own HEAD. The cursor is how many commits were handed
  * out before this page, which keeps paging right when a commit lands on top while the log is open:
  * a hash to continue from would silently skip the new one instead.
  */
-export const readLog = async (cwd: string, limit: number = DEFAULT_LIMIT, cursor?: string): Promise<GitLogResult> => {
+export async function readLog(cwd: string, limit: number = DEFAULT_LIMIT, cursor?: string): Promise<GitLogResult> {
     const top = await toplevel(cwd);
     const skip = Math.max(0, Number.parseInt(cursor ?? '0', 10) || 0);
     // One more than asked for, which is how the answer knows whether there is another page.
@@ -57,10 +57,10 @@ export const readLog = async (cwd: string, limit: number = DEFAULT_LIMIT, cursor
     const commits = parseLog(output);
     const page = commits.slice(0, limit);
     return { commits: page, cursor: commits.length > page.length ? String(skip + page.length) : null };
-};
+}
 
 /* One commit as the log row that names it, for the tab a diff of that commit opens in. */
-export const readCommit = async (top: string, hash: string): Promise<GitCommit | null> => {
+export async function readCommit(top: string, hash: string): Promise<GitCommit | null> {
     const output = await git(['log', '-z', `--format=${LOG_FORMAT}`, '--max-count=1', hash], top);
     return output === null ? null : (parseLog(output)[0] ?? null);
-};
+}

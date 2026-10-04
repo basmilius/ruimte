@@ -67,7 +67,7 @@ for (const [name, schema] of Object.entries(roots)) {
     schemas[name] = z.toJSONSchema(schema, { io: 'input', unrepresentable: 'throw' });
 }
 // JSON Schema cannot carry Zod refinements; retain the statement lifetime check explicitly.
-const stampStatement = (schema: Schema): void => {
+function stampStatement(schema: Schema): void {
     if (schema.type === 'object' && schema.properties?.machineId && schema.properties?.clientPublicKey && schema.properties?.expiresAt) {
         schema['x-statement-lifetime-ms'] = address.ACCESS_STATEMENT_LIFETIME_MS;
     }
@@ -82,22 +82,29 @@ const stampStatement = (schema: Schema): void => {
             stampStatement(value);
         }
     }
-};
+}
 Object.values(schemas).forEach(stampStatement);
-const canonical = (schema: Schema): string => JSON.stringify(schema, (key, value) => (key === '$schema' ? undefined : value));
+function canonical(schema: Schema): string {
+    return JSON.stringify(schema, (key, value) => (key === '$schema' ? undefined : value));
+}
 const names = new Map(
     Object.entries(schemas).map(([name, schema]) => [canonical(schema), name.replace(/Schema$/, '') === 'Error' ? 'WireError' : name.replace(/Schema$/, '')])
 );
 const declarations = new Map<string, string>();
-const camel = (name: string): string => name.replace(/[-. ]+(\w)/g, (_match, letter) => letter.toUpperCase());
-const identifier = (name: string): string => `\`${camel(name)}\``;
-const nullable = (schema: Schema): Schema | undefined =>
-    Array.isArray(schema.type) && schema.type.includes('null')
+function camel(name: string): string {
+    return name.replace(/[-. ]+(\w)/g, (_match, letter) => letter.toUpperCase());
+}
+function identifier(name: string): string {
+    return `\`${camel(name)}\``;
+}
+function nullable(schema: Schema): Schema | undefined {
+    return Array.isArray(schema.type) && schema.type.includes('null')
         ? { ...schema, type: schema.type.find((type: string) => type !== 'null') }
         : schema.anyOf?.length === 2 && schema.anyOf.some((entry: Schema) => entry.type === 'null')
           ? schema.anyOf.find((entry: Schema) => entry.type !== 'null')
           : undefined;
-const typeOf = (schema: Schema, suggested: string, force = false): string => {
+}
+function typeOf(schema: Schema, suggested: string, force = false): string {
     const inner = nullable(schema);
     if (inner) {
         return `${typeOf(inner, suggested)}?`;
@@ -204,7 +211,7 @@ const typeOf = (schema: Schema, suggested: string, force = false): string => {
         return 'JSONValue';
     }
     throw new Error(`Unsupported schema ${suggested}: ${JSON.stringify(schema)}`);
-};
+}
 for (const [name, schema] of Object.entries(schemas)) {
     const clean = name === 'ErrorSchema' ? 'WireError' : name.replace(/Schema$/, '');
     const type = typeOf(schema, clean, true);
@@ -295,8 +302,9 @@ for (const [name, schema] of Object.entries(apiRoots)) {
         schemas[name]!['x-follow-dimensions'] = true;
     }
 }
-const tableSource = (name: string, entries: string[], methods: string): string =>
-    `public enum ${name}: String, CaseIterable, Sendable {\n${entries.map((entry) => `    case ${identifier(entry)} = ${JSON.stringify(entry)}`).join('\n')}\n\n${methods}\n}`;
+function tableSource(name: string, entries: string[], methods: string): string {
+    return `public enum ${name}: String, CaseIterable, Sendable {\n${entries.map((entry) => `    case ${identifier(entry)} = ${JSON.stringify(entry)}`).join('\n')}\n\n${methods}\n}`;
+}
 const apiSource = [
     tableSource(
         'WireRequest',
@@ -564,11 +572,27 @@ const readNonce = Buffer.alloc(12, 4);
 const readCipher = createCipheriv('aes-256-gcm', pushSymmetric, readNonce, { authTagLength: 16 });
 readCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
 const readCiphertext = Buffer.concat([readCipher.update(Buffer.from(JSON.stringify(readContent))), readCipher.final(), readCipher.getAuthTag()]);
-const unsignedRead = { ...unsignedPush, pushType: 'background' as const, nonce: readNonce.toString('base64url'), ciphertext: readCiphertext.toString('base64url') };
-const pushReadEncryption = { ...pushEncryption, content: readContent,
-    push: { ...unsignedRead, signature: sign(null, Buffer.from(signing.pushMessage(unsignedRead)), privateKey).toString('base64url') } };
-const activityPush: push.PushEnvelope = { ...pushRouting, pushType: 'liveactivity', signature: '',
-    activity: { title: 'Mac', phase: 'needs-you', startedAt: 1000, runningCount: 1, attentionCount: 1,
+const unsignedRead = {
+    ...unsignedPush,
+    pushType: 'background' as const,
+    nonce: readNonce.toString('base64url'),
+    ciphertext: readCiphertext.toString('base64url')
+};
+const pushReadEncryption = {
+    ...pushEncryption,
+    content: readContent,
+    push: { ...unsignedRead, signature: sign(null, Buffer.from(signing.pushMessage(unsignedRead)), privateKey).toString('base64url') }
+};
+const activityPush: push.PushEnvelope = {
+    ...pushRouting,
+    pushType: 'liveactivity',
+    signature: '',
+    activity: {
+        title: 'Mac',
+        phase: 'needs-you',
+        startedAt: 1000,
+        runningCount: 1,
+        attentionCount: 1,
         agents: [
             { nodeId: 'review-1', target: 'chat', title: 'Review café 🚀', phase: 'needs-you', startedAt: 900 },
             { nodeId: 'build-2', target: 'terminal', title: 'Build app', phase: 'running' }

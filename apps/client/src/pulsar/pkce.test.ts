@@ -2,11 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { LoginStartQuerySchema } from '@ruimte/pulsar';
 import { LoginError, codeFromCallback, createLoginState, createPkce, loginStartUrl } from './pkce';
 
-const sha256 = async (text: string): Promise<string> =>
-    btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))))
+async function sha256(text: string): Promise<string> {
+    return btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))))
         .replaceAll('+', '-')
         .replaceAll('/', '_')
         .replace(/=+$/, '');
+}
 
 describe('PKCE and state', () => {
     test('a verifier is 43 characters of base64url and the challenge is its SHA-256', async () => {

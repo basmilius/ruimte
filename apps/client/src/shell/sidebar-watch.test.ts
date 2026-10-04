@@ -36,16 +36,16 @@ class FakeTransport implements Transport {
 }
 
 const watchers: SidebarWatch[] = [];
-const watch = (transport: FakeTransport) => {
+function watch(transport: FakeTransport) {
     const watcher = new SidebarWatch(transport);
     watchers.push(watcher);
     return watcher;
-};
-const settle = async () => {
+}
+async function settle() {
     for (let turn = 0; turn < 15; turn++) {
         await Promise.resolve();
     }
-};
+}
 afterEach(() => {
     watchers.splice(0).forEach((watcher) => watcher.dispose());
     jest.useRealTimers();

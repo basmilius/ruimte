@@ -58,9 +58,15 @@ export const ALL_SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [...SETTING
 const AGENTS_SECTIONS: Partial<Record<SettingsSectionId, AgentsSettingsSection>> = { providers: PROVIDERS_SECTION, usage: USAGE_SECTION };
 
 /* Read when a section is drawn, never at module level. The translations are not in yet while this file loads. */
-export const sectionLabel = (id: SettingsSectionId): string => AGENTS_SECTIONS[id]?.label() ?? i18next.t(`settings:sections.${id}.label`);
+export function sectionLabel(id: SettingsSectionId): string {
+    return AGENTS_SECTIONS[id]?.label() ?? i18next.t(`settings:sections.${id}.label`);
+}
 
 /* One line under the pane title that says what the pane is about. */
-export const sectionDescription = (id: SettingsSectionId): string => AGENTS_SECTIONS[id]?.description() ?? i18next.t(`settings:sections.${id}.description`);
+export function sectionDescription(id: SettingsSectionId): string {
+    return AGENTS_SECTIONS[id]?.description() ?? i18next.t(`settings:sections.${id}.description`);
+}
 
-export const groupLabel = (label: NonNullable<SettingsNavGroup['label']>): string => i18next.t(`settings:nav.groups.${label}`);
+export function groupLabel(label: NonNullable<SettingsNavGroup['label']>): string {
+    return i18next.t(`settings:nav.groups.${label}`);
+}

@@ -4,33 +4,39 @@ import { useWindow } from '../state/window';
 import type { OpenRequest } from '../transport/connections';
 import { bootWindow, switchRun, type SwitchDeps, type SwitchPlan, type Whereabouts } from './open';
 
-const endpoint = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: id,
-    daemonPublicKey: null
-});
+function endpoint(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: id,
+        daemonPublicKey: null
+    };
+}
 
-const fakeStorage = (storage: Map<string, string>) => ({
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => void storage.set(key, value),
-    removeItem: (key: string) => void storage.delete(key)
-});
+function fakeStorage(storage: Map<string, string>) {
+    return {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => void storage.set(key, value),
+        removeItem: (key: string) => void storage.delete(key)
+    };
+}
 
-const stored = (value: unknown): Map<string, string> => new Map([['ruimte.lastProject', JSON.stringify(value)]]);
+function stored(value: unknown): Map<string, string> {
+    return new Map([['ruimte.lastProject', JSON.stringify(value)]]);
+}
 
-const describeRequest = (request: OpenRequest): string => {
+function describeRequest(request: OpenRequest): string {
     if ('projectId' in request) {
         return `project:${request.projectId}`;
     }
     return `folder:${request.folder}:${request.createFolder}`;
-};
+}
 
 /* A window with a project on screen (or none), and every step the switch takes written down. */
-const spyDeps = (start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { deps: SwitchDeps; steps: string[]; here: () => Whereabouts | null } => {
+function spyDeps(start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { deps: SwitchDeps; steps: string[]; here: () => Whereabouts | null } {
     const steps: string[] = [];
     let current = start;
     const deps: SwitchDeps = {
@@ -54,17 +60,19 @@ const spyDeps = (start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { d
         ...over
     };
     return { deps, steps, here: () => current };
-};
+}
 
 const HERE: Whereabouts = { endpointId: 'local', projectId: 'p0' };
 
 /* Runs the steps of a plan the way the switch does, with a signal nobody aborts unless the test passes one. */
-const run = (plan: SwitchPlan, deps: SwitchDeps, controller = new AbortController(), opening: () => void = () => undefined) => {
+function run(plan: SwitchPlan, deps: SwitchDeps, controller = new AbortController(), opening: () => void = () => undefined) {
     const handle = switchRun(plan, deps);
     return { handle, done: handle.steps({ signal: controller.signal, opening }) };
-};
+}
 
-const folder = (endpointId: string, createFolder = false): SwitchPlan => ({ kind: 'folder', endpointId, folder: '/work/atlas', createFolder });
+function folder(endpointId: string, createFolder = false): SwitchPlan {
+    return { kind: 'folder', endpointId, folder: '/work/atlas', createFolder };
+}
 
 describe('opening a folder on the machine it is on', () => {
     test('from the start screen the machine is reached and the folder opens in a workspace', async () => {
@@ -178,13 +186,15 @@ describe('opening a project', () => {
 });
 
 /* The shell's claims written down beside the steps, granted unless the project is in `taken`. */
-const claiming = (steps: string[], taken: string[] = []): Pick<SwitchDeps, 'claim'> => ({
-    claim: async (project) => {
-        const key = project === null ? 'none' : `${project.endpointId}:${project.projectId}`;
-        steps.push(`claim:${key}`);
-        return !taken.includes(key);
-    }
-});
+function claiming(steps: string[], taken: string[] = []): Pick<SwitchDeps, 'claim'> {
+    return {
+        claim: async (project) => {
+            const key = project === null ? 'none' : `${project.endpointId}:${project.projectId}`;
+            steps.push(`claim:${key}`);
+            return !taken.includes(key);
+        }
+    };
+}
 
 describe('one project in one window', () => {
     test('the shell is asked for the project before the open one is left', async () => {

@@ -10,34 +10,40 @@ const palette = Object.fromEntries(
 
 const base = { stroke: 'ink', strokeWidth: 2, seed: 7 } as const;
 
-const rect = (id: string, x = 0, y = 0): DrawingElement => ({ kind: 'rect', id, x, y, w: 100, h: 60, ...base });
+function rect(id: string, x = 0, y = 0): DrawingElement {
+    return { kind: 'rect', id, x, y, w: 100, h: 60, ...base };
+}
 
-const text = (id: string, value: string, x: number, y: number): DrawingElement => ({
-    kind: 'text',
-    id,
-    x,
-    y,
-    w: 80,
-    h: 24,
-    ...base,
-    text: value,
-    size: 20
-});
+function text(id: string, value: string, x: number, y: number): DrawingElement {
+    return {
+        kind: 'text',
+        id,
+        x,
+        y,
+        w: 80,
+        h: 24,
+        ...base,
+        text: value,
+        size: 20
+    };
+}
 
-const line = (id: string, from: [number, number], to: [number, number], head = true): DrawingElement => ({
-    kind: 'line',
-    id,
-    x: from[0],
-    y: from[1],
-    w: Math.abs(to[0] - from[0]),
-    h: Math.abs(to[1] - from[1]),
-    ...base,
-    points: [
-        [0, 0],
-        [to[0] - from[0], to[1] - from[1]]
-    ],
-    ...(head ? { arrowEnd: true } : {})
-});
+function line(id: string, from: [number, number], to: [number, number], head = true): DrawingElement {
+    return {
+        kind: 'line',
+        id,
+        x: from[0],
+        y: from[1],
+        w: Math.abs(to[0] - from[0]),
+        h: Math.abs(to[1] - from[1]),
+        ...base,
+        points: [
+            [0, 0],
+            [to[0] - from[0], to[1] - from[1]]
+        ],
+        ...(head ? { arrowEnd: true } : {})
+    };
+}
 
 describe('paths', () => {
     test('the same seed draws the same path twice, and another seed does not', () => {
@@ -86,19 +92,21 @@ describe('paths', () => {
     });
 });
 
-const note = (id: string, value: string, x = 0, y = 0): DrawingElement => ({
-    kind: 'note',
-    id,
-    x,
-    y,
-    w: 180,
-    h: 180,
-    ...base,
-    fill: 'solid',
-    fillColor: 'yellow',
-    text: value,
-    size: 20
-});
+function note(id: string, value: string, x = 0, y = 0): DrawingElement {
+    return {
+        kind: 'note',
+        id,
+        x,
+        y,
+        w: 180,
+        h: 180,
+        ...base,
+        fill: 'solid',
+        fillColor: 'yellow',
+        text: value,
+        size: 20
+    };
+}
 
 describe('a sticky note', () => {
     test('it is paper with an edge, drawn without any wobble', () => {

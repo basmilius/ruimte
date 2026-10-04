@@ -43,7 +43,7 @@ interface BranchMenuProps {
 /* Which checkout the branch is in, when it is not simply the project folder: the worktree, named
    after the group that binds it since that says more than its path does, or the repository, since a
    branch called `main` says nothing about which of a folder's repositories is on it. */
-const prefixOf = (target: GitTarget): string | null => {
+function prefixOf(target: GitTarget): string | null {
     if (target.cwd === null) {
         return null;
     }
@@ -51,7 +51,7 @@ const prefixOf = (target: GitTarget): string | null => {
         return target.label;
     }
     return target.kind === 'worktree' ? (target.group ?? basenameOf(target.cwd)) : null;
-};
+}
 
 export function BranchMenu({
     target,

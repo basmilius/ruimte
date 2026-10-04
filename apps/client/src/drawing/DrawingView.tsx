@@ -38,8 +38,9 @@ import { isApplePlatform } from '@/desktop/bridge';
  * events through the surface. A press on either is a button, never the start of a gesture: without
  * this the marquee below clears the selection and captures the pointer, so the click never lands.
  */
-const isChrome = (target: EventTarget | null): boolean =>
-    isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-drawing-chrome]') !== null);
+function isChrome(target: EventTarget | null): boolean {
+    return isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-drawing-chrome]') !== null);
+}
 
 /* How far from a line or an outline a click still lands on it, before the zoom is taken out. */
 const HIT_TOLERANCE = 10;
@@ -538,7 +539,7 @@ export function DrawingView({ id }: { id: string }) {
 }
 
 /* What the pointer says it will do here: the tool, unless a gesture is already saying otherwise. */
-const cursorFor = (tool: string, gesture: Gesture['kind'] | null, space: boolean): string => {
+function cursorFor(tool: string, gesture: Gesture['kind'] | null, space: boolean): string {
     if (gesture === 'pan') {
         return 'grabbing';
     }
@@ -552,4 +553,4 @@ const cursorFor = (tool: string, gesture: Gesture['kind'] | null, space: boolean
         return 'crosshair';
     }
     return tool === 'select' ? 'default' : 'crosshair';
-};
+}

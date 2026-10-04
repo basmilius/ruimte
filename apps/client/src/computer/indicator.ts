@@ -11,17 +11,20 @@ export interface IndicatorLook {
 }
 
 /* How the session stands while this node's agent holds the Mac; null while it does not. */
-export const nodeSessionMode = (status: ComputerUseStatus | undefined, nodeId: string): ComputerSessionMode | null => {
+export function nodeSessionMode(status: ComputerUseStatus | undefined, nodeId: string): ComputerSessionMode | null {
     const session = status?.session;
     return session && session.nodeId === nodeId ? session.mode : null;
-};
+}
 
-export const useNodeComputerSession = (endpointId: string, nodeId: string): ComputerSessionMode | null =>
-    useComputer((s) => nodeSessionMode(s.statuses[endpointId], nodeId));
+export function useNodeComputerSession(endpointId: string, nodeId: string): ComputerSessionMode | null {
+    return useComputer((s) => nodeSessionMode(s.statuses[endpointId], nodeId));
+}
 
 /* `machine` is the label the rest of the client gives the machine the agent operates. */
-export const indicatorLook = (mode: ComputerSessionMode, machine: string): IndicatorLook => ({
-    tone: mode === 'running' ? 'accent' : 'muted',
-    label: i18next.t(`computer:indicator.${mode}`, { machine }),
-    actions: mode === 'running' ? ['pause', 'stop'] : ['resume', 'stop']
-});
+export function indicatorLook(mode: ComputerSessionMode, machine: string): IndicatorLook {
+    return {
+        tone: mode === 'running' ? 'accent' : 'muted',
+        label: i18next.t(`computer:indicator.${mode}`, { machine }),
+        actions: mode === 'running' ? ['pause', 'stop'] : ['resume', 'stop']
+    };
+}

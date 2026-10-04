@@ -29,7 +29,8 @@ export const CLIENT_CSP_DIRECTIVES = {
 } satisfies CspDirectives;
 
 /* The policy as a header value. An override replaces a directive whole, and a name that is not in the table is added to the end. */
-export const cspString = (overrides: CspDirectives = {}): string =>
-    Object.entries({ ...CLIENT_CSP_DIRECTIVES, ...overrides })
+export function cspString(overrides: CspDirectives = {}): string {
+    return Object.entries({ ...CLIENT_CSP_DIRECTIVES, ...overrides })
         .map(([name, values]) => `${name} ${values.join(' ')}`)
         .join('; ');
+}

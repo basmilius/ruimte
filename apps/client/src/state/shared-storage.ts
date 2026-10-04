@@ -10,7 +10,7 @@ import { THEME_STORAGE_KEY, useTheme } from '@/state/theme';
  * pinned for them), the settings, the theme, the defaults a new agent starts with and how the usage
  * page reads. What a window keeps for itself (the open view, the camera, the panels) stays out of it.
  */
-export const startSharedStorage = (target?: StorageTarget | null): (() => void) => {
+export function startSharedStorage(target?: StorageTarget | null): () => void {
     const stops = [
         followOtherWindows(ENDPOINTS_STORAGE_KEY, () => useEndpoints.getState().reload(), target),
         followOtherWindows(SETTINGS_STORAGE_KEY, () => useSettings.getState().reload(), target),
@@ -19,4 +19,4 @@ export const startSharedStorage = (target?: StorageTarget | null): (() => void) 
         followOtherWindows(USAGE_PREFERENCES_KEY, reloadUsagePreferences, target)
     ];
     return () => stops.forEach((stop) => stop());
-};
+}

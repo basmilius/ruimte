@@ -42,7 +42,7 @@ export interface EndChildrenWiring {
     start(): void;
 }
 
-export const wireEndChildren = ({
+export function wireEndChildren({
     lineage,
     outbox,
     tasks,
@@ -52,7 +52,7 @@ export const wireEndChildren = ({
     now = Date.now,
     log = console.error,
     ended
-}: EndChildrenWiringDeps): EndChildrenWiring => {
+}: EndChildrenWiringDeps): EndChildrenWiring {
     const ending = endChildren({
         lineage,
         tasks,
@@ -100,4 +100,4 @@ export const wireEndChildren = ({
             }
         }
     };
-};
+}

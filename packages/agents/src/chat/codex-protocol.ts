@@ -12,16 +12,22 @@ type CodexAnswer = { kind: 'respond'; rpcId: CodexRpcId; result: unknown } | { k
 
 type Frame = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is Frame => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Frame {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+function str(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
 
-const num = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+function num(value: unknown): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
 
 // Codex wraps every command in a login shell; the person wants to read the command, not the wrapper.
 const SHELL_WRAPPER = /^(?:\/bin\/|\/usr\/bin\/)?(?:zsh|bash|sh) -lc (.*)$/s;
 
-export const unwrapCommand = (command: string): string => {
+export function unwrapCommand(command: string): string {
     const match = SHELL_WRAPPER.exec(command);
     if (!match) {
         return command;
@@ -29,9 +35,9 @@ export const unwrapCommand = (command: string): string => {
     const inner = match[1]!;
     const quoted = /^(["'])([\s\S]*)\1$/.exec(inner);
     return quoted ? quoted[2]! : inner;
-};
+}
 
-const textOf = (content: unknown): string => {
+function textOf(content: unknown): string {
     if (typeof content === 'string') {
         return content;
     }
@@ -42,13 +48,13 @@ const textOf = (content: unknown): string => {
         .map((block) => (isRecord(block) ? (str(block.text) ?? null) : null))
         .filter((text): text is string => text !== null)
         .join('\n');
-};
+}
 
 // What `agentsStates` says of an agent that stopped working; the call that reports it may have completed long before.
 const ENDED_AGENT_STATES = new Set(['completed', 'errored', 'interrupted', 'shutdown', 'notFound']);
 
 /* What became of every agent a collab call touched, one line each; empty while the call still runs. */
-const collabAgentOutput = (states: unknown): string => {
+function collabAgentOutput(states: unknown): string {
     if (!isRecord(states)) {
         return '';
     }
@@ -59,10 +65,10 @@ const collabAgentOutput = (states: unknown): string => {
             return message ? `${thread}: ${status}, ${message}` : `${thread}: ${status}`;
         })
         .join('\n');
-};
+}
 
 /* A blocking `request_user_input` question, as far as the person needs to see it. */
-const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
+function parseBlockingQuestions(questions: unknown): ChatQuestion[] {
     if (!Array.isArray(questions)) {
         return [];
     }
@@ -75,10 +81,10 @@ const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
             : [],
         multiSelect: false
     }));
-};
+}
 
 /* The questions an agent message carries when Codex asks without blocking the turn. */
-const parseAsyncQuestions = (questions: unknown): ChatQuestion[] => {
+function parseAsyncQuestions(questions: unknown): ChatQuestion[] {
     if (!Array.isArray(questions)) {
         return [];
     }
@@ -91,15 +97,16 @@ const parseAsyncQuestions = (questions: unknown): ChatQuestion[] => {
             : [],
         multiSelect: false
     }));
-};
+}
 
-const toLines = (value: unknown): string[] =>
-    Array.isArray(value) ? value.filter((line): line is string => typeof line === 'string' && line.trim() !== '') : [];
+function toLines(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((line): line is string => typeof line === 'string' && line.trim() !== '') : [];
+}
 
 const CHANGE_KINDS = new Set<ChatFileChange['kind']>(['add', 'update', 'delete']);
 
 /* The files a `fileChange` item touches, with the unified diff Codex reports per file. */
-const parseChanges = (value: unknown): ChatFileChange[] => {
+function parseChanges(value: unknown): ChatFileChange[] {
     if (!Array.isArray(value)) {
         return [];
     }
@@ -111,10 +118,10 @@ const parseChanges = (value: unknown): ChatFileChange[] => {
             diff: str(change.diff) ?? ''
         };
     });
-};
+}
 
 // Partial command output arrives as text or as the raw bytes of it, depending on the build.
-const outputChunk = (params: Frame): string | null => {
+function outputChunk(params: Frame): string | null {
     const text = str(params.delta) ?? str(params.chunk);
     if (text !== null) {
         return text;
@@ -124,7 +131,7 @@ const outputChunk = (params: Frame): string | null => {
         return null;
     }
     return new TextDecoder().decode(Uint8Array.from(bytes.filter((byte): byte is number => typeof byte === 'number')));
-};
+}
 
 type RequestOwner = { threadId: string | null; turnId: string | null };
 
@@ -138,19 +145,22 @@ type Pending = RequestOwner &
 type ElicitationPersist = 'always' | 'session';
 
 /* A form that asks for no fields is a yes or no, which is all an approval card can answer. */
-const isConfirmation = (params: Frame): boolean =>
-    params.mode === 'form' &&
-    isRecord(params.requestedSchema) &&
-    Object.keys(isRecord(params.requestedSchema.properties) ? params.requestedSchema.properties : {}).length === 0;
+function isConfirmation(params: Frame): boolean {
+    return (
+        params.mode === 'form' &&
+        isRecord(params.requestedSchema) &&
+        Object.keys(isRecord(params.requestedSchema.properties) ? params.requestedSchema.properties : {}).length === 0
+    );
+}
 
 /* The widest remembering the MCP server offers, which the one "always" button of a card stands for. */
-const elicitationPersist = (meta: Frame): ElicitationPersist | null => {
+function elicitationPersist(meta: Frame): ElicitationPersist | null {
     const offered = Array.isArray(meta.persist) ? meta.persist : [];
     return offered.includes('always') ? 'always' : offered.includes('session') ? 'session' : null;
-};
+}
 
 /* The arguments as the MCP server shows them to a person, keyed by name, so the card sums up the call. */
-const elicitationInput = (meta: Frame): Frame => {
+function elicitationInput(meta: Frame): Frame {
     const input: Frame = {};
     for (const param of Array.isArray(meta.tool_params_display) ? meta.tool_params_display : []) {
         if (isRecord(param) && typeof param.name === 'string') {
@@ -158,16 +168,16 @@ const elicitationInput = (meta: Frame): Frame => {
         }
     }
     return input;
-};
+}
 
 // Every spent window must reset; one unknown reset keeps resuming a person's choice.
-const spentUntil = (windows: readonly UsageWindow[]): number | null => {
+function spentUntil(windows: readonly UsageWindow[]): number | null {
     const spent = windows.filter((window) => window.used >= 1);
     if (spent.length === 0 || spent.some((window) => window.resetsAt === null)) {
         return null;
     }
     return Math.max(...spent.map((window) => window.resetsAt!));
-};
+}
 
 /*
  * The `codex app-server` protocol, in and out. Notifications and the server's own requests become
@@ -840,7 +850,7 @@ export class CodexProtocol {
  * The decision the app-server takes for one of ours; "always" becomes its own policy amendment when it offered one.
  * `decline` is accepted even when `availableDecisions` lists only accept, the amendment and cancel.
  */
-const codexDecision = (decision: ApprovalDecision, pending: Extract<Pending, { type: 'approval' }>): unknown => {
+function codexDecision(decision: ApprovalDecision, pending: Extract<Pending, { type: 'approval' }>): unknown {
     if (decision === 'deny') {
         return 'decline';
     }
@@ -851,12 +861,12 @@ const codexDecision = (decision: ApprovalDecision, pending: Extract<Pending, { t
         return { acceptWithExecpolicyAmendment: { execpolicy_amendment: pending.amendment } };
     }
     return pending.kind === 'fileChange' || pending.decisions.includes('acceptForSession') ? 'acceptForSession' : 'accept';
-};
+}
 
 /* The MCP answer to a yes or no; how long it is remembered rides along in `_meta.persist`. */
-const elicitationAnswer = (decision: ApprovalDecision, persist: ElicitationPersist | null): unknown => {
+function elicitationAnswer(decision: ApprovalDecision, persist: ElicitationPersist | null): unknown {
     if (decision === 'deny') {
         return { action: 'decline' };
     }
     return decision === 'allow-always' && persist !== null ? { action: 'accept', content: {}, _meta: { persist } } : { action: 'accept', content: {} };
-};
+}

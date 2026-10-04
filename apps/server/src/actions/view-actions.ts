@@ -33,7 +33,9 @@ import {
 } from '../canvas/views.ts';
 import type { ServerActionContext } from './context.ts';
 
-const kindOf = (view: ProjectView): ActionOutput<'view.focus'>['kind'] => (isUnknownView(view) ? 'unknown' : view.kind);
+function kindOf(view: ProjectView): ActionOutput<'view.focus'>['kind'] {
+    return isUnknownView(view) ? 'unknown' : view.kind;
+}
 
 export const viewActions: ActionHandlers<ServerActionContext> = {
     'view.list': async (_input, { actor, context }) => {

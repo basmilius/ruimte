@@ -3,7 +3,7 @@ import type { AuthStore } from './auth-store.ts';
 let nonces = 0;
 
 /* For tests: lets a key in the way a checked statement does, and answers its session. */
-export const admitClient = async (store: AuthStore, publicKey: string, label = 'Laptop', accountId = 'owner'): Promise<string> => {
+export async function admitClient(store: AuthStore, publicKey: string, label = 'Laptop', accountId = 'owner'): Promise<string> {
     nonces += 1;
     const admitted = await store.admitStatement({
         publicKey,
@@ -16,4 +16,4 @@ export const admitClient = async (store: AuthStore, publicKey: string, label = '
         throw new Error(`The store refused the key: ${admitted.refused}`);
     }
     return admitted.sessionId;
-};
+}

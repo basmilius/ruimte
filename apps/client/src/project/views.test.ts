@@ -7,7 +7,9 @@ import { currentEndpointId } from '../state/keys';
 import { providerSinkFor } from '@ruimte/agents-react/state/providers';
 import { askAgentAboutDiagram, newFileViewsAfter, openSessionInKind } from './views';
 
-const installed = (kind: string, name: string) => ({ kind, name, installed: true, capabilities: { chat: true, terminal: true } }) as unknown as ProviderInfo;
+function installed(kind: string, name: string) {
+    return { kind, name, installed: true, capabilities: { chat: true, terminal: true } } as unknown as ProviderInfo;
+}
 
 const document: ProjectDocument = {
     version: 3,

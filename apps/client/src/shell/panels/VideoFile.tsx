@@ -15,7 +15,9 @@ import { formatBytes } from '@basmilius/desktop-ui/format';
  * runtime knows is not a promise about the codecs inside it, so `canPlayType` answers "maybe" more
  * often than "probably"; an empty answer is the only certain no, and the one this asks about.
  */
-const canPlay = (mime: string): boolean => typeof document !== 'undefined' && document.createElement('video').canPlayType(mime) !== '';
+function canPlay(mime: string): boolean {
+    return typeof document !== 'undefined' && document.createElement('video').canPlayType(mime) !== '';
+}
 
 /* A video in ranges, so the scrubber works: from the daemon's own route, or over a direct connection through the bytes worker. */
 export function VideoFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {

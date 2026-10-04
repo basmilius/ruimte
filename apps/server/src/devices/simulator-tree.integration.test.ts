@@ -29,33 +29,35 @@ afterAll(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const content = (): ProjectContent => ({
-    name: 'trial',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-1', kind: 'chat', title: 'Tester', x: 0, y: 0, w: 560, h: 360 },
-                {
-                    id: 'phone-1',
-                    kind: 'device',
-                    title: 'Phone',
-                    x: 700,
-                    y: 0,
-                    w: 400,
-                    h: 800,
-                    device: { platform: 'ios', kind: 'simulator', name: booted?.name ?? '-', runtime: booted?.runtime ?? '-' }
-                }
-            ],
-            texts: [],
-            edges: [{ id: 'edge-1', from: 'phone-1', to: 'chat-1' }],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'trial',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-1', kind: 'chat', title: 'Tester', x: 0, y: 0, w: 560, h: 360 },
+                    {
+                        id: 'phone-1',
+                        kind: 'device',
+                        title: 'Phone',
+                        x: 700,
+                        y: 0,
+                        w: 400,
+                        h: 800,
+                        device: { platform: 'ios', kind: 'simulator', name: booted?.name ?? '-', runtime: booted?.runtime ?? '-' }
+                    }
+                ],
+                texts: [],
+                edges: [{ id: 'edge-1', from: 'phone-1', to: 'chat-1' }],
+                layouts: []
+            }
+        ]
+    };
+}
 
 const host = {
     locate: () => ({ projectId: 'p1', folder: home, canvasId: 'main' }),
@@ -63,7 +65,9 @@ const host = {
     devices: driver
 } as unknown as CanvasHost;
 
-const device = (argv: string[]) => (verbNamed('device') as Noun).run(argv, { caller: 'chat-1', host });
+function device(argv: string[]) {
+    return (verbNamed('device') as Noun).run(argv, { caller: 'chat-1', host });
+}
 
 describe.skipIf(booted === undefined)('ruimte-context device state on a booted simulator', () => {
     test('prints the elements of the app in front, and reads them again quickly from the same bridge', async () => {

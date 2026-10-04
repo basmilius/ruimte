@@ -16,8 +16,12 @@ const DEVICE_REFRESH_MS = 1_000;
 const DRAWABLE_FORMATS: DeviceVideoFormat[] = ['jpeg', 'hevc', 'h264'];
 export type DeviceTarget = Pick<DeviceInfo, 'backendId' | 'platform' | 'deviceId'>;
 
-const keyOf = (device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string => `${device.backendId}:${device.deviceId}`;
-const targetOf = (device: DeviceTarget) => ({ backendId: device.backendId, platform: device.platform, deviceId: device.deviceId });
+function keyOf(device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string {
+    return `${device.backendId}:${device.deviceId}`;
+}
+function targetOf(device: DeviceTarget) {
+    return { backendId: device.backendId, platform: device.platform, deviceId: device.deviceId };
+}
 
 export class DeviceClient {
     private readonly frameHandlers = new HandlerTable<LiveStreamFrame>();
@@ -237,4 +241,6 @@ export class DeviceClient {
     }
 }
 
-const messageOf = (error: unknown, fallback: string): string => (error instanceof Error ? error.message : fallback);
+function messageOf(error: unknown, fallback: string): string {
+    return error instanceof Error ? error.message : fallback;
+}

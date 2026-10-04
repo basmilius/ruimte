@@ -22,17 +22,17 @@ export interface Numstat {
     binary: boolean;
 }
 
-const countedLines = (numstat: string): number => {
+function countedLines(numstat: string): number {
     const added = Number.parseInt(numstat, 10);
     return Number.isNaN(added) ? 0 : added;
-};
+}
 
 /*
  * `--numstat -z` writes `<added>\t<deleted>\t<path>` per file, NUL terminated; a binary file counts
  * `-`. A rename leaves the path field empty and writes the old and the new path as two records of
  * their own, so the new one is what the entry ends up carrying.
  */
-export const parseNumstat = (output: string): Numstat[] => {
+export function parseNumstat(output: string): Numstat[] {
     const records = output.split('\0');
     const entries: Numstat[] = [];
     for (let i = 0; i < records.length; i += 1) {
@@ -52,10 +52,10 @@ export const parseNumstat = (output: string): Numstat[] => {
         entries.push({ path, added: countedLines(added), deleted: countedLines(deleted), binary: added === '-' });
     }
     return entries;
-};
+}
 
 // `--name-status -z` alternates a status letter and the path it belongs to.
-const kindsByPath = (output: string): Map<string, ChatCheckpointFile['kind']> => {
+function kindsByPath(output: string): Map<string, ChatCheckpointFile['kind']> {
     const kinds = new Map<string, ChatCheckpointFile['kind']>();
     const fields = output.split('\0').filter((field) => field !== '');
     for (let i = 0; i + 1 < fields.length; i += 2) {
@@ -63,14 +63,14 @@ const kindsByPath = (output: string): Map<string, ChatCheckpointFile['kind']> =>
         kinds.set(fields[i + 1]!, letter === 'A' ? 'add' : letter === 'D' ? 'delete' : 'update');
     }
     return kinds;
-};
+}
 
 /*
  * What changed between two git trees: one unified diff per file, with the counts a card shows and
  * the caps that keep a chat file small. Both the turn's checkpoint diff and the git panel read
  * their file lists through this, so a diff is capped and shaped the same way wherever it shows up.
  */
-export const diffTrees = async (top: string, from: string, to: string, prefix = ''): Promise<ChatCheckpointDiff | null> => {
+export async function diffTrees(top: string, from: string, to: string, prefix = ''): Promise<ChatCheckpointDiff | null> {
     // A folder inside the repository narrows the lists to what lies under it; the patches follow the list.
     const under = prefix === '' ? [] : ['--', `:(literal)${prefix}`];
     const numstat = await git(['diff', '--numstat', '-z', '--no-renames', from, to, ...under], top);
@@ -106,7 +106,7 @@ export const diffTrees = async (top: string, from: string, to: string, prefix = 
         files.push(file);
     }
     return { files, truncated: counts.length > files.length };
-};
+}
 
 export interface DiffOptions {
     scope: GitDiffScope;
@@ -118,10 +118,10 @@ export interface DiffOptions {
     ignoreWhitespace: boolean;
 }
 
-const isTracked = async (top: string, path: string): Promise<boolean> => {
+async function isTracked(top: string, path: string): Promise<boolean> {
     const listed = await git(['ls-files', '-z', '--', `:(literal)${path}`], top);
     return listed !== null && listed !== '';
-};
+}
 
 /*
  * The arguments a scope diffs with. An untracked file is nowhere in history, so it is read against
@@ -129,7 +129,7 @@ const isTracked = async (top: string, path: string): Promise<boolean> => {
  * consult. `base` diffs the merge base against the working tree, so a file the panel lists shows
  * everything this branch did to it, committed or not.
  */
-const diffArgs = async (top: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<string[]> => {
+async function diffArgs(top: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<string[]> {
     const args = [...PATCH_ARGS, ...(options.ignoreWhitespace ? ['--ignore-all-space'] : [])];
     // Only the working tree can hold a file git has never seen; in history every path is tracked.
     if (options.scope === 'worktree' && !(await isTracked(top, path))) {
@@ -144,10 +144,12 @@ const diffArgs = async (top: string, path: string, options: DiffOptions, mergeBa
         return ['diff', ...args, mergeBase ?? 'HEAD', '--', `:(literal)${path}`];
     }
     return ['diff', ...args, ...(options.staged ? ['--cached'] : []), '--', `:(literal)${path}`];
-};
+}
 
 /* The same call with `--numstat` in it, which is where the counts and the binary flag come from. */
-const asNumstat = (args: string[]): string[] => ['diff', '--numstat', '-z', ...args.slice(1)];
+function asNumstat(args: string[]): string[] {
+    return ['diff', '--numstat', '-z', ...args.slice(1)];
+}
 
 /* Where one side of a file's diff is read from: a blob git names, or a file in the working tree. */
 type Side = { blob: string } | { file: string };
@@ -156,7 +158,7 @@ type Side = { blob: string } | { file: string };
  * The two sides a scope compares, for the scopes the panel reads one file in. An untracked file
  * compares against nothing, which its patch says, so the index side it names is never read.
  */
-const sidesOf = (path: string, options: DiffOptions, mergeBase: string | null): readonly [Side, Side] | null => {
+function sidesOf(path: string, options: DiffOptions, mergeBase: string | null): readonly [Side, Side] | null {
     if (options.scope === 'base') {
         return [{ blob: `${mergeBase ?? 'HEAD'}:${path}` }, { file: path }];
     }
@@ -164,14 +166,14 @@ const sidesOf = (path: string, options: DiffOptions, mergeBase: string | null): 
         return null;
     }
     return options.staged ? [{ blob: `HEAD:${path}` }, { blob: `:0:${path}` }] : [{ blob: `:0:${path}` }, { file: path }];
-};
+}
 
 /* Which side a patch says the file is missing on, read from its header so no line of the file can pass for it. */
-export const missingSides = (patch: string): { old: boolean; new: boolean } => {
+export function missingSides(patch: string): { old: boolean; new: boolean } {
     const start = patch.search(/^@@/m);
     const header = start === -1 ? patch : patch.slice(0, start);
     return { old: /^--- \/dev\/null$/m.test(header), new: /^\+\+\+ \/dev\/null$/m.test(header) };
-};
+}
 
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
@@ -181,7 +183,7 @@ const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
  * wrong place. Under `--ignore-all-space` git shows one side's spacing on a shared line, so lines
  * are then compared without their whitespace.
  */
-export const patchFits = (patch: string, oldText: string, newText: string, ignoreWhitespace: boolean): boolean => {
+export function patchFits(patch: string, oldText: string, newText: string, ignoreWhitespace: boolean): boolean {
     const oldLines = oldText.split('\n');
     const newLines = newText.split('\n');
     const same = ignoreWhitespace
@@ -221,32 +223,36 @@ export const patchFits = (patch: string, oldText: string, newText: string, ignor
         }
     }
     return hunks > 0;
-};
+}
 
-const hasNul = (bytes: Uint8Array): boolean => bytes.includes(0);
+function hasNul(bytes: Uint8Array): boolean {
+    return bytes.includes(0);
+}
 
 // A patch shows a byte order mark as part of the first line, so a text keeps it too.
 const KEEP_BOM = new TextDecoder('utf-8', { ignoreBOM: true });
 
 /* A blob's text, or null when it is missing, too large or not text. */
-const readBlob = async (top: string, name: string): Promise<string | null> => {
+async function readBlob(top: string, name: string): Promise<string | null> {
     const size = await runGit(['cat-file', '-s', name], top);
     if (size.code !== 0 || Number(size.stdout.trim()) > MAX_SIDE_BYTES) {
         return null;
     }
     const blob = await runGitBytes(['cat-file', 'blob', name], top);
     return blob.code !== 0 || hasNul(blob.stdout) ? null : KEEP_BOM.decode(blob.stdout);
-};
+}
 
 /* A path relative to a folder that climbs out of it. */
-const leaves = (inside: string): boolean => inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside);
+function leaves(inside: string): boolean {
+    return inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside);
+}
 
 /*
  * Whether a path a client named stays inside the checkout, also once every symlinked folder on the
  * way is followed. The file itself may be gone, so the nearest folder of it that exists resolves.
  * A symlink at the end is diffed as its target's name and never read through.
  */
-const insideCheckout = async (top: string, path: string): Promise<boolean> => {
+async function insideCheckout(top: string, path: string): Promise<boolean> {
     const root = await realpath(top);
     if (isAbsolute(path) || leaves(relative(root, join(root, path)))) {
         return false;
@@ -262,13 +268,13 @@ const insideCheckout = async (top: string, path: string): Promise<boolean> => {
             folder = dirname(folder);
         }
     }
-};
+}
 
 /*
  * A file of the working tree, or null. A path that leaves the repository, also through a symlinked
  * folder, is never read; a symlink itself is its target's name to git, not a text.
  */
-const readWorktree = async (top: string, path: string): Promise<string | null> => {
+async function readWorktree(top: string, path: string): Promise<string | null> {
     try {
         const root = await realpath(top);
         const file = join(root, path);
@@ -285,17 +291,19 @@ const readWorktree = async (top: string, path: string): Promise<string | null> =
     } catch {
         return null;
     }
-};
+}
 
-const readSide = (top: string, side: Side): Promise<string | null> => ('blob' in side ? readBlob(top, side.blob) : readWorktree(top, side.file));
+function readSide(top: string, side: Side): Promise<string | null> {
+    return 'blob' in side ? readBlob(top, side.blob) : readWorktree(top, side.file);
+}
 
 /* Both whole texts of a one-file diff, or null when either cannot be handed over as the patch reads it. */
-const readSides = async (
+async function readSides(
     top: string,
     patch: string,
     [oldSide, newSide]: readonly [Side, Side],
     ignoreWhitespace: boolean
-): Promise<{ oldText: string; newText: string } | null> => {
+): Promise<{ oldText: string; newText: string } | null> {
     const missing = missingSides(patch);
     const oldText = missing.old ? '' : await readSide(top, oldSide);
     const newText = missing.new ? '' : await readSide(top, newSide);
@@ -303,13 +311,13 @@ const readSides = async (
         return null;
     }
     return { oldText, newText };
-};
+}
 
 /*
  * One file's diff for the git panel. `--no-index` answers 1 when the two sides differ, which is the
  * normal outcome and not a failure, so only a code above that means the diff could not be read.
  */
-export const diffFile = async (cwd: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<GitDiffResult> => {
+export async function diffFile(cwd: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<GitDiffResult> {
     const top = await toplevel(cwd);
     // An untracked file is read through `--no-index`, which follows any path it is handed.
     if (!(await insideCheckout(top, path))) {
@@ -346,23 +354,23 @@ export const diffFile = async (cwd: string, path: string, options: DiffOptions, 
         result.newText = texts.newText;
     }
     return result;
-};
+}
 
 // The tree of a repository with nothing in it: what the first commit is diffed against.
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 /* A commit's parent, or the empty tree for the first commit, which has none to compare with. */
-const parentOf = async (top: string, commit: string): Promise<string> => {
+async function parentOf(top: string, commit: string): Promise<string> {
     const parent = (await git(['rev-parse', '--verify', '--quiet', `${commit}^`], top))?.trim();
     return parent || EMPTY_TREE;
-};
+}
 
 /*
  * A whole commit as one answer: every file it touched, with the same caps a turn's diff has, plus
  * the row that names it. The panel's log opens this in a tab of its own, which is why it is one
  * request and not one per file.
  */
-export const diffCommit = async (cwd: string, commit: string): Promise<GitDiffResult> => {
+export async function diffCommit(cwd: string, commit: string): Promise<GitDiffResult> {
     const top = await toplevel(cwd);
     const hash = (await git(['rev-parse', '--verify', commit], top))?.trim();
     if (!hash) {
@@ -389,7 +397,7 @@ export const diffCommit = async (cwd: string, commit: string): Promise<GitDiffRe
         truncated: diff?.truncated ?? false,
         ...(meta ? { commit: meta } : {})
     };
-};
+}
 
 /*
  * Everything a checkout holds over where it left `from`: its commits, its uncommitted changes and
@@ -397,7 +405,7 @@ export const diffCommit = async (cwd: string, commit: string): Promise<GitDiffRe
  * tree through a throwaway index, started from a copy of the checkout's own so git only hashes what
  * changed; the person's index is never written.
  */
-export const diffCheckout = async (cwd: string, from: string | null): Promise<GitDiffResult> => {
+export async function diffCheckout(cwd: string, from: string | null): Promise<GitDiffResult> {
     const top = await toplevel(cwd);
     const scratch = await mkdtemp(join(tmpdir(), 'ruimte-diff-'));
     try {
@@ -437,4 +445,4 @@ export const diffCheckout = async (cwd: string, from: string | null): Promise<Gi
     } finally {
         await rm(scratch, { recursive: true, force: true });
     }
-};
+}

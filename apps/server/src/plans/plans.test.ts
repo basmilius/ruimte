@@ -10,24 +10,26 @@ import type { SessionEvent } from '../sessions/manager.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { planFileName } from './plan-store.ts';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'term-lead', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'term-lead', kind: 'terminal', title: 'Shell', x: 0, y: 700, w: 560, h: 360 }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 const DOCUMENT = JSON.stringify({
     meta: { title: 'Ship the feature' },
@@ -67,36 +69,43 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const boot = async (installed: ('claude' | 'codex')[] = ['claude']): Promise<TestDaemon> => {
+async function boot(installed: ('claude' | 'codex')[] = ['claude']): Promise<TestDaemon> {
     const daemon = await bootTestDaemon({ home, store, clock, installed });
     running.push(daemon);
     return daemon;
-};
+}
 
-const listen = (daemon: TestDaemon): SessionEvent[] => {
+function listen(daemon: TestDaemon): SessionEvent[] {
     const events: SessionEvent[] = [];
     daemon.plans.subscribe('test', (event) => events.push(event));
     return events;
-};
+}
 
-const newPlan = async (daemon: TestDaemon, document = DOCUMENT): Promise<string> => {
+async function newPlan(daemon: TestDaemon, document = DOCUMENT): Promise<string> {
     const lines = await runVerb(daemon, 'chat-lead', 'plan', ['new', `--document=${document}`]);
     const [kind, planId] = lines[0]!.split('\t');
     expect(kind).toBe('plan');
     return planId!;
-};
+}
 
-const refusalCode = (lines: string[]): string | undefined => (lines[0]!.startsWith('refused\t') ? lines[0]!.split('\t')[1] : undefined);
+function refusalCode(lines: string[]): string | undefined {
+    return lines[0]!.startsWith('refused\t') ? lines[0]!.split('\t')[1] : undefined;
+}
 
-const planOf = async (daemon: TestDaemon, planId: string): Promise<Plan> => (await daemon.plans.read('chat-lead')).find((plan) => plan.id === planId)!;
+async function planOf(daemon: TestDaemon, planId: string): Promise<Plan> {
+    return (await daemon.plans.read('chat-lead')).find((plan) => plan.id === planId)!;
+}
 
-const stepOf = (plan: Plan, id: string) => plan.items.find((item) => item.id === id) as Extract<Plan['items'][number], { type: 'step' }>;
+function stepOf(plan: Plan, id: string) {
+    return plan.items.find((item) => item.id === id) as Extract<Plan['items'][number], { type: 'step' }>;
+}
 
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
+function exists(path: string): Promise<boolean> {
+    return stat(path).then(
         () => true,
         () => false
     );
+}
 
 describe('plan verbs', () => {
     test('plan new from a chat writes the plan and sends plan.changed and plan.created; a terminal is refused', async () => {

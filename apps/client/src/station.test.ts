@@ -4,12 +4,14 @@ import { stationBoot, type StationBootInput } from './station';
 
 const machine: Machine = { id: 'studio', name: 'Studio', icon: null, publicKey: 'A'.repeat(43), brokerUrl: 'wss://broker.ruimte.app', lastSeenAt: null };
 
-const input = (patch: Partial<StationBootInput> = {}): StationBootInput => ({
-    station: true,
-    accountStatus: 'signed-out',
-    machines: null,
-    ...patch
-});
+function input(patch: Partial<StationBootInput> = {}): StationBootInput {
+    return {
+        station: true,
+        accountStatus: 'signed-out',
+        machines: null,
+        ...patch
+    };
+}
 
 describe('the web boot state', () => {
     test('a fresh web client offers signing in rather than reaching for a machine at its own origin', () => {

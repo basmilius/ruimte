@@ -13,7 +13,7 @@ const TITLE_PATTERN = /<title[^>]*>([\s\S]*?)<\/title>/i;
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'" };
 
-export const titleOfHtml = (html: string): string | undefined => {
+export function titleOfHtml(html: string): string | undefined {
     const match = TITLE_PATTERN.exec(html);
     if (match === null) {
         return undefined;
@@ -23,9 +23,9 @@ export const titleOfHtml = (html: string): string | undefined => {
         .replace(/\s+/g, ' ')
         .trim();
     return text === '' ? undefined : clipText(text, 200);
-};
+}
 
-const readStart = async (response: Response): Promise<string> => {
+async function readStart(response: Response): Promise<string> {
     const body = response.body;
     if (body === null) {
         return '';
@@ -45,9 +45,9 @@ const readStart = async (response: Response): Promise<string> => {
         await reader.cancel().catch(() => undefined);
     }
     return html;
-};
+}
 
-const probePort = async (port: number, request: Fetch): Promise<DevServer | null> => {
+async function probePort(port: number, request: Fetch): Promise<DevServer | null> {
     try {
         // 127.0.0.1 rather than localhost: a resolver that answers ::1 first would call a server
         // bound to IPv4 down. A redirect is an answer as well, and following one could leave the machine.
@@ -61,14 +61,14 @@ const probePort = async (port: number, request: Fetch): Promise<DevServer | null
     } catch {
         return null;
     }
-};
+}
 
 /*
  * Which of the given ports have a web server on them, asked over HTTP rather than as a bare
  * connection: a page with a name is worth more on the splash than an open socket, and a port that
  * answers something other than HTTP is not one a browser node can open anyway.
  */
-export const probeDevServers = async (ports: readonly number[], request: Fetch = fetch): Promise<DevServer[]> => {
+export async function probeDevServers(ports: readonly number[], request: Fetch = fetch): Promise<DevServer[]> {
     const answers = await Promise.all(ports.map((port) => probePort(port, request)));
     return answers.filter((server): server is DevServer => server !== null).sort((one, other) => one.port - other.port);
-};
+}

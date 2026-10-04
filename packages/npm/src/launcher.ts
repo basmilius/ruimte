@@ -28,7 +28,7 @@ export const INTEL_NODE_REFUSAL =
 export const MUSL_REFUSAL =
     'Ruimte runs on Linux with glibc, and this system uses musl (as Alpine does), so npm left its binary out. Run it on a distribution with glibc, such as Debian or Ubuntu, or in a container of one.';
 
-export const platformPackageOf = (host: Host): string => {
+export function platformPackageOf(host: Host): string {
     if (host.platform === 'win32') {
         throw new LauncherError(WINDOWS_REFUSAL);
     }
@@ -40,10 +40,10 @@ export const platformPackageOf = (host: Host): string => {
         throw new LauncherError(`Ruimte has no build for ${host.platform} on ${host.arch}. It runs on Macs with Apple silicon and on Linux, on arm64 and x64.`);
     }
     return packageNameOf(target);
-};
+}
 
 /* `libc` is asked only once the package turns out missing, since finding it out costs a process report. */
-export const binaryPathOf = (host: Host, resolve: Resolve, libc: () => Libc = () => null): string => {
+export function binaryPathOf(host: Host, resolve: Resolve, libc: () => Libc = () => null): string {
     const name = platformPackageOf(host);
     let manifest: string;
     try {
@@ -58,12 +58,12 @@ export const binaryPathOf = (host: Host, resolve: Resolve, libc: () => Libc = ()
         );
     }
     return join(dirname(manifest), 'bin', 'ruimte');
-};
+}
 
 /* The launcher's exit code for a binary that ended: its own code, or 128 plus the signal as a shell reports it. */
-export const exitCodeOf = (code: number | null, signalNumber: number | null): number => {
+export function exitCodeOf(code: number | null, signalNumber: number | null): number {
     if (code !== null) {
         return code;
     }
     return signalNumber === null ? 1 : 128 + signalNumber;
-};
+}

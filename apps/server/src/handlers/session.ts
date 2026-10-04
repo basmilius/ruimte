@@ -11,7 +11,7 @@ export interface LoginCommands {
     nameOf(kind: AgentKind): string;
 }
 
-export const registerSessionHandlers = (dispatcher: Dispatcher, manager: SessionManager, beforeKill?: BeforeKill, logins?: LoginCommands): void => {
+export function registerSessionHandlers(dispatcher: Dispatcher, manager: SessionManager, beforeKill?: BeforeKill, logins?: LoginCommands): void {
     dispatcher.register('session.create', (payload) => translate(() => manager.create(payload)));
 
     /* No `cwd`, so the shell starts in the home folder. The default account is named outright, since a
@@ -100,4 +100,4 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
     // A terminal's permission request is answered in its CLI's own prompt; these two stay for clients built before that.
     dispatcher.register('agent.answerApproval', () => ({ accepted: false }));
     dispatcher.register('agent.setApprovals', () => ({}));
-};
+}

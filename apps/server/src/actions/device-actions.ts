@@ -5,8 +5,8 @@ import { CodedError } from '@ruimte/agents/coded-error';
 import type { ServerActionContext } from './context.ts';
 
 /* Every device node this caller may operate, for a refusal that offers what the next call takes. */
-const deviceLines = (sources: readonly ContextSource[], callerCanvas: string | null): string[] =>
-    orNote(
+function deviceLines(sources: readonly ContextSource[], callerCanvas: string | null): string[] {
+    return orNote(
         sources
             .filter((source) => source.kind === 'device')
             .map((source) => `device\t${source.id}\t${field(source.title)}\t${field(source.device?.name ?? '')}`),
@@ -14,9 +14,10 @@ const deviceLines = (sources: readonly ContextSource[], callerCanvas: string | n
             ? 'No device node is linked to you, and none can be: you are a view of your own, and a line only runs between two nodes of one canvas'
             : 'No device node is linked to you; ruimte-context link new --to <id> draws the line to one on your canvas'
     );
+}
 
 /* What gets a caller a device it may operate: a line, which only runs between two nodes of one canvas. */
-const lineLines = (id: string, callerCanvas: string | null, deviceCanvas: string): string[] => {
+function lineLines(id: string, callerCanvas: string | null, deviceCanvas: string): string[] {
     if (callerCanvas === null) {
         return [`note\t${id} stands on ${deviceCanvas}, and you are a view of your own: a line only runs between two nodes of one canvas`];
     }
@@ -24,14 +25,14 @@ const lineLines = (id: string, callerCanvas: string | null, deviceCanvas: string
         return [`see\truimte-context link new --to ${id}\tdraws it`];
     }
     return [`note\t${id} stands on ${deviceCanvas} and you on ${callerCanvas}, and a line only runs between two nodes of one canvas`];
-};
+}
 
 /*
  * The device a call works on: the one a device node of this project points at, with a line between
  * that node and the caller, the same line a read takes. No card asks a person: the device is a
  * sandbox of its own, and the line is the permission.
  */
-const referenceOf = async ({ host, place }: ServerActionContext, caller: string, id: string): Promise<DeviceReference> => {
+async function referenceOf({ host, place }: ServerActionContext, caller: string, id: string): Promise<DeviceReference> {
     const content = await host.read(place.projectId);
     const sources = deriveProjectContextSources(content.views, null).get(caller) ?? [];
     const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((candidate) => candidate.id === id));
@@ -57,17 +58,17 @@ const referenceOf = async ({ host, place }: ServerActionContext, caller: string,
         ]);
     }
     return node.device;
-};
+}
 
-const driverOf = (host: CanvasHost): DeviceDriveHost => {
+function driverOf(host: CanvasHost): DeviceDriveHost {
     if (!host.devices) {
         throw new VerbRefusal('unavailable', 'This machine has no devices to operate');
     }
     return host.devices;
-};
+}
 
 /* The device a node points at on this machine now, refused when it is not here or not running. */
-const bootedDevice = async (context: ServerActionContext, caller: string, nodeId: string): Promise<DeviceInfo> => {
+async function bootedDevice(context: ServerActionContext, caller: string, nodeId: string): Promise<DeviceInfo> {
     const reference = await referenceOf(context, caller, nodeId);
     const device = await driverOf(context.host).find(reference);
     if (device === null) {
@@ -83,7 +84,7 @@ const bootedDevice = async (context: ServerActionContext, caller: string, nodeId
         );
     }
     return device;
-};
+}
 
 export const deviceActions: ActionHandlers<ServerActionContext> = {
     'device.inspect': async ({ nodeId, find }, { actor, context }) => {

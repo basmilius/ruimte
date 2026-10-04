@@ -9,11 +9,12 @@ const LAUNCH_PARAM = { syntax: '<launch>', need: 'required', field: 'launch', mo
 const APPROVAL_LINE =
     'approval\tA launch starts only once a person approved it on this machine for the command, folder and environment it has now; a changed launch needs that again';
 
-const launchTuple = (word: string) =>
-    z.tuple([z.string().min(1, `launches ${word} needs the id or the name of a launch`)], {
+function launchTuple(word: string) {
+    return z.tuple([z.string().min(1, `launches ${word} needs the id or the name of a launch`)], {
         error: (issue) =>
             issue.code === 'too_big' ? `launches ${word} takes one launch and nothing else` : `launches ${word} needs the id or the name of a launch`
     });
+}
 
 const listAction = defineActionVerb('launches', {
     name: 'list',
@@ -84,17 +85,21 @@ const readAction = defineActionVerb('launches', {
     }
 });
 
-const startedLines = (verb: string, output: { launchId: string; name: string; kind: string; members: string[] }): string[] => [
-    `${verb}\t${field(output.launchId)}\t${field(output.name)}${output.members.length === 0 ? '' : `\t${output.members.map(field).join(',')}`}`,
-    `see\truimte-context launches list\twhether it came up; ruimte-context launches read ${field(output.launchId)} for its output`
-];
+function startedLines(verb: string, output: { launchId: string; name: string; kind: string; members: string[] }): string[] {
+    return [
+        `${verb}\t${field(output.launchId)}\t${field(output.name)}${output.members.length === 0 ? '' : `\t${output.members.map(field).join(',')}`}`,
+        `see\truimte-context launches list\twhether it came up; ruimte-context launches read ${field(output.launchId)} for its output`
+    ];
+}
 
-const startDetail = (word: string): string[] => [
-    APPROVAL_LINE,
-    'refused\tlaunch-held\tnobody approved it here yet: ask the person, whose launch chip in the toolbar asks for it; one held line per launch it would run, with its command and folder',
-    'refused\tport-busy\tanother launch has the port of its url: stop that one first when it is of this project, or ask the person',
-    `note\tA group ${word}s every launch it holds, and only once each of them is approved`
-];
+function startDetail(word: string): string[] {
+    return [
+        APPROVAL_LINE,
+        'refused\tlaunch-held\tnobody approved it here yet: ask the person, whose launch chip in the toolbar asks for it; one held line per launch it would run, with its command and folder',
+        'refused\tport-busy\tanother launch has the port of its url: stop that one first when it is of this project, or ask the person',
+        `note\tA group ${word}s every launch it holds, and only once each of them is approved`
+    ];
+}
 
 const startAction = defineActionVerb('launches', {
     name: 'start',

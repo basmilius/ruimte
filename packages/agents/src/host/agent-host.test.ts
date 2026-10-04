@@ -111,12 +111,12 @@ afterEach(async () => {
     await rm(dataDir, { recursive: true, force: true });
 });
 
-const ok = (reply: ReplyOk | ReplyError): unknown => {
+function ok(reply: ReplyOk | ReplyError): unknown {
     if (!reply.ok) {
         throw new Error(`${reply.error.code}: ${reply.error.message}`);
     }
     return reply.result;
-};
+}
 
 describe('AgentHost over a port', () => {
     test('runs a whole turn of a chat and says what it does to the client', async () => {

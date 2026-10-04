@@ -11,7 +11,7 @@ export interface SidebarNavigation {
     reveal(target: SidebarTarget): void;
 }
 
-export const sidebarNavigator = (navigation: SidebarNavigation): ((target: SidebarTarget) => Promise<void>) => {
+export function sidebarNavigator(navigation: SidebarNavigation): (target: SidebarTarget) => Promise<void> {
     let serial = 0;
     return async (target) => {
         const attempt = ++serial;
@@ -22,4 +22,4 @@ export const sidebarNavigator = (navigation: SidebarNavigation): ((target: Sideb
         }
         navigation.reveal(target);
     };
-};
+}

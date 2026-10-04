@@ -5,19 +5,21 @@ import { PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { projectActions, type ListedProject, type ProjectMachine } from './project-actions';
 import { useDocument } from '@/state/document';
 
-const summary = (projectId: string, name: string, closedAt: number | null = null): ProjectSummary => ({
-    projectId,
-    name,
-    color: '#000',
-    folder: `/work/${projectId}`,
-    lastOpenedAt: 1,
-    closedAt,
-    available: true,
-    icon: { kind: 'initial', value: name[0]! },
-    nameSource: 'chosen'
-});
+function summary(projectId: string, name: string, closedAt: number | null = null): ProjectSummary {
+    return {
+        projectId,
+        name,
+        color: '#000',
+        folder: `/work/${projectId}`,
+        lastOpenedAt: 1,
+        closedAt,
+        available: true,
+        icon: { kind: 'initial', value: name[0]! },
+        nameSource: 'chosen'
+    };
+}
 
-const listed = (projectId: string, name: string, extra: Partial<ListedProject> = {}): ListedProject => {
+function listed(projectId: string, name: string, extra: Partial<ListedProject> = {}): ListedProject {
     const row = summary(projectId, name, extra.recent === true ? 5 : null);
     return {
         endpointId: 'mac',
@@ -31,7 +33,7 @@ const listed = (projectId: string, name: string, extra: Partial<ListedProject> =
         summary: row,
         ...extra
     };
-};
+}
 
 interface Calls {
     opened: string[];
@@ -41,7 +43,7 @@ interface Calls {
     icons: string[];
 }
 
-const fake = (projects: ListedProject[], overrides: Partial<ProjectMachine> = {}) => {
+function fake(projects: ListedProject[], overrides: Partial<ProjectMachine> = {}) {
     const calls: Calls = { opened: [], closed: [], removed: [], renamed: [], icons: [] };
     const machine: Partial<ProjectMachine> = {
         projects: () => projects,
@@ -69,14 +71,14 @@ const fake = (projects: ListedProject[], overrides: Partial<ProjectMachine> = {}
         ...overrides
     };
     return { registry: new ActionRegistry<void>(projectActions(useDocument, machine)), calls };
-};
+}
 
-const questionOf = (result: ActionResult): string => {
+function questionOf(result: ActionResult): string {
     if (result.status !== 'needs_confirmation') {
         throw new Error(`Expected a question, got ${result.status}`);
     }
     return [result.confirmation.title, ...result.confirmation.consequences].join(' ');
-};
+}
 
 afterEach(() => {
     useDocument.getState().load(null, null);

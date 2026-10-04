@@ -77,7 +77,7 @@ class FakeSource {
 
 const NAMES = ['sessions', 'chats', 'identity', 'projects', 'drawings', 'diagrams', 'folders', 'statuses', 'usage', 'limits', 'processes'] as const;
 
-const setup = (screens: Record<string, string> = {}, presence?: ConnectionServices['presence']) => {
+function setup(screens: Record<string, string> = {}, presence?: ConnectionServices['presence']) {
     const order: string[] = [];
     const sources = Object.fromEntries(NAMES.map((name) => [name, new FakeSource(name, order)])) as Record<(typeof NAMES)[number], FakeSource>;
     const dispatcher = new Dispatcher();
@@ -93,10 +93,12 @@ const setup = (screens: Record<string, string> = {}, presence?: ConnectionServic
     });
     const services: ConnectionServices = { ...sources, sessions, dispatcher, presence };
     return { open: connectionOpener(services), sources, order };
-};
+}
 
 // The dispatcher answers across an await; one macrotask settles it.
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function flush(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('connectionOpener', () => {
     test('gives every channel a client id of its own and subscribes it everywhere, in order', () => {

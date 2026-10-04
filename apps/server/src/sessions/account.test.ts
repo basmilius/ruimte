@@ -41,8 +41,9 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const create = (sessionId: string, account?: string) =>
-    harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent: { kind: 'claude', ...(account ? { account } : {}) } });
+function create(sessionId: string, account?: string) {
+    return harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home, agent: { kind: 'claude', ...(account ? { account } : {}) } });
+}
 
 describe('a terminal agent under an account', () => {
     test('leaves the shell as it was on the default account', async () => {

@@ -121,28 +121,33 @@ export interface SidebarInput {
 }
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
-export const isSessionKind = (kind: CanvasNodeKind): boolean => kind === 'terminal' || kind === 'chat' || kind === 'browser' || kind === 'device';
+export function isSessionKind(kind: CanvasNodeKind): boolean {
+    return kind === 'terminal' || kind === 'chat' || kind === 'browser' || kind === 'device';
+}
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
 
-export const heaviestStatus = (nodes: readonly SidebarNode[]): AgentStatus | null =>
-    nodes.reduce<AgentStatus | null>((heaviest, node) => {
+export function heaviestStatus(nodes: readonly SidebarNode[]): AgentStatus | null {
+    return nodes.reduce<AgentStatus | null>((heaviest, node) => {
         if (!node.status) {
             return heaviest;
         }
         return heaviest === null || WEIGHT[node.status] > WEIGHT[heaviest] ? node.status : heaviest;
     }, null);
+}
 
 /* A turn speaks for a folded canvas before sub-agents that go on alone. */
-export const heaviestWork = (nodes: readonly SidebarNode[]): AgentWork | null => {
+export function heaviestWork(nodes: readonly SidebarNode[]): AgentWork | null {
     if (nodes.some((node) => node.work === 'turn')) {
         return 'turn';
     }
     return nodes.some((node) => node.work === 'delegating') ? 'delegating' : null;
-};
+}
 
 /* Whether a node belongs in "Needs you": waiting, and not put aside for now. */
-export const waitsOnYou = (node: SidebarNode): boolean => node.status === 'needs-you' && !node.snoozedUntil;
+export function waitsOnYou(node: SidebarNode): boolean {
+    return node.status === 'needs-you' && !node.snoozedUntil;
+}
 
 /*
  * The sidebar as one list of rows: what waits for you first, then the views in the order the
@@ -150,7 +155,7 @@ export const waitsOnYou = (node: SidebarNode): boolean => node.status === 'needs
  * status grouping of the old flat list is gone: the order is the project's, the dock keeps the
  * counters.
  */
-export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSection[] => {
+export function buildSidebar({ project, expandedIds }: SidebarInput): SidebarSection[] {
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];
     for (const view of project.views.filter((candidate) => !candidate.hidden)) {
@@ -194,20 +199,22 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
     }
     sections.push({ id: 'views', kind: 'views', label: null, rows, viewCount: project.views.length });
     return sections;
-};
+}
 
 /* The gap a dragged row would land in: above the row whose top half the pointer is in, and under the
    last one the end of the list. A row's index counts the views the list hides, so the end is too. */
-export const gapIndex = (rows: readonly { index: number; middle: number }[], y: number, viewCount: number): number =>
-    rows.find((row) => y < row.middle)?.index ?? viewCount;
+export function gapIndex(rows: readonly { index: number; middle: number }[], y: number, viewCount: number): number {
+    return rows.find((row) => y < row.middle)?.index ?? viewCount;
+}
 
 /* The ids in the order the eye reads them, which is the order Up and Down have to walk. */
-export const rowOrder = (sections: readonly SidebarSection[]): string[] =>
-    sections.flatMap((section) => [...(section.group ? [`project:${section.id}`] : []), ...section.rows.map((row) => row.rowId)]);
+export function rowOrder(sections: readonly SidebarSection[]): string[] {
+    return sections.flatMap((section) => [...(section.group ? [`project:${section.id}`] : []), ...section.rows.map((row) => row.rowId)]);
+}
 
 /* The row an arrow key lands on. Without a row to move from, Down starts at the top and Up at the
    bottom; at either end it stays put, so a held key never wraps around behind your back. */
-export const rowAfterArrow = (order: string[], current: string | null, delta: -1 | 1): string | null => {
+export function rowAfterArrow(order: string[], current: string | null, delta: -1 | 1): string | null {
     if (order.length === 0) {
         return null;
     }
@@ -216,7 +223,7 @@ export const rowAfterArrow = (order: string[], current: string | null, delta: -1
         return delta === 1 ? order[0]! : order[order.length - 1]!;
     }
     return order[Math.min(order.length - 1, Math.max(0, at + delta))] ?? null;
-};
+}
 
 export interface SidebarGroup {
     key: string;
@@ -230,28 +237,32 @@ export interface SidebarGroup {
     state: 'ready' | 'loading' | 'offline' | 'error' | 'unsupported';
 }
 
-const needsYou = (waiting: SidebarWaitingGroup[]): SidebarSection => ({
-    id: 'needs-you',
-    kind: 'needs-you',
-    label: i18next.t('shell:sidebar.needsYou'),
-    rows: waiting.flatMap((group) => group.rows),
-    waiting,
-    viewCount: 0
-});
+function needsYou(waiting: SidebarWaitingGroup[]): SidebarSection {
+    return {
+        id: 'needs-you',
+        kind: 'needs-you',
+        label: i18next.t('shell:sidebar.needsYou'),
+        rows: waiting.flatMap((group) => group.rows),
+        waiting,
+        viewCount: 0
+    };
+}
 
 /* A row of another project's list, keyed apart from the same ids on another machine and pointing at where it lives. */
-const qualify = (group: SidebarGroup, row: SidebarRow): SidebarRow => ({
-    ...row,
-    rowId: `${group.key}:${row.rowId}`,
-    target: {
-        endpointId: group.endpointId,
-        projectId: group.summary.projectId,
-        viewId: row.type === 'view' ? row.view.id : row.viewId,
-        ...(row.type === 'node' ? { nodeId: row.node.id } : {})
-    }
-});
+function qualify(group: SidebarGroup, row: SidebarRow): SidebarRow {
+    return {
+        ...row,
+        rowId: `${group.key}:${row.rowId}`,
+        target: {
+            endpointId: group.endpointId,
+            projectId: group.summary.projectId,
+            viewId: row.type === 'view' ? row.view.id : row.viewId,
+            ...(row.type === 'node' ? { nodeId: row.node.id } : {})
+        }
+    };
+}
 
-const waitingIn = (group: SidebarGroup): SidebarRow[] => {
+function waitingIn(group: SidebarGroup): SidebarRow[] {
     const own = buildSidebar({ project: group.project, expandedIds: new Set() });
     const seen = new Set<string>();
     const rows: SidebarRow[] = [];
@@ -263,14 +274,14 @@ const waitingIn = (group: SidebarGroup): SidebarRow[] => {
         rows.push(qualify(group, row));
     }
     return rows;
-};
+}
 
 /*
  * "Needs you" over every project, one heading per project: the one on screen first, the others in
  * the sidebar's order. A project the machine could not read right now says nothing, since its
  * statuses are from before.
  */
-export const needsYouSection = (groups: readonly SidebarGroup[], onScreen?: readonly SidebarRow[]): SidebarSection | null => {
+export function needsYouSection(groups: readonly SidebarGroup[], onScreen?: readonly SidebarRow[]): SidebarSection | null {
     const waiting: (SidebarWaitingGroup & { group: SidebarGroup })[] = [];
     for (const group of [...groups.filter((group) => group.active), ...groups.filter((group) => !group.active)]) {
         if (group.state !== 'ready') {
@@ -293,9 +304,9 @@ export const needsYouSection = (groups: readonly SidebarGroup[], onScreen?: read
             rows
         }))
     );
-};
+}
 
-export const buildCombinedSidebar = (groups: readonly SidebarGroup[]): SidebarSection[] => {
+export function buildCombinedSidebar(groups: readonly SidebarGroup[]): SidebarSection[] {
     const sections: SidebarSection[] = [];
     for (const group of groups) {
         const views = buildSidebar({ project: group.project, expandedIds: group.expandedIds }).find((section) => section.kind === 'views')!;
@@ -303,12 +314,12 @@ export const buildCombinedSidebar = (groups: readonly SidebarGroup[]): SidebarSe
     }
     const waiting = needsYouSection(groups);
     return waiting ? [waiting, ...sections] : sections;
-};
+}
 
 /* The list of the project on screen, with "Needs you" drawn from every open project. The project on
    screen keeps its own rows, read live and revealed in place; until it is among the groups, the
    block keeps to what this window knows itself. */
-export const buildSidebarEverywhere = (input: SidebarInput, groups: readonly SidebarGroup[]): SidebarSection[] => {
+export function buildSidebarEverywhere(input: SidebarInput, groups: readonly SidebarGroup[]): SidebarSection[] {
     const own = buildSidebar(input);
     if (!groups.some((group) => group.active)) {
         return own;
@@ -316,4 +327,4 @@ export const buildSidebarEverywhere = (input: SidebarInput, groups: readonly Sid
     const views = own.filter((section) => section.kind !== 'needs-you');
     const waiting = needsYouSection(groups, own.find((section) => section.kind === 'needs-you')?.rows ?? []);
     return waiting ? [waiting, ...views] : views;
-};
+}

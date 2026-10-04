@@ -25,7 +25,9 @@ const LineageSchema = z.object({
 type Lineage = z.infer<typeof LineageSchema>;
 
 /* Opened by the agent it names, which is what every rule about children is about; a fork lives on its own. */
-const openedByAgent = (entry: Lineage): boolean => entry.agent && entry.relation !== 'fork';
+function openedByAgent(entry: Lineage): boolean {
+    return entry.agent && entry.relation !== 'fork';
+}
 
 /*
  * Lineage lives in `lineage` under the host's data folder, outside the agent-writable project, so agents

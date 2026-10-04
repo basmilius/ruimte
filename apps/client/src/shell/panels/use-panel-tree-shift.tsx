@@ -12,13 +12,15 @@ const HIDE_AFTER = 900;
 const NEAR_BOTTOM = 16;
 
 /* An element `display: contents` puts in its parent's place draws no box of its own. */
-const boxesOf = (element: Element): Element[] => (element.getClientRects().length > 0 ? [element] : [...element.children].flatMap((child) => boxesOf(child)));
+function boxesOf(element: Element): Element[] {
+    return element.getClientRects().length > 0 ? [element] : [...element.children].flatMap((child) => boxesOf(child));
+}
 
 /*
  * Where a row's name may end: before the first thing that sits after the name, or the end of the
  * row. An empty part that grows is only filler, which gives way to the name.
  */
-const limitOf = (row: HTMLElement, content: Element, gap: number): number => {
+function limitOf(row: HTMLElement, content: Element, gap: number): number {
     const start = content.getBoundingClientRect().left;
     let limit = Number.POSITIVE_INFINITY;
     for (const part of [...row.children].filter((child) => child !== content).flatMap((child) => boxesOf(child))) {
@@ -35,17 +37,17 @@ const limitOf = (row: HTMLElement, content: Element, gap: number): number => {
         return limit;
     }
     return row.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(row).paddingInlineEnd);
-};
+}
 
 /* What one drawn row asks for at the shift it was drawn at, or null for a row that is not drawn. */
-const needOf = (row: HTMLElement, shift: number, gap: number, range: Range): number | null => {
+function needOf(row: HTMLElement, shift: number, gap: number, range: Range): number | null {
     const content = row.querySelector(':scope > [data-item-section="content"]');
     if (content === null || row.getBoundingClientRect().width === 0) {
         return null;
     }
     range.selectNodeContents(content);
     return shiftNeed(range.getBoundingClientRect().right, limitOf(row, content, gap), shift);
-};
+}
 
 /*
  * Lets a person slide the rows of a panel tree sideways, with a sideways swipe or Shift and the
@@ -54,7 +56,7 @@ const needOf = (row: HTMLElement, shift: number, gap: number, range: Range): num
  * `resetKey` changes. `attach` is the ref of the element around the tree, and `bar` goes inside
  * that element after the tree.
  */
-export const usePanelTreeShift = (model: FileTree, resetKey?: string): { attach(node: HTMLElement | null): void; bar: ReactElement } => {
+export function usePanelTreeShift(model: FileTree, resetKey?: string): { attach(node: HTMLElement | null): void; bar: ReactElement } {
     const [frame, setFrame] = useState<HTMLElement | null>(null);
     const [track, setTrack] = useState<HTMLDivElement | null>(null);
     const [thumb, setThumb] = useState<HTMLDivElement | null>(null);
@@ -180,4 +182,4 @@ export const usePanelTreeShift = (model: FileTree, resetKey?: string): { attach(
     );
 
     return { attach: setFrame, bar };
-};
+}

@@ -1,15 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import { editBlockOf, type EditGateInput } from '@/shell/panels/edit-gate';
 
-const gate = (patch: Partial<EditGateInput>): EditGateInput => ({
-    path: '/repo/src/a.ts',
-    roots: ['/repo', '/home/me/.ruimte/worktrees/repo-feature'],
-    large: false,
-    plain: false,
-    coarse: false,
-    zoomedOut: false,
-    ...patch
-});
+function gate(patch: Partial<EditGateInput>): EditGateInput {
+    return {
+        path: '/repo/src/a.ts',
+        roots: ['/repo', '/home/me/.ruimte/worktrees/repo-feature'],
+        large: false,
+        plain: false,
+        coarse: false,
+        zoomedOut: false,
+        ...patch
+    };
+}
 
 describe('editBlockOf', () => {
     test('offers a file in the project folder or one of its worktrees', () => {

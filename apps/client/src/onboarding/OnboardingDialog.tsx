@@ -49,14 +49,14 @@ const WELCOME_ORBITS: readonly EclipseOrbit[] = [
  * The machine this window runs beside, held for as long as the onboarding is up. Its clients are
  * built too, so its providers and accounts reach the stores in a window that points at another machine.
  */
-const useLocalMachine = (): Endpoint | null => {
+function useLocalMachine(): Endpoint | null {
     const endpoint = useEndpoints((s) => s.endpoints.find((entry) => entry.id === LOCAL_ENDPOINT_ID) ?? null);
     useMachineHold(endpoint);
     useEffect(() => {
         machineFor(LOCAL_ENDPOINT_ID);
     }, []);
     return endpoint;
-};
+}
 
 /*
  * The first start of a desktop client: a welcome, then a few short tasks in any order, each with what

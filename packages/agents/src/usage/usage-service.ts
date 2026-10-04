@@ -27,7 +27,7 @@ export interface UsageServiceOptions {
 }
 
 /* The accounts of the machine, and after them any a record names that the machine no longer has, under its id. */
-const withRecordAccounts = (accounts: UsageAccount[], records: readonly UsageRecord[]): UsageAccount[] => {
+function withRecordAccounts(accounts: UsageAccount[], records: readonly UsageRecord[]): UsageAccount[] {
     const listed = new Set(accounts.map((account) => account.id));
     const gone: UsageAccount[] = [];
     for (const record of records) {
@@ -38,7 +38,7 @@ const withRecordAccounts = (accounts: UsageAccount[], records: readonly UsageRec
         }
     }
     return [...accounts, ...gone];
-};
+}
 
 const EMPTY_SCAN: ScanReport = { at: 0, files: 0, changedFiles: 0, durationMs: 0, roots: [] };
 

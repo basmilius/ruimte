@@ -8,7 +8,9 @@ const NO_APP: MachineUpdate = { app: false, status: 'unsupported' };
 const INSTALLABLE: ReadonlySet<MachineUpdate['status']> = new Set(['available', 'downloading', 'ready']);
 
 /* What the event compares, so a download says a new percent once per whole step and not per chunk. */
-const said = (update: MachineUpdate): string => JSON.stringify({ ...update, percent: update.percent === undefined ? undefined : Math.floor(update.percent) });
+function said(update: MachineUpdate): string {
+    return JSON.stringify({ ...update, percent: update.percent === undefined ? undefined : Math.floor(update.percent) });
+}
 
 export type InstallVerdict = 'no-app' | 'nothing' | 'asked';
 
@@ -71,4 +73,6 @@ export class MachineUpdates {
 }
 
 /* What a restart of the app ends: nothing when the daemon runs as the service and outlives it, else whatever runs. */
-export const workEndedByInstall = (underService: boolean, work: MachineWork): MachineWork => (underService ? { terminals: 0, agents: 0 } : work);
+export function workEndedByInstall(underService: boolean, work: MachineWork): MachineWork {
+    return underService ? { terminals: 0, agents: 0 } : work;
+}

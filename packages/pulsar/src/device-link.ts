@@ -33,7 +33,7 @@ export const USER_CODE_LENGTH = 8;
 export const UserCodeSchema = z.string().regex(new RegExp(`^[${USER_CODE_ALPHABET}]{${USER_CODE_LENGTH}}$`), 'Expected a code of eight letters');
 
 /* A fresh code. Bytes of 240 and over are drawn again, since 256 is no multiple of 20 and would favor the first letters. */
-export const generateUserCode = (random: (count: number) => Uint8Array = (count) => crypto.getRandomValues(new Uint8Array(count))): string => {
+export function generateUserCode(random: (count: number) => Uint8Array = (count) => crypto.getRandomValues(new Uint8Array(count))): string {
     let code = '';
     while (code.length < USER_CODE_LENGTH) {
         for (const byte of random(USER_CODE_LENGTH * 2)) {
@@ -43,29 +43,31 @@ export const generateUserCode = (random: (count: number) => Uint8Array = (count)
         }
     }
     return code;
-};
+}
 
 // `BCDFGHJK` as `BCDF-GHJK`, which is how a terminal prints it and a person reads it out.
-export const formatUserCode = (code: string): string => `${code.slice(0, 4)}-${code.slice(4)}`;
+export function formatUserCode(code: string): string {
+    return `${code.slice(0, 4)}-${code.slice(4)}`;
+}
 
 /* What a person typed, as the stored form, or null when it cannot be a code: case, spaces and dashes do not matter. */
-export const normalizeUserCode = (input: string): string | null => {
+export function normalizeUserCode(input: string): string | null {
     const code = input.toUpperCase().replace(/[\s-]/g, '');
     return UserCodeSchema.safeParse(code).success ? code : null;
-};
+}
 
 /*
  * The first eight bytes of a public key in hex, in four groups: short enough to compare between a
  * terminal and a page, and 64 bits is more than anyone can grind a look-alike key for.
  */
-export const keyFingerprint = (publicKey: string): string => {
+export function keyFingerprint(publicKey: string): string {
     const binary = atob(publicKey.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - (publicKey.length % 4)) % 4));
     let hex = '';
     for (let i = 0; i < Math.min(8, binary.length); i++) {
         hex += binary.charCodeAt(i).toString(16).padStart(2, '0');
     }
     return hex.match(/.{1,4}/g)?.join(' ') ?? '';
-};
+}
 
 const DeviceLinkMachineNameSchema = z.string().min(1).max(80);
 

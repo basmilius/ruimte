@@ -5,37 +5,44 @@ import { RESUME_COMPACTION_IDLE_MS, RESUME_COMPACTION_TOKENS, resumeCompactionOf
 const NOW = 1_800_000_000_000;
 const ENDED = NOW - RESUME_COMPACTION_IDLE_MS;
 
-const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
-    chatId: 'chat-1',
-    provider: 'claude',
-    cwd: '/tmp/project',
-    agentSessionId: 'session-1',
-    model: 'claude-opus-5',
-    selection: { model: 'claude-opus-5', options: {} },
-    runtimeMode: 'supervised',
-    status: 'idle',
-    running: true,
-    activeTurnId: null,
-    slashCommands: [],
-    usage: { contextTokens: RESUME_COMPACTION_TOKENS, contextWindow: 1_000_000, costUsd: 1, turns: 4 },
-    createdAt: 0,
-    ...patch
-});
+function info(patch: Partial<ChatInfo> = {}): ChatInfo {
+    return {
+        chatId: 'chat-1',
+        provider: 'claude',
+        cwd: '/tmp/project',
+        agentSessionId: 'session-1',
+        model: 'claude-opus-5',
+        selection: { model: 'claude-opus-5', options: {} },
+        runtimeMode: 'supervised',
+        status: 'idle',
+        running: true,
+        activeTurnId: null,
+        slashCommands: [],
+        usage: { contextTokens: RESUME_COMPACTION_TOKENS, contextWindow: 1_000_000, costUsd: 1, turns: 4 },
+        createdAt: 0,
+        ...patch
+    };
+}
 
-const turn = (id: string, endedAt: number | null): ChatItem => ({
-    id,
-    kind: 'turn',
-    createdAt: 0,
-    turnId: id,
-    state: endedAt === null ? 'running' : 'done',
-    endedAt,
-    costUsd: 0
-});
+function turn(id: string, endedAt: number | null): ChatItem {
+    return {
+        id,
+        kind: 'turn',
+        createdAt: 0,
+        turnId: id,
+        state: endedAt === null ? 'running' : 'done',
+        endedAt,
+        costUsd: 0
+    };
+}
 
-const compaction = (turnId: string): ChatItem => ({ id: `compaction-${turnId}`, kind: 'compaction', createdAt: 0, turnId, preTokens: 180_000 });
+function compaction(turnId: string): ChatItem {
+    return { id: `compaction-${turnId}`, kind: 'compaction', createdAt: 0, turnId, preTokens: 180_000 };
+}
 
-const offer = (patch: Partial<Parameters<typeof resumeCompactionOffer>[0]> = {}) =>
-    resumeCompactionOffer({ info: info(), compaction: 'prompt', items: [turn('turn-1', ENDED)], dismissedTurnId: null, now: NOW, ...patch });
+function offer(patch: Partial<Parameters<typeof resumeCompactionOffer>[0]> = {}) {
+    return resumeCompactionOffer({ info: info(), compaction: 'prompt', items: [turn('turn-1', ENDED)], dismissedTurnId: null, now: NOW, ...patch });
+}
 
 test('a quiet chat with enough context is offered a compaction, and the offer names the turn it is about', () => {
     expect(offer()).toEqual({ turnId: 'turn-1', tokens: RESUME_COMPACTION_TOKENS });

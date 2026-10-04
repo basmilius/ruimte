@@ -40,7 +40,7 @@ export interface LineMeaning {
  * agent both reads that node and works in it, whichever way the line was drawn, so it is a target
  * line either way and its head stays at the node being worked on.
  */
-const roleOf = (line: EdgeLine, reads: (nodeId: string) => boolean, driven: (nodeId: string) => boolean): LineRole => {
+function roleOf(line: EdgeLine, reads: (nodeId: string) => boolean, driven: (nodeId: string) => boolean): LineRole {
     const written = edgeRole(line.edge) ?? (line.back === null ? null : edgeRole(line.back));
     if (written !== null) {
         return written;
@@ -52,19 +52,19 @@ const roleOf = (line: EdgeLine, reads: (nodeId: string) => boolean, driven: (nod
         return 'context';
     }
     return reads(line.edge.from) ? 'context' : 'plain';
-};
+}
 
-export const lineMeaning = (line: EdgeLine, reads: (nodeId: string) => boolean, driven: (nodeId: string) => boolean): LineMeaning => {
+export function lineMeaning(line: EdgeLine, reads: (nodeId: string) => boolean, driven: (nodeId: string) => boolean): LineMeaning {
     const role = roleOf(line, reads, driven);
     // The work happens at the end that is driven, so that is where the point of a target line goes.
     return { role, reversed: role === 'target' && driven(line.edge.from) && !driven(line.edge.to) };
-};
+}
 
 /*
  * The table of what each kind of line wears. An open task comes before the role: the line under it
  * is a context line the whole time, and only says the task is still out while it is.
  */
-const lookOf = (role: LineRole, pair: boolean, openTask: boolean): EdgeLook => {
+function lookOf(role: LineRole, pair: boolean, openTask: boolean): EdgeLook {
     if (openTask) {
         return { tail: 'none', head: 'dot', dashed: true, accent: true, width: EDGE_WIDTH };
     }
@@ -78,9 +78,9 @@ const lookOf = (role: LineRole, pair: boolean, openTask: boolean): EdgeLook => {
         case 'plain':
             return { tail: 'dot', head: 'dot', dashed: false, accent: false, width: EDGE_WIDTH };
     }
-};
+}
 
-export const edgeLook = (meaning: LineMeaning, { pair, openTask }: { pair: boolean; openTask: boolean }): EdgeLook => {
+export function edgeLook(meaning: LineMeaning, { pair, openTask }: { pair: boolean; openTask: boolean }): EdgeLook {
     const look = lookOf(meaning.role, pair, openTask);
     return meaning.reversed ? { ...look, tail: look.head, head: look.tail } : look;
-};
+}

@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { LiveStreamFrame } from '@ruimte/contracts';
 import { PhysicalScreenshotSource } from './physical-screenshot-source.ts';
 
-const frame = (sequence: number): LiveStreamFrame => ({ sequence, width: 1320, height: 2868, data: new Uint8Array([0xff, 0xd8, 0xff]) });
+function frame(sequence: number): LiveStreamFrame {
+    return { sequence, width: 1320, height: 2868, data: new Uint8Array([0xff, 0xd8, 0xff]) };
+}
 
 describe('PhysicalScreenshotSource', () => {
     test('publishes immediately, keeps refreshing and stops cleanly', async () => {

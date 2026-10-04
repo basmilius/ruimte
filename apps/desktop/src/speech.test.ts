@@ -5,7 +5,7 @@ import type { spawn } from 'node:child_process';
 import type { SpeechEvent } from '@ruimte/desktop-bridge';
 import { SpeechService } from './speech';
 
-const fixture = () => {
+function fixture() {
     const events: SpeechEvent[] = [];
     const delivered: Array<[string | undefined, SpeechEvent['type']]> = [];
     let now = 0;
@@ -65,7 +65,7 @@ const fixture = () => {
     );
     const emit = (index: number, value: object) => children[index]!.stdout.write(`${JSON.stringify(value)}\n`);
     return { service, children, events, delivered, emit, advance };
-};
+}
 
 test('waits for ready and keeps a finished helper warm for sixty seconds', async () => {
     const run = fixture();

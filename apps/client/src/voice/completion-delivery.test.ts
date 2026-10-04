@@ -5,10 +5,12 @@ import type { LiveEvent } from '@/voice/live-session';
 
 const followUp: VoiceChatFollowUp = { key: 'remote:chat', chat: 'Research', project: 'Atlas', turnId: 'turn-1' };
 const completion = { state: 'done' as const, answer: 'The report is ready.' };
-const ack = (event: LiveEvent): LiveEvent => ({
-    type: event.type === 'session.thinking.append' ? 'session.thinking.appended' : 'session.commentary.appended',
-    client_event_id: event.event_id
-});
+function ack(event: LiveEvent): LiveEvent {
+    return {
+        type: event.type === 'session.thinking.append' ? 'session.thinking.appended' : 'session.commentary.appended',
+        client_event_id: event.event_id
+    };
+}
 
 function setup() {
     const sent: LiveEvent[] = [];

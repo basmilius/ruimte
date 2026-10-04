@@ -8,13 +8,15 @@ let dataDir: string;
 let clock: number;
 let store: NoticeStore;
 
-const left = (text: string, targetId = 'term-2'): Omit<Notice, 'createdAt'> => ({
-    projectId: 'project-1',
-    targetId,
-    from: 'term-1',
-    fromTitle: 'shell',
-    text
-});
+function left(text: string, targetId = 'term-2'): Omit<Notice, 'createdAt'> {
+    return {
+        projectId: 'project-1',
+        targetId,
+        from: 'term-1',
+        fromTitle: 'shell',
+        text
+    };
+}
 
 beforeEach(async () => {
     dataDir = await mkdtemp(join(tmpdir(), 'agents-notices-'));

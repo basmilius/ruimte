@@ -3,20 +3,22 @@ import type { Task } from '@ruimte/contracts';
 import { taskStatusWord } from '@ruimte/agents-react/agents/status-look';
 import { childTask, edgeTask, useTasks } from './tasks';
 
-const task = (id: string, overrides: Partial<Task> = {}): Task => ({
-    id,
-    projectId: 'project',
-    parentId: 'chat-lead',
-    childId: 'chat-child',
-    title: id,
-    prompt: 'go',
-    status: 'open',
-    result: null,
-    createdAt: 1,
-    settledAt: null,
-    wake: 'pending',
-    ...overrides
-});
+function task(id: string, overrides: Partial<Task> = {}): Task {
+    return {
+        id,
+        projectId: 'project',
+        parentId: 'chat-lead',
+        childId: 'chat-child',
+        title: id,
+        prompt: 'go',
+        status: 'open',
+        result: null,
+        createdAt: 1,
+        settledAt: null,
+        wake: 'pending',
+        ...overrides
+    };
+}
 
 beforeEach(() => {
     useTasks.setState({ byEndpoint: {} });

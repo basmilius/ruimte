@@ -28,24 +28,26 @@ export interface VoiceAction {
 let timelineOrder = 0;
 const VOICE_WIDTH_KEY = 'ruimte.voice.width';
 
-const readVoiceWidth = (): number | null => {
+function readVoiceWidth(): number | null {
     try {
         const value = Number.parseInt(localStorage.getItem(VOICE_WIDTH_KEY) ?? '', 10);
         return Number.isFinite(value) && value > 0 ? value : null;
     } catch {
         return null;
     }
-};
+}
 
-const persistVoiceWidth = (width: number): void => {
+function persistVoiceWidth(width: number): void {
     try {
         localStorage.setItem(VOICE_WIDTH_KEY, String(width));
     } catch {
         // Storage that refuses keeps the width for this session only.
     }
-};
+}
 
-export const nextVoiceTimelineOrder = (): number => ++timelineOrder;
+export function nextVoiceTimelineOrder(): number {
+    return ++timelineOrder;
+}
 
 interface VoiceState {
     credential: OpenAiCredentialStatus | null;

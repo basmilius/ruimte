@@ -32,9 +32,8 @@ export interface DeliverMessageDeps {
  * next one, which is what a message to a busy chat has always done; holding the entry instead would
  * make the host start turns nobody asked for long after the news was worth anything.
  */
-export const deliverMessageHandler =
-    (deps: DeliverMessageDeps) =>
-    async (entry: DeliverMessageEntry): Promise<OutboxOutcome> => {
+export function deliverMessageHandler(deps: DeliverMessageDeps) {
+    return async (entry: DeliverMessageEntry): Promise<OutboxOutcome> => {
         if (!deps.placed(entry.target)) {
             return;
         }
@@ -59,3 +58,4 @@ export const deliverMessageHandler =
             messageFrom: [...new Set(waiting.map((notice) => notice.from))]
         });
     };
+}

@@ -21,11 +21,11 @@ let changed: SessionEvent[];
 let summaries: SessionEvent[];
 
 /* The summary is written to disk before it goes out, so the loop yields until it has; no clock decides. */
-const summarySent = async (): Promise<void> => {
+async function summarySent(): Promise<void> {
     while (summaries.length === 0) {
         await new Promise((resolve) => setImmediate(resolve));
     }
-};
+}
 let unsubscribe: () => void;
 
 beforeEach(async () => {
@@ -52,27 +52,33 @@ afterEach(async () => {
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 
-const content = (name = 'repo'): ProjectContent => ({
-    name,
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [{ id: 'n1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360, cwd: join(folder, 'apps', 'server') }],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(name = 'repo'): ProjectContent {
+    return {
+        name,
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'n1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360, cwd: join(folder, 'apps', 'server') }],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 /* Every test here works on projects whose views are canvases; this is the cast that says so. */
-const canvas = (document: Pick<ProjectContent, 'views'>, at = 0): ProjectCanvasView => document.views[at] as ProjectCanvasView;
+function canvas(document: Pick<ProjectContent, 'views'>, at = 0): ProjectCanvasView {
+    return document.views[at] as ProjectCanvasView;
+}
 
 /* The watcher on the directory the project file lives in; the platform reports every write there, ours included. */
-const projectDirWatcher = () => fake.on(dirname(documentPathInFolder(folder)));
+function projectDirWatcher() {
+    return fake.on(dirname(documentPathInFolder(folder)));
+}
 
 describe('ProjectStore', () => {
     test('opening a folder creates an empty project, lists it, and saves with a rising rev', async () => {

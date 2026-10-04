@@ -8,8 +8,12 @@ function subscribe(onChange: () => void) {
     return () => query.removeEventListener('change', onChange);
 }
 
-const getSnapshot = () => window.matchMedia(QUERY).matches;
-const getServerSnapshot = () => false;
+function getSnapshot() {
+    return window.matchMedia(QUERY).matches;
+}
+function getServerSnapshot() {
+    return false;
+}
 
 export function useReducedAnimations() {
     // Match the server's first frame before applying the browser's motion preference.

@@ -4,19 +4,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Checkpoints } from './checkpoints.ts';
 
-const git = async (args: string[], cwd: string): Promise<void> => {
+async function git(args: string[], cwd: string): Promise<void> {
     const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' });
     const [stderr, code] = await Promise.all([new Response(proc.stderr).text(), proc.exited]);
     if (code !== 0) {
         throw new Error(`git ${args.join(' ')}: ${stderr}`);
     }
-};
+}
 
-const status = async (cwd: string): Promise<string> => {
+async function status(cwd: string): Promise<string> {
     const proc = Bun.spawn(['git', 'status', '--porcelain'], { cwd, stdout: 'pipe', stderr: 'pipe' });
     const [stdout] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
     return stdout;
-};
+}
 
 let home: string;
 let repo: string;

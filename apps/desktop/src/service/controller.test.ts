@@ -15,7 +15,7 @@ const DEFINITION = '<plist/>';
 
 const COMMAND_LINE_PROGRAM = '/Users/bas/.ruimte/bin/ruimte';
 
-const fakeManager = (options: { installed?: boolean; onDisk?: string; running?: BuildIdentity | null; refuseStart?: string } = {}) => {
+function fakeManager(options: { installed?: boolean; onDisk?: string; running?: BuildIdentity | null; refuseStart?: string } = {}) {
     const calls: string[] = [];
     const service = { definition: options.onDisk ?? (options.installed ? DEFINITION : null), running: options.running ?? null };
     const manager: ServiceManager = {
@@ -50,9 +50,9 @@ const fakeManager = (options: { installed?: boolean; onDisk?: string; running?: 
         }
     };
     return { calls, service, manager };
-};
+}
 
-const memorySetting = (initial: boolean): KeepRunningSetting & { value: boolean } => {
+function memorySetting(initial: boolean): KeepRunningSetting & { value: boolean } {
     const setting = {
         value: initial,
         read: () => setting.value,
@@ -61,9 +61,9 @@ const memorySetting = (initial: boolean): KeepRunningSetting & { value: boolean 
         }
     };
     return setting;
-};
+}
 
-const setup = (options: {
+function setup(options: {
     support?: ServiceSupport;
     keepRunning?: boolean;
     fake?: ReturnType<typeof fakeManager>;
@@ -73,7 +73,7 @@ const setup = (options: {
     proves?: (health: BuildIdentity) => boolean;
     /* The answer to the question before an earlier build that cannot prove itself is restarted. */
     restartUnproven?: boolean;
-}) => {
+}) {
     const fake = options.fake ?? fakeManager();
     const events: string[] = [];
     let child: BuildIdentity | null = null;
@@ -135,7 +135,7 @@ const setup = (options: {
         await Promise.resolve();
     };
     return { controller: createServiceController(deps), fake, events, deps, machine, clock, published, crash, advance };
-};
+}
 
 describe('start', () => {
     test('the same build behind the port is attached to, and nothing is spawned', async () => {

@@ -256,16 +256,16 @@ export interface ComputerSetup {
     launches: string[];
 }
 
-export const tempHome = async (): Promise<string> => {
+export async function tempHome(): Promise<string> {
     const home = await mkdtemp(join(tmpdir(), 'ruimte-computer-'));
     await writeFile(join(home, 'local.key'), 'secret\n');
     return home;
-};
+}
 
 /* A computer use service over a fake helper, a fixed process table and manual timers; `enabled` turns it on first. */
-export const computerSetup = async (
+export async function computerSetup(
     options: { home?: string; enabled?: boolean; helper?: FakeHelper; overrides?: Partial<ComputerUseOptions> } = {}
-): Promise<ComputerSetup> => {
+): Promise<ComputerSetup> {
     const home = options.home ?? (await tempHome());
     const helper = options.helper ?? new FakeHelper();
     const timers = new ManualTimers();
@@ -303,23 +303,26 @@ export const computerSetup = async (
         await computer.setEnabled(true, 'en');
     }
     return { home, helper, timers, computer, runs, launches };
-};
+}
 
 /* Lets the promise chains of the service run without a clock: every turn of the event loop, until the condition holds. */
-export const until = async (condition: () => boolean): Promise<void> => {
+export async function until(condition: () => boolean): Promise<void> {
     for (let i = 0; i < 1000 && !condition(); i++) {
         await new Promise<void>((resolve) => setImmediate(resolve));
     }
     if (!condition()) {
         throw new Error('the condition never held');
     }
-};
+}
 
-export const chatInfo = (chatId: string, status: AgentStatus): SessionEvent =>
-    ({ event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } }) as unknown as SessionEvent;
+export function chatInfo(chatId: string, status: AgentStatus): SessionEvent {
+    return { event: 'chat.event', payload: { chatId, event: { type: 'info', info: { chatId, status } } } } as unknown as SessionEvent;
+}
 
-export const turnEnded = (chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent =>
-    ({ event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } }) as unknown as SessionEvent;
+export function turnEnded(chatId: string, state: 'done' | 'aborted' | 'error'): SessionEvent {
+    return { event: 'chat.event', payload: { chatId, event: { type: 'item', item: { kind: 'turn', id: 'turn-1', state } } } } as unknown as SessionEvent;
+}
 
-export const terminalStatus = (sessionId: string, status: AgentStatus): SessionEvent =>
-    ({ event: 'session.status', payload: { sessionId, agent: { status } } }) as unknown as SessionEvent;
+export function terminalStatus(sessionId: string, status: AgentStatus): SessionEvent {
+    return { event: 'session.status', payload: { sessionId, agent: { status } } } as unknown as SessionEvent;
+}

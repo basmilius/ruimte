@@ -6,17 +6,17 @@ import { Icon, IconButton, Menu, Tooltip, ContextMenu } from '@basmilius/desktop
 import { SNOOZE_CHOICES, snoozeUntil, useSnoozedUntil, useSnoozes, type SnoozeChoice } from '@/state/snooze';
 
 /* The moment a choice lands on, beside its name: a clock today, a weekday for tomorrow. */
-const choiceHint = (choice: SnoozeChoice, now: number): string => {
+function choiceHint(choice: SnoozeChoice, now: number): string {
     const until = snoozeUntil(choice, now);
     return choice === 'tomorrow' ? formatWeekdayClock(until) : formatClock(until);
-};
+}
 
-const snooze = (endpointId: string, nodeId: string, choice: SnoozeChoice): void => {
+function snooze(endpointId: string, nodeId: string, choice: SnoozeChoice): void {
     useSnoozes.getState().snooze(endpointId, nodeId, snoozeUntil(choice, Date.now()));
-};
+}
 
 /* The moment a menu opened, which is what its hints are read from; a render has no business asking the clock. */
-const useOpenedAt = (): [number, (open: boolean) => void] => {
+function useOpenedAt(): [number, (open: boolean) => void] {
     const [openedAt, setOpenedAt] = useState(0);
     const onOpenChange = (open: boolean): void => {
         if (open) {
@@ -24,7 +24,7 @@ const useOpenedAt = (): [number, (open: boolean) => void] => {
         }
     };
     return [openedAt, onOpenChange];
-};
+}
 
 /* The corner of a "Needs you" row, shown while the pointer is on it. */
 export function SnoozeButton({ endpointId, nodeId, tabIndex }: { endpointId: string; nodeId: string; tabIndex?: number }) {

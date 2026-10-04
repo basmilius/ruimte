@@ -14,18 +14,20 @@ export interface DraggedDiff {
     view: ProjectFileTabView;
 }
 
-export const startDiffDrag = (transfer: DataTransfer, diff: DraggedDiff): void => {
+export function startDiffDrag(transfer: DataTransfer, diff: DraggedDiff): void {
     transfer.setData(VIEW_DRAG_TYPE, FILES_VIEW_ID);
     transfer.setData(DIFF_DRAG_TYPE, JSON.stringify(diff));
     transfer.effectAllowed = 'move';
     setDragging(FILES_VIEW_ID);
-};
+}
 
 /* `getData` is empty during dragover, so the types decide. */
-export const carriesDiff = (transfer: Pick<DataTransfer, 'types'>): boolean => transfer.types.includes(DIFF_DRAG_TYPE);
+export function carriesDiff(transfer: Pick<DataTransfer, 'types'>): boolean {
+    return transfer.types.includes(DIFF_DRAG_TYPE);
+}
 
 /* Null for a drag without a change, or with one another window wrote in a shape this one cannot read. */
-export const droppedDiff = (transfer: Pick<DataTransfer, 'types' | 'getData'>): DraggedDiff | null => {
+export function droppedDiff(transfer: Pick<DataTransfer, 'types' | 'getData'>): DraggedDiff | null {
     if (!carriesDiff(transfer)) {
         return null;
     }
@@ -36,4 +38,4 @@ export const droppedDiff = (transfer: Pick<DataTransfer, 'types' | 'getData'>): 
     } catch {
         return null;
     }
-};
+}

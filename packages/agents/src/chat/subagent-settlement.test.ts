@@ -5,28 +5,32 @@ import { join } from 'node:path';
 import { readSubagentSettlement, settlementOf } from './subagent-settlement.ts';
 
 // Lines in the shape Claude Code 2.1.273 writes them into `subagents/agent-<id>.jsonl`.
-const assistant = (content: unknown[], stopReason: string | null, timestamp = '2026-09-16T09:12:12.045Z'): string =>
-    JSON.stringify({
+function assistant(content: unknown[], stopReason: string | null, timestamp = '2026-09-16T09:12:12.045Z'): string {
+    return JSON.stringify({
         isSidechain: true,
         agentId: 'a91114f36f4c6b0ef',
         type: 'assistant',
         timestamp,
         message: { id: 'msg_1', type: 'message', role: 'assistant', content, stop_reason: stopReason }
     });
+}
 
-const toolResult = (timestamp = '2026-09-16T09:12:10.661Z'): string =>
-    JSON.stringify({
+function toolResult(timestamp = '2026-09-16T09:12:10.661Z'): string {
+    return JSON.stringify({
         isSidechain: true,
         type: 'user',
         timestamp,
         message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_handback', content: 'Delivered.' }] }
     });
+}
 
 const attachment = JSON.stringify({ isSidechain: true, type: 'attachment', timestamp: '2026-09-16T09:12:10.663Z', attachment: { type: 'output_style' } });
 
 const handback = assistant([{ type: 'tool_use', id: 'toolu_handback', name: 'SubagentHandback', input: { message: 'The report' } }], 'tool_use');
 
-const lines = (...entries: string[]): string => `${entries.join('\n')}\n`;
+function lines(...entries: string[]): string {
+    return `${entries.join('\n')}\n`;
+}
 
 describe('what the end of a subagent transcript says', () => {
     test('a last message that ended the turn is finished, with its time and its report', () => {

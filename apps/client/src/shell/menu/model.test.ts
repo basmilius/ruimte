@@ -18,57 +18,67 @@ const NO_OFFERS = {
     share: false
 };
 
-const context = (patch: Partial<MenuContext> = {}): MenuContext => ({
-    host: 'desktop',
-    apple: true,
-    workspace: true,
-    folder: true,
-    fileManager: 'Finder',
-    view: 'canvas',
-    offers: { ...NO_OFFERS, duplicate: true, share: true },
-    shared: false,
-    selection: 0,
-    promote: false,
-    anyLocked: false,
-    cells: 1,
-    split: { right: true, down: true },
-    maximized: false,
-    nodeMaximizable: false,
-    nodeMaximized: false,
-    closesRight: false,
-    panel: null,
-    sidebar: true,
-    views: ['Main', 'Sketch'],
-    moveTargets: [],
-    layouts: ['Review'],
-    agents: [{ kind: 'claude', name: 'Claude Code', chat: true, terminal: true }],
-    launches: [],
-    chosenLaunch: null,
-    releaseNotes: true,
-    fullscreen: false,
-    keepAwake: null,
-    settingsOpen: false,
-    windows: true,
-    newChat: true,
-    scratch: false,
-    ...patch
-});
+function context(patch: Partial<MenuContext> = {}): MenuContext {
+    return {
+        host: 'desktop',
+        apple: true,
+        workspace: true,
+        folder: true,
+        fileManager: 'Finder',
+        view: 'canvas',
+        offers: { ...NO_OFFERS, duplicate: true, share: true },
+        shared: false,
+        selection: 0,
+        promote: false,
+        anyLocked: false,
+        cells: 1,
+        split: { right: true, down: true },
+        maximized: false,
+        nodeMaximizable: false,
+        nodeMaximized: false,
+        closesRight: false,
+        panel: null,
+        sidebar: true,
+        views: ['Main', 'Sketch'],
+        moveTargets: [],
+        layouts: ['Review'],
+        agents: [{ kind: 'claude', name: 'Claude Code', chat: true, terminal: true }],
+        launches: [],
+        chosenLaunch: null,
+        releaseNotes: true,
+        fullscreen: false,
+        keepAwake: null,
+        settingsOpen: false,
+        windows: true,
+        newChat: true,
+        scratch: false,
+        ...patch
+    };
+}
 
 const START_SCREEN = context({ workspace: false, folder: false, view: null, offers: null, views: [], layouts: [], cells: 1 });
 
-const labels = (spec: MenuSpec): string[] => spec.menus.map((menu) => menu.label);
+function labels(spec: MenuSpec): string[] {
+    return spec.menus.map((menu) => menu.label);
+}
 
-const menu = (spec: MenuSpec, label: string): MenuNode[] => spec.menus.find((candidate) => candidate.label === label)?.items ?? [];
+function menu(spec: MenuSpec, label: string): MenuNode[] {
+    return spec.menus.find((candidate) => candidate.label === label)?.items ?? [];
+}
 
-const flatten = (nodes: readonly MenuNode[]): MenuNode[] => nodes.flatMap((node) => (node.kind === 'submenu' ? [node, ...flatten(node.items)] : [node]));
+function flatten(nodes: readonly MenuNode[]): MenuNode[] {
+    return nodes.flatMap((node) => (node.kind === 'submenu' ? [node, ...flatten(node.items)] : [node]));
+}
 
-const commandIds = (spec: MenuSpec): string[] =>
-    spec.menus.flatMap((entry) => flatten(entry.items)).flatMap((node) => (node.kind === 'command' ? [node.id] : []));
+function commandIds(spec: MenuSpec): string[] {
+    return spec.menus.flatMap((entry) => flatten(entry.items)).flatMap((node) => (node.kind === 'command' ? [node.id] : []));
+}
 
-const find = (spec: MenuSpec, id: string): Extract<MenuNode, { kind: 'command' }> | undefined =>
-    spec.menus
+function find(spec: MenuSpec, id: string): Extract<MenuNode, { kind: 'command' }> | undefined {
+    return spec.menus
         .flatMap((entry) => flatten(entry.items))
         .find((node): node is Extract<MenuNode, { kind: 'command' }> => node.kind === 'command' && node.id === id);
+}
 
 const EVERY_CONTEXT: MenuContext[] = [
     START_SCREEN,

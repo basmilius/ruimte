@@ -56,4 +56,6 @@ export const FOCUS_SHORTCUTS: Record<SplitDirection, Shortcut> = {
 export const VIEW_SHORTCUTS: readonly Shortcut[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => shortcut(`Mod+${number}`));
 
 /* The shortcut of the view at a zero-based index, or undefined past the ninth. */
-export const viewShortcut = (index: number): Shortcut | undefined => VIEW_SHORTCUTS[index];
+export function viewShortcut(index: number): Shortcut | undefined {
+    return VIEW_SHORTCUTS[index];
+}

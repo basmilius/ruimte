@@ -9,7 +9,7 @@ import { endpointKey, useEndpointId } from '@/state/keys';
  * <webview> in the parking layer. A node without an address has no page and shows the splash until
  * something gives it one.
  */
-export const usePage = (id: string): { url: string; available: boolean } => {
+export function usePage(id: string): { url: string; available: boolean } {
     const host = useNodeHost(id);
     const savedUrl = host?.url ?? '';
     const state = useBrowserRow(id, (row) => row);
@@ -24,4 +24,4 @@ export const usePage = (id: string): { url: string; available: boolean } => {
     }, [key, available, savedUrl]);
 
     return { url: state?.url ?? savedUrl, available };
-};
+}

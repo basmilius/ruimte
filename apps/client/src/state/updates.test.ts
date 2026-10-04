@@ -58,7 +58,9 @@ describe('noteVersionChange', () => {
     });
 });
 
-const state = (patch: Partial<UpdateState>): UpdateState => ({ status: 'idle', currentVersion: '1.0.0', ...patch });
+function state(patch: Partial<UpdateState>): UpdateState {
+    return { status: 'idle', currentVersion: '1.0.0', ...patch };
+}
 
 describe('hasUpdate', () => {
     test('is true only while there is something to do about a new version', () => {

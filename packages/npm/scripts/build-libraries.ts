@@ -31,18 +31,21 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const out = resolve(values.out);
 const version = values.version;
 
-const writeJson = (path: string, value: unknown): Promise<void> => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+function writeJson(path: string, value: unknown): Promise<void> {
+    return writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+}
 
 /* Where a library that depends on another finds its declarations instead of its source. */
-const declarationPaths = (): Record<string, string[]> =>
-    Object.fromEntries(
+function declarationPaths(): Record<string, string[]> {
+    return Object.fromEntries(
         LIBRARIES.flatMap((library) => [
             [`@ruimte/${library}`, [join(out, library, 'dist', 'index.d.ts')]],
             [`@ruimte/${library}/*`, [join(out, library, 'dist', '*')]]
         ])
     );
+}
 
-const build = async (library: Library): Promise<void> => {
+async function build(library: Library): Promise<void> {
     const source = join(repoRoot, 'packages', library);
     const dir = join(out, library);
     const dist = join(dir, 'dist');
@@ -91,7 +94,7 @@ const build = async (library: Library): Promise<void> => {
     await copyFile(join(source, 'README.md'), join(dir, 'README.md'));
     await copyFile(join(repoRoot, 'LICENSE'), join(dir, 'LICENSE'));
     console.log(`Laid out ${dir}`);
-};
+}
 
 for (const library of LIBRARIES) {
     await build(library);

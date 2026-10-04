@@ -3,7 +3,7 @@ import { readBytes, type ByteSources } from '../bytes/read-bytes.ts';
 import { BinaryReply, translate, type Dispatcher } from '../dispatcher.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
 
-export const registerBytesHandlers = (dispatcher: Dispatcher, sources: ByteSources, machineHome: MachineHome): void => {
+export function registerBytesHandlers(dispatcher: Dispatcher, sources: ByteSources, machineHome: MachineHome): void {
     dispatcher.register('bytes.read', (payload, client) =>
         translate(async () => {
             if (payload.resource.kind === 'file') {
@@ -16,4 +16,4 @@ export const registerBytesHandlers = (dispatcher: Dispatcher, sources: ByteSourc
             return { ...header, data: Buffer.from(bytes).toString('base64') };
         })
     );
-};
+}

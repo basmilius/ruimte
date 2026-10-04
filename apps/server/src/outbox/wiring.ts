@@ -134,7 +134,7 @@ export interface OutboxWiring {
  * Everything the outbox drives, wired once for the daemon and the test daemon both. A handler that
  * only one of them knew would fail in production or in the tests, never in both.
  */
-export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
+export function wireOutbox(deps: OutboxWiringDeps): OutboxWiring {
     const { link, outbox, projects, lineage, prompts, notices, tasks, chats, sessions } = deps;
     const enqueue = (projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> =>
         link.enqueue(projectId, target, work, notBefore);
@@ -254,4 +254,4 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
             void taskWiring.prune(projectId, ids).catch((e) => failed('Pruning tasks failed', e));
         }
     };
-};
+}

@@ -9,20 +9,22 @@ export interface PersistedJson<T> {
  * version that shaped it differently, both come back as the fallback rather than as an error: there
  * is nothing a person could do about either, and the composer has to open regardless.
  */
-export const persistedJson = <T>(key: string, parse: (raw: string | null) => T, fallback: T): PersistedJson<T> => ({
-    read: () => {
-        try {
-            return parse(localStorage.getItem(key));
-        } catch {
-            return fallback;
+export function persistedJson<T>(key: string, parse: (raw: string | null) => T, fallback: T): PersistedJson<T> {
+    return {
+        read: () => {
+            try {
+                return parse(localStorage.getItem(key));
+            } catch {
+                return fallback;
+            }
+        },
+        write: (value) => {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch {
+                return false;
+            }
         }
-    },
-    write: (value) => {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch {
-            return false;
-        }
-    }
-});
+    };
+}

@@ -11,12 +11,14 @@ export interface TerminalTasks {
 }
 
 /* A terminal agent has no turn that answers its task, so only `done` settles it and its end fails it. */
-export const terminalTasks = (coordinator: Pick<TaskCoordinator, 'agentEnded'>): TerminalTasks => ({
-    ended: (sessionId) => coordinator.agentEnded(sessionId, TERMINAL_ENDED),
-    sessionEvent: (event) => {
-        if (event.event !== 'session.status' || event.payload.agent?.status !== 'exited') {
-            return;
+export function terminalTasks(coordinator: Pick<TaskCoordinator, 'agentEnded'>): TerminalTasks {
+    return {
+        ended: (sessionId) => coordinator.agentEnded(sessionId, TERMINAL_ENDED),
+        sessionEvent: (event) => {
+            if (event.event !== 'session.status' || event.payload.agent?.status !== 'exited') {
+                return;
+            }
+            coordinator.agentEnded(event.payload.sessionId, TERMINAL_ENDED);
         }
-        coordinator.agentEnded(event.payload.sessionId, TERMINAL_ENDED);
-    }
-});
+    };
+}

@@ -11,7 +11,7 @@ afterEach(async () => {
     await Promise.all(backends.splice(0).map((backend) => backend.dispose()));
 });
 
-const harness = (available = true, executeTool?: typeof executeAppleTool, throwToolResult = false, options: AppleBackendOptions = {}, protocolVersion = 3) => {
+function harness(available = true, executeTool?: typeof executeAppleTool, throwToolResult = false, options: AppleBackendOptions = {}, protocolVersion = 3) {
     let io: FakeIo;
     const requests: AppleFoundationRequest[] = [];
     const events: BackendEvent[] = [];
@@ -68,7 +68,7 @@ const harness = (available = true, executeTool?: typeof executeAppleTool, throwT
         out: (frame: unknown) => io.out(frame),
         until: (predicate: () => boolean): Promise<void> => (predicate() ? Promise.resolve() : new Promise((resolve) => waiters.push({ predicate, resolve })))
     };
-};
+}
 
 const call = { type: 'tool.call', id: '1-1-tool-1', name: 'list_files', path: '.' };
 
@@ -345,7 +345,7 @@ test('file change evidence reaches the existing tool row', async () => {
     expect(rig.events.find((event) => event.type === 'tool.done')?.changes).toEqual(changes);
 });
 
-const manualDeadlines = () => {
+function manualDeadlines() {
     const pending = new Map<() => void, number>();
     return {
         schedule: (callback: () => void, milliseconds: number) => {
@@ -364,7 +364,7 @@ const manualDeadlines = () => {
             }
         }
     };
-};
+}
 
 test('a denial seals the turn before a model can ask again, and the next turn remains usable', async () => {
     const rig = harness();

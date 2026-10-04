@@ -12,7 +12,7 @@ const UNAVAILABLE: Record<string, string> = {
     'devicectl-unavailable': 'panels:devices.unavailable.xcode'
 };
 
-export const deviceStateText = (device: Pick<DeviceInfo, 'kind' | 'platform' | 'state' | 'reason'>): string => {
+export function deviceStateText(device: Pick<DeviceInfo, 'kind' | 'platform' | 'state' | 'reason'>): string {
     const reason = device.reason === undefined ? undefined : REASONS[device.reason];
     if (reason !== undefined) {
         return i18next.t(reason);
@@ -28,13 +28,13 @@ export const deviceStateText = (device: Pick<DeviceInfo, 'kind' | 'platform' | '
         : device.state === 'shutdown'
           ? i18next.t('panels:devices.state.stopped')
           : i18next.t('panels:devices.state.changing');
-};
+}
 
 /*
  * One line per kind of device the machine could not look for. Away from macOS a missing Xcode is
  * not something to install, so the iOS entries give way to the one line that says iOS needs a Mac.
  */
-export const unavailableNotes = (unavailable: readonly DeviceUnavailable[], platform: string | null): string[] => {
+export function unavailableNotes(unavailable: readonly DeviceUnavailable[], platform: string | null): string[] {
     const notMac = platform !== null && platform !== 'darwin';
     const notes = unavailable
         .filter((entry) => !notMac || entry.platform !== 'ios')
@@ -46,4 +46,4 @@ export const unavailableNotes = (unavailable: readonly DeviceUnavailable[], plat
         notes.push(i18next.t('panels:devices.unavailable.needsMac'));
     }
     return [...new Set(notes)];
-};
+}

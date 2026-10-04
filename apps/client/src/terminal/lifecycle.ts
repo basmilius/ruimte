@@ -1,15 +1,17 @@
-import type { ProjectView } from '@ruimte/contracts';
+import type { CanvasNodeKind, ProjectView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { sessionNodesOf } from '@/project/project-sessions';
 import { endpointKey } from '@/state/keys';
-import { watchNodes, type NodeEnder } from '@/terminal/lifecycle-watch';
+import { watchNodes, type NodeExit } from '@/terminal/lifecycle-watch';
 import { forgetScreen } from '@/terminal/registry';
 import { browserClientFor, chatClientFor, sessionClientFor } from '@/transport/connections';
 
-const noop = (): void => undefined;
+function noop(): void {
+    return undefined;
+}
 
 /* The node names the machine it ran on, so a node that leaves is ended there and not on the machine that is active now. */
-const end: NodeEnder = (endpointId, id, kind, exit) => {
+function end(endpointId: string, id: string, kind: CanvasNodeKind, exit: NodeExit): void {
     const kills = exit === 'closed';
     if (kind === 'terminal') {
         forgetScreen(endpointId, id);
@@ -26,10 +28,12 @@ const end: NodeEnder = (endpointId, id, kind, exit) => {
             void browserClientFor(endpointId)?.kill(id).catch(noop);
         }
     }
-};
+}
 
 /* Ends the daemon session of every node this client takes out of the document. */
-export const startSessionLifecycle = (): (() => void) => watchNodes(end);
+export function startSessionLifecycle(): () => void {
+    return watchNodes(end);
+}
 
 /*
  * What a closing project leaves behind inside this client. Ending the sessions themselves is the
@@ -37,10 +41,10 @@ export const startSessionLifecycle = (): (() => void) => watchNodes(end);
  * client still has open keeps its sessions running. The last screen of a terminal is a cache either
  * way, and a reattach fills it again.
  */
-export const forgetProjectSessions = (endpointId: string, views: readonly ProjectView[]): void => {
+export function forgetProjectSessions(endpointId: string, views: readonly ProjectView[]): void {
     for (const node of sessionNodesOf(views)) {
         if (node.kind === 'terminal') {
             forgetScreen(endpointId, node.id);
         }
     }
-};
+}

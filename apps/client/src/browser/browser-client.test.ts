@@ -5,16 +5,18 @@ import type { Transport, TransportStatus } from '@/transport/transport';
 import { BrowserClient } from './browser-client';
 import { initialStreamUrl, normalizeUrl, useBrowser } from './registry';
 
-const info = (browserId: string, url = 'https://example.com') => ({
-    browserId,
-    url,
-    title: 'Example',
-    loading: false,
-    canGoBack: false,
-    canGoForward: false,
-    error: null,
-    favicon: null
-});
+function info(browserId: string, url = 'https://example.com') {
+    return {
+        browserId,
+        url,
+        title: 'Example',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false,
+        error: null,
+        favicon: null
+    };
+}
 
 class FakeTransport implements Transport {
     status: TransportStatus = 'open';

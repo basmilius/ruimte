@@ -53,39 +53,42 @@ export const usePulsarAccount = create<AccountState>(() => ({
 }));
 
 /* Read when a session ends rather than at module load, where the words are not in yet. */
-const sessionEnded = (): string => i18next.t('machines:account.sessionEndedOnDevice');
+function sessionEnded(): string {
+    return i18next.t('machines:account.sessionEndedOnDevice');
+}
 
 let platform: PulsarPlatform | null = null;
 let tokens: AccessTokens | null = null;
 let book: Promise<AddressBookClient> | null = null;
 
 /* The Remote pane, where the account section says how a sign-in it started went, even when the dialog was closed meanwhile. */
-const openAccountSection = (): void => {
+function openAccountSection(): void {
     useUi.getState().setSettings({ open: true, section: 'machines' });
-};
+}
 
-const signedOut = (error: string | null, notice: string | null = null): void => {
+function signedOut(error: string | null, notice: string | null = null): void {
     tokens?.set(null);
     usePulsarAccount.setState({ status: 'signed-out', account: null, error, notice, identities: null, linking: null });
-};
+}
 
-const applyAccountResult = (result: AccountResult): void => {
+function applyAccountResult(result: AccountResult): void {
     usePulsarAccount.setState({ account: result.account, identities: result.identities, linking: null, error: null });
-};
+}
 
-const completeLink = (payload: IdentityLinkCompletePayload): Promise<AccountResult> =>
-    withAccessToken((client, token) => client.completeIdentityLink(token, payload));
+function completeLink(payload: IdentityLinkCompletePayload): Promise<AccountResult> {
+    return withAccessToken((client, token) => client.completeIdentityLink(token, payload));
+}
 
 /* Safari clears a site's storage after a week without a visit unless the site may keep it, and the session and its key live there. */
-const keepStorage = (): void => {
+function keepStorage(): void {
     void navigator.storage?.persist?.().catch(() => false);
-};
+}
 
 /*
  * The page came back from the address book. The code leaves the address bar before anything else, so
  * a reload or a screenshot carries none, and a return that fails leaves whoever was signed in before.
  */
-const finishWebSignIn = async (given: PulsarPlatform, web: NonNullable<PulsarPlatform['web']>): Promise<void> => {
+async function finishWebSignIn(given: PulsarPlatform, web: NonNullable<PulsarPlatform['web']>): Promise<void> {
     const query = new URLSearchParams(location.search);
     history.replaceState(null, '', '/');
     usePulsarAccount.setState({ status: 'signing-in', error: null, notice: null });
@@ -113,10 +116,10 @@ const finishWebSignIn = async (given: PulsarPlatform, web: NonNullable<PulsarPla
             openAccountSection();
         }
     }
-};
+}
 
 /* The page came back from adding a provider: the session it left with trades the code, and stays signed in whatever the answer. */
-const finishWebLink = async (given: PulsarPlatform, provider: ProviderId, payload: IdentityLinkCompletePayload): Promise<void> => {
+async function finishWebLink(given: PulsarPlatform, provider: ProviderId, payload: IdentityLinkCompletePayload): Promise<void> {
     const restored = await given.keeper.restore().catch(() => null);
     if (!restored) {
         signedOut(null, sessionEnded());
@@ -131,20 +134,20 @@ const finishWebLink = async (given: PulsarPlatform, provider: ProviderId, payloa
     }
     // Adding a provider only starts in the account section, so the way back always leads there.
     openAccountSection();
-};
+}
 
 /* Which providers to offer. A failure keeps what is on screen: the address book may be down, and GitHub is the one it always had. */
-const loadProviders = async (): Promise<void> => {
+async function loadProviders(): Promise<void> {
     try {
         const client = await addressBookClient();
         usePulsarAccount.setState({ providers: offeredProviders(await client.providers()) });
     } catch {
         // Nothing to say: signing in says why if the address book is really gone.
     }
-};
+}
 
 /* Reads who is signed in from the platform's keeper, without asking the address book. */
-export const startPulsarAccount = async (given: PulsarPlatform | null = desktopPulsar() ?? webPulsar()): Promise<void> => {
+export async function startPulsarAccount(given: PulsarPlatform | null = desktopPulsar() ?? webPulsar()): Promise<void> {
     platform = given;
     book = null;
     if (!given) {
@@ -168,13 +171,13 @@ export const startPulsarAccount = async (given: PulsarPlatform | null = desktopP
     } catch (e) {
         signedOut(messageOf(e));
     }
-};
+}
 
 /*
  * `confirm` is for a sign-in started in the account section: the Remote pane opens with how it went.
  * A flow with a step of its own after signing in (approving a machine, picking one) leaves it off.
  */
-export const signInToPulsar = async (provider: ProviderId = 'github', options: { confirm?: boolean } = {}): Promise<void> => {
+export async function signInToPulsar(provider: ProviderId = 'github', options: { confirm?: boolean } = {}): Promise<void> {
     if (!platform || !tokens) {
         return;
     }
@@ -217,23 +220,23 @@ export const signInToPulsar = async (provider: ProviderId = 'github', options: {
             openAccountSection();
         }
     }
-};
+}
 
 /* The ways to sign in to this account, and how the account is shown now that they may have changed. */
-export const refreshPulsarIdentities = async (): Promise<void> => {
+export async function refreshPulsarIdentities(): Promise<void> {
     try {
         applyAccountResult(await withAccessToken((client, token) => client.account(token)));
     } catch (e) {
         usePulsarAccount.setState({ error: messageOf(e) });
     }
-};
+}
 
 /*
  * Adds a provider to the signed-in account. The link token is asked for with this session and the code
  * is traded with it again, so the new identity can only land on the account that is signed in here. The
  * web client leaves the page for the provider and finishes in `finishWebLink` when it comes back.
  */
-export const linkPulsarProvider = async (provider: ProviderId): Promise<void> => {
+export async function linkPulsarProvider(provider: ProviderId): Promise<void> {
     if (!platform || !tokens) {
         return;
     }
@@ -258,55 +261,57 @@ export const linkPulsarProvider = async (provider: ProviderId): Promise<void> =>
         usePulsarAccount.setState({ linking: null, error: messageOf(e) });
         openAccountSection();
     }
-};
+}
 
 /* Removes a provider from the account; the address book refuses the last one. */
-export const unlinkPulsarProvider = async (provider: ProviderId): Promise<void> => {
+export async function unlinkPulsarProvider(provider: ProviderId): Promise<void> {
     try {
         applyAccountResult(await withAccessToken((client, token) => client.unlinkIdentity(token, provider)));
     } catch (e) {
         usePulsarAccount.setState({ error: messageOf(e) });
     }
-};
+}
 
-export const cancelPulsarSignIn = async (): Promise<void> => {
+export async function cancelPulsarSignIn(): Promise<void> {
     await platform?.redirect?.cancel().catch(() => undefined);
-};
+}
 
-export const signOutOfPulsar = async (): Promise<void> => {
+export async function signOutOfPulsar(): Promise<void> {
     if (!platform) {
         return;
     }
     await platform.keeper.signOut().catch(() => undefined);
     dismissAccountConfirmation();
     signedOut(null);
-};
+}
 
 /*
  * Deletes the account on the address book with the name the person typed, then signs out the way signing
  * out does, so the shell forgets the refresh token of a session that is gone.
  */
-export const deletePulsarAccount = async (confirmation: string): Promise<void> => {
+export async function deletePulsarAccount(confirmation: string): Promise<void> {
     await withAccessToken((client, token) => client.deleteAccount(token, { confirmation }));
     await signOutOfPulsar();
-};
+}
 
-const addressBookClient = (): Promise<AddressBookClient> => {
+function addressBookClient(): Promise<AddressBookClient> {
     if (!platform) {
         return Promise.reject(new Error(i18next.t('machines:account.signInUnavailable')));
     }
     book ??= platform.addressBook().then((baseUrl) => new AddressBookClient({ baseUrl }));
     return book;
-};
+}
 
 /* For the routes that need no account; a page without a platform to sign in on reads them from the production address book. */
-export const publicAddressBook = (): Promise<AddressBookClient> => (platform ? addressBookClient() : Promise.resolve(new AddressBookClient()));
+export function publicAddressBook(): Promise<AddressBookClient> {
+    return platform ? addressBookClient() : Promise.resolve(new AddressBookClient());
+}
 
 /*
  * One call against the address book with a fresh access token. An `unauthorized` answer refreshes
  * once and tries again, since a token can run out between the check and the request.
  */
-export const withAccessToken = async <T>(call: (client: AddressBookClient, token: string) => Promise<T>): Promise<T> => {
+export async function withAccessToken<T>(call: (client: AddressBookClient, token: string) => Promise<T>): Promise<T> {
     const client = await addressBookClient();
     const token = await tokens?.token();
     if (!token) {
@@ -324,4 +329,4 @@ export const withAccessToken = async <T>(call: (client: AddressBookClient, token
         }
         return call(client, fresh);
     }
-};
+}

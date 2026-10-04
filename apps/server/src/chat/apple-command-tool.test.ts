@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { executeAppleCommand, type AppleCommandDependencies } from './apple-command-tool.ts';
 
-const harness = () => {
+function harness() {
     let output!: ReadableStreamDefaultController<Uint8Array>;
     let errors!: ReadableStreamDefaultController<Uint8Array>;
     let finish!: (code: number) => void;
@@ -55,7 +55,7 @@ const harness = () => {
         timeout: () => timeout(),
         state: () => ({ kills, cleared, milliseconds })
     };
-};
+}
 
 describe('Apple approved local shell command', () => {
     test('passes the approved command verbatim, inherits the provided environment, and captures output', async () => {

@@ -16,7 +16,7 @@ export interface PanBatch {
 
 /* A trackpad sends more wheel events than the screen draws frames, and every pan re-renders the
    canvas; one move per frame shows the same. */
-export const createPanBatch = (apply: (dx: number, dy: number) => void, clock: FrameClock = windowFrames): PanBatch => {
+export function createPanBatch(apply: (dx: number, dy: number) => void, clock: FrameClock = windowFrames): PanBatch {
     let pendingX = 0;
     let pendingY = 0;
     let frame: number | null = null;
@@ -49,4 +49,4 @@ export const createPanBatch = (apply: (dx: number, dy: number) => void, clock: F
         },
         flush
     };
-};
+}

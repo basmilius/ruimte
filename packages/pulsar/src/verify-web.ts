@@ -7,7 +7,7 @@ import { PublicKeySchema } from './keys.ts';
  * private key, which is why neither side reaches for a library: what a runtime without Ed25519
  * loses is the pinning, not the connection.
  */
-export const verifySignature = async (publicKey: string, message: string, signature: string): Promise<boolean> => {
+export async function verifySignature(publicKey: string, message: string, signature: string): Promise<boolean> {
     if (!PublicKeySchema.safeParse(publicKey).success) {
         return false;
     }
@@ -17,4 +17,4 @@ export const verifySignature = async (publicKey: string, message: string, signat
     } catch {
         return false;
     }
-};
+}

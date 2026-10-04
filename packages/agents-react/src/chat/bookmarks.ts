@@ -20,11 +20,11 @@ export const useBookmarkNaming = create<BookmarkNaming>((set) => ({
     close: () => set({ chatKey: null, itemId: null })
 }));
 
-const failed = (title: string, e: unknown): void => {
+function failed(title: string, e: unknown): void {
     chatHost().notify({ title, description: e instanceof Error ? e.message : String(e), kind: 'error' });
-};
+}
 
-const add = async (scope: ChatScope, chatId: string, itemId: string, name?: string): Promise<boolean> => {
+async function add(scope: ChatScope, chatId: string, itemId: string, name?: string): Promise<boolean> {
     try {
         await scope.chats.addBookmark(chatId, itemId, name);
         return true;
@@ -32,21 +32,21 @@ const add = async (scope: ChatScope, chatId: string, itemId: string, name?: stri
         failed(i18next.t('agent-chat:bookmarks.addFailed'), e);
         return false;
     }
-};
+}
 
 /* Marks a message and opens the field for its name at once, before the host answered. */
-export const placeBookmark = async (scope: ChatScope, chatId: string, itemId: string): Promise<void> => {
+export async function placeBookmark(scope: ChatScope, chatId: string, itemId: string): Promise<void> {
     useBookmarkNaming.getState().open(scope.keyOf(chatId), itemId);
     if (!(await add(scope, chatId, itemId))) {
         useBookmarkNaming.getState().close();
     }
-};
+}
 
 /*
  * The name a field settles on. A name goes through `addBookmark`, which also names a bookmark that
  * already stands, so a name typed before the mark itself landed is not refused.
  */
-export const nameBookmark = async (scope: ChatScope, chatId: string, itemId: string, name: string, previous: string | undefined): Promise<void> => {
+export async function nameBookmark(scope: ChatScope, chatId: string, itemId: string, name: string, previous: string | undefined): Promise<void> {
     const next = name.trim();
     if (next === (previous ?? '')) {
         return;
@@ -60,10 +60,10 @@ export const nameBookmark = async (scope: ChatScope, chatId: string, itemId: str
     } catch (e) {
         failed(i18next.t('agent-chat:bookmarks.renameFailed'), e);
     }
-};
+}
 
 /* Takes a bookmark away at once; the toast puts it back, name and all. */
-export const removeBookmark = async (scope: ChatScope, chatId: string, bookmark: ChatBookmark): Promise<void> => {
+export async function removeBookmark(scope: ChatScope, chatId: string, bookmark: ChatBookmark): Promise<void> {
     try {
         await scope.chats.removeBookmark(chatId, bookmark.itemId);
     } catch (e) {
@@ -75,13 +75,13 @@ export const removeBookmark = async (scope: ChatScope, chatId: string, bookmark:
         kind: 'deleted',
         action: { label: i18next.t('agent-chat:common.action.undo'), run: () => void add(scope, chatId, bookmark.itemId, bookmark.name) }
     });
-};
+}
 
 /* Scrolls the chat's thread to the message, and opens its name field for a rename. False when no thread of it is on screen yet. */
-export const goToBookmark = (scope: ChatScope, chatId: string, itemId: string, rename = false): boolean => {
+export function goToBookmark(scope: ChatScope, chatId: string, itemId: string, rename = false): boolean {
     const key = scope.keyOf(chatId);
     if (rename) {
         useBookmarkNaming.getState().open(key, itemId);
     }
     return jumpToTimelineItem(key, itemId);
-};
+}

@@ -6,24 +6,33 @@ import { describe, expect, test } from 'bun:test';
 const HERE = new URL('.', import.meta.url).pathname;
 
 // This file is left out: its samples below name modules on purpose.
-const sources = (): { path: string; text: string }[] =>
-    [...new Glob('**/*.ts').scanSync(HERE)]
+function sources(): { path: string; text: string }[] {
+    return [...new Glob('**/*.ts').scanSync(HERE)]
         .filter((path) => path !== 'boundary.test.ts')
         .map((path) => ({ path, text: readFileSync(join(HERE, path), 'utf8') }));
+}
 
-const isTest = (path: string): boolean => path.endsWith('.test.ts');
+function isTest(path: string): boolean {
+    return path.endsWith('.test.ts');
+}
 
 /* Every module a file names: an import or export from it, an import for its effect, a dynamic import and a require, in either quote. */
-const modulesOf = (text: string): string[] =>
-    [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)(['"])([^'"]+)\1/gm)].map((match) => match[2]!);
+function modulesOf(text: string): string[] {
+    return [...text.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)(['"])([^'"]+)\1/gm)].map((match) => match[2]!);
+}
 
-const reachesOut = (path: string, specifier: string): boolean =>
-    specifier.startsWith('@/') ||
-    specifier === '@ruimte/contracts' ||
-    specifier.startsWith('@ruimte/contracts/') ||
-    (specifier.startsWith('.') && relative(HERE, resolve(dirname(join(HERE, path)), specifier)).startsWith('..'));
+function reachesOut(path: string, specifier: string): boolean {
+    return (
+        specifier.startsWith('@/') ||
+        specifier === '@ruimte/contracts' ||
+        specifier.startsWith('@ruimte/contracts/') ||
+        (specifier.startsWith('.') && relative(HERE, resolve(dirname(join(HERE, path)), specifier)).startsWith('..'))
+    );
+}
 
-const usesBun = (text: string): boolean => /\bBun\./.test(text) || modulesOf(text).some((specifier) => specifier === 'bun' || specifier.startsWith('bun:'));
+function usesBun(text: string): boolean {
+    return /\bBun\./.test(text) || modulesOf(text).some((specifier) => specifier === 'bun' || specifier.startsWith('bun:'));
+}
 
 describe('the boundary of @ruimte/agents', () => {
     test('nothing imports from an app or from contracts beyond the chat host', () => {

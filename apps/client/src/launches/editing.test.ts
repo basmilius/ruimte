@@ -17,21 +17,25 @@ import {
     withoutDraft
 } from './editing.ts';
 
-const launch = (id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry => ({
-    id,
-    name: id,
-    kind: 'service',
-    command: `run ${id}`,
-    shared: false,
-    ...overrides
-});
+function launch(id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry {
+    return {
+        id,
+        name: id,
+        kind: 'service',
+        command: `run ${id}`,
+        shared: false,
+        ...overrides
+    };
+}
 
-const suggestion = (id: string, overrides: Partial<LaunchSuggestion> = {}, launchOverrides: Partial<LaunchConfigEntry> = {}): LaunchSuggestion => {
+function suggestion(id: string, overrides: Partial<LaunchSuggestion> = {}, launchOverrides: Partial<LaunchConfigEntry> = {}): LaunchSuggestion {
     const { shared: _shared, ...config } = launch(id, launchOverrides);
     return { launch: config, source: 'run-xml', path: `backend/dev/run/${id}.run.xml`, detail: 'PHP Built-in Web Server', private: false, ...overrides };
-};
+}
 
-const doc = (launches: LaunchConfigEntry[]): LaunchesDocument => ({ rev: 3, launches, approved: [] });
+function doc(launches: LaunchConfigEntry[]): LaunchesDocument {
+    return { rev: 3, launches, approved: [] };
+}
 
 describe('saving', () => {
     test('a new launch is named after itself, and a group that starts it follows', () => {

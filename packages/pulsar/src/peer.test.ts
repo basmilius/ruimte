@@ -6,7 +6,7 @@ const otherKey = 'B'.repeat(43);
 const signature = 's'.repeat(86);
 const nonce = 'n'.repeat(22);
 
-const setup = (host = 'broker.example.com') => {
+function setup(host = 'broker.example.com') {
     const sent: unknown[] = [];
     const signed: string[] = [];
     const log = { ready: 0, relayed: [] as unknown[], refused: [] as unknown[], failed: [] as string[], ice: [] as unknown[] };
@@ -31,7 +31,7 @@ const setup = (host = 'broker.example.com') => {
         events
     });
     return { peer, sent, signed, log };
-};
+}
 
 describe('BrokerPeer', () => {
     test('announces, answers the challenge over the broker host and signs every relay end to end', async () => {

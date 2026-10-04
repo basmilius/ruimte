@@ -8,8 +8,8 @@ import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
 const SHIFT_ENTER = '\x1b\r';
 
-export const createTerminal = (): Terminal =>
-    new Terminal({
+export function createTerminal(): Terminal {
+    return new Terminal({
         theme: readTerminalTheme(),
         fontFamily: readTerminalFont(),
         fontSize: useSettings.getState().fontSize,
@@ -17,13 +17,14 @@ export const createTerminal = (): Terminal =>
         scrollback: 5000,
         macOptionIsMeta: true
     });
+}
 
 /*
  * FitAddon measures the host's border box, so a vertical padding on the host would count as room for a
  * row that is cut off. The host has none; what a whole row does not fill is split above and below, as an
  * offset rather than a padding, since FitAddon subtracts the terminal element's own padding too.
  */
-export const fitToHost = (term: Terminal, fit: FitAddon): void => {
+export function fitToHost(term: Terminal, fit: FitAddon): void {
     fit.fit();
     const host = term.element?.parentElement;
     // The same private dimensions FitAddon itself divides by.
@@ -34,7 +35,7 @@ export const fitToHost = (term: Terminal, fit: FitAddon): void => {
     }
     const slack = host.clientHeight - term.rows * cellHeight;
     host.style.setProperty('--term-offset', `${Math.max(0, Math.floor(slack / 2))}px`);
-};
+}
 
 interface Pointer {
     clientX: number;
@@ -47,18 +48,18 @@ interface MouseService {
 }
 
 /** Where a pointer would stand on an element whose ancestors scale it from its layout size to `rect`. */
-export const unscaledPointer = (
+export function unscaledPointer(
     pointer: Pointer,
     rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>,
     layout: { width: number; height: number }
-): Pointer => {
+): Pointer {
     const scaleX = layout.width > 0 && rect.width > 0 ? rect.width / layout.width : 1;
     const scaleY = layout.height > 0 && rect.height > 0 ? rect.height / layout.height : 1;
     return {
         clientX: rect.left + (pointer.clientX - rect.left) / scaleX,
         clientY: rect.top + (pointer.clientY - rect.top) / scaleY
     };
-};
+}
 
 /*
  * xterm measures a pointer against the screen's scaled bounding box but divides by unscaled cells, so
@@ -66,7 +67,7 @@ export const unscaledPointer = (
  * service (private, shared by selection, links and mouse reporting) gets the pointer as it would stand
  * without the transform. Call after `open`, which creates that service.
  */
-export const followAncestorScale = (term: Terminal): void => {
+export function followAncestorScale(term: Terminal): void {
     const mouse = (term as unknown as { _core: { _mouseService?: MouseService } })._core._mouseService;
     if (!mouse) {
         return;
@@ -77,7 +78,7 @@ export const followAncestorScale = (term: Terminal): void => {
     const getMouseReportCoords = mouse.getMouseReportCoords.bind(mouse);
     mouse.getCoords = (event, element, ...rest) => getCoords(unscaled(event, element), element, ...rest);
     mouse.getMouseReportCoords = (event, element) => getMouseReportCoords(unscaled(event, element), element);
-};
+}
 
 interface TerminalKeys {
     write(data: string): void;
@@ -92,7 +93,7 @@ interface TerminalKeys {
  * views stops here instead of reaching the window listeners. The ones it does need are the window's
  * alone, or xterm would write Cmd+Shift+Enter as a return.
  */
-export const bindTerminalKeys = (term: Terminal, keys: TerminalKeys): void => {
+export function bindTerminalKeys(term: Terminal, keys: TerminalKeys): void {
     term.attachCustomKeyEventHandler((e) => {
         const apple = isApplePlatform();
         if (e.key === 'Escape') {
@@ -136,4 +137,4 @@ export const bindTerminalKeys = (term: Terminal, keys: TerminalKeys): void => {
         }
         return true;
     });
-};
+}

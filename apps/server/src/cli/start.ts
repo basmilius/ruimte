@@ -14,7 +14,7 @@ export interface StartDeps {
  * start leaves no trace in a home it shares with the first; the listen error is still caught for
  * the port taken in between. Answers the exit code of a refusal, or null once the machine runs.
  */
-export const startMachine = async (address: { host: string; port: number }, deps: StartDeps): Promise<number | null> => {
+export async function startMachine(address: { host: string; port: number }, deps: StartDeps): Promise<number | null> {
     const refuse = async (): Promise<number> => {
         deps.err(portInUseMessage(address.port, await deps.askRunningMachine(address.port)));
         return 1;
@@ -32,12 +32,13 @@ export const startMachine = async (address: { host: string; port: number }, deps
         }
         return refuse();
     }
-};
+}
 
 /** Whether listening on the address fails because something already does; any other failure is left for the daemon's own listen to report. */
-export const portTaken = (host: string, port: number): Promise<boolean> =>
-    new Promise((resolve) => {
+export function portTaken(host: string, port: number): Promise<boolean> {
+    return new Promise((resolve) => {
         const probe = createServer();
         probe.once('error', (e) => resolve(isAddressInUse(e)));
         probe.listen({ host, port, exclusive: true }, () => probe.close(() => resolve(false)));
     });
+}

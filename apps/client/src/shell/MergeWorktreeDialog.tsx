@@ -233,21 +233,21 @@ export function MergeWorktreeDialog() {
 }
 
 /* A terminal whose shell still runs or a chat whose CLI is up, in a turn or not. */
-const nodeLive = (node: WorktreeNode, sessions: ReturnType<typeof useSessions.getState>['byKey'], chats: ChatStatuses, endpointId: string): boolean => {
+function nodeLive(node: WorktreeNode, sessions: ReturnType<typeof useSessions.getState>['byKey'], chats: ChatStatuses, endpointId: string): boolean {
     const key = endpointKey(endpointId, node.id);
     if (node.kind === 'terminal') {
         const session = sessions[key];
         return session !== undefined && session.exited === undefined;
     }
     return node.kind === 'chat' && chats[key]?.info.running === true;
-};
+}
 
 /*
  * Runs the merges with a toast each that follows the daemon's progress, and ends every refusal with
  * the one thing a person can do next: merge into the branch the project folder is on, stash their
  * own change and try again, or take a conflicting merge back.
  */
-const mergeWithToasts = async (transport: Transport, folder: string, runs: readonly MergeRun[], done: () => void): Promise<void> => {
+async function mergeWithToasts(transport: Transport, folder: string, runs: readonly MergeRun[], done: () => void): Promise<void> {
     const toasts = new Map<string, string>();
     const off = transport.on('git.progress', (payload) => {
         const toastId = toasts.get(payload.actionId);
@@ -288,16 +288,16 @@ const mergeWithToasts = async (transport: Transport, folder: string, runs: reado
         off();
         done();
     }
-};
+}
 
-const toastOf = (
+function toastOf(
     transport: Transport,
     folder: string,
     outcome: MergeOutcome,
     run: MergeRun | undefined,
     retry: (run: MergeRun, patch: Partial<MergeRun['payload']>) => void,
     rest: string
-): Parameters<ReturnType<typeof useToasts.getState>['show']>[0] => {
+): Parameters<ReturnType<typeof useToasts.getState>['show']>[0] {
     if (outcome.kind === 'merged') {
         const description = mergedDescription(outcome.result);
         return { title: outcome.result.summary, kind: 'success', ...(description === undefined ? {} : { description }) };
@@ -348,20 +348,20 @@ const toastOf = (
         };
     }
     return base;
-};
+}
 
 /* Moves the person's own changes in the target checkout into a stash they asked for, named so it is found again. */
-const stashTarget = async (transport: Transport, folder: string, worktree: Worktree): Promise<void> => {
+async function stashTarget(transport: Transport, folder: string, worktree: Worktree): Promise<void> {
     const [status, list] = await Promise.all([transport.request('git.status', { cwd: folder }), transport.request('git.worktree-list', { repo: folder })]);
     const cwd = targetCheckout(folder, status.branch, list.worktrees, worktree.from?.branch);
     if (cwd === null) {
         throw new Error(i18next.t('shell:merge.notCheckedOut', { branch: worktree.from?.branch ?? i18next.t('shell:merge.targetBranch') }));
     }
     await performAsPerson('git.stash', { repository: cwd, message: `Before merging ${worktree.branch}`, run: nextActionId() });
-};
+}
 
 /* One worktree merged as the person set it up in the dialog, by the branch the catalog names a worktree with. */
-const mergeAsPerson = async ({ worktree, payload }: MergeRun, actionId: string): Promise<WorktreeMergeResult> => {
+async function mergeAsPerson({ worktree, payload }: MergeRun, actionId: string): Promise<WorktreeMergeResult> {
     const merged = await performAsPerson('worktree.merge', {
         branch: worktree.branch,
         strategy: payload.strategy,
@@ -385,4 +385,4 @@ const mergeAsPerson = async ({ worktree, payload }: MergeRun, actionId: string):
         ...(branchDeleted === undefined ? {} : { branchDeleted }),
         ...(kept === undefined ? {} : { kept })
     };
-};
+}

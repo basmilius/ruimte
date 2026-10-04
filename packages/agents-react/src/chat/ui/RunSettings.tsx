@@ -81,21 +81,26 @@ interface AccountPick {
     onPick(id: string): void;
 }
 
-const optionSummary = (option: ModelOptionDescriptor, selection: ModelSelection): string | null => {
+function optionSummary(option: ModelOptionDescriptor, selection: ModelSelection): string | null {
     const value = selection.options[option.id];
     if (option.type === 'select') {
         return option.choices.find((choice) => choice.id === (value ?? option.defaultChoice))?.label ?? null;
     }
     return (value ?? option.defaultValue) === true ? option.label : null;
-};
+}
 
-const optionIcon = (option: ModelOptionDescriptor): LucideIcon =>
-    option.type === 'boolean' ? Gauge : option.id === CONTEXT_OPTION ? Activity : SlidersHorizontal;
+function optionIcon(option: ModelOptionDescriptor): LucideIcon {
+    return option.type === 'boolean' ? Gauge : option.id === CONTEXT_OPTION ? Activity : SlidersHorizontal;
+}
 
-const contextTone = (fraction: number): string => (fraction >= 0.9 ? 'text-status-error' : fraction >= 0.7 ? 'text-status-needs-you' : 'text-text');
+function contextTone(fraction: number): string {
+    return fraction >= 0.9 ? 'text-status-error' : fraction >= 0.7 ? 'text-status-needs-you' : 'text-text';
+}
 
 // A radio group holds one string, so a model is named by its provider and its slug together.
-const modelValue = (provider: AgentKind, slug: string): string => `${provider}/${slug}`;
+function modelValue(provider: AgentKind, slug: string): string {
+    return `${provider}/${slug}`;
+}
 
 /*
  * Everything that decides how the next turn runs, behind one pill: the model, its own knobs and the
@@ -281,12 +286,13 @@ export function RunSettings({
 }
 
 /* Red where a window is nearly spent, amber where it is worth knowing, as the usage bars have it. */
-const sessionTone = (used: number): { bar: string; text: string } =>
-    used >= 0.9
+function sessionTone(used: number): { bar: string; text: string } {
+    return used >= 0.9
         ? { bar: 'bg-status-error', text: 'text-status-error' }
         : used >= 0.7
           ? { bar: 'bg-status-needs-you', text: 'text-status-needs-you' }
           : { bar: 'bg-text-muted', text: 'text-text-muted' };
+}
 
 /*
  * The account the next turn runs under, for the chat's own CLI. Before the first turn any of them;

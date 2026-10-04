@@ -3,25 +3,29 @@ import type { ProjectCanvasView } from '@ruimte/contracts';
 import { createCanvasStore, type CanvasNode } from '@/state/canvas';
 import { lineRoutes } from './line-routes';
 
-const node = (id: string, x: number, y: number): CanvasNode => ({ id, kind: 'terminal', title: id, x, y, w: 200, h: 100 });
+function node(id: string, x: number, y: number): CanvasNode {
+    return { id, kind: 'terminal', title: id, x, y, w: 200, h: 100 };
+}
 
-const view = (nodes: CanvasNode[]): ProjectCanvasView => ({
-    kind: 'canvas',
-    id: 'view',
-    name: 'Canvas',
-    nodes,
-    texts: [],
-    edges: [
-        { id: 'e1', from: 'a', to: 'b' },
-        { id: 'e2', from: 'b', to: 'a' }
-    ],
-    layouts: []
-});
+function view(nodes: CanvasNode[]): ProjectCanvasView {
+    return {
+        kind: 'canvas',
+        id: 'view',
+        name: 'Canvas',
+        nodes,
+        texts: [],
+        edges: [
+            { id: 'e1', from: 'a', to: 'b' },
+            { id: 'e2', from: 'b', to: 'a' }
+        ],
+        layouts: []
+    };
+}
 
-const routesOf = (store: ReturnType<typeof createCanvasStore>) => {
+function routesOf(store: ReturnType<typeof createCanvasStore>) {
     const { edges, nodes, texts, hidden } = store.getState();
     return lineRoutes(edges, nodes, texts, hidden);
-};
+}
 
 describe('the routes of the lines on a canvas', () => {
     test('are not found again for a pan or a zoom', () => {

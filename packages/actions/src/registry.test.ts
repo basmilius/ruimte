@@ -15,7 +15,9 @@ interface Context {
     name: string;
 }
 
-const call = (kind: 'person' | 'voice' = 'person'): ActionCall<Context> => ({ actor: { kind, id: `${kind}-1` }, context: { name: 'Board' } });
+function call(kind: 'person' | 'voice' = 'person'): ActionCall<Context> {
+    return { actor: { kind, id: `${kind}-1` }, context: { name: 'Board' } };
+}
 
 describe('ActionRegistry', () => {
     test('catalog only exposes handlers installed in this adapter', () => {

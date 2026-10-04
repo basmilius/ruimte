@@ -15,16 +15,18 @@ export const SUMMARY_MAX_BYTES = 8 * 1024;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-const turnsOf = (items: readonly ChatItem[]): ChatTurnItem[] => items.filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(items: readonly ChatItem[]): ChatTurnItem[] {
+    return items.filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 /* The number a turn has in a thread, counted from one; null for a turn that is not in it. */
-const turnNumber = (items: readonly ChatItem[], turnId: string): number | null => {
+function turnNumber(items: readonly ChatItem[], turnId: string): number | null {
     const index = turnsOf(items).findIndex((turn) => turn.id === turnId);
     return index === -1 ? null : index + 1;
-};
+}
 
 /* The last thing a turn said outside its subagents, which is its answer. */
-export const answerOf = (items: readonly ChatItem[], turnId: string): string | null => {
+export function answerOf(items: readonly ChatItem[], turnId: string): string | null {
     for (let i = items.length - 1; i >= 0; i--) {
         const item = items[i]!;
         if (item.kind === 'assistant' && item.turnId === turnId && !item.parentToolUseId && item.text.trim() !== '') {
@@ -32,15 +34,18 @@ export const answerOf = (items: readonly ChatItem[], turnId: string): string | n
         }
     }
     return null;
-};
+}
 
-const where = (place: IndexedPlace | null): 'node' | 'view' => (place?.canvasId === null ? 'view' : 'node');
+function where(place: IndexedPlace | null): 'node' | 'view' {
+    return place?.canvasId === null ? 'view' : 'node';
+}
 
-export const summaryPrompt = (original: { id: string; kind: 'node' | 'view' }, after: number | null): string =>
-    [
+export function summaryPrompt(original: { id: string; kind: 'node' | 'view' }, after: number | null): string {
+    return [
         `Ruimte: write a summary of what this conversation found out and decided since it was forked from ${original.kind} ${original.id}${after === null ? '' : ` after turn ${after}`}, for the agent that continues there.`,
         'At most 300 words. Say what changed in the files and where, what worked, what did not, and what is left; leave out what the original already knows. Do not run tools.'
     ].join(' ');
+}
 
 export interface SummarizeDeps {
     source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
@@ -54,7 +59,7 @@ export interface SummarizeDeps {
  * Asks a fork's own CLI to write down what it learned, in a turn of the fork a person sees and can
  * stop. The turn carries the chat it is for; the coordinator takes its last answer from there.
  */
-export const summarizeFork = async (deps: SummarizeDeps, chatId: string): Promise<ChatSummarizeResult> => {
+export async function summarizeFork(deps: SummarizeDeps, chatId: string): Promise<ChatSummarizeResult> {
     const fork = await deps.source(chatId);
     if (fork === null) {
         throw new ChatError('chat-not-found', `No chat ${chatId}`);
@@ -81,7 +86,7 @@ export const summarizeFork = async (deps: SummarizeDeps, chatId: string): Promis
         throw new ChatError('chat-busy', 'The fork is working on a turn; ask for the summary once it ends');
     }
     return { turnId };
-};
+}
 
 export interface SummaryCoordinatorDeps {
     chatItems(chatId: string): readonly ChatItem[] | null;
@@ -134,20 +139,20 @@ export class SummaryCoordinator {
 }
 
 /* The first `bytes` of a text without cutting a character in half, and whether anything was left off. */
-const cutAt = (text: string, bytes: number): { text: string; cut: boolean } => {
+function cutAt(text: string, bytes: number): { text: string; cut: boolean } {
     const encoded = encoder.encode(text);
     if (encoded.length <= bytes) {
         return { text, cut: false };
     }
     return { text: decoder.decode(encoded.slice(0, bytes)).replace(/\uFFFD$/, ''), cut: true };
-};
+}
 
 /* What the original's thread shows and what its CLI hears, from one summary. */
-export const summaryTexts = (
+export function summaryTexts(
     summary: string,
     fork: { id: string; title: string; kind: 'node' | 'view' },
     after: number | null
-): { note: string; preamble: string } => {
+): { note: string; preamble: string } {
     const { text, cut } = cutAt(summary, SUMMARY_MAX_BYTES);
     const read = `ruimte-context read ${fork.id}`;
     const body = cut ? `${text}\n\n[The summary was cut at ${SUMMARY_MAX_BYTES / 1024} KiB; ${read} shows the whole fork.]` : text;
@@ -161,7 +166,7 @@ export const summaryTexts = (
             `(The whole fork is readable with ${read}.)`
         ].join('\n')
     };
-};
+}
 
 export interface DeliverSummaryDeps {
     source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
@@ -175,7 +180,9 @@ export interface DeliverSummaryDeps {
 }
 
 /* The id the note of one summary is written under, so delivering it twice leaves one. */
-export const summaryNoteId = (turnId: string): string => `summary-${turnId}`;
+export function summaryNoteId(turnId: string): string {
+    return `summary-${turnId}`;
+}
 
 /*
  * Brings a summary to the chat it is for: a line from the fork back into the original when both are
@@ -183,9 +190,8 @@ export const summaryNoteId = (turnId: string): string => `summary-${turnId}`;
  * The line goes first because it is looked for before it is drawn: a restart after the note would
  * otherwise never draw it. An original that is gone says so in the fork instead.
  */
-export const deliverSummaryHandler =
-    (deps: DeliverSummaryDeps) =>
-    async (entry: DeliverSummaryEntry): Promise<OutboxOutcome> => {
+export function deliverSummaryHandler(deps: DeliverSummaryDeps) {
+    return async (entry: DeliverSummaryEntry): Promise<OutboxOutcome> => {
         const originalId = entry.target;
         const { forkId, turnId, text } = entry.payload;
         const place = deps.locate(originalId);
@@ -217,11 +223,11 @@ export const deliverSummaryHandler =
         const texts = summaryTexts(text, { id: forkId, title: deps.titleFor(forkId) ?? forkId, kind: where(forkPlace) }, after);
         await deps.deliver(originalId, { noteId: summaryNoteId(turnId), note: texts.note, from: forkId, preamble: texts.preamble });
     };
+}
 
 /* A delivery the outbox gave up on is said in the fork that wrote the summary. */
-export const deliverSummaryParked =
-    (deps: Pick<DeliverSummaryDeps, 'note' | 'titleFor'>) =>
-    (entry: OutboxEntry, error: unknown): void => {
+export function deliverSummaryParked(deps: Pick<DeliverSummaryDeps, 'note' | 'titleFor'>) {
+    return (entry: OutboxEntry, error: unknown): void => {
         if (entry.kind !== 'deliver-summary') {
             return;
         }
@@ -230,6 +236,7 @@ export const deliverSummaryParked =
             .note(entry.payload.forkId, `The summary could not be delivered to ${title}: ${errorText(error)}`)
             .catch((e: unknown) => console.error(`Leaving a note in ${entry.payload.forkId} failed:`, errorText(e)));
     };
+}
 
 export interface SummaryWiring {
     coordinator: SummaryCoordinator;
@@ -239,12 +246,12 @@ export interface SummaryWiring {
 }
 
 /* The summaries of the daemon in one place, wired the same for `daemon.ts` and the test daemon. */
-export const wireSummaries = (wiring: {
+export function wireSummaries(wiring: {
     chats: ChatManager;
     host: Pick<CanvasHost, 'locate' | 'mutate'>;
     titleFor(id: string): string | null;
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
-}): SummaryWiring => {
+}): SummaryWiring {
     const coordinator = new SummaryCoordinator({
         chatItems: (chatId) => wiring.chats.get(chatId)?.thread.list() ?? null,
         projectOf: (chatId) => wiring.host.locate(chatId)?.projectId ?? null,
@@ -274,4 +281,4 @@ export const wireSummaries = (wiring: {
                 chatId
             )
     };
-};
+}

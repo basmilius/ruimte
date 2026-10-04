@@ -43,28 +43,35 @@ const PUBLIC_ORIGIN = 'https://pulsar.test';
 const REDIRECT_URI = 'http://127.0.0.1:53682/pulsar/callback';
 const GITHUB_SECRET = 'github-secret';
 
-const base64url = (bytes: Buffer): string => bytes.toString('base64url');
-const sha256 = (text: string): string => base64url(createHash('sha256').update(text).digest());
+function base64url(bytes: Buffer): string {
+    return bytes.toString('base64url');
+}
+function sha256(text: string): string {
+    return base64url(createHash('sha256').update(text).digest());
+}
 
 interface KeyPair {
     publicKey: string;
     privateKey: KeyObject;
 }
 
-const newKeyPair = (): KeyPair => {
+function newKeyPair(): KeyPair {
     const pair = generateKeyPairSync('ed25519');
     return { publicKey: pair.publicKey.export({ format: 'jwk' }).x ?? '', privateKey: pair.privateKey };
-};
+}
 
-const signWith = (pair: KeyPair, message: string): string => base64url(sign(null, Buffer.from(message), pair.privateKey));
+function signWith(pair: KeyPair, message: string): string {
+    return base64url(sign(null, Buffer.from(message), pair.privateKey));
+}
 
-const verifies = (publicKey: string, message: string, signature: string): boolean =>
-    verify(
+function verifies(publicKey: string, message: string, signature: string): boolean {
+    return verify(
         null,
         Buffer.from(message),
         createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: publicKey }, format: 'jwk' }),
         Buffer.from(signature, 'base64url')
     );
+}
 
 // With the real secret in the environment the pinned key is checked too; without it a throwaway pair stands in.
 const realStatementSecret = process.env.PULSAR_STATEMENT_PRIVATE_KEY;
@@ -72,14 +79,14 @@ const testStatementPair = generateKeyPairSync('ed25519');
 const statementSecret = realStatementSecret ?? base64url(testStatementPair.privateKey.export({ format: 'der', type: 'pkcs8' }));
 const statementPublicKey = realStatementSecret ? (PULSAR_STATEMENT_PUBLIC_KEYS[0] ?? '') : (testStatementPair.publicKey.export({ format: 'jwk' }).x ?? '');
 
-const bundle = async (): Promise<string> => {
+async function bundle(): Promise<string> {
     const result = await Bun.build({ entrypoints: [join(APP_ROOT, 'src/index.ts')], target: 'browser', format: 'esm' });
     const output = result.outputs[0];
     if (!result.success || !output) {
         throw new Error(`The worker did not bundle: ${result.logs.join('\n')}`);
     }
     return output.text();
-};
+}
 
 /*
  * The tests reach D1 through a Worker of their own and never through `getD1Database`. Miniflare answers
@@ -115,7 +122,7 @@ interface Database {
     batch(statements: Statement[]): Promise<void>;
 }
 
-const database = (on: Miniflare): Database => {
+function database(on: Miniflare): Database {
     const send = async (mode: string, statements: Statement[]): Promise<unknown> => {
         const response = (await on.dispatchFetch(`${PUBLIC_ORIGIN}${SQL_PATH}`, {
             method: 'POST',
@@ -136,10 +143,10 @@ const database = (on: Miniflare): Database => {
             await send('batch', statements);
         }
     };
-};
+}
 
 // The Worker under test comes first, so every request outside the SQL path reaches it.
-const miniflare = (databaseId: string, options: Partial<Pick<WorkerOptions, 'bindings' | 'outboundService'>>): Miniflare => {
+function miniflare(databaseId: string, options: Partial<Pick<WorkerOptions, 'bindings' | 'outboundService'>>): Miniflare {
     const shared = { modules: true, compatibilityDate: '2026-08-01', d1Databases: { DB: databaseId } };
     return new Miniflare({
         workers: [
@@ -147,10 +154,10 @@ const miniflare = (databaseId: string, options: Partial<Pick<WorkerOptions, 'bin
             { name: 'sql', script: SQL_WORKER, routes: [`*${SQL_PATH}`], ...shared }
         ]
     });
-};
+}
 
 // Every migration by default; `files` picks some, so a test can seed the database the way an older Worker left it.
-const migrate = async (on: Miniflare, files?: (file: string) => boolean): Promise<void> => {
+async function migrate(on: Miniflare, files?: (file: string) => boolean): Promise<void> {
     const folder = join(APP_ROOT, 'migrations');
     for (const file of readdirSync(folder)
         .sort()
@@ -165,7 +172,7 @@ const migrate = async (on: Miniflare, files?: (file: string) => boolean): Promis
             .filter((statement) => statement.length > 0);
         await database(on).batch(statements.map((statement): Statement => [statement]));
     }
-};
+}
 
 // A code GitHub handed out, with the challenge the address book sent along, so the mock checks PKCE the way GitHub does.
 const githubCodes = new Map<string, { userId: number; challenge: string }>();
@@ -195,13 +202,13 @@ const appleCodes = new Map<string, AppleCode>();
 const appleRevoked: { clientId: string; token: string; hint: string }[] = [];
 let appleRevokeFails = false;
 
-const signRs256 = (payload: Record<string, unknown>, signer: KeyObject): string => {
+function signRs256(payload: Record<string, unknown>, signer: KeyObject): string {
     const input = `${base64url(Buffer.from(JSON.stringify({ alg: 'RS256', kid: APPLE_SIGNING_KID })))}.${base64url(Buffer.from(JSON.stringify(payload)))}`;
     return `${input}.${base64url(sign('sha256', Buffer.from(input), signer))}`;
-};
+}
 
 // Checks the client secret against the Services ID or native App ID used for this code.
-const appleClientSecretHolds = (secret: string, clientId: string): boolean => {
+function appleClientSecretHolds(secret: string, clientId: string): boolean {
     const [header, payload, signature] = secret.split('.');
     if (!header || !payload || !signature) {
         return false;
@@ -217,9 +224,9 @@ const appleClientSecretHolds = (secret: string, clientId: string): boolean => {
         Number(claims.exp) > Number(claims.iat) &&
         verify('sha256', Buffer.from(`${header}.${payload}`), { key: appleClientKey.publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(signature, 'base64url'))
     );
-};
+}
 
-const apple = async (request: Request, url: URL): Promise<Response> => {
+async function apple(request: Request, url: URL): Promise<Response> {
     if (url.href === `${APPLE_ISSUER}/auth/keys`) {
         return Response.json({ keys: [{ ...appleSigningKey.publicKey.export({ format: 'jwk' }), kid: APPLE_SIGNING_KID, alg: 'RS256', use: 'sig' }] });
     }
@@ -258,9 +265,9 @@ const apple = async (request: Request, url: URL): Promise<Response> => {
         return new Response(null, { status: 200 });
     }
     return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
-};
+}
 
-const outbound = async (request: Request): Promise<Response> => {
+async function outbound(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.origin === APPLE_ISSUER) {
         return apple(request, url);
@@ -289,14 +296,16 @@ const outbound = async (request: Request): Promise<Response> => {
             : Response.json({ message: 'Bad credentials' }, { status: 401 });
     }
     return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
-};
+}
 
 let script = '';
 let mf: Miniflare;
 let ipCounter = 0;
 
 // Every flow gets an address of its own, so one test never spends another's rate limit.
-const nextIp = (): string => `192.0.2.${++ipCounter}`;
+function nextIp(): string {
+    return `192.0.2.${++ipCounter}`;
+}
 
 interface DispatchInit {
     method?: string;
@@ -309,7 +318,7 @@ interface DispatchInit {
     on?: Miniflare;
 }
 
-const dispatch = async (path: string, init: DispatchInit = {}): Promise<Response> => {
+async function dispatch(path: string, init: DispatchInit = {}): Promise<Response> {
     const headers: Record<string, string> = { 'cf-connecting-ip': init.ip ?? nextIp(), ...init.headers };
     let body: string | undefined;
     if (init.form !== undefined) {
@@ -321,9 +330,11 @@ const dispatch = async (path: string, init: DispatchInit = {}): Promise<Response
     }
     const response = await (init.on ?? mf).dispatchFetch(`${PUBLIC_ORIGIN}${path}`, { method: init.method ?? 'GET', headers, body, redirect: 'manual' });
     return response as unknown as Response;
-};
+}
 
-const bearer = (session: SessionResult): Record<string, string> => ({ authorization: `Bearer ${session.accessToken}` });
+function bearer(session: SessionResult): Record<string, string> {
+    return { authorization: `Bearer ${session.accessToken}` };
+}
 
 interface LoginStart {
     verifier: string;
@@ -342,7 +353,7 @@ const AUTHORIZE_URLS: Record<ProviderId, string> = {
     apple: `${APPLE_ISSUER}/auth/authorize`
 };
 
-const startLogin = async (provider: ProviderId = 'github', options: { link?: string; on?: Miniflare } = {}): Promise<LoginStart> => {
+async function startLogin(provider: ProviderId = 'github', options: { link?: string; on?: Miniflare } = {}): Promise<LoginStart> {
     const verifier = base64url(randomBytes(32));
     const appState = base64url(randomBytes(16));
     const ip = nextIp();
@@ -365,20 +376,16 @@ const startLogin = async (provider: ProviderId = 'github', options: { link?: str
         ip,
         on: options.on
     };
-};
+}
 
-const githubCallback = async (start: LoginStart, userId: number, cookie = start.cookie): Promise<Response> => {
+async function githubCallback(start: LoginStart, userId: number, cookie = start.cookie): Promise<Response> {
     const code = randomBytes(8).toString('hex');
     githubCodes.set(code, { userId, challenge: start.providerChallenge });
     return dispatch(`/auth/github/callback?${new URLSearchParams({ code, state: start.providerState })}`, { headers: { cookie }, ip: start.ip, on: start.on });
-};
+}
 
 // `user` is the field Apple posts beside the code on the first authorization of an Apple ID.
-const appleCallback = async (
-    start: LoginStart,
-    sub: string,
-    options: { cookie?: string; code?: Partial<AppleCode>; user?: string } = {}
-): Promise<Response> => {
+async function appleCallback(start: LoginStart, sub: string, options: { cookie?: string; code?: Partial<AppleCode>; user?: string } = {}): Promise<Response> {
     const code = randomBytes(8).toString('hex');
     appleCodes.set(code, { sub, nonce: start.providerChallenge, ...options.code });
     return dispatch('/auth/apple/callback', {
@@ -388,26 +395,29 @@ const appleCallback = async (
         ip: start.ip,
         on: start.on
     });
-};
+}
 
-const codeOf = (callback: Response): string => {
+function codeOf(callback: Response): string {
     expect(callback.status).toBe(302);
     return new URL(callback.headers.get('location') ?? '').searchParams.get('code') ?? '';
-};
+}
 
-const callbackFor = (provider: ProviderId, start: LoginStart, subject: string): Promise<Response> =>
-    provider === 'apple' ? appleCallback(start, subject) : githubCallback(start, Number(subject));
+function callbackFor(provider: ProviderId, start: LoginStart, subject: string): Promise<Response> {
+    return provider === 'apple' ? appleCallback(start, subject) : githubCallback(start, Number(subject));
+}
 
-const bindKey = (code: string, key: KeyPair, signer = key) => ({
-    sessionKey: key.publicKey,
-    sessionKeySignature: signWith(signer, sessionKeyMessage(code, key.publicKey))
-});
+function bindKey(code: string, key: KeyPair, signer = key) {
+    return {
+        sessionKey: key.publicKey,
+        sessionKeySignature: signWith(signer, sessionKeyMessage(code, key.publicKey))
+    };
+}
 
 interface SignedIn extends SessionResult {
     key: KeyPair;
 }
 
-const signInWith = async (provider: ProviderId, subject: string, key = newKeyPair(), on?: Miniflare): Promise<SignedIn> => {
+async function signInWith(provider: ProviderId, subject: string, key = newKeyPair(), on?: Miniflare): Promise<SignedIn> {
     const start = await startLogin(provider, { on });
     const callback = await callbackFor(provider, start, subject);
     expect(callback.status).toBe(302);
@@ -422,48 +432,55 @@ const signInWith = async (provider: ProviderId, subject: string, key = newKeyPai
     });
     expect(response.status).toBe(200);
     return { ...((await response.json()) as SessionResult), key };
-};
+}
 
-const signIn = (userId: number, key = newKeyPair(), on?: Miniflare): Promise<SignedIn> => signInWith('github', String(userId), key, on);
+function signIn(userId: number, key = newKeyPair(), on?: Miniflare): Promise<SignedIn> {
+    return signInWith('github', String(userId), key, on);
+}
 
-const signInWithApple = (sub: string): Promise<SignedIn> => signInWith('apple', sub);
+function signInWithApple(sub: string): Promise<SignedIn> {
+    return signInWith('apple', sub);
+}
 
-const requestLink = async (session: SessionResult, provider: ProviderId): Promise<string> => {
+async function requestLink(session: SessionResult, provider: ProviderId): Promise<string> {
     const response = await dispatch('/v1/account/link', { method: 'POST', body: { provider }, headers: bearer(session) });
     expect(response.status).toBe(200);
     return ((await response.json()) as IdentityLinkStartResult).linkToken;
-};
+}
 
 interface LinkLogin {
     start: LoginStart;
     code: string;
 }
 
-const linkLogin = async (session: SessionResult, provider: ProviderId, subject: string): Promise<LinkLogin> => {
+async function linkLogin(session: SessionResult, provider: ProviderId, subject: string): Promise<LinkLogin> {
     const start = await startLogin(provider, { link: await requestLink(session, provider) });
     return { start, code: codeOf(await callbackFor(provider, start, subject)) };
-};
+}
 
-const completeLink = (session: SessionResult, login: LinkLogin, verifier = login.start.verifier): Promise<Response> =>
-    dispatch('/v1/account/identities', {
+function completeLink(session: SessionResult, login: LinkLogin, verifier = login.start.verifier): Promise<Response> {
+    return dispatch('/v1/account/identities', {
         method: 'POST',
         body: { code: login.code, codeVerifier: verifier, redirectUri: REDIRECT_URI },
         headers: bearer(session)
     });
+}
 
-const accountOf = async (session: SessionResult): Promise<AccountResult> => {
+async function accountOf(session: SessionResult): Promise<AccountResult> {
     const response = await dispatch('/v1/account', { headers: bearer(session) });
     expect(response.status).toBe(200);
     return (await response.json()) as AccountResult;
-};
+}
 
-const refreshBody = (refreshToken: string, key: KeyPair, issuedAt = Date.now()) => ({
-    refreshToken,
-    issuedAt,
-    signature: signWith(key, sessionRefreshMessage(refreshToken, issuedAt))
-});
+function refreshBody(refreshToken: string, key: KeyPair, issuedAt = Date.now()) {
+    return {
+        refreshToken,
+        issuedAt,
+        signature: signWith(key, sessionRefreshMessage(refreshToken, issuedAt))
+    };
+}
 
-const registration = (session: SessionResult, machine: KeyPair, id: string, accountId = session.account.id, signer = machine) => {
+function registration(session: SessionResult, machine: KeyPair, id: string, accountId = session.account.id, signer = machine) {
     const issuedAt = Date.now();
     const name = `Machine ${id}`;
     return {
@@ -475,21 +492,23 @@ const registration = (session: SessionResult, machine: KeyPair, id: string, acco
         issuedAt,
         signature: signWith(signer, machineRegistrationMessage(accountId, id, machine.publicKey, name, issuedAt))
     };
-};
+}
 
-const accessRequest = (machineId: string, client: KeyPair, signer = client) => {
+function accessRequest(machineId: string, client: KeyPair, signer = client) {
     const nonce = base64url(randomBytes(16));
     return { machineId, clientPublicKey: client.publicKey, nonce, signature: signWith(signer, accessRequestMessage(machineId, client.publicKey, nonce)) };
-};
+}
 
-const errorCode = async (response: Response): Promise<string> => ((await response.json()) as AddressBookError).error.code;
+async function errorCode(response: Response): Promise<string> {
+    return ((await response.json()) as AddressBookError).error.code;
+}
 
 /*
  * A bucket already at its limit, so the next request through the route is the refusal. Filling it with
  * real requests costs a round trip each, and a slow runner spent seconds on it. The Worker reads its own
  * clock, so the next window is filled too, in case the minute turns between this and the request.
  */
-const spendLimit = async (bucket: string, limit: number): Promise<void> => {
+async function spendLimit(bucket: string, limit: number): Promise<void> {
     const now = Date.now();
     for (const windowStart of [now - (now % WINDOW_MS), now - (now % WINDOW_MS) + WINDOW_MS]) {
         await database(mf).run(
@@ -499,7 +518,7 @@ const spendLimit = async (bucket: string, limit: number): Promise<void> => {
             limit
         );
     }
-};
+}
 
 const APPLE_BINDINGS = {
     APPLE_TEAM_ID,

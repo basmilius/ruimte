@@ -10,7 +10,7 @@ interface Asked {
 }
 
 /* Whatever holds the port: it answers the proof as `prove` says and the work to anyone who asks. */
-const holder = (prove: (nonce: string) => Promise<string | null>) => {
+function holder(prove: (nonce: string) => Promise<string | null>) {
     const asked: Asked[] = [];
     const daemon: DaemonPort = {
         port: 4210,
@@ -31,7 +31,7 @@ const holder = (prove: (nonce: string) => Promise<string | null>) => {
         }
     };
     return { daemon, asked };
-};
+}
 
 describe('proveDaemon', () => {
     test('a daemon that holds the secret proves it', async () => {

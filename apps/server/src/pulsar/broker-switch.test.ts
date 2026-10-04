@@ -26,7 +26,7 @@ class RecordingRelay implements Relay {
 const LOCAL = { host: '127.0.0.1', port: 4210 };
 const quiet = { log: () => undefined };
 
-const setup = (override: BrokerOverride, advertise: string | null = null) => {
+function setup(override: BrokerOverride, advertise: string | null = null) {
     let setting: BrokerSetting = { mode: 'default' };
     const relays: RecordingRelay[] = [];
     const broker = new BrokerSwitch({
@@ -47,7 +47,7 @@ const setup = (override: BrokerOverride, advertise: string | null = null) => {
             setting = next;
         }
     };
-};
+}
 
 describe('BrokerSwitch', () => {
     test('starts on the default broker with nothing set', async () => {

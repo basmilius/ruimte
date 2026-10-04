@@ -101,7 +101,8 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - TypeScript in the Bun workspaces, Swift in `apps/ios`. 4 spaces, LF; `.editorconfig` is the rule.
 - American English in code, comments, commit messages and UI text. No em dashes or en dashes anywhere.
 - Always curly braces, also for one-line early returns. No one-letter variable names except `i`, `e`, `x`, `y`.
-- Arrow functions inside functions; class methods are never arrow properties.
+- Named top-level functions use function declarations, exported with `export function`. Keep functions produced by factories or wrappers as `const`, and mutable callback slots as variables.
+- Arrow functions for callbacks and inside functions; class methods are never arrow properties.
 - Comments explain WHY, never what the code already says.
 - Keyboard shortcuts are bound on `window`, once: the window's own in `shell/app-shortcuts.ts`, anything acting on the project once, by the workspace, in `canvas/canvas-shortcuts.ts`, so the start screen has none of those. Never per cell or per node.
 - A new command gets its place in the menu tree (`apps/client/src/shell/menu/model.ts`) as well as the palette. The menu only shows a key: a command its accelerator fires is dropped by the shell when the page had that key first, since its own listeners answered it (`createMenuCommands` in `@basmilius/desktop-shell`); a page in a browser node never sees it, and an item picked through accessibility or a key sent to a window that is not key never reached the page, so there the menu answers.

@@ -18,13 +18,13 @@ const GESTURES: ReadonlyArray<{ button: DeviceButton; icon: LucideIcon }> = [
 
 const ANDROID_LABELS: Partial<Record<DeviceButton, string>> = { appSwitcher: 'recentApps', lock: 'power', siri: 'assistant' };
 
-const useDeviceFor = (reference: DeviceReference | undefined): { device: DeviceInfo | null; loading: boolean; error: string | null } => {
+function useDeviceFor(reference: DeviceReference | undefined): { device: DeviceInfo | null; loading: boolean; error: string | null } {
     const endpointId = useEndpointId();
     const row = useDeviceList(endpointId);
     const device = useResolvedDevice(endpointId, reference);
     useEffect(() => deviceClientFor(endpointId)?.watch(), [endpointId]);
     return { device, loading: row.loading, error: row.error };
-};
+}
 
 export function DeviceControls({ device }: { device: DeviceInfo }) {
     const { t } = useTranslation('machines');

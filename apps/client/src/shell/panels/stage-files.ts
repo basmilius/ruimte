@@ -6,7 +6,7 @@ import { useToasts } from '@/state/toasts';
  * Move files in and out of the index. The git panel wraps its own busy flag and status read around
  * this; everywhere else the daemon's watcher is what brings the new status along.
  */
-export const stageFiles = async (cwd: string, paths: readonly string[], staged: boolean): Promise<boolean> => {
+export async function stageFiles(cwd: string, paths: readonly string[], staged: boolean): Promise<boolean> {
     if (paths.length === 0) {
         return false;
     }
@@ -23,4 +23,4 @@ export const stageFiles = async (cwd: string, paths: readonly string[], staged: 
         });
         return false;
     }
-};
+}

@@ -2,19 +2,21 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatToolItem } from '@ruimte/agent-contracts';
 import { approvalChanges, hasFileChanges, liveOutput, readImagePath, toolStartedAt, unifiedChanges } from './tools';
 
-const running = (progress?: ChatToolItem['progress']): ChatToolItem => ({
-    id: 'b1',
-    kind: 'tool',
-    createdAt: 5000,
-    turnId: 't1',
-    toolUseId: 'b1',
-    name: 'Bash',
-    input: { command: 'bun test' },
-    output: null,
-    state: 'running',
-    parentToolUseId: null,
-    progress
-});
+function running(progress?: ChatToolItem['progress']): ChatToolItem {
+    return {
+        id: 'b1',
+        kind: 'tool',
+        createdAt: 5000,
+        turnId: 't1',
+        toolUseId: 'b1',
+        name: 'Bash',
+        input: { command: 'bun test' },
+        output: null,
+        state: 'running',
+        parentToolUseId: null,
+        progress
+    };
+}
 
 describe('readImagePath', () => {
     test('names the image a read looked at and nothing else', () => {
@@ -42,17 +44,19 @@ describe('live tool helpers', () => {
     });
 });
 
-const patched = (changes: ChatToolItem['changes']): ChatToolItem => ({
-    ...running(),
-    id: 'p1',
-    toolUseId: 'p1',
-    name: 'ApplyPatch',
-    input: { summary: 'a.ts' },
-    output: '-x\n+y\n',
-    state: 'done',
-    progress: undefined,
-    changes
-});
+function patched(changes: ChatToolItem['changes']): ChatToolItem {
+    return {
+        ...running(),
+        id: 'p1',
+        toolUseId: 'p1',
+        name: 'ApplyPatch',
+        input: { summary: 'a.ts' },
+        output: '-x\n+y\n',
+        state: 'done',
+        progress: undefined,
+        changes
+    };
+}
 
 describe('file change helpers', () => {
     test('a call carries the unified diffs a provider reported, and an empty diff is nothing to show', () => {

@@ -20,9 +20,11 @@ export interface LaunchView {
 
 export const EMPTY_DOCUMENT: LaunchesDocument = { rev: 0, launches: [], approved: [] };
 
-const isLive = (status: LaunchStatus | undefined): boolean => status !== undefined && status.state !== 'exited';
+function isLive(status: LaunchStatus | undefined): boolean {
+    return status !== undefined && status.state !== 'exited';
+}
 
-const endedPhase = (status: LaunchStatus): LaunchPhase => {
+function endedPhase(status: LaunchStatus): LaunchPhase {
     if (status.stopped) {
         return 'idle';
     }
@@ -30,9 +32,9 @@ const endedPhase = (status: LaunchStatus): LaunchPhase => {
         return status.exitCode === 0 ? 'passed' : 'failed';
     }
     return status.exitCode === 0 ? 'idle' : 'failed';
-};
+}
 
-const singleView = (launch: LaunchConfigEntry, status: LaunchStatus | undefined, approved: boolean): LaunchView => {
+function singleView(launch: LaunchConfigEntry, status: LaunchStatus | undefined, approved: boolean): LaunchView {
     if (status !== undefined && isLive(status)) {
         return { launch, phase: status.state as LaunchPhase, live: true, status, exitCode: null, port: status.port };
     }
@@ -43,10 +45,10 @@ const singleView = (launch: LaunchConfigEntry, status: LaunchStatus | undefined,
         return { launch, phase: 'idle', live: false, status: null, exitCode: null, port: null };
     }
     return { launch, phase: endedPhase(status), live: false, status, exitCode: status.exitCode, port: null };
-};
+}
 
 /* A group runs while one of its members does; a failed member makes it red once none runs. */
-const groupView = (launch: LaunchConfigEntry, members: readonly LaunchView[], approved: boolean): LaunchView => {
+function groupView(launch: LaunchConfigEntry, members: readonly LaunchView[], approved: boolean): LaunchView {
     const live = members.filter((member) => member.live);
     if (live.length > 0) {
         const phase = live.some((member) => member.phase === 'starting')
@@ -64,10 +66,10 @@ const groupView = (launch: LaunchConfigEntry, members: readonly LaunchView[], ap
         return { launch, phase: 'failed', live: false, status: null, exitCode: failed.exitCode, port: null };
     }
     return { launch, phase: 'idle', live: false, status: null, exitCode: null, port: null };
-};
+}
 
 /* Every launch of a project with its state, by id. */
-export const launchViews = (document: LaunchesDocument, statuses: Readonly<Record<string, LaunchStatus>>): Map<string, LaunchView> => {
+export function launchViews(document: LaunchesDocument, statuses: Readonly<Record<string, LaunchStatus>>): Map<string, LaunchView> {
     const approved = new Set(document.approved);
     const views = new Map<string, LaunchView>();
     for (const launch of document.launches) {
@@ -82,15 +84,17 @@ export const launchViews = (document: LaunchesDocument, statuses: Readonly<Recor
         }
     }
     return views;
-};
+}
 
 /* The members a group starts, as launches this document still has. */
-export const membersOf = (launch: LaunchConfigEntry, document: LaunchesDocument): LaunchConfigEntry[] =>
-    (launch.launches ?? []).flatMap((id) => document.launches.find((candidate) => candidate.id === id && candidate.kind !== 'group') ?? []);
+export function membersOf(launch: LaunchConfigEntry, document: LaunchesDocument): LaunchConfigEntry[] {
+    return (launch.launches ?? []).flatMap((id) => document.launches.find((candidate) => candidate.id === id && candidate.kind !== 'group') ?? []);
+}
 
 /* The launch the chip shows: the one this client chose, else the first of the menu. */
-export const chosenLaunch = (document: LaunchesDocument, chosenId: string | undefined): LaunchConfigEntry | null =>
-    document.launches.find((launch) => launch.id === chosenId) ?? document.launches[0] ?? null;
+export function chosenLaunch(document: LaunchesDocument, chosenId: string | undefined): LaunchConfigEntry | null {
+    return document.launches.find((launch) => launch.id === chosenId) ?? document.launches[0] ?? null;
+}
 
 /*
  * Failing outranks what is busy; green, and then nothing, count least. A launch nobody approved yet
@@ -102,7 +106,7 @@ const PHASE_RANK: Record<LaunchPhase, number> = { failed: 4, starting: 3, stoppi
  * The state of the whole project in one view: the launch in the worst phase, so the chip shows what
  * needs a look. A group counts through its members, and the first launch wins a tie.
  */
-export const headlineOf = (views: ReadonlyMap<string, LaunchView>): LaunchView | null => {
+export function headlineOf(views: ReadonlyMap<string, LaunchView>): LaunchView | null {
     let headline: LaunchView | null = null;
     for (const view of views.values()) {
         if (view.launch.kind !== 'group' && (headline === null || PHASE_RANK[view.phase] > PHASE_RANK[headline.phase])) {
@@ -110,13 +114,13 @@ export const headlineOf = (views: ReadonlyMap<string, LaunchView>): LaunchView |
         }
     }
     return headline;
-};
+}
 
 /*
  * What runs beside the launch on the chip, or ended badly: the `+1`. A group counts through its
  * members, so a launch is never counted twice.
  */
-export const othersOf = (views: ReadonlyMap<string, LaunchView>, chosen: LaunchConfigEntry | null): { count: number; failed: boolean } => {
+export function othersOf(views: ReadonlyMap<string, LaunchView>, chosen: LaunchConfigEntry | null): { count: number; failed: boolean } {
     const away = new Set([chosen?.id, ...(chosen?.launches ?? [])]);
     let count = 0;
     let failed = false;
@@ -132,7 +136,7 @@ export const othersOf = (views: ReadonlyMap<string, LaunchView>, chosen: LaunchC
         }
     }
     return { count, failed };
-};
+}
 
 export interface LaunchSection {
     /* The checkout the launches run in, by the name it declares or else its folder; null for the ones in the project folder itself, which go first. */
@@ -140,24 +144,26 @@ export interface LaunchSection {
     launches: LaunchConfigEntry[];
 }
 
-const trimSlashes = (path: string): string => path.replace(/\/+$/, '');
+function trimSlashes(path: string): string {
+    return path.replace(/\/+$/, '');
+}
 
 /* Where a launch runs, absolute. A private overlay may name a folder of its own. */
-export const launchFolder = (launch: LaunchConfigEntry, folder: string): string => {
+export function launchFolder(launch: LaunchConfigEntry, folder: string): string {
     const cwd = (launch.overlay?.cwd ?? launch.cwd ?? '').trim();
     if (cwd.startsWith('/')) {
         return trimSlashes(cwd);
     }
     const relative = cwd.replace(/^\.\/?/, '');
     return relative === '' ? trimSlashes(folder) : `${trimSlashes(folder)}/${trimSlashes(relative)}`;
-};
+}
 
 /*
  * The menu's launches, grouped by the checkout they run in, the way the git panel groups a folder of
  * repositories. A group and a launch in the project folder itself come first under no heading; a
  * folder with one checkout has no headings at all.
  */
-export const launchSections = (launches: readonly LaunchConfigEntry[], folder: string, repos: readonly GitRepo[]): LaunchSection[] => {
+export function launchSections(launches: readonly LaunchConfigEntry[], folder: string, repos: readonly GitRepo[]): LaunchSection[] {
     const root = trimSlashes(folder);
     const inner = repos.filter((repo) => trimSlashes(repo.path) !== root).sort((one, other) => other.path.length - one.path.length);
     const loose: LaunchConfigEntry[] = [];
@@ -185,16 +191,18 @@ export const launchSections = (launches: readonly LaunchConfigEntry[], folder: s
         return [{ label: null, launches: sections[0]!.launches }];
     }
     return sections;
-};
+}
 
 /* An address as a person reads it in a row: the host and port, without the scheme. */
-export const shortAddress = (url: string): string => url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '');
+export function shortAddress(url: string): string {
+    return url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/$/, '');
+}
 
 /*
  * The launch whose terminal the panel shows for the one chosen. A group has no session of its own,
  * so it shows a member: one that runs, else one that failed, else the first that ran at all.
  */
-export const outputOf = (views: ReadonlyMap<string, LaunchView>, launch: LaunchConfigEntry): LaunchView | null => {
+export function outputOf(views: ReadonlyMap<string, LaunchView>, launch: LaunchConfigEntry): LaunchView | null {
     if (launch.kind !== 'group') {
         return views.get(launch.id) ?? null;
     }
@@ -206,4 +214,4 @@ export const outputOf = (views: ReadonlyMap<string, LaunchView>, launch: LaunchC
         members[0] ??
         null
     );
-};
+}

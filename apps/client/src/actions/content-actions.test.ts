@@ -24,11 +24,12 @@ const main: ProjectCanvasView = {
 
 const document: ProjectDocument = { version: 3, rev: 1, name: 'Atlas', color: '#000', views: [main] };
 
-const rect = (id: string, x = 0, patch: Partial<DrawingElement> = {}): DrawingElement =>
-    ({ kind: 'rect', id, x, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1, ...patch }) as DrawingElement;
+function rect(id: string, x = 0, patch: Partial<DrawingElement> = {}): DrawingElement {
+    return { kind: 'rect', id, x, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1, ...patch } as DrawingElement;
+}
 
 /* The clipboard, the save dialog and the painters, as a log of what reached them. */
-const fakes = () => {
+function fakes() {
     const log: string[] = [];
     const machine: Partial<ContentMachine> = {
         writeText: async (text) => void log.push(`text:${text}`),
@@ -40,29 +41,37 @@ const fakes = () => {
         diagramSvg: () => '<svg>diagram</svg>'
     };
     return { log, registry: createClientActionRegistry(useDocument, { content: machine }) };
-};
+}
 
-const completed = <Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> => {
+function completed<Result extends ActionResult>(result: Result): Extract<Result, { status: 'completed' }> {
     if (result.status !== 'completed') {
         throw new Error(`Expected a completed action, got ${JSON.stringify(result)}`);
     }
     return result as Extract<Result, { status: 'completed' }>;
-};
+}
 
-const confirmed = async (registry: ActionRegistry<void>, asked: ActionResult) => {
+async function confirmed(registry: ActionRegistry<void>, asked: ActionResult) {
     if (asked.status !== 'needs_confirmation') {
         throw new Error(`Expected a confirmation, got ${asked.status}`);
     }
     return registry.confirm(asked.confirmationToken, true, VOICE_ACTION_CALL);
-};
+}
 
-const canvas = () => defaultCanvases.of('main').getState();
+function canvas() {
+    return defaultCanvases.of('main').getState();
+}
 
 let drawingId = '';
 let diagramId = '';
-const drawing = () => defaultDrawings.of(drawingId).getState();
-const diagram = () => defaultDiagrams.of(diagramId).getState();
-const ids = () => drawing().elements.map((element) => element.id);
+function drawing() {
+    return defaultDrawings.of(drawingId).getState();
+}
+function diagram() {
+    return defaultDiagrams.of(diagramId).getState();
+}
+function ids() {
+    return drawing().elements.map((element) => element.id);
+}
 
 beforeEach(() => {
     useDocument.getState().load(document, { activeViewId: 'main', views: {} });
@@ -82,12 +91,12 @@ afterEach(() => {
 });
 
 /* The drawing beside the canvas, in a cell of its own, holding two rectangles and a locked third. */
-const showDrawing = () => {
+function showDrawing() {
     useDocument.getState().splitFocused('right', drawingId);
     drawing().load(drawingId, { version: 1, rev: 2, elements: [rect('a'), rect('b', 200), rect('c', 400, { locked: true })] }, null);
-};
+}
 
-const showDiagram = () => {
+function showDiagram() {
     useDocument.getState().splitFocused('right', diagramId);
     diagram().load(
         diagramId,
@@ -104,7 +113,7 @@ const showDiagram = () => {
         },
         null
     );
-};
+}
 
 describe('notes', () => {
     test('Voice reads a note, writes over it, adds a line under it, and undo takes back exactly its own write', async () => {

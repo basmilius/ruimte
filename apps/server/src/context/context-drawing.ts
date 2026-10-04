@@ -8,11 +8,11 @@ import { DEFAULT_PALETTE, readingOrder, toSvg } from '@ruimte/drawing';
  * last lines of the reading order alone: the picture is the expensive half, and the last lines of an
  * SVG are markup, not an answer.
  */
-export const renderDrawing = (elements: readonly DrawingElement[], tail: number | null = null): string => {
+export function renderDrawing(elements: readonly DrawingElement[], tail: number | null = null): string {
     const lines = readingOrder(elements);
     const list = lines.length > 0 ? lines : ['This drawing has no text in it.'];
     if (tail !== null) {
         return list.slice(Math.max(0, list.length - tail)).join('\n');
     }
     return [`# Drawing`, '', list.join('\n'), '', '## SVG', '', toSvg(elements, { palette: DEFAULT_PALETTE, background: null })].join('\n');
-};
+}

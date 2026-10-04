@@ -3,7 +3,7 @@ import { createHighlighter } from 'shiki/bundle/web';
 import { IncrementalLines, type CodeToken, type Tokenize } from './code-lines';
 
 /* A tokenizer that turns every line into one token and records what it was asked to read. */
-const recording = () => {
+function recording() {
     const calls: string[] = [];
     const tokenize: Tokenize<number> = (code, state) => {
         calls.push(code);
@@ -11,9 +11,11 @@ const recording = () => {
         return { lines, state: (state ?? 0) + lines.length };
     };
     return { calls, tokenize };
-};
+}
 
-const contents = (lines: CodeToken[][]): string[] => lines.map((line) => line.map((token) => token.content).join(''));
+function contents(lines: CodeToken[][]): string[] {
+    return lines.map((line) => line.map((token) => token.content).join(''));
+}
 
 describe('IncrementalLines', () => {
     test('a growing block tokenizes only the lines that ended since the last update and the one being written', () => {

@@ -20,21 +20,29 @@ export interface PromptDraft {
     showReason: boolean;
 }
 
-export const emptyPromptDraft = (): PromptDraft => ({ index: 0, answers: {}, reason: '', showReason: false });
-export const answerValue = (answer: PromptAnswer): string => (answer.custom ? answer.text.trim() : answer.choices.join(', '));
-export const questionAnswer = (draft: PromptDraft, question: ChatQuestion): PromptAnswer =>
-    draft.answers[question.id] ?? { choices: [], text: '', custom: question.choices.length === 0 };
+export function emptyPromptDraft(): PromptDraft {
+    return { index: 0, answers: {}, reason: '', showReason: false };
+}
+export function answerValue(answer: PromptAnswer): string {
+    return answer.custom ? answer.text.trim() : answer.choices.join(', ');
+}
+export function questionAnswer(draft: PromptDraft, question: ChatQuestion): PromptAnswer {
+    return draft.answers[question.id] ?? { choices: [], text: '', custom: question.choices.length === 0 };
+}
 
 export function pickPromptChoice(answer: PromptAnswer, question: ChatQuestion, label: string): PromptAnswer {
     return { ...answer, custom: false, choices: question.multiSelect ? toggleChoice(answer.choices, label) : [label] };
 }
 
 /* An optional question never stands in front of a request that holds the agent up. */
-export const isBlockingPrompt = (item: PendingPrompt): boolean => item.kind === 'approval' || !item.async;
+export function isBlockingPrompt(item: PendingPrompt): boolean {
+    return item.kind === 'approval' || !item.async;
+}
 
 /* Blocking prompts first and optional ones after, each oldest first. The chat and a canvas's stack both follow it. */
-export const orderPrompts = <T>(prompts: readonly T[], blocking: (prompt: T) => boolean, createdAt: (prompt: T) => number): T[] =>
-    [...prompts].sort((a, b) => Number(blocking(b)) - Number(blocking(a)) || createdAt(a) - createdAt(b));
+export function orderPrompts<T>(prompts: readonly T[], blocking: (prompt: T) => boolean, createdAt: (prompt: T) => number): T[] {
+    return [...prompts].sort((a, b) => Number(blocking(b)) - Number(blocking(a)) || createdAt(a) - createdAt(b));
+}
 
 export function nextPrompt(items: readonly PendingPrompt[], activeId: string | null): PendingPrompt | null {
     const active = items.find((item) => item.requestId === activeId);

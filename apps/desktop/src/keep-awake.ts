@@ -11,22 +11,22 @@ export interface PowerFacts {
 export const LEGACY_KEEP_AWAKE: KeepAwakeRequest = { onBattery: true, display: false };
 
 /* A request as it came over IPC. Anything that is not one asks for nothing. */
-export const keepAwakeRequestFrom = (value: unknown): KeepAwakeRequest | null => {
+export function keepAwakeRequestFrom(value: unknown): KeepAwakeRequest | null {
     if (typeof value !== 'object' || value === null) {
         return null;
     }
     const { onBattery, display } = value as Partial<KeepAwakeRequest>;
     return { onBattery: onBattery === true, display: display === true };
-};
+}
 
 /* What every window asks for at once: the block holds while one of them wants it, as far as the widest asks. */
-export const mergeKeepAwake = (requests: Iterable<KeepAwakeRequest>): KeepAwakeRequest | null => {
+export function mergeKeepAwake(requests: Iterable<KeepAwakeRequest>): KeepAwakeRequest | null {
     const all = [...requests];
     if (all.length === 0) {
         return null;
     }
     return { onBattery: all.some((request) => request.onBattery), display: all.some((request) => request.display) };
-};
+}
 
 /*
  * The block a request comes down to right now, or none. Mac only for now, so anywhere else a request
@@ -34,7 +34,7 @@ export const mergeKeepAwake = (requests: Iterable<KeepAwakeRequest>): KeepAwakeR
  * only for a person who asked for it. On macOS, `pmset -g assertions` reports these as
  * `NoIdleSleepAssertion` and `NoDisplaySleepAssertion` owned by Electron.
  */
-export const keepAwakeBlocker = (request: KeepAwakeRequest | null, facts: PowerFacts): KeepAwakeBlocker | null => {
+export function keepAwakeBlocker(request: KeepAwakeRequest | null, facts: PowerFacts): KeepAwakeBlocker | null {
     if (request === null || facts.platform !== 'darwin') {
         return null;
     }
@@ -42,7 +42,7 @@ export const keepAwakeBlocker = (request: KeepAwakeRequest | null, facts: PowerF
         return null;
     }
     return request.display ? 'prevent-display-sleep' : 'prevent-app-suspension';
-};
+}
 
 /* The part of Electron's `powerSaveBlocker` the hold uses, so a test hands it a fake. */
 export interface PowerSaveBlocker {
@@ -55,7 +55,7 @@ export interface PowerSaveBlocker {
  * One block at a time, so a second request never leaks the first. A new type starts before the old
  * one stops, so the machine is not left without a block for the moment in between.
  */
-export const createKeepAwakeHold = (blocker: PowerSaveBlocker): ((type: KeepAwakeBlocker | null) => void) => {
+export function createKeepAwakeHold(blocker: PowerSaveBlocker): (type: KeepAwakeBlocker | null) => void {
     let held: { id: number; type: KeepAwakeBlocker } | null = null;
     return (type) => {
         if ((held?.type ?? null) === type) {
@@ -67,4 +67,4 @@ export const createKeepAwakeHold = (blocker: PowerSaveBlocker): ((type: KeepAwak
             blocker.stop(previous.id);
         }
     };
-};
+}

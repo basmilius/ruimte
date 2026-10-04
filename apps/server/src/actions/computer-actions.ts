@@ -12,15 +12,15 @@ type ComputerOutcome = ActionOutput<'computer.click'>;
 export const READ_MAX_CHARS = 20_000;
 
 /* The machine's helper, or the refusal for a machine built without one. */
-const computerOf = ({ host }: ServerActionContext): ComputerHost => {
+function computerOf({ host }: ServerActionContext): ComputerHost {
     if (!host.computer) {
         throw new VerbRefusal('unavailable', 'This machine cannot operate its apps');
     }
     return host.computer;
-};
+}
 
 /* A state as the agent reads it; `view` says whether its tree is whole or only what changed. */
-const stateOf = (state: StateResult, view: TreeView | null = null): ComputerState => {
+function stateOf(state: StateResult, view: TreeView | null = null): ComputerState {
     const { screenshot } = state;
     const shot =
         screenshot.path !== undefined && screenshot.origin !== undefined
@@ -48,14 +48,16 @@ const stateOf = (state: StateResult, view: TreeView | null = null): ComputerStat
         matches: state.matches ?? null,
         within: null
     };
-};
+}
 
-const given = <Value>(value: Value | null | undefined): value is Value => value !== null && value !== undefined;
+function given<Value>(value: Value | null | undefined): value is Value {
+    return value !== null && value !== undefined;
+}
 
 /* The fields every action shares, and the scalars it reported of its own as words. */
 const SHARED = new Set(['app', 'target', 'point', 'settled', 'state', 'menu', 'note', 'truncated']);
 
-const scalar = (value: unknown): string | null => {
+function scalar(value: unknown): string | null {
     if (typeof value === 'string') {
         return value;
     }
@@ -66,12 +68,12 @@ const scalar = (value: unknown): string | null => {
         return value.join(' ');
     }
     return null;
-};
+}
 
 /* A state that came after an action, told as the agent asked: what changed, or all of it. */
 type StateSeen = (state: StateResult) => TreeView;
 
-export const outcomeOf = (result: ActionResult, seen: StateSeen = () => ({ kind: 'full', reason: null })): ComputerOutcome => {
+export function outcomeOf(result: ActionResult, seen: StateSeen = () => ({ kind: 'full', reason: null })): ComputerOutcome {
     const details: Record<string, string> = {};
     for (const [key, value] of Object.entries(result)) {
         const text = SHARED.has(key) ? null : scalar(value);
@@ -101,7 +103,7 @@ export const outcomeOf = (result: ActionResult, seen: StateSeen = () => ({ kind:
         state: state !== undefined && !('error' in state) ? stateOf(state, seen(state)) : null,
         stateError: state !== undefined && 'error' in state ? state.error : null
     };
-};
+}
 
 interface CutInput {
     withState?: boolean | null;
@@ -113,20 +115,26 @@ interface CutInput {
 }
 
 /* Only a call that asked for the front says so; the helper works behind the person's work without it. */
-const frontOf = (input: { front?: boolean | null }): OperateInput => (input.front ? { front: true } : {});
+function frontOf(input: { front?: boolean | null }): OperateInput {
+    return input.front ? { front: true } : {};
+}
 
 /* The helper's own spelling of the options every call shares; a field left out stays out. */
-const cutOf = (input: CutInput): OperateInput => ({
-    ...(input.withState ? { withState: true } : {}),
-    ...frontOf(input),
-    ...(input.screenshot === false ? { screenshot: false } : {}),
-    ...(given(input.maxDepth) ? { maxDepth: input.maxDepth } : {}),
-    ...(given(input.maxElements) ? { maxElements: input.maxElements } : {}),
-    ...(given(input.maxText) ? { maxText: input.maxText } : {})
-});
+function cutOf(input: CutInput): OperateInput {
+    return {
+        ...(input.withState ? { withState: true } : {}),
+        ...frontOf(input),
+        ...(input.screenshot === false ? { screenshot: false } : {}),
+        ...(given(input.maxDepth) ? { maxDepth: input.maxDepth } : {}),
+        ...(given(input.maxElements) ? { maxElements: input.maxElements } : {}),
+        ...(given(input.maxText) ? { maxText: input.maxText } : {})
+    };
+}
 
 /* The hold an agent asked for with --wait, in the milliseconds the service counts in. */
-const holdOf = (input: { wait?: number | null }): number | undefined => (given(input.wait) ? input.wait * 1000 : undefined);
+function holdOf(input: { wait?: number | null }): number | undefined {
+    return given(input.wait) ? input.wait * 1000 : undefined;
+}
 
 interface Place {
     element?: number | null;
@@ -135,7 +143,7 @@ interface Place {
 }
 
 /* Where a click, a scroll or one end of a drag lands: an element, or both halves of a pixel, never a mix. */
-const placeOf = ({ element, x, y }: Place, refusal: string): { element: number } | { x: number; y: number } => {
+function placeOf({ element, x, y }: Place, refusal: string): { element: number } | { x: number; y: number } {
     if (given(element) && !given(x) && !given(y)) {
         return { element };
     }
@@ -143,28 +151,30 @@ const placeOf = ({ element, x, y }: Place, refusal: string): { element: number }
         return { x, y };
     }
     throw new VerbRefusal('bad-arguments', refusal);
-};
+}
 
-const pointOf = (place: Place, verb: string): OperateInput => placeOf(place, `computer ${verb} takes --element N, or both --x and --y, and not both`);
+function pointOf(place: Place, verb: string): OperateInput {
+    return placeOf(place, `computer ${verb} takes --element N, or both --x and --y, and not both`);
+}
 
 /* Runs an action and tells the state after it as the agent asked: what changed, unless it asked for all of it. */
-const act = async (
+async function act(
     context: ServerActionContext,
     callerId: string,
     command: Exclude<AppCommand, 'state' | 'read' | 'wait'>,
     input: CutInput & { app: string; wait?: number | null; fullState?: boolean | null },
     fields: OperateInput = {}
-): Promise<{ result: ActionResult; outcome: ComputerOutcome }> => {
+): Promise<{ result: ActionResult; outcome: ComputerOutcome }> {
     const computer = computerOf(context);
     const result = await computer.operate(callerId, command, input.app, { ...cutOf(input), ...fields }, holdOf(input));
     return { result, outcome: outcomeOf(result, (state) => computer.treeView(callerId, state, input.fullState ? 'full' : 'diff')) };
-};
+}
 
 /* How long `wait` waits for its condition without --timeout, in seconds. */
 export const WAIT_TIMEOUT_S = 10;
 
 /* What `wait` holds out for: exactly one of a text that appears, a text that goes, or the value of an element. */
-const conditionOf = ({
+function conditionOf({
     text,
     gone,
     element,
@@ -174,7 +184,7 @@ const conditionOf = ({
     gone?: string | null;
     element?: number | null;
     value?: string | null;
-}): OperateInput => {
+}): OperateInput {
     if ([given(text), given(gone), given(element) || given(value)].filter(Boolean).length === 1) {
         if (given(text)) {
             return { text };
@@ -187,10 +197,10 @@ const conditionOf = ({
         }
     }
     throw new VerbRefusal('bad-arguments', 'computer wait takes one of --text T, --gone T, or --element N with --value V');
-};
+}
 
 /* The start of a text too long to pass on whole, counted in characters so a cut never splits one. */
-const capped = (text: string | undefined, key: string, cut: Record<string, number>): string | null => {
+function capped(text: string | undefined, key: string, cut: Record<string, number>): string | null {
     if (text === undefined) {
         return null;
     }
@@ -203,9 +213,11 @@ const capped = (text: string | undefined, key: string, cut: Record<string, numbe
     }
     cut[key] = characters.length;
     return characters.slice(0, READ_MAX_CHARS).join('');
-};
+}
 
-const appRefOf = (app: { name: string; bundleId?: string; pid: number }) => ({ name: app.name, bundleId: app.bundleId ?? null, pid: app.pid });
+function appRefOf(app: { name: string; bundleId?: string; pid: number }) {
+    return { name: app.name, bundleId: app.bundleId ?? null, pid: app.pid };
+}
 
 export const computerActions: ActionHandlers<ServerActionContext> = {
     'computer.apps': async (_input, { actor, context }) => {

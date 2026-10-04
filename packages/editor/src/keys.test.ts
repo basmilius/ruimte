@@ -1,15 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import { type KeyChord, monacoKeyOf } from './keys.ts';
 
-const chord = (key: string, held: Partial<Omit<KeyChord, 'key'>> = {}): KeyChord => ({
-    mod: false,
-    ctrl: false,
-    meta: false,
-    alt: false,
-    shift: false,
-    ...held,
-    key
-});
+function chord(key: string, held: Partial<Omit<KeyChord, 'key'>> = {}): KeyChord {
+    return {
+        mod: false,
+        ctrl: false,
+        meta: false,
+        alt: false,
+        shift: false,
+        ...held,
+        key
+    };
+}
 
 describe('monacoKeyOf', () => {
     test('reads mod as Monaco reads CtrlCmd, on every platform', () => {

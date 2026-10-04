@@ -3,10 +3,18 @@ import type { ChatAssistantItem, ChatToolItem, ChatTurnItem, ChatUserItem } from
 import type { TimelineRow } from '../../logic/timeline';
 import { replyHeader, rowRhythm } from './row-rhythm';
 
-const user = (id: string, createdAt = 0): TimelineRow => ({ kind: 'user', id, item: { id, kind: 'user', createdAt } as ChatUserItem });
-const opener = (id: string, createdAt: number): TimelineRow => ({ kind: 'turn-start', id, label: '', turn: { id, kind: 'turn', createdAt } as ChatTurnItem });
-const prose = (id: string): TimelineRow => ({ kind: 'assistant', id, item: { id, kind: 'assistant' } as ChatAssistantItem });
-const call = (id: string): TimelineRow => ({ kind: 'work', id, tool: { id, kind: 'tool' } as ChatToolItem });
+function user(id: string, createdAt = 0): TimelineRow {
+    return { kind: 'user', id, item: { id, kind: 'user', createdAt } as ChatUserItem };
+}
+function opener(id: string, createdAt: number): TimelineRow {
+    return { kind: 'turn-start', id, label: '', turn: { id, kind: 'turn', createdAt } as ChatTurnItem };
+}
+function prose(id: string): TimelineRow {
+    return { kind: 'assistant', id, item: { id, kind: 'assistant' } as ChatAssistantItem };
+}
+function call(id: string): TimelineRow {
+    return { kind: 'work', id, tool: { id, kind: 'tool' } as ChatToolItem };
+}
 
 describe('the gaps a row wears', () => {
     test('a question makes room for the answer under it', () => {

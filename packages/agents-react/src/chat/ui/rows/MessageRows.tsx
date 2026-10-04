@@ -29,12 +29,12 @@ const USER_FOLD_CHARS = 600;
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
 const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
 
-const useReplyAuthor = (chatId: string) => {
+function useReplyAuthor(chatId: string) {
     const { id } = useChatScope();
     const context = useContext(ReplyContext);
     const author = chatHost().useReplyAuthor(id, context?.chatId ?? chatId);
     return context !== null && context.chatId === undefined ? null : author;
-};
+}
 
 /*
  * A file attached to a message that is not a picture. `download` is what saves a blob URL: the shell

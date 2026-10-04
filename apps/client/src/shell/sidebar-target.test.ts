@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { sidebarNavigator, type SidebarTarget } from './sidebar-target';
 
-const target = (projectId: string, viewId: string): SidebarTarget => ({ endpointId: 'machine', projectId, viewId });
+function target(projectId: string, viewId: string): SidebarTarget {
+    return { endpointId: 'machine', projectId, viewId };
+}
 
 describe('sidebar navigation', () => {
     test('only the last requested destination can reveal a view', async () => {

@@ -3,20 +3,24 @@ import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import { isIdle } from '@ruimte/contracts';
 import { childCounter, workOf } from './work.ts';
 
-const agent = (status: AgentStatus, live = true): AgentInfo => ({
-    kind: 'claude',
-    agentSessionId: 'agent-1',
-    transcriptPath: null,
-    status,
-    live,
-    updatedAt: 0
-});
+function agent(status: AgentStatus, live = true): AgentInfo {
+    return {
+        kind: 'claude',
+        agentSessionId: 'agent-1',
+        transcriptPath: null,
+        status,
+        live,
+        updatedAt: 0
+    };
+}
 
-const shell = (pid: number, options: { exited?: boolean; agent?: AgentInfo | null } = {}) => ({
-    pid,
-    exited: options.exited ?? false,
-    agent: options.agent ?? null
-});
+function shell(pid: number, options: { exited?: boolean; agent?: AgentInfo | null } = {}) {
+    return {
+        pid,
+        exited: options.exited ?? false,
+        agent: options.agent ?? null
+    };
+}
 
 describe('workOf', () => {
     test('a shell with nothing running in it is idle', () => {

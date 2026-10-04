@@ -15,25 +15,31 @@ import {
 } from './worktree-merge.ts';
 import { removeAllQuestion } from './worktree-rows.ts';
 
-const worktree = (branch: string, extra: Partial<Worktree> = {}): Worktree => ({
-    path: `/wt/${branch}`,
-    branch,
-    from: { branch: 'main', commit: 'abc' },
-    ...extra
-});
+function worktree(branch: string, extra: Partial<Worktree> = {}): Worktree {
+    return {
+        path: `/wt/${branch}`,
+        branch,
+        from: { branch: 'main', commit: 'abc' },
+        ...extra
+    };
+}
 
-const run = (branch: string): MergeRun => ({ worktree: worktree(branch), payload: { repo: '/project', path: `/wt/${branch}`, strategy: 'squash' } });
+function run(branch: string): MergeRun {
+    return { worktree: worktree(branch), payload: { repo: '/project', path: `/wt/${branch}`, strategy: 'squash' } };
+}
 
-const result = (extra: Partial<WorktreeMergeResult> = {}): WorktreeMergeResult => ({ actionId: 'a', summary: 'ok', output: '', ...extra });
+function result(extra: Partial<WorktreeMergeResult> = {}): WorktreeMergeResult {
+    return { actionId: 'a', summary: 'ok', output: '', ...extra };
+}
 
-const mergeAnswering = (answers: Record<string, () => WorktreeMergeResult>): { merge: (run: MergeRun) => Promise<WorktreeMergeResult>; asked: string[] } => {
+function mergeAnswering(answers: Record<string, () => WorktreeMergeResult>): { merge: (run: MergeRun) => Promise<WorktreeMergeResult>; asked: string[] } {
     const asked: string[] = [];
     const merge = async (run: MergeRun): Promise<WorktreeMergeResult> => {
         asked.push(run.payload.path);
         return answers[run.payload.path]!();
     };
     return { merge, asked };
-};
+}
 
 describe('runMerges', () => {
     test('merges in order and stops at the first conflict, leaving the rest alone', async () => {

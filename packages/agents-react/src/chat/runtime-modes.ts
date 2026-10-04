@@ -9,6 +9,10 @@ import { RuntimeModeSchema, type RuntimeMode } from '@ruimte/agent-contracts';
  */
 export const RUNTIME_MODES: readonly RuntimeMode[] = RuntimeModeSchema.options;
 
-export const runtimeModeLabel = (mode: RuntimeMode): string => i18next.t(`agent-chat:modes.${mode}.label`);
+export function runtimeModeLabel(mode: RuntimeMode): string {
+    return i18next.t(`agent-chat:modes.${mode}.label`);
+}
 
-export const runtimeModeHint = (mode: RuntimeMode): string => i18next.t(`agent-chat:modes.${mode}.hint`);
+export function runtimeModeHint(mode: RuntimeMode): string {
+    return i18next.t(`agent-chat:modes.${mode}.hint`);
+}

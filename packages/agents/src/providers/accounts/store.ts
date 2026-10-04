@@ -20,7 +20,9 @@ import { DEFAULT_ACCOUNTS_HOST, redactVariables, type AccountsHost } from './var
 
 const FILE_VERSION = 1;
 
-export const accountsPath = (home: string): string => join(home, 'providers.json');
+export function accountsPath(home: string): string {
+    return join(home, 'providers.json');
+}
 
 /*
  * The accounts as the file holds them. A known kind is a parsed account; an unknown one is the entry
@@ -29,12 +31,12 @@ export const accountsPath = (home: string): string => join(home, 'providers.json
 export type StoredAccounts = Record<string, unknown>;
 
 /* Every entry that does not parse is dropped on its own; a file that is not JSON at all reads as none. */
-export const readAccounts = async (
+export async function readAccounts(
     path: string,
     providerOf: (kind: AgentKind) => ChatProvider,
     env: Env,
     host: AccountsHost = DEFAULT_ACCOUNTS_HOST
-): Promise<StoredAccounts> => {
+): Promise<StoredAccounts> {
     let parsed: unknown;
     try {
         parsed = JSON.parse(await readFile(path, 'utf8'));
@@ -59,23 +61,24 @@ export const readAccounts = async (
         }
     }
     return stored;
-};
+}
 
-export const writeAccounts = async (path: string, stored: StoredAccounts): Promise<void> => {
+export async function writeAccounts(path: string, stored: StoredAccounts): Promise<void> {
     await writeAtomic(path, `${JSON.stringify({ version: FILE_VERSION, accounts: stored }, null, 2)}\n`, 0o600);
-};
+}
 
 /* What a client reads of an entry of a kind it may not know either: the fields this version knows. */
-const wireAccount = (entry: unknown): ProviderAccount => {
+function wireAccount(entry: unknown): ProviderAccount {
     const parsed = ProviderAccountSchema.safeParse(entry);
     if (!parsed.success) {
         return { kind: String((entry as { kind?: unknown }).kind) };
     }
     return parsed.data.env === undefined ? parsed.data : { ...parsed.data, env: redactVariables(parsed.data.env) };
-};
+}
 
-export const wireAccounts = (stored: StoredAccounts): ProviderAccountMap =>
-    withDefaults(Object.fromEntries(Object.entries(stored).map(([id, entry]) => [id, wireAccount(entry)])));
+export function wireAccounts(stored: StoredAccounts): ProviderAccountMap {
+    return withDefaults(Object.fromEntries(Object.entries(stored).map(([id, entry]) => [id, wireAccount(entry)])));
+}
 
 export class InvalidAccountError extends CodedError<'invalid-account'> {
     constructor(message: string) {
@@ -83,23 +86,23 @@ export class InvalidAccountError extends CodedError<'invalid-account'> {
     }
 }
 
-const storedFolders = (entry: unknown): Pick<ProviderAccount, 'home' | 'shadowHome'> => {
+function storedFolders(entry: unknown): Pick<ProviderAccount, 'home' | 'shadowHome'> {
     const parsed = ProviderAccountSchema.safeParse(entry);
     return parsed.success ? { home: parsed.data.home, shadowHome: parsed.data.shadowHome } : {};
-};
+}
 
 /*
  * What is wrong with the folders of an account a person points somewhere new, or null. An account
  * whose folders did not change is left alone, so one whose folder went missing can still be renamed.
  */
-const linkProblem = (
+function linkProblem(
     id: string,
     account: ProviderAccount,
     before: unknown,
     provider: ChatProvider,
     env: Env,
     isDirectory: (path: string) => boolean
-): string | null => {
+): string | null {
     if (isDefaultAccount(id, account) || provider.home === undefined || account.home === undefined) {
         return null;
     }
@@ -116,7 +119,7 @@ const linkProblem = (
         return `${defaultFolder(provider, env)} is the folder of the default ${provider.name} account`;
     }
     return null;
-};
+}
 
 /*
  * The whole map a person saved, as the file will hold it. A mistake in an account of a known kind
@@ -124,14 +127,14 @@ const linkProblem = (
  * client that knows the kind no better than this host could only have cut short. Sensitive values
  * are still in it: the caller puts them in the keychain before the file is written.
  */
-export const acceptAccounts = (
+export function acceptAccounts(
     saved: ProviderAccountMap,
     before: StoredAccounts,
     providerOf: (kind: AgentKind) => ChatProvider,
     env: Env,
     isDirectory: (path: string) => boolean,
     host: AccountsHost = DEFAULT_ACCOUNTS_HOST
-): StoredAccounts => {
+): StoredAccounts {
     const stored: StoredAccounts = {};
     const reserved = { host, folderVariables: folderVariablesOf(providerOf) };
     for (const [id, account] of Object.entries(withDefaults(saved))) {
@@ -152,4 +155,4 @@ export const acceptAccounts = (
         stored[id] = account;
     }
     return stored;
-};
+}

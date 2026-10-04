@@ -2,26 +2,37 @@ import { describe, expect, test } from 'bun:test';
 import { EMPTY_PRIVATE_FILE, PROJECT_VERSION, type ProjectCanvasView, type ProjectContent, type ProjectSharedFile, type ProjectView } from './project.ts';
 import { canShareView, mergeFiles, overlayOfLegacy, privateFileOf, splitContent, viewShareRefusal } from './project-split.ts';
 
-const canvas = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes,
-    texts: [],
-    edges: [],
-    layouts: []
-});
+function canvas(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes,
+        texts: [],
+        edges: [],
+        layouts: []
+    };
+}
 
-const node = (id: string, extra: Record<string, unknown> = {}): ProjectCanvasView['nodes'][number] =>
-    ({ id, kind: 'chat', title: id, x: 0, y: 0, w: 100, h: 100, ...extra }) as ProjectCanvasView['nodes'][number];
+function node(id: string, extra: Record<string, unknown> = {}): ProjectCanvasView['nodes'][number] {
+    return { id, kind: 'chat', title: id, x: 0, y: 0, w: 100, h: 100, ...extra } as ProjectCanvasView['nodes'][number];
+}
 
-const chatView = (id: string, extra: Record<string, unknown> = {}): ProjectView => ({ kind: 'chat', id, name: id, node: extra });
+function chatView(id: string, extra: Record<string, unknown> = {}): ProjectView {
+    return { kind: 'chat', id, name: id, node: extra };
+}
 
-const separator = (id: string): ProjectView => ({ kind: 'separator', id, name: id });
+function separator(id: string): ProjectView {
+    return { kind: 'separator', id, name: id };
+}
 
-const subheader = (id: string): ProjectView => ({ kind: 'subheader', id, name: id });
+function subheader(id: string): ProjectView {
+    return { kind: 'subheader', id, name: id };
+}
 
-const content = (views: ProjectView[]): ProjectContent => ({ name: 'repo', color: '#7c74ff', views });
+function content(views: ProjectView[]): ProjectContent {
+    return { name: 'repo', color: '#7c74ff', views };
+}
 
 const fallback = { name: 'repo', color: '#7c74ff' };
 

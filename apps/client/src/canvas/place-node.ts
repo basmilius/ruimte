@@ -2,9 +2,11 @@ import { GRID, intersects, snapToGrid, type Point, type Rect } from '@/canvas/ma
 
 const GAP = GRID * 5;
 
-const withGap = (rect: Rect): Rect => ({ x: rect.x - GAP, y: rect.y - GAP, w: rect.w + GAP * 2, h: rect.h + GAP * 2 });
+function withGap(rect: Rect): Rect {
+    return { x: rect.x - GAP, y: rect.y - GAP, w: rect.w + GAP * 2, h: rect.h + GAP * 2 };
+}
 
-export const nearestFreeNodeRect = (existing: readonly Rect[], size: Pick<Rect, 'w' | 'h'>, preferredCenter: Point): Rect => {
+export function nearestFreeNodeRect(existing: readonly Rect[], size: Pick<Rect, 'w' | 'h'>, preferredCenter: Point): Rect {
     const origin = {
         x: snapToGrid(preferredCenter.x - size.w / 2),
         y: snapToGrid(preferredCenter.y - size.h / 2)
@@ -37,4 +39,4 @@ export const nearestFreeNodeRect = (existing: readonly Rect[], size: Pick<Rect, 
         y: origin.y,
         ...size
     };
-};
+}

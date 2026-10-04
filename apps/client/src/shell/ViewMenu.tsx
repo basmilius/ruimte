@@ -35,13 +35,13 @@ interface NewViewEntry {
  * sees, so the Dutch interface reads Kopje before Scheiding where the English one reads Separator
  * before Subheader, and a row nobody is offered takes its place with it.
  */
-const inOrder = (entries: (NewViewEntry | false)[]): ReactNode[] => {
+function inOrder(entries: (NewViewEntry | false)[]): ReactNode[] {
     const order = labelCollator();
     return entries
         .filter((entry): entry is NewViewEntry => entry !== false)
         .sort((one, other) => order.compare(one.label, other.label))
         .map((entry) => <Fragment key={entry.id}>{entry.node}</Fragment>);
-};
+}
 
 /* Dividers are left out of the start screen because there are no views to group yet. */
 export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {

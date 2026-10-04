@@ -21,7 +21,9 @@ export interface ComputerPresenceOptions {
     log?: (message: string) => void;
 }
 
-const same = (a: PresenceShow | null, b: PresenceShow | null): boolean => a?.state === b?.state && a?.label === b?.label && a?.ends === b?.ends;
+function same(a: PresenceShow | null, b: PresenceShow | null): boolean {
+    return a?.state === b?.state && a?.label === b?.label && a?.ends === b?.ends;
+}
 
 /* How a place in line ends: the Mac is the waiter's now, the session went without a word, or the waiter's own node went. */
 export type LineOutcome = 'yours' | 'dropped' | 'gone';

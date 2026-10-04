@@ -14,16 +14,18 @@ afterEach(async () => {
     await Promise.all(contexts.splice(0).map(closeAppleNetworkTools));
     await Promise.all(folders.splice(0).map((folder) => rm(folder, { recursive: true, force: true })));
 });
-const context = (env: Record<string, string> = {}): AppleToolContext => {
+function context(env: Record<string, string> = {}): AppleToolContext {
     const value = { env, home: '/unused-apple-home' };
     contexts.push(value);
     return value;
-};
+}
 const configured: AppleMcpServer = { command: 'configured-server', args: [], env: {}, allowedTools: ['echo', 'fail'] };
-const tool = (name: string): Tool => ({ name, description: `${name} tool`, inputSchema: { type: 'object', properties: { message: { type: 'string' } } } });
+function tool(name: string): Tool {
+    return { name, description: `${name} tool`, inputSchema: { type: 'object', properties: { message: { type: 'string' } } } };
+}
 const listCall: AppleToolCall = { type: 'tool.call', id: 'list', name: 'mcp_list_tools', server: 'local' };
 const echoCall: AppleToolCall = { type: 'tool.call', id: 'call', name: 'mcp_call', server: 'local', tool: 'echo', arguments: '{"message":"hello"}' };
-const mcpHarness = () => {
+function mcpHarness() {
     let connections = 0;
     let closes = 0;
     const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
@@ -49,7 +51,7 @@ const mcpHarness = () => {
         },
         state: () => ({ connections, closes })
     };
-};
+}
 
 describe('Apple web tool routing', () => {
     test('requires explicit search configuration without making a request', async () => {

@@ -9,9 +9,11 @@ const MACHINE = 'm1';
 const PATH = '/repo/a.ts';
 
 // Fake timers leave setImmediate alone, so this drains every pending promise without letting a timer run.
-const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function flush(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
-const deferred = <T>(): { promise: Promise<T>; resolve(value: T): void; reject(error: unknown): void } => {
+function deferred<T>(): { promise: Promise<T>; resolve(value: T): void; reject(error: unknown): void } {
     let resolve!: (value: T) => void;
     let reject!: (error: unknown) => void;
     const promise = new Promise<T>((res, rej) => {
@@ -19,7 +21,7 @@ const deferred = <T>(): { promise: Promise<T>; resolve(value: T): void; reject(e
         reject = rej;
     });
     return { promise, resolve, reject };
-};
+}
 
 interface Write {
     path: string;
@@ -68,7 +70,9 @@ let drafts: TextDrafts;
 // The surface every test draws the file on, so a clean draft stays around to be looked at.
 let releaseSurface: () => void;
 
-const draft = () => drafts.draft(MACHINE, PATH);
+function draft() {
+    return drafts.draft(MACHINE, PATH);
+}
 
 beforeEach(() => {
     jest.useFakeTimers();

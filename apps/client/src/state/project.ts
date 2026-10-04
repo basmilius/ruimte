@@ -36,8 +36,8 @@ export interface ProjectState {
  * Which project the window has on the canvas and how its file and the screen relate. The app makes
  * one; a test makes its own, since two project clients sharing a store would answer for each other's saves.
  */
-export const createProjectStore = (): StoreApi<ProjectState> =>
-    createStore<ProjectState>((set) => ({
+export function createProjectStore(): StoreApi<ProjectState> {
+    return createStore<ProjectState>((set) => ({
         current: null,
         currentEndpointId: null,
         rev: 0,
@@ -71,13 +71,18 @@ export const createProjectStore = (): StoreApi<ProjectState> =>
             set({ switching });
         }
     }));
+}
 
 export const defaultProjectStore = createProjectStore();
 
 export const useProject = storeHook(defaultProjectStore);
 
 /* The machine's Chats project, whose folder is the daemon's and is never shown. */
-export const isScratchProject = (current: ProjectSummary | null): boolean => current?.scratch === true;
+export function isScratchProject(current: ProjectSummary | null): boolean {
+    return current?.scratch === true;
+}
 
 /* The folder of the open project as a person may see and use it: none for the Chats project. */
-export const shownFolderOf = (current: ProjectSummary | null): string | null => (current === null || isScratchProject(current) ? null : current.folder);
+export function shownFolderOf(current: ProjectSummary | null): string | null {
+    return current === null || isScratchProject(current) ? null : current.folder;
+}

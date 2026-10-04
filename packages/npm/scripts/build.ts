@@ -37,7 +37,9 @@ const out = resolve(values.out);
 const version = values.version;
 const targets = values.only.length > 0 ? TARGETS.filter((target) => values.only.includes(targetId(target))) : TARGETS;
 
-const writeJson = (path: string, value: unknown): Promise<void> => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+function writeJson(path: string, value: unknown): Promise<void> {
+    return writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+}
 
 await rm(out, { recursive: true, force: true });
 

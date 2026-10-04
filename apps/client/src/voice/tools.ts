@@ -18,7 +18,9 @@ import type { VoiceActionKind } from '@/voice/state';
 import { voiceWorkspaceRevision } from '@/voice/workspace-context';
 
 /* What the activity log shows a person; the message beside it is for the model and stays English. */
-const activity = (key: string): string => i18next.t(`voice:activity.${key}`);
+function activity(key: string): string {
+    return i18next.t(`voice:activity.${key}`);
+}
 
 interface ToolAction {
     kind: VoiceActionKind;
@@ -74,7 +76,9 @@ const NODE_LABELS = {
     unknown: 'node'
 } as const;
 
-const counted = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`;
+function counted(count: number, noun: string): string {
+    return `${count} ${count === 1 ? noun : `${noun}s`}`;
+}
 
 const REPLIES: Replies = {
     'agents.inspect': () => ({ message: 'Read agent statuses. Idle does not imply successful completion.' }),
@@ -264,14 +268,14 @@ const REPLIES: Replies = {
 const DETAIL_FIELDS = ['view', 'node', 'name', 'chat', 'terminal', 'target', 'canvas', 'file', 'path'] as const;
 
 /* An action without a sentence of its own still shows up in the timeline under its catalog title. */
-const genericReply = (name: ActionName, output: Record<string, unknown>): Reply => {
+function genericReply(name: ActionName, output: Record<string, unknown>): Reply {
     const definition = ACTION_DEFINITIONS[name];
     if (definition.effect === 'read') {
         return { message: `${definition.title}: done.` };
     }
     const detail = DETAIL_FIELDS.map((field) => output[field]).find((value): value is string => typeof value === 'string') ?? '';
     return { message: `${definition.title}: done.`, entry: { kind: TIMELINE_KINDS[definition.domain], label: definition.title, detail } };
-};
+}
 
 interface GitRunLine {
     repository?: string;
@@ -282,7 +286,7 @@ interface GitRunLine {
 }
 
 /* A conflict is a stop that waits for the user, never a success, so the sentence says which it was. */
-const gitLine = (run: GitRunLine): string => {
+function gitLine(run: GitRunLine): string {
     const name = run.repository ?? run.branch ?? 'git';
     if (run.error) {
         return `${name}: failed, ${run.error.message}`;
@@ -291,9 +295,9 @@ const gitLine = (run: GitRunLine): string => {
     return conflicts.length > 0
         ? `${name}: stopped halfway with conflicts in ${conflicts.join(', ')}; it waits for the user to resolve or take it back in the app`
         : `${name}: ${run.summary}`;
-};
+}
 
-const gitReply = (name: ActionName, output: Record<string, unknown>): Reply => {
+function gitReply(name: ActionName, output: Record<string, unknown>): Reply {
     const runs = Array.isArray(output.runs) ? (output.runs as GitRunLine[]) : typeof output.summary === 'string' ? [output as unknown as GitRunLine] : [];
     const title = ACTION_DEFINITIONS[name].title;
     if (runs.length === 0) {
@@ -301,23 +305,25 @@ const gitReply = (name: ActionName, output: Record<string, unknown>): Reply => {
     }
     const lines = runs.map(gitLine);
     return { message: `${lines.join('. ')}. Report this result as it stands.`, entry: { kind: 'git', label: title, detail: lines.join('; ') } };
-};
+}
 
-const replyOf = (name: ActionName, output: Record<string, unknown>): Reply => {
+function replyOf(name: ActionName, output: Record<string, unknown>): Reply {
     const reply = REPLIES[name] as ((output: Record<string, unknown>) => Reply) | undefined;
     if (reply) {
         return reply(output);
     }
     const definition = ACTION_DEFINITIONS[name];
     return definition.domain === 'developer' && definition.effect !== 'read' ? gitReply(name, output) : genericReply(name, output);
-};
+}
 
-const failed = (message: string, data: Record<string, unknown> = {}): VoiceToolExecution => ({
-    output: { ok: false, message, ...data }
-});
+function failed(message: string, data: Record<string, unknown> = {}): VoiceToolExecution {
+    return {
+        output: { ok: false, message, ...data }
+    };
+}
 
-const failureOf = (result: ActionResult): VoiceToolExecution =>
-    result.status === 'needs_confirmation'
+function failureOf(result: ActionResult): VoiceToolExecution {
+    return result.status === 'needs_confirmation'
         ? failed('Ask the user to confirm or cancel this action before continuing.', {
               needs_confirmation: true,
               confirmation_token: result.confirmationToken,
@@ -326,8 +332,9 @@ const failureOf = (result: ActionResult): VoiceToolExecution =>
         : failed(result.status === 'failed' ? result.error.message : 'The action could not be completed.', {
               code: result.status === 'failed' ? result.error.code : result.status
           });
+}
 
-const completed = (name: ActionName, output: Record<string, unknown>, undoToken: string | undefined, endpointId: string): VoiceToolExecution => {
+function completed(name: ActionName, output: Record<string, unknown>, undoToken: string | undefined, endpointId: string): VoiceToolExecution {
     const reply = replyOf(name, output);
     return {
         output: { ok: true, message: reply.message, ...output },
@@ -347,22 +354,23 @@ const completed = (name: ActionName, output: Record<string, unknown>, undoToken:
             : {}),
         ...(name === 'chat.clear' ? { clearedChatKey: endpointKey(endpointId, (output as ActionOutput<'chat.clear'>).chatId) } : {})
     };
-};
+}
 
-const objectArguments = (raw: string): Record<string, unknown> | null => {
+function objectArguments(raw: string): Record<string, unknown> | null {
     try {
         const parsed: unknown = JSON.parse(raw);
         return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
     } catch {
         return null;
     }
-};
+}
 
 /* A strict tool carries every field of its domain; the action gets only its own, and the registry validates those. */
-const inputOf = (name: ActionName, args: Record<string, unknown>): Record<string, unknown> =>
-    Object.fromEntries(Object.keys(ACTION_DEFINITIONS[name].input.shape).map((field) => [field, args[field] ?? null]));
+function inputOf(name: ActionName, args: Record<string, unknown>): Record<string, unknown> {
+    return Object.fromEntries(Object.keys(ACTION_DEFINITIONS[name].input.shape).map((field) => [field, args[field] ?? null]));
+}
 
-const executed = async (name: ActionName, input: Record<string, unknown>): Promise<ActionResult> => {
+async function executed(name: ActionName, input: Record<string, unknown>): Promise<ActionResult> {
     const revision = voiceWorkspaceRevision();
     const result = await clientActions.execute(name, input, VOICE_ACTION_CALL);
     if (result.status !== 'needs_confirmation') {
@@ -379,9 +387,9 @@ const executed = async (name: ActionName, input: Record<string, unknown>): Promi
         return result;
     }
     return clientActions.confirm(result.confirmationToken, true, VOICE_ACTION_CALL);
-};
+}
 
-const sent = (output: ActionOutput<'chat.send'>, prompt: string, notify: boolean, endpointId: string, project: string): VoiceToolExecution => {
+function sent(output: ActionOutput<'chat.send'>, prompt: string, notify: boolean, endpointId: string, project: string): VoiceToolExecution {
     const cannotFollow = notify && output.turnId === undefined;
     const execution: VoiceToolExecution = {
         output: {
@@ -399,9 +407,9 @@ const sent = (output: ActionOutput<'chat.send'>, prompt: string, notify: boolean
         return execution;
     }
     return { ...execution, followUp: { key: endpointKey(endpointId, output.chatId), project, chat: output.chat, turnId: output.turnId } };
-};
+}
 
-const runAction = async (name: ActionName, args: Record<string, unknown>): Promise<VoiceToolExecution> => {
+async function runAction(name: ActionName, args: Record<string, unknown>): Promise<VoiceToolExecution> {
     const endpointId = currentEndpointId();
     const project = useProject.getState().current?.name ?? 'Untitled project';
     const input = inputOf(name, args);
@@ -413,9 +421,9 @@ const runAction = async (name: ActionName, args: Record<string, unknown>): Promi
         return sent(result.output as ActionOutput<'chat.send'>, String(input.prompt), args.notify_on_completion === true, endpointId, project);
     }
     return completed(result.action, result.output as Record<string, unknown>, result.undoToken, endpointId);
-};
+}
 
-const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
+async function controlAction(args: Record<string, unknown>): Promise<VoiceToolExecution> {
     const token = typeof args.confirmation_token === 'string' ? args.confirmation_token : null;
     if (!token || (args.action !== 'confirm' && args.action !== 'cancel')) {
         return failed('Choose confirm or cancel and provide the confirmation token.', { code: 'invalid-confirmation' });
@@ -423,9 +431,9 @@ const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolEx
     const endpointId = currentEndpointId();
     const result = await clientActions.confirm(token, args.action === 'confirm', VOICE_ACTION_CALL);
     return result.status === 'completed' ? completed(result.action, result.output as Record<string, unknown>, result.undoToken, endpointId) : failureOf(result);
-};
+}
 
-const runVoiceTool = async (tool: string, rawArguments: string): Promise<VoiceToolExecution> => {
+async function runVoiceTool(tool: string, rawArguments: string): Promise<VoiceToolExecution> {
     if (useProject.getState().switching) {
         return failed('A project switch is in progress. Wait and inspect the workspace before retrying.', { code: 'project-switching' });
     }
@@ -445,15 +453,16 @@ const runVoiceTool = async (tool: string, rawArguments: string): Promise<VoiceTo
         return failed(`Choose one of ${actions.join(', ')} as the action of ${tool}.`, { code: 'unknown-action' });
     }
     return runAction(action, args);
-};
+}
 
 /* A cancel stops a run the queue is still waiting on, so it runs beside the queue rather than behind it. */
-export const bypassesQueue = (tool: string, rawArguments: string): boolean =>
-    VOICE_TOOL_ACTIONS.get(tool)?.includes('operation.cancel') === true && objectArguments(rawArguments)?.action === 'operation.cancel';
+export function bypassesQueue(tool: string, rawArguments: string): boolean {
+    return VOICE_TOOL_ACTIONS.get(tool)?.includes('operation.cancel') === true && objectArguments(rawArguments)?.action === 'operation.cancel';
+}
 
 const confirmationRevisions = new Map<string, number>();
 
-export const executeVoiceTool = async (tool: string, rawArguments: string): Promise<VoiceToolExecution> => {
+export async function executeVoiceTool(tool: string, rawArguments: string): Promise<VoiceToolExecution> {
     const revision = voiceWorkspaceRevision();
     if (tool === VOICE_CONTROL_TOOL) {
         const token = objectArguments(rawArguments)?.confirmation_token;
@@ -480,4 +489,4 @@ export const executeVoiceTool = async (tool: string, rawArguments: string): Prom
         };
     }
     return result;
-};
+}

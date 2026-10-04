@@ -39,8 +39,8 @@ const capabilities: ProviderCapabilities = {
     reportsThinking: false,
     slashCommands: false
 };
-const render = (context: { provider: ChatInfo['provider']; chatId?: string } | null = null) =>
-    renderToStaticMarkup(
+function render(context: { provider: ChatInfo['provider']; chatId?: string } | null = null) {
+    return renderToStaticMarkup(
         createElement(
             I18nextProvider,
             { i18n },
@@ -56,6 +56,7 @@ const render = (context: { provider: ChatInfo['provider']; chatId?: string } | n
             )
         )
     );
+}
 
 beforeEach(() => {
     useProvidersStore.getState().setProviders(scope.id, [

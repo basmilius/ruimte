@@ -31,7 +31,7 @@ export interface CodeRange {
 }
 
 /* The code spans and fenced blocks between `from` and `to`, as far as the parser has got. */
-export const codeRanges = (state: EditorState, from = 0, to = state.doc.length): CodeRange[] => {
+export function codeRanges(state: EditorState, from = 0, to = state.doc.length): CodeRange[] {
     const found: CodeRange[] = [];
     syntaxTree(state).iterate({
         from,
@@ -45,18 +45,19 @@ export const codeRanges = (state: EditorState, from = 0, to = state.doc.length):
         }
     });
     return found;
-};
+}
 
 const inlineCodeMark = Decoration.mark({ class: 'cm-md-code' });
 
-const fenceLine = (first: boolean, last: boolean): Decoration =>
-    Decoration.line({ class: ['cm-md-fence', first ? 'cm-md-fence-start' : '', last ? 'cm-md-fence-end' : ''].join(' ').trim() });
+function fenceLine(first: boolean, last: boolean): Decoration {
+    return Decoration.line({ class: ['cm-md-fence', first ? 'cm-md-fence-start' : '', last ? 'cm-md-fence-end' : ''].join(' ').trim() });
+}
 
 /*
  * Code is decorated from the tree rather than highlighted per token: the highlighter styles the
  * backticks apart from what they wrap, and a block's background belongs to its whole lines.
  */
-const codeDecorations = (view: EditorView): DecorationSet => {
+function codeDecorations(view: EditorView): DecorationSet {
     const { state } = view;
     const decorations: Array<Range<Decoration>> = [];
     const fenceLines = new Set<number>();
@@ -79,7 +80,7 @@ const codeDecorations = (view: EditorView): DecorationSet => {
         }
     }
     return Decoration.set(decorations, true);
-};
+}
 
 const codeDecorationPlugin = ViewPlugin.fromClass(
     class {
@@ -103,13 +104,15 @@ const codeDecorationPlugin = ViewPlugin.fromClass(
  * adds code editor commands (move a line, indent, select the syntax parent) on keys a prompt box
  * has no business taking.
  */
-export const composerEditorExtensions = (): Extension => [
-    history(),
-    keymap.of([...standardKeymap, ...historyKeymap]),
-    EditorView.lineWrapping,
-    // What Tab and Shift+Tab in a fence add and take away, so a selection indents in the same steps as a caret.
-    indentUnit.of('    '),
-    markdownLanguage,
-    syntaxHighlighting(markdownClasses),
-    codeDecorationPlugin
-];
+export function composerEditorExtensions(): Extension {
+    return [
+        history(),
+        keymap.of([...standardKeymap, ...historyKeymap]),
+        EditorView.lineWrapping,
+        // What Tab and Shift+Tab in a fence add and take away, so a selection indents in the same steps as a caret.
+        indentUnit.of('    '),
+        markdownLanguage,
+        syntaxHighlighting(markdownClasses),
+        codeDecorationPlugin
+    ];
+}

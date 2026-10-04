@@ -10,7 +10,7 @@ export const WORKTREE_LINES: readonly string[] = [
 ];
 
 /* A branch name out of a title: lower case, only what every ref takes, and never empty. */
-export const branchSlug = (title: string): string => {
+export function branchSlug(title: string): string {
     const slug = title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -18,37 +18,40 @@ export const branchSlug = (title: string): string => {
         .slice(0, 48)
         .replace(/-+$/, '');
     return slug === '' ? 'agent' : slug;
-};
+}
 
 /* Refuses a project that is not in a git repository, before anything is made for it. */
-export const requireRepository = async (call: VerbCall, folder: string): Promise<void> => {
+export async function requireRepository(call: VerbCall, folder: string): Promise<void> {
     if ((await call.host.branchesOf(folder)) === null) {
         throw new VerbRefusal('not-a-repository', `--worktree needs a git repository, and ${folder} is not in one`);
     }
-};
+}
 
-const nameOf = (want: WorktreeWant): string => ('branch' in want ? want.branch : want.fresh);
+function nameOf(want: WorktreeWant): string {
+    return 'branch' in want ? want.branch : want.fresh;
+}
 
 /* `CanvasHost.addWorktree` over the machine's worktrees. */
-export const addWanted = async (
+export async function addWanted(
     worktrees: Worktrees,
     folder: string,
     want: WorktreeWant,
     projectId: string
-): Promise<{ worktree: Worktree; created: boolean }> =>
-    'branch' in want
+): Promise<{ worktree: Worktree; created: boolean }> {
+    return 'branch' in want
         ? await worktrees.add(folder, want.branch, { madeBy: 'verb', projectId })
         : { worktree: await worktrees.addFresh(folder, want.fresh, { madeBy: 'verb', projectId }), created: true };
+}
 
 /*
  * The worktrees of one call, made before the project is written so the nodes can start in them.
  * `undo` takes back the ones made here when the write is refused; one that already existed stays.
  */
-export const makeWorktrees = async (
+export async function makeWorktrees(
     call: VerbCall,
     place: { folder: string; projectId: string },
     wants: readonly WorktreeWant[]
-): Promise<{ worktrees: Worktree[]; undo(): Promise<void> }> => {
+): Promise<{ worktrees: Worktree[]; undo(): Promise<void> }> {
     const folder = place.folder;
     const made: Worktree[] = [];
     const worktrees: Worktree[] = [];
@@ -70,4 +73,4 @@ export const makeWorktrees = async (
         }
     }
     return { worktrees, undo };
-};
+}

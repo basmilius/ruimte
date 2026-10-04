@@ -22,24 +22,28 @@ const document: ProjectDocument = {
     views: [main, { kind: 'canvas', id: 'release', name: 'Release', nodes: [], texts: [], edges: [], layouts: [] }]
 };
 
-const canvasNode = (id: string, title: string, kind: ProjectNode['kind'], x: number): ProjectNode => ({
-    id,
-    title,
-    kind,
-    x,
-    y: 100,
-    w: 240,
-    h: 160
-});
+function canvasNode(id: string, title: string, kind: ProjectNode['kind'], x: number): ProjectNode {
+    return {
+        id,
+        title,
+        kind,
+        x,
+        y: 100,
+        w: 240,
+        h: 160
+    };
+}
 
 /* A strict tool call carries every field of its tool, null where the action has no use for it. */
-const toolArgs = (tool: string, fields: Record<string, unknown>): string => {
+function toolArgs(tool: string, fields: Record<string, unknown>): string {
     const definition = VOICE_TOOL_DEFINITIONS.find((candidate) => candidate.name === tool)!;
     const nulls = Object.fromEntries(Object.keys(definition.parameters.properties).map((field) => [field, null]));
     return JSON.stringify({ ...nulls, ...(tool === 'communicate' ? { notify_on_completion: false } : {}), ...fields });
-};
+}
 
-const run = (tool: string, fields: Record<string, unknown>) => executeVoiceTool(tool, toolArgs(tool, fields));
+function run(tool: string, fields: Record<string, unknown>) {
+    return executeVoiceTool(tool, toolArgs(tool, fields));
+}
 
 beforeEach(() => {
     useProject.getState().setCurrent(null, 0, null);

@@ -16,13 +16,17 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const create = (sessionId: string) => harness.manager.create({ sessionId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: harness.home });
+function create(sessionId: string) {
+    return harness.manager.create({ sessionId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: harness.home });
+}
 
 // Every character in a color of its own, so parsing a line costs enough that a burst outlasts one of xterm's write slices.
-const colored = (text: string): string => [...text].map((character, i) => `\x1b[3${i % 8}m${character}`).join('') + '\x1b[0m';
+function colored(text: string): string {
+    return [...text].map((character, i) => `\x1b[3${i % 8}m${character}`).join('') + '\x1b[0m';
+}
 
 /* Emits each line as a read of its own, so the emulator has a queue of writes to work through. */
-const emitLines = (sessionId: string, from: number, to: number): string[] => {
+function emitLines(sessionId: string, from: number, to: number): string[] {
     const pty = harness.adapter.forSession(sessionId);
     const lines: string[] = [];
     for (let i = from; i < to; i++) {
@@ -31,7 +35,7 @@ const emitLines = (sessionId: string, from: number, to: number): string[] => {
         pty.emit(`${colored(line)}\r\n`);
     }
     return lines;
-};
+}
 
 type Step = { screen: string } | { output: string };
 
@@ -39,7 +43,7 @@ type Step = { screen: string } | { output: string };
 const FULL_RESET = '\x1bc';
 
 /* What a client ends up showing: a screen replaces everything, output is written on top. */
-const replay = async (steps: Step[]): Promise<string[]> => {
+async function replay(steps: Step[]): Promise<string[]> {
     const terminal = new Terminal({ cols: 80, rows: 24, scrollback: 10_000, allowProposedApi: true });
     for (const step of steps) {
         terminal.write('screen' in step ? `${FULL_RESET}${step.screen}` : step.output);
@@ -55,7 +59,7 @@ const replay = async (steps: Step[]): Promise<string[]> => {
     }
     terminal.dispose();
     return lines;
-};
+}
 
 describe('Session.snapshotFor', () => {
     test('output emitted while an attach takes its screen is in the screen or in the stream, exactly once', async () => {

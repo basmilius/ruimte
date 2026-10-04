@@ -3,7 +3,7 @@ import { GitWatches } from '@/state/git-watch';
 import type { Transport, TransportStatus } from '@/transport/transport';
 
 /* One machine's link that records what was asked of it and drops and comes back when a test says so. */
-const fakeLink = (): { link: Transport; calls: string[]; setStatus(status: TransportStatus): void } => {
+function fakeLink(): { link: Transport; calls: string[]; setStatus(status: TransportStatus): void } {
     const calls: string[] = [];
     const heard = new Set<(status: TransportStatus) => void>();
     const link = {
@@ -27,7 +27,7 @@ const fakeLink = (): { link: Transport; calls: string[]; setStatus(status: Trans
             }
         }
     };
-};
+}
 
 describe('GitWatches', () => {
     test('asks the daemon once however many panels hold the checkout', () => {

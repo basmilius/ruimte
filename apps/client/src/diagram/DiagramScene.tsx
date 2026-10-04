@@ -15,8 +15,12 @@ import {
 } from '@ruimte/diagram';
 
 // The palette names resolve through the theme's own tokens, so a diagram follows light and dark.
-const ink = (tone: DrawingColor): string => `var(--draw-${tone})`;
-const paper = (tone: DrawingColor): string => `var(--draw-paper-${tone})`;
+function ink(tone: DrawingColor): string {
+    return `var(--draw-${tone})`;
+}
+function paper(tone: DrawingColor): string {
+    return `var(--draw-paper-${tone})`;
+}
 
 /* The graph as elements: the same layout and paths as the export, with the colors left to CSS. `interactive` is the view, where a node is dragged. */
 export function DiagramScene({ content, layout, interactive = false }: { content: DiagramContent; layout: DiagramLayout; interactive?: boolean }) {

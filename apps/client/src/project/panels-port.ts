@@ -6,20 +6,22 @@ import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
 import { PANEL_DEFAULTS, useUi } from '@/state/ui';
 
-const defaults = (): PanelsState => ({
-    ...PANEL_DEFAULTS,
-    tabs: [],
-    active: null,
-    expandedDirs: [],
-    gitScope: DEFAULT_SCOPE,
-    gitCollapsedDirs: [],
-    gitLogHeight: DEFAULT_LOG_HEIGHT,
-    gitHiddenRepos: [],
-    sidebarExpanded: null,
-    favicons: {}
-});
+function defaults(): PanelsState {
+    return {
+        ...PANEL_DEFAULTS,
+        tabs: [],
+        active: null,
+        expandedDirs: [],
+        gitScope: DEFAULT_SCOPE,
+        gitCollapsedDirs: [],
+        gitLogHeight: DEFAULT_LOG_HEIGHT,
+        gitHiddenRepos: [],
+        sidebarExpanded: null,
+        favicons: {}
+    };
+}
 
-const read = (): PanelsState => {
+function read(): PanelsState {
     const ui = useUi.getState();
     const files = useFiles.getState();
     return {
@@ -37,7 +39,7 @@ const read = (): PanelsState => {
         sidebarExpanded: ui.sidebarExpanded,
         favicons: faviconsOfProject(useBrowser.getState().byKey, currentEndpointId())
     };
-};
+}
 
 /*
  * The panels on one side, the project's machine-local file on the other. It puts a project's panels

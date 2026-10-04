@@ -22,11 +22,14 @@ export const setSpans = StateEffect.define<LiveSpan[]>();
 export const settleBlock = StateEffect.define<number>();
 
 /* The first position of a line, counted from zero, clamped to the end of a shorter document. */
-const startOf = (doc: Text, line: number): number => (line >= doc.lines ? doc.length : doc.line(line + 1).from);
+function startOf(doc: Text, line: number): number {
+    return line >= doc.lines ? doc.length : doc.line(line + 1).from;
+}
 
 /* The spans a fresh file starts with: line numbers as positions, nothing settled. */
-export const spansOf = (doc: Text, spans: readonly MergeSpan[]): LiveSpan[] =>
-    spans.map((span) => ({ block: span.block, kind: span.kind, from: startOf(doc, span.from), to: startOf(doc, span.to), settled: false }));
+export function spansOf(doc: Text, spans: readonly MergeSpan[]): LiveSpan[] {
+    return spans.map((span) => ({ block: span.block, kind: span.kind, from: startOf(doc, span.from), to: startOf(doc, span.to), settled: false }));
+}
 
 /*
  * Every block's place while the file is edited. CodeMirror maps the positions through each change,
@@ -77,7 +80,7 @@ const LINE_CLASS: Record<Exclude<MergeBlockKind, 'stable'>, string> = {
 // A stretch longer than this is drawn by its first lines alone; nobody reads a thousand marked rows.
 const MAX_MARKED_LINES = 200;
 
-const decorationsOf = (state: EditorState): DecorationSet => {
+function decorationsOf(state: EditorState): DecorationSet {
     const marks = [];
     for (const span of state.field(spansField)) {
         if (span.kind === 'stable') {
@@ -92,7 +95,7 @@ const decorationsOf = (state: EditorState): DecorationSet => {
         }
     }
     return Decoration.set(marks, true);
-};
+}
 
 const mergeDecorations: Extension = EditorView.decorations.compute([spansField], decorationsOf);
 
@@ -101,39 +104,41 @@ const mergeDecorations: Extension = EditorView.decorations.compute([spansField],
 export const conflictEditing: Extension = [EditorState.lineSeparator.of('\n'), spansField, mergeDecorations];
 
 /* The block the cursor is in, so the panes below the editor follow what a person is reading. */
-export const blockAt = (state: EditorState, position: number): number | null => {
+export function blockAt(state: EditorState, position: number): number | null {
     for (const span of state.field(spansField)) {
         if (span.kind === 'conflict' && position >= span.from && position <= span.to) {
             return span.block;
         }
     }
     return null;
-};
+}
 
-export const spanOf = (state: EditorState, block: number): LiveSpan | undefined => state.field(spansField).find((span) => span.block === block);
+export function spanOf(state: EditorState, block: number): LiveSpan | undefined {
+    return state.field(spansField).find((span) => span.block === block);
+}
 
 /* One block replaced by the lines a person picked, and settled in the same step. */
-export const blockChange = (state: EditorState, block: number, lines: readonly string[]): TransactionSpec | null => {
+export function blockChange(state: EditorState, block: number, lines: readonly string[]): TransactionSpec | null {
     const span = spanOf(state, block);
     if (span === undefined) {
         return null;
     }
     return { changes: replacementOf(state.doc, span, lines), effects: settleBlock.of(block), scrollIntoView: true };
-};
+}
 
-export const applyBlock = (view: EditorView, block: number, lines: readonly string[]): void => {
+export function applyBlock(view: EditorView, block: number, lines: readonly string[]): void {
     const change = blockChange(view.state, block, lines);
     if (change !== null) {
         view.dispatch(change);
     }
-};
+}
 
 /* Brings a block into view and puts the caret at its first line. */
-export const revealBlock = (view: EditorView, block: number): void => {
+export function revealBlock(view: EditorView, block: number): void {
     const span = spanOf(view.state, block);
     if (span === undefined) {
         return;
     }
     view.dispatch({ selection: { anchor: span.from }, effects: EditorView.scrollIntoView(span.from, { y: 'center' }) });
     view.focus();
-};
+}

@@ -29,13 +29,15 @@ class FakeLink implements Transport {
     }
 }
 
-const poolOf = (links: Record<string, FakeLink>): WatchablePool => ({
-    ids: () => Object.keys(links),
-    peek: (endpointId) => links[endpointId] ?? null,
-    subscribe: () => () => undefined
-});
+function poolOf(links: Record<string, FakeLink>): WatchablePool {
+    return {
+        ids: () => Object.keys(links),
+        peek: (endpointId) => links[endpointId] ?? null,
+        subscribe: () => () => undefined
+    };
+}
 
-const shellAt = (initial: UpdateState) => {
+function shellAt(initial: UpdateState) {
     const calls: string[] = [];
     let state = initial;
     return {
@@ -51,7 +53,7 @@ const shellAt = (initial: UpdateState) => {
             install: () => calls.push('install')
         }
     };
-};
+}
 
 describe('machineReportOf', () => {
     test('carries the step, the versions and the percent', () => {

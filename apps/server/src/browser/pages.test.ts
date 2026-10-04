@@ -3,22 +3,24 @@ import type { BrowserPageState } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { BrowserPages } from './pages.ts';
 
-const stateOf = (browserId: string, url = 'https://example.com'): BrowserPageState => ({
-    browserId,
-    url,
-    title: 'Example',
-    loading: false,
-    canGoBack: false,
-    canGoForward: false,
-    error: null
-});
+function stateOf(browserId: string, url = 'https://example.com'): BrowserPageState {
+    return {
+        browserId,
+        url,
+        title: 'Example',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false,
+        error: null
+    };
+}
 
 /* A client on its socket, with what it was told and a hand to answer with. */
-const clientOf = (pages: BrowserPages, clientId: string): { events: SessionEvent[]; stop: () => void } => {
+function clientOf(pages: BrowserPages, clientId: string): { events: SessionEvent[]; stop: () => void } {
     const events: SessionEvent[] = [];
     const stop = pages.subscribe(clientId, (event) => events.push(event));
     return { events, stop };
-};
+}
 
 describe('BrowserPages', () => {
     test('a page nobody holds is a null, which is what lets a verb say nobody is watching', async () => {

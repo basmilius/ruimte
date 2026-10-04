@@ -88,11 +88,15 @@ const PRESENCE: Record<string, PresenceWords> = {
 const OVERLAY: Record<string, OverlayWords> = { en: ENGLISH, nl: DUTCH };
 
 /* The language of a tag such as `nl-NL`, or English for one the interface does not have. */
-const languageOf = (language: string | undefined): string => {
+function languageOf(language: string | undefined): string {
     const base = (language ?? 'en').toLowerCase().split(/[-_]/)[0] ?? 'en';
     return base in OVERLAY ? base : 'en';
-};
+}
 
-export const overlayWords = (language: string | undefined): OverlayWords => OVERLAY[languageOf(language)]!;
+export function overlayWords(language: string | undefined): OverlayWords {
+    return OVERLAY[languageOf(language)]!;
+}
 
-export const presenceWords = (language: string | undefined): PresenceWords => PRESENCE[languageOf(language)]!;
+export function presenceWords(language: string | undefined): PresenceWords {
+    return PRESENCE[languageOf(language)]!;
+}

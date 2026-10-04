@@ -3,10 +3,10 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 /* Runs a callback after a delay and hands back what cancels it. */
 export type Schedule = (callback: () => void, ms: number) => () => void;
 
-const browserSchedule: Schedule = (callback, ms) => {
+function browserSchedule(callback: () => void, ms: number): () => void {
     const timer = window.setTimeout(callback, ms);
     return () => window.clearTimeout(timer);
-};
+}
 
 /*
  * A value that shows up at once and lets go only after it stayed away for `holdMs`. An agent marks

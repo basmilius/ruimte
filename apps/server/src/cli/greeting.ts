@@ -13,7 +13,7 @@ export interface GreetingFacts {
  * The lines a daemon prints once it listens. A log keeps the one line it always had; a person who
  * just ran `npx ruimte` to try it also learns what is running and what to do with it next.
  */
-export const greetingLines = (facts: GreetingFacts): string[] => {
+export function greetingLines(facts: GreetingFacts): string[] {
     const address = `ws://${facts.host}:${facts.port}/ws`;
     if (!facts.interactive) {
         return [`ruimte server ${facts.version} listening on ${address} (home: ${facts.home})`];
@@ -23,4 +23,4 @@ export const greetingLines = (facts: GreetingFacts): string[] => {
         `This machine runs Ruimte ${facts.version} on ${address} (home: ${facts.home}). Ctrl+C stops it.`,
         `Next: \`ruimte login${portFlag}\` puts it on your account, \`ruimte service install${portFlag}\` keeps it running in the background, and \`ruimte status${portFlag}\` says how clients reach it.`
     ];
-};
+}

@@ -28,9 +28,8 @@ export interface FakeCodexOptions {
     resumeLead?: string;
 }
 
-export const fakeCodexWith =
-    (options: FakeCodexOptions): FakeCli =>
-    (io) => {
+export function fakeCodexWith(options: FakeCodexOptions): FakeCli {
+    return (io) => {
         const out = io.out;
 
         let serverRequestId = 0;
@@ -526,6 +525,7 @@ export const fakeCodexWith =
             }
         };
     };
+}
 
 export const fakeCodex: FakeCli = fakeCodexWith({});
 

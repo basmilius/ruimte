@@ -30,7 +30,7 @@ export interface SharedFileRead {
  * committed, and two machines that migrate it on their own have to end up on the same id, or the
  * second save would add a ghost view next to the first one.
  */
-export const migrateSharedFile = (value: unknown): SharedFileRead | null => {
+export function migrateSharedFile(value: unknown): SharedFileRead | null {
     const current = ProjectSharedFileSchema.safeParse(value);
     if (current.success) {
         return { file: current.data, legacyRev: null };
@@ -55,7 +55,7 @@ export const migrateSharedFile = (value: unknown): SharedFileRead | null => {
         },
         legacyRev: rev
     };
-};
+}
 
 /*
  * The version a file claims when this Ruimte is too old to know it. Such a file is not broken and
@@ -63,16 +63,16 @@ export const migrateSharedFile = (value: unknown): SharedFileRead | null => {
  * then it is someone's work. Null for anything this version can read, including a file with no
  * version at all, which the migrations answer for.
  */
-export const newerVersionIn = (value: unknown, known: number): number | null => {
+export function newerVersionIn(value: unknown, known: number): number | null {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         return null;
     }
     const version = (value as { version?: unknown }).version;
     return typeof version === 'number' && Number.isInteger(version) && version > known ? version : null;
-};
+}
 
 /* The machine-local file, on the same two versions. Anything unreadable starts from nothing. */
-export const migrateLocal = (value: unknown): ProjectLocal => {
+export function migrateLocal(value: unknown): ProjectLocal {
     const current = ProjectLocalSchema.safeParse(value);
     if (current.success) {
         return current.data;
@@ -88,7 +88,7 @@ export const migrateLocal = (value: unknown): ProjectLocal => {
         views: { [MAIN_VIEW_ID]: { camera: null, focusedNodeId } },
         ...(panels ? { panels } : {})
     };
-};
+}
 
 export const EMPTY_LOCAL: ProjectLocal = { activeViewId: null, views: {} };
 
@@ -97,7 +97,7 @@ export const EMPTY_LOCAL: ProjectLocal = { activeViewId: null, views: {} };
  * they are the keys of the daemon's flat session map. A repeat means two things would attach to
  * one shell, so a file that has one is refused with a message that names the id.
  */
-export const duplicateIdIn = (views: ProjectView[]): string | null => {
+export function duplicateIdIn(views: ProjectView[]): string | null {
     const seen = new Set<string>();
     for (const view of views) {
         if (seen.has(view.id)) {
@@ -115,14 +115,14 @@ export const duplicateIdIn = (views: ProjectView[]): string | null => {
         }
     }
     return null;
-};
+}
 
 /*
  * An edge is a line on one canvas. A file that points one at something in another view (a bad
  * merge, a hand edit) loses that line rather than the view: nothing on screen could draw it.
  */
-export const withoutCrossViewEdges = (views: ProjectView[]): ProjectView[] =>
-    views.map((view) => {
+export function withoutCrossViewEdges(views: ProjectView[]): ProjectView[] {
+    return views.map((view) => {
         if (!isCanvasView(view)) {
             return view;
         }
@@ -130,3 +130,4 @@ export const withoutCrossViewEdges = (views: ProjectView[]): ProjectView[] =>
         const edges = view.edges.filter((edge) => here.has(edge.from) && here.has(edge.to));
         return edges.length === view.edges.length ? view : { ...view, edges };
     });
+}

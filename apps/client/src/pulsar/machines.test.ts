@@ -3,15 +3,17 @@ import type { Machine } from '@ruimte/pulsar';
 import { brokerRouteOf, type Endpoint } from '@/state/endpoints';
 import { endpointForAccountMachine, rowForAccountMachine } from './machines';
 
-const machine = (patch: Partial<Machine> = {}): Machine => ({
-    id: 'studio',
-    name: 'Studio',
-    icon: null,
-    publicKey: 'A'.repeat(43),
-    brokerUrl: 'wss://broker.ruimte.app',
-    lastSeenAt: null,
-    ...patch
-});
+function machine(patch: Partial<Machine> = {}): Machine {
+    return {
+        id: 'studio',
+        name: 'Studio',
+        icon: null,
+        publicKey: 'A'.repeat(43),
+        brokerUrl: 'wss://broker.ruimte.app',
+        lastSeenAt: null,
+        ...patch
+    };
+}
 
 describe('machines on the account', () => {
     test('a machine opened from the account is reached through its broker, pinned to the key the account listed, and asks for a statement', () => {

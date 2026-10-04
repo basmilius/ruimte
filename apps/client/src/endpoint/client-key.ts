@@ -23,7 +23,7 @@ export interface KeyStore {
  * strings. The pair is generated non-extractable, so the private half exists only as a handle
  * the browser signs with, never a byte a script can read, unlike a session token in `localStorage`.
  */
-export const indexedDbKeyStore = (): KeyStore => {
+export function indexedDbKeyStore(): KeyStore {
     const open = (): Promise<IDBDatabase> =>
         new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, 1);
@@ -46,19 +46,21 @@ export const indexedDbKeyStore = (): KeyStore => {
         read: () => run<CryptoKeyPair | undefined>('readonly', (store) => store.get(RECORD_ID)).then((value) => value ?? null),
         write: (pair) => run('readwrite', (store) => store.put(pair, RECORD_ID)).then(() => undefined)
     };
-};
+}
 
-const toClientKey = async (pair: CryptoKeyPair): Promise<ClientKey> => ({
-    publicKey: toBase64Url(await crypto.subtle.exportKey('raw', pair.publicKey)),
-    sign: async (message) => toBase64Url(await crypto.subtle.sign({ name: 'Ed25519' }, pair.privateKey, new TextEncoder().encode(message)))
-});
+async function toClientKey(pair: CryptoKeyPair): Promise<ClientKey> {
+    return {
+        publicKey: toBase64Url(await crypto.subtle.exportKey('raw', pair.publicKey)),
+        sign: async (message) => toBase64Url(await crypto.subtle.sign({ name: 'Ed25519' }, pair.privateKey, new TextEncoder().encode(message)))
+    };
+}
 
 /*
  * One key pair for this client, not one per daemon. Every daemon it pairs with is a machine of the
  * same person, so a key each would buy nothing but bookkeeping. Answers null where ed25519 or
  * IndexedDB is missing, and the caller falls back to the session token it already has.
  */
-export const createClientKeyLoader = (store: KeyStore = indexedDbKeyStore()): (() => Promise<ClientKey | null>) => {
+export function createClientKeyLoader(store: KeyStore = indexedDbKeyStore()): () => Promise<ClientKey | null> {
     let pending: Promise<ClientKey | null> | null = null;
     const load = async (): Promise<ClientKey | null> => {
         const stored = await store.read();
@@ -78,6 +80,6 @@ export const createClientKeyLoader = (store: KeyStore = indexedDbKeyStore()): ((
         });
         return pending;
     };
-};
+}
 
 export const clientKey = createClientKeyLoader();

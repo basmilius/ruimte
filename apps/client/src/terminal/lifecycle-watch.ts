@@ -22,7 +22,7 @@ export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind, e
  * view switch takes nodes off the canvas while they keep running. The canvas store edits one view at a
  * time and says which one, so its nodes win over the document's own copy of that view.
  */
-const liveNodes = (): Map<string, CanvasNodeKind> => {
+function liveNodes(): Map<string, CanvasNodeKind> {
     const endpointId = currentEndpointId();
     const live = new Map<string, CanvasNodeKind>();
     for (const node of projectNodes()) {
@@ -41,10 +41,10 @@ const liveNodes = (): Map<string, CanvasNodeKind> => {
         }
     }
     return live;
-};
+}
 
 /* Ends every node that leaves the document, so no store talks to the transport itself. */
-export const watchNodes = (end: NodeEnder): (() => void) => {
+export function watchNodes(end: NodeEnder): () => void {
     let previous = liveNodes();
     /* What was live when the project on screen began to be read again from disk. */
     let beforeReload: Map<string, CanvasNodeKind> | null = null;
@@ -116,4 +116,4 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
         offDocument();
         offEndpoint();
     };
-};
+}

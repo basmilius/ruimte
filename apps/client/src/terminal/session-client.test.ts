@@ -160,14 +160,16 @@ class FakeSink implements SessionSink {
     }
 }
 
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function flush(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
-const setup = () => {
+function setup() {
     const transport = new FakeTransport();
     const sink = new FakeSink();
     const client = new SessionClient(transport, sink);
     return { transport, sink, client };
-};
+}
 
 describe('SessionClient', () => {
     test('ensure treats session-exists as success', async () => {

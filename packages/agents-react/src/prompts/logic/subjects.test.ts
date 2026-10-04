@@ -13,11 +13,13 @@ import {
     type PromptSubject
 } from './subjects';
 
-const sampleOf = (label: string) => PROMPT_SAMPLES.find((sample) => sample.label === label)!.items[0]!;
+function sampleOf(label: string) {
+    return PROMPT_SAMPLES.find((sample) => sample.label === label)!.items[0]!;
+}
 const command = sampleOf('Permission · Command') as ChatApprovalItem;
 const optional = sampleOf('Question · Optional') as ChatQuestionItem;
 
-const recorder = () => {
+function recorder() {
     const calls: unknown[][] = [];
     const clients: ChatPromptClients = {
         approve: async (...args) => void calls.push(['approve', ...args]),
@@ -25,10 +27,12 @@ const recorder = () => {
         dismiss: async (...args) => void calls.push(['dismiss', ...args])
     };
     return { calls, clients };
-};
+}
 
 /* One of the app's own prompts, the way it raises one beside a chat's. */
-const hostPrompt = (id: string, createdAt: number, blocking = true): HostPrompt => ({ id, createdAt, blocking, asks: 'approval', data: null });
+function hostPrompt(id: string, createdAt: number, blocking = true): HostPrompt {
+    return { id, createdAt, blocking, asks: 'approval', data: null };
+}
 
 describe('approval buttons', () => {
     test('a chat approval offers its remembered rule first and carries a reason on Deny only', () => {

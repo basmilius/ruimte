@@ -6,7 +6,9 @@ import { watchPool, type WatchablePool } from '@/transport/pool-watch';
 
 type Target = Pick<DeviceInfo, 'backendId' | 'deviceId'>;
 
-const keyOf = (device: Target): string => `${device.backendId}\u0000${device.deviceId}`;
+function keyOf(device: Target): string {
+    return `${device.backendId}\u0000${device.deviceId}`;
+}
 
 interface DeviceOperatedState {
     /* Per machine, the devices an agent operates there now, by backend and device id. */
@@ -34,11 +36,13 @@ export const useDeviceOperated = create<DeviceOperatedState>((set, get) => ({
 }));
 
 /* How an agent operates this device of the machine now; null while none does. */
-export const operatedOf = (state: Pick<DeviceOperatedState, 'byEndpoint'>, endpointId: string, device: Target | null): DeviceOperated | null =>
-    device ? (state.byEndpoint[endpointId]?.[keyOf(device)] ?? null) : null;
+export function operatedOf(state: Pick<DeviceOperatedState, 'byEndpoint'>, endpointId: string, device: Target | null): DeviceOperated | null {
+    return device ? (state.byEndpoint[endpointId]?.[keyOf(device)] ?? null) : null;
+}
 
-export const useOperatedDevice = (endpointId: string, device: Target | null): DeviceOperated | null =>
-    useDeviceOperated((s) => operatedOf(s, endpointId, device));
+export function useOperatedDevice(endpointId: string, device: Target | null): DeviceOperated | null {
+    return useDeviceOperated((s) => operatedOf(s, endpointId, device));
+}
 
 /* Android names three of the buttons its own way, as the node's controls do. */
 const ANDROID_BUTTONS: Readonly<Record<string, string>> = { appSwitcher: 'recentApps', lock: 'power', siri: 'assistant' };
@@ -46,7 +50,7 @@ const ANDROID_BUTTONS: Readonly<Record<string, string>> = { appSwitcher: 'recent
 const BUTTONS: ReadonlySet<string> = new Set(['home', 'back', 'swipeHome', 'appSwitcher', 'recentApps', 'lock', 'power', 'siri', 'assistant']);
 
 /* What the agent is doing, in the words of the strip; a kind this client does not know reads as the machine said it. */
-export const stepWords = (step: DeviceAgentStep, platform: DevicePlatform): string => {
+export function stepWords(step: DeviceAgentStep, platform: DevicePlatform): string {
     switch (step.kind) {
         case 'tap':
         case 'swipe':
@@ -63,7 +67,7 @@ export const stepWords = (step: DeviceAgentStep, platform: DevicePlatform): stri
         default:
             return step.description;
     }
-};
+}
 
 export interface StripLook {
     /* What the agent is doing, or that the person holds the device. */
@@ -73,7 +77,7 @@ export interface StripLook {
     actions: readonly DeviceControlMode[];
 }
 
-export const stripLook = (operated: DeviceOperated, platform: DevicePlatform): StripLook => {
+export function stripLook(operated: DeviceOperated, platform: DevicePlatform): StripLook {
     if (operated.state === 'paused') {
         return { words: i18next.t('machines:device.operated.paused'), tone: 'muted', actions: ['resume'] };
     }
@@ -85,28 +89,25 @@ export const stripLook = (operated: DeviceOperated, platform: DevicePlatform): S
         tone: 'accent',
         actions: ['pause', 'takeOver']
     };
-};
+}
 
 /*
  * Where a tap of the agent lands on the drawn screen, in pixels of the box the screen sits in; null for
  * any other step. `screen` is the drawn screen inside that box, which shows the whole frame.
  */
-export const tapPoint = (
-    step: DeviceAgentStep | null,
-    screen: { left: number; top: number; width: number; height: number }
-): { x: number; y: number } | null => {
+export function tapPoint(step: DeviceAgentStep | null, screen: { left: number; top: number; width: number; height: number }): { x: number; y: number } | null {
     if (step?.kind !== 'tap' || step.x === undefined || step.y === undefined) {
         return null;
     }
     return { x: Math.round(screen.left + step.x * screen.width), y: Math.round(screen.top + step.y * screen.height) };
-};
+}
 
 /*
  * The devices agents operate on every machine this client holds a socket for. The daemon tells every
  * socket each step and change; a socket that opens asks for the standing answer once.
  */
-export const startDeviceOperatedWatch = (source: WatchablePool = pool): (() => void) =>
-    watchPool(
+export function startDeviceOperatedWatch(source: WatchablePool = pool): () => void {
+    return watchPool(
         (link, endpointId) => ({
             onOpen: () => {
                 // A daemon from before the strip does not know the request, and has no agent on a device to show.
@@ -121,3 +122,4 @@ export const startDeviceOperatedWatch = (source: WatchablePool = pool): (() => v
         }),
         source
     );
+}

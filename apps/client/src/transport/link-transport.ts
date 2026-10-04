@@ -393,8 +393,8 @@ export class LinkTransport implements PooledTransport {
     }
 }
 
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
-    new Promise((resolve, reject) => {
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(i18next.t('machines:connection.noAddress', { seconds: Math.round(timeoutMs / 1000) }))), timeoutMs);
         promise.then(
             (value) => {
@@ -407,3 +407,4 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
             }
         );
     });
+}

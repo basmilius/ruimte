@@ -21,7 +21,9 @@ const PRIVATE_ENTRIES = new Set(['auth.json']);
 const LOCAL_ENTRIES = new Set(['models_cache.json', 'cache', 'log', 'logs', 'tmp', '.tmp', 'app-server-daemon', 'app-server-control', 'ipc']);
 
 /* A SQLite journal comes and goes with its database, so a link to one would soon point at nothing. */
-const isJournal = (name: string): boolean => /-(wal|shm|journal)$/.test(name);
+function isJournal(name: string): boolean {
+    return /-(wal|shm|journal)$/.test(name);
+}
 
 export interface ShadowHomeReport {
     linked: string[];
@@ -35,7 +37,7 @@ export class ShadowHomeError extends Error {}
 
 type Existing = { kind: 'missing' } | { kind: 'link'; target: string } | { kind: 'real' };
 
-const existing = async (path: string): Promise<Existing> => {
+async function existing(path: string): Promise<Existing> {
     try {
         const stats = await lstat(path);
         return stats.isSymbolicLink() ? { kind: 'link', target: await readlink(path) } : { kind: 'real' };
@@ -45,14 +47,14 @@ const existing = async (path: string): Promise<Existing> => {
         }
         throw e;
     }
-};
+}
 
 /*
  * Links every shared entry of `home` into `shadow` that is not there yet. Never overwrites and never
  * removes anything, so it runs again whenever it likes and picks up what Codex added to `home` since.
  * Both folders have to exist; the person makes them, the way they sign in.
  */
-export const prepareShadowHome = async (home: string, shadow: string): Promise<ShadowHomeReport> => {
+export async function prepareShadowHome(home: string, shadow: string): Promise<ShadowHomeReport> {
     const shared = resolve(home);
     const own = resolve(shadow);
     if (shared === own) {
@@ -80,4 +82,4 @@ export const prepareShadowHome = async (home: string, shadow: string): Promise<S
         }
     }
     return report;
-};
+}

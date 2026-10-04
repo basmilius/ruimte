@@ -5,16 +5,18 @@ import type { LiveStreamHub } from './live-stream.ts';
 
 export const LIVE_STREAM_PATH = '/live-stream';
 
-const corsHeaders = (origin: string | null): Record<string, string> => (origin === null ? {} : { 'access-control-allow-origin': origin, vary: 'origin' });
+function corsHeaders(origin: string | null): Record<string, string> {
+    return origin === null ? {} : { 'access-control-allow-origin': origin, vary: 'origin' };
+}
 
-export const handleLiveStreamRequest = async (
+export async function handleLiveStreamRequest(
     request: Request,
     url: URL,
     remoteAddress: string,
     options: AccessOptions,
     hub: LiveStreamHub,
     streamingAllowed: () => boolean = () => true
-): Promise<Response> => {
+): Promise<Response> {
     const origin = request.headers.get('origin');
     const headers = corsHeaders(origin);
     if (request.method === 'OPTIONS') {
@@ -116,4 +118,4 @@ export const handleLiveStreamRequest = async (
             'x-content-type-options': 'nosniff'
         }
     });
-};
+}

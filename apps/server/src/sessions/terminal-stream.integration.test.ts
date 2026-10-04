@@ -41,7 +41,9 @@ const REPLAY_SCROLLBACK = 50_000;
 const SHELL_RUN_MS = 60_000;
 
 // The quotes keep the echo of the typed line from reading as the end.
-const burst = (last: number): string => `seq 1 ${last}; echo end-of-""run; exit\n`;
+function burst(last: number): string {
+    return `seq 1 ${last}; echo end-of-""run; exit\n`;
+}
 
 interface Segment {
     screen: string;
@@ -72,7 +74,7 @@ interface Pending {
     onReply?(result: unknown): void;
 }
 
-const segmentShows = (segment: Segment, text: string): boolean => {
+function segmentShows(segment: Segment, text: string): boolean {
     if (segment.screen.includes(text)) {
         return true;
     }
@@ -85,7 +87,7 @@ const segmentShows = (segment: Segment, text: string): boolean => {
     }
     segment.searched.set(text, chunk);
     return false;
-};
+}
 
 /* One client of the daemon: requests and replies by id, and every screen and output of a session in the order they came. */
 class WireClient {
@@ -212,16 +214,17 @@ class WireClient {
 }
 
 /* The WebSocket a page has. */
-const openSocket = (url: string, events: LinkEvents): Promise<Link> =>
-    new Promise((resolve, reject) => {
+function openSocket(url: string, events: LinkEvents): Promise<Link> {
+    return new Promise((resolve, reject) => {
         const socket = new WebSocket(url);
         socket.onmessage = (message) => events.receive(String(message.data));
         socket.onclose = () => events.closed();
         socket.onerror = () => reject(new Error(`Could not connect to ${url}`));
         socket.onopen = () => resolve({ send: (text) => socket.send(text), close: () => socket.close() });
     });
+}
 
-const maskedFrame = (opcode: number, body: Buffer): Buffer => {
+function maskedFrame(opcode: number, body: Buffer): Buffer {
     if (body.length >= 65_536) {
         throw new Error('A client frame this large is not needed here');
     }
@@ -233,15 +236,15 @@ const maskedFrame = (opcode: number, body: Buffer): Buffer => {
         masked[i] = body[i]! ^ mask[i % 4]!;
     }
     return Buffer.concat([header, mask, masked]);
-};
+}
 
 /*
  * A WebSocket client that can stop reading, which the WebSocket API cannot: once the kernel's
  * buffers are full, what the daemon sends piles up in its own socket, as it does for a phone on a
  * bad line. No extensions are offered, so every frame is plain.
  */
-const openPausableSocket = (url: string, events: LinkEvents): Promise<PausableLink> =>
-    new Promise((resolve, reject) => {
+function openPausableSocket(url: string, events: LinkEvents): Promise<PausableLink> {
+    return new Promise((resolve, reject) => {
         const target = new URL(url);
         const socket = connect({ host: target.hostname, port: Number(target.port) });
         let buffer = Buffer.alloc(0);
@@ -339,12 +342,13 @@ const openPausableSocket = (url: string, events: LinkEvents): Promise<PausableLi
         socket.on('error', (e) => reject(e));
         socket.on('close', () => events.closed());
     });
+}
 
 /*
  * The numbers a segment ends up showing, top to bottom. Lines are read off above the cursor after
  * each chunk and cleared, which keeps the cursor line: the only one later output can still change.
  */
-const replay = async (segment: Pick<Segment, 'screen' | 'output'>): Promise<number[]> => {
+async function replay(segment: Pick<Segment, 'screen' | 'output'>): Promise<number[]> {
     const terminal = new Terminal({ cols: COLS, rows: ROWS, scrollback: REPLAY_SCROLLBACK, allowProposedApi: true });
     const lines: string[] = [];
     const write = (data: string): Promise<void> => new Promise((resolve) => terminal.write(data, resolve));
@@ -374,10 +378,10 @@ const replay = async (segment: Pick<Segment, 'screen' | 'output'>): Promise<numb
     }
     terminal.dispose();
     return lines.filter((line) => /^\d+$/.test(line)).map(Number);
-};
+}
 
 /* Every place a run of numbers skips or repeats one. */
-const breaksIn = (numbers: number[]): string[] => {
+function breaksIn(numbers: number[]): string[] {
     const found: string[] = [];
     for (let i = 1; i < numbers.length; i++) {
         if (numbers[i] !== numbers[i - 1]! + 1) {
@@ -385,10 +389,10 @@ const breaksIn = (numbers: number[]): string[] => {
         }
     }
     return found;
-};
+}
 
 /* Each screen and the stream after it is one unbroken run, and the last one reaches the end of the burst. */
-const expectContiguous = async (segments: Segment[], last: number): Promise<number[][]> => {
+async function expectContiguous(segments: Segment[], last: number): Promise<number[][]> {
     expect(segments.length).toBeGreaterThan(0);
     const replayed: number[][] = [];
     for (const segment of segments) {
@@ -398,14 +402,14 @@ const expectContiguous = async (segments: Segment[], last: number): Promise<numb
     }
     expect(replayed.at(-1)!.at(-1)).toBe(last);
     return replayed;
-};
+}
 
 /* The screen itself shows part of the burst and the stream after it the rest, so the seam between them was crossed. */
-const expectMidBurst = async (segment: Segment, last: number): Promise<void> => {
+async function expectMidBurst(segment: Segment, last: number): Promise<void> {
     const screen = await replay({ screen: segment.screen, output: [] });
     expect(screen.length).toBeGreaterThan(0);
     expect(screen.at(-1)!).toBeLessThan(last);
-};
+}
 
 let home: string;
 let manager: SessionManager;
@@ -496,36 +500,40 @@ afterAll(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const socketUrl = (name: string): string => `ws://127.0.0.1:${server.port}/ws?name=${name}`;
+function socketUrl(name: string): string {
+    return `ws://127.0.0.1:${server.port}/ws?name=${name}`;
+}
 
-const connectClient = async (name = ''): Promise<WireClient> => {
+async function connectClient(name = ''): Promise<WireClient> {
     const client = new WireClient();
     client.bind(await openSocket(socketUrl(name), client.events()));
     clients.push(client);
     return client;
-};
+}
 
-const connectPausableClient = async (name: string): Promise<{ client: WireClient; link: PausableLink }> => {
+async function connectPausableClient(name: string): Promise<{ client: WireClient; link: PausableLink }> {
     const client = new WireClient();
     const link = await openPausableSocket(socketUrl(name), client.events());
     client.bind(link);
     clients.push(client);
     return { client, link };
-};
+}
 
 /* The client that makes the session and types the burst into it, attached from before its first line. */
-const openSession = async (sessionId: string, name = ''): Promise<WireClient> => {
+async function openSession(sessionId: string, name = ''): Promise<WireClient> {
     const writer = await connectClient(name);
     await writer.request('session.create', { sessionId, cols: COLS, rows: ROWS, shell: '/bin/sh', cwd: home });
     await writer.attach(sessionId);
     return writer;
-};
+}
 
-const startBurst = async (writer: WireClient, sessionId: string, last = LAST): Promise<void> => {
+async function startBurst(writer: WireClient, sessionId: string, last = LAST): Promise<void> {
     await writer.request('session.write', { sessionId, data: burst(last) });
-};
+}
 
-const untilEnd = (client: WireClient, sessionId: string): Promise<void> => client.until(() => client.shows(sessionId, END) || client.closed);
+function untilEnd(client: WireClient, sessionId: string): Promise<void> {
+    return client.until(() => client.shows(sessionId, END) || client.closed);
+}
 
 describe('terminal output over a real socket', () => {
     test(

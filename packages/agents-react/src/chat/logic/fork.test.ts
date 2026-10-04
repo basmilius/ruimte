@@ -15,22 +15,24 @@ import {
 } from './fork';
 import { deriveTimelineRows } from './timeline';
 
-const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
-    chatId: 'chat-1',
-    provider: 'claude',
-    cwd: '/work',
-    agentSessionId: 'session-1',
-    model: null,
-    selection: { model: 'm', options: {} },
-    runtimeMode: 'full-access',
-    status: 'idle',
-    running: false,
-    activeTurnId: null,
-    slashCommands: [],
-    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 3 },
-    createdAt: 0,
-    ...patch
-});
+function info(patch: Partial<ChatInfo> = {}): ChatInfo {
+    return {
+        chatId: 'chat-1',
+        provider: 'claude',
+        cwd: '/work',
+        agentSessionId: 'session-1',
+        model: null,
+        selection: { model: 'm', options: {} },
+        runtimeMode: 'full-access',
+        status: 'idle',
+        running: false,
+        activeTurnId: null,
+        slashCommands: [],
+        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 3 },
+        createdAt: 0,
+        ...patch
+    };
+}
 
 const thread: ChatItem[] = [
     { id: 't1', kind: 'turn', createdAt: 0, turnId: 't1', state: 'done', endedAt: 1, costUsd: 0 },

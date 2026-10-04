@@ -11,7 +11,7 @@ import { fullFileDiff, type DiffContents } from './full-diff';
  * to know what it is looking at, and a CLI that only sends hunks gets one from the path we know.
  * A diff without hunks at all is shown as its own lines, so nothing is ever swallowed.
  */
-const asPatch = (change: ChatFileChange): string | null => {
+function asPatch(change: ChatFileChange): string | null {
     if (!/^@@/m.test(change.diff)) {
         return null;
     }
@@ -21,7 +21,7 @@ const asPatch = (change: ChatFileChange): string | null => {
     const from = change.kind === 'add' ? '/dev/null' : `a/${change.path}`;
     const to = change.kind === 'delete' ? '/dev/null' : `b/${change.path}`;
     return `--- ${from}\n+++ ${to}\n${change.diff}`;
-};
+}
 
 /* Lets a diff with a view of its own run to the bottom of it, so the scrollbar of a short one sits
    there instead of under its last line; the lines themselves keep their height. */
@@ -33,7 +33,7 @@ pre[data-diff-type="split"][data-overflow="scroll"]:not([data-dehydrated]) { ali
 pre > [data-code] { flex-grow: 1; align-self: stretch; align-content: start; }
 `;
 
-const lineClass = (line: string): string => {
+function lineClass(line: string): string {
     if (line.startsWith('+')) {
         return 'text-term-green';
     }
@@ -41,7 +41,7 @@ const lineClass = (line: string): string => {
         return 'text-term-red';
     }
     return 'text-text-muted';
-};
+}
 
 interface UnifiedDiffProps {
     change: ChatFileChange;

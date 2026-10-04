@@ -35,7 +35,7 @@ const row: BrowserState = {
 };
 
 /* The pages this window holds, and every drive and address that reached them. */
-const fakes = (held: readonly string[]) => {
+function fakes(held: readonly string[]) {
     const drives: { nodeId: string; drive: PageDrive }[] = [];
     const assigned: { nodeId: string; url: string }[] = [];
     const machine: Partial<PageMachine> = {
@@ -45,7 +45,7 @@ const fakes = (held: readonly string[]) => {
         drive: (nodeId, drive) => void drives.push({ nodeId, drive })
     };
     return { drives, assigned, registry: createClientActionRegistry(useDocument, { pages: machine }) };
-};
+}
 
 beforeEach(() => {
     useDocument.getState().load(document, { activeViewId: 'main', views: {} });

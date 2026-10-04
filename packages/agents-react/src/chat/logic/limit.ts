@@ -14,7 +14,7 @@ export interface LimitView {
  * What a chat that stopped on a limit says about it, from its info alone, so a header that never holds
  * the thread says the same as the chat. Null while the last turn stopped on nothing, or a turn runs.
  */
-export const limitView = (info: Pick<ChatInfo, 'limit' | 'resumeAt' | 'activeTurnId'>, now: number): LimitView | null => {
+export function limitView(info: Pick<ChatInfo, 'limit' | 'resumeAt' | 'activeTurnId'>, now: number): LimitView | null {
     const limit = info.limit;
     if (limit === undefined || info.activeTurnId !== null) {
         return null;
@@ -43,4 +43,4 @@ export const limitView = (info: Pick<ChatInfo, 'limit' | 'resumeAt' | 'activeTur
                   ? i18next.t('agent-chat:limit.usage.resets', { time: resets })
                   : null
     };
-};
+}

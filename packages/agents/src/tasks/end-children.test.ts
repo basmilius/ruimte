@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { endChildren, type EndChildrenDeps, type EndChildrenEntry } from './end-children.ts';
 import type { AnyOutboxEntry } from './task-work.ts';
 
-const fakeDeps = (tree: Record<string, string[]>, entries: AnyOutboxEntry[] = [], extra: Partial<EndChildrenDeps> = {}) => {
+function fakeDeps(tree: Record<string, string[]>, entries: AnyOutboxEntry[] = [], extra: Partial<EndChildrenDeps> = {}) {
     const calls: string[] = [];
     const ended = new Set<string>();
     const descendants = (nodeId: string): string[] => {
@@ -56,18 +56,20 @@ const fakeDeps = (tree: Record<string, string[]>, entries: AnyOutboxEntry[] = []
         ...extra
     };
     return { calls, deps };
-};
+}
 
-const entry = (nodeIds: string[]): EndChildrenEntry => ({
-    kind: 'end-children',
-    id: 'end-children-1',
-    projectId: 'project',
-    target: 'lead',
-    createdAt: 1,
-    attempts: 0,
-    notBefore: 1,
-    payload: { nodeIds }
-});
+function entry(nodeIds: string[]): EndChildrenEntry {
+    return {
+        kind: 'end-children',
+        id: 'end-children-1',
+        projectId: 'project',
+        target: 'lead',
+        createdAt: 1,
+        attempts: 0,
+        notBefore: 1,
+        payload: { nodeIds }
+    };
+}
 
 describe('ending a node and the ones it opened', () => {
     test('marks first, takes away what would revive a child, cancels, then stops the leaves before their parents', async () => {

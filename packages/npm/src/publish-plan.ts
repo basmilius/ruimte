@@ -28,19 +28,18 @@ export interface RegistryLookup {
  * `latest` never points at a prerelease, and never moves back: a run of 0.11.0 that finishes after
  * the one of 0.11.1, or runs again, publishes under a tag of its own.
  */
-export const distTagOf = (version: string, latest: string | null): string => {
+export function distTagOf(version: string, latest: string | null): string {
     if (version.includes('-')) {
         return 'next';
     }
     return latest === null || Bun.semver.order(version, latest) >= 0 ? 'latest' : 'previous';
-};
+}
 
-export const publishOrder = (packages: PackageToPublish[]): PackageToPublish[] => [
-    ...packages.filter((entry) => entry.name !== LAUNCHER_NAME),
-    ...packages.filter((entry) => entry.name === LAUNCHER_NAME)
-];
+export function publishOrder(packages: PackageToPublish[]): PackageToPublish[] {
+    return [...packages.filter((entry) => entry.name !== LAUNCHER_NAME), ...packages.filter((entry) => entry.name === LAUNCHER_NAME)];
+}
 
-export const planPublish = async (packages: PackageToPublish[], version: string, registry: RegistryLookup): Promise<PublishStep[]> => {
+export async function planPublish(packages: PackageToPublish[], version: string, registry: RegistryLookup): Promise<PublishStep[]> {
     const steps: PublishStep[] = [];
     for (const entry of publishOrder(packages)) {
         if (await registry.published(entry.name, version)) {
@@ -50,7 +49,7 @@ export const planPublish = async (packages: PackageToPublish[], version: string,
         steps.push({ ...entry, action: 'publish', tag: distTagOf(version, await registry.latest(entry.name)) });
     }
     return steps;
-};
+}
 
 export interface CommandOutcome {
     code: number;
@@ -59,7 +58,7 @@ export interface CommandOutcome {
 }
 
 /* `npm view <name> dist-tags.latest`, which fails with E404 for a package that is not on the registry yet. */
-export const latestFromView = (outcome: CommandOutcome): string | null => {
+export function latestFromView(outcome: CommandOutcome): string | null {
     if (outcome.code === 0) {
         return outcome.stdout.trim().replace(/^"|"$/g, '') || null;
     }
@@ -67,13 +66,13 @@ export const latestFromView = (outcome: CommandOutcome): string | null => {
         return null;
     }
     throw new Error(`npm view failed (${outcome.code}): ${outcome.stderr.trim() || outcome.stdout.trim() || 'no output'}`);
-};
+}
 
 /*
  * `npm view <name>@<version> version` prints the version when it exists, prints nothing when the
  * package exists without that version, and fails with E404 when there is no package at all.
  */
-export const publishedFromView = (version: string, outcome: CommandOutcome): boolean => {
+export function publishedFromView(version: string, outcome: CommandOutcome): boolean {
     if (outcome.code === 0) {
         return outcome.stdout.trim().replace(/^"|"$/g, '') === version;
     }
@@ -81,4 +80,4 @@ export const publishedFromView = (version: string, outcome: CommandOutcome): boo
         return false;
     }
     throw new Error(`npm view failed (${outcome.code}): ${outcome.stderr.trim() || outcome.stdout.trim() || 'no output'}`);
-};
+}

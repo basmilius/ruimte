@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Hold, type Schedule } from '@/plan/hold';
 
 /* A clock that only moves when the test says so. */
-const manualClock = () => {
+function manualClock() {
     let now = 0;
     const timers = new Map<number, { at: number; callback: () => void }>();
     let nextId = 0;
@@ -23,17 +23,17 @@ const manualClock = () => {
         }
     };
     return { schedule, advance, pending: () => timers.size };
-};
+}
 
 const HOLD_MS = 1500;
 
-const setup = () => {
+function setup() {
     const clock = manualClock();
     const hold = new Hold<string>(HOLD_MS, (a, b) => a === b, clock.schedule);
     let changes = 0;
     hold.subscribe(() => changes++);
     return { clock, hold, changes: () => changes };
-};
+}
 
 describe('a held value', () => {
     test('shows up at once', () => {

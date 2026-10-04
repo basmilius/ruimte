@@ -24,7 +24,9 @@ import { fitTextBox } from '@/drawing/paint';
 export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
 
 /* The tools that make an element by dragging; after one the tool goes back to select unless locked. */
-export const isShapeTool = (tool: DrawingTool): boolean => tool !== 'select' && tool !== 'hand' && tool !== 'eraser';
+export function isShapeTool(tool: DrawingTool): boolean {
+    return tool !== 'select' && tool !== 'hand' && tool !== 'eraser';
+}
 
 /* What the next element is drawn with. The last choice stays for the session and never enters the file. */
 export interface DrawingStyle {
@@ -135,38 +137,48 @@ export interface DrawingState extends CameraSlice {
     applyDocument(document: DrawingDocument): void;
 }
 
-export const boundsOf = (elements: readonly DrawingElement[]): Rect | null => boundsOfElements(elements);
+export function boundsOf(elements: readonly DrawingElement[]): Rect | null {
+    return boundsOfElements(elements);
+}
 
-const remember = (state: DrawingState): Pick<DrawingState, 'past' | 'future'> => ({
-    past: [...state.past.slice(-(HISTORY_LIMIT - 1)), state.elements],
-    future: []
-});
+function remember(state: DrawingState): Pick<DrawingState, 'past' | 'future'> {
+    return {
+        past: [...state.past.slice(-(HISTORY_LIMIT - 1)), state.elements],
+        future: []
+    };
+}
 
 /* Every change to the elements is an edit; the client saves on the counter, not on the array. */
-const changed = (state: DrawingState, elements: DrawingElement[], first = true): Partial<DrawingState> => ({
-    elements,
-    edits: state.edits + 1,
-    ...(first ? remember(state) : {})
-});
+function changed(state: DrawingState, elements: DrawingElement[], first = true): Partial<DrawingState> {
+    return {
+        elements,
+        edits: state.edits + 1,
+        ...(first ? remember(state) : {})
+    };
+}
 
 /* The style of one element, which is what the dock shows while it is the only thing selected. */
-export const styleOfElement = (element: DrawingElement): Partial<DrawingStyle> => ({
-    stroke: element.stroke,
-    strokeWidth: element.strokeWidth,
-    ...(element.strokeStyle ? { strokeStyle: element.strokeStyle } : {}),
-    ...(element.kind === 'note'
-        ? { noteColor: element.fillColor ?? DEFAULT_STYLE.noteColor }
-        : { ...(element.fill ? { fill: element.fill } : {}), ...(element.fillColor ? { fillColor: element.fillColor } : {}) }),
-    roughness: element.roughness ?? 1,
-    ...(isWritten(element) ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
-});
+export function styleOfElement(element: DrawingElement): Partial<DrawingStyle> {
+    return {
+        stroke: element.stroke,
+        strokeWidth: element.strokeWidth,
+        ...(element.strokeStyle ? { strokeStyle: element.strokeStyle } : {}),
+        ...(element.kind === 'note'
+            ? { noteColor: element.fillColor ?? DEFAULT_STYLE.noteColor }
+            : { ...(element.fill ? { fill: element.fill } : {}), ...(element.fillColor ? { fillColor: element.fillColor } : {}) }),
+        roughness: element.roughness ?? 1,
+        ...(isWritten(element) ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
+    };
+}
 
 /* An element that carries its own words: a written line, or the note it is written on. */
-export const isWritten = (element: DrawingElement): element is DrawingElement & { kind: 'text' | 'note' } => element.kind === 'text' || element.kind === 'note';
+export function isWritten(element: DrawingElement): element is DrawingElement & { kind: 'text' | 'note' } {
+    return element.kind === 'text' || element.kind === 'note';
+}
 
 /* What a style choice writes onto an element: only the field that was chosen, so picking an
    alignment leaves a color the dock happens to show alone. */
-export const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): DrawingElement => {
+export function withStyle(element: DrawingElement, patch: Partial<DrawingStyle>): DrawingElement {
     const next: DrawingElement = {
         ...element,
         ...(patch.stroke !== undefined ? { stroke: patch.stroke } : {}),
@@ -192,15 +204,15 @@ export const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>)
     };
     // New glyphs need a new box, or the text would spill out of the frame that selects it.
     return patch.textSize === undefined && patch.font === undefined ? text : { ...text, ...fitTextBox(text) };
-};
+}
 
 /*
  * The drawing on screen: its elements, what is selected, which tool is up and where the camera is.
  * Shaped after `useCanvas`, which it cannot reuse, since that store is the editor of a canvas view
  * and the session lifecycle reads its nodes.
  */
-export const createDrawingStore = (): StoreApi<DrawingState> =>
-    createStore<DrawingState>((set, get) => ({
+export function createDrawingStore(): StoreApi<DrawingState> {
+    return createStore<DrawingState>((set, get) => ({
         ...createCameraSlice<DrawingState>(set, get, {
             boundsOfAll: (state) => boundsOf(state.elements),
             boundsOfSelection: (state) => boundsOf(state.elements.filter((element) => state.selection.includes(element.id)))
@@ -448,6 +460,7 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
             set({ loading: false });
         }
     }));
+}
 
 export const defaultDrawingStore = createDrawingStore();
 
@@ -463,8 +476,11 @@ export const {
 } = editorBindings(defaultDrawings);
 
 /* Keeps the hand-drawn wobble of an element the same on every render and on every machine. */
-export const newSeed = (): number => Math.floor(Math.random() * 2 ** 31);
+export function newSeed(): number {
+    return Math.floor(Math.random() * 2 ** 31);
+}
 
 /* What Escape clears, in order. False means there is nothing left and the body may be left. */
-export const drawingHasSomethingToClear = (state: Pick<DrawingState, 'draft' | 'editingTextId' | 'selection' | 'tool'>): boolean =>
-    state.draft !== null || state.editingTextId !== null || state.selection.length > 0 || state.tool !== 'select';
+export function drawingHasSomethingToClear(state: Pick<DrawingState, 'draft' | 'editingTextId' | 'selection' | 'tool'>): boolean {
+    return state.draft !== null || state.editingTextId !== null || state.selection.length > 0 || state.tool !== 'select';
+}

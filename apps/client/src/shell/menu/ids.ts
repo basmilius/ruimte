@@ -122,4 +122,6 @@ export const GO_VIEW_PREFIX = 'go-view-';
 /* The Run menu's row per launch, which puts that launch on the chip. */
 export const LAUNCH_CHOOSE_PREFIX = 'launch-choose-';
 
-export const isPaletteId = (id: string): boolean => (PALETTE_IDS as readonly string[]).includes(id) || PALETTE_PREFIXES.some((prefix) => id.startsWith(prefix));
+export function isPaletteId(id: string): boolean {
+    return (PALETTE_IDS as readonly string[]).includes(id) || PALETTE_PREFIXES.some((prefix) => id.startsWith(prefix));
+}

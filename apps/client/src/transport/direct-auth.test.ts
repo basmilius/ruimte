@@ -6,9 +6,11 @@ import { proveChallenge } from './direct-auth';
 
 const encoder = new TextEncoder();
 
-const base64url = (bytes: ArrayBuffer): string => Buffer.from(bytes).toString('base64url');
+function base64url(bytes: ArrayBuffer): string {
+    return Buffer.from(bytes).toString('base64url');
+}
 
-const keyPair = async () => {
+async function keyPair() {
     const pair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])) as CryptoKeyPair;
     const publicKey = base64url(await crypto.subtle.exportKey('raw', pair.publicKey));
     return {
@@ -18,16 +20,18 @@ const keyPair = async () => {
         verify: (message: string, signature: string) =>
             crypto.subtle.verify({ name: 'Ed25519' }, pair.publicKey, Buffer.from(signature, 'base64url'), encoder.encode(message))
     };
-};
+}
 
 const BINDING = '[["sha-256 AA"],["sha-256 BB"]]';
 const DAEMON_ID = 'daemon-a';
 
-const challengeFrom = async (daemon: Awaited<ReturnType<typeof keyPair>>, binding = BINDING): Promise<DirectChallengeFrame> => ({
-    type: 'direct.challenge',
-    challenge: 'nonce-1',
-    daemon: { id: DAEMON_ID, publicKey: daemon.publicKey, signature: await daemon.sign(daemonChannelMessage(DAEMON_ID, 'nonce-1', binding)) }
-});
+async function challengeFrom(daemon: Awaited<ReturnType<typeof keyPair>>, binding = BINDING): Promise<DirectChallengeFrame> {
+    return {
+        type: 'direct.challenge',
+        challenge: 'nonce-1',
+        daemon: { id: DAEMON_ID, publicKey: daemon.publicKey, signature: await daemon.sign(daemonChannelMessage(DAEMON_ID, 'nonce-1', binding)) }
+    };
+}
 
 describe('proveChallenge', () => {
     test('a pinned daemon that signed this binding gets a key signature over the same binding', async () => {

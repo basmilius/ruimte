@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { parser } from '@lezer/markdown';
 import { type EnterContext, enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from './keys';
 
-const fenceAt = (doc: string, pos: number = doc.length): boolean => inOpenFence(parser.parse(doc), pos);
+function fenceAt(doc: string, pos: number = doc.length): boolean {
+    return inOpenFence(parser.parse(doc), pos);
+}
 
 const ENTER = { shift: false, mod: false };
 const SHIFT = { shift: true, mod: false };
@@ -10,7 +12,9 @@ const MOD = { shift: false, mod: true };
 const PROSE: EnterContext = { inOpenFence: false, list: null, column: 0 };
 const FENCE: EnterContext = { inOpenFence: true, list: null, column: 0 };
 
-const itemContext = (line: string, column: number = line.length): EnterContext => ({ inOpenFence: false, list: listItemAt(line), column });
+function itemContext(line: string, column: number = line.length): EnterContext {
+    return { inOpenFence: false, list: listItemAt(line), column };
+}
 
 describe('enterAction', () => {
     test('sends outside a fence and a list and adds a line with Shift', () => {

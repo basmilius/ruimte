@@ -74,7 +74,9 @@ export interface FileEditorClientOptions {
     document?: Pick<Document, 'addEventListener' | 'removeEventListener' | 'visibilityState'> | null;
 }
 
-const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
+function isConnectionError(e: unknown): boolean {
+    return e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
+}
 
 /* One file the daemon has open for this client, with everything a save of that one file needs. */
 interface OpenFile<TState> {

@@ -10,21 +10,22 @@ export type ProcessTable = () => Promise<ProcessRow[]>;
 const NO_TTY = new Set(['??', '-', '']);
 
 /* `ps -A -o pid=,ppid=,tty=`: three columns, no header. */
-export const parseProcessTable = (text: string): ProcessRow[] =>
-    text.split('\n').flatMap((line) => {
+export function parseProcessTable(text: string): ProcessRow[] {
+    return text.split('\n').flatMap((line) => {
         const [pid, ppid, tty = ''] = line.trim().split(/\s+/);
         if (pid === undefined || ppid === undefined || !/^\d+$/.test(pid) || !/^\d+$/.test(ppid)) {
             return [];
         }
         return [{ pid: Number(pid), ppid: Number(ppid), tty: NO_TTY.has(tty) ? null : tty }];
     });
+}
 
-export const readProcessTable: ProcessTable = async () => {
+export async function readProcessTable(): Promise<ProcessRow[]> {
     const child = Bun.spawn(['ps', '-A', '-o', 'pid=,ppid=,tty='], { stdout: 'pipe', stderr: 'ignore' });
     const text = await new Response(child.stdout).text();
     await child.exited;
     return parseProcessTable(text);
-};
+}
 
 /*
  * Terminal apps by bundle id, lowercased. A window of one may run no shell yet, as one just opened
@@ -44,7 +45,9 @@ const KNOWN_TERMINALS: ReadonlySet<string> = new Set([
     'com.termius.mac'
 ]);
 
-export const isKnownTerminal = (bundleId: string): boolean => KNOWN_TERMINALS.has(bundleId.toLowerCase());
+export function isKnownTerminal(bundleId: string): boolean {
+    return KNOWN_TERMINALS.has(bundleId.toLowerCase());
+}
 
 /* How far below an app a shell may sit: a terminal that starts its shells under a pty host of its own puts them two or three levels down. */
 export const SHELL_DEPTH = 3;
@@ -55,7 +58,7 @@ export const SHELL_DEPTH = 3;
  * controlling terminal that the app itself does not share. An app started from a shell passes that
  * shell's terminal on to what it starts, which then shares it and does not count.
  */
-export const runsShells = (pid: number, rows: readonly ProcessRow[], depth: number = SHELL_DEPTH): boolean => {
+export function runsShells(pid: number, rows: readonly ProcessRow[], depth: number = SHELL_DEPTH): boolean {
     const own = rows.find((row) => row.pid === pid)?.tty ?? null;
     let level = [pid];
     for (let step = 0; step < depth && level.length > 0; step++) {
@@ -67,4 +70,4 @@ export const runsShells = (pid: number, rows: readonly ProcessRow[], depth: numb
         level = below.map((row) => row.pid);
     }
     return false;
-};
+}

@@ -3,5 +3,6 @@
  * list (forgotten, or taken off the account), and then the page falls back to the machine its workspace runs on
  * rather than showing numbers under the name of a machine this client no longer knows.
  */
-export const usageEndpointFor = (chosen: string | null, known: readonly string[], workspaceId: string): string =>
-    chosen !== null && known.includes(chosen) ? chosen : workspaceId;
+export function usageEndpointFor(chosen: string | null, known: readonly string[], workspaceId: string): string {
+    return chosen !== null && known.includes(chosen) ? chosen : workspaceId;
+}

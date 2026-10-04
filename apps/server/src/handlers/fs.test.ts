@@ -46,11 +46,11 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const request = async (type: string, payload: unknown): Promise<ServerFrame> => {
+async function request(type: string, payload: unknown): Promise<ServerFrame> {
     const frames: ServerFrame[] = [];
     await dispatcher.handle({ id: 'paired', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
     return frames[0]!;
-};
+}
 
 const refused = { ok: false, error: { code: 'machine-state' } };
 

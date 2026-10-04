@@ -39,12 +39,12 @@ export type ChatStreamingMode = 'words' | 'blocks' | 'whole';
 export const CHAT_STREAMING_MODES: readonly ChatStreamingMode[] = ['words', 'blocks', 'whole'];
 
 /* A stored mode, or the switch it used to be: on was a word at a time, off was whole. */
-export const chatStreamingFrom = (stored: unknown): ChatStreamingMode => {
+export function chatStreamingFrom(stored: unknown): ChatStreamingMode {
     if (stored === false) {
         return 'whole';
     }
     return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
-};
+}
 
 /* When this computer stays awake: never, while an agent works, or all the time. */
 export type KeepAwakeMode = 'off' | 'working' | 'always';
@@ -52,13 +52,13 @@ export type KeepAwakeMode = 'off' | 'working' | 'always';
 export const KEEP_AWAKE_MODES: readonly KeepAwakeMode[] = ['off', 'working', 'always'];
 
 /* A stored mode, or the switch before it under `agentsKeepAwake`, whose on was while an agent works. */
-export const keepAwakeFrom = (stored: unknown, legacy: unknown): KeepAwakeMode => {
+export function keepAwakeFrom(stored: unknown, legacy: unknown): KeepAwakeMode {
     const mode = KEEP_AWAKE_MODES.find((entry) => entry === stored);
     if (mode) {
         return mode;
     }
     return legacy === true ? 'working' : 'off';
-};
+}
 
 export interface CodeThemeInfo {
     readonly id: string;
@@ -67,21 +67,26 @@ export interface CodeThemeInfo {
 }
 
 /* The themes code can be drawn in under the app's light or dark: ours first, then Shiki's in its own order. */
-export const codeThemesOf = (mode: 'light' | 'dark'): readonly CodeThemeInfo[] => [
-    ...CODE_THEMES.filter((theme) => theme.type === mode).map(({ name, displayName, type }) => ({ id: name, displayName, type })),
-    ...bundledThemesInfo.filter((info) => info.type === mode)
-];
+export function codeThemesOf(mode: 'light' | 'dark'): readonly CodeThemeInfo[] {
+    return [
+        ...CODE_THEMES.filter((theme) => theme.type === mode).map(({ name, displayName, type }) => ({ id: name, displayName, type })),
+        ...bundledThemesInfo.filter((info) => info.type === mode)
+    ];
+}
 
 /* A stored code theme id, if it is still one of ours or one Shiki bundles for that mode. */
-const codeThemeFrom = (stored: unknown, mode: 'light' | 'dark', fallback: string): string =>
-    codeThemesOf(mode).find((info) => info.id === stored)?.id ?? fallback;
+function codeThemeFrom(stored: unknown, mode: 'light' | 'dark', fallback: string): string {
+    return codeThemesOf(mode).find((info) => info.id === stored)?.id ?? fallback;
+}
 
 export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
 /* The line a code size draws on, in whole pixels. 20 at 13, the pair the interface's own code token has. */
-export const codeLineHeight = (size: number): number => Math.round((size * 20) / 13);
+export function codeLineHeight(size: number): number {
+    return Math.round((size * 20) / 13);
+}
 
 export interface Settings {
     sidebarScope: 'current' | 'all-open';
@@ -174,10 +179,10 @@ export interface Settings {
 }
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
-export const iceServersFrom = (value: string): RTCIceServer[] => {
+export function iceServersFrom(value: string): RTCIceServer[] {
     const urls = value.split(/[\s,]+/).filter((url) => url !== '');
     return urls.length === 0 ? [] : [{ urls }];
-};
+}
 
 interface SettingsStore extends Settings {
     /* Bumped on every change, so a terminal knows to read the tokens again. */
@@ -229,78 +234,81 @@ const DEFAULT_SETTINGS: Settings = {
 
 // Rounded as well as clamped. The stepper used to move in halves, so a browser can still hand back
 // a half pixel from before, and both text and the terminal render sharpest on a whole one.
-const clampSize = (value: unknown, range: { min: number; max: number }, fallback: number): number => {
+function clampSize(value: unknown, range: { min: number; max: number }, fallback: number): number {
     const size = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : fallback;
     return Math.min(range.max, Math.max(range.min, size));
-};
+}
 
 /* What a stored blob means, key by key. Everything a client wrote before a setting existed, or wrote
    as something else, reads as what a fresh client gets. */
-export const settingsFrom = (stored: Partial<Settings>): Settings => ({
-    ...DEFAULT_SETTINGS,
-    ...stored,
-    sidebarScope: stored.sidebarScope === 'all-open' ? 'all-open' : 'current',
-    needsYouAllProjects: stored.needsYouAllProjects !== false,
-    fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
-    interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
-    codeFontSize: clampSize(stored.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize),
-    filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
-    // A path is typed by hand and read back as one; anything else in the blob is no folder.
-    browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
-    codeThemeLight: codeThemeFrom(stored.codeThemeLight, 'light', DEFAULT_SETTINGS.codeThemeLight),
-    codeThemeDark: codeThemeFrom(stored.codeThemeDark, 'dark', DEFAULT_SETTINGS.codeThemeDark),
-    codeWrap: stored.codeWrap === true,
-    codeLigatures: stored.codeLigatures !== false,
-    // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
-    accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
-    // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
-    agentsShowViews: stored.agentsShowViews === true,
-    // Same rule. Nothing keeps a laptop from sleeping unless a person asked for it.
-    keepAwake: keepAwakeFrom(stored.keepAwake, (stored as Partial<Settings> & { agentsKeepAwake?: unknown }).agentsKeepAwake),
-    keepAwakeOnBattery: stored.keepAwakeOnBattery === true,
-    keepAwakeDisplay: stored.keepAwakeDisplay === true,
-    chatStreaming: chatStreamingFrom(stored.chatStreaming),
-    voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
-    liveVoice: isLiveVoice(stored.liveVoice)
-        ? stored.liveVoice
-        : (stored as Partial<Settings> & { voiceGender?: unknown }).voiceGender === 'male'
-          ? 'cedar'
-          : 'marin',
-    voiceInputDeviceId:
-        typeof stored.voiceInputDeviceId === 'string' && stored.voiceInputDeviceId.trim() !== ''
-            ? stored.voiceInputDeviceId
-            : DEFAULT_SETTINGS.voiceInputDeviceId,
-    voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
-    agentsTurnSound: stored.agentsTurnSound === true,
-    browserSwipe: stored.browserSwipe !== false,
-    worktreeMergeStrategy: WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
-    // The key before it, `directStunServer`, held the previous default for nearly every client, since the field was hidden
-    // and every save writes the whole blob; a new key leaves that value behind instead of recognizing it.
-    directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers,
-    language: languageFrom(stored.language),
-    formatRegion: formatRegionFrom(stored.formatRegion),
-    onboardingSeen: stored.onboardingSeen === true,
-    onboardingIntroSeen: stored.onboardingIntroSeen === true
-});
+export function settingsFrom(stored: Partial<Settings>): Settings {
+    return {
+        ...DEFAULT_SETTINGS,
+        ...stored,
+        sidebarScope: stored.sidebarScope === 'all-open' ? 'all-open' : 'current',
+        needsYouAllProjects: stored.needsYouAllProjects !== false,
+        fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
+        interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
+        codeFontSize: clampSize(stored.codeFontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.codeFontSize),
+        filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
+        // A path is typed by hand and read back as one; anything else in the blob is no folder.
+        browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
+        codeThemeLight: codeThemeFrom(stored.codeThemeLight, 'light', DEFAULT_SETTINGS.codeThemeLight),
+        codeThemeDark: codeThemeFrom(stored.codeThemeDark, 'dark', DEFAULT_SETTINGS.codeThemeDark),
+        codeWrap: stored.codeWrap === true,
+        codeLigatures: stored.codeLigatures !== false,
+        // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
+        accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
+        // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
+        agentsShowViews: stored.agentsShowViews === true,
+        // Same rule. Nothing keeps a laptop from sleeping unless a person asked for it.
+        keepAwake: keepAwakeFrom(stored.keepAwake, (stored as Partial<Settings> & { agentsKeepAwake?: unknown }).agentsKeepAwake),
+        keepAwakeOnBattery: stored.keepAwakeOnBattery === true,
+        keepAwakeDisplay: stored.keepAwakeDisplay === true,
+        chatStreaming: chatStreamingFrom(stored.chatStreaming),
+        voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
+        liveVoice: isLiveVoice(stored.liveVoice)
+            ? stored.liveVoice
+            : (stored as Partial<Settings> & { voiceGender?: unknown }).voiceGender === 'male'
+              ? 'cedar'
+              : 'marin',
+        voiceInputDeviceId:
+            typeof stored.voiceInputDeviceId === 'string' && stored.voiceInputDeviceId.trim() !== ''
+                ? stored.voiceInputDeviceId
+                : DEFAULT_SETTINGS.voiceInputDeviceId,
+        voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
+        agentsTurnSound: stored.agentsTurnSound === true,
+        browserSwipe: stored.browserSwipe !== false,
+        worktreeMergeStrategy:
+            WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
+        // The key before it, `directStunServer`, held the previous default for nearly every client, since the field was hidden
+        // and every save writes the whole blob; a new key leaves that value behind instead of recognizing it.
+        directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers,
+        language: languageFrom(stored.language),
+        formatRegion: formatRegionFrom(stored.formatRegion),
+        onboardingSeen: stored.onboardingSeen === true,
+        onboardingIntroSeen: stored.onboardingIntroSeen === true
+    };
+}
 
-const read = (): Settings => {
+function read(): Settings {
     try {
         const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
         return settingsFrom(raw ? (JSON.parse(raw) as Partial<Settings>) : {});
     } catch {
         return DEFAULT_SETTINGS;
     }
-};
+}
 
 /* The accent as channels. A token that needs it with an alpha writes `rgb(var(--accent-rgb) / a)`,
    which still computes to a literal color for the reader that wants one, the terminal above all. */
-const channelsOf = (hex: string): string => {
+function channelsOf(hex: string): string {
     const value = Number.parseInt(hex.slice(1), 16);
     return `${(value >> 16) & 255} ${(value >> 8) & 255} ${value & 255}`;
-};
+}
 
 /* The few tokens a person may change are set on the root, over the theme's own values. */
-const apply = (settings: Settings): void => {
+function apply(settings: Settings): void {
     // The tokens are written on the document, and a test that reads this module for its defaults has none.
     if (typeof document === 'undefined') {
         return;
@@ -333,7 +341,7 @@ const apply = (settings: Settings): void => {
     } else {
         root.setProperty('font-variant-ligatures', 'none');
     }
-};
+}
 
 export const useSettings = create<SettingsStore>((set, get) => {
     const initial = read();

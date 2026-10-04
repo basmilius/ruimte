@@ -8,7 +8,7 @@ export const AI_FAMILIES = ['claude', 'codex', 'gemini', 'copilot', 'opencode', 
 const FAMILY_PATTERNS = AI_FAMILIES.map((family) => [family, new RegExp(`(^|[/\\s._@-])${family}([/\\s._-]|$)`, 'i')] as const);
 
 /* Which AI the process itself is, from its path, its name and the script a runtime was given. */
-export const ownFamilyOf = (name: string, path: string | null, args: readonly string[] | null = null): string | null => {
+export function ownFamilyOf(name: string, path: string | null, args: readonly string[] | null = null): string | null {
     // A native CLI names itself in its path; one on node or bun names itself in the script it runs.
     const haystack = [path ?? '', name, ...(args?.slice(0, 2) ?? [])].join(' ');
     for (const [family, pattern] of FAMILY_PATTERNS) {
@@ -17,7 +17,7 @@ export const ownFamilyOf = (name: string, path: string | null, args: readonly st
         }
     }
     return null;
-};
+}
 
 export interface TreeRoots {
     daemonPid: number;
@@ -54,7 +54,9 @@ export interface TreeIndex {
 }
 
 /* Electron's main process, or the app bundle a packaged daemon runs in. */
-const looksLikeDesktopApp = (process: RawProcess): boolean => /electron|\.app\/Contents\/MacOS\//i.test(process.path ?? process.name);
+function looksLikeDesktopApp(process: RawProcess): boolean {
+    return /electron|\.app\/Contents\/MacOS\//i.test(process.path ?? process.name);
+}
 
 /*
  * Sorts the process table into Ruimte's groups: a node per terminal and chat, the desktop app when
@@ -62,7 +64,7 @@ const looksLikeDesktopApp = (process: RawProcess): boolean => /electron|\.app\/C
  * inherited up to the root of a group and never past it, so a daemon started from a Claude session
  * does not make every shell on its canvas a Claude.
  */
-export const indexTree = (sample: RawSample, roots: TreeRoots, argsOf: (process: RawProcess) => readonly string[] | null = () => null): TreeIndex => {
+export function indexTree(sample: RawSample, roots: TreeRoots, argsOf: (process: RawProcess) => readonly string[] | null = () => null): TreeIndex {
     const byPid = new Map<number, RawProcess>();
     const children = new Map<number, RawProcess[]>();
     for (const process of sample.processes) {
@@ -171,9 +173,9 @@ export const indexTree = (sample: RawSample, roots: TreeRoots, argsOf: (process:
         inherited(process);
     }
     return { sample, byPid, groups, ruimte, family, ownFamily };
-};
+}
 
-const sortValue = (rate: Pick<ProcessRate, 'cpu' | 'memory' | 'diskRead' | 'diskWrite'> | undefined, sort: ProcessSort): number => {
+function sortValue(rate: Pick<ProcessRate, 'cpu' | 'memory' | 'diskRead' | 'diskWrite'> | undefined, sort: ProcessSort): number {
     if (rate === undefined) {
         return -1;
     }
@@ -184,9 +186,9 @@ const sortValue = (rate: Pick<ProcessRate, 'cpu' | 'memory' | 'diskRead' | 'disk
         return rate.memory ?? -1;
     }
     return rate.diskRead === null && rate.diskWrite === null ? -1 : (rate.diskRead ?? 0) + (rate.diskWrite ?? 0);
-};
+}
 
-const sum = (values: readonly (number | null)[]): number | null => {
+function sum(values: readonly (number | null)[]): number | null {
     let total: number | null = null;
     for (const value of values) {
         if (value !== null) {
@@ -194,9 +196,9 @@ const sum = (values: readonly (number | null)[]): number | null => {
         }
     }
     return total;
-};
+}
 
-const rowOf = (index: TreeIndex, rates: Map<string, ProcessRate>, entry: TreeEntry): ProcessRow => {
+function rowOf(index: TreeIndex, rates: Map<string, ProcessRate>, entry: TreeEntry): ProcessRow {
     const rate = rates.get(entry.identity);
     const { process } = entry;
     return {
@@ -213,20 +215,22 @@ const rowOf = (index: TreeIndex, rates: Map<string, ProcessRate>, entry: TreeEnt
         family: index.family.get(entry.identity) ?? null,
         depth: entry.depth
     };
-};
+}
 
-const groupOf = (id: string, kind: ProcessGroupKind, nodeId: string | null, rows: ProcessRow[], hidden = 0, label?: string): ProcessGroup => ({
-    id,
-    kind,
-    nodeId,
-    ...(label === undefined ? {} : { label }),
-    cpu: sum(rows.map((row) => row.cpu)),
-    memory: sum(rows.map((row) => row.memory)),
-    diskRead: sum(rows.map((row) => row.diskRead)),
-    diskWrite: sum(rows.map((row) => row.diskWrite)),
-    processes: rows,
-    hidden
-});
+function groupOf(id: string, kind: ProcessGroupKind, nodeId: string | null, rows: ProcessRow[], hidden = 0, label?: string): ProcessGroup {
+    return {
+        id,
+        kind,
+        nodeId,
+        ...(label === undefined ? {} : { label }),
+        cpu: sum(rows.map((row) => row.cpu)),
+        memory: sum(rows.map((row) => row.memory)),
+        diskRead: sum(rows.map((row) => row.diskRead)),
+        diskWrite: sum(rows.map((row) => row.diskWrite)),
+        processes: rows,
+        hidden
+    };
+}
 
 const GROUP_ORDER: Record<ProcessGroupKind, number> = { terminal: 0, chat: 0, app: 1, daemon: 2, other: 3 };
 
@@ -234,7 +238,7 @@ const GROUP_ORDER: Record<ProcessGroupKind, number> = { terminal: 0, chat: 0, ap
  * What the panel draws for one scope. "All" adds the rest of the machine, but only the top of it on
  * the chosen sort plus every AI process, never 1,500 rows every two seconds.
  */
-export const groupsFor = (index: TreeIndex, rates: Map<string, ProcessRate>, scope: ProcessScope, sort: ProcessSort, limit: number): ProcessGroup[] => {
+export function groupsFor(index: TreeIndex, rates: Map<string, ProcessRate>, scope: ProcessScope, sort: ProcessSort, limit: number): ProcessGroup[] {
     const groups = index.groups.map((group) =>
         groupOf(
             group.id,
@@ -263,20 +267,20 @@ export const groupsFor = (index: TreeIndex, rates: Map<string, ProcessRate>, sco
         );
     }
     return groups;
-};
+}
 
 /* The share of Ruimte for the charts: percent of one core summed, bytes, bytes per second. */
-export const ruimteTotals = (index: TreeIndex, rates: Map<string, ProcessRate>): { cpu: number | null; memory: number | null; disk: number | null } => {
+export function ruimteTotals(index: TreeIndex, rates: Map<string, ProcessRate>): { cpu: number | null; memory: number | null; disk: number | null } {
     const members = [...index.ruimte].map((identity) => rates.get(identity)).filter((rate) => rate !== undefined);
     return {
         cpu: sum(members.map((rate) => rate.cpu)),
         memory: sum(members.map((rate) => rate.memory)),
         disk: sum(members.map((rate) => (rate.diskRead === null && rate.diskWrite === null ? null : (rate.diskRead ?? 0) + (rate.diskWrite ?? 0))))
     };
-};
+}
 
 /* Disk throughput of the whole machine as far as it can be read, the sum of every readable process. */
-export const machineDisk = (rates: Map<string, ProcessRate>): { read: number | null; write: number | null } => {
+export function machineDisk(rates: Map<string, ProcessRate>): { read: number | null; write: number | null } {
     const all = [...rates.values()];
     return { read: sum(all.map((rate) => rate.diskRead)), write: sum(all.map((rate) => rate.diskWrite)) };
-};
+}

@@ -11,20 +11,20 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 /* The first `bytes` of a text without cutting a character in half, and whether anything was left off. */
-const cutAt = (text: string, bytes: number): { text: string; cut: boolean } => {
+function cutAt(text: string, bytes: number): { text: string; cut: boolean } {
     const encoded = encoder.encode(text);
     if (encoded.length <= bytes) {
         return { text, cut: false };
     }
     return { text: decoder.decode(encoded.slice(0, bytes)).replace(/\uFFFD$/, ''), cut: true };
-};
+}
 
 /*
  * The prompt a woken chat's CLI gets. Every task is named with its child's id, so the agent can go
  * on with that node (read it, notify it) without asking which one it was. `restOf` says where the rest
  * of a result that was cut is to be read.
  */
-export const wakePrompt = (tasks: readonly Task[], teamsOut = 0, restOf?: (childId: string) => string): string => {
+export function wakePrompt(tasks: readonly Task[], teamsOut = 0, restOf?: (childId: string) => string): string {
     const head = tasks.length === 1 ? 'A task you gave has settled. Its result:' : `${tasks.length} tasks you gave have settled. Their results:`;
     const sections = tasks.map((task) => {
         const { text, cut } = cutAt(task.result?.text ?? '', RESULT_PREVIEW_BYTES);
@@ -45,12 +45,16 @@ export const wakePrompt = (tasks: readonly Task[], teamsOut = 0, restOf?: (child
                   `${teamsOut === 1 ? 'A team you gave is' : `${teamsOut} teams you gave are`} still out: you are woken with all of a team's results once its last task settles.`
               ];
     return [head, ...sections, ...together, ...out].join('\n\n');
-};
+}
 
 /* The label of the turn a wake opens: what a person reads above it in the thread. */
-export const wakeLabel = (tasks: readonly Task[]): string => tasks.map((task) => task.title).join(', ');
+export function wakeLabel(tasks: readonly Task[]): string {
+    return tasks.map((task) => task.title).join(', ');
+}
 
-export const wakeNote = (tasks: readonly Task[]): string => `Woken by ${tasks.length} finished ${tasks.length === 1 ? 'task' : 'tasks'}`;
+export function wakeNote(tasks: readonly Task[]): string {
+    return `Woken by ${tasks.length} finished ${tasks.length === 1 ? 'task' : 'tasks'}`;
+}
 
 export interface WakeParentDeps {
     tasks: Pick<TaskStore, 'pendingWake' | 'readyWake' | 'openBatches' | 'markWoken' | 'dropWake'>;
@@ -64,9 +68,8 @@ export interface WakeParentDeps {
  * CLI acceptance lives in the saved turn before the task store consumes its result, so a restart
  * between those writes can finish delivery without opening another turn.
  */
-export const wakeParentHandler =
-    (deps: WakeParentDeps) =>
-    async (entry: WakeParentEntry): Promise<OutboxOutcome> => {
+export function wakeParentHandler(deps: WakeParentDeps) {
+    return async (entry: WakeParentEntry): Promise<OutboxOutcome> => {
         const parentId = entry.target;
         const pending = deps.tasks.pendingWake(parentId);
         if (pending.length === 0) {
@@ -127,11 +130,13 @@ export const wakeParentHandler =
         await deps.tasks.markWoken(tasks.map((task) => task.id));
         return held();
     };
+}
 
 export interface OweWakeDeps {
     enqueue(projectId: string, target: string, work: TaskWork): Promise<void>;
 }
 
 /* A settled task owes its parent a wake; one entry per task, and the first to run takes every task there is. */
-export const oweWake = (deps: OweWakeDeps, task: Task): Promise<void> =>
-    deps.enqueue(task.projectId, task.parentId, { kind: 'wake-parent', payload: { taskId: task.id } });
+export function oweWake(deps: OweWakeDeps, task: Task): Promise<void> {
+    return deps.enqueue(task.projectId, task.parentId, { kind: 'wake-parent', payload: { taskId: task.id } });
+}

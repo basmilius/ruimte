@@ -239,24 +239,32 @@ declare global {
     }
 }
 
-export const desktop = (): DesktopBridge | null => (typeof window === 'undefined' ? null : (window.ruimteDesktop ?? null));
+export function desktop(): DesktopBridge | null {
+    return typeof window === 'undefined' ? null : (window.ruimteDesktop ?? null);
+}
 
-export const isDesktop = (): boolean => desktop() !== null;
+export function isDesktop(): boolean {
+    return desktop() !== null;
+}
 
 /* True where the shell can hold the machine awake, which is the desktop app on macOS for now. A
    browser cannot, so the setting is not offered there rather than shown as a switch that promises
    something the page has no way to do. */
-export const canKeepAwake = (): boolean => {
+export function canKeepAwake(): boolean {
     const bridge = desktop();
     return bridge?.platform === 'darwin' && (typeof bridge.requestKeepAwake === 'function' || typeof bridge.setKeepAwake === 'function');
-};
+}
 
 /* True only in the desktop app on macOS, where a two-finger swipe goes back and forward in a page.
    Elsewhere a mouse's side buttons do the same thing, and they work on every platform. */
-export const canSwipeBetweenPages = (): boolean => desktop()?.platform === 'darwin';
+export function canSwipeBetweenPages(): boolean {
+    return desktop()?.platform === 'darwin';
+}
 
 /* True when the window chrome leaves room for the traffic lights, which only macOS does. */
-export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
+export function hasTrafficLights(): boolean {
+    return desktop()?.platform === 'darwin';
+}
 
 /* The traffic lights end 64px in (12px from the edge, then three 12px buttons 8px apart, see the
    shell), and the first control starts 20px after that, so the lights read as their own group. */
@@ -264,16 +272,16 @@ export const TRAFFIC_LIGHTS_INSET_PX = 84;
 
 /* True on macOS, in the desktop app and in a browser tab alike. Shortcuts differ there. Ctrl+B is
    readline's backward-char and tmux's prefix, while Cmd+B is free. */
-export const isApplePlatform = (): boolean => {
+export function isApplePlatform(): boolean {
     const bridge = desktop();
     if (bridge) {
         return bridge.platform === 'darwin';
     }
     return isApplePlatformFromNavigator();
-};
+}
 
 /* True when the window controls sit over the top right of the window, which Windows and Linux do. */
-export const hasOverlayControls = (): boolean => {
+export function hasOverlayControls(): boolean {
     const bridge = desktop();
     return bridge !== null && bridge.platform !== 'darwin';
-};
+}

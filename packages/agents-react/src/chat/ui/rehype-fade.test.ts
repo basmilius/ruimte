@@ -10,7 +10,7 @@ interface Rendered {
 }
 
 /* The elements react-markdown hands React, flattened, without rendering them into a DOM. */
-const elementsOf = (node: ReactNode): Rendered[] => {
+function elementsOf(node: ReactNode): Rendered[] {
     if (Array.isArray(node)) {
         return node.flatMap(elementsOf);
     }
@@ -20,14 +20,17 @@ const elementsOf = (node: ReactNode): Rendered[] => {
     const element = node as ReactElement<{ children?: ReactNode }>;
     const own = typeof element.type === 'string' ? [{ type: element.type, key: element.key, children: element.props.children }] : [];
     return [...own, ...elementsOf(element.props.children)];
-};
+}
 
-const render = (text: string): Rendered[] => elementsOf(ReactMarkdown({ children: text, rehypePlugins: [rehypeFadeWords] }));
+function render(text: string): Rendered[] {
+    return elementsOf(ReactMarkdown({ children: text, rehypePlugins: [rehypeFadeWords] }));
+}
 
-const spans = (text: string): { key: string | null; word: ReactNode }[] =>
-    render(text)
+function spans(text: string): { key: string | null; word: ReactNode }[] {
+    return render(text)
         .filter((element) => element.type === 'span')
         .map((element) => ({ key: element.key, word: element.children }));
+}
 
 describe('wordSegments', () => {
     test('keeps the whitespace between words as segments of its own', () => {

@@ -28,14 +28,14 @@ class Reads {
 
 let reads: Reads;
 
-const start = async (extra: Parameters<typeof makeHarness>[0]): Promise<void> => {
+async function start(extra: Parameters<typeof makeHarness>[0]): Promise<void> {
     harness = await makeHarness(extra);
     transcript = join(harness.home, 'transcript.jsonl');
     await writeFile(transcript, '');
     recorder = new Recorder();
     harness.manager.subscribe('c1', recorder.sink());
     await harness.manager.create({ sessionId: 's1', cols: 80, rows: 24, cwd: harness.home });
-};
+}
 
 beforeEach(async () => {
     reads = new Reads();
@@ -48,14 +48,18 @@ afterEach(async () => {
     await harness.cleanup();
 });
 
-const hook = (event: string, sessionId = 'claude-1') => ({ session_id: sessionId, transcript_path: transcript, hook_event_name: event });
+function hook(event: string, sessionId = 'claude-1') {
+    return { session_id: sessionId, transcript_path: transcript, hook_event_name: event };
+}
 
-const token = (): string => harness.manager.get('s1')!.hookToken;
+function token(): string {
+    return harness.manager.get('s1')!.hookToken;
+}
 
-const lastAgent = (): AgentInfo | null => {
+function lastAgent(): AgentInfo | null {
     const last = recorder.events.filter((event) => event.event === 'session.status').at(-1);
     return last?.event === 'session.status' ? last.payload.agent : null;
-};
+}
 
 describe('the name of a terminal agent', () => {
     test('comes out of the transcript the hooks point at and stays with its conversation', async () => {

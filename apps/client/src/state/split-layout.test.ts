@@ -3,23 +3,33 @@ import type { ProjectCanvasView, ProjectDocument, SplitLayout } from '@ruimte/co
 import { focusedCanvas, liveCanvases } from './canvas';
 import { useDocument } from './document';
 
-const view = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes,
-    texts: [],
-    edges: [],
-    layouts: []
-});
+function view(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes,
+        texts: [],
+        edges: [],
+        layouts: []
+    };
+}
 
-const node = (id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] => ({ id, kind: 'terminal', title: id, x, y, w: 100, h: 80 });
+function node(id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] {
+    return { id, kind: 'terminal', title: id, x, y, w: 100, h: 80 };
+}
 
-const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 3, rev: 1, name: 'p', color: '#000', views });
+function document(views: ProjectCanvasView[]): ProjectDocument {
+    return { version: 3, rev: 1, name: 'p', color: '#000', views };
+}
 
-const shape = (): string[][] => (useDocument.getState().layout?.columns ?? []).map((column) => column.cells.map((cell) => cell.viewId));
+function shape(): string[][] {
+    return (useDocument.getState().layout?.columns ?? []).map((column) => column.cells.map((cell) => cell.viewId));
+}
 
-const openEditors = (): string[] => liveCanvases().map(([viewId]) => viewId);
+function openEditors(): string[] {
+    return liveCanvases().map(([viewId]) => viewId);
+}
 
 beforeEach(() => {
     focusedCanvas().getState().setViewport({ w: 800, h: 600 });

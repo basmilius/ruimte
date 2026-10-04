@@ -7,8 +7,8 @@ import { moneyFormat } from './format';
  * the summary on screen carries. It is a hook rather than a prop because every row wants it and
  * none of them wants to know where the rate came from.
  */
-export const useMoney = (): ((usd: number) => string) => {
+export function useMoney(): (usd: number) => string {
     const currency = useUsage((s) => s.currency);
     const rate = useUsage((s) => s.summary?.rate ?? null);
     return useMemo(() => moneyFormat(currency, rate), [currency, rate]);
-};
+}

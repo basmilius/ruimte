@@ -2,24 +2,28 @@ import { describe, expect, test } from 'bun:test';
 import type { NetworkInterfaceInfo } from 'node:os';
 import { lanAddresses } from './lan-addresses.ts';
 
-const ipv4 = (address: string, internal = false): NetworkInterfaceInfo => ({
-    address,
-    netmask: '255.255.255.0',
-    family: 'IPv4',
-    mac: '00:00:00:00:00:00',
-    internal,
-    cidr: `${address}/24`
-});
+function ipv4(address: string, internal = false): NetworkInterfaceInfo {
+    return {
+        address,
+        netmask: '255.255.255.0',
+        family: 'IPv4',
+        mac: '00:00:00:00:00:00',
+        internal,
+        cidr: `${address}/24`
+    };
+}
 
-const ipv6 = (address: string): NetworkInterfaceInfo => ({
-    address,
-    netmask: 'ffff:ffff:ffff:ffff::',
-    family: 'IPv6',
-    mac: '00:00:00:00:00:00',
-    internal: false,
-    cidr: `${address}/64`,
-    scopeid: 0
-});
+function ipv6(address: string): NetworkInterfaceInfo {
+    return {
+        address,
+        netmask: 'ffff:ffff:ffff:ffff::',
+        family: 'IPv6',
+        mac: '00:00:00:00:00:00',
+        internal: false,
+        cidr: `${address}/64`,
+        scopeid: 0
+    };
+}
 
 describe('lanAddresses', () => {
     test('the local network first, then a tailnet, and nothing a client elsewhere cannot reach', () => {

@@ -19,11 +19,11 @@ class FakeSocket implements ClientConnection {
     }
 }
 
-const makeDispatcher = (): Dispatcher => {
+function makeDispatcher(): Dispatcher {
     const dispatcher = new Dispatcher();
     dispatcher.register('server.hello', () => ({ version: '1.2.3', platform: 'test', home: '/tmp/home' }));
     return dispatcher;
-};
+}
 
 describe('Dispatcher', () => {
     test('answers a known request with ok and the result', async () => {

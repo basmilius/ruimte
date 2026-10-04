@@ -22,10 +22,13 @@ export const NOTE_RADIUS = 8;
  * Where the glyphs of an element sit inside it: a note writes within its padding, a text is its
  * own box. Everything that lays out or measures a text goes through this, so both stay in step.
  */
-export const writingFrameOf = (element: WrittenElement): { x: number; y: number; w: number } =>
-    element.kind === 'note' ? { x: NOTE_PADDING, y: NOTE_PADDING, w: Math.max(1, element.w - NOTE_PADDING * 2) } : { x: 0, y: 0, w: element.w };
+export function writingFrameOf(element: WrittenElement): { x: number; y: number; w: number } {
+    return element.kind === 'note' ? { x: NOTE_PADDING, y: NOTE_PADDING, w: Math.max(1, element.w - NOTE_PADDING * 2) } : { x: 0, y: 0, w: element.w };
+}
 
-export const textLines = (text: string): string[] => text.split('\n');
+export function textLines(text: string): string[] {
+    return text.split('\n');
+}
 
 export type MeasureLine = (line: string) => number;
 
@@ -33,12 +36,12 @@ export type MeasureLine = (line: string) => number;
  * A measure for where no font exists, such as the daemon writing an SVG for an agent: a glyph is
  * a little over half its size wide, which is what most faces come to on average.
  */
-export const approximateMeasure = (size: number, font: DrawingFont | undefined): MeasureLine => {
+export function approximateMeasure(size: number, font: DrawingFont | undefined): MeasureLine {
     const glyph = fontOf(font) === 'mono' ? 0.6 : 0.55;
     return (line) => line.length * size * glyph;
-};
+}
 
-const wrapParagraph = (paragraph: string, maxWidth: number, measure: MeasureLine): string[] => {
+function wrapParagraph(paragraph: string, maxWidth: number, measure: MeasureLine): string[] {
     const lines: string[] = [];
     let line = '';
     const push = (): void => {
@@ -67,18 +70,21 @@ const wrapParagraph = (paragraph: string, maxWidth: number, measure: MeasureLine
     }
     lines.push(line);
     return lines;
-};
+}
 
-export const wrapLines = (text: string, maxWidth: number, measure: MeasureLine): string[] =>
-    textLines(text).flatMap((paragraph) => wrapParagraph(paragraph, maxWidth, measure));
+export function wrapLines(text: string, maxWidth: number, measure: MeasureLine): string[] {
+    return textLines(text).flatMap((paragraph) => wrapParagraph(paragraph, maxWidth, measure));
+}
 
 // An unsized text element follows its content; once sized, its box controls wrapping.
-export const linesOf = (element: WrittenElement, measure: MeasureLine): string[] => {
+export function linesOf(element: WrittenElement, measure: MeasureLine): string[] {
     if (element.kind === 'note') {
         return wrapLines(element.text, writingFrameOf(element).w, measure);
     }
     return element.sized ? wrapLines(element.text, element.w, measure) : textLines(element.text);
-};
+}
 
 /* Absent means hand: a drawing is written by hand unless it says otherwise. */
-export const fontOf = (font: DrawingFont | undefined): DrawingFont => font ?? 'hand';
+export function fontOf(font: DrawingFont | undefined): DrawingFont {
+    return font ?? 'hand';
+}

@@ -74,23 +74,30 @@ export interface MachineRate {
 /* More sleep than this between two readings and the history starts over; less is clock jitter. */
 export const SLEEP_TOLERANCE_MS = 2000;
 
-export const identityOf = (pid: number, startTime: number): string => `${pid}:${startTime}`;
+export function identityOf(pid: number, startTime: number): string {
+    return `${pid}:${startTime}`;
+}
 
 /* On Apple silicon a tick is 125/3 ns, so the raw number reads 40 times too low. */
-export const ticksToNs = (ticks: number, numer: number, denom: number): number => (ticks * numer) / denom;
+export function ticksToNs(ticks: number, numer: number, denom: number): number {
+    return (ticks * numer) / denom;
+}
 
 /* How long the gap was says nothing, since a closed panel samples every five minutes. */
-export const sleptBetween = (before: RawSample, after: RawSample): boolean => after.asleepMs - before.asleepMs > SLEEP_TOLERANCE_MS;
+export function sleptBetween(before: RawSample, after: RawSample): boolean {
+    return after.asleepMs - before.asleepMs > SLEEP_TOLERANCE_MS;
+}
 
-const perSecond = (now: number | null, then: number | null, elapsedMs: number): number | null =>
-    now === null || then === null ? null : (Math.max(0, now - then) * 1000) / elapsedMs;
+function perSecond(now: number | null, then: number | null, elapsedMs: number): number | null {
+    return now === null || then === null ? null : (Math.max(0, now - then) * 1000) / elapsedMs;
+}
 
 /*
  * A process that started after `before` was taken spent all its counters inside the interval, so it
  * has a rate on its first sight too; one that was already running but not in `before` has none yet,
  * because nothing says when it spent them.
  */
-export const processRates = (before: RawSample | null, after: RawSample): Map<string, ProcessRate> => {
+export function processRates(before: RawSample | null, after: RawSample): Map<string, ProcessRate> {
     const rates = new Map<string, ProcessRate>();
     const previous = new Map<string, RawProcess>();
     for (const process of before?.processes ?? []) {
@@ -116,22 +123,22 @@ export const processRates = (before: RawSample | null, after: RawSample): Map<st
         });
     }
     return rates;
-};
+}
 
-export const machineRate = (before: RawSample | null, after: RawSample): MachineRate => {
+export function machineRate(before: RawSample | null, after: RawSample): MachineRate {
     const then = before?.machine;
     const now = after.machine;
     if (!then || then.cpuBusy === null || then.cpuTotal === null || now.cpuBusy === null || now.cpuTotal === null || now.cpuTotal <= then.cpuTotal) {
         return { cpu: null };
     }
     return { cpu: (Math.max(0, now.cpuBusy - then.cpuBusy) / (now.cpuTotal - then.cpuTotal)) * 100 };
-};
+}
 
 /*
  * `KERN_PROCARGS2`: the argument count, the executable path and its padding, the arguments, then the
  * environment, every string closed by a zero byte.
  */
-export const parseProcArgs = (bytes: Uint8Array): CommandLine | null => {
+export function parseProcArgs(bytes: Uint8Array): CommandLine | null {
     if (bytes.byteLength < 4) {
         return null;
     }
@@ -158,9 +165,9 @@ export const parseProcArgs = (bytes: Uint8Array): CommandLine | null => {
         start = i + 1;
     }
     return { args: strings.slice(0, argc), env: parseEnvironment(strings.slice(argc)) };
-};
+}
 
-export const parseEnvironment = (entries: readonly string[]): Record<string, string> => {
+export function parseEnvironment(entries: readonly string[]): Record<string, string> {
     const env: Record<string, string> = {};
     for (const entry of entries) {
         const equals = entry.indexOf('=');
@@ -169,10 +176,10 @@ export const parseEnvironment = (entries: readonly string[]): Record<string, str
         }
     }
     return env;
-};
+}
 
 /* The sampler of this platform, or null where there is none (Windows); the panel explains that instead. */
-export const createSampler = async (platform: string = process.platform, home: string = process.env.HOME ?? '/'): Promise<ProcessSampler | null> => {
+export async function createSampler(platform: string = process.platform, home: string = process.env.HOME ?? '/'): Promise<ProcessSampler | null> {
     try {
         if (platform === 'darwin') {
             const { DarwinSampler } = await import('./darwin.ts');
@@ -186,4 +193,4 @@ export const createSampler = async (platform: string = process.platform, home: s
         console.error('The process sampler could not start:', errorText(e));
     }
     return null;
-};
+}

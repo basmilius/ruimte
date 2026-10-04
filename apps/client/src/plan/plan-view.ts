@@ -33,16 +33,17 @@ const LEAF_MATCHES: Record<Exclude<PlanFilter, 'all'>, ReadonlySet<PlanStepState
     issues: new Set(['failed', 'blocked', 'warning'])
 };
 
-const matches = (items: readonly PlanItem[], filter: PlanFilter): boolean =>
-    filter === 'all' || leafSteps(items).some((step) => LEAF_MATCHES[filter].has(step.state ?? 'open'));
+function matches(items: readonly PlanItem[], filter: PlanFilter): boolean {
+    return filter === 'all' || leafSteps(items).some((step) => LEAF_MATCHES[filter].has(step.state ?? 'open'));
+}
 
-const allDone = (items: readonly PlanItem[]): boolean => {
+function allDone(items: readonly PlanItem[]): boolean {
     const leaves = leafSteps(items);
     return leaves.length > 0 && leaves.every((step) => step.state === 'done' || step.state === 'skipped');
-};
+}
 
 /* The plan as the rows the panel draws, in document order, with folds and the filter applied. */
-export const planRows = (plan: Pick<Plan, 'items'>, options: PlanViewOptions): PlanRow[] => {
+export function planRows(plan: Pick<Plan, 'items'>, options: PlanViewOptions): PlanRow[] {
     const rows: PlanRow[] = [];
     const folded = (item: PlanSection | PlanStep, children: readonly PlanItem[]): boolean =>
         options.collapsed.has(item.id) || (options.collapseDone && allDone(children));
@@ -92,21 +93,24 @@ export const planRows = (plan: Pick<Plan, 'items'>, options: PlanViewOptions): P
 
     plan.items.forEach(entry);
     return rows;
-};
+}
 
 /* Every section and parent step, what "Collapse all" folds. */
-export const foldableIds = (plan: Pick<Plan, 'items'>): string[] =>
-    allItems(plan.items)
+export function foldableIds(plan: Pick<Plan, 'items'>): string[] {
+    return allItems(plan.items)
         .filter((item) => item.type === 'section' || (item.type === 'step' && isParentStep(item)))
         .map((item) => item.id);
+}
 
 /* "Plan 6/11": steps with an outcome over all steps, the counter `plan read` uses too. */
-export const planCounter = (plan: Pick<Plan, 'items'>): string => {
+export function planCounter(plan: Pick<Plan, 'items'>): string {
     const progress = planProgress(plan.items);
     return `${progress.finished}/${progress.total}`;
-};
+}
 
-export const hasFailedStep = (plan: Pick<Plan, 'items'>): boolean => leafSteps(plan.items).some((step) => step.state === 'failed');
+export function hasFailedStep(plan: Pick<Plan, 'items'>): boolean {
+    return leafSteps(plan.items).some((step) => step.state === 'failed');
+}
 
 export interface ActiveStep {
     id: string;
@@ -114,33 +118,35 @@ export interface ActiveStep {
 }
 
 /* The steps an agent is on, in document order. */
-export const activeSteps = (plan: Pick<Plan, 'items'>): ActiveStep[] =>
-    leafSteps(plan.items)
+export function activeSteps(plan: Pick<Plan, 'items'>): ActiveStep[] {
+    return leafSteps(plan.items)
         .filter((step) => step.state === 'active')
         .map((step) => ({ id: step.id, title: step.title }));
+}
 
-export const sameActiveSteps = (a: readonly ActiveStep[], b: readonly ActiveStep[]): boolean =>
-    a.length === b.length && a.every((step, i) => step.id === b[i].id && step.title === b[i].title);
+export function sameActiveSteps(a: readonly ActiveStep[], b: readonly ActiveStep[]): boolean {
+    return a.length === b.length && a.every((step, i) => step.id === b[i].id && step.title === b[i].title);
+}
 
 /* "Fix focus", or "Fix focus and 2 more". */
-export const activeStepsLabel = (steps: readonly ActiveStep[]): string => {
+export function activeStepsLabel(steps: readonly ActiveStep[]): string {
     if (steps.length === 0) {
         return '';
     }
     return steps.length === 1 ? steps[0].title : i18next.t('plan:active.more', { title: steps[0].title, count: steps.length - 1 });
-};
+}
 
 /* The step a click on the active item goes to: the first, and on each next click the one after the last. */
-export const nextActiveTarget = (steps: readonly ActiveStep[], last: string | null): string | null => {
+export function nextActiveTarget(steps: readonly ActiveStep[], last: string | null): string | null {
     if (steps.length === 0) {
         return null;
     }
     const index = steps.findIndex((step) => step.id === last);
     return steps[(index + 1) % steps.length].id;
-};
+}
 
 /* The sections and parent steps around an item, outermost first; null when the plan has no such item. */
-export const ancestorIds = (plan: Pick<Plan, 'items'>, id: string): string[] | null => {
+export function ancestorIds(plan: Pick<Plan, 'items'>, id: string): string[] | null {
     const walk = (items: readonly PlanItem[], path: string[]): string[] | null => {
         for (const item of items) {
             if (item.id === id) {
@@ -155,13 +161,13 @@ export const ancestorIds = (plan: Pick<Plan, 'items'>, id: string): string[] | n
         return null;
     };
     return walk(plan.items, []);
-};
+}
 
 /*
  * The view options that show one step: every fold around it opened, and the filter or Collapse done
  * let go only when they would still hide it, so a person's choice survives whenever it can.
  */
-export const revealOptions = (plan: Pick<Plan, 'items'>, options: PlanViewOptions, id: string): PlanViewOptions => {
+export function revealOptions(plan: Pick<Plan, 'items'>, options: PlanViewOptions, id: string): PlanViewOptions {
     const around = new Set(ancestorIds(plan, id) ?? []);
     const opened: PlanViewOptions = { ...options, collapsed: new Set([...options.collapsed].filter((entry) => !around.has(entry))) };
     const shows = (candidate: PlanViewOptions): boolean => planRows(plan, candidate).some((row) => row.item.id === id);
@@ -172,10 +178,12 @@ export const revealOptions = (plan: Pick<Plan, 'items'>, options: PlanViewOption
         { ...opened, filter: 'all', collapseDone: false }
     ];
     return candidates.find(shows) ?? candidates[candidates.length - 1];
-};
+}
 
 /* What a state reads as in a plan of this kind: a test is passed, not done. */
-export const stateLabel = (kind: Plan['meta']['kind'], state: PlanStepState): string => i18next.t(`plan:state.${kind}.${state}`);
+export function stateLabel(kind: Plan['meta']['kind'], state: PlanStepState): string {
+    return i18next.t(`plan:state.${kind}.${state}`);
+}
 
 /* The states a person picks from; active is the agent's word for where it works. */
 export const PERSON_STATES: readonly PlanStepState[] = ['open', 'done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
@@ -184,27 +192,31 @@ export const PERSON_STATES: readonly PlanStepState[] = ['open', 'done', 'warning
 export const TEST_OUTCOMES: readonly PlanStepState[] = ['done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
 
 /* A state that is only worth something with a line about what happened, so picking it opens the note. */
-export const asksForNote = (state: PlanStepState): boolean => state === 'failed' || state === 'warning' || state === 'info';
+export function asksForNote(state: PlanStepState): boolean {
+    return state === 'failed' || state === 'warning' || state === 'info';
+}
 
 /* A click on the mark of a step in a steps plan: done, or back to open. */
-export const toggledState = (state: PlanStepState): PlanStepState => (state === 'done' ? 'open' : 'done');
+export function toggledState(state: PlanStepState): PlanStepState {
+    return state === 'done' ? 'open' : 'done';
+}
 
 /* Product names, the same word in every language. */
 const AGENT_NAMES: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini', copilot: 'Copilot' };
 
 /* The short name of the agent a chat runs, as a person calls it. */
-export const agentName = (provider: AgentKind | string | null | undefined): string => {
+export function agentName(provider: AgentKind | string | null | undefined): string {
     if (!provider) {
         return i18next.t('plan:agent.unknown');
     }
     return AGENT_NAMES[provider] ?? provider.charAt(0).toUpperCase() + provider.slice(1);
-};
+}
 
 /*
  * Who set a step and when. A person's short line stays in the row; an agent's name only goes in a
  * tooltip, so a long title keeps the width of the row. An open step says nothing.
  */
-export const stepSetBy = (step: Pick<PlanStep, 'by'>, state: PlanStepState, agent: string, when: string): { text: string | null; tooltip: string | null } => {
+export function stepSetBy(step: Pick<PlanStep, 'by'>, state: PlanStepState, agent: string, when: string): { text: string | null; tooltip: string | null } {
     if (state === 'open') {
         return { text: null, tooltip: null };
     }
@@ -215,13 +227,13 @@ export const stepSetBy = (step: Pick<PlanStep, 'by'>, state: PlanStepState, agen
         return { text: null, tooltip: when ? i18next.t('plan:setBy.agentAt', { agent, when }) : i18next.t('plan:setBy.agent', { agent }) };
     }
     return { text: null, tooltip: null };
-};
+}
 
 /*
  * What "Send results to chat" puts in the prompt: every failed, blocked, warning and info step with
  * its note, under the plan's title. Null when there is nothing to report.
  */
-export const resultsText = (plan: Plan): string | null => {
+export function resultsText(plan: Plan): string | null {
     const lines = (state: PlanStepState): string[] =>
         leafSteps(plan.items)
             .filter((step) => step.state === state)
@@ -233,22 +245,22 @@ export const resultsText = (plan: Plan): string | null => {
         return null;
     }
     return [i18next.t('plan:results.title', { title: plan.meta.title }), ...groups.map((group) => [group.heading, ...group.lines].join('\n'))].join('\n\n');
-};
+}
 
 /* One step as a line of Markdown, for Copy in its menu. */
-export const stepMarkdown = (kind: Plan['meta']['kind'], step: PlanStep): string => {
+export function stepMarkdown(kind: Plan['meta']['kind'], step: PlanStep): string {
     const state = stepState(step);
     const mark = state === 'done' ? '[x]' : '[ ]';
     const label = state === 'open' || state === 'done' ? '' : ` (${stateLabel(kind, state).toLowerCase()})`;
     return `- ${mark} ${step.title}${label}${step.note ? `\n    > ${step.note.replace(/\n/g, '\n    > ')}` : ''}`;
-};
+}
 
 /*
  * The plan header, counted out in words. `progressText` in `@ruimte/plan` writes the same numbers
  * for an agent, which reads English whatever the person in front of the screen reads, so the two
  * are separate rather than one with a language argument.
  */
-export const progressParts = (plan: Pick<Plan, 'meta' | 'items'>): string[] => {
+export function progressParts(plan: Pick<Plan, 'meta' | 'items'>): string[] {
     const progress = planProgress(plan.items);
     const extra = (count: number, key: string): string[] => (count > 0 ? [i18next.t(`plan:progress.${key}`, { count })] : []);
     if (plan.meta.kind === 'test') {
@@ -271,4 +283,4 @@ export const progressParts = (plan: Pick<Plan, 'meta' | 'items'>): string[] => {
         ...extra(progress.skipped, 'skipped'),
         ...extra(progress.blocked, 'blocked')
     ];
-};
+}

@@ -8,13 +8,14 @@ export interface WindowAddress {
     replace(search: string): void;
 }
 
-const pageAddress = (): WindowAddress | null =>
-    typeof history === 'undefined'
+function pageAddress(): WindowAddress | null {
+    return typeof history === 'undefined'
         ? null
         : {
               search: () => location.search,
               replace: (search) => history.replaceState(history.state, '', `${location.pathname}${search}${location.hash}`)
           };
+}
 
 /*
  * Asks the shell for this window to show a project, or nothing (null). A project is in one window
@@ -22,11 +23,11 @@ const pageAddress = (): WindowAddress | null =>
  * Granted at once where no shell keeps windows, a browser among them. Once granted the address
  * follows, so a reload opens what the window shows.
  */
-export const claimWindow = async (
+export async function claimWindow(
     project: { endpointId: string; projectId: string } | null,
     shell: Pick<DesktopBridge, 'claimWindow'> | null = desktop(),
     address: WindowAddress | null = pageAddress()
-): Promise<boolean> => {
+): Promise<boolean> {
     const claim = shell?.claimWindow;
     if (!claim) {
         return true;
@@ -41,4 +42,4 @@ export const claimWindow = async (
         }
     }
     return granted;
-};
+}

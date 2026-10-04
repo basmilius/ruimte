@@ -52,19 +52,21 @@ export interface EditorFont {
     fontLigatures?: boolean;
 }
 
-const hex = (value: number): string => value.toString(16).padStart(2, '0');
+function hex(value: number): string {
+    return value.toString(16).padStart(2, '0');
+}
 
 /* Monaco parses only hex, and a token can be any CSS color, `color-mix()` included; a pixel is what every one of them ends up as. */
-const pixelHex = (context: OffscreenCanvasRenderingContext2D, color: string): string => {
+function pixelHex(context: OffscreenCanvasRenderingContext2D, color: string): string {
     context.clearRect(0, 0, 1, 1);
     context.fillStyle = color;
     context.fillRect(0, 0, 1, 1);
     const [red = 0, green = 0, blue = 0, alpha = 255] = context.getImageData(0, 0, 1, 1).data;
     return `#${hex(red)}${hex(green)}${hex(blue)}${alpha === 255 ? '' : hex(alpha)}`;
-};
+}
 
 /* The chrome colors under an element, for a Monaco theme. A token the page does not define is left to Shiki's theme. */
-export const readChromeColors = (element: HTMLElement): Record<string, string> => {
+export function readChromeColors(element: HTMLElement): Record<string, string> {
     const context = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true });
     if (!context) {
         return { ...CHROME_FIXED };
@@ -84,10 +86,10 @@ export const readChromeColors = (element: HTMLElement): Record<string, string> =
     }
     probe.remove();
     return colors;
-};
+}
 
 /* The first of the tokens the page defines, in pixels. */
-const pixels = (style: CSSStyleDeclaration, ...tokens: string[]): number | undefined => {
+function pixels(style: CSSStyleDeclaration, ...tokens: string[]): number | undefined {
     for (const token of tokens) {
         const value = Number.parseFloat(style.getPropertyValue(token));
         if (Number.isFinite(value)) {
@@ -95,14 +97,14 @@ const pixels = (style: CSSStyleDeclaration, ...tokens: string[]): number | undef
         }
     }
     return undefined;
-};
+}
 
 /*
  * The viewer's code face: `--font-mono`, which the terminal font setting overrides, at `--code-font-size`
  * and `--code-line-height`, with ligatures unless the page turned them off. A page without the code
  * tokens gets its interface's `--text-code`.
  */
-export const readEditorFont = (element: HTMLElement): EditorFont => {
+export function readEditorFont(element: HTMLElement): EditorFont {
     const style = getComputedStyle(element);
     const family = style.getPropertyValue('--font-mono').trim();
     return {
@@ -111,4 +113,4 @@ export const readEditorFont = (element: HTMLElement): EditorFont => {
         lineHeight: pixels(style, '--code-line-height', '--text-code--line-height'),
         fontLigatures: style.fontVariantLigatures !== 'none'
     };
-};
+}

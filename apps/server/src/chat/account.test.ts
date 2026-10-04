@@ -13,24 +13,26 @@ import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.t
 import { ChatStore } from '@ruimte/agents/chat/chat-store';
 import { claudeProjectSlug } from '@ruimte/agents/chat/claude-transcript';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true },
-                { id: 'chat-codex', kind: 'chat', title: 'Codex', x: 600, y: 0, w: 560, h: 640, provider: 'codex', providerFixed: true }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude', providerFixed: true },
+                    { id: 'chat-codex', kind: 'chat', title: 'Codex', x: 600, y: 0, w: 560, h: 640, provider: 'codex', providerFixed: true }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let root: string;
 let home: string;
@@ -90,14 +92,15 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const turnsOf = (chatId: string): ChatTurnItem[] =>
-    (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+function turnsOf(chatId: string): ChatTurnItem[] {
+    return (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
-const say = async (chatId: string, text: string): Promise<void> => {
+async function say(chatId: string, text: string): Promise<void> {
     const before = turnsOf(chatId).length;
     await daemon.chats.send(chatId, text);
     await daemon.until(() => daemon.chats.get(chatId)?.info.activeTurnId === null && turnsOf(chatId).length === before + 1);
-};
+}
 
 describe('a chat under an account', () => {
     test('without one starts its CLI in the environment of the machine', async () => {

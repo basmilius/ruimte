@@ -2,16 +2,18 @@ import { describe, expect, test } from 'bun:test';
 import type { CanvasNode, Edge, TextElement } from '@/state/canvas';
 import { contextSourcesOf } from './sources';
 
-const node = (id: string, kind: CanvasNode['kind'], extra: Partial<CanvasNode> = {}): CanvasNode => ({
-    id,
-    kind,
-    title: id,
-    x: 0,
-    y: 0,
-    w: 100,
-    h: 100,
-    ...extra
-});
+function node(id: string, kind: CanvasNode['kind'], extra: Partial<CanvasNode> = {}): CanvasNode {
+    return {
+        id,
+        kind,
+        title: id,
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        ...extra
+    };
+}
 
 describe('the context sources of a canvas', () => {
     const nodes: Record<string, CanvasNode> = {

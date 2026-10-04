@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { SpeechBridge, SpeechEvent } from '@ruimte/desktop-bridge';
 import { HelperSession, type Capture } from './helper';
 
-const deferred = <T>() => {
+function deferred<T>() {
     let resolve!: (value: T) => void;
     let reject!: (error: Error) => void;
     const promise = new Promise<T>((yes, no) => {
@@ -10,13 +10,13 @@ const deferred = <T>() => {
         reject = no;
     });
     return { promise, resolve, reject };
-};
-const flush = async (): Promise<void> => {
+}
+async function flush(): Promise<void> {
     for (let i = 0; i < 20; i++) {
         await Promise.resolve();
     }
-};
-const fixture = (allowed = true) => {
+}
+function fixture(allowed = true) {
     const ready = deferred<void>();
     const calls: string[] = [];
     let id = '';
@@ -89,7 +89,7 @@ const fixture = (allowed = true) => {
         calls,
         emit: (event: Omit<SpeechEvent, 'sessionId'> & { sessionId?: string }) => listener?.({ ...event, sessionId: event.sessionId ?? id } as SpeechEvent)
     };
-};
+}
 
 describe('dictation lifecycle', () => {
     test('asks for the microphone, then waits for the loaded model before opening it', async () => {

@@ -7,29 +7,31 @@ import type { BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput }
 import { ChatSession, type ChatSessionOptions } from './chat-session.ts';
 import { ClaudeProtocol } from './claude-protocol.ts';
 
-const info = (): ChatInfo => ({
-    chatId: 'child',
-    provider: 'claude',
-    cwd: '/tmp',
-    agentSessionId: null,
-    model: null,
-    selection: claudeProvider.catalog.normalize(undefined),
-    runtimeMode: 'supervised',
-    status: 'idle',
-    running: false,
-    activeTurnId: null,
-    slashCommands: [],
-    usage: { contextTokens: 0, contextWindow: 200000, costUsd: 0, turns: 0 },
-    createdAt: 1
-});
+function info(): ChatInfo {
+    return {
+        chatId: 'child',
+        provider: 'claude',
+        cwd: '/tmp',
+        agentSessionId: null,
+        model: null,
+        selection: claudeProvider.catalog.normalize(undefined),
+        runtimeMode: 'supervised',
+        status: 'idle',
+        running: false,
+        activeTurnId: null,
+        slashCommands: [],
+        usage: { contextTokens: 0, contextWindow: 200000, costUsd: 0, turns: 0 },
+        createdAt: 1
+    };
+}
 
-const flush = async (): Promise<void> => {
+async function flush(): Promise<void> {
     for (let i = 0; i < 12; i++) {
         await Promise.resolve();
     }
-};
+}
 
-const rig = (options: Partial<ChatSessionOptions> = {}, blocked = false) => {
+function rig(options: Partial<ChatSessionOptions> = {}, blocked = false) {
     const start = Promise.withResolvers<void>();
     if (!blocked) {
         start.resolve();
@@ -70,7 +72,7 @@ const rig = (options: Partial<ChatSessionOptions> = {}, blocked = false) => {
         ...options
     });
     return { session, sent, start, backend, stops: () => stops, event: (event: BackendEvent) => host.onEvent(event) };
-};
+}
 
 describe('a queue behind a usage limit', () => {
     test('an unknown reset preserves the queue without owing an automatic resume', async () => {
@@ -541,7 +543,7 @@ test('a legacy result proves wake acceptance, while a failed durable save sends 
     await failed.session.dispose();
 });
 
-const replacementRig = (provider = claudeProvider, options: Partial<ChatSessionOptions> = {}) => {
+function replacementRig(provider = claudeProvider, options: Partial<ChatSessionOptions> = {}) {
     let folders: readonly string[] = [];
     let failNextStart = false;
     const instances: {
@@ -614,7 +616,7 @@ const replacementRig = (provider = claudeProvider, options: Partial<ChatSessionO
             failNextStart = true;
         }
     };
-};
+}
 
 describe('backend replacement with live work', () => {
     for (const change of ['model', 'options', 'mode', 'account', 'folders'] as const) {

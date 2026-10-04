@@ -7,11 +7,14 @@ import { useUi } from '@/state/ui';
 import { PromptDialog } from '@basmilius/desktop-ui';
 
 // A group's title, as a branch name git accepts.
-const branchFromTitle = (title: string): string =>
-    title
-        .toLowerCase()
-        .replace(/[^a-z0-9._/-]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'work';
+function branchFromTitle(title: string): string {
+    return (
+        title
+            .toLowerCase()
+            .replace(/[^a-z0-9._/-]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'work'
+    );
+}
 
 /* Binds a group to a git worktree of the project's repository; every node made inside it starts there. */
 export function WorktreeDialog() {

@@ -7,8 +7,8 @@ import { watchPool } from '@/transport/pool-watch';
  * a node. The daemon tells every socket about every task it writes; a socket that opens asks once per
  * project the machine lists, and a project that turns up in the list later is asked about then.
  */
-export const startTaskWatch = (): (() => void) =>
-    watchPool((link, endpointId) => {
+export function startTaskWatch(): () => void {
+    return watchPool((link, endpointId) => {
         const asked = new Set<string>();
         const ask = (): void => {
             // The project list also moves while the socket is down, and a closed link answers nothing.
@@ -37,3 +37,4 @@ export const startTaskWatch = (): (() => void) =>
             subscriptions: [link.on('task.changed', (payload) => useTasks.getState().putTask(endpointId, payload.task)), useProjectList.subscribe(ask)]
         };
     });
+}

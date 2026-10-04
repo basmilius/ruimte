@@ -36,13 +36,13 @@ const defaults: AppleCommandDependencies = {
     }
 };
 
-export const executeAppleCommand = async (
+export async function executeAppleCommand(
     cwd: string,
     command: string,
     signal?: AbortSignal,
     env: Record<string, string | undefined> = process.env,
     dependencies: Partial<AppleCommandDependencies> = {}
-): Promise<AppleToolResult> => {
+): Promise<AppleToolResult> {
     signal?.throwIfAborted();
     if (!command.trim() || Buffer.byteLength(command) > 16_000 || command.includes('\0')) {
         throw new Error('Use a nonempty shell command of at most 16000 bytes.');
@@ -132,4 +132,4 @@ export const executeAppleCommand = async (
         signal?.removeEventListener('abort', stop);
         stop();
     }
-};
+}

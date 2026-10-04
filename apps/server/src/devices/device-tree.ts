@@ -42,12 +42,15 @@ export interface DeviceElement {
 }
 
 /* Text that only holds white space says nothing, the single space the iOS home screen labels itself with included. */
-export const textOf = (value: string | null | undefined): string | null => (value === null || value === undefined || value.trim() === '' ? null : value);
+export function textOf(value: string | null | undefined): string | null {
+    return value === null || value === undefined || value.trim() === '' ? null : value;
+}
 
-const intersects = (frame: ElementFrame, screen: { width: number; height: number }): boolean =>
-    frame.x < screen.width && frame.y < screen.height && frame.x + frame.width > 0 && frame.y + frame.height > 0;
+function intersects(frame: ElementFrame, screen: { width: number; height: number }): boolean {
+    return frame.x < screen.width && frame.y < screen.height && frame.x + frame.width > 0 && frame.y + frame.height > 0;
+}
 
-export const flattenTree = (tree: DeviceTree): DeviceElement[] => {
+export function flattenTree(tree: DeviceTree): DeviceElement[] {
     const elements: DeviceElement[] = [];
     const visit = (node: DeviceTreeNode, depth: number, parent: number | null): void => {
         const handle = elements.length;
@@ -70,10 +73,10 @@ export const flattenTree = (tree: DeviceTree): DeviceElement[] => {
     };
     visit(tree.root, 0, null);
     return elements;
-};
+}
 
 /* The elements whose label, value or identifier holds the text, ignoring case, with every element they sit in. */
-export const findElements = (elements: readonly DeviceElement[], text: string): { elements: DeviceElement[]; matches: number } => {
+export function findElements(elements: readonly DeviceElement[], text: string): { elements: DeviceElement[]; matches: number } {
     const needle = text.toLowerCase();
     const holds = (element: DeviceElement): boolean =>
         [element.label, element.value, element.identifier].some((candidate) => candidate !== null && candidate.toLowerCase().includes(needle));
@@ -89,13 +92,15 @@ export const findElements = (elements: readonly DeviceElement[], text: string): 
         }
     }
     return { elements: elements.filter((element) => kept.has(element.handle)), matches };
-};
+}
 
 /* The pixel a tap on an element lands on: the middle of its frame. */
-export const centerOf = (element: Pick<DeviceElement, 'frame'>): { x: number; y: number } => ({
-    x: element.frame.x + element.frame.width / 2,
-    y: element.frame.y + element.frame.height / 2
-});
+export function centerOf(element: Pick<DeviceElement, 'frame'>): { x: number; y: number } {
+    return {
+        x: element.frame.x + element.frame.width / 2,
+        y: element.frame.y + element.frame.height / 2
+    };
+}
 
 const BridgeFrameSchema = z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() });
 
@@ -136,17 +141,17 @@ export const SimulatorTreeReplySchema = z.object({
 export type SimulatorTreeReply = z.infer<typeof SimulatorTreeReplySchema>;
 
 /* `AXButton` reads as `Button`, the way a state of an app on this Mac names it. */
-const roleName = (role: string | null): string | null => {
+function roleName(role: string | null): string | null {
     const text = textOf(role);
     return text === null ? null : text.replace(/^AX(?=[A-Z])/, '');
-};
+}
 
 /*
  * A simulator's tree in pixels of its screen. The bridge counts in points, and a shot is taken in
  * pixels, so every frame is scaled; a bridge that knows no scale leaves them in points, which still
  * taps right because a tap is a share of the screen.
  */
-export const simulatorTree = (reply: SimulatorTreeReply): DeviceTree => {
+export function simulatorTree(reply: SimulatorTreeReply): DeviceTree {
     const scale = reply.scale ?? 1;
     const convert = (node: BridgeNode): DeviceTreeNode => ({
         role: roleName(node.role) ?? 'Unknown',
@@ -160,4 +165,4 @@ export const simulatorTree = (reply: SimulatorTreeReply): DeviceTree => {
     });
     const root = convert(reply.root);
     return { screen: { width: Math.round(root.frame.width), height: Math.round(root.frame.height) }, root, truncated: reply.truncated };
-};
+}

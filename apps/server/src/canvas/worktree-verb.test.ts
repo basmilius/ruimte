@@ -9,24 +9,26 @@ import { ManualClock } from '@ruimte/agents/outbox/manual-clock';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        {
-            kind: 'canvas',
-            id: 'main',
-            name: 'Canvas',
-            nodes: [
-                { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
-                { id: 'chat-stranger', kind: 'chat', title: 'Stranger', x: 700, y: 0, w: 560, h: 640, provider: 'claude' }
-            ],
-            texts: [],
-            edges: [],
-            layouts: []
-        }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'chat-lead', kind: 'chat', title: 'Lead', x: 0, y: 0, w: 560, h: 640, provider: 'claude' },
+                    { id: 'chat-stranger', kind: 'chat', title: 'Stranger', x: 700, y: 0, w: 560, h: 640, provider: 'claude' }
+                ],
+                texts: [],
+                edges: [],
+                layouts: []
+            }
+        ]
+    };
+}
 
 let template: RepoTemplate;
 let root: string;
@@ -34,11 +36,12 @@ let folder: string;
 let store: ProjectStore;
 let daemon: TestDaemon;
 
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
+function exists(path: string): Promise<boolean> {
+    return stat(path).then(
         () => true,
         () => false
     );
+}
 
 beforeAll(async () => {
     template = await repoTemplate('ruimte-worktree-verb', async (dir) => {
@@ -71,14 +74,15 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-const firstTurn = (chatId: string): ChatTurnItem | undefined =>
-    daemon.chats
+function firstTurn(chatId: string): ChatTurnItem | undefined {
+    return daemon.chats
         .get(chatId)
         ?.thread.list()
         .find((item): item is ChatTurnItem => item.kind === 'turn');
+}
 
 /* A team of two chat roles, each writing one file in a worktree of its own, with both first turns over. */
-const team = async (lexerWrites: string, parserWrites: string): Promise<{ lexer: string; parser: string }> => {
+async function team(lexerWrites: string, parserWrites: string): Promise<{ lexer: string; parser: string }> {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     const roles = [
         { title: 'Lexer', prompt: `write: ${lexerWrites}`, provider: 'claude' },
@@ -90,7 +94,7 @@ const team = async (lexerWrites: string, parserWrites: string): Promise<{ lexer:
     await daemon.worker.settled();
     await daemon.until(() => firstTurn(lexer!)?.state === 'done' && firstTurn(parser!)?.state === 'done');
     return { lexer: lexer!, parser: parser! };
-};
+}
 
 test('a lead lists the worktrees of its team with their nodes and counts, and reads what a child wrote', async () => {
     const { lexer, parser } = await team('lexer.txt from the lexer', 'parser.txt from the parser');

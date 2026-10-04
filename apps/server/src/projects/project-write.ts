@@ -18,7 +18,7 @@ export interface ProjectWriteIO {
     remove(path: string): Promise<void>;
 }
 
-const removeDurable = async (path: string): Promise<void> => {
+async function removeDurable(path: string): Promise<void> {
     await rm(path, { force: true });
     if (process.platform !== 'win32') {
         const directory = await open(dirname(path), 'r');
@@ -28,10 +28,12 @@ const removeDurable = async (path: string): Promise<void> => {
             await directory.close();
         }
     }
-};
+}
 
 export const PROJECT_WRITE_IO: ProjectWriteIO = { write: writeAtomic, remove: removeDurable };
-export const pendingWritePathOf = (path: string): string => join(privateDirOf(path), 'pending-save.json');
+export function pendingWritePathOf(path: string): string {
+    return join(privateDirOf(path), 'pending-save.json');
+}
 
 /* A file moved under a save before its first write: nothing was written, so nothing waits on recovery. */
 export class ProjectWriteRaced extends Error {}
@@ -39,10 +41,13 @@ export class ProjectWriteRaced extends Error {}
 /* An interrupted save that cannot finish without overwriting an edit made since. */
 export class ProjectWriteStuck extends Error {}
 
-const stuck = (path: string, why: string): ProjectWriteStuck =>
-    new ProjectWriteStuck(`The interrupted project save needs recovery: ${why}. Delete ${pendingWritePathOf(path)} to keep the project files as they are now.`);
+function stuck(path: string, why: string): ProjectWriteStuck {
+    return new ProjectWriteStuck(
+        `The interrupted project save needs recovery: ${why}. Delete ${pendingWritePathOf(path)} to keep the project files as they are now.`
+    );
+}
 
-const bytesAt = async (path: string): Promise<Buffer | null> => {
+async function bytesAt(path: string): Promise<Buffer | null> {
     try {
         return await readFile(path);
     } catch (error) {
@@ -51,16 +56,20 @@ const bytesAt = async (path: string): Promise<Buffer | null> => {
         }
         throw error;
     }
-};
+}
 
-const textAt = async (path: string): Promise<string | null> => (await bytesAt(path))?.toString('utf8') ?? null;
+async function textAt(path: string): Promise<string | null> {
+    return (await bytesAt(path))?.toString('utf8') ?? null;
+}
 
-const movePaths = (path: string, move: PendingWrite['moves'][number]) => ({
-    from: viewFilePathOf(path, move.kind, move.viewId, move.shared ? [] : [move.viewId]),
-    to: viewFilePathOf(path, move.kind, move.viewId, move.shared ? [move.viewId] : [])
-});
+function movePaths(path: string, move: PendingWrite['moves'][number]) {
+    return {
+        from: viewFilePathOf(path, move.kind, move.viewId, move.shared ? [] : [move.viewId]),
+        to: viewFilePathOf(path, move.kind, move.viewId, move.shared ? [move.viewId] : [])
+    };
+}
 
-const checkMove = async (path: string, move: PendingWrite['moves'][number]) => {
+async function checkMove(path: string, move: PendingWrite['moves'][number]) {
     const { from, to } = movePaths(path, move);
     const source = await bytesAt(from);
     const target = await bytesAt(to);
@@ -69,15 +78,17 @@ const checkMove = async (path: string, move: PendingWrite['moves'][number]) => {
         throw stuck(path, `the file of ${move.viewId} changed since it started`);
     }
     return { from, to, source, target, expected };
-};
+}
 
-const filesOf = (path: string, pending: PendingWrite) => [
-    { path, before: pending.before.text, after: pending.after.text },
-    { path: privatePathOf(path), before: pending.before.private, after: pending.after.private }
-];
+function filesOf(path: string, pending: PendingWrite) {
+    return [
+        { path, before: pending.before.text, after: pending.after.text },
+        { path: privatePathOf(path), before: pending.before.private, after: pending.after.private }
+    ];
+}
 
 /* Recovery never overwrites an edit made after the interrupted save. */
-const checkUnmoved = async (path: string, pending: PendingWrite): Promise<void> => {
+async function checkUnmoved(path: string, pending: PendingWrite): Promise<void> {
     for (const file of filesOf(path, pending)) {
         const current = await textAt(file.path);
         if (current !== file.before && current !== file.after) {
@@ -87,14 +98,14 @@ const checkUnmoved = async (path: string, pending: PendingWrite): Promise<void> 
     for (const move of pending.moves) {
         await checkMove(path, move);
     }
-};
+}
 
-const complete = async (path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> => {
+async function complete(path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> {
     await checkUnmoved(path, pending);
     await apply(path, pending, io);
-};
+}
 
-const apply = async (path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> => {
+async function apply(path: string, pending: PendingWrite, io: ProjectWriteIO): Promise<void> {
     for (const file of filesOf(path, pending)) {
         if ((await textAt(file.path)) !== file.after) {
             await mkdir(dirname(file.path), { recursive: true });
@@ -113,9 +124,9 @@ const apply = async (path: string, pending: PendingWrite, io: ProjectWriteIO): P
         }
     }
     await io.remove(pendingWritePathOf(path));
-};
+}
 
-export const recoverProjectWrite = async (path: string, io: ProjectWriteIO = PROJECT_WRITE_IO): Promise<PendingWrite['after'] | null> => {
+export async function recoverProjectWrite(path: string, io: ProjectWriteIO = PROJECT_WRITE_IO): Promise<PendingWrite['after'] | null> {
     const text = await textAt(pendingWritePathOf(path));
     if (text === null) {
         return null;
@@ -123,15 +134,15 @@ export const recoverProjectWrite = async (path: string, io: ProjectWriteIO = PRO
     const pending = WriteSchema.parse(JSON.parse(text));
     await complete(path, pending, io);
     return pending.after;
-};
+}
 
-export const writeProjectFiles = async (
+export async function writeProjectFiles(
     path: string,
     after: PendingWrite['after'],
     moved: readonly string[] = [],
     shared: readonly string[] = [],
     io: ProjectWriteIO = PROJECT_WRITE_IO
-): Promise<void> => {
+): Promise<void> {
     await recoverProjectWrite(path, io);
     const before = { text: await textAt(path), private: await textAt(privatePathOf(path)) };
     const moves: PendingWrite['moves'] = [];
@@ -167,4 +178,4 @@ export const writeProjectFiles = async (
         throw new ProjectWriteRaced('The project files changed on disk while they were saved; nothing was written');
     }
     await apply(path, pending, io);
-};
+}

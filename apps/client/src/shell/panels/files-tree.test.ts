@@ -20,18 +20,22 @@ import {
 
 const ROOT = '/repo';
 
-const entry = (path: string, patch: Partial<FsEntry> = {}): FsEntry => ({
-    name: path.slice(path.lastIndexOf('/') + 1),
-    path,
-    kind: 'file',
-    size: 0,
-    mtime: 0,
-    hidden: path.slice(path.lastIndexOf('/') + 1).startsWith('.'),
-    ignored: false,
-    ...patch
-});
+function entry(path: string, patch: Partial<FsEntry> = {}): FsEntry {
+    return {
+        name: path.slice(path.lastIndexOf('/') + 1),
+        path,
+        kind: 'file',
+        size: 0,
+        mtime: 0,
+        hidden: path.slice(path.lastIndexOf('/') + 1).startsWith('.'),
+        ignored: false,
+        ...patch
+    };
+}
 
-const directory = (path: string, patch: Partial<FsEntry> = {}): FsEntry => entry(path, { kind: 'directory', size: null, ...patch });
+function directory(path: string, patch: Partial<FsEntry> = {}): FsEntry {
+    return entry(path, { kind: 'directory', size: null, ...patch });
+}
 
 describe('paths', () => {
     test('a directory keeps the trailing slash the tree marks it with', () => {
@@ -184,7 +188,9 @@ describe('dirnameOf', () => {
     });
 });
 
-const file = (path: string, status: string): GitFile => ({ path, status, state: 'unstaged', added: 0, deleted: 0, binary: false });
+function file(path: string, status: string): GitFile {
+    return { path, status, state: 'unstaged', added: 0, deleted: 0, binary: false };
+}
 
 describe('gitStatusEntries', () => {
     test('names every changed row the way the tree does', () => {

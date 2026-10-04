@@ -3,7 +3,9 @@ import { GRID, type Rect } from '@/canvas/math';
 import { resizedRect } from './resize';
 
 const rect: Rect = { x: 80, y: 160, w: 480, h: 320 };
-const center = (value: Rect) => ({ x: value.x + value.w / 2, y: value.y + value.h / 2 });
+function center(value: Rect) {
+    return { x: value.x + value.w / 2, y: value.y + value.h / 2 };
+}
 const edges = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
 describe('canvas resize', () => {

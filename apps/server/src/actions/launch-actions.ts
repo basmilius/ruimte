@@ -3,21 +3,22 @@ import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { VerbRefusal, field, orNote, type LaunchHost, type LaunchReading } from '../canvas/verb.ts';
 import type { ServerActionContext } from './context.ts';
 
-const launchHostOf = (context: ServerActionContext): LaunchHost => {
+function launchHostOf(context: ServerActionContext): LaunchHost {
     if (!context.host.launches) {
         throw new VerbRefusal('no-launches', 'This machine runs no launches');
     }
     return context.host.launches;
-};
+}
 
-const launchLines = (launches: readonly LaunchReading[]): string[] =>
-    orNote(
+function launchLines(launches: readonly LaunchReading[]): string[] {
+    return orNote(
         launches.map((launch) => `launch\t${field(launch.launchId)}\t${field(launch.name)}`),
         'This project has no launches; a person adds them from the launch chip in the toolbar'
     );
+}
 
 /* A launch by its id, or by a name no other launch of the project carries; names are what a person sees, ids are what stays unique. */
-const named = (launches: readonly LaunchReading[], wanted: string): LaunchReading => {
+function named(launches: readonly LaunchReading[], wanted: string): LaunchReading {
     const byId = launches.find((launch) => launch.launchId === wanted);
     if (byId) {
         return byId;
@@ -30,11 +31,13 @@ const named = (launches: readonly LaunchReading[], wanted: string): LaunchReadin
         throw new VerbRefusal('ambiguous-launch', `${byName.length} launches are called ${wanted}; name one by its id`, launchLines(byName));
     }
     throw new VerbRefusal('unknown-launch', `This project has no launch ${wanted}`, launchLines(launches));
-};
+}
 
-const lastLines = (text: string, count: number): string => text.split('\n').slice(-count).join('\n');
+function lastLines(text: string, count: number): string {
+    return text.split('\n').slice(-count).join('\n');
+}
 
-const started = async (context: ServerActionContext, wanted: string, restart: boolean) => {
+async function started(context: ServerActionContext, wanted: string, restart: boolean) {
     const host = launchHostOf(context);
     const { projectId } = context.place;
     const launch = named(await host.list(projectId), wanted);
@@ -52,7 +55,7 @@ const started = async (context: ServerActionContext, wanted: string, restart: bo
         throw new VerbRefusal('port-busy', `Port ${busy.port} is taken by ${holder}; nothing started`);
     }
     return { output: { launchId: launch.launchId, name: launch.name, kind: launch.kind, members: launch.members } };
-};
+}
 
 export const launchActions: ActionHandlers<ServerActionContext> = {
     'launch.list': async (_input, { context }) => {

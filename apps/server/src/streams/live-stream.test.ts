@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { LiveStreamFrame } from '@ruimte/contracts';
 import { LiveStreamHub, type LiveFrameSource } from './live-stream.ts';
 
-const frame = (sequence: number): LiveStreamFrame => ({ sequence, width: 2, height: 2, data: new Uint8Array([sequence]) });
+function frame(sequence: number): LiveStreamFrame {
+    return { sequence, width: 2, height: 2, data: new Uint8Array([sequence]) };
+}
 
 describe('LiveStreamHub', () => {
     test('reports the registered source format', () => {

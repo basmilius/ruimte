@@ -21,7 +21,7 @@ import { useWindow } from '@/state/window';
 const SETTLE_MS = 100;
 
 /* Mounted once by the app: keeps the shell's native menu on what has the focus and runs its clicks. */
-export const useNativeMenu = (): void => {
+export function useNativeMenu(): void {
     useEffect(() => {
         const bridge = desktop();
         const setMenu = bridge?.setMenu;
@@ -69,4 +69,4 @@ export const useNativeMenu = (): void => {
             }
         };
     }, []);
-};
+}

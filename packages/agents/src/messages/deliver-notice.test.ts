@@ -10,27 +10,31 @@ import { NoticeStore, type Notice } from './notice-store.ts';
 let dataDir: string;
 let store: NoticeStore;
 
-const left = (text: string, targetId = 'chat-2'): Omit<Notice, 'createdAt'> => ({
-    projectId: 'project-1',
-    targetId,
-    from: 'chat-1',
-    fromTitle: 'Lead',
-    text
-});
+function left(text: string, targetId = 'chat-2'): Omit<Notice, 'createdAt'> {
+    return {
+        projectId: 'project-1',
+        targetId,
+        from: 'chat-1',
+        fromTitle: 'Lead',
+        text
+    };
+}
 
 const words = { shown: (notice: Notice): string => `${notice.fromTitle} wrote: ${notice.text}` };
 
-const turn = (id: string, messageFrom?: string[]): ChatTurnItem => ({
-    id,
-    kind: 'turn',
-    createdAt: 1,
-    turnId: id,
-    state: 'running',
-    origin: 'agent',
-    endedAt: null,
-    costUsd: 0,
-    ...(messageFrom ? { messageFrom } : {})
-});
+function turn(id: string, messageFrom?: string[]): ChatTurnItem {
+    return {
+        id,
+        kind: 'turn',
+        createdAt: 1,
+        turnId: id,
+        state: 'running',
+        origin: 'agent',
+        endedAt: null,
+        costUsd: 0,
+        ...(messageFrom ? { messageFrom } : {})
+    };
+}
 
 beforeEach(async () => {
     dataDir = await mkdtemp(join(tmpdir(), 'agents-deliver-'));

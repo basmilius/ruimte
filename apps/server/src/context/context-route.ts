@@ -10,13 +10,15 @@ const UNREAD: ReadonlySet<string> = new Set(['unknown-source', 'not-linked', 'un
 
 const TEXT = { 'content-type': 'text/plain; charset=utf-8' };
 
-const linesOf = (details: unknown): string[] => (Array.isArray(details) && details.every((line) => typeof line === 'string') ? (details as string[]) : []);
+function linesOf(details: unknown): string[] {
+    return Array.isArray(details) && details.every((line) => typeof line === 'string') ? (details as string[]) : [];
+}
 
 /*
  * The statuses a `ruimte-context` of any build reads: a 404 carries the refusal rows of a source that
  * could not be read, a 422 the sentence about a subagent, and anything else is the daemon failing.
  */
-const failed = (result: ActionResult): Response => {
+function failed(result: ActionResult): Response {
     if (result.status !== 'failed') {
         return new Response(`The read answered ${result.status}`, { status: 500, headers: TEXT });
     }
@@ -28,7 +30,7 @@ const failed = (result: ActionResult): Response => {
         return new Response(error.message, { status: 422, headers: TEXT });
     }
     return new Response(`The read failed: ${error.message}`, { status: 500, headers: TEXT });
-};
+}
 
 interface ContextRouteDeps {
     /* The session or chat a bearer token speaks for. */
@@ -40,7 +42,7 @@ interface ContextRouteDeps {
  * `GET /context` lists, `GET /context/<id>[?tail=N][&subagent=T]` reads; the bearer token names the
  * agent asking. Both run `context.list` and `context.read`, so the CLI is one adapter among others.
  */
-export const handleContextRequest = async (request: Request, pathname: string, deps: ContextRouteDeps): Promise<Response> => {
+export async function handleContextRequest(request: Request, pathname: string, deps: ContextRouteDeps): Promise<Response> {
     if (request.method !== 'GET') {
         return new Response('Method not allowed', { status: 405 });
     }
@@ -70,4 +72,4 @@ export const handleContextRequest = async (request: Request, pathname: string, d
     }
     const read = await serverActions.execute('context.read', { sourceId, tail, subagent: query.get('subagent') || null }, call);
     return read.status === 'completed' ? new Response(read.output.text, { headers: TEXT }) : failed(read);
-};
+}

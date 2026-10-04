@@ -1,4 +1,4 @@
-import { ACTION_DEFINITIONS, ActionRefusal, REVISION_CONFLICT, revisionConflict, type ActionName, type ActionRevisionCheck } from '@ruimte/actions';
+import { ACTION_DEFINITIONS, ActionRefusal, REVISION_CONFLICT, revisionConflict, type ActionName, type ActionCall } from '@ruimte/actions';
 import type { StoreApi } from 'zustand';
 import { defaultDiagrams } from '@/state/diagram';
 import { defaultDrawings } from '@/state/drawing';
@@ -14,7 +14,7 @@ interface Held {
 const PROJECT_DOMAINS: ReadonlySet<string> = new Set(['views', 'canvas', 'layout']);
 const PROJECT_ACTIONS: ReadonlySet<ActionName> = new Set<ActionName>(['node.update', 'note.setColor', 'browser.navigate']);
 
-const heldTo = (document: string, expected: number, { rev, dirty }: Held): void => {
+function heldTo(document: string, expected: number, { rev, dirty }: Held): void {
     if (rev !== expected) {
         throw revisionConflict(document, expected, rev);
     }
@@ -22,18 +22,18 @@ const heldTo = (document: string, expected: number, { rev, dirty }: Held): void 
     if (dirty) {
         throw new ActionRefusal(REVISION_CONFLICT, `${document} has changes on screen that are not saved yet; read it again in a moment and decide anew.`);
     }
-};
+}
 
-const editorHeld = (kind: 'drawing' | 'diagram', viewId: unknown, peek: (viewId: string) => StoreApi<Held> | null): Held => {
+function editorHeld(kind: 'drawing' | 'diagram', viewId: unknown, peek: (viewId: string) => StoreApi<Held> | null): Held {
     const store = typeof viewId === 'string' ? peek(viewId) : null;
     if (store === null) {
         throw new ActionRefusal('inactive-view', `Open the ${kind} before changing what it holds.`);
     }
     return store.getState();
-};
+}
 
 /* A write in this window against the revision it was decided on, which a read here reports beside what it read. */
-export const checkClientRevision: ActionRevisionCheck<void> = (name, input, call) => {
+export function checkClientRevision(name: ActionName, input: unknown, call: ActionCall<void> & { expectedRevision: number }): void | Promise<void> {
     const viewId = (input as { viewId?: unknown }).viewId;
     if (name.startsWith('drawing.')) {
         heldTo(
@@ -56,4 +56,4 @@ export const checkClientRevision: ActionRevisionCheck<void> = (name, input, call
         return;
     }
     throw new ActionRefusal('no-revision', `“${name}” writes nothing with a revision this window reads, so it takes none.`);
-};
+}

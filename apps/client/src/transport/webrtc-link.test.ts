@@ -117,15 +117,17 @@ class FakePeer {
 }
 
 // Fake timers leave setImmediate alone, so this drains every pending promise without letting a timer run.
-const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+function tick(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
 // Each step runs the timers due in that millisecond, then every promise they started.
-const sleep = async (ms: number): Promise<void> => {
+async function sleep(ms: number): Promise<void> {
     for (let i = 0; i < ms; i++) {
         jest.advanceTimersByTime(1);
         await tick();
     }
-};
+}
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -135,7 +137,7 @@ afterEach(() => {
     jest.useRealTimers();
 });
 
-const setup = (extra: Partial<WebRtcLinkOptions> = {}) => {
+function setup(extra: Partial<WebRtcLinkOptions> = {}) {
     const socket = new FakeSocket();
     const peer = new FakePeer();
     const proved: Array<{ challenge: DirectChallengeFrame; binding: string }> = [];
@@ -161,7 +163,7 @@ const setup = (extra: Partial<WebRtcLinkOptions> = {}) => {
         ...extra
     })('ws://machine/ws?token=ticket', events);
     return { socket, peer, link, proved, tickets, log };
-};
+}
 
 const CHALLENGE: DirectChallengeFrame = {
     type: 'direct.challenge',
@@ -171,7 +173,7 @@ const CHALLENGE: DirectChallengeFrame = {
 };
 
 /* Everything up to the moment the daemon has answered the offer. */
-const negotiated = async (extra: Partial<WebRtcLinkOptions> = {}) => {
+async function negotiated(extra: Partial<WebRtcLinkOptions> = {}) {
     const context = setup(extra);
     context.socket.onopen?.();
     await tick();
@@ -182,13 +184,15 @@ const negotiated = async (extra: Partial<WebRtcLinkOptions> = {}) => {
     context.socket.event('direct.signaled', { envelope: { connectionId: offer.payload.envelope.connectionId, signal: { kind: 'answer', sdp: ANSWER } } });
     await tick();
     return { ...context, offer };
-};
+}
 
-const pathThrough = (localType: string): Array<Record<string, unknown>> => [
-    { id: 'P01', type: 'candidate-pair', localCandidateId: 'L01', remoteCandidateId: 'R01' },
-    { id: 'L01', type: 'local-candidate', candidateType: localType },
-    { id: 'R01', type: 'remote-candidate', candidateType: 'srflx' }
-];
+function pathThrough(localType: string): Array<Record<string, unknown>> {
+    return [
+        { id: 'P01', type: 'candidate-pair', localCandidateId: 'L01', remoteCandidateId: 'R01' },
+        { id: 'L01', type: 'local-candidate', candidateType: localType },
+        { id: 'R01', type: 'remote-candidate', candidateType: 'srflx' }
+    ];
+}
 
 describe('webRtcLink and the relay', () => {
     test('the servers a route hands out join the own ones of this client, and the path of the open channel is reported as it changes', async () => {

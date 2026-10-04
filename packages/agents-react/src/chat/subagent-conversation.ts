@@ -37,12 +37,12 @@ export const INITIAL_CONVERSATION: SubagentConversationState = {
  * stands and a new one goes after them all. A page that shares nothing with what is held means more
  * happened than one page holds, so what is held is dropped for it rather than shown with a hole.
  */
-export const mergeNewest = (
+export function mergeNewest(
     current: ChatItem[],
     currentCursor: string | null,
     page: ChatItem[],
     pageCursor: string | null
-): { items: ChatItem[]; cursor: string | null } => {
+): { items: ChatItem[]; cursor: string | null } {
     const known = new Map(current.map((item, index) => [item.id, index]));
     if (current.length > 0 && page.length > 0 && !page.some((item) => known.has(item.id))) {
         return { items: page, cursor: pageCursor };
@@ -57,9 +57,11 @@ export const mergeNewest = (
         }
     }
     return { items, cursor: current.length === 0 ? pageCursor : currentCursor };
-};
+}
 
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('agent-chat:subagents.noAnswer'));
+function messageOf(error: unknown): string {
+    return error instanceof Error ? error.message : i18next.t('agent-chat:subagents.noAnswer');
+}
 
 /*
  * One subagent's conversation as a panel follows it. Opening asks for the newest page and holds the

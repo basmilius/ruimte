@@ -9,7 +9,9 @@ interface LatestRelease {
     readonly platforms: readonly Platform[];
 }
 
-const subscribe = () => () => {};
+function subscribe() {
+    return () => {};
+}
 
 function detectPlatform(): Platform {
     const agent = navigator.userAgent;

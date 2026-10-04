@@ -1,16 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import { answerFieldKey, choiceKey, headingKey, isPrimaryKey, pageKey, staysInCard, stepIndex, toolbarKey, type PromptKeyEvent } from './keys';
 
-const key = (name: string, patch: Partial<PromptKeyEvent> = {}): PromptKeyEvent => ({
-    key: name,
-    code: name === ' ' ? 'Space' : name,
-    metaKey: false,
-    ctrlKey: false,
-    altKey: false,
-    shiftKey: false,
-    isComposing: false,
-    ...patch
-});
+function key(name: string, patch: Partial<PromptKeyEvent> = {}): PromptKeyEvent {
+    return {
+        key: name,
+        code: name === ' ' ? 'Space' : name,
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+        shiftKey: false,
+        isComposing: false,
+        ...patch
+    };
+}
 
 describe('prompt card keys', () => {
     test('a list wraps at both ends and jumps with Home and End', () => {

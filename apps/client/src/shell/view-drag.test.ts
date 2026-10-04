@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { carriesView, draggedViewId, edgeZoneAt, shapeOf, VIEW_DRAG_TYPE, zoneAt } from './view-drag';
 
-const transfer = (types: string[], data: Record<string, string> = {}): Pick<DataTransfer, 'types' | 'getData'> => ({
-    types,
-    getData: (type: string) => data[type] ?? ''
-});
+function transfer(types: string[], data: Record<string, string> = {}): Pick<DataTransfer, 'types' | 'getData'> {
+    return {
+        types,
+        getData: (type: string) => data[type] ?? ''
+    };
+}
 
 describe('what a drag carries', () => {
     test('a view drag is the one with this type on it', () => {

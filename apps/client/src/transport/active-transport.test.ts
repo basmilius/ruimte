@@ -5,15 +5,17 @@ import { ActiveTransport } from './active-transport';
 import { TransportPool, type PooledTransport } from './pool';
 import { TransportError, type ConnectionState, type TransportStatus } from './transport';
 
-const endpoint = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}`,
-    wsBaseUrl: `ws://${id}`,
-    reachability: 'lan',
-    daemonId: null,
-    daemonPublicKey: null
-});
+function endpoint(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}`,
+        wsBaseUrl: `ws://${id}`,
+        reachability: 'lan',
+        daemonId: null,
+        daemonPublicKey: null
+    };
+}
 
 interface Pending {
     type: RequestType;
@@ -79,7 +81,7 @@ class FakeTransport implements PooledTransport {
     dispose(): void {}
 }
 
-const setup = () => {
+function setup() {
     const sockets = new Map<string, FakeTransport>();
     const pool = new TransportPool({
         idleMs: 60_000,
@@ -111,9 +113,11 @@ const setup = () => {
             }
         }
     };
-};
+}
 
-const output = (sessionId: string): EventMap['session.output'] => ({ sessionId, data: 'hi' });
+function output(sessionId: string): EventMap['session.output'] {
+    return { sessionId, data: 'hi' };
+}
 
 describe('ActiveTransport', () => {
     test('a request goes to the machine that is active', async () => {

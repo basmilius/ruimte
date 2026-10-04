@@ -17,7 +17,7 @@ export interface ByteSources {
     file(path: string): Promise<{ mime: string } | null>;
 }
 
-const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ path: string; mime: string } | null> => {
+async function locate(sources: ByteSources, resource: ByteResource): Promise<{ path: string; mime: string } | null> {
     if (resource.kind === 'attachment') {
         const attachment = sources.attachment(resource.chatId, resource.attachmentId);
         return attachment ? { path: attachment.path, mime: attachment.mime } : null;
@@ -27,7 +27,7 @@ const locate = async (sources: ByteSources, resource: ByteResource): Promise<{ p
     }
     const served = await sources.file(resource.path).catch(() => null);
     return served ? { path: resource.path, mime: served.mime } : null;
-};
+}
 
 export interface BytesPieceRead extends BytesReadHeader {
     bytes: Uint8Array;
@@ -39,7 +39,7 @@ export interface BytesPieceRead extends BytesReadHeader {
  * is how the client notices a file that changed halfway. A file of any size is served: a piece reads
  * only its own slice, and a video player asks for the ranges it needs.
  */
-export const readBytes = async (sources: ByteSources, payload: BytesReadPayload): Promise<BytesPieceRead> => {
+export async function readBytes(sources: ByteSources, payload: BytesReadPayload): Promise<BytesPieceRead> {
     const found = await locate(sources, payload.resource);
     const info = found ? await stat(found.path).catch(() => null) : null;
     if (!found || !info?.isFile()) {
@@ -56,4 +56,4 @@ export const readBytes = async (sources: ByteSources, payload: BytesReadPayload)
         offset: payload.offset,
         bytes: new Uint8Array(await Bun.file(found.path).slice(payload.offset, end).arrayBuffer())
     };
-};
+}

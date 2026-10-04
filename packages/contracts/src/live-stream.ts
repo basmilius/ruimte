@@ -16,7 +16,7 @@ export interface LiveStreamFrame {
 }
 
 /* Where each NAL unit's header byte sits in an Annex-B access unit, after a three or four byte start code. */
-export const annexBNalHeaders = (data: Uint8Array): number[] => {
+export function annexBNalHeaders(data: Uint8Array): number[] {
     const headers: number[] = [];
     for (let index = 0; index + 3 < data.byteLength; index += 1) {
         if (data[index] === 0 && data[index + 1] === 0 && data[index + 2] === 1) {
@@ -25,22 +25,24 @@ export const annexBNalHeaders = (data: Uint8Array): number[] => {
         }
     }
     return headers;
-};
+}
 
-export const hevcKeyFrame = (data: Uint8Array): boolean =>
-    annexBNalHeaders(data).some((header) => {
+export function hevcKeyFrame(data: Uint8Array): boolean {
+    return annexBNalHeaders(data).some((header) => {
         const type = (data[header]! >> 1) & 0x3f;
         return type >= 16 && type <= 23;
     });
+}
 
 export const H264_SPS = 7;
 const H264_IDR = 5;
 
-export const h264KeyFrame = (data: Uint8Array): boolean =>
-    annexBNalHeaders(data).some((header) => {
+export function h264KeyFrame(data: Uint8Array): boolean {
+    return annexBNalHeaders(data).some((header) => {
         const type = data[header]! & 0x1f;
         return type === H264_IDR || type === H264_SPS;
     });
+}
 
 export type LiveStreamFormat = 'jpeg' | 'hevc' | 'h264';
 
@@ -50,16 +52,18 @@ const CONTENT_TYPES: Record<LiveStreamFormat, string> = {
     h264: H264_STREAM_CONTENT_TYPE
 };
 
-export const liveStreamContentType = (format: LiveStreamFormat): string => CONTENT_TYPES[format];
+export function liveStreamContentType(format: LiveStreamFormat): string {
+    return CONTENT_TYPES[format];
+}
 
 /* The format a live stream response carries, or null for one this version cannot read. */
-export const liveStreamFormatOf = (contentType: string): LiveStreamFormat | null => {
+export function liveStreamFormatOf(contentType: string): LiveStreamFormat | null {
     const mediaType = contentType.split(';')[0]!.trim();
     const match = (Object.entries(CONTENT_TYPES) as Array<[LiveStreamFormat, string]>).find(([, type]) => type.split(';')[0] === mediaType);
     return match ? match[0] : null;
-};
+}
 
-export const encodeLiveStreamFrame = (frame: LiveStreamFrame): Uint8Array => {
+export function encodeLiveStreamFrame(frame: LiveStreamFrame): Uint8Array {
     if (frame.data.byteLength > LIVE_STREAM_MAX_FRAME_BYTES) {
         throw new Error('Live stream frame is too large');
     }
@@ -84,7 +88,7 @@ export const encodeLiveStreamFrame = (frame: LiveStreamFrame): Uint8Array => {
     header.setUint16(10, frame.height);
     encoded.set(frame.data, LIVE_STREAM_FRAME_HEADER_BYTES);
     return encoded;
-};
+}
 
 export class LiveStreamDecoder {
     private buffer = new Uint8Array();

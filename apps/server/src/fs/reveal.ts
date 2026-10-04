@@ -7,7 +7,7 @@ type RevealErrorCode = 'path-not-found' | 'reveal-failed';
 export class RevealError extends CodedError<RevealErrorCode> {}
 
 /* The file manager's command line per platform: a folder opens, a file is selected inside its folder. */
-export const revealCommand = (path: string, isDirectory: boolean, platform: NodeJS.Platform = process.platform): string[] => {
+export function revealCommand(path: string, isDirectory: boolean, platform: NodeJS.Platform = process.platform): string[] {
     switch (platform) {
         case 'darwin':
             return isDirectory ? ['open', path] : ['open', '-R', path];
@@ -17,10 +17,10 @@ export const revealCommand = (path: string, isDirectory: boolean, platform: Node
             // No portable "select this file"; the folder is the best a Linux desktop offers.
             return ['xdg-open', isDirectory ? path : dirname(path)];
     }
-};
+}
 
 /* Shows a path in Finder, Explorer or the desktop's file manager, detached from the daemon. */
-export const revealInFileManager = async (path: string, platform: NodeJS.Platform = process.platform): Promise<void> => {
+export async function revealInFileManager(path: string, platform: NodeJS.Platform = process.platform): Promise<void> {
     let isDirectory: boolean;
     try {
         isDirectory = (await stat(path)).isDirectory();
@@ -33,4 +33,4 @@ export const revealInFileManager = async (path: string, platform: NodeJS.Platfor
     } catch (e) {
         throw new RevealError('reveal-failed', e instanceof Error ? e.message : 'The file manager could not be started');
     }
-};
+}

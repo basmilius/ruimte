@@ -15,17 +15,21 @@ export const LANGUAGE_LABELS: Record<AppLanguage, string> = { en: 'English', nl:
 
 export const FALLBACK_LANGUAGE: AppLanguage = 'en';
 
-export const isAppLanguage = (value: unknown): value is AppLanguage => APP_LANGUAGES.some((language) => language === value);
+export function isAppLanguage(value: unknown): value is AppLanguage {
+    return APP_LANGUAGES.some((language) => language === value);
+}
 
 /* A stored language, or the system for anything this version does not speak. */
-export const languageFrom = (stored: unknown): string => (isAppLanguage(stored) ? stored : LANGUAGE_SYSTEM);
+export function languageFrom(stored: unknown): string {
+    return isAppLanguage(stored) ? stored : LANGUAGE_SYSTEM;
+}
 
 /*
  * Which of our languages a list of system languages asks for. Only the language is read, never the
  * country: someone whose Mac is set to Dutch in Belgium wants Dutch, and the country is the region's
  * business, not this one's.
  */
-export const languageOf = (preferred: readonly string[]): AppLanguage | null => {
+export function languageOf(preferred: readonly string[]): AppLanguage | null {
     for (const tag of preferred) {
         const base = tag.toLowerCase().split(/[-_]/)[0];
         const known = APP_LANGUAGES.find((language) => language === base);
@@ -34,4 +38,4 @@ export const languageOf = (preferred: readonly string[]): AppLanguage | null => 
         }
     }
     return null;
-};
+}

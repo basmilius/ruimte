@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { reloadOnStaleChunk } from '@/stale-chunks';
 
-const memoryStorage = (): Pick<Storage, 'getItem' | 'setItem'> => {
+function memoryStorage(): Pick<Storage, 'getItem' | 'setItem'> {
     const values = new Map<string, string>();
     return {
         getItem: (key) => values.get(key) ?? null,
@@ -9,9 +9,11 @@ const memoryStorage = (): Pick<Storage, 'getItem' | 'setItem'> => {
             values.set(key, value);
         }
     };
-};
+}
 
-const preloadError = (): Event => new Event('vite:preloadError', { cancelable: true });
+function preloadError(): Event {
+    return new Event('vite:preloadError', { cancelable: true });
+}
 
 describe('reloading on a stale chunk', () => {
     test('reloads exactly once, however many chunks fail', () => {
@@ -73,7 +75,7 @@ describe('reloading on a stale chunk', () => {
     });
 });
 
-const failedOpens = () => {
+function failedOpens() {
     const listeners = new Set<() => void>();
     return {
         subscribe: (listener: () => void): (() => void) => {
@@ -89,7 +91,7 @@ const failedOpens = () => {
         },
         listening: (): number => listeners.size
     };
-};
+}
 
 describe('a failed open beside a prefetch', () => {
     test('a chunk only a prefetch asked for does not reload', () => {

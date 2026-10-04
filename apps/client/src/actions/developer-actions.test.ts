@@ -8,23 +8,27 @@ import { TransportError, type Transport } from '@/transport/transport';
 
 const FOLDER = '/work/atlas';
 
-const status = (extra: Partial<GitStatus> = {}): GitStatus => ({
-    repo: true,
-    root: FOLDER,
-    branch: 'main',
-    detached: false,
-    upstream: 'origin/main',
-    ahead: 0,
-    behind: 0,
-    base: 'main',
-    mergeBase: null,
-    files: [],
-    truncated: false,
-    live: true,
-    ...extra
-});
+function status(extra: Partial<GitStatus> = {}): GitStatus {
+    return {
+        repo: true,
+        root: FOLDER,
+        branch: 'main',
+        detached: false,
+        upstream: 'origin/main',
+        ahead: 0,
+        behind: 0,
+        base: 'main',
+        mergeBase: null,
+        files: [],
+        truncated: false,
+        live: true,
+        ...extra
+    };
+}
 
-const file = (path: string, state: GitFile['state']): GitFile => ({ path, state, status: 'M', added: 1, deleted: 0, binary: false });
+function file(path: string, state: GitFile['state']): GitFile {
+    return { path, state, status: 'M', added: 1, deleted: 0, binary: false };
+}
 
 type Answers = { [Type in RequestType]?: (payload: RequestMap[Type]['payload']) => RequestMap[Type]['result'] | Promise<RequestMap[Type]['result']> };
 
@@ -34,14 +38,16 @@ interface Fake {
     of(type: RequestType): Record<string, unknown>[];
 }
 
-const worktree = (branch: string, extra: Partial<Worktree> = {}): Worktree => ({
-    path: `/home/.ruimte/worktrees/${branch}`,
-    branch,
-    from: { branch: 'main', commit: 'abc' },
-    ...extra
-});
+function worktree(branch: string, extra: Partial<Worktree> = {}): Worktree {
+    return {
+        path: `/home/.ruimte/worktrees/${branch}`,
+        branch,
+        from: { branch: 'main', commit: 'abc' },
+        ...extra
+    };
+}
 
-const fake = (answers: Answers, options: { hidden?: string[] } = {}): Fake => {
+function fake(answers: Answers, options: { hidden?: string[] } = {}): Fake {
     const asked: Fake['asked'] = [];
     const defaults: Answers = {
         'git.repos': () => ({
@@ -76,17 +82,18 @@ const fake = (answers: Answers, options: { hidden?: string[] } = {}): Fake => {
         })
     );
     return { registry, asked, of: (type) => asked.filter((entry) => entry.type === type).map((entry) => entry.payload) };
-};
+}
 
-const confirm = async (registry: ActionRegistry<void>, asked: ActionResult): Promise<ActionResult> => {
+async function confirm(registry: ActionRegistry<void>, asked: ActionResult): Promise<ActionResult> {
     if (asked.status !== 'needs_confirmation') {
         throw new Error(`Expected a confirmation, got ${JSON.stringify(asked)}`);
     }
     return registry.confirm(asked.confirmationToken, true, VOICE_ACTION_CALL);
-};
+}
 
-const questionOf = (result: ActionResult): string =>
-    result.status === 'needs_confirmation' ? [result.confirmation.title, ...result.confirmation.consequences].join(' ') : '';
+function questionOf(result: ActionResult): string {
+    return result.status === 'needs_confirmation' ? [result.confirmation.title, ...result.confirmation.consequences].join(' ') : '';
+}
 
 const main: ProjectCanvasView = {
     kind: 'canvas',

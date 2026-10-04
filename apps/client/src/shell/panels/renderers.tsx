@@ -41,7 +41,7 @@ export const TEXT_RENDERERS: readonly TextFileRenderer[] = [
 ];
 
 /* The name picks a renderer for a text file; what the read found picks everything else. */
-export const renderFile = ({ path, name, read }: FileRendererProps): React.JSX.Element => {
+export function renderFile({ path, name, read }: FileRendererProps): React.JSX.Element {
     if (read.kind === 'text') {
         const renderer = TEXT_RENDERERS.find((entry) => entry.match(name));
         return renderer ? renderer.render({ path, name, read }) : <CodeFile path={path} read={read} />;
@@ -59,4 +59,4 @@ export const renderFile = ({ path, name, read }: FileRendererProps): React.JSX.E
         return <PdfPreview path={path} name={name} read={read} />;
     }
     return <UnsupportedFile path={path} name={name} read={read} />;
-};
+}

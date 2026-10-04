@@ -7,11 +7,11 @@ import { useChatScope, type ChatScope } from '../scope';
  */
 const useDismissals = create<{ byKey: Record<string, string> }>(() => ({ byKey: {} }));
 
-export const useResumeCompactionDismissal = (chatId: string): string | null => {
+export function useResumeCompactionDismissal(chatId: string): string | null {
     const { keyOf } = useChatScope();
     return useDismissals((s) => s.byKey[keyOf(chatId)] ?? null);
-};
+}
 
-export const dismissResumeCompaction = (scope: ChatScope, chatId: string, turnId: string): void => {
+export function dismissResumeCompaction(scope: ChatScope, chatId: string, turnId: string): void {
     useDismissals.setState((s) => ({ byKey: { ...s.byKey, [scope.keyOf(chatId)]: turnId } }));
-};
+}

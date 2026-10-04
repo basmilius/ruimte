@@ -23,13 +23,15 @@ const DIAMOND_ALONG = 6;
 const DIAMOND_SIDE = 6;
 
 /* Two decimals: a marker is built from a unit vector, and the float noise past that is not a pixel. */
-const round = (value: number): number => Math.round(value * 100) / 100;
+function round(value: number): number {
+    return Math.round(value * 100) / 100;
+}
 
 /*
  * The path of a marker at `at`, with `out` pointing away from the node it belongs to, so a shape with
  * a point aims back into that node. Only the direction of `out` is read, never its length.
  */
-export const markerPath = (shape: MarkerShape, at: Point, out: Point): string => {
+export function markerPath(shape: MarkerShape, at: Point, out: Point): string {
     const length = Math.hypot(out.x, out.y);
     if (shape === 'none' || length === 0) {
         return '';
@@ -49,4 +51,4 @@ export const markerPath = (shape: MarkerShape, at: Point, out: Point): string =>
         case 'diamond':
             return `M ${corner(DIAMOND_ALONG, 0)} L ${corner(0, DIAMOND_SIDE)} L ${corner(-DIAMOND_ALONG, 0)} L ${corner(0, -DIAMOND_SIDE)} Z`;
     }
-};
+}

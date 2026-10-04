@@ -29,7 +29,7 @@ interface IndexedProject {
 }
 
 /* A drawing or a diagram is read by its view id, but what the person flagged on the canvas is the node. */
-const flaggedSources = (sources: Map<string, ContextSource[]>, flags: ProjectFlags | undefined): Map<string, ContextSource[]> => {
+function flaggedSources(sources: Map<string, ContextSource[]>, flags: ProjectFlags | undefined): Map<string, ContextSource[]> {
     if (!flags) {
         return sources;
     }
@@ -44,10 +44,10 @@ const flaggedSources = (sources: Map<string, ContextSource[]>, flags: ProjectFla
         );
     }
     return flagged;
-};
+}
 
 /* Every id these views place, with the canvas it is a node on (null for a view of its own). */
-export const placesOf = (views: readonly ProjectView[]): Map<string, string | null> => {
+export function placesOf(views: readonly ProjectView[]): Map<string, string | null> {
     const places = new Map<string, string | null>();
     for (const view of views) {
         if (isCanvasView(view)) {
@@ -59,7 +59,7 @@ export const placesOf = (views: readonly ProjectView[]): Map<string, string | nu
         }
     }
     return places;
-};
+}
 
 /*
  * The last known document of every project the daemon knows, open or not. A session outlives the

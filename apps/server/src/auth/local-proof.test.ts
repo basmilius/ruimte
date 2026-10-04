@@ -2,8 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { isLocalProof, MACHINE_PROOF_PATH } from '@ruimte/contracts';
 import { handleLocalProofRequest } from './local-proof.ts';
 
-const ask = (init: RequestInit): Promise<Response> =>
-    handleLocalProofRequest(new Request(`http://127.0.0.1:4210${MACHINE_PROOF_PATH}`, init), { localSecret: 'the-local-secret', port: 4210 });
+function ask(init: RequestInit): Promise<Response> {
+    return handleLocalProofRequest(new Request(`http://127.0.0.1:4210${MACHINE_PROOF_PATH}`, init), { localSecret: 'the-local-secret', port: 4210 });
+}
 
 describe('handleLocalProofRequest', () => {
     test('answers a nonce with the HMAC the shell checks, and never with the secret', async () => {

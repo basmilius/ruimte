@@ -12,14 +12,16 @@ export interface Pkce {
     challenge: string;
 }
 
-export const createPkce = async (): Promise<Pkce> => {
+export async function createPkce(): Promise<Pkce> {
     const verifier = randomToken(32);
     // The very hash the address book takes the verifier through when it checks the trade.
     return { verifier, challenge: await sha256(verifier) };
-};
+}
 
 // 24 bytes, well past the 12 the address book asks for, so a state is never worth guessing.
-export const createLoginState = (): string => randomToken(24);
+export function createLoginState(): string {
+    return randomToken(24);
+}
 
 export interface LoginStart {
     addressBookUrl: string;
@@ -31,7 +33,7 @@ export interface LoginStart {
     link?: string;
 }
 
-export const loginStartUrl = (start: LoginStart): string => {
+export function loginStartUrl(start: LoginStart): string {
     const url = new URL(`/auth/${start.provider}/start`, start.addressBookUrl);
     url.search = new URLSearchParams({
         redirect_uri: start.redirectUri,
@@ -41,7 +43,7 @@ export const loginStartUrl = (start: LoginStart): string => {
         ...(start.link === undefined ? {} : { link: start.link })
     }).toString();
     return url.toString();
-};
+}
 
 /* The query the address book sent the browser back with. */
 export interface LoginCallback {
@@ -62,7 +64,7 @@ export class LoginError extends Error {
  * refused before its code is looked at: it is another login's answer, or somebody else's, and trading
  * it would sign this app in to an account nobody here chose.
  */
-export const codeFromCallback = (callback: LoginCallback, expectedState: string): string => {
+export function codeFromCallback(callback: LoginCallback, expectedState: string): string {
     if (callback.state !== expectedState) {
         throw new LoginError(i18next.t('machines:signIn.wrongCallback'));
     }
@@ -75,4 +77,4 @@ export const codeFromCallback = (callback: LoginCallback, expectedState: string)
         throw new LoginError(i18next.t('machines:signIn.noCode'));
     }
     return callback.code;
-};
+}

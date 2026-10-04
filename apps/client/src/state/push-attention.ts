@@ -108,7 +108,7 @@ export class PushAttentionSync {
 
 const machines = new Map<string, PushAttentionSync>();
 
-export const watchPushAttention = (endpointId: string, transport: Transport): (() => void) => {
+export function watchPushAttention(endpointId: string, transport: Transport): () => void {
     const sync = new PushAttentionSync(transport);
     machines.set(endpointId, sync);
     return () => {
@@ -117,22 +117,26 @@ export const watchPushAttention = (endpointId: string, transport: Transport): ((
             machines.delete(endpointId);
         }
     };
-};
+}
 
-export const seePushNotifications = (endpointId: string, nodes: ReadonlySet<string>): void => {
+export function seePushNotifications(endpointId: string, nodes: ReadonlySet<string>): void {
     for (const [id, sync] of machines) {
         sync.setVisible(id === endpointId ? nodes : new Set());
     }
-};
+}
 
 /* What a machine still holds unread, which the marks start from after a client was away. */
-export const unreadOnMachine = (endpointId: string): string[] => machines.get(endpointId)?.unread() ?? [];
+export function unreadOnMachine(endpointId: string): string[] {
+    return machines.get(endpointId)?.unread() ?? [];
+}
 
-export const subscribePushAttention = (listener: () => void): (() => void) => {
+export function subscribePushAttention(listener: () => void): () => void {
     changeListeners.add(listener);
     return () => {
         changeListeners.delete(listener);
     };
-};
+}
 
-export const clearPushNotification = (endpointId: string, nodeId: string): void => machines.get(endpointId)?.markSeen(nodeId);
+export function clearPushNotification(endpointId: string, nodeId: string): void {
+    return machines.get(endpointId)?.markSeen(nodeId);
+}

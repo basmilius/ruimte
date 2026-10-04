@@ -17,7 +17,7 @@ export interface EditorFind {
  * compiled here to say whether a pattern is invalid, in the same words as every other surface. Closing
  * the bar leaves the cursor on the match it was on.
  */
-export const useEditorFind = (find: FindState, editor: Editor | null): EditorFind => {
+export function useEditorFind(find: FindState, editor: Editor | null): EditorFind {
     const [state, setState] = useState<EditorFindState>(NOTHING);
     const compiled = useMemo(() => compileFind(find.query), [find.query]);
     const wasOpen = useRef(false);
@@ -43,4 +43,4 @@ export const useEditorFind = (find: FindState, editor: Editor | null): EditorFin
         invalid: find.open && compiled.kind === 'invalid',
         step: (direction) => editor?.findStep(direction)
     };
-};
+}

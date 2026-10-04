@@ -60,13 +60,13 @@ export interface AgentWiring<Core extends ChatCore = ChatCore> {
 }
 
 // A folder the rule cannot be written to only costs an approval per call, so it never stops the host.
-const installRulesIn = async (kind: AgentKind, folder: string, rules: CodexRules): Promise<void> => {
+async function installRulesIn(kind: AgentKind, folder: string, rules: CodexRules): Promise<void> {
     if (kind !== 'codex') {
         return;
     }
     const path = codexRulesPathIn(folder, rules);
     await installCodexRules(path, rules).catch((e: unknown) => console.error(`Could not write the codex rules in ${path}:`, errorText(e)));
-};
+}
 
 /*
  * The chats of a host with the providers, accounts and usage around them, and the handlers of
@@ -74,7 +74,7 @@ const installRulesIn = async (kind: AgentKind, folder: string, rules: CodexRules
  * of its own takes the handlers and `connect` from here. The accounts are read with
  * `accounts.load()` before the first request.
  */
-export const wireAgents = <Core extends ChatCore = ChatCore>(options: AgentWiringOptions<Core>): AgentWiring<Core> => {
+export function wireAgents<Core extends ChatCore = ChatCore>(options: AgentWiringOptions<Core>): AgentWiring<Core> {
     const env = options.env ?? cliEnvironment();
     const client = options.client ?? DEFAULT_CODEX_CLIENT;
     const codexRules = options.codexRules;
@@ -159,4 +159,4 @@ export const wireAgents = <Core extends ChatCore = ChatCore>(options: AgentWirin
             }
         }
     };
-};
+}

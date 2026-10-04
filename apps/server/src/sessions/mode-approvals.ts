@@ -13,10 +13,11 @@ const ApprovalSchema = z.object({
 
 type Approval = z.infer<typeof ApprovalSchema>;
 
-const hashOf = (folder: string, nodeId: string): string =>
-    createHash('sha256')
+function hashOf(folder: string, nodeId: string): string {
+    return createHash('sha256')
         .update(JSON.stringify([folder, nodeId]))
         .digest('hex');
+}
 
 /*
  * The permission mode a person on this machine gave each terminal agent, per project folder and node.
@@ -53,11 +54,12 @@ export interface NodeMode {
     mode: RuntimeMode;
 }
 
-const startsIn = (kind: AgentKind, runtimeMode: RuntimeMode | undefined, resume: string | undefined): RuntimeMode =>
-    launchedMode({ kind, ...(runtimeMode ? { runtimeMode } : {}), ...(resume ? { resume } : {}) });
+function startsIn(kind: AgentKind, runtimeMode: RuntimeMode | undefined, resume: string | undefined): RuntimeMode {
+    return launchedMode({ kind, ...(runtimeMode ? { runtimeMode } : {}), ...(resume ? { resume } : {}) });
+}
 
 /* The mode every terminal agent in these views starts in, by node id, read the way the launch line is. */
-const modesOf = (views: readonly ProjectView[]): Map<string, RuntimeMode> => {
+function modesOf(views: readonly ProjectView[]): Map<string, RuntimeMode> {
     const modes = new Map<string, RuntimeMode>();
     for (const view of views) {
         if (isCanvasView(view)) {
@@ -71,19 +73,21 @@ const modesOf = (views: readonly ProjectView[]): Map<string, RuntimeMode> => {
         }
     }
     return modes;
-};
+}
 
 /*
  * The modes a save sets or changes. A mode an outside edit put on a node is in `before` as well, since
  * the daemon took that edit in, so a client that only saves it back approves nothing.
  */
-export const modesSet = (before: readonly ProjectView[], after: readonly ProjectView[]): NodeMode[] => {
+export function modesSet(before: readonly ProjectView[], after: readonly ProjectView[]): NodeMode[] {
     const had = modesOf(before);
     return [...modesOf(after)].filter(([nodeId, mode]) => had.get(nodeId) !== mode).map(([nodeId, mode]) => ({ nodeId, mode }));
-};
+}
 
 /*
  * The widest mode a terminal agent no agent opened may start in: what a person's save gave it, or
  * for a node no save named yet the terminal mode the person picks now, and the strictest without either.
  */
-export const personModeOf = (approved: RuntimeMode | null, preference: RuntimeMode | undefined): RuntimeMode => approved ?? preference ?? 'supervised';
+export function personModeOf(approved: RuntimeMode | null, preference: RuntimeMode | undefined): RuntimeMode {
+    return approved ?? preference ?? 'supervised';
+}

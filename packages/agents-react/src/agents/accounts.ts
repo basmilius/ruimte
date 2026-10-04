@@ -6,7 +6,9 @@ import { chatHost } from '../host';
  * An account wears one of the host's accents, so the app paints from one palette. A color that is none
  * of them (an older name, or one written by hand) reads as undefined, and the dot takes the accent.
  */
-export const accountColor = (color: string | undefined): string | undefined => chatHost().accents.all.find((entry) => entry.id === color)?.color;
+export function accountColor(color: string | undefined): string | undefined {
+    return chatHost().accents.all.find((entry) => entry.id === color)?.color;
+}
 
 /*
  * The variable each CLI reads its config folder from, as the host's providers name them. Only for
@@ -23,7 +25,7 @@ export interface AccountEntry {
 }
 
 /* The accounts of one CLI, its default one first and the others in the order the machine keeps them. */
-export const accountsOfKind = (accounts: ProviderAccounts | null, kind: AgentKind): AccountEntry[] => {
+export function accountsOfKind(accounts: ProviderAccounts | null, kind: AgentKind): AccountEntry[] {
     if (accounts === null) {
         return [];
     }
@@ -32,11 +34,12 @@ export const accountsOfKind = (accounts: ProviderAccounts | null, kind: AgentKin
         .filter(([, account]) => account.kind === kind)
         .map(([id, account]) => ({ id, account, status: statuses.get(id) ?? null, isDefault: id === kind }))
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
-};
+}
 
 /* A default account nobody named goes by its CLI's name. */
-export const accountName = (entry: Pick<AccountEntry, 'id' | 'account' | 'isDefault'>, providerName: string): string =>
-    entry.account.label ?? (entry.isDefault ? providerName : entry.id);
+export function accountName(entry: Pick<AccountEntry, 'id' | 'account' | 'isDefault'>, providerName: string): string {
+    return entry.account.label ?? (entry.isDefault ? providerName : entry.id);
+}
 
 export type AccountTone = 'muted' | 'needs-you' | 'error';
 
@@ -50,7 +53,7 @@ export const ACCOUNT_TONE_CLASSES: Record<AccountTone, string> = {
  * What an account's row says about it, in a few words. `canLogIn` is false for a CLI without a config
  * folder: it has no login of its own to report, so being there is all a ready one says.
  */
-export const accountStatusLine = (status: ProviderAccountStatus | null, canLogIn: boolean): { text: string; tone: AccountTone } => {
+export function accountStatusLine(status: ProviderAccountStatus | null, canLogIn: boolean): { text: string; tone: AccountTone } {
     const words = (key: string, values?: Record<string, string>): string => i18next.t(`agent-providers:status.${key}`, values);
     switch (status?.state ?? 'checking') {
         case 'checking':
@@ -73,51 +76,55 @@ export const accountStatusLine = (status: ProviderAccountStatus | null, canLogIn
         case 'failed':
             return { text: words('failed'), tone: 'error' };
     }
-};
+}
 
 /* The part of a name an id can hold, the way the machine makes one: `Work (EU)` becomes `work-eu`. */
-const slugOf = (label: string): string =>
-    label
+function slugOf(label: string): string {
+    return label
         .normalize('NFKD')
         .replace(/[̀-ͯ]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
+}
 
 /* A free id for an account a person links to a folder of their own; one the machine makes gets its id from the machine. */
-export const mintAccountId = (kind: AgentKind, label: string, taken: ReadonlySet<string>): string => {
+export function mintAccountId(kind: AgentKind, label: string, taken: ReadonlySet<string>): string {
     const base = `${kind}_${slugOf(label) || 'account'}`.slice(0, 60).replace(/-+$/, '');
     let id = base;
     for (let suffix = 2; taken.has(id); suffix += 1) {
         id = `${base}-${suffix}`;
     }
     return id;
-};
+}
 
 /*
  * The first featured accent no account of the CLI wears yet, then any other, so a new one stands apart.
  * An account without a color of its own wears `fallback`, the accent the app is painted in.
  */
-export const freeAccountColor = (entries: readonly AccountEntry[], fallback: string): string => {
+export function freeAccountColor(entries: readonly AccountEntry[], fallback: string): string {
     const { all, featured } = chatHost().accents;
     const worn = new Set(entries.map((entry) => (accountColor(entry.account.color) === undefined ? fallback : entry.account.color)));
     const choices = [...featured, ...all.map((entry) => entry.id).filter((id) => !featured.includes(id))];
     return choices.find((id) => !worn.has(id)) ?? featured[entries.length % featured.length] ?? fallback;
-};
+}
 
 /* The accounts of a CLI a picker offers: every one that is on, and the one in use even while it is off. */
-export const offeredAccounts = (entries: readonly AccountEntry[], current: string | undefined): AccountEntry[] =>
-    entries.filter((entry) => entry.account.enabled !== false || entry.id === current);
+export function offeredAccounts(entries: readonly AccountEntry[], current: string | undefined): AccountEntry[] {
+    return entries.filter((entry) => entry.account.enabled !== false || entry.id === current);
+}
 
 /* Whether a person has a choice of account for this CLI at all, which is when a chat shows its account. */
-export const hasAccountChoice = (entries: readonly AccountEntry[]): boolean => entries.filter((entry) => entry.account.enabled !== false).length >= 2;
+export function hasAccountChoice(entries: readonly AccountEntry[]): boolean {
+    return entries.filter((entry) => entry.account.enabled !== false).length >= 2;
+}
 
 /*
  * Whether a chat of one account can go on under another, the way the machine decides it: the same
  * account, or two of the chat's CLI that write their conversations to one folder. A machine that does
  * not say where an account writes them answers no, so the person forks instead of being refused.
  */
-export const canContinueOn = (accounts: ProviderAccounts | null, kind: AgentKind, from: string | undefined, to: string | undefined): boolean => {
+export function canContinueOn(accounts: ProviderAccounts | null, kind: AgentKind, from: string | undefined, to: string | undefined): boolean {
     const fromId = from ?? kind;
     const toId = to ?? kind;
     if (fromId === toId) {
@@ -127,4 +134,4 @@ export const canContinueOn = (accounts: ProviderAccounts | null, kind: AgentKind
         accounts?.accounts[id]?.kind === kind ? accounts.statuses.find((status) => status.id === id)?.transcripts : undefined;
     const folder = folderOf(fromId);
     return folder !== undefined && folder !== '' && folder === folderOf(toId);
-};
+}

@@ -6,7 +6,7 @@ export type SelectionMode = 'replace' | 'add' | 'toggle';
  * expects of shift and what makes a canvas and a drawing answer the same. A box drawn with shift
  * only ever adds: dragging one over what is already selected must not clear it.
  */
-export const mergeSelection = (current: readonly string[], ids: readonly string[], mode: SelectionMode): string[] => {
+export function mergeSelection(current: readonly string[], ids: readonly string[], mode: SelectionMode): string[] {
     if (mode === 'replace') {
         return [...ids];
     }
@@ -19,4 +19,4 @@ export const mergeSelection = (current: readonly string[], ids: readonly string[
         }
     }
     return [...next];
-};
+}

@@ -145,7 +145,7 @@ export const dictationPreview = StateField.define<{ text: string; levels: readon
     provide: (field) => EditorView.decorations.from(field, (value) => value.decorations)
 });
 
-export const captureEditor = (view: EditorView): DictationInsertion | null => {
+export function captureEditor(view: EditorView): DictationInsertion | null {
     if (view.state.readOnly) {
         return null;
     }
@@ -182,4 +182,4 @@ export const captureEditor = (view: EditorView): DictationInsertion | null => {
             }
         }
     };
-};
+}

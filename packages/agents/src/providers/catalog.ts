@@ -4,7 +4,9 @@ import manifest from './claude-models.json' with { type: 'json' };
 // What a host builds a catalog from; one that is never replaced needs no date.
 export type ModelCatalogInput = Omit<ModelCatalogData, 'updatedAt'> & { updatedAt?: string };
 
-const timeOf = (data: ModelCatalogInput): number => (data.updatedAt === undefined ? 0 : Date.parse(data.updatedAt));
+function timeOf(data: ModelCatalogInput): number {
+    return data.updatedAt === undefined ? 0 : Date.parse(data.updatedAt);
+}
 
 /*
  * The models a provider offers and what each one can be asked for. Bundled as JSON so a new

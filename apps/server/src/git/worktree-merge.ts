@@ -30,8 +30,8 @@ export interface WorktreeAgents {
  * a merge commit or a squash, or fold and reorder commits in a rebase. Hooks and signing stay the
  * person's: a hook that refuses is git's answer in git's words.
  */
-const settingsFor = (into: string): string[] =>
-    [
+function settingsFor(into: string): string[] {
+    return [
         'merge.autoStash=false',
         'rebase.autoStash=false',
         'rerere.enabled=false',
@@ -42,6 +42,7 @@ const settingsFor = (into: string): string[] =>
         'rebase.autoSquash=false',
         'rebase.rebaseMerges=false'
     ].flatMap((setting) => ['-c', setting]);
+}
 
 /* What the agent verb holds a merge to on top of what a person's merge is held to. */
 export interface MergeLimits {
@@ -56,14 +57,17 @@ const WAIT_NOTICE_MS = 20_000;
 
 export const STILL_WAITING = 'Still waiting on git. A hook or a prompt may be holding it up; cancel to stop it.';
 
-const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
+function plural(count: number, one: string, many: string): string {
+    return `${count} ${count === 1 ? one : many}`;
+}
 
 /*
  * The message git writes for a merge of a branch by its bare name, which leaves out the target for
  * main and master. The merge itself names the full ref, so a tag of the same name never wins.
  */
-const mergeMessageOf = (branch: string, into: string): string =>
-    into === 'main' || into === 'master' ? `Merge branch '${branch}'` : `Merge branch '${branch}' into ${into}`;
+function mergeMessageOf(branch: string, into: string): string {
+    return into === 'main' || into === 'master' ? `Merge branch '${branch}'` : `Merge branch '${branch}' into ${into}`;
+}
 
 /*
  * Merge through the target checkout under the repository lock, never by moving its ref. Dirty work
@@ -330,4 +334,6 @@ export class WorktreeMerge {
     }
 }
 
-const messageBody = (body: string | undefined): string[] => (body === undefined || body.trim() === '' ? [] : ['--message', body.trim()]);
+function messageBody(body: string | undefined): string[] {
+    return body === undefined || body.trim() === '' ? [] : ['--message', body.trim()];
+}

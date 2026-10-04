@@ -18,12 +18,13 @@ import { FALLBACK_LANGUAGE } from './src/i18n/languages';
 const here = new URL('.', import.meta.url).pathname;
 const dir = join(here, 'src', 'i18n', 'locales', FALLBACK_LANGUAGE);
 
-const namespacesIn = (folder: string): Record<string, Record<string, unknown>> =>
-    Object.fromEntries(
+function namespacesIn(folder: string): Record<string, Record<string, unknown>> {
+    return Object.fromEntries(
         readdirSync(folder)
             .filter((name) => name.endsWith('.json'))
             .map((name) => [name.slice(0, -'.json'.length), JSON.parse(readFileSync(join(folder, name), 'utf8')) as Record<string, unknown>])
     );
+}
 
 const resources = namespacesIn(dir);
 

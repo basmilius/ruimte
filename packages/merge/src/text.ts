@@ -8,16 +8,16 @@ export interface TextShape {
 }
 
 /* The line ending a file uses, by the first one in it, and whether it ends on one. */
-export const shapeOf = (text: string): TextShape => {
+export function shapeOf(text: string): TextShape {
     const line = text.indexOf('\n');
     return {
         eol: line > 0 && text[line - 1] === '\r' ? '\r\n' : '\n',
         finalNewline: text === '' || text.endsWith('\n')
     };
-};
+}
 
 /* The lines of a file, without the empty one a trailing newline would leave behind. */
-export const splitLines = (text: string): string[] => {
+export function splitLines(text: string): string[] {
     if (text === '') {
         return [];
     }
@@ -26,7 +26,8 @@ export const splitLines = (text: string): string[] => {
         lines.pop();
     }
     return lines;
-};
+}
 
-export const joinLines = (lines: readonly string[], shape: TextShape): string =>
-    lines.length === 0 ? '' : lines.join(shape.eol) + (shape.finalNewline ? shape.eol : '');
+export function joinLines(lines: readonly string[], shape: TextShape): string {
+    return lines.length === 0 ? '' : lines.join(shape.eol) + (shape.finalNewline ? shape.eol : '');
+}

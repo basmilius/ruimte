@@ -10,22 +10,26 @@ let home: string;
 let clock: number;
 let store: NoticeStore;
 
-const left = (text: string, targetId = 'term-2'): Omit<Notice, 'createdAt'> => ({
-    projectId: 'project-1',
-    targetId,
-    from: 'term-1',
-    fromTitle: 'shell',
-    text
-});
+function left(text: string, targetId = 'term-2'): Omit<Notice, 'createdAt'> {
+    return {
+        projectId: 'project-1',
+        targetId,
+        from: 'term-1',
+        fromTitle: 'shell',
+        text
+    };
+}
 
-const agent = (kind: AgentInfo['kind'], live = true): AgentInfo => ({
-    kind,
-    agentSessionId: 'a1',
-    transcriptPath: null,
-    status: 'running',
-    live,
-    updatedAt: 0
-});
+function agent(kind: AgentInfo['kind'], live = true): AgentInfo {
+    return {
+        kind,
+        agentSessionId: 'a1',
+        transcriptPath: null,
+        status: 'running',
+        live,
+        updatedAt: 0
+    };
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-notices-'));

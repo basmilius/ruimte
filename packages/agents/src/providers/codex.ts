@@ -24,21 +24,25 @@ const THREAD_OPTIONS: Record<RuntimeMode, CodexThreadOptions> = {
     'full-access': { approvalPolicy: 'never', sandbox: 'danger-full-access' }
 };
 
-export const codexThreadOptions = (runtimeMode: RuntimeMode): CodexThreadOptions => THREAD_OPTIONS[runtimeMode];
+export function codexThreadOptions(runtimeMode: RuntimeMode): CodexThreadOptions {
+    return THREAD_OPTIONS[runtimeMode];
+}
 
-export const codexRuntimeMode = (approvalPolicy: string, sandbox: string): RuntimeMode | undefined => {
+export function codexRuntimeMode(approvalPolicy: string, sandbox: string): RuntimeMode | undefined {
     const names: Record<string, string> = { readOnly: 'read-only', workspaceWrite: 'workspace-write', dangerFullAccess: 'danger-full-access' };
     return (Object.keys(THREAD_OPTIONS) as RuntimeMode[]).find((mode) => {
         const options = THREAD_OPTIONS[mode];
         return options.approvalPolicy === approvalPolicy && options.sandbox === (names[sandbox] ?? sandbox);
     });
-};
+}
 
 // What the app-server calls the faster of the two tiers it lists per model; the standard tier is no id at all.
 const CODEX_PRIORITY_TIER = 'priority';
 
 /* The service tier a thread or a turn runs on, or null for the standard one the account defaults to. */
-export const codexServiceTier = (selection: ModelSelection): string | null => (selection.options.serviceTier === true ? CODEX_PRIORITY_TIER : null);
+export function codexServiceTier(selection: ModelSelection): string | null {
+    return selection.options.serviceTier === true ? CODEX_PRIORITY_TIER : null;
+}
 
 // What the app-server can do, as far as a client has to know.
 export const CODEX_CAPABILITIES: ProviderCapabilities = {

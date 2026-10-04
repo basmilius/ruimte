@@ -4,7 +4,7 @@ import { mergeMachines, type MachineEntry } from '@/shell/settings/machine-list'
 import { useEndpoints } from '@/state/endpoints';
 
 /* A machine as the Machines pane knows it: a row of this client, or only the account's record. */
-export const useMachineEntry = (endpointId: string): MachineEntry => {
+export function useMachineEntry(endpointId: string): MachineEntry {
     const endpoints = useEndpoints((s) => s.endpoints);
     const machines = usePulsarMachines((s) => s.machines);
     return useMemo(
@@ -20,4 +20,4 @@ export const useMachineEntry = (endpointId: string): MachineEntry => {
             },
         [endpointId, endpoints, machines]
     );
-};
+}

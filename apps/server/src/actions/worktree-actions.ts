@@ -9,15 +9,15 @@ import type { ServerActionContext } from './context.ts';
 // How far up the chain of openers a merge looks for the caller; a chain this deep is refused by `agent` long before.
 const MAX_LINEAGE = 64;
 
-const worktreeHostOf = (host: CanvasHost): WorktreeHost => {
+function worktreeHostOf(host: CanvasHost): WorktreeHost {
     if (host.worktrees === undefined) {
         throw new VerbRefusal('not-a-repository', 'This machine has no git to read worktrees with');
     }
     return host.worktrees;
-};
+}
 
 /* The worktrees of the caller's project, refusing a project outside a repository. */
-const worktreesOf = async (host: CanvasHost, place: IndexedPlace): Promise<{ content: ProjectContent; worktrees: Worktree[] }> => {
+async function worktreesOf(host: CanvasHost, place: IndexedPlace): Promise<{ content: ProjectContent; worktrees: Worktree[] }> {
     const [content, worktrees] = await Promise.all([
         host.read(place.projectId),
         worktreeHostOf(host)
@@ -30,10 +30,10 @@ const worktreesOf = async (host: CanvasHost, place: IndexedPlace): Promise<{ con
             })
     ]);
     return { content, worktrees };
-};
+}
 
 /* The nodes of the project working in a worktree: the one it was made for, and every terminal or chat whose folder is inside it. */
-const nodesIn = (content: ProjectContent, worktree: Worktree): string[] => {
+function nodesIn(content: ProjectContent, worktree: Worktree): string[] {
     const ids = new Set<string>(worktree.nodeId === undefined ? [] : [worktree.nodeId]);
     for (const view of content.views) {
         if (!isCanvasView(view)) {
@@ -46,24 +46,25 @@ const nodesIn = (content: ProjectContent, worktree: Worktree): string[] => {
         }
     }
     return [...ids];
-};
+}
 
-const branchLines = (worktrees: readonly Worktree[]): string[] =>
-    orNote(
+function branchLines(worktrees: readonly Worktree[]): string[] {
+    return orNote(
         worktrees.map((worktree) => `worktree\t${field(worktree.branch)}`),
         'This repository has no worktrees'
     );
+}
 
-const named = (worktrees: readonly Worktree[], branch: string): Worktree => {
+function named(worktrees: readonly Worktree[], branch: string): Worktree {
     const worktree = worktrees.find((candidate) => candidate.branch === branch);
     if (!worktree) {
         throw new VerbRefusal('unknown-worktree', `${branch} is not the branch of a worktree of this repository`, branchLines(worktrees));
     }
     return worktree;
-};
+}
 
 /* Whether the caller opened this node, or opened the agent that did, however far down. */
-const openedBy = (host: CanvasHost, caller: string, nodeId: string): boolean => {
+function openedBy(host: CanvasHost, caller: string, nodeId: string): boolean {
     let current: string | null = nodeId;
     for (let i = 0; i < MAX_LINEAGE && current !== null; i++) {
         current = host.madeBy(current);
@@ -72,7 +73,7 @@ const openedBy = (host: CanvasHost, caller: string, nodeId: string): boolean => 
         }
     }
     return false;
-};
+}
 
 export const worktreeActions: ActionHandlers<ServerActionContext> = {
     'worktree.list': async (_input, { context }) => {

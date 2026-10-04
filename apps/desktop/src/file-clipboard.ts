@@ -8,24 +8,28 @@ export interface FileClipboard {
 }
 
 /* How Electron's `clipboard.write` names a format of the platform's own rather than a MIME type. */
-export const osClipboardFormat = (format: string): string => `electron application/osclipboard;format="${format}"`;
+export function osClipboardFormat(format: string): string {
+    return `electron application/osclipboard;format="${format}"`;
+}
 
 /* The paths a page asked to copy, or null when it sent anything but a list of absolute paths. */
-export const copyablePaths = (paths: unknown): string[] | null => {
+export function copyablePaths(paths: unknown): string[] | null {
     if (!Array.isArray(paths) || paths.length === 0) {
         return null;
     }
     return paths.every((path) => typeof path === 'string' && isAbsolute(path)) ? (paths as string[]) : null;
-};
+}
 
-const escapeXml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function escapeXml(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 /*
  * The files as the platform's file manager pastes them, or null on a platform this has no format for.
  * macOS bridges `NSFilenamesPboardType` into one file URL per item, which is what Finder reads; the
  * GNOME file manager reads its own list and the others the URI list of RFC 2483.
  */
-export const fileClipboard = (platform: NodeJS.Platform, paths: readonly string[]): FileClipboard | null => {
+export function fileClipboard(platform: NodeJS.Platform, paths: readonly string[]): FileClipboard | null {
     const text = paths.join('\n');
     if (platform === 'darwin') {
         const strings = paths.map((path) => `<string>${escapeXml(path)}</string>`).join('');
@@ -43,4 +47,4 @@ export const fileClipboard = (platform: NodeJS.Platform, paths: readonly string[
         };
     }
     return null;
-};
+}

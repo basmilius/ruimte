@@ -8,15 +8,17 @@ import { chatHost, type FileRef } from '../../host';
  */
 export const FileLinkContext = createContext<string | null>(null);
 
-export const useFileLinkCwd = (): string | null => useContext(FileLinkContext);
+export function useFileLinkCwd(): string | null {
+    return useContext(FileLinkContext);
+}
 
 /* The reference a piece of text names, only where this spot on screen could open it. */
-export const useFileLinkTarget = (text: string): FileRef | null => {
+export function useFileLinkTarget(text: string): FileRef | null {
     const cwd = useFileLinkCwd();
     return useMemo(() => chatHost().fileLinks?.target(text, cwd) ?? null, [text, cwd]);
-};
+}
 
 /* A reference followed, the way the app opens a file or a folder. */
-export const openFileLink = (cwd: string | null, ref: FileRef): void => {
+export function openFileLink(cwd: string | null, ref: FileRef): void {
     chatHost().fileLinks?.open(cwd, ref);
-};
+}

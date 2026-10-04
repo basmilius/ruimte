@@ -8,7 +8,9 @@ import { verbCallOf, type ServerActionContext } from './context.ts';
 
 type DrawnEdge = ActionOutput<'link.create'>['edges'][number];
 
-const pickId = (edge: ProjectEdge): string => edge.id;
+function pickId(edge: ProjectEdge): string {
+    return edge.id;
+}
 
 export const linkActions: ActionHandlers<ServerActionContext> = {
     'link.list': async ({ viewId }, { context }) => {

@@ -12,7 +12,9 @@ interface Progress {
 }
 
 /* The index in a Codex home, which is the folder CODEX_HOME names. */
-export const codexIndexIn = (home: string): string => join(home, 'session_index.jsonl');
+export function codexIndexIn(home: string): string {
+    return join(home, 'session_index.jsonl');
+}
 
 /*
  * The name Codex gave a thread, out of `session_index.jsonl` in its home. The TUI appends a line

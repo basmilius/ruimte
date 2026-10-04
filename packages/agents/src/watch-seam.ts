@@ -21,7 +21,9 @@ export interface WatchSeams {
  * Recursive watching is one call to the platform on macOS and Windows; elsewhere it costs a
  * descriptor per directory, which a folder tree has too many of to be worth it.
  */
-export const supportsRecursive = (platform: NodeJS.Platform): boolean => platform === 'darwin' || platform === 'win32';
+export function supportsRecursive(platform: NodeJS.Platform): boolean {
+    return platform === 'darwin' || platform === 'win32';
+}
 
 export const SYSTEM_WATCH: WatchSeams = {
     watch: (path, options, listener) => watch(path, options, listener),
@@ -42,7 +44,7 @@ export interface Settled {
  * How long a burst is differs per watcher: reading one file again is cheap, a status run over a
  * whole repository is not.
  */
-export const settled = (seams: WatchSeams, ms: number, run: () => unknown): Settled => {
+export function settled(seams: WatchSeams, ms: number, run: () => unknown): Settled {
     let cancel: (() => void) | null = null;
     return {
         nudge: () => {
@@ -57,7 +59,7 @@ export const settled = (seams: WatchSeams, ms: number, run: () => unknown): Sett
             cancel = null;
         }
     };
-};
+}
 
 /*
  * What each client watches, keyed on the path it asked for. A watch is per client, like a session

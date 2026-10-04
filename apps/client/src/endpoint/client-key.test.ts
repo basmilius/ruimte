@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { createClientKeyLoader, type KeyStore } from './client-key';
 
 /* Does what IndexedDB would for the page, minus the IndexedDB, by holding the pair in memory. */
-const memoryStore = (): KeyStore & { writes: number } => {
+function memoryStore(): KeyStore & { writes: number } {
     let held: CryptoKeyPair | null = null;
     return {
         writes: 0,
@@ -12,13 +12,13 @@ const memoryStore = (): KeyStore & { writes: number } => {
             this.writes += 1;
         }
     };
-};
+}
 
-const verify = async (publicKey: string, message: string, signature: string): Promise<boolean> => {
+async function verify(publicKey: string, message: string, signature: string): Promise<boolean> {
     const bytes = (value: string) => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), (character) => character.charCodeAt(0));
     const key = await crypto.subtle.importKey('raw', bytes(publicKey), { name: 'Ed25519' }, false, ['verify']);
     return crypto.subtle.verify({ name: 'Ed25519' }, key, bytes(signature), new TextEncoder().encode(message));
-};
+}
 
 describe('the client key pair', () => {
     test('signs what a daemon can check against the public half it registered', async () => {

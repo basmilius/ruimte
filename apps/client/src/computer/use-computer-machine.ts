@@ -13,12 +13,12 @@ import type { Transport } from '@/transport/transport';
 const POLL_MS = 2_000;
 
 /* Asks quietly: a failed recheck changes nothing on screen, and the next one or the person's own press tries again. */
-const recheckOn = (endpointId: string, how: 'restart' | 'status'): void => {
+function recheckOn(endpointId: string, how: 'restart' | 'status'): void {
     transportFor(endpointId)
         ?.request(how === 'restart' ? 'computer.restart' : 'computer.status', {})
         .then((next) => useComputer.getState().setStatus(endpointId, next))
         .catch(() => undefined);
-};
+}
 
 export interface ComputerMachine {
     connected: boolean;
@@ -42,7 +42,7 @@ export interface ComputerMachine {
  * Computer use on one machine, for whatever shows its switch and its grants. While a grant is missing
  * it asks the machine again on a clock, and once more when the window comes back from System Settings.
  */
-export const useComputerMachine = (endpointId: string): ComputerMachine => {
+export function useComputerMachine(endpointId: string): ComputerMachine {
     const connection = useEndpointConnection(endpointId);
     const connected = connection.status === 'open';
     const platform = useServers((s) => s.byEndpoint[endpointId]?.platform ?? null);
@@ -114,4 +114,4 @@ export const useComputerMachine = (endpointId: string): ComputerMachine => {
                 await link.request('computer.revoke', payload);
             })
     };
-};
+}

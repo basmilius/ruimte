@@ -11,14 +11,15 @@ export interface KeyPair {
     privateKey: string;
 }
 
-export const generateKeyPair = (): KeyPair => {
+export function generateKeyPair(): KeyPair {
     const pair = generateKeyPairSync('ed25519');
     const jwk = pair.publicKey.export({ format: 'jwk' }) as { x?: string };
     return {
         publicKey: jwk.x ?? '',
         privateKey: pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString()
     };
-};
+}
 
-export const signMessage = (privateKey: string, message: string): string =>
-    sign(null, Buffer.from(message, 'utf8'), createPrivateKey(privateKey)).toString('base64url');
+export function signMessage(privateKey: string, message: string): string {
+    return sign(null, Buffer.from(message, 'utf8'), createPrivateKey(privateKey)).toString('base64url');
+}

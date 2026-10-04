@@ -11,7 +11,7 @@ export const DEFAULT_TIMEOUT_MS = 5000;
 
 // Polls instead of sleeping: a shell answers in milliseconds on a quiet machine and in
 // hundreds under CI load, and a fixed sleep is wrong on one of them.
-export const waitForAsync = async (check: () => Promise<boolean>, what: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<void> => {
+export async function waitForAsync(check: () => Promise<boolean>, what: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (!(await check())) {
         if (Date.now() > deadline) {
@@ -19,10 +19,11 @@ export const waitForAsync = async (check: () => Promise<boolean>, what: string, 
         }
         await new Promise((resolve) => setTimeout(resolve, 10));
     }
-};
+}
 
-export const waitFor = (check: () => boolean, what: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<void> =>
-    waitForAsync(async () => check(), what, timeoutMs);
+export function waitFor(check: () => boolean, what: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<void> {
+    return waitForAsync(async () => check(), what, timeoutMs);
+}
 
 export class Recorder {
     readonly events: SessionEvent[] = [];
@@ -107,7 +108,7 @@ export interface Harness {
 
 // A daemon over its own fresh directory, or over the one an earlier harness left behind, which is a
 // daemon restarting: the same sessions, the same stores on disk, nothing kept in memory.
-export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}, over?: string): Promise<Harness> => {
+export async function makeHarness(extra: Partial<SessionManagerOptions> = {}, over?: string): Promise<Harness> {
     const home = over ?? (await mkdtemp(join(tmpdir(), 'ruimte-test-')));
     const adapter = new FakePtyAdapter();
     const snapshots = new SnapshotStore(home);
@@ -133,4 +134,4 @@ export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}, ov
             await rm(home, { recursive: true, force: true });
         }
     };
-};
+}

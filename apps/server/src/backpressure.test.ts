@@ -28,30 +28,36 @@ class FakeSocket implements BackpressuredSocket {
     }
 }
 
-const output = (sessionId: string, data: string): ServerFrame => ({ type: 'event', event: 'session.output', payload: { sessionId, data } });
-const browserFrame = (sequence: number): ServerFrame => ({
-    type: 'event',
-    event: 'browser.frame',
-    payload: { browserId: 'browser-1', sequence, width: 800, height: 600, data: 'jpeg' }
-});
+function output(sessionId: string, data: string): ServerFrame {
+    return { type: 'event', event: 'session.output', payload: { sessionId, data } };
+}
+function browserFrame(sequence: number): ServerFrame {
+    return {
+        type: 'event',
+        event: 'browser.frame',
+        payload: { browserId: 'browser-1', sequence, width: 800, height: 600, data: 'jpeg' }
+    };
+}
 
-const deviceFrame = (sequence: number, keyFrame?: boolean): ServerFrame => ({
-    type: 'event',
-    event: 'device.frame',
-    payload: {
-        deviceId: 'phone-1',
-        backendId: 'android',
-        platform: 'android',
-        sequence,
-        width: 800,
-        height: 600,
-        format: keyFrame === undefined ? 'jpeg' : 'h264',
-        ...(keyFrame === undefined ? {} : { keyFrame }),
-        data: 'AA=='
-    }
-});
+function deviceFrame(sequence: number, keyFrame?: boolean): ServerFrame {
+    return {
+        type: 'event',
+        event: 'device.frame',
+        payload: {
+            deviceId: 'phone-1',
+            backendId: 'android',
+            platform: 'android',
+            sequence,
+            width: 800,
+            height: 600,
+            format: keyFrame === undefined ? 'jpeg' : 'h264',
+            ...(keyFrame === undefined ? {} : { keyFrame }),
+            data: 'AA=='
+        }
+    };
+}
 
-const setup = (screens: Record<string, string | null> = { a: 'screen-a', b: 'screen-b' }) => {
+function setup(screens: Record<string, string | null> = { a: 'screen-a', b: 'screen-b' }) {
     const socket = new FakeSocket();
     const keyFrameRequests: string[] = [];
     const gate = new OutputGate({
@@ -68,10 +74,12 @@ const setup = (screens: Record<string, string | null> = { a: 'screen-a', b: 'scr
         requestKeyFrame: ({ backendId, deviceId }) => keyFrameRequests.push(`${backendId}/${deviceId}`)
     });
     return { socket, gate, screens, keyFrameRequests };
-};
+}
 
 // The gate resyncs across an await; one macrotask is enough for its whole loop.
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+function flush(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 describe('OutputGate', () => {
     test('output flows while the socket keeps up', () => {

@@ -87,10 +87,10 @@ function ActionEvent({ action }: { action: VoiceAction }) {
     );
 }
 
-const actionDetail = (detail: string): { item: string; context: string | null } => {
+function actionDetail(detail: string): { item: string; context: string | null } {
     const separator = detail.lastIndexOf(' · ');
     return separator === -1 ? { item: detail, context: null } : { item: detail.slice(0, separator), context: detail.slice(separator + 3) };
-};
+}
 
 function ActionGroup({ actions }: { actions: VoiceAction[] }) {
     const { t } = useTranslation('voice');
@@ -169,7 +169,9 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
     );
 }
 
-const isActionEntry = (entry: VoiceTimelineEntry): boolean => entry.kind === 'action' || entry.kind === 'action-group';
+function isActionEntry(entry: VoiceTimelineEntry): boolean {
+    return entry.kind === 'action' || entry.kind === 'action-group';
+}
 
 function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utterance: VoiceUtterance }) {
     const { t } = useTranslation('voice');

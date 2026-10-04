@@ -104,7 +104,9 @@ const DEVICE_ERROR_CODES = [
 
 export type DeviceErrorCode = (typeof DEVICE_ERROR_CODES)[number];
 
-const isDeviceErrorCode = (code: string): code is DeviceErrorCode => (DEVICE_ERROR_CODES as readonly string[]).includes(code);
+function isDeviceErrorCode(code: string): code is DeviceErrorCode {
+    return (DEVICE_ERROR_CODES as readonly string[]).includes(code);
+}
 
 export class DeviceError extends CodedError<DeviceErrorCode> {}
 
@@ -477,22 +479,26 @@ export class DeviceManager {
     }
 }
 
-const sessionKey = (backendId: string, deviceId: string): string => streamKeyOf(backendId, deviceId);
+function sessionKey(backendId: string, deviceId: string): string {
+    return streamKeyOf(backendId, deviceId);
+}
 
-const requireFormat = (source: DeviceSource, formats: readonly DeviceVideoFormat[]): void => {
+function requireFormat(source: DeviceSource, formats: readonly DeviceVideoFormat[]): void {
     if (!formats.includes(source.format ?? 'jpeg')) {
         throw new DeviceError('device-format-unsupported', 'Update Ruimte on this client to show this device');
     }
-};
+}
 
-const eventFrame = (device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame => ({
-    deviceId: device.deviceId,
-    backendId: device.backendId,
-    platform: device.platform,
-    sequence: frame.sequence,
-    width: frame.width,
-    height: frame.height,
-    ...(frame.format ? { format: frame.format } : {}),
-    ...(frame.keyFrame !== undefined ? { keyFrame: frame.keyFrame } : {}),
-    data: Buffer.from(frame.data).toString('base64')
-});
+function eventFrame(device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame {
+    return {
+        deviceId: device.deviceId,
+        backendId: device.backendId,
+        platform: device.platform,
+        sequence: frame.sequence,
+        width: frame.width,
+        height: frame.height,
+        ...(frame.format ? { format: frame.format } : {}),
+        ...(frame.keyFrame !== undefined ? { keyFrame: frame.keyFrame } : {}),
+        data: Buffer.from(frame.data).toString('base64')
+    };
+}

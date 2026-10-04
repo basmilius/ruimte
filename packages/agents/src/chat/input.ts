@@ -10,12 +10,16 @@ interface UserMessageInput {
     skills?: string[];
 }
 
-const isBoundary = (char: string | undefined): boolean => char === undefined || /\s/.test(char);
+function isBoundary(char: string | undefined): boolean {
+    return char === undefined || /\s/.test(char);
+}
 
-const isTokenEnd = (char: string | undefined): boolean => isBoundary(char) || /[.,;:!?)]/.test(char!);
+function isTokenEnd(char: string | undefined): boolean {
+    return isBoundary(char) || /[.,;:!?)]/.test(char!);
+}
 
 /* Where a `$name` of a known skill sits in the text, as a whole token; -1 when it does not. */
-const findSkillToken = (text: string, name: string, from: number): number => {
+function findSkillToken(text: string, name: string, from: number): number {
     const token = `$${name}`;
     let index = text.indexOf(token, from);
     while (index >= 0) {
@@ -25,10 +29,10 @@ const findSkillToken = (text: string, name: string, from: number): number => {
         index = text.indexOf(token, index + 1);
     }
     return -1;
-};
+}
 
 /* The last `$name` in the text that names one of the skills, longest name first on a tie. */
-export const lastSkillToken = (text: string, skills: string[]): { index: number; name: string } | null => {
+export function lastSkillToken(text: string, skills: string[]): { index: number; name: string } | null {
     let best: { index: number; name: string } | null = null;
     for (const name of [...new Set(skills)].sort((a, b) => b.length - a.length)) {
         let index = findSkillToken(text, name, 0);
@@ -40,7 +44,7 @@ export const lastSkillToken = (text: string, skills: string[]): { index: number;
         }
     }
     return best;
-};
+}
 
 /*
  * The text blocks a prompt with skills becomes. Claude Code expands a skill only from a text block
@@ -49,7 +53,7 @@ export const lastSkillToken = (text: string, skills: string[]): { index: number;
  * person wrote before it stays a block in front, with the earlier `$x` written as `/x` so the model
  * can still reach those through its Skill tool.
  */
-export const splitSkillPrompt = (text: string, skills: string[]): { lead: string; invocation: string | null } => {
+export function splitSkillPrompt(text: string, skills: string[]): { lead: string; invocation: string | null } {
     const last = lastSkillToken(text, skills);
     if (last === null) {
         return { lead: text, invocation: null };
@@ -57,18 +61,19 @@ export const splitSkillPrompt = (text: string, skills: string[]): { lead: string
     const lead = text.slice(0, last.index).replace(/\$([A-Za-z][A-Za-z0-9_:-]*)/g, (match, name: string) => (skills.includes(name) ? `/${name}` : match));
     const rest = text.slice(last.index + last.name.length + 1).replace(/^[ \t]+/, '');
     return { lead: lead.trimEnd(), invocation: rest === '' ? `/${last.name}` : `/${last.name} ${rest}` };
-};
+}
 
 /* Paths stay in the prompt so the agent can also edit or copy the original attachments. */
-export const attachmentNote = (attachments: ChatAttachment[]): string =>
-    attachments.length === 0 ? '' : `Attached files:\n${attachments.map((attachment) => `- ${attachment.path} (${attachment.name})`).join('\n')}`;
+export function attachmentNote(attachments: ChatAttachment[]): string {
+    return attachments.length === 0 ? '' : `Attached files:\n${attachments.map((attachment) => `- ${attachment.path} (${attachment.name})`).join('\n')}`;
+}
 
 /*
  * The `user` frame the CLI reads on stdin. The message body is the Anthropic API shape: a content
  * array of text blocks, which the CLI passes through unchanged (checked against claude 2.1.266).
  * The attachments are named by path in the leading block, so the invocation of a skill stays last.
  */
-export const buildUserMessage = ({ text, attachments = [], prefix = '', skills = [], promptId }: UserMessageInput): Record<string, unknown> => {
+export function buildUserMessage({ text, attachments = [], prefix = '', skills = [], promptId }: UserMessageInput): Record<string, unknown> {
     const content: unknown[] = [];
     const { lead, invocation } = splitSkillPrompt(text, skills);
     const note = attachmentNote(attachments);
@@ -81,4 +86,4 @@ export const buildUserMessage = ({ text, attachments = [], prefix = '', skills =
         content.push({ type: 'text', text: invocation });
     }
     return { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, session_id: '', ...(promptId ? { uuid: promptId } : {}) };
-};
+}

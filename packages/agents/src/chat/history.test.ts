@@ -3,7 +3,9 @@ import type { ChatInfo, ChatItem } from '@ruimte/agent-contracts';
 import { ChatThread } from './thread.ts';
 
 const info = { chatId: 'history' } as ChatInfo;
-const message = (i: number, text = `Message ${i}`): ChatItem => ({ id: `m${i}`, kind: 'assistant', text, streaming: false }) as ChatItem;
+function message(i: number, text = `Message ${i}`): ChatItem {
+    return { id: `m${i}`, kind: 'assistant', text, streaming: false } as ChatItem;
+}
 
 describe('chat history', () => {
     test('pages a large synthetic thread without dropping or repeating items', () => {

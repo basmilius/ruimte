@@ -4,23 +4,23 @@
  */
 const tickets = new Map<string, string>();
 
-export const rememberTicket = (endpointId: string, ticket: string): void => {
+export function rememberTicket(endpointId: string, ticket: string): void {
     tickets.set(endpointId, ticket);
-};
+}
 
-export const forgetTicket = (endpointId: string): void => {
+export function forgetTicket(endpointId: string): void {
     tickets.delete(endpointId);
-};
+}
 
 /* The row moved onto the id its daemon answers with; the ticket is for that same daemon. */
-export const rekeyTicket = (oldId: string, newId: string): void => {
+export function rekeyTicket(oldId: string, newId: string): void {
     const ticket = tickets.get(oldId);
     if (ticket === undefined || oldId === newId) {
         return;
     }
     tickets.delete(oldId);
     tickets.set(newId, ticket);
-};
+}
 
 /*
  * The local secret the desktop shell read from the daemon's home, for the row of the daemon that
@@ -30,27 +30,31 @@ export const rekeyTicket = (oldId: string, newId: string): void => {
  */
 const localSecrets = new Map<string, string>();
 
-export const rememberLocalSecret = (endpointId: string, secret: string | null): void => {
+export function rememberLocalSecret(endpointId: string, secret: string | null): void {
     if (secret === null) {
         localSecrets.delete(endpointId);
         return;
     }
     localSecrets.set(endpointId, secret);
-};
+}
 
 /* The local secret this client holds for a row, which a direct connection proves it has without sending it. */
-export const localSecretOf = (endpointId: string): string | null => localSecrets.get(endpointId) ?? null;
+export function localSecretOf(endpointId: string): string | null {
+    return localSecrets.get(endpointId) ?? null;
+}
 
 /* The local secret of a daemon from before the ticket trade, which takes nothing else in a URL. A newer daemon gets a ticket instead. */
 const secretsForUrls = new Map<string, string>();
 
-export const rememberSecretForUrls = (endpointId: string, secret: string | null): void => {
+export function rememberSecretForUrls(endpointId: string, secret: string | null): void {
     if (secret === null) {
         secretsForUrls.delete(endpointId);
         return;
     }
     secretsForUrls.set(endpointId, secret);
-};
+}
 
 /* What goes in the `token` query of a socket URL or of a URL an `<img>` fetches, the name the daemon reads it under. */
-export const credentialFor = (endpoint: { id: string }): string | null => tickets.get(endpoint.id) ?? secretsForUrls.get(endpoint.id) ?? null;
+export function credentialFor(endpoint: { id: string }): string | null {
+    return tickets.get(endpoint.id) ?? secretsForUrls.get(endpoint.id) ?? null;
+}

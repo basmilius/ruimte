@@ -135,7 +135,7 @@ export interface ScreenSize {
     height: number;
 }
 
-export const encodeKeycode = (action: typeof ACTION_DOWN | typeof ACTION_UP, keycode: number): Uint8Array => {
+export function encodeKeycode(action: typeof ACTION_DOWN | typeof ACTION_UP, keycode: number): Uint8Array {
     const message = new DataView(new ArrayBuffer(14));
     message.setUint8(0, TYPE_INJECT_KEYCODE);
     message.setUint8(1, action);
@@ -143,9 +143,9 @@ export const encodeKeycode = (action: typeof ACTION_DOWN | typeof ACTION_UP, key
     message.setInt32(6, 0);
     message.setInt32(10, 0);
     return new Uint8Array(message.buffer);
-};
+}
 
-export const encodeTouch = (action: number, pointerId: number, x: number, y: number, screen: ScreenSize): Uint8Array => {
+export function encodeTouch(action: number, pointerId: number, x: number, y: number, screen: ScreenSize): Uint8Array {
     const message = new DataView(new ArrayBuffer(32));
     message.setUint8(0, TYPE_INJECT_TOUCH_EVENT);
     message.setUint8(1, action);
@@ -158,9 +158,9 @@ export const encodeTouch = (action: number, pointerId: number, x: number, y: num
     message.setInt32(24, 0);
     message.setInt32(28, 0);
     return new Uint8Array(message.buffer);
-};
+}
 
-export const encodeScroll = (x: number, y: number, horizontal: number, vertical: number, screen: ScreenSize): Uint8Array => {
+export function encodeScroll(x: number, y: number, horizontal: number, vertical: number, screen: ScreenSize): Uint8Array {
     const message = new DataView(new ArrayBuffer(21));
     message.setUint8(0, TYPE_INJECT_SCROLL_EVENT);
     message.setInt32(1, toPixel(x, screen.width));
@@ -171,15 +171,19 @@ export const encodeScroll = (x: number, y: number, horizontal: number, vertical:
     message.setInt16(15, toScrollFixedPoint(vertical));
     message.setInt32(17, 0);
     return new Uint8Array(message.buffer);
-};
+}
 
-export const encodeRotate = (): Uint8Array => new Uint8Array([TYPE_ROTATE_DEVICE]);
+export function encodeRotate(): Uint8Array {
+    return new Uint8Array([TYPE_ROTATE_DEVICE]);
+}
 
 /* Restarts the encoder, which answers with a fresh configuration and key frame. */
-export const encodeResetVideo = (): Uint8Array => new Uint8Array([TYPE_RESET_VIDEO]);
+export function encodeResetVideo(): Uint8Array {
+    return new Uint8Array([TYPE_RESET_VIDEO]);
+}
 
 /* The control messages one input becomes, against the size of the screen the last frame showed. */
-export const controlMessages = (input: DeviceInput, screen: ScreenSize): Uint8Array[] => {
+export function controlMessages(input: DeviceInput, screen: ScreenSize): Uint8Array[] {
     switch (input.kind) {
         case 'pointer':
             return [encodeTouch(touchAction(input.phase), 0, input.x, input.y, screen)];
@@ -200,23 +204,29 @@ export const controlMessages = (input: DeviceInput, screen: ScreenSize): Uint8Ar
         case 'rotate':
             return [encodeRotate()];
     }
-};
+}
 
-const touchAction = (phase: 'down' | 'move' | 'up'): number => (phase === 'down' ? ACTION_DOWN : phase === 'up' ? ACTION_UP : ACTION_MOVE);
+function touchAction(phase: 'down' | 'move' | 'up'): number {
+    return phase === 'down' ? ACTION_DOWN : phase === 'up' ? ACTION_UP : ACTION_MOVE;
+}
 
-const toPixel = (fraction: number, extent: number): number => Math.min(extent - 1, Math.max(0, Math.round(fraction * extent)));
+function toPixel(fraction: number, extent: number): number {
+    return Math.min(extent - 1, Math.max(0, Math.round(fraction * extent)));
+}
 
 /* A step count as the signed 16-bit fixed point of a value in [-16, 16] the server reads. */
-const toScrollFixedPoint = (steps: number): number => {
+function toScrollFixedPoint(steps: number): number {
     const fraction = Math.max(-1, Math.min(1, steps / 16));
     return Math.min(0x7fff, Math.round(fraction * 0x8000));
-};
+}
 
-const view = (bytes: Uint8Array, offset: number): DataView => new DataView(bytes.buffer, bytes.byteOffset + offset);
+function view(bytes: Uint8Array, offset: number): DataView {
+    return new DataView(bytes.buffer, bytes.byteOffset + offset);
+}
 
-const concat = (first: Uint8Array, second: Uint8Array): Uint8Array => {
+function concat(first: Uint8Array, second: Uint8Array): Uint8Array {
     const joined = new Uint8Array(first.byteLength + second.byteLength);
     joined.set(first);
     joined.set(second, first.byteLength);
     return joined;
-};
+}

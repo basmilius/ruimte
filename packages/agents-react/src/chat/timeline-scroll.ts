@@ -11,12 +11,12 @@ type Scroller = {
 const scrollers = new Map<string, Scroller>();
 
 /* The timeline hands its scroller over so the composer, which never sees it, can page through it. */
-export const registerTimeline = (
+export function registerTimeline(
     chatId: string,
     element: HTMLElement | null,
     follow: Scroller['follow'],
     coveredHeight: Scroller['coveredHeight']
-): (() => void) => {
+): () => void {
     if (element === null) {
         return () => undefined;
     }
@@ -27,13 +27,13 @@ export const registerTimeline = (
             ends.delete(chatId);
         }
     };
-};
+}
 
 /* The timeline owns following; the composer subscribes here to show its jump-to-end button. */
 const ends = new Map<string, boolean>();
 const listeners = new Set<() => void>();
 
-export const setTimelineAtEnd = (chatId: string, atEnd: boolean): void => {
+export function setTimelineAtEnd(chatId: string, atEnd: boolean): void {
     if (ends.get(chatId) === atEnd) {
         return;
     }
@@ -41,28 +41,30 @@ export const setTimelineAtEnd = (chatId: string, atEnd: boolean): void => {
     for (const listener of listeners) {
         listener();
     }
-};
+}
 
-export const subscribeTimelineEnd = (listener: () => void): (() => void) => {
+export function subscribeTimelineEnd(listener: () => void): () => void {
     listeners.add(listener);
     return () => {
         listeners.delete(listener);
     };
-};
+}
 
 /* A thread nobody has scrolled is at its end, so the button stays away until there is a way back. */
-export const timelineAtEnd = (chatId: string): boolean => ends.get(chatId) ?? true;
+export function timelineAtEnd(chatId: string): boolean {
+    return ends.get(chatId) ?? true;
+}
 
-export const scrollTimelineToEnd = (chatId: string, behavior: ScrollBehavior = 'smooth'): void => {
+export function scrollTimelineToEnd(chatId: string, behavior: ScrollBehavior = 'smooth'): void {
     const scroller = scrollers.get(chatId);
     if (scroller) {
         scroller.follow(true);
         scroller.element.scrollTo({ top: scroller.element.scrollHeight, behavior });
     }
-};
+}
 
 /* Pages the thread of this chat up or down; false when it has no timeline on screen. */
-export const pageTimeline = (chatId: string, direction: -1 | 1): boolean => {
+export function pageTimeline(chatId: string, direction: -1 | 1): boolean {
     const scroller = scrollers.get(chatId);
     if (!scroller) {
         return false;
@@ -71,7 +73,7 @@ export const pageTimeline = (chatId: string, direction: -1 | 1): boolean => {
     const { element } = scroller;
     element.scrollBy({ top: direction * Math.max(0, element.clientHeight - scroller.coveredHeight()) * PAGE_OVERLAP, behavior: 'smooth' });
     return true;
-};
+}
 
 /*
  * The keyboard steps from one message of the person to the next through the timeline on screen,
@@ -80,17 +82,19 @@ export const pageTimeline = (chatId: string, direction: -1 | 1): boolean => {
  */
 const steppers = new Map<string, (direction: -1 | 1) => boolean>();
 
-export const registerMessageStepper = (key: string, step: (direction: -1 | 1) => boolean): (() => void) => {
+export function registerMessageStepper(key: string, step: (direction: -1 | 1) => boolean): () => void {
     steppers.set(key, step);
     return () => {
         if (steppers.get(key) === step) {
             steppers.delete(key);
         }
     };
-};
+}
 
 /* False when that chat has no timeline on screen or no message in that direction. */
-export const stepTimelineMessage = (key: string, direction: -1 | 1): boolean => steppers.get(key)?.(direction) ?? false;
+export function stepTimelineMessage(key: string, direction: -1 | 1): boolean {
+    return steppers.get(key)?.(direction) ?? false;
+}
 
 /*
  * A jump to one message of a chat, asked from outside its thread (the chat's menu). A thread that is
@@ -100,7 +104,7 @@ export const stepTimelineMessage = (key: string, direction: -1 | 1): boolean => 
 const jumpers = new Map<string, (itemId: string) => void>();
 const waitingJumps = new Map<string, string>();
 
-export const registerItemJumper = (key: string, jump: (itemId: string) => void): (() => void) => {
+export function registerItemJumper(key: string, jump: (itemId: string) => void): () => void {
     jumpers.set(key, jump);
     const waiting = waitingJumps.get(key);
     if (waiting !== undefined) {
@@ -112,10 +116,10 @@ export const registerItemJumper = (key: string, jump: (itemId: string) => void):
             jumpers.delete(key);
         }
     };
-};
+}
 
 /* False when that chat has no thread on screen; the jump then waits for the next one that registers. */
-export const jumpToTimelineItem = (key: string, itemId: string): boolean => {
+export function jumpToTimelineItem(key: string, itemId: string): boolean {
     const jump = jumpers.get(key);
     if (jump === undefined) {
         waitingJumps.set(key, itemId);
@@ -123,12 +127,14 @@ export const jumpToTimelineItem = (key: string, itemId: string): boolean => {
     }
     jump(itemId);
     return true;
-};
+}
 
 /* How near the top, in screens, the page before is asked for, so it is there before a reader reaches the edge. */
 const EARLIER_SCREENS = 1.5;
 
-export const wantsEarlier = (scroller: HTMLElement): boolean => scroller.clientHeight > 0 && scroller.scrollTop < scroller.clientHeight * EARLIER_SCREENS;
+export function wantsEarlier(scroller: HTMLElement): boolean {
+    return scroller.clientHeight > 0 && scroller.scrollTop < scroller.clientHeight * EARLIER_SCREENS;
+}
 
 /* A row being read and how far below the top of its scroller it starts, so a page going in above leaves it there. */
 export interface ReadingAnchor {
@@ -137,7 +143,7 @@ export interface ReadingAnchor {
 }
 
 /* The first row in view, found by the rows' `data-item-id`, for a thread that keeps every row in the document. */
-export const firstRowInView = (scroller: HTMLElement): ReadingAnchor | null => {
+export function firstRowInView(scroller: HTMLElement): ReadingAnchor | null {
     const top = scroller.getBoundingClientRect().top;
     for (const row of scroller.querySelectorAll<HTMLElement>('[data-item-id]')) {
         const rect = row.getBoundingClientRect();
@@ -146,12 +152,12 @@ export const firstRowInView = (scroller: HTMLElement): ReadingAnchor | null => {
         }
     }
     return null;
-};
+}
 
 /* Puts the anchored row back where it was; nothing moves when that row is gone. */
-export const restoreAnchor = (scroller: HTMLElement, anchor: ReadingAnchor): void => {
+export function restoreAnchor(scroller: HTMLElement, anchor: ReadingAnchor): void {
     const row = scroller.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(anchor.id)}"]`);
     if (row !== null) {
         scroller.scrollTop += row.getBoundingClientRect().top - scroller.getBoundingClientRect().top - anchor.offset;
     }
-};
+}

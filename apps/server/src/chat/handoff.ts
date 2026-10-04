@@ -25,10 +25,12 @@ export interface HandoffMeta {
 }
 
 /* A moment as every machine writes it, so the text does not depend on the daemon's locale. */
-const moment = (at: number): string => `${new Date(at).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+function moment(at: number): string {
+    return `${new Date(at).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+}
 
 /* The copied items per turn, oldest first; what belongs to no turn is left out, since the daemon wrote it. */
-const turnsOf = (items: readonly ChatItem[]): ChatItem[][] => {
+function turnsOf(items: readonly ChatItem[]): ChatItem[][] {
     const order: string[] = [];
     const byTurn = new Map<string, ChatItem[]>();
     for (const item of items) {
@@ -44,14 +46,14 @@ const turnsOf = (items: readonly ChatItem[]): ChatItem[][] => {
         group.push(item);
     }
     return order.map((turnId) => byTurn.get(turnId)!);
-};
+}
 
 /*
  * What a CLI that takes over a conversation hears first: where it came from, how to read all of it,
  * and its last whole turns as text, added from the newest back until the budget is spent. The last
  * turn always goes along, however long it is, since a handoff without it has nothing to go on from.
  */
-export const handoffText = (items: readonly ChatItem[], meta: HandoffMeta, budget = HANDOFF_BUDGET_BYTES): { text: string; turns: number; all: boolean } => {
+export function handoffText(items: readonly ChatItem[], meta: HandoffMeta, budget = HANDOFF_BUDGET_BYTES): { text: string; turns: number; all: boolean } {
     const rendered = turnsOf(items)
         .map((turn) => renderTranscript(turn))
         .filter((text) => text !== '');
@@ -81,4 +83,4 @@ export const handoffText = (items: readonly ChatItem[], meta: HandoffMeta, budge
         "Continue from here. The person's next message follows."
     ].join('\n');
     return { text, turns: kept.length, all: kept.length === rendered.length };
-};
+}

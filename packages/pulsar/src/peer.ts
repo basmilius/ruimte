@@ -36,7 +36,9 @@ export interface BrokerPeerOptions {
 }
 
 /* `host[:port]` of a broker URL, which is what a broker names in its challenge. */
-export const brokerHostOf = (url: string): string => new URL(url).host;
+export function brokerHostOf(url: string): string {
+    return new URL(url).host;
+}
 
 /*
  * One peer's side of a broker socket, without the socket: the daemon, the client and the tests all

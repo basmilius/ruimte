@@ -7,12 +7,14 @@ export const MAX_TEAM_DEPTH = 1;
 
 export { MAX_OPENED_PER_CALLER } from '@ruimte/actions';
 
-const depthLines = (mine: number): string[] => [
-    `depth\tyou\t${mine}`,
-    'depth\t0\ta node a person opened',
-    `depth\tagent\topens up to depth ${MAX_AGENT_DEPTH}`,
-    `depth\tteam\topens up to depth ${MAX_TEAM_DEPTH}`
-];
+function depthLines(mine: number): string[] {
+    return [
+        `depth\tyou\t${mine}`,
+        'depth\t0\ta node a person opened',
+        `depth\tagent\topens up to depth ${MAX_AGENT_DEPTH}`,
+        `depth\tteam\topens up to depth ${MAX_TEAM_DEPTH}`
+    ];
+}
 
 export const DEPTH_LIMIT_LINES: readonly string[] = [
     `depth\tA node a person opened is depth 0 and one an agent opens is one deeper; agent opens up to depth ${MAX_AGENT_DEPTH}, team up to depth ${MAX_TEAM_DEPTH}`,
@@ -26,7 +28,7 @@ export const DEPTH_LIMIT_LINES: readonly string[] = [
  * this caller has opened enough. `making` is how many nodes are about to be opened, so a team is
  * weighed whole rather than one role at a time.
  */
-export const depthForOpening = (call: VerbCall, verb: 'agent' | 'team', making: number): number => {
+export function depthForOpening(call: VerbCall, verb: 'agent' | 'team', making: number): number {
     const mine = call.host.depthOf(call.caller);
     const depth = mine + 1;
     const max = verb === 'team' ? MAX_TEAM_DEPTH : MAX_AGENT_DEPTH;
@@ -45,4 +47,4 @@ export const depthForOpening = (call: VerbCall, verb: 'agent' | 'team', making: 
         );
     }
     return depth;
-};
+}

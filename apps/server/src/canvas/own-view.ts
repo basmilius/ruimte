@@ -12,30 +12,35 @@ import { VerbRefusal } from './verb.ts';
 export type OwnView = ProjectBrowserView | ProjectChatView | ProjectDeviceView | ProjectTerminalView;
 
 /* The view an id names when it stands in the sidebar rather than on a canvas; null for every other id. */
-export const ownViewOf = (content: Pick<ProjectContent, 'views'>, id: string): OwnView | null => {
+export function ownViewOf(content: Pick<ProjectContent, 'views'>, id: string): OwnView | null {
     const view = content.views.find((candidate) => candidate.id === id);
     return view !== undefined && isSessionView(view) ? view : null;
-};
+}
 
 /*
  * What a verb says about such an id. "Not a node on this canvas" is true and leaves open that it is
  * a node on another one, so an agent goes through every view of the project to find out that it is
  * not; the daemon has the document and can close that question in the sentence itself.
  */
-export const refuseOwnView = (view: OwnView, cannot: string, lines: string[] = []): VerbRefusal =>
-    new VerbRefusal('not-on-a-canvas', `${view.id} is a ${view.kind} that is a view of its own, not a node on any canvas of this project, so ${cannot}`, lines);
+export function refuseOwnView(view: OwnView, cannot: string, lines: string[] = []): VerbRefusal {
+    return new VerbRefusal(
+        'not-on-a-canvas',
+        `${view.id} is a ${view.kind} that is a view of its own, not a node on any canvas of this project, so ${cannot}`,
+        lines
+    );
+}
 
 /*
  * The refusal for ids a canvas does not carry, whichever of the two they are. An id that names
  * nothing at all keeps the sentence it has always had, since that is the other case entirely.
  */
-export const refuseMissingNodes = (
+export function refuseMissingNodes(
     content: Pick<ProjectContent, 'views'>,
     missing: readonly string[],
     canvasId: string,
     cannot: string,
     lines: string[] = []
-): VerbRefusal => {
+): VerbRefusal {
     const own = missing.map((id) => ownViewOf(content, id)).filter((view): view is OwnView => view !== null);
     if (missing.length === 1 && own.length === 1) {
         return refuseOwnView(own[0]!, cannot, lines);
@@ -45,4 +50,4 @@ export const refuseMissingNodes = (
         ...own.map((view) => `note\t${view.id} is a ${view.kind} that is a view of its own, not a node on any canvas of this project`),
         ...lines
     ]);
-};
+}

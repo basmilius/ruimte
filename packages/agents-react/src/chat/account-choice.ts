@@ -20,7 +20,7 @@ export interface AccountChoice {
  * The accounts of a chat's CLI on the machine in scope and the one the chat runs under, or null while
  * the CLI has fewer than two accounts that are on: with one there is nothing to choose or tell apart.
  */
-export const useAccountChoice = (kind: AgentKind | null, account: string | undefined): AccountChoice | null => {
+export function useAccountChoice(kind: AgentKind | null, account: string | undefined): AccountChoice | null {
     const accounts = useProviderAccounts((row) => row.accounts);
     const providerName = useProviders((row) => row.providers.find((entry) => entry.kind === kind)?.name) ?? kind ?? '';
     return useMemo(() => {
@@ -41,4 +41,4 @@ export const useAccountChoice = (kind: AgentKind | null, account: string | undef
             nameOf: (entry: AccountEntry) => accountName(entry, providerName)
         };
     }, [accounts, kind, account, providerName]);
-};
+}

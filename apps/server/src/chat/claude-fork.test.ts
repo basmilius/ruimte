@@ -9,58 +9,66 @@ import { ChatError } from './errors.ts';
 const SESSION = 'ef133c61-7c0d-4182-9b8f-40f5214adbdf';
 const FORK = '04d373e9-dd60-4612-9381-7bb0827ac6a5';
 
-const line = (entry: Record<string, unknown>): string => JSON.stringify(entry);
+function line(entry: Record<string, unknown>): string {
+    return JSON.stringify(entry);
+}
 
 /* One turn the way Claude Code 2.1.273 writes it: the queue lines, the prompt, what it attached, the answer and what trails it. */
-const turn = (n: number, parent: string | null): string[] => [
-    line({ type: 'queue-operation', operation: 'enqueue', sessionId: SESSION, content: `prompt ${n}` }),
-    line({ type: 'queue-operation', operation: 'dequeue', sessionId: SESSION }),
-    line({ type: 'user', uuid: `u${n}`, parentUuid: parent, isSidechain: false, sessionId: SESSION, message: { role: 'user', content: `prompt ${n}` } }),
-    line({ type: 'attachment', uuid: `a${n}`, parentUuid: `u${n}`, isSidechain: false, sessionId: SESSION, attachment: {} }),
-    line({ type: 'assistant', uuid: `t${n}`, parentUuid: `a${n}`, isSidechain: false, sessionId: SESSION, message: { content: [{ type: 'thinking' }] } }),
-    line({
-        type: 'assistant',
-        uuid: `r${n}`,
-        parentUuid: `t${n}`,
-        isSidechain: false,
-        sessionId: SESSION,
-        message: { content: [{ type: 'text', text: `answer ${n}` }] }
-    }),
-    line({ type: 'system', uuid: `s${n}`, parentUuid: `r${n}`, isSidechain: false, sessionId: SESSION, subtype: 'turn_duration' }),
-    line({ type: 'last-prompt', sessionId: SESSION, lastPrompt: `prompt ${n}` })
-];
-
-const transcript = (): string =>
-    [
-        line({ type: 'ai-title', sessionId: SESSION, aiTitle: 'Four turns' }),
-        ...turn(1, null),
-        // A tool result and an injected skill are no prompt, so they never end a turn.
+function turn(n: number, parent: string | null): string[] {
+    return [
+        line({ type: 'queue-operation', operation: 'enqueue', sessionId: SESSION, content: `prompt ${n}` }),
+        line({ type: 'queue-operation', operation: 'dequeue', sessionId: SESSION }),
+        line({ type: 'user', uuid: `u${n}`, parentUuid: parent, isSidechain: false, sessionId: SESSION, message: { role: 'user', content: `prompt ${n}` } }),
+        line({ type: 'attachment', uuid: `a${n}`, parentUuid: `u${n}`, isSidechain: false, sessionId: SESSION, attachment: {} }),
+        line({ type: 'assistant', uuid: `t${n}`, parentUuid: `a${n}`, isSidechain: false, sessionId: SESSION, message: { content: [{ type: 'thinking' }] } }),
         line({
-            type: 'user',
-            uuid: 'u1-meta',
-            isSidechain: false,
-            isMeta: true,
-            sessionId: SESSION,
-            message: { role: 'user', content: [{ type: 'text', text: 'skill' }] }
-        }),
-        ...turn(2, 's1'),
-        line({
-            type: 'user',
-            uuid: 'u2-tool',
+            type: 'assistant',
+            uuid: `r${n}`,
+            parentUuid: `t${n}`,
             isSidechain: false,
             sessionId: SESSION,
-            message: { role: 'user', content: [{ type: 'tool_result', content: 'x' }] }
+            message: { content: [{ type: 'text', text: `answer ${n}` }] }
         }),
-        line({ type: 'file-history-snapshot', messageId: 'r2', snapshot: {} }),
-        ...turn(3, 's2'),
-        ...turn(4, 's3')
-    ].join('\n') + '\n';
+        line({ type: 'system', uuid: `s${n}`, parentUuid: `r${n}`, isSidechain: false, sessionId: SESSION, subtype: 'turn_duration' }),
+        line({ type: 'last-prompt', sessionId: SESSION, lastPrompt: `prompt ${n}` })
+    ];
+}
 
-const parse = (text: string): Record<string, unknown>[] =>
-    text
+function transcript(): string {
+    return (
+        [
+            line({ type: 'ai-title', sessionId: SESSION, aiTitle: 'Four turns' }),
+            ...turn(1, null),
+            // A tool result and an injected skill are no prompt, so they never end a turn.
+            line({
+                type: 'user',
+                uuid: 'u1-meta',
+                isSidechain: false,
+                isMeta: true,
+                sessionId: SESSION,
+                message: { role: 'user', content: [{ type: 'text', text: 'skill' }] }
+            }),
+            ...turn(2, 's1'),
+            line({
+                type: 'user',
+                uuid: 'u2-tool',
+                isSidechain: false,
+                sessionId: SESSION,
+                message: { role: 'user', content: [{ type: 'tool_result', content: 'x' }] }
+            }),
+            line({ type: 'file-history-snapshot', messageId: 'r2', snapshot: {} }),
+            ...turn(3, 's2'),
+            ...turn(4, 's3')
+        ].join('\n') + '\n'
+    );
+}
+
+function parse(text: string): Record<string, unknown>[] {
+    return text
         .trim()
         .split('\n')
         .map((raw) => JSON.parse(raw) as Record<string, unknown>);
+}
 
 describe('cutTranscript', () => {
     test('a cut at the last answer of turn 2 keeps every line up to the prompt of turn 3, all under the new session id', () => {

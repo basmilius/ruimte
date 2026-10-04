@@ -35,11 +35,12 @@ describe('buildTitlePrompt', () => {
     });
 });
 
-const registryWith = (installed: string[], providers?: ChatProvider[]): ProviderRegistry =>
-    new ProviderRegistry({
+function registryWith(installed: string[], providers?: ChatProvider[]): ProviderRegistry {
+    return new ProviderRegistry({
         ...(providers ? { providers } : {}),
         detect: async (command) => ({ installed: installed.includes(command), version: installed.includes(command) ? '1.0.0' : null })
     });
+}
 
 describe('suggestChatTitle', () => {
     const input = { cwd: process.cwd(), prompt: 'Why does the build fail?', answer: 'The lockfile is stale.' };

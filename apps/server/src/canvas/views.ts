@@ -36,13 +36,16 @@ export const ID_PREFIX: Partial<Record<ProjectViewKind, string>> = {
     subheader: 'subheader'
 };
 
-export const viewKindsFor = (flag: ViewFlag): string =>
-    VIEW_KINDS.filter((kind) => VIEW_KIND_FLAGS[kind] === flag)
+export function viewKindsFor(flag: ViewFlag): string {
+    return VIEW_KINDS.filter((kind) => VIEW_KIND_FLAGS[kind] === flag)
         .map((kind) => `${kind} (required)`)
         .join(', ');
+}
 
 /* The views a refusal offers instead; the caller passes the ones its verb would actually take. */
-export const viewLines = (views: readonly ProjectView[]): string[] => views.map((view) => `view\t${view.id}\t${view.kind}\t${field(view.name ?? '')}`);
+export function viewLines(views: readonly ProjectView[]): string[] {
+    return views.map((view) => `view\t${view.id}\t${view.kind}\t${field(view.name ?? '')}`);
+}
 
 /*
  * Whether `view delete` would remove this view for this caller, and why: one it made itself, or any
@@ -50,7 +53,7 @@ export const viewLines = (views: readonly ProjectView[]): string[] => views.map(
  * the verb would end the session that is asking. The reason is what the `view list` column prints, so a
  * `yes` on a machine that frees everything does not read as a mistake to a caller that made none of them.
  */
-export const deleteReason = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): { may: boolean; why: string } => {
+export function deleteReason(view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): { may: boolean; why: string } {
     if (view.id === call.caller || view.id === call.place.canvasId) {
         return { may: false, why: 'you are in it' };
     }
@@ -61,9 +64,11 @@ export const deleteReason = (view: ProjectView, call: { caller: string; place: I
         return { may: true, why: 'this machine frees every view' };
     }
     return { may: false, why: view.createdBy === undefined ? 'a person made it' : `${view.createdBy} made it` };
-};
+}
 
-export const deletableView = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): boolean => deleteReason(view, call).may;
+export function deletableView(view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): boolean {
+    return deleteReason(view, call).may;
+}
 
 /* The icon names in rows of ten: one per line they would bury the refusal they belong to. */
 export const ICON_NAME_LINES = Array.from({ length: Math.ceil(PROJECT_ICON_NAMES.length / 10) }, (_, row) =>
@@ -72,15 +77,15 @@ export const ICON_NAME_LINES = Array.from({ length: Math.ceil(PROJECT_ICON_NAMES
 
 /* A Lucide name from the closed set. Anything else is refused with the set, which is the answer to
    both a typo and a mark of one's own: a view wears one of these names or the mark of its kind. */
-export const iconChoice = (value: string): ProjectIconChoice => {
+export function iconChoice(value: string): ProjectIconChoice {
     if ((PROJECT_ICON_NAMES as readonly string[]).includes(value)) {
         return { kind: 'lucide', value: value as (typeof PROJECT_ICON_NAMES)[number] };
     }
     throw new VerbRefusal('unknown-icon', `${value} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`, ICON_NAME_LINES);
-};
+}
 
 /* The view an id names, refused with the list when it names none: the views are a closed set. */
-export const viewNamed = (content: ProjectContent, id: string, flag: string): ProjectView => {
+export function viewNamed(content: ProjectContent, id: string, flag: string): ProjectView {
     const view = content.views.find((candidate) => candidate.id === id);
     if (!view) {
         throw new VerbRefusal('unknown-view', `${id} is not a view of this project`, [
@@ -89,18 +94,14 @@ export const viewNamed = (content: ProjectContent, id: string, flag: string): Pr
         ]);
     }
     return view;
-};
+}
 
 /* A path stays inside the project folder as a stored one, and stays absolute when it points out. */
-export const storedFilePath = (folder: string, path: string): string => (folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path);
+export function storedFilePath(folder: string, path: string): string {
+    return folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path;
+}
 
-export const madeView = (
-    kind: (typeof VIEW_KINDS)[number],
-    id: string,
-    name: string,
-    createdBy: string,
-    parts: { url?: string; path?: string }
-): ProjectView => {
+export function madeView(kind: (typeof VIEW_KINDS)[number], id: string, name: string, createdBy: string, parts: { url?: string; path?: string }): ProjectView {
     if (kind === 'canvas') {
         return { ...emptyCanvasView(id, name), createdBy };
     }
@@ -117,10 +118,10 @@ export const madeView = (
         return { kind, id, name, path: parts.path!, createdBy };
     }
     return { kind, id, name, createdBy };
-};
+}
 
 /* Why this view stays. Every sentence names the way out, since the caller cannot read the machine. */
-export const refuseUndeletable = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): void => {
+export function refuseUndeletable(view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): void {
     if (deletableView(view, call)) {
         return;
     }
@@ -132,4 +133,4 @@ export const refuseUndeletable = (view: ProjectView, call: { caller: string; pla
         `you\t${call.caller}`,
         "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every view; a person turns it on from the Machines pane"
     ]);
-};
+}

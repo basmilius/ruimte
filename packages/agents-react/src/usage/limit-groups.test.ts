@@ -2,31 +2,37 @@ import { describe, expect, test } from 'bun:test';
 import type { ProviderAccounts, ProviderAccountStatus, UsageLimitsProvider, UsageWindow } from '@ruimte/agent-contracts';
 import { checkedLabel, hasSeveralAccounts, limitGroups, nextReset } from './limit-groups';
 
-const status = (id: string, kind: string, state: ProviderAccountStatus['state'] = 'ready'): ProviderAccountStatus => ({
-    id,
-    kind,
-    state,
-    email: null,
-    plan: null,
-    organization: null,
-    home: '',
-    message: null,
-    checkedAt: 1
-});
+function status(id: string, kind: string, state: ProviderAccountStatus['state'] = 'ready'): ProviderAccountStatus {
+    return {
+        id,
+        kind,
+        state,
+        email: null,
+        plan: null,
+        organization: null,
+        home: '',
+        message: null,
+        checkedAt: 1
+    };
+}
 
-const entry = (kind: 'claude' | 'codex', account?: { id: string; label: string }, extra: Partial<UsageLimitsProvider> = {}): UsageLimitsProvider => ({
-    kind,
-    ...(account === undefined ? {} : { account }),
-    plan: null,
-    checkedAt: 5,
-    source: 'probe',
-    windows: [],
-    cost: null,
-    unavailable: null,
-    ...extra
-});
+function entry(kind: 'claude' | 'codex', account?: { id: string; label: string }, extra: Partial<UsageLimitsProvider> = {}): UsageLimitsProvider {
+    return {
+        kind,
+        ...(account === undefined ? {} : { account }),
+        plan: null,
+        checkedAt: 5,
+        source: 'probe',
+        windows: [],
+        cost: null,
+        unavailable: null,
+        ...extra
+    };
+}
 
-const window = (id: string, resetsAt: number | null): UsageWindow => ({ id, kind: 'session', label: id, used: 0.2, resetsAt, durationMs: null });
+function window(id: string, resetsAt: number | null): UsageWindow {
+    return { id, kind: 'session', label: id, used: 0.2, resetsAt, durationMs: null };
+}
 
 describe('limits per account', () => {
     const accounts: ProviderAccounts = {

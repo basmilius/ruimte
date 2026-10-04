@@ -41,14 +41,16 @@ type ViewMerge = { ok: true; view: ProjectView; patch: CanvasPatch | null } | { 
 
 type ElementsMerge<T> = { ok: true; elements: T[]; put: T[]; removed: string[] } | { ok: false; reason: string };
 
-const refuse = (reason: string): { ok: false; reason: string } => ({ ok: false, reason });
+function refuse(reason: string): { ok: false; reason: string } {
+    return { ok: false, reason };
+}
 
 /*
  * Deep equality that reads a missing key and an undefined one as the same thing. What this client
  * holds went through the stores, what the daemon sent went through JSON, and only one of the two
  * can carry an `undefined`.
  */
-const same = (a: unknown, b: unknown): boolean => {
+function same(a: unknown, b: unknown): boolean {
     if (a === b) {
         return true;
     }
@@ -61,7 +63,7 @@ const same = (a: unknown, b: unknown): boolean => {
     const left = a as Record<string, unknown>;
     const right = b as Record<string, unknown>;
     return [...new Set([...Object.keys(left), ...Object.keys(right)])].every((key) => same(left[key], right[key]));
-};
+}
 
 // Merge coupled values together so coordinates, title source and folded-group state cannot form hybrids.
 type FieldGroups = Readonly<Record<string, readonly string[]>>;
@@ -83,7 +85,7 @@ type FieldsMerge<T> = { ok: true; merged: T; took: boolean } | { ok: false; fiel
  * `base` had it takes the other side's. Only a field both sides changed to different values is a
  * conflict, unless `keepMine` says this client's value stands for it anyway.
  */
-const mergeFields = <T extends object>(base: T, mine: T, theirs: T, groups: FieldGroups, keepMine: (field: string) => boolean): FieldsMerge<T> => {
+function mergeFields<T extends object>(base: T, mine: T, theirs: T, groups: FieldGroups, keepMine: (field: string) => boolean): FieldsMerge<T> {
     const was = base as Record<string, unknown>;
     const here = mine as Record<string, unknown>;
     const there = theirs as Record<string, unknown>;
@@ -114,17 +116,17 @@ const mergeFields = <T extends object>(base: T, mine: T, theirs: T, groups: Fiel
         }
     }
     return merged === null ? { ok: true, merged: mine, took: false } : { ok: true, merged: merged as T, took: true };
-};
+}
 
 // Merge entries by id and field with maps because this runs over every canvas on each remote save.
-const mergeElements = <T extends { id: string }>(
+function mergeElements<T extends { id: string }>(
     kind: string,
     base: readonly T[],
     mine: readonly T[],
     theirs: readonly T[],
     groups: FieldGroups,
     keepMine: (id: string, field: string) => boolean = () => false
-): ElementsMerge<T> => {
+): ElementsMerge<T> {
     const was = new Map(base.map((element) => [element.id, element]));
     const now = new Map(theirs.map((element) => [element.id, element]));
     const held = new Set(mine.map((element) => element.id));
@@ -167,10 +169,11 @@ const mergeElements = <T extends { id: string }>(
         }
     }
     return { ok: true, elements, put, removed };
-};
+}
 
-const sameOrder = (left: readonly string[], right: readonly string[]): boolean =>
-    left.length === right.length && left.every((id, index) => id === right[index]);
+function sameOrder(left: readonly string[], right: readonly string[]): boolean {
+    return left.length === right.length && left.every((id, index) => id === right[index]);
+}
 
 /*
  * The stacking order of the merged nodes. When only the other side moved the nodes both sides have
@@ -179,7 +182,7 @@ const sameOrder = (left: readonly string[], right: readonly string[]): boolean =
  * sides changing it is no conflict. A click into a node brings it to the front, and a dialog for two
  * people clicking would be the dialog on every other save.
  */
-const stackingOf = (base: readonly ProjectNode[], mine: readonly ProjectNode[], theirs: readonly ProjectNode[], merged: ProjectNode[]): ProjectNode[] => {
+function stackingOf(base: readonly ProjectNode[], mine: readonly ProjectNode[], theirs: readonly ProjectNode[], merged: ProjectNode[]): ProjectNode[] {
     const inBase = new Set(base.map((node) => node.id));
     const inMine = new Set(mine.map((node) => node.id));
     const inTheirs = new Set(theirs.map((node) => node.id));
@@ -198,9 +201,9 @@ const stackingOf = (base: readonly ProjectNode[], mine: readonly ProjectNode[], 
     const byId = new Map(merged.map((node) => [node.id, node]));
     let next = 0;
     return merged.map((node) => (shared(node) ? byId.get(theirOrder[next++]!)! : node));
-};
+}
 
-const mergeCanvas = (base: ProjectCanvasView, mine: ProjectCanvasView, theirs: ProjectCanvasView, held: ReadonlySet<string>): ViewMerge => {
+function mergeCanvas(base: ProjectCanvasView, mine: ProjectCanvasView, theirs: ProjectCanvasView, held: ReadonlySet<string>): ViewMerge {
     let layouts: ProjectLayout[] | null = null;
     if (!same(base.layouts, theirs.layouts) && !same(mine.layouts, theirs.layouts)) {
         if (!same(base.layouts, mine.layouts)) {
@@ -270,7 +273,7 @@ const mergeCanvas = (base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
         layouts
     };
     return { ok: true, view, patch: empty ? null : patch };
-};
+}
 
 /*
  * What a view is called and what it wears, apart from what it holds. The name goes with its source,
@@ -279,20 +282,21 @@ const mergeCanvas = (base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
  */
 const VIEW_LABELS: readonly (readonly string[])[] = [['name', 'titleSource'], ['icon'], ['empty']];
 
-const fieldsOf = (view: ProjectView, keys: readonly string[]): Record<string, unknown> =>
-    Object.fromEntries(keys.map((key) => [key, (view as Record<string, unknown>)[key]]));
+function fieldsOf(view: ProjectView, keys: readonly string[]): Record<string, unknown> {
+    return Object.fromEntries(keys.map((key) => [key, (view as Record<string, unknown>)[key]]));
+}
 
-const withoutLabels = (view: ProjectView): Record<string, unknown> => {
+function withoutLabels(view: ProjectView): Record<string, unknown> {
     const { name: _name, titleSource: _titleSource, icon: _icon, empty: _empty, ...rest } = view as Record<string, unknown>;
     return rest;
-};
+}
 
 /*
  * Three-way per label. A side that left the name or the icon alone takes the other side's, so a
  * rename in another client lands beside an edit here. Only the same label changed differently on
  * both sides is a conflict.
  */
-const mergeLabels = (base: ProjectView, mine: ProjectView, theirs: ProjectView, merged: ProjectView): ViewMerge => {
+function mergeLabels(base: ProjectView, mine: ProjectView, theirs: ProjectView, merged: ProjectView): ViewMerge {
     let view = merged as Record<string, unknown>;
     for (const keys of VIEW_LABELS) {
         const was = fieldsOf(base, keys);
@@ -310,9 +314,9 @@ const mergeLabels = (base: ProjectView, mine: ProjectView, theirs: ProjectView, 
         view = Object.fromEntries(Object.entries({ ...view, ...there }).filter(([key, value]) => !keys.includes(key) || value !== undefined));
     }
     return { ok: true, view: view as ProjectView, patch: null };
-};
+}
 
-const mergeView = (base: ProjectView, mine: ProjectView, theirs: ProjectView, held: ReadonlySet<string>): ViewMerge => {
+function mergeView(base: ProjectView, mine: ProjectView, theirs: ProjectView, held: ReadonlySet<string>): ViewMerge {
     if (base.kind !== theirs.kind) {
         return refuse(`the view ${base.id} became a ${theirs.kind}`);
     }
@@ -326,16 +330,18 @@ const mergeView = (base: ProjectView, mine: ProjectView, theirs: ProjectView, he
     }
     const labels = mergeLabels(base, mine, theirs, canvas.view);
     return labels.ok ? { ...canvas, view: labels.view } : labels;
-};
+}
 
-const idsOf = (views: readonly ProjectView[], within: ReadonlySet<string>): string[] => views.map((view) => view.id).filter((id) => within.has(id));
+function idsOf(views: readonly ProjectView[], within: ReadonlySet<string>): string[] {
+    return views.map((view) => view.id).filter((id) => within.has(id));
+}
 
 /*
  * `primary` in its own order, with every id of `secondary` that is missing from it put right after
  * the nearest id before it in `secondary` that already stands, or first when there is none. Only
  * ids in `present` take part. A view deleted on one side has no place to keep.
  */
-const interleave = (primary: readonly string[], secondary: readonly string[], present: ReadonlySet<string>): string[] => {
+function interleave(primary: readonly string[], secondary: readonly string[], present: ReadonlySet<string>): string[] {
     const order = primary.filter((id) => present.has(id));
     secondary.forEach((id, index) => {
         if (!present.has(id) || order.includes(id)) {
@@ -348,13 +354,13 @@ const interleave = (primary: readonly string[], secondary: readonly string[], pr
         order.splice(before === undefined ? 0 : order.indexOf(before) + 1, 0, id);
     });
     return order;
-};
+}
 
 /*
  * Three-way per id, the rule a field of a node follows. When both sides flagged one id differently
  * this client's flag stands rather than refusing the whole document: a flag is a mark, not work.
  */
-const mergeFlags = (base: ProjectFlags = {}, mine: ProjectFlags = {}, theirs: ProjectFlags = {}): ProjectFlags => {
+function mergeFlags(base: ProjectFlags = {}, mine: ProjectFlags = {}, theirs: ProjectFlags = {}): ProjectFlags {
     const merged: ProjectFlags = { ...mine };
     for (const id of new Set([...Object.keys(base), ...Object.keys(theirs)])) {
         if (base[id] === theirs[id] || mine[id] !== base[id]) {
@@ -367,13 +373,13 @@ const mergeFlags = (base: ProjectFlags = {}, mine: ProjectFlags = {}, theirs: Pr
         }
     }
     return merged;
-};
+}
 
 /*
  * Three-way merge by id and field. Local edits win unless both sides changed the same field,
  * deleted a changed entry or orphaned an edge. Nodes in `handled` keep their local frame.
  */
-export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs: ProjectContent, handled: ReadonlySet<string> = new Set()): ProjectMerge => {
+export function mergeProject(base: ProjectContent, mine: ProjectContent, theirs: ProjectContent, handled: ReadonlySet<string> = new Set()): ProjectMerge {
     if (base.name !== theirs.name) {
         return refuse(`the project was renamed to "${theirs.name}"`);
     }
@@ -453,4 +459,4 @@ export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs:
         },
         changes: { views: added, canvases }
     };
-};
+}

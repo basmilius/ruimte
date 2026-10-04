@@ -27,10 +27,12 @@ const canvas: ProjectCanvasView = {
     layouts: []
 };
 
-const thread = (text: string): ChatItem[] => [
-    { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text },
-    { id: 'a', kind: 'assistant', createdAt: 2, turnId: 't', text: `Done: ${text}`, streaming: false }
-];
+function thread(text: string): ChatItem[] {
+    return [
+        { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text },
+        { id: 'a', kind: 'assistant', createdAt: 2, turnId: 't', text: `Done: ${text}`, streaming: false }
+    ];
+}
 
 let home: string;
 let lineage: AgentLineageStore;
@@ -66,14 +68,14 @@ afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const refusalOf = async (reader: string, source: string): Promise<string> => {
+async function refusalOf(reader: string, source: string): Promise<string> {
     try {
         await store.answer(reader, source, null, null);
     } catch (e) {
         return e instanceof ContextRefusal ? e.code : 'thrown';
     }
     return 'read';
-};
+}
 
 describe('a node the caller opened itself', () => {
     test('reads without a line, whole, by --tail and by --subagent', async () => {

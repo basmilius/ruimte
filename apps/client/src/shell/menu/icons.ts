@@ -208,11 +208,11 @@ const PREFIXES: [prefix: string, icon: LucideIcon][] = [
 
 const AGENT_ROW = /^agent-(?:view-)?(?:chat|terminal)-(.+)$/;
 
-export const menuIconOf = (id: string): MenuIcon | null => {
+export function menuIconOf(id: string): MenuIcon | null {
     const agent = AGENT_ROW.exec(id)?.[1];
     if (agent !== undefined) {
         return { agent: agent as AgentKind };
     }
     const icon = ICONS[id] ?? PREFIXES.find(([prefix]) => id.startsWith(prefix))?.[1];
     return icon === undefined ? null : { icon };
-};
+}

@@ -7,8 +7,8 @@ import { FakeHelper, tempHome } from './computer-test-helpers.ts';
 import { answerWithinMs, ComputerHelper, HelperFailure, locateHelperApp } from './helper.ts';
 import { DoctorResultSchema, StateResultSchema } from './helper-protocol.ts';
 
-const helperOver = async (fake: FakeHelper, launches: string[] = [], appPath: string | null = '/Apps/Helper.app') =>
-    new ComputerHelper({
+async function helperOver(fake: FakeHelper, launches: string[] = [], appPath: string | null = '/Apps/Helper.app') {
+    return new ComputerHelper({
         home: await tempHome(),
         appPath,
         transport: fake,
@@ -19,15 +19,16 @@ const helperOver = async (fake: FakeHelper, launches: string[] = [], appPath: st
         sleep: async () => undefined,
         startWaitMs: 500
     });
+}
 
-const failureOf = async (work: Promise<unknown>): Promise<HelperFailure> => {
+async function failureOf(work: Promise<unknown>): Promise<HelperFailure> {
     try {
         await work;
     } catch (error) {
         return error as HelperFailure;
     }
     throw new Error('no failure');
-};
+}
 
 describe('the helper', () => {
     test('gets the time a wait waits for on top of the time any request has to answer in', () => {

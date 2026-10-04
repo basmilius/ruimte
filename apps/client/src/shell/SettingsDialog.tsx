@@ -38,21 +38,23 @@ const HEROES: Partial<Record<SettingsSectionId, ComponentType>> = {
 };
 
 /* The index plus the shortcuts, whose words and keys are only known once the lists are built. */
-const findSettings = (query: string): SearchResult[] => {
+function findSettings(query: string): SearchResult[] {
     const apple = isApplePlatform();
     return searchSettings(query, query.trim() === '' ? [] : shortcutSearchRows(keyboardGroups(apple), apple));
-};
+}
 
 // Built on every render rather than once: the words move with the language, the list does not.
-const entryOf = (meta: SettingsSectionMeta): SettingsSectionEntry => ({
-    id: meta.id,
-    icon: meta.icon,
-    label: sectionLabel(meta.id),
-    description: sectionDescription(meta.id),
-    pane: PANES[meta.id],
-    split: meta.split,
-    hero: HEROES[meta.id]
-});
+function entryOf(meta: SettingsSectionMeta): SettingsSectionEntry {
+    return {
+        id: meta.id,
+        icon: meta.icon,
+        label: sectionLabel(meta.id),
+        description: sectionDescription(meta.id),
+        pane: PANES[meta.id],
+        split: meta.split,
+        hero: HEROES[meta.id]
+    };
+}
 
 /* Ruimte's sections, search and account in the settings dialog of @basmilius/desktop-ui. Opens on the section the caller asked for, or the last one. */
 export function SettingsDialog() {

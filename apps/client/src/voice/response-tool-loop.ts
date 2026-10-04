@@ -20,7 +20,7 @@ type Execute = (name: string, args: string) => Promise<Record<string, unknown>>;
 
 const toolNames = new Set<string>(VOICE_TOOL_DEFINITIONS.map((tool) => tool.name));
 
-const functionCallOf = (event: LiveEvent): FunctionCall | null => {
+function functionCallOf(event: LiveEvent): FunctionCall | null {
     if (event.type !== 'response.event' || typeof event.event !== 'object' || event.event === null) {
         return null;
     }
@@ -39,22 +39,22 @@ const functionCallOf = (event: LiveEvent): FunctionCall | null => {
         return null;
     }
     return { callId: item.call_id, name: item.name, arguments: item.arguments };
-};
+}
 
-const responseEventOf = (event: LiveEvent): { delegationId: string; type: string } | null => {
+function responseEventOf(event: LiveEvent): { delegationId: string; type: string } | null {
     if (event.type !== 'response.event' || typeof event.delegation_id !== 'string' || typeof event.event !== 'object' || event.event === null) {
         return null;
     }
     const type = (event.event as { type?: unknown }).type;
     return typeof type === 'string' ? { delegationId: event.delegation_id, type } : null;
-};
+}
 
-const completedDelegationOf = (event: LiveEvent): string | null => {
+function completedDelegationOf(event: LiveEvent): string | null {
     if (event.type !== 'response.event' || typeof event.delegation_id !== 'string' || typeof event.event !== 'object' || event.event === null) {
         return null;
     }
     return (event.event as { type?: unknown }).type === 'response.completed' ? event.delegation_id : null;
-};
+}
 
 export class ResponseToolLoop {
     readonly #send: Send;

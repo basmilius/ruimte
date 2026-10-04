@@ -25,8 +25,9 @@ const HOOK_MAX_TIME_S = 2;
  * Outside Ruimte the hook only drains stdin. Inside it, stdout carries daemon context;
  * failed HTTP responses stay silent and never block the CLI.
  */
-export const hookCommand = (kind: AgentKind): string =>
-    `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -sf -m ${HOOK_MAX_TIME_S} -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
+export function hookCommand(kind: AgentKind): string {
+    return `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -sf -m ${HOOK_MAX_TIME_S} -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
+}
 
 // A `command` hook with curl, never Claude Code's `http` kind: that one cannot read the port from the
 // environment and reports an error whenever Ruimte is not running.
@@ -36,25 +37,32 @@ interface HookEntry {
     timeout: number;
 }
 
-const hookEntry = (kind: AgentKind): HookEntry => ({
-    type: 'command',
-    command: hookCommand(kind),
-    timeout: HOOK_TIMEOUT_S
-});
+function hookEntry(kind: AgentKind): HookEntry {
+    return {
+        type: 'command',
+        command: hookCommand(kind),
+        timeout: HOOK_TIMEOUT_S
+    };
+}
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const isOurs = (hook: unknown): boolean => isRecord(hook) && typeof hook.command === 'string' && hook.command.includes(HOOK_MARKER);
+function isOurs(hook: unknown): boolean {
+    return isRecord(hook) && typeof hook.command === 'string' && hook.command.includes(HOOK_MARKER);
+}
 
-const sameEntry = (hook: unknown, wanted: HookEntry): boolean =>
-    isRecord(hook) && hook.type === wanted.type && hook.command === wanted.command && hook.timeout === wanted.timeout;
+function sameEntry(hook: unknown, wanted: HookEntry): boolean {
+    return isRecord(hook) && hook.type === wanted.type && hook.command === wanted.command && hook.timeout === wanted.timeout;
+}
 
 /*
  * Puts one Ruimte hook under every event the daemon listens for and leaves everything else in
  * the config alone: other tools' hooks, other keys, unknown fields on our own group. Answers the
  * new config and whether anything changed, so an unchanged file is never rewritten.
  */
-export const mergeHooks = (config: unknown, kind: AgentKind): { config: Record<string, unknown>; changed: boolean } => {
+export function mergeHooks(config: unknown, kind: AgentKind): { config: Record<string, unknown>; changed: boolean } {
     const root: Record<string, unknown> = isRecord(config) ? { ...config } : {};
     const hooks: Record<string, unknown> = isRecord(root.hooks) ? { ...root.hooks } : {};
     const wantedEvents = new Set(HOOK_EVENTS[kind] ?? []);
@@ -111,12 +119,12 @@ export const mergeHooks = (config: unknown, kind: AgentKind): { config: Record<s
 
     root.hooks = hooks;
     return { config: root, changed };
-};
+}
 
 type InstallResult = 'unchanged' | 'written';
 
 /* Idempotent: the second run on the same file is a no-op. A file that is not JSON is left alone (throws). */
-export const installHooks = async (link: string, kind: AgentKind): Promise<InstallResult> => {
+export async function installHooks(link: string, kind: AgentKind): Promise<InstallResult> {
     // Written where a symlink points, since a rename over the link itself would cut a dotfiles checkout loose.
     const path = await realpath(link).catch(() => link);
     let existing: unknown = {};
@@ -138,10 +146,10 @@ export const installHooks = async (link: string, kind: AgentKind): Promise<Insta
     await mkdir(dirname(path), { recursive: true });
     await writeAtomic(path, `${JSON.stringify(config, null, 2)}\n`, mode);
     return 'written';
-};
+}
 
 /* The file a CLI reads user-level hooks from inside one of its config folders; null for a CLI whose hooks the daemon cannot read. */
-export const hookPathIn = (kind: AgentKind, folder: string): string | null => {
+export function hookPathIn(kind: AgentKind, folder: string): string | null {
     if (kind === 'claude') {
         return join(folder, 'settings.json');
     }
@@ -149,27 +157,33 @@ export const hookPathIn = (kind: AgentKind, folder: string): string | null => {
         return join(folder, 'hooks.json');
     }
     return null;
-};
+}
 
 // Where each CLI reads user-level hooks from; a CLI whose hooks the daemon cannot read is not listed.
-export const defaultHookPaths = (env: Record<string, string | undefined> = process.env): Partial<Record<AgentKind, string>> => {
+export function defaultHookPaths(env: Record<string, string | undefined> = process.env): Partial<Record<AgentKind, string>> {
     const home = env.HOME ?? homedir();
     return {
         claude: hookPathIn('claude', env.CLAUDE_CONFIG_DIR ?? join(home, '.claude'))!,
         codex: hookPathIn('codex', env.CODEX_HOME ?? join(home, '.codex'))!
     };
-};
+}
 
 /* Lets Codex run `ruimte-context` outside its sandbox without asking; the daemon already enforces every verb (mode ceiling, depth, cwd). */
 const RUIMTE_CODEX_RULES: CodexRules = { app: 'Ruimte', commands: ['ruimte-context'] };
 
 export const CODEX_RULES = codexRulesText(RUIMTE_CODEX_RULES);
 
-export const installCodexRules = (path: string): Promise<InstallResult> => installCodexRulesAt(path, RUIMTE_CODEX_RULES);
+export function installCodexRules(path: string): Promise<InstallResult> {
+    return installCodexRulesAt(path, RUIMTE_CODEX_RULES);
+}
 
-export const codexRulesPathIn = (folder: string): string => codexRulesPathInFolder(folder, RUIMTE_CODEX_RULES);
+export function codexRulesPathIn(folder: string): string {
+    return codexRulesPathInFolder(folder, RUIMTE_CODEX_RULES);
+}
 
-export const defaultCodexRulesPath = (env: Record<string, string | undefined> = process.env): string => codexRulesPathIn(defaultCodexHome(env));
+export function defaultCodexRulesPath(env: Record<string, string | undefined> = process.env): string {
+    return codexRulesPathIn(defaultCodexHome(env));
+}
 
 export interface FolderInstall {
     path: string;
@@ -180,7 +194,7 @@ export interface FolderInstall {
  * Everything the daemon puts in one config folder of a CLI: its hooks, and for Codex the rule that
  * lets `ruimte-context` out of the sandbox. Answers what was written where, so the caller can say so.
  */
-export const installInFolder = async (kind: AgentKind, folder: string): Promise<FolderInstall[]> => {
+export async function installInFolder(kind: AgentKind, folder: string): Promise<FolderInstall[]> {
     const hookPath = hookPathIn(kind, folder);
     if (hookPath === null) {
         return [];
@@ -191,4 +205,4 @@ export const installInFolder = async (kind: AgentKind, folder: string): Promise<
         installs.push({ path: rulesPath, result: await installCodexRules(rulesPath) });
     }
     return installs;
-};
+}

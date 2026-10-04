@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import { probeDevServers, titleOfHtml } from './dev-servers.ts';
 
-const page = (html: string): Response => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+function page(html: string): Response {
+    return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+}
 
 describe('titleOfHtml', () => {
     it('reads the title of a page', () => {

@@ -12,10 +12,12 @@ import {
 } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@ruimte/agents-react/chat/mentions';
 
-const drag = (values: Record<string, string>): DragPayload => ({
-    types: Object.keys(values),
-    getData: (type) => values[type] ?? ''
-});
+function drag(values: Record<string, string>): DragPayload {
+    return {
+        types: Object.keys(values),
+        getData: (type) => values[type] ?? ''
+    };
+}
 
 describe('carriesPaths', () => {
     test('takes either type a drag inside the app writes', () => {

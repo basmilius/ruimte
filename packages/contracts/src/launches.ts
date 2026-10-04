@@ -201,7 +201,7 @@ export type LaunchesChangedEvent = z.infer<typeof LaunchesChangedEventSchema>;
  * The port of an address, or null when it names none a launch can wait on. An address without a
  * port gets the scheme's own, so `http://localhost` waits on 80.
  */
-export const launchPortOf = (url: string | undefined): number | null => {
+export function launchPortOf(url: string | undefined): number | null {
     if (url === undefined || url.trim() === '') {
         return null;
     }
@@ -221,13 +221,14 @@ export const launchPortOf = (url: string | undefined): number | null => {
         return 443;
     }
     return null;
-};
+}
 
 /* An entry of a launches file as it stands: a launch this release reads, or one it keeps untouched. */
 export type LaunchFileEntry = { launch: LaunchConfig } | { raw: unknown };
 
-export const readLaunchEntries = (entries: readonly unknown[]): LaunchFileEntry[] =>
-    entries.map((raw) => {
+export function readLaunchEntries(entries: readonly unknown[]): LaunchFileEntry[] {
+    return entries.map((raw) => {
         const parsed = LaunchConfigSchema.safeParse(raw);
         return parsed.success ? { launch: parsed.data } : { raw };
     });
+}

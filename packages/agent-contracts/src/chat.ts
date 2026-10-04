@@ -34,12 +34,14 @@ export const CHAT_ATTACHMENT_MAX_BYTES = CHAT_ATTACHMENTS_MAX_BYTES;
 export const CHAT_ATTACHMENTS_MAX_COUNT = 8;
 const MAX_BASE64_LENGTH = Math.ceil(CHAT_ATTACHMENT_MAX_BYTES / 3) * 4;
 
-export const attachmentBytes = (data: string): number => Math.floor((data.length * 3) / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0);
+export function attachmentBytes(data: string): number {
+    return Math.floor((data.length * 3) / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0);
+}
 
-const isBase64 = (data: string): boolean => {
+function isBase64(data: string): boolean {
     const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
     return data.length % 4 === 0 && !/[^A-Za-z0-9+/]/.test(data.slice(0, data.length - padding));
-};
+}
 
 const IMAGE_MIME_BY_EXTENSION = new Map([
     ['png', 'image/png'],
@@ -51,7 +53,7 @@ const IMAGE_MIME_BY_EXTENSION = new Map([
 const IMAGE_MIME_TYPES = new Set(IMAGE_MIME_BY_EXTENSION.values());
 
 // A generic MIME type from Finder may still name a picture; a declared PDF must stay a PDF.
-export const attachmentImageMime = ({ name, mime }: { name: string; mime: string }): string | null => {
+export function attachmentImageMime({ name, mime }: { name: string; mime: string }): string | null {
     const type = mime.split(';')[0]!.trim().toLowerCase();
     if (IMAGE_MIME_TYPES.has(type)) {
         return type;
@@ -61,7 +63,7 @@ export const attachmentImageMime = ({ name, mime }: { name: string; mime: string
     }
     const dot = name.lastIndexOf('.');
     return dot < 0 ? null : (IMAGE_MIME_BY_EXTENSION.get(name.slice(dot + 1).toLowerCase()) ?? null);
-};
+}
 
 // What the composer hands the daemon: the bytes, plus what the file is called and what it is.
 export const ChatAttachmentUploadSchema = z.object({
@@ -359,9 +361,13 @@ export type ChatWorkflow = z.infer<typeof ChatWorkflowSchema>;
 // A workflow's agent has no call of its own, so `chat.subagent` names it by its agent id under this prefix.
 const WORKFLOW_AGENT_REF = 'workflow-agent:';
 
-export const workflowAgentRef = (agentId: string): string => `${WORKFLOW_AGENT_REF}${agentId}`;
+export function workflowAgentRef(agentId: string): string {
+    return `${WORKFLOW_AGENT_REF}${agentId}`;
+}
 
-export const workflowAgentIdOf = (ref: string): string | null => (ref.startsWith(WORKFLOW_AGENT_REF) ? ref.slice(WORKFLOW_AGENT_REF.length) || null : null);
+export function workflowAgentIdOf(ref: string): string | null {
+    return ref.startsWith(WORKFLOW_AGENT_REF) ? ref.slice(WORKFLOW_AGENT_REF.length) || null : null;
+}
 
 export const ChatToolItemSchema = z.object({
     ...base,
@@ -513,15 +519,20 @@ export const ChatTurnItemSchema = z.object({
 /* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */
 const NOT_RESUMED_PREFIX = 'This turn could not be resumed after the machine restarted: ';
 
-export const notResumedNote = (reason: string): string => `${NOT_RESUMED_PREFIX}${reason}`;
+export function notResumedNote(reason: string): string {
+    return `${NOT_RESUMED_PREFIX}${reason}`;
+}
 
 /* Whether the machine ended this aborted turn rather than a person: the daemon leaves its warning note in the turn. */
-export const abortedByMachine = (
+export function abortedByMachine(
     turn: { id: string; state: string },
     items: readonly { kind: string; turnId: string | null; level?: string; text?: string }[]
-): boolean =>
-    turn.state === 'aborted' &&
-    items.some((item) => item.kind === 'note' && item.turnId === turn.id && item.level === 'warning' && item.text?.startsWith(NOT_RESUMED_PREFIX) === true);
+): boolean {
+    return (
+        turn.state === 'aborted' &&
+        items.some((item) => item.kind === 'note' && item.turnId === turn.id && item.level === 'warning' && item.text?.startsWith(NOT_RESUMED_PREFIX) === true)
+    );
+}
 
 export const ChatNoteItemSchema = z.object({
     ...base,

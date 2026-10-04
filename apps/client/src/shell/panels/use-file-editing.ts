@@ -24,7 +24,7 @@ export interface FileEditing {
 }
 
 /* How one text file on one surface is drawn and whether it can be edited there. */
-export const useFileEditing = (path: string, read: FsReadText, plain: boolean, large: boolean): FileEditing => {
+export function useFileEditing(path: string, read: FsReadText, plain: boolean, large: boolean): FileEditing {
     const endpointId = useEndpointId();
     const transport = useOptionalConnection()?.transport ?? null;
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -74,4 +74,4 @@ export const useFileEditing = (path: string, read: FsReadText, plain: boolean, l
     };
 
     return { endpointId, block, viewer, engine, loadFailed, focused: gate?.focused ?? null, retryLoad };
-};
+}

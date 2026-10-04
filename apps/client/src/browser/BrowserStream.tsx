@@ -14,12 +14,17 @@ import { browserStreamScaleLimit, clampBrowserStreamScale, useBrowserStreamQuali
 
 const RETRY_MS = 1_000;
 
-const modifiersOf = (event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): number =>
-    (event.altKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) | (event.metaKey ? 4 : 0) | (event.shiftKey ? 8 : 0);
+function modifiersOf(event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): number {
+    return (event.altKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) | (event.metaKey ? 4 : 0) | (event.shiftKey ? 8 : 0);
+}
 
-const buttonOf = (button: number): 'left' | 'middle' | 'right' => (button === 1 ? 'middle' : button === 2 ? 'right' : 'left');
+function buttonOf(button: number): 'left' | 'middle' | 'right' {
+    return button === 1 ? 'middle' : button === 2 ? 'right' : 'left';
+}
 
-const buttonsOf = (buttons: number): number => (buttons & 1 ? 1 : 0) | (buttons & 2 ? 4 : 0) | (buttons & 4 ? 2 : 0);
+function buttonsOf(buttons: number): number {
+    return (buttons & 1 ? 1 : 0) | (buttons & 2 ? 4 : 0) | (buttons & 4 ? 2 : 0);
+}
 
 export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: string; initialUrl: string; className?: string }) {
     const { t } = useTranslation('browser');

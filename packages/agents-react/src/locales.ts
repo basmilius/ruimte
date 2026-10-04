@@ -7,11 +7,12 @@ export type AgentsNamespace = (typeof AGENTS_NAMESPACES)[number];
 
 type Files = Record<AgentsNamespace, () => Promise<{ default: Bundle }>>;
 
-const open = async (files: Files): Promise<Record<AgentsNamespace, Bundle>> =>
-    Object.fromEntries(await Promise.all(Object.entries(files).map(async ([namespace, file]) => [namespace, (await file()).default]))) as Record<
+async function open(files: Files): Promise<Record<AgentsNamespace, Bundle>> {
+    return Object.fromEntries(await Promise.all(Object.entries(files).map(async ([namespace, file]) => [namespace, (await file()).default]))) as Record<
         AgentsNamespace,
         Bundle
     >;
+}
 
 /* One loader per language that answers every namespace of it, so a bundler splits them and a window only downloads the language it shows. */
 export const AGENTS_LOCALES: Record<string, () => Promise<Record<AgentsNamespace, Bundle>>> = {

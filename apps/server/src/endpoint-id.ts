@@ -329,20 +329,20 @@ export class EndpointIdentity {
     }
 }
 
-const parseEndpointFile = (text: string): z.infer<typeof FileSchema> | null => {
+function parseEndpointFile(text: string): z.infer<typeof FileSchema> | null {
     try {
         const parsed = FileSchema.safeParse(JSON.parse(text));
         return parsed.success ? parsed.data : null;
     } catch {
         return null;
     }
-};
+}
 
 /*
  * The file as it stands, or null when there is none yet. One that will not read is set aside before
  * anything is minted, so the key pair every paired client pinned can still be put back by hand.
  */
-const readEndpointFile = async (path: string): Promise<z.infer<typeof FileSchema> | null> => {
+async function readEndpointFile(path: string): Promise<z.infer<typeof FileSchema> | null> {
     let text: string;
     try {
         text = await readFile(path, 'utf8');
@@ -359,10 +359,10 @@ const readEndpointFile = async (path: string): Promise<z.infer<typeof FileSchema
         console.warn(`${path} would not read; it is kept as ${setAside} and this machine starts with a new id`);
     }
     return file;
-};
+}
 
 /* Reads `$RUIMTE_HOME/endpoint.json` and mints whatever is not in it yet. */
-export const readOrCreateEndpointIdentity = async (home: string, defaultName: string = hostname()): Promise<EndpointIdentity> => {
+export async function readOrCreateEndpointIdentity(home: string, defaultName: string = hostname()): Promise<EndpointIdentity> {
     const path = join(home, 'endpoint.json');
     const file = await readEndpointFile(path);
     const keys = file?.publicKey && file.privateKey ? { publicKey: file.publicKey, privateKey: file.privateKey } : null;
@@ -391,4 +391,4 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         await identity.persist();
     }
     return identity;
-};
+}

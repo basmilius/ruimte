@@ -30,11 +30,13 @@ const MIN_TREE_WIDTH = 160;
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
 /* The whole texts beside the patch, which a daemon sends only when it can hand over both sides. */
-const contentsOf = (diff: GitDiffResult): DiffContents | undefined =>
-    diff.oldText === undefined || diff.newText === undefined ? undefined : { old: diff.oldText, new: diff.newText };
+function contentsOf(diff: GitDiffResult): DiffContents | undefined {
+    return diff.oldText === undefined || diff.newText === undefined ? undefined : { old: diff.oldText, new: diff.newText };
+}
 
-const omittedLabel = (omitted: GitDiffResult['omitted']): string =>
-    omitted === 'binary' ? i18next.t('panels:diff.omitted.binary') : i18next.t('panels:diff.omitted.tooLarge');
+function omittedLabel(omitted: GitDiffResult['omitted']): string {
+    return omitted === 'binary' ? i18next.t('panels:diff.omitted.binary') : i18next.t('panels:diff.omitted.tooLarge');
+}
 
 /*
  * A changed file as its diff, in a tab of the preview panel next to the tab that holds the file

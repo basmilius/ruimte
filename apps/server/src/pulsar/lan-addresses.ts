@@ -6,18 +6,21 @@ const VIRTUAL_INTERFACE = /^(docker|br-|veth|virbr|vmnet|vboxnet|cni|flannel|lxc
 // More than a machine has interfaces worth trying; a client tries every one at once.
 const MAX_ADDRESSES = 16;
 
-const isPrivate = (first: number, second: number): boolean =>
-    first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+function isPrivate(first: number, second: number): boolean {
+    return first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+}
 
 // 100.64.0.0/10, which Tailscale and other mesh networks hand out, so a machine on the same tailnet is found as well.
-const isSharedAddressSpace = (first: number, second: number): boolean => first === 100 && second >= 64 && second <= 127;
+function isSharedAddressSpace(first: number, second: number): boolean {
+    return first === 100 && second >= 64 && second <= 127;
+}
 
 /*
  * The IPv4 addresses a client on the same network or the same tailnet may reach this machine at, the
  * local network first. Read when asked, so a new address after a network change needs no timer. IPv6
  * stays out: the door listens on IPv4 only.
  */
-export const lanAddresses = (interfaces: NodeJS.Dict<NetworkInterfaceInfo[]> = networkInterfaces()): string[] => {
+export function lanAddresses(interfaces: NodeJS.Dict<NetworkInterfaceInfo[]> = networkInterfaces()): string[] {
     const local: string[] = [];
     const mesh: string[] = [];
     for (const [name, entries] of Object.entries(interfaces)) {
@@ -37,4 +40,4 @@ export const lanAddresses = (interfaces: NodeJS.Dict<NetworkInterfaceInfo[]> = n
         }
     }
     return [...new Set([...local, ...mesh])].slice(0, MAX_ADDRESSES);
-};
+}

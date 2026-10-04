@@ -27,11 +27,12 @@ export interface StatementExpectation {
     now: number;
 }
 
-const signedByTrustedKey = (keys: readonly string[], message: string, signature: string): boolean =>
-    keys.some((key) => verifySignature(key, message, signature));
+function signedByTrustedKey(keys: readonly string[], message: string, signature: string): boolean {
+    return keys.some((key) => verifySignature(key, message, signature));
+}
 
 /* Whether a statement opens this machine for this key right now; null when it does, the reason when it does not. */
-export const checkStatement = (statement: AccessStatement, expected: StatementExpectation): StatementRefusal | null => {
+export function checkStatement(statement: AccessStatement, expected: StatementExpectation): StatementRefusal | null {
     if (statement.machineId !== expected.machineId) {
         return 'wrong-machine';
     }
@@ -69,16 +70,16 @@ export const checkStatement = (statement: AccessStatement, expected: StatementEx
         statement.expiresAt
     );
     return signedByTrustedKey(expected.trustedKeys, v2, accountSignature) ? null : 'bad-signature';
-};
+}
 
 /* The pinned keys, or the bench's own key in their place when this daemon runs from source and was handed one. */
-export const trustedStatementKeys = (env: Record<string, string | undefined>, compiled: boolean): readonly string[] => {
+export function trustedStatementKeys(env: Record<string, string | undefined>, compiled: boolean): readonly string[] {
     const testKey = env[TEST_STATEMENT_KEY_VARIABLE]?.trim() ?? '';
     if (compiled || testKey === '' || !isPublicKey(testKey)) {
         return PULSAR_STATEMENT_PUBLIC_KEYS;
     }
     return [testKey];
-};
+}
 
 export interface StatementGateOptions {
     machineId: string;

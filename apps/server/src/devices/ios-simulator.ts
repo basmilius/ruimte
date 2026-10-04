@@ -36,20 +36,20 @@ const SimctlDeviceSchema = z.object({
 
 const SimctlListSchema = z.object({ devices: z.record(z.string(), z.array(SimctlDeviceSchema)) });
 
-const runtimeName = (identifier: string): string => {
+function runtimeName(identifier: string): string {
     const value = identifier.replace('com.apple.CoreSimulator.SimRuntime.', '');
     const match = /^(.*)-(\d+)-(\d+)$/.exec(value);
     return match ? `${match[1]} ${match[2]}.${match[3]}` : value;
-};
+}
 
-const stateOf = (state: string): DeviceInfo['state'] => {
+function stateOf(state: string): DeviceInfo['state'] {
     if (state === 'Booted') {
         return 'booted';
     }
     return state === 'Shutdown' ? 'shutdown' : 'transitioning';
-};
+}
 
-const defaultRunner: SimctlRunner = async (arguments_, stdin) => {
+async function defaultRunner(arguments_: string[], stdin?: string): Promise<CommandResult> {
     // simctl reads stdin in the locale's encoding, and a daemon under launchd has none, which turns ü into √º.
     const process = Bun.spawn(['xcrun', 'simctl', ...arguments_], {
         stdin: stdin === undefined ? 'ignore' : 'pipe',
@@ -63,7 +63,7 @@ const defaultRunner: SimctlRunner = async (arguments_, stdin) => {
     }
     const [exitCode, stdout, stderr] = await Promise.all([process.exited, new Response(process.stdout).text(), new Response(process.stderr).text()]);
     return { exitCode, stdout, stderr };
-};
+}
 
 const IOS_BUTTONS: DeviceButton[] = ['home', 'swipeHome', 'appSwitcher', 'lock', 'siri'];
 
@@ -103,7 +103,7 @@ const IOS_PERMISSION_SERVICES: Record<DevicePermission, string> = {
     faceid: 'faceid'
 };
 
-const textSizeFromIos = (category: string): DeviceTextSize => {
+function textSizeFromIos(category: string): DeviceTextSize {
     const exact = (Object.entries(IOS_TEXT_SIZES) as Array<[DeviceTextSize, string]>).find(([, value]) => value === category);
     if (exact) {
         return exact[0];
@@ -115,9 +115,9 @@ const textSizeFromIos = (category: string): DeviceTextSize => {
         return 'large';
     }
     return ['extra-small', 'small', 'medium'].includes(category) ? 'small' : 'default';
-};
+}
 
-const axHelperPath = (): string | null => {
+function axHelperPath(): string | null {
     const besideExecutable = join(dirname(process.execPath), 'native', 'serve-sim-ax-settings');
     if (existsSync(besideExecutable)) {
         return besideExecutable;
@@ -129,7 +129,7 @@ const axHelperPath = (): string | null => {
     } catch {
         return null;
     }
-};
+}
 
 export class IosSimulatorBackend implements DeviceBackend {
     readonly id = 'simctl';

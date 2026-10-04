@@ -8,27 +8,27 @@ import { useToasts } from '@/state/toasts';
 import { transportFor } from '@/transport';
 import { watchPool } from '@/transport/pool-watch';
 
-const readDocument = (endpointId: string, projectId: string): void => {
+function readDocument(endpointId: string, projectId: string): void {
     void transportFor(endpointId)
         ?.request('launches.read', { projectId })
         .then((document) => useLaunches.getState().setDocument(endpointId, projectId, document))
         .catch(() => undefined);
-};
+}
 
-const openProject = (): { endpointId: string; projectId: string } | null => {
+function openProject(): { endpointId: string; projectId: string } | null {
     const { current, currentEndpointId } = defaultProjectStore.getState();
     return current === null || currentEndpointId === null ? null : { endpointId: currentEndpointId, projectId: current.projectId };
-};
+}
 
 const FAILED_TOAST = 'launch-failed:';
 
-const launchName = (endpointId: string, status: LaunchStatus): string => {
+function launchName(endpointId: string, status: LaunchStatus): string {
     const document = useLaunches.getState().documents[`${endpointId}:${status.projectId}`];
     return document?.launches.find((launch) => launch.id === status.launchId)?.name ?? status.launchId;
-};
+}
 
 /* Only a launch that went down by itself says so; one a person or an agent stopped is expected to end. */
-const announceFailure = (endpointId: string, previous: LaunchStatus | undefined, status: LaunchStatus): void => {
+function announceFailure(endpointId: string, previous: LaunchStatus | undefined, status: LaunchStatus): void {
     const failed = status.state === 'exited' && previous?.state !== 'exited' && !status.stopped && status.exitCode !== 0;
     const open = openProject();
     if (!failed || open === null || open.endpointId !== endpointId || open.projectId !== status.projectId) {
@@ -70,14 +70,14 @@ const announceFailure = (endpointId: string, previous: LaunchStatus | undefined,
         show();
         notification.close();
     };
-};
+}
 
 /*
  * What runs on every machine this client holds a socket for, and the launches of the project on
  * screen. The daemon pushes each change to every socket; a socket that opens asks once, since what
  * changed while it was closed was pushed to nobody.
  */
-export const startLaunchWatch = (): (() => void) => {
+export function startLaunchWatch(): () => void {
     const offPool = watchPool((link, endpointId) => ({
         onOpen: () => {
             // A daemon from before launches does not know the request and simply runs none.
@@ -123,4 +123,4 @@ export const startLaunchWatch = (): (() => void) => {
         offPool();
         offProject();
     };
-};
+}

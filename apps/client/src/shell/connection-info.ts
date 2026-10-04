@@ -10,7 +10,9 @@ import { relativeTime } from '@/shell/panels/commit-log';
  * when a row draws it, because this module is imported before `initI18n()` has run: a string fixed
  * here would stay English for the life of the window.
  */
-export const reachabilityLabel = (reach: Reachability): string => i18next.t(`shell:connection.reachability.${reach}`);
+export function reachabilityLabel(reach: Reachability): string {
+    return i18next.t(`shell:connection.reachability.${reach}`);
+}
 
 export interface MachineInfo {
     /* What this client calls the daemon it points at (`endpoints.ts`). */
@@ -25,7 +27,7 @@ export interface MachineInfo {
  * Which way an open direct connection reaches the machine, as a label: its door on the local network,
  * the broker, or a TURN relay the broker handed out. Null over a socket, which has no route to name.
  */
-export const describeRoute = (connection: ConnectionState): string | null => {
+export function describeRoute(connection: ConnectionState): string | null {
     if (connection.status !== 'open') {
         return null;
     }
@@ -36,11 +38,11 @@ export const describeRoute = (connection: ConnectionState): string | null => {
         return i18next.t('shell:connection.route.lan');
     }
     return connection.signaled === 'broker' ? i18next.t('shell:connection.route.broker') : null;
-};
+}
 
 /* The socket's state in the words the tooltip shows. The countdown needs a clock, so it comes in;
    `now` as null leaves the countdown off, which is what a screen reader wants to hear. */
-export const describeConnection = (connection: ConnectionState, now: number | null): string => {
+export function describeConnection(connection: ConnectionState, now: number | null): string {
     if (connection.status === 'open') {
         if (connection.relayed === true) {
             return i18next.t('shell:connection.relayed');
@@ -68,22 +70,24 @@ export const describeConnection = (connection: ConnectionState, now: number | nu
     }
     const seconds = Math.max(0, Math.ceil((connection.retryAt - now) / 1000));
     return i18next.t('shell:connection.reconnectingIn', { attempt, seconds });
-};
+}
 
 /*
  * The machines the tooltip lists: every one with a link, in the order of the list. The local row of
  * the web client is no machine, so it is left out even when something put it in the pool.
  */
-export const tooltipMachines = <T extends Pick<Endpoint, 'id'>>(endpoints: readonly T[], connected: readonly string[], local?: boolean): T[] =>
-    listedEndpoints(endpoints, local).filter((endpoint) => connected.includes(endpoint.id));
+export function tooltipMachines<T extends Pick<Endpoint, 'id'>>(endpoints: readonly T[], connected: readonly string[], local?: boolean): T[] {
+    return listedEndpoints(endpoints, local).filter((endpoint) => connected.includes(endpoint.id));
+}
 
 /* When a machine without a link last had one here; null when this client never reached it. */
-export const describeLastSeen = (at: number | null, now: number): string | null =>
-    at === null ? null : i18next.t('shell:connection.lastSeen', { ago: relativeTime(Math.floor(at / 1000), Math.floor(now / 1000)) });
+export function describeLastSeen(at: number | null, now: number): string | null {
+    return at === null ? null : i18next.t('shell:connection.lastSeen', { ago: relativeTime(Math.floor(at / 1000), Math.floor(now / 1000)) });
+}
 
 /* The machine on the other end. A daemon on this machine is named after the machine itself,
    because "This machine · bas-mbp" says the same thing twice. */
-export const describeMachine = (info: MachineInfo): string => {
+export function describeMachine(info: MachineInfo): string {
     if (info.reachability === 'loopback') {
         if (info.platform === 'darwin') {
             return i18next.t('shell:connection.thisMac');
@@ -94,9 +98,12 @@ export const describeMachine = (info: MachineInfo): string => {
         return info.endpointLabel;
     }
     return `${info.endpointLabel} · ${info.machineLabel}`;
-};
+}
 
-export const describeVersion = (version: string | null): string => i18next.t('shell:connection.version', { version: version ?? '-' });
+export function describeVersion(version: string | null): string {
+    return i18next.t('shell:connection.version', { version: version ?? '-' });
+}
 
-export const describePing = (latency: number | null): string =>
-    i18next.t('shell:connection.ping', { latency: latency === null ? '-' : `${Math.round(latency)} ms` });
+export function describePing(latency: number | null): string {
+    return i18next.t('shell:connection.ping', { latency: latency === null ? '-' : `${Math.round(latency)} ms` });
+}

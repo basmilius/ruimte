@@ -8,7 +8,7 @@ import { splitKey } from '@/state/keys';
  */
 export type WindowTarget = { kind: 'project'; endpointId: string; projectId: string; viewId?: string } | { kind: 'start' } | { kind: 'last' };
 
-export const readWindowTarget = (search: string): WindowTarget => {
+export function readWindowTarget(search: string): WindowTarget {
     const query = new URLSearchParams(search);
     const key = query.get(WINDOW_PROJECT_PARAM);
     if (key !== null) {
@@ -19,14 +19,16 @@ export const readWindowTarget = (search: string): WindowTarget => {
         }
     }
     return query.has(WINDOW_START_PARAM) ? { kind: 'start' } : { kind: 'last' };
-};
+}
 
 /* The target of this page, and a bare address where there is no page to ask, as in a test. */
-export const pageWindowTarget = (): WindowTarget => (typeof location === 'undefined' ? { kind: 'last' } : readWindowTarget(location.search));
+export function pageWindowTarget(): WindowTarget {
+    return typeof location === 'undefined' ? { kind: 'last' } : readWindowTarget(location.search);
+}
 
 /* The query for a window showing a project (its `endpointKey`) or the start screen (null), keeping whatever else it carried.
    The view the shell asked for goes: it was for the first open, and a reload shows what the window had in front. */
-export const windowSearch = (search: string, key: string | null): string => {
+export function windowSearch(search: string, key: string | null): string {
     const query = new URLSearchParams(search);
     query.delete(WINDOW_PROJECT_PARAM);
     query.delete(WINDOW_START_PARAM);
@@ -37,4 +39,4 @@ export const windowSearch = (search: string, key: string | null): string => {
         query.set(WINDOW_PROJECT_PARAM, key);
     }
     return `?${query.toString()}`;
-};
+}

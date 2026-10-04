@@ -10,7 +10,7 @@ import { usageRoots, type UsageRootPath } from './roots.ts';
 import { errorText } from '../error-text.ts';
 
 /* What a file holds from `from` to its end, as it is at the read. */
-const readFrom = async (path: string, from: number): Promise<string> => {
+async function readFrom(path: string, from: number): Promise<string> {
     const handle = await open(path, 'r');
     try {
         const { size } = await handle.stat();
@@ -27,7 +27,7 @@ const readFrom = async (path: string, from: number): Promise<string> => {
     } finally {
         await handle.close();
     }
-};
+}
 
 export interface ScanReport {
     at: number;
@@ -44,7 +44,7 @@ interface ParsedFile {
     codex: CodexParserState | null;
 }
 
-const listJsonl = async (dir: string, out: string[] = []): Promise<string[]> => {
+async function listJsonl(dir: string, out: string[] = []): Promise<string[]> {
     let entries;
     try {
         entries = await readdir(dir, { withFileTypes: true });
@@ -61,14 +61,14 @@ const listJsonl = async (dir: string, out: string[] = []): Promise<string[]> => 
         }
     }
     return out;
-};
+}
 
 /*
  * Reads what a file added since the last scan. Only whole lines count towards the offset; the piece
  * after the last newline is a line still being written, so it is parsed for what it is worth and
  * read again next time. The Codex state is snapshotted before that tail for the same reason.
  */
-const parseChunk = (text: string, provider: 'claude' | 'codex', from: number, state: CodexParserState | null): ParsedFile => {
+function parseChunk(text: string, provider: 'claude' | 'codex', from: number, state: CodexParserState | null): ParsedFile {
     let records: UsageRecord[] = [];
     const end = text.lastIndexOf('\n');
     const whole = end === -1 ? '' : text.slice(0, end);
@@ -103,7 +103,7 @@ const parseChunk = (text: string, provider: 'claude' | 'codex', from: number, st
     records = [];
     read(tail, codex);
     return { records: counted, tail: records, offset: from + (end === -1 ? 0 : Buffer.byteLength(whole, 'utf8') + 1), codex: committed };
-};
+}
 
 export interface UsageScannerOptions {
     /* The account of every session the host knows ran, by `<provider>\0<sessionId>`, the default one under its kind. */
@@ -117,7 +117,7 @@ type AccountOf = (record: UsageRecord) => string | undefined;
  * the one account that writes there, else the one the host knows ran the session, else the
  * default account of the CLI, which is the only one a session nobody started through the host ran under.
  */
-export const accountResolver = (root: UsageRootPath, sessionAccounts: () => ReadonlyMap<string, string>): AccountOf => {
+export function accountResolver(root: UsageRootPath, sessionAccounts: () => ReadonlyMap<string, string>): AccountOf {
     const accounts = root.accounts ?? [root.provider];
     const stored = (id: string): string | undefined => (id === root.provider ? undefined : id);
     if (accounts.length === 1) {
@@ -129,13 +129,14 @@ export const accountResolver = (root: UsageRootPath, sessionAccounts: () => Read
         const ran = sessionAccounts().get(`${root.provider}\0${record.sessionId}`);
         return stored(ran !== undefined && accounts.includes(ran) ? ran : fallback);
     };
-};
+}
 
-const withAccount = (records: UsageRecord[], accountOf: AccountOf): UsageRecord[] =>
-    records.map((record) => {
+function withAccount(records: UsageRecord[], accountOf: AccountOf): UsageRecord[] {
+    return records.map((record) => {
         const account = accountOf(record);
         return account === undefined ? record : { ...record, account };
     });
+}
 
 /*
  * Read appended transcript bytes incrementally, but restart after rewrites or truncation. Preserve

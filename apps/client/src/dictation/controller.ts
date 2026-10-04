@@ -70,20 +70,20 @@ let engine: DictationEngine = helperEngine;
 let awaitingAccess = false;
 
 /* Puts another recognizer behind every dictation that starts from now on; the returned call puts the previous one back. */
-export const setDictationEngine = (next: DictationEngine): (() => void) => {
+export function setDictationEngine(next: DictationEngine): () => void {
     const previous = engine;
     engine = next;
     return () => {
         engine = previous;
     };
-};
+}
 
-const failWith = (targetId: string, error: unknown): void => {
+function failWith(targetId: string, error: unknown): void {
     console.warn('Dictation failed:', error);
     useDictation.setState({ targetId, phase: 'error', error: dictationFailureText(error) });
-};
+}
 
-const discardDictation = (): void => {
+function discardDictation(): void {
     generation++;
     awaitingAccess = false;
     const current = session;
@@ -94,9 +94,9 @@ const discardDictation = (): void => {
     releaseAudio = null;
     current?.cancel();
     useDictation.setState({ targetId: null, phase: 'idle', text: '', error: null, bands: [] });
-};
+}
 
-export const observeSpeech = (): (() => void) => {
+export function observeSpeech(): () => void {
     const bridge = desktop()?.speech;
     if (!bridge?.state) {
         return () => undefined;
@@ -137,9 +137,9 @@ export const observeSpeech = (): (() => void) => {
             discardDictation();
         }
     };
-};
+}
 
-export const registerDictationTarget = (target: DictationTarget): (() => void) => {
+export function registerDictationTarget(target: DictationTarget): () => void {
     targets.set(target.element, target);
     return () => {
         targets.delete(target.element);
@@ -147,22 +147,24 @@ export const registerDictationTarget = (target: DictationTarget): (() => void) =
             discardDictation();
         }
     };
-};
+}
 
 /*
  * A person cancels from a focused window, so a cancel without the focus is the window losing it. That
  * ends a recording, but not the system's question about the microphone or a run that already stopped.
  */
-const endsOnBlur = (phase: State['phase']): boolean => phase === 'listening' || (phase === 'starting' && !awaitingAccess);
+function endsOnBlur(phase: State['phase']): boolean {
+    return phase === 'listening' || (phase === 'starting' && !awaitingAccess);
+}
 
-export const cancelDictation = (): void => {
+export function cancelDictation(): void {
     if (!document.hasFocus() && !endsOnBlur(useDictation.getState().phase)) {
         return;
     }
     discardDictation();
-};
+}
 
-export const stopDictation = (): void => {
+export function stopDictation(): void {
     if (useDictation.getState().phase === 'starting') {
         discardDictation();
         return;
@@ -173,9 +175,9 @@ export const stopDictation = (): void => {
     useDictation.setState({ phase: 'finishing' });
     insertion?.levels?.(null);
     session?.stop();
-};
+}
 
-export const toggleDictation = (target: DictationTarget): void => {
+export function toggleDictation(target: DictationTarget): void {
     const state = useDictation.getState();
     if (state.targetId === target.id && state.phase !== 'error') {
         stopDictation();
@@ -273,9 +275,9 @@ export const toggleDictation = (target: DictationTarget): void => {
         discardDictation();
         failWith(target.id, error);
     }
-};
+}
 
-export const toggleFocusedDictation = (): boolean => {
+export function toggleFocusedDictation(): boolean {
     if (session) {
         stopDictation();
         return true;
@@ -290,4 +292,4 @@ export const toggleFocusedDictation = (): boolean => {
         element = element.parentElement;
     }
     return false;
-};
+}

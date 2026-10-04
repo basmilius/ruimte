@@ -2,17 +2,19 @@ import { describe, expect, test } from 'bun:test';
 import type { ProviderAccounts, ProviderAccountStatus, UsageLimitsProvider, UsageLimitsSnapshot } from '@ruimte/agent-contracts';
 import { continueTarget, hasUnreadAccount, limitsOfAccount } from './account-limits';
 
-const status = (id: string, state: ProviderAccountStatus['state'] = 'ready'): ProviderAccountStatus => ({
-    id,
-    kind: 'claude',
-    state,
-    email: null,
-    plan: null,
-    organization: null,
-    home: '',
-    message: null,
-    checkedAt: 1
-});
+function status(id: string, state: ProviderAccountStatus['state'] = 'ready'): ProviderAccountStatus {
+    return {
+        id,
+        kind: 'claude',
+        state,
+        email: null,
+        plan: null,
+        organization: null,
+        home: '',
+        message: null,
+        checkedAt: 1
+    };
+}
 
 const accounts: ProviderAccounts = {
     accounts: {
@@ -25,21 +27,25 @@ const accounts: ProviderAccounts = {
     statuses: [status('claude'), status('claude_work'), status('claude_home'), status('claude_off'), status('claude_out', 'signed-out')]
 };
 
-const limits = (id: string | null, session: number, weekly = 0.1, checkedAt = 5): UsageLimitsProvider => ({
-    kind: 'claude',
-    ...(id === null ? {} : { account: { id, label: id } }),
-    plan: 'max',
-    checkedAt,
-    source: 'probe',
-    windows: [
-        { id: 'session', kind: 'session', label: 'Session', used: session, resetsAt: null, durationMs: null },
-        { id: 'weekly', kind: 'weekly', label: 'Weekly', used: weekly, resetsAt: null, durationMs: null }
-    ],
-    cost: null,
-    unavailable: null
-});
+function limits(id: string | null, session: number, weekly = 0.1, checkedAt = 5): UsageLimitsProvider {
+    return {
+        kind: 'claude',
+        ...(id === null ? {} : { account: { id, label: id } }),
+        plan: 'max',
+        checkedAt,
+        source: 'probe',
+        windows: [
+            { id: 'session', kind: 'session', label: 'Session', used: session, resetsAt: null, durationMs: null },
+            { id: 'weekly', kind: 'weekly', label: 'Weekly', used: weekly, resetsAt: null, durationMs: null }
+        ],
+        cost: null,
+        unavailable: null
+    };
+}
 
-const snapshot = (...providers: UsageLimitsProvider[]): UsageLimitsSnapshot => ({ providers });
+function snapshot(...providers: UsageLimitsProvider[]): UsageLimitsSnapshot {
+    return { providers };
+}
 
 describe('going on under another account after a limit', () => {
     test('picks the account with the least of its session spent', () => {

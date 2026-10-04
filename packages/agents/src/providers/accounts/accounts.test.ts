@@ -4,7 +4,9 @@ import { providerFor } from '../registry.ts';
 import { accountEnv, accountFolder, accountProblem, canContinue, readAccount, withDefaults } from './accounts.ts';
 
 const env = { HOME: '/home/bas', PATH: '/bin', ANTHROPIC_API_KEY: 'sk-ant', CLAUDE_CODE_OAUTH_TOKEN: 'oat', OPENAI_API_KEY: 'sk-oai', CODEX_API_KEY: 'ck' };
-const providerOf = (kind: AgentKind) => providerFor(kind);
+function providerOf(kind: AgentKind) {
+    return providerFor(kind);
+}
 const claude = providerFor('claude');
 const codex = providerFor('codex');
 

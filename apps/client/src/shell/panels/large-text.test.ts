@@ -5,20 +5,24 @@ import { readLargeText, textLimitFor } from './large-text';
 
 const MB = 1024 * 1024;
 
-const machine = (id: string, reachability: Endpoint['reachability']): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: `http://${id}:4210`,
-    wsBaseUrl: `ws://${id}:4210`,
-    reachability,
-    daemonId: id,
-    daemonPublicKey: null
-});
+function machine(id: string, reachability: Endpoint['reachability']): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: `http://${id}:4210`,
+        wsBaseUrl: `ws://${id}:4210`,
+        reachability,
+        daemonId: id,
+        daemonPublicKey: null
+    };
+}
 
 const here = machine('here', 'loopback');
 const studio = machine('studio', 'lan');
 
-const tooLarge = (size: number): FsReadTooLarge => ({ kind: 'too-large', size, mtime: 1700 });
+function tooLarge(size: number): FsReadTooLarge {
+    return { kind: 'too-large', size, mtime: 1700 };
+}
 
 let fetched: string[];
 

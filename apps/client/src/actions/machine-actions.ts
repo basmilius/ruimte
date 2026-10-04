@@ -58,9 +58,11 @@ const GROUP_NAMES: Record<ProcessGroup['kind'], string> = {
 type UsageOutput = ActionOutput<'usage.summary'>;
 
 /* Cost adds up only over what has a price, so a sum of unknowns stays unknown rather than zero. */
-const addCost = (total: number | null, cost: number | null): number | null => (cost === null ? total : (total ?? 0) + cost);
+function addCost(total: number | null, cost: number | null): number | null {
+    return cost === null ? total : (total ?? 0) + cost;
+}
 
-const usageOf = (summary: UsageSummaryResult): UsageOutput => {
+function usageOf(summary: UsageSummaryResult): UsageOutput {
     const providers = new Map<string, { tokens: number; costUsd: number | null }>();
     for (const model of summary.models) {
         const known = providers.get(model.provider) ?? { tokens: 0, costUsd: null };
@@ -82,23 +84,25 @@ const usageOf = (summary: UsageSummaryResult): UsageOutput => {
             .slice(0, TOP_ROWS)
             .map((project) => ({ name: project.name, tokens: totalTokensOf(project.totals), costUsd: project.costUsd }))
     };
-};
+}
 
-const limitsOf = (snapshot: UsageLimitsSnapshot): ActionOutput<'usage.limits'> => ({
-    providers: snapshot.providers.map((provider) => ({
-        provider: provider.kind,
-        account: provider.account?.label ?? null,
-        plan: provider.plan,
-        checkedAt: provider.checkedAt,
-        unavailable: provider.unavailable === null ? null : (provider.unavailable.message ?? provider.unavailable.reason),
-        windows: provider.windows.map((window) => ({
-            label: window.label,
-            kind: window.kind,
-            usedPercent: Math.round(window.used * 100),
-            resetsAt: window.resetsAt
+function limitsOf(snapshot: UsageLimitsSnapshot): ActionOutput<'usage.limits'> {
+    return {
+        providers: snapshot.providers.map((provider) => ({
+            provider: provider.kind,
+            account: provider.account?.label ?? null,
+            plan: provider.plan,
+            checkedAt: provider.checkedAt,
+            unavailable: provider.unavailable === null ? null : (provider.unavailable.message ?? provider.unavailable.reason),
+            windows: provider.windows.map((window) => ({
+                label: window.label,
+                kind: window.kind,
+                usedPercent: Math.round(window.used * 100),
+                resetsAt: window.resetsAt
+            }))
         }))
-    }))
-});
+    };
+}
 
 /*
  * What a person reads and does in the processes panel and the usage page, as actions. Reading is

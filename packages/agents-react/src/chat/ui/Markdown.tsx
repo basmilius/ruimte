@@ -15,7 +15,9 @@ import type { FileRef } from '../../host';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget } from './file-links';
 import { FileIcon, Icon } from '@basmilius/desktop-ui';
 
-const languageOf = (className: string | undefined): string => /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';
+function languageOf(className: string | undefined): string {
+    return /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';
+}
 
 const INLINE_CODE = 'rounded-sm bg-surface-sunken px-1 py-px font-mono text-code';
 
@@ -57,14 +59,14 @@ function InlineCode({ text }: { text: string }) {
 
 /* The path a link target spells, with the one scheme that still means a file on the host's machine
    taken off. A href nobody encoded is left as it is, since decoding throws on a stray percent. */
-const hrefPath = (href: string): string => {
+function hrefPath(href: string): string {
     const bare = href.replace(/^file:\/\//, '');
     try {
         return decodeURI(bare);
     } catch {
         return bare;
     }
-};
+}
 
 /* A markdown link, which is a file when its target names no scheme of its own. */
 function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
@@ -131,12 +133,12 @@ const plainComponents = {
 // that. Only `aria-level` moves. The tag stays, since the styles and a copy of the thread read it.
 const REPLY_HEADING_OFFSET = 3;
 
-const replyHeading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
+function replyHeading(level: 1 | 2 | 3 | 4 | 5 | 6) {
     const Tag = `h${level}` as const;
     return function ReplyHeading({ children }: { children?: ReactNode }) {
         return <Tag aria-level={Math.min(6, level + REPLY_HEADING_OFFSET)}>{children}</Tag>;
     };
-};
+}
 
 const replyComponents = {
     ...components,

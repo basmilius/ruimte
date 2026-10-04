@@ -26,7 +26,7 @@ class FakeSocket {
     }
 }
 
-const setup = (known: string[] = []) => {
+function setup(known: string[] = []) {
     const received: SignalEnvelope[] = [];
     const replies: Array<(envelope: SignalEnvelope) => void> = [];
     const gate = new SignalGate({
@@ -45,17 +45,18 @@ const setup = (known: string[] = []) => {
         socket
     );
     return { session, socket, received, replies };
-};
+}
 
 const offer: SignalEnvelope = { connectionId: 'attempt-0001', signal: { kind: 'offer', sdp: 'v=0\r\na=fingerprint:sha-256 AA' } };
 
-const signalFrom = (key: { publicKey: string; privateKey: string }, envelope: SignalEnvelope, signer = key) =>
-    JSON.stringify({
+function signalFrom(key: { publicKey: string; privateKey: string }, envelope: SignalEnvelope, signer = key) {
+    return JSON.stringify({
         type: 'signal',
         from: key.publicKey,
         envelope,
         signature: signMessage(signer.privateKey, signalMessage(key.publicKey, machine.publicKey, envelope))
     });
+}
 
 describe('DoorSession', () => {
     test('the machine answers a hello with its signature over the client nonce, before the client says who it is', async () => {

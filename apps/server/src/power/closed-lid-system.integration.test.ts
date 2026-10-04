@@ -32,17 +32,17 @@ afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
 });
 
-const alive = (pid: number): boolean => {
+function alive(pid: number): boolean {
     try {
         process.kill(pid, 0);
         return true;
     } catch {
         return false;
     }
-};
+}
 
 /* Reads the first lines a process prints, as many as asked for. */
-const firstLines = async (stream: ReadableStream<Uint8Array>, count: number): Promise<string[]> => {
+async function firstLines(stream: ReadableStream<Uint8Array>, count: number): Promise<string[]> {
     const decoder = new TextDecoder();
     let text = '';
     for await (const chunk of stream) {
@@ -52,7 +52,7 @@ const firstLines = async (stream: ReadableStream<Uint8Array>, count: number): Pr
         }
     }
     return text.split('\n').slice(0, count);
-};
+}
 
 describe('the closed-lid watchdog', () => {
     test('runs its command once the process holding it is killed outright, though a child of that process lives on', async () => {

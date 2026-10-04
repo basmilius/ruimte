@@ -33,7 +33,7 @@ export const AppleMcpConfigSchema = z.object({
 });
 export type AppleMcpServer = z.infer<typeof AppleMcpConfigSchema>['mcpServers'][string];
 
-export const readAppleMcpConfig = async (home: string, signal?: AbortSignal): Promise<Record<string, AppleMcpServer>> => {
+export async function readAppleMcpConfig(home: string, signal?: AbortSignal): Promise<Record<string, AppleMcpServer>> {
     signal?.throwIfAborted();
     let handle;
     try {
@@ -63,10 +63,10 @@ export const readAppleMcpConfig = async (home: string, signal?: AbortSignal): Pr
     } finally {
         await handle.close();
     }
-};
+}
 
-export const expandMcpEnvironment = (values: Record<string, string>, env: Record<string, string>): Record<string, string> =>
-    Object.fromEntries(
+export function expandMcpEnvironment(values: Record<string, string>, env: Record<string, string>): Record<string, string> {
+    return Object.fromEntries(
         Object.entries(values).map(([key, value]) => [
             key,
             value.replace(/\$\{([A-Z_a-z][A-Z_a-z0-9]*)\}/g, (_match, name: string) => {
@@ -77,6 +77,7 @@ export const expandMcpEnvironment = (values: Record<string, string>, env: Record
             })
         ])
     );
+}
 
 export interface AppleMcpConnection {
     list(signal: AbortSignal): Promise<Tool[]>;
@@ -85,7 +86,7 @@ export interface AppleMcpConnection {
 }
 export type ConnectAppleMcp = (server: AppleMcpServer, cwd: string, env: Record<string, string>, signal: AbortSignal) => Promise<AppleMcpConnection>;
 
-export const connectAppleMcp: ConnectAppleMcp = async (server, cwd, env, signal) => {
+export async function connectAppleMcp(server: AppleMcpServer, cwd: string, env: Record<string, string>, signal: AbortSignal): Promise<AppleMcpConnection> {
     const client = new Client(
         { name: 'ruimte-apple-foundation', version: '1.0.0' },
         { versionNegotiation: { mode: 'command' in server ? 'legacy' : 'auto' }, listMaxPages: 5 }
@@ -164,7 +165,7 @@ export const connectAppleMcp: ConnectAppleMcp = async (server, cwd, env, signal)
                 await client.close();
             })())
     };
-};
+}
 
 export class AppleMcpPool {
     private readonly connections = new Map<string, { fingerprint: string; ready: Promise<AppleMcpConnection> }>();

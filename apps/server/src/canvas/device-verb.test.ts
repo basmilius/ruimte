@@ -30,14 +30,16 @@ let nodes: ProjectNode[];
 let edges: ProjectEdge[];
 let host: CanvasHost;
 
-const content = (): ProjectContent => ({
-    name: 'repo',
-    color: '#123456',
-    views: [
-        { kind: 'canvas', id: 'main', name: 'Canvas', nodes, texts: [], edges, layouts: [] },
-        { kind: 'canvas', id: 'other', name: 'Other', nodes: [{ ...PHONE, id: 'phone-2' }], texts: [], edges: [], layouts: [] }
-    ]
-});
+function content(): ProjectContent {
+    return {
+        name: 'repo',
+        color: '#123456',
+        views: [
+            { kind: 'canvas', id: 'main', name: 'Canvas', nodes, texts: [], edges, layouts: [] },
+            { kind: 'canvas', id: 'other', name: 'Other', nodes: [{ ...PHONE, id: 'phone-2' }], texts: [], edges: [], layouts: [] }
+        ]
+    };
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-device-verb-'));
@@ -48,29 +50,30 @@ beforeEach(async () => {
     host = hostWith([backend]);
 });
 
-const hostWith = (backends: RecordingBackend[]): CanvasHost =>
-    ({
+function hostWith(backends: RecordingBackend[]): CanvasHost {
+    return {
         locate: (id: string) => (id === 'chat-1' ? { projectId: 'p1', folder: '/tmp/p1', canvasId: 'main' } : null),
         read: async () => content(),
         devices: new DeviceDriver({ home, manager: new DeviceManager(backends), timers: new ManualTimers(), sleep: async () => undefined })
-    }) as unknown as CanvasHost;
+    } as unknown as CanvasHost;
+}
 
 /* A second device node beside the phone, linked to the caller, pointing at this device. */
-const linkedTo = (info: DeviceInfo): RecordingBackend => {
+function linkedTo(info: DeviceInfo): RecordingBackend {
     const other = new RecordingBackend(info);
     other.shot = pngOf(1080, 2400);
     nodes = [...nodes, { ...PHONE, id: 'other-1', device: { platform: info.platform, kind: info.kind, name: info.name, runtime: info.runtime } }];
     edges = [...edges, { id: 'edge-2', from: 'chat-1', to: 'other-1' }];
     host = hostWith([backend, other]);
     return other;
-};
+}
 
 afterEach(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
 /* What the CLI prints: the lines of an answer, or the refusal with its advice. */
-const run = async (argv: string[]): Promise<string[]> => {
+async function run(argv: string[]): Promise<string[]> {
     try {
         return await noun.run(argv, { caller: 'chat-1', host });
     } catch (error) {
@@ -79,7 +82,7 @@ const run = async (argv: string[]): Promise<string[]> => {
         }
         throw error;
     }
-};
+}
 
 describe('ruimte-context device', () => {
     test('says which device the node holds and what works on it', async () => {

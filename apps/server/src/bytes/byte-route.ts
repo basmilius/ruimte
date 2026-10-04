@@ -20,7 +20,7 @@ const RANGE = /^bytes=(\d*)-(\d*)$/;
  * What of the file the `Range` header asks for. Null when there is nothing to honor and the whole
  * file is the answer, `unsatisfiable` when it names bytes the file does not have, which is a 416.
  */
-export const parseByteRange = (header: string | null, size: number): ByteRange | 'unsatisfiable' | null => {
+export function parseByteRange(header: string | null, size: number): ByteRange | 'unsatisfiable' | null {
     const match = header === null ? null : RANGE.exec(header.trim());
     if (!match) {
         return null;
@@ -40,19 +40,19 @@ export const parseByteRange = (header: string | null, size: number): ByteRange |
         return 'unsatisfiable';
     }
     return { start, end };
-};
+}
 
 /*
  * What every route that serves bytes asks before it looks anything up: the method it answers and the
  * access rules the socket itself is behind. A response here is the answer; null means carry on.
  */
-export const guardBytesRequest = async (request: Request, remoteAddress: string, options: AccessOptions): Promise<Response | null> => {
+export async function guardBytesRequest(request: Request, remoteAddress: string, options: AccessOptions): Promise<Response | null> {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
         return new Response('Method not allowed', { status: 405 });
     }
     const decision = await decideAccess(request, remoteAddress, options, 'bytes');
     return decision.ok ? null : new Response(decision.reason, { status: decision.status });
-};
+}
 
 export interface ServedFile {
     mime: string;
@@ -74,7 +74,7 @@ export interface ServedFileOptions {
  * The bytes with the headers every one of these routes answers with, `nosniff` among them: a file a
  * person uploaded is never a browser's to guess the type of.
  */
-export const bytesResponse = (file: ServedFile, options: ServedFileOptions): Response => {
+export function bytesResponse(file: ServedFile, options: ServedFileOptions): Response {
     const named = options.name === undefined ? '' : `; filename="${options.name.replaceAll(/["\\\r\n]/g, '')}"`;
     const headers: Record<string, string> = {
         'content-type': file.mime,
@@ -100,4 +100,4 @@ export const bytesResponse = (file: ServedFile, options: ServedFileOptions): Res
         status: 206,
         headers: { ...headers, 'content-range': `bytes ${start}-${end}/${file.size}`, 'content-length': `${end - start + 1}` }
     });
-};
+}

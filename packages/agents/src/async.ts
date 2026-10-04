@@ -5,8 +5,8 @@
  * failing it: every caller here is a loop that checks the signal itself on the next turn, and a
  * rejection would only be caught and thrown away.
  */
-export const wait = (ms: number, signal?: AbortSignal): Promise<void> =>
-    new Promise((resolve) => {
+export function wait(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve) => {
         const timer = setTimeout(resolve, ms);
         signal?.addEventListener(
             'abort',
@@ -17,13 +17,14 @@ export const wait = (ms: number, signal?: AbortSignal): Promise<void> =>
             { once: true }
         );
     });
+}
 
 /*
  * The promise, or `message` when it takes longer than `ms`. The timer is cleared either way, so a
  * call that answers at once does not hold the process for the rest of its deadline.
  */
-export const withTimeout = <T>(promise: Promise<T>, ms: number, message: string): Promise<T> =>
-    new Promise((resolve, reject) => {
+export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+    return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(message)), ms);
         promise.then(
             (value) => {
@@ -36,3 +37,4 @@ export const withTimeout = <T>(promise: Promise<T>, ms: number, message: string)
             }
         );
     });
+}

@@ -37,7 +37,7 @@ export interface CanvasPrompts {
  * A waiting terminal is dated by when it was first seen waiting rather than by the agent's
  * `updatedAt`, which every later hook of the same prompt moves forward.
  */
-export const canvasPrompts = ({ nodes, endpointId, sessions, chats, computer, waitingSince }: CanvasPromptsInput): CanvasPrompts => {
+export function canvasPrompts({ nodes, endpointId, sessions, chats, computer, waitingSince }: CanvasPromptsInput): CanvasPrompts {
     const prompts: CanvasPrompt[] = [];
     const since = new Map(waitingSince);
     const add = (node: CanvasPromptsInput['nodes'][number], subject: PromptSubject, provider: AgentKind | null, surface: CanvasPrompt['surface']) =>
@@ -81,13 +81,13 @@ export const canvasPrompts = ({ nodes, endpointId, sessions, chats, computer, wa
         ),
         waitingSince: since
     };
-};
+}
 
 /*
  * The prompt in front of a stack. The one being read stays there whatever arrives; once it is
  * answered the prompt that moved into its place follows, so a card skipped with the arrows stays skipped.
  */
-export const stackFront = (ids: readonly string[], activeId: string | null, lastIndex: number): string | null => {
+export function stackFront(ids: readonly string[], activeId: string | null, lastIndex: number): string | null {
     if (activeId !== null && ids.includes(activeId)) {
         return activeId;
     }
@@ -95,18 +95,21 @@ export const stackFront = (ids: readonly string[], activeId: string | null, last
         return null;
     }
     return ids[Math.min(Math.max(lastIndex, 0), ids.length - 1)]!;
-};
+}
 
 /* Whether a new reading draws the same stack, so a word streaming into a chat does not redraw its cards. */
-export const samePrompts = (a: readonly CanvasPrompt[], b: readonly CanvasPrompt[]): boolean =>
-    a.length === b.length &&
-    a.every((prompt, i) => {
-        const other = b[i]!;
-        return (
-            prompt.id === other.id &&
-            prompt.title === other.title &&
-            prompt.provider === other.provider &&
-            prompt.subject.kind === other.subject.kind &&
-            ruimtePayloadOf(prompt.subject) === ruimtePayloadOf(other.subject)
-        );
-    });
+export function samePrompts(a: readonly CanvasPrompt[], b: readonly CanvasPrompt[]): boolean {
+    return (
+        a.length === b.length &&
+        a.every((prompt, i) => {
+            const other = b[i]!;
+            return (
+                prompt.id === other.id &&
+                prompt.title === other.title &&
+                prompt.provider === other.provider &&
+                prompt.subject.kind === other.subject.kind &&
+                ruimtePayloadOf(prompt.subject) === ruimtePayloadOf(other.subject)
+            );
+        })
+    );
+}

@@ -6,11 +6,11 @@ import { prefetcher } from '@basmilius/desktop-ui';
 /* Flip to true while debugging the budget; false logs nothing. */
 const DEBUG: boolean = false;
 
-const debug = (message: string, id: string): void => {
+function debug(message: string, id: string): void {
     if (DEBUG) {
         console.debug(`[webgl] ${message} ${id}`);
     }
-};
+}
 
 let webgl2Available: boolean | null = null;
 
@@ -20,21 +20,21 @@ let addonLoad: Promise<void> | null = null;
 prefetcher.register(() => import('@xterm/addon-webgl'));
 
 /* Probed once for the page; the probe context is released so it does not count against the browser's cap. */
-const hasWebgl2 = (): boolean => {
+function hasWebgl2(): boolean {
     if (webgl2Available === null) {
         const context = document.createElement('canvas').getContext('webgl2');
         webgl2Available = context !== null;
         context?.getExtension('WEBGL_lose_context')?.loseContext();
     }
     return webgl2Available;
-};
+}
 
 /* The canvas the addon just added. xterm names the canvas of every render layer it owns
    (`xterm-link-layer`); the WebGL one is the nameless one. */
-const rendererCanvas = (term: Terminal): HTMLCanvasElement | null => {
+function rendererCanvas(term: Terminal): HTMLCanvasElement | null {
     const canvases = term.element?.querySelectorAll<HTMLCanvasElement>('.xterm-screen canvas') ?? [];
     return [...canvases].filter((canvas) => canvas.classList.length === 0).at(-1) ?? null;
-};
+}
 
 interface Entry {
     term: Terminal;

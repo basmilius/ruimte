@@ -35,7 +35,7 @@ const BROWSER_SYSTEMS: [RegExp, string][] = [
 ];
 
 /* The system in the words its own maker uses, or null when nothing here recognizes it. */
-export const systemName = (raw: string | null | undefined): string | null => {
+export function systemName(raw: string | null | undefined): string | null {
     const text = (raw ?? '').trim();
     if (text === '') {
         return null;
@@ -46,7 +46,7 @@ export const systemName = (raw: string | null | undefined): string | null => {
         }
     }
     return null;
-};
+}
 
 /*
  * Chromium pads its brand list with a made-up one to keep parsers honest ("Not)A;Brand"), and every
@@ -64,14 +64,14 @@ const BRAND_NAMES: Record<string, string> = {
     arc: 'Arc'
 };
 
-export const brandName = (brands: readonly { readonly brand: string }[] | null | undefined): string | null => {
+export function brandName(brands: readonly { readonly brand: string }[] | null | undefined): string | null {
     const named = (brands ?? []).map((entry) => entry.brand.trim()).filter((brand) => brand !== '' && !GREASE.test(brand));
     const own = named.find((brand) => brand.toLowerCase() !== 'chromium') ?? named[0];
     if (own === undefined) {
         return null;
     }
     return BRAND_NAMES[own.toLowerCase()] ?? own;
-};
+}
 
 /*
  * The fallback for a browser without `userAgentData`, ordered so a browser that carries another's
@@ -85,7 +85,7 @@ const USER_AGENTS: [RegExp, string][] = [
     [/\bSafari\//, 'Safari']
 ];
 
-export const browserName = (userAgent: string | null | undefined): string | null => {
+export function browserName(userAgent: string | null | undefined): string | null {
     const text = userAgent ?? '';
     for (const [pattern, name] of USER_AGENTS) {
         if (pattern.test(text)) {
@@ -93,10 +93,10 @@ export const browserName = (userAgent: string | null | undefined): string | null
         }
     }
     return null;
-};
+}
 
 /* The name in the daemon's list. A system nobody here can name is left out rather than guessed at. */
-export const clientLabelFrom = (env: ClientEnvironment): string => {
+export function clientLabelFrom(env: ClientEnvironment): string {
     const desktop = (env.desktopPlatform ?? '').trim();
     const app = desktop !== '' ? 'Ruimte' : (brandName(env.brands) ?? browserName(env.userAgent) ?? 'Browser');
     const system =
@@ -104,13 +104,13 @@ export const clientLabelFrom = (env: ClientEnvironment): string => {
             ? (DESKTOP_SYSTEMS[desktop] ?? systemName(desktop))
             : (systemName(env.uaPlatform) ?? systemName(env.platform) ?? systemName(env.userAgent));
     return system === null ? app : `${app} on ${system}`;
-};
+}
 
 /*
  * What this client is called on the page it runs in, read from the page's own navigator. Here, so
  * the account code can name a device without importing the transport.
  */
-export const currentClientLabel = (): string => {
+export function currentClientLabel(): string {
     if (typeof navigator === 'undefined') {
         return 'Ruimte';
     }
@@ -123,4 +123,4 @@ export const currentClientLabel = (): string => {
         userAgent: navigator.userAgent,
         platform: navigator.platform
     });
-};
+}

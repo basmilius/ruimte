@@ -105,7 +105,7 @@ afterAll(async () => {
     await rm(home, { recursive: true, force: true });
 });
 
-const connect = (credential: DirectCredential, signal?: (client: DirectClient, envelope: Parameters<DirectPeers['receive']>[0]) => void): DirectClient => {
+function connect(credential: DirectCredential, signal?: (client: DirectClient, envelope: Parameters<DirectPeers['receive']>[0]) => void): DirectClient {
     const client: DirectClient = new DirectClient({
         stunServers: [],
         credential,
@@ -114,12 +114,12 @@ const connect = (credential: DirectCredential, signal?: (client: DirectClient, e
     });
     clients.push(client);
     return client;
-};
+}
 
-const pairedKey = async () => {
+async function pairedKey() {
     const key = generateKeyPair();
     return { ...key, sessionId: await admitClient(store, key.publicKey, 'direct test') };
-};
+}
 
 describe('a direct connection', () => {
     test('a paired key passes the handshake and its requests reach the dispatcher', async () => {
@@ -298,7 +298,7 @@ describe('a direct connection', () => {
  * A client of the door on the local network, as the app is one: hello first, the machine's proof
  * checked against the pinned key, and only then the signals, signed for the machine's key.
  */
-const throughDoor = async (key: { publicKey: string; privateKey: string }): Promise<{ client: DirectClient; socket: WebSocket }> => {
+async function throughDoor(key: { publicKey: string; privateKey: string }): Promise<{ client: DirectClient; socket: WebSocket }> {
     const socket = new WebSocket(lanDoorUrl('127.0.0.1', door.port!));
     await new Promise((resolve, reject) => {
         socket.onopen = resolve;
@@ -343,7 +343,7 @@ const throughDoor = async (key: { publicKey: string; privateKey: string }): Prom
             )
     );
     return { client, socket };
-};
+}
 
 describe('the door on the local network', () => {
     test('a key the machine let in opens a direct channel through it without any broker', async () => {

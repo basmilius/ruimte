@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { followOtherWindows } from './other-windows';
 
 /* A page that hears what other pages write, the way `window` does. */
-const fakeTarget = () => {
+function fakeTarget() {
     const listeners = new Set<(event: StorageEvent) => void>();
     return {
         addEventListener: (_type: string, listener: (event: StorageEvent) => void) => void listeners.add(listener),
@@ -12,7 +12,7 @@ const fakeTarget = () => {
             return listeners.size;
         }
     };
-};
+}
 
 describe('followOtherWindows', () => {
     test('reads again when another window writes the key, and not for another key', () => {

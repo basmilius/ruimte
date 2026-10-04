@@ -27,11 +27,12 @@ const ALL_ACCOUNTS = '*';
 const DIALOG_CENTER = 'pointer-events-none absolute inset-0';
 
 /* Whether the scope's host answers right now, redrawn as its link comes and goes. */
-const useAnswering = (transport: ChatTransport): boolean =>
-    useSyncExternalStore(
+function useAnswering(transport: ChatTransport): boolean {
+    return useSyncExternalStore(
         useCallback((onChange: () => void) => transport.subscribeStatus(onChange), [transport]),
         () => transport.status === 'open'
     );
+}
 
 /*
  * Which agent CLIs the host has, under an empty usage page: no usage is what a host without any
@@ -62,7 +63,7 @@ function HostAgents() {
  * it answers, and tells the host to keep scanning while the page is here. A late answer to the period
  * before this one never lands, because the key it carries is no longer the one being shown.
  */
-const useSummary = (scopeId: string, transport: ChatTransport, period: UsagePeriod, account: string | null): (() => void) => {
+function useSummary(scopeId: string, transport: ChatTransport, period: UsagePeriod, account: string | null): () => void {
     useEffect(() => {
         const subscribe = (): void => void transport.request('usage.subscribe', {}).catch(() => undefined);
         if (transport.status === 'open') {
@@ -109,7 +110,7 @@ const useSummary = (scopeId: string, transport: ChatTransport, period: UsagePeri
     }, [transport, load]);
 
     return load;
-};
+}
 
 function Provenance() {
     const { t } = useTranslation('agent-usage');

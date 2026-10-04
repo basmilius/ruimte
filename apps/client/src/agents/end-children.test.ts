@@ -13,14 +13,16 @@ import {
     useEndingAgents
 } from '@/agents/end-children';
 
-const machine = (children: Record<string, string[]>, failing = false) => ({
-    request: async (_type: string, payload: { nodeId: string }) => {
-        if (failing) {
-            throw new Error('unknown request');
+function machine(children: Record<string, string[]>, failing = false) {
+    return {
+        request: async (_type: string, payload: { nodeId: string }) => {
+            if (failing) {
+                throw new Error('unknown request');
+            }
+            return { nodeIds: children[payload.nodeId] ?? [] };
         }
-        return { nodeIds: children[payload.nodeId] ?? [] };
-    }
-});
+    };
+}
 
 beforeEach(() => {
     useEndingAgents.setState({ pending: null });

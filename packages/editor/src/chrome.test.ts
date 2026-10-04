@@ -5,12 +5,12 @@ const element = {} as HTMLElement;
 const original = globalThis.getComputedStyle;
 
 /* A page whose root defines these tokens and nothing else. */
-const page = (tokens: Record<string, string>, ligatures = 'normal'): void => {
+function page(tokens: Record<string, string>, ligatures = 'normal'): void {
     globalThis.getComputedStyle = (() => ({
         getPropertyValue: (name: string) => tokens[name] ?? '',
         fontVariantLigatures: ligatures
     })) as unknown as typeof getComputedStyle;
-};
+}
 
 afterEach(() => {
     globalThis.getComputedStyle = original;

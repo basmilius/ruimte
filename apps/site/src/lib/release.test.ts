@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { assetUrl, availablePlatforms, parseRelease } from './release.ts';
 
-const asset = (name: string) => ({ name, browser_download_url: `https://github.com/basmilius/ruimte/releases/download/v0.6.0/${name}` });
+function asset(name: string) {
+    return { name, browser_download_url: `https://github.com/basmilius/ruimte/releases/download/v0.6.0/${name}` };
+}
 
 const answer = {
     tag_name: 'v0.6.0',

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { ConnectionState } from './transport';
 import { reconnectStale, startWakeReconnect, type WakePool } from './wake';
 
-const fakePool = (states: Record<string, ConnectionState>): WakePool & { reconnected: string[] } => {
+function fakePool(states: Record<string, ConnectionState>): WakePool & { reconnected: string[] } {
     const reconnected: string[] = [];
     return {
         reconnected,
@@ -12,7 +12,7 @@ const fakePool = (states: Record<string, ConnectionState>): WakePool & { reconne
             reconnected.push(endpointId);
         }
     };
-};
+}
 
 const STATES: Record<string, ConnectionState> = {
     open: { status: 'open', attempts: 0, retryAt: null },

@@ -20,7 +20,7 @@ const EXTENSIONS: Record<string, string> = {
 const SAFE_EXTENSION = /^[A-Za-z0-9]{1,8}$/;
 
 /* What the file is called on disk: the id, plus an extension the agent's tools can recognize. */
-export const extensionFor = (name: string, mime: string): string => {
+export function extensionFor(name: string, mime: string): string {
     const own = extname(name).slice(1).toLowerCase();
     if (SAFE_EXTENSION.test(own)) {
         return own;
@@ -31,7 +31,7 @@ export const extensionFor = (name: string, mime: string): string => {
     }
     const subtype = mime.split('/')[1]?.replace(/\+.*$/, '') ?? '';
     return SAFE_EXTENSION.test(subtype) ? subtype.toLowerCase() : 'bin';
-};
+}
 
 /*
  * The files people attach to a message, under `<home>/attachments/<chatId>`. The thread keeps
@@ -67,18 +67,21 @@ export class AttachmentStore {
     }
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // What an attachment looked like before the files moved out of the thread: the bytes inline.
-const isInline = (value: unknown): value is { name: string; mediaType: string; data: string } =>
-    isRecord(value) && typeof value.name === 'string' && typeof value.mediaType === 'string' && typeof value.data === 'string';
+function isInline(value: unknown): value is { name: string; mediaType: string; data: string } {
+    return isRecord(value) && typeof value.name === 'string' && typeof value.mediaType === 'string' && typeof value.data === 'string';
+}
 
 /*
  * Writes out the images a thread still carries inline and answers the record with metadata in their
  * place, or null when there was nothing to do. Old records are migrated on the read that opens the
  * chat, before the schema sees them, because the schema no longer knows the inline shape.
  */
-export const migrateInlineAttachments = async (chatId: string, record: unknown, store: AttachmentStore): Promise<unknown | null> => {
+export async function migrateInlineAttachments(chatId: string, record: unknown, store: AttachmentStore): Promise<unknown | null> {
     const items = isRecord(record) && Array.isArray(record.items) ? record.items : null;
     if (!items) {
         return null;
@@ -102,4 +105,4 @@ export const migrateInlineAttachments = async (chatId: string, record: unknown, 
         })
     );
     return migrated ? { ...(record as Record<string, unknown>), items: next } : null;
-};
+}

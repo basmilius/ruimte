@@ -9,11 +9,11 @@ import { ClaudeBackend } from './claude-backend.ts';
 import { CodexTransport } from './codex-transport.ts';
 import { inProcess, type FakeIo, type FakeCli } from './fake-cli.ts';
 
-const flush = async (): Promise<void> => {
+async function flush(): Promise<void> {
     for (let i = 0; i < 30; i++) {
         await Promise.resolve();
     }
-};
+}
 
 const launch: BackendLaunch = {
     command: ['unused'],
@@ -28,7 +28,7 @@ const launch: BackendLaunch = {
     resumeNote: null
 };
 
-const pipe = (program?: FakeCli) => {
+function pipe(program?: FakeCli) {
     let io: FakeIo;
     let options: ChatSpawnOptions;
     let broken = false;
@@ -63,7 +63,7 @@ const pipe = (program?: FakeCli) => {
             await fake.started[0]!.exited;
         }
     };
-};
+}
 
 test('Claude continues reading after an event consumer throws and reports the failure without killing the process', async () => {
     const fake = pipe();

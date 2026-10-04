@@ -9,12 +9,14 @@ import { ModelCatalogFeed } from './model-catalogs.ts';
 
 const HOUR = 60 * 60 * 1000;
 
-const catalogOf = (updatedAt: string, slugs: string[]): ModelCatalogData => ({
-    updatedAt,
-    defaultModel: slugs[0]!,
-    profiles: { plain: { options: [], contextWindowTokens: { '*': 200000 } } },
-    models: slugs.map((slug) => ({ slug, name: slug, profile: 'plain' }))
-});
+function catalogOf(updatedAt: string, slugs: string[]): ModelCatalogData {
+    return {
+        updatedAt,
+        defaultModel: slugs[0]!,
+        profiles: { plain: { options: [], contextWindowTokens: { '*': 200000 } } },
+        models: slugs.map((slug) => ({ slug, name: slug, profile: 'plain' }))
+    };
+}
 
 const SHIPPED = catalogOf('2026-09-01T00:00:00Z', ['model-a']);
 const NEWER = catalogOf('2026-09-28T00:00:00Z', ['model-a', 'model-b']);
@@ -24,10 +26,12 @@ let clock: number;
 let asked: number;
 let answer: () => Promise<ModelCatalogsResult>;
 
-const slugsOf = (catalog: ModelCatalog): string[] => catalog.list().map((model) => model.slug);
+function slugsOf(catalog: ModelCatalog): string[] {
+    return catalog.list().map((model) => model.slug);
+}
 
-const feedOf = (catalogs: { claude: ModelCatalog; codex?: ModelCatalog }, allowFetch = true): ModelCatalogFeed =>
-    new ModelCatalogFeed({
+function feedOf(catalogs: { claude: ModelCatalog; codex?: ModelCatalog }, allowFetch = true): ModelCatalogFeed {
+    return new ModelCatalogFeed({
         home,
         allowFetch,
         catalogs,
@@ -37,6 +41,7 @@ const feedOf = (catalogs: { claude: ModelCatalog; codex?: ModelCatalog }, allowF
             return answer();
         }
     });
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-catalogs-'));

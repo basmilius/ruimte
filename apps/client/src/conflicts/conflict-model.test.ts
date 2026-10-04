@@ -16,15 +16,17 @@ import {
 } from '@/conflicts/conflict-model';
 import type { ConflictDraft } from '@/conflicts/editor';
 
-const answer = (patch: Partial<GitConflictResult> = {}): GitConflictResult => ({
-    path: 'file.txt',
-    kind: 'text',
-    base: 'one\ntwo\nthree\n',
-    ours: 'one\nour two\nthree\n',
-    theirs: 'one\ntheir two\nthree\n',
-    hash: 'abc',
-    ...patch
-});
+function answer(patch: Partial<GitConflictResult> = {}): GitConflictResult {
+    return {
+        path: 'file.txt',
+        kind: 'text',
+        base: 'one\ntwo\nthree\n',
+        ours: 'one\nour two\nthree\n',
+        theirs: 'one\ntheir two\nthree\n',
+        hash: 'abc',
+        ...patch
+    };
+}
 
 describe('fileOf', () => {
     test('opens on the merged draft with our side in the conflict', () => {

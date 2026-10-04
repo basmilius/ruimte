@@ -4,16 +4,20 @@ import type { WatchablePool } from '@/transport/pool-watch';
 import type { Transport, TransportStatus } from '@/transport/transport';
 import { startDeviceOperatedWatch, stepWords, stripLook, tapPoint, useDeviceOperated } from './operated';
 
-const step = (kind: string, more: Partial<DeviceAgentStep> = {}): DeviceAgentStep => ({ kind, description: kind, seq: 1, ...more });
+function step(kind: string, more: Partial<DeviceAgentStep> = {}): DeviceAgentStep {
+    return { kind, description: kind, seq: 1, ...more };
+}
 
-const operated = (state: DeviceOperated['state'], more: Partial<DeviceOperated> = {}): DeviceOperated => ({
-    backendId: 'simctl',
-    deviceId: 'sim-1',
-    nodeId: 'chat-1',
-    state,
-    step: step('tap', { x: 0.5, y: 0.25 }),
-    ...more
-});
+function operated(state: DeviceOperated['state'], more: Partial<DeviceOperated> = {}): DeviceOperated {
+    return {
+        backendId: 'simctl',
+        deviceId: 'sim-1',
+        nodeId: 'chat-1',
+        state,
+        step: step('tap', { x: 0.5, y: 0.25 }),
+        ...more
+    };
+}
 
 describe('the words of the strip', () => {
     test('follow the last step while the agent operates the device', () => {
@@ -84,24 +88,28 @@ class FakeLink implements Transport {
     }
 }
 
-const poolOf = (links: Record<string, FakeLink>): WatchablePool => ({
-    ids: () => Object.keys(links),
-    peek: (endpointId) => links[endpointId] ?? null,
-    subscribe: () => () => undefined
-});
+function poolOf(links: Record<string, FakeLink>): WatchablePool {
+    return {
+        ids: () => Object.keys(links),
+        peek: (endpointId) => links[endpointId] ?? null,
+        subscribe: () => () => undefined
+    };
+}
 
-const settle = async (): Promise<void> => {
+async function settle(): Promise<void> {
     for (let turn = 0; turn < 5; turn++) {
         await Promise.resolve();
     }
-};
+}
 
 const stops: (() => void)[] = [];
 afterEach(() => {
     stops.splice(0).forEach((stop) => stop());
 });
 
-const devicesOf = (endpointId: string) => Object.values(useDeviceOperated.getState().byEndpoint[endpointId] ?? {});
+function devicesOf(endpointId: string) {
+    return Object.values(useDeviceOperated.getState().byEndpoint[endpointId] ?? {});
+}
 
 describe('the devices agents operate', () => {
     test('are asked for once the socket is open, follow every step, and drop a device once the agent let go', async () => {

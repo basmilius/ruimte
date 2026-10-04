@@ -23,14 +23,14 @@ const StoredSessionSchema = z.object({
  * token either. Without encryption (a Linux desktop with no keyring) nothing is written: the session
  * lasts until the app quits, rather than a refresh token sitting in a plain file.
  */
-const writeEncrypted = async (path: string, cipher: StringCipher, plain: string): Promise<void> => {
+async function writeEncrypted(path: string, cipher: StringCipher, plain: string): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
     const temporary = `${path}.${process.pid}.tmp`;
     await writeFile(temporary, cipher.encryptString(plain), { mode: 0o600 });
     await rename(temporary, path);
-};
+}
 
-export const fileSessionStore = (path: string, cipher: StringCipher): SessionStore => {
+export function fileSessionStore(path: string, cipher: StringCipher): SessionStore {
     let memory: StoredSession | null = null;
 
     return {
@@ -64,15 +64,19 @@ export const fileSessionStore = (path: string, cipher: StringCipher): SessionSto
             await writeEncrypted(path, cipher, JSON.stringify(session));
         }
     };
-};
+}
 
-const signerOf = (privateKey: KeyObject): SessionSigner => ({
-    publicKey: createPublicKey(privateKey).export({ format: 'jwk' }).x ?? '',
-    sign: async (message) => sign(null, Buffer.from(message), privateKey).toString('base64url')
-});
+function signerOf(privateKey: KeyObject): SessionSigner {
+    return {
+        publicKey: createPublicKey(privateKey).export({ format: 'jwk' }).x ?? '',
+        sign: async (message) => sign(null, Buffer.from(message), privateKey).toString('base64url')
+    };
+}
 
 /* A key for this run only; a session bound to it signs in again on the next start. */
-const keyInMemory = (): SessionSigner => signerOf(generateKeyPairSync('ed25519').privateKey);
+function keyInMemory(): SessionSigner {
+    return signerOf(generateKeyPairSync('ed25519').privateKey);
+}
 
 /*
  * The key the shell's session is bound to: every refresh is signed with it, so the refresh token in the
@@ -81,7 +85,7 @@ const keyInMemory = (): SessionSigner => signerOf(generateKeyPairSync('ed25519')
  * Only a missing file makes a new one: a keychain that refused once (a declined prompt after an update)
  * may answer on the next start, and a key written over the old one would end that session for good.
  */
-export const fileSessionKey = (path: string, cipher: StringCipher): (() => Promise<SessionSigner>) => {
+export function fileSessionKey(path: string, cipher: StringCipher): () => Promise<SessionSigner> {
     let held: Promise<SessionSigner> | null = null;
 
     const createKeyFile = async (): Promise<SessionSigner> => {
@@ -115,4 +119,4 @@ export const fileSessionKey = (path: string, cipher: StringCipher): (() => Promi
         });
         return held;
     };
-};
+}

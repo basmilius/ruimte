@@ -6,7 +6,7 @@ export interface LiveEvent {
     [key: string]: unknown;
 }
 
-const gatheringComplete = (peer: RTCPeerConnection): Promise<void> => {
+function gatheringComplete(peer: RTCPeerConnection): Promise<void> {
     if (peer.iceGatheringState === 'complete') {
         return Promise.resolve();
     }
@@ -19,7 +19,7 @@ const gatheringComplete = (peer: RTCPeerConnection): Promise<void> => {
         };
         peer.addEventListener('icegatheringstatechange', changed);
     });
-};
+}
 
 export interface LiveSessionParts {
     peer: RTCPeerConnection;

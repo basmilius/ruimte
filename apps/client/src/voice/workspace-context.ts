@@ -11,4 +11,6 @@ useProject.subscribe((state, previous) => {
     }
 });
 
-export const voiceWorkspaceRevision = (): number => revision;
+export function voiceWorkspaceRevision(): number {
+    return revision;
+}

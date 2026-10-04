@@ -29,7 +29,9 @@ index.set('project-b', '/work/b', {
     views: [{ id: 'elsewhere', kind: 'chat', name: 'Other project', node: { provider: 'claude' } }]
 });
 
-const titleFor = (fromId: string) => (id: string) => index.chatTitleBeside(fromId, id);
+function titleFor(fromId: string) {
+    return (id: string) => index.chatTitleBeside(fromId, id);
+}
 
 const earlierThread: ChatItem[] = [
     { id: 'u1', kind: 'user', createdAt: 1, turnId: 't1', text: 'Move the tokens to the shell' },

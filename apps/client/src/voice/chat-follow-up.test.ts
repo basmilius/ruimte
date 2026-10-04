@@ -3,10 +3,10 @@ import type { ChatInfo, ChatItem } from '@ruimte/contracts';
 import { applyEvent, type ChatState } from '@ruimte/agents-react/state/chats';
 import { chatCompletion, completionPrompt } from '@/voice/chat-follow-up';
 
-const state = (items: ChatItem[]): ChatState => {
+function state(items: ChatItem[]): ChatState {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
     return { info: {} as ChatInfo, items: byId, structure: byId, order: items.map((item) => item.id) };
-};
+}
 
 describe('voice AI Chat follow-up', () => {
     test('waits for the exact tracked turn to settle', () => {

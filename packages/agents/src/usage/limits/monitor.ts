@@ -44,15 +44,17 @@ interface ProviderState {
     nextAt: number;
 }
 
-const blank = (kind: UsageProvider): UsageLimitsProvider => ({
-    kind,
-    plan: null,
-    checkedAt: 0,
-    source: 'probe',
-    windows: [],
-    cost: null,
-    unavailable: null
-});
+function blank(kind: UsageProvider): UsageLimitsProvider {
+    return {
+        kind,
+        plan: null,
+        checkedAt: 0,
+        source: 'probe',
+        windows: [],
+        cost: null,
+        unavailable: null
+    };
+}
 
 export interface UsageMonitorOptions {
     providers: ProviderRegistry;

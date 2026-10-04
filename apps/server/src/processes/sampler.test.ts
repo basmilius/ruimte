@@ -3,29 +3,33 @@ import { identityOf, machineRate, parseProcArgs, processRates, sleptBetween, tic
 
 const MACHINE: RawSample['machine'] = { cores: 8, cpuBusy: 0, cpuTotal: 0, memoryUsed: 0, memoryTotal: 16, diskFree: null, diskTotal: null };
 
-const proc = (pid: number, overrides: Partial<RawProcess> = {}): RawProcess => ({
-    pid,
-    ppid: 1,
-    uid: 501,
-    startTime: 1_000_000_000,
-    name: `p${pid}`,
-    path: null,
-    readable: true,
-    cpuNs: 0,
-    memory: 100,
-    diskRead: 0,
-    diskWrite: 0,
-    ...overrides
-});
+function proc(pid: number, overrides: Partial<RawProcess> = {}): RawProcess {
+    return {
+        pid,
+        ppid: 1,
+        uid: 501,
+        startTime: 1_000_000_000,
+        name: `p${pid}`,
+        path: null,
+        readable: true,
+        cpuNs: 0,
+        memory: 100,
+        diskRead: 0,
+        diskWrite: 0,
+        ...overrides
+    };
+}
 
-const sample = (at: number, processes: RawProcess[], overrides: Partial<RawSample> = {}): RawSample => ({
-    at,
-    awakeMs: at,
-    asleepMs: 0,
-    processes,
-    machine: MACHINE,
-    ...overrides
-});
+function sample(at: number, processes: RawProcess[], overrides: Partial<RawSample> = {}): RawSample {
+    return {
+        at,
+        awakeMs: at,
+        asleepMs: 0,
+        processes,
+        machine: MACHINE,
+        ...overrides
+    };
+}
 
 describe('rates between two readings', () => {
     test('CPU is the difference in CPU time over the awake time between them, as percent of one core', () => {

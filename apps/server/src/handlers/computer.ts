@@ -1,7 +1,7 @@
 import type { ComputerUse } from '../computer/computer-use.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 
-export const registerComputerHandlers = (dispatcher: Dispatcher, computer: ComputerUse): void => {
+export function registerComputerHandlers(dispatcher: Dispatcher, computer: ComputerUse): void {
     dispatcher.register('computer.status', () => computer.refreshStatus());
 
     dispatcher.register('computer.setEnabled', (payload) => computer.setEnabled(payload.enabled, payload.language));
@@ -24,4 +24,4 @@ export const registerComputerHandlers = (dispatcher: Dispatcher, computer: Compu
     dispatcher.register('computer.grants', () => computer.grants());
 
     dispatcher.register('computer.revoke', async (payload) => ({ removed: await computer.revoke(payload.bundleId, payload.kind, payload.nodeId) }));
-};
+}

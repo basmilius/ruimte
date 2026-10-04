@@ -6,8 +6,8 @@ const BOUNDS = /^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$/;
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 
-const unescape = (value: string): string =>
-    value.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (entity, name: string) => {
+function unescape(value: string): string {
+    return value.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (entity, name: string) => {
         if (name.startsWith('#x') || name.startsWith('#X')) {
             return String.fromCodePoint(Number.parseInt(name.slice(2), 16));
         }
@@ -16,14 +16,15 @@ const unescape = (value: string): string =>
         }
         return ENTITIES[name] ?? entity;
     });
+}
 
-const attributesOf = (source: string): Map<string, string> => {
+function attributesOf(source: string): Map<string, string> {
     const attributes = new Map<string, string>();
     for (const [, name, value] of source.matchAll(ATTRIBUTE)) {
         attributes.set(name!, unescape(value!));
     }
     return attributes;
-};
+}
 
 interface RawNode {
     attributes: Map<string, string>;
@@ -37,7 +38,7 @@ interface Dump {
 }
 
 /* Reads the XML `uiautomator dump` writes, and nothing else: one hierarchy of nodes, every value in double quotes. */
-const readDump = (xml: string): Dump | null => {
+function readDump(xml: string): Dump | null {
     const start = xml.indexOf('<hierarchy');
     if (start === -1) {
         return null;
@@ -63,21 +64,26 @@ const readDump = (xml: string): Dump | null => {
         }
     }
     return { rotation, nodes: top };
-};
+}
 
 /* `android.widget.Button` reads as `Button`. */
-const roleOf = (className: string): string => className.slice(className.lastIndexOf('.') + 1) || 'View';
+function roleOf(className: string): string {
+    return className.slice(className.lastIndexOf('.') + 1) || 'View';
+}
 
-const yes = (attributes: Map<string, string>, name: string): boolean => attributes.get(name) === 'true';
+function yes(attributes: Map<string, string>, name: string): boolean {
+    return attributes.get(name) === 'true';
+}
 
 /*
  * A node a person could read or use: one that says something or does something when touched. The
  * layouts in between, ids and all, say nothing, so their children take their place.
  */
-const worthKeeping = (node: DeviceTreeNode, attributes: Map<string, string>): boolean =>
-    node.label !== null || node.value !== null || ['clickable', 'long-clickable', 'scrollable', 'checkable'].some((name) => yes(attributes, name));
+function worthKeeping(node: DeviceTreeNode, attributes: Map<string, string>): boolean {
+    return node.label !== null || node.value !== null || ['clickable', 'long-clickable', 'scrollable', 'checkable'].some((name) => yes(attributes, name));
+}
 
-const convert = (raw: RawNode): DeviceTreeNode[] => {
+function convert(raw: RawNode): DeviceTreeNode[] {
     const { attributes } = raw;
     const children = raw.children.flatMap(convert);
     const role = roleOf(attributes.get('class') ?? '');
@@ -109,13 +115,13 @@ const convert = (raw: RawNode): DeviceTreeNode[] => {
         children
     };
     return worthKeeping(node, attributes) ? [node] : children;
-};
+}
 
 /*
  * An Android screen as a tree in pixels, the unit of its bounds and of a screencap. `screen` is the
  * display as `wm size` reports it, upright; a dump taken on its side turns it.
  */
-export const androidTree = (xml: string, screen: { width: number; height: number }): DeviceTree | null => {
+export function androidTree(xml: string, screen: { width: number; height: number }): DeviceTree | null {
     const dump = readDump(xml);
     if (dump === null) {
         return null;
@@ -136,11 +142,11 @@ export const androidTree = (xml: string, screen: { width: number; height: number
             children: dump.nodes.flatMap(convert)
         }
     };
-};
+}
 
 /* The size `wm size` reports, the override a person set before the panel's own. */
-export const parseWmSize = (output: string): { width: number; height: number } | null => {
+export function parseWmSize(output: string): { width: number; height: number } | null {
     const sizes = [...output.matchAll(/(Physical|Override) size:\s*(\d+)x(\d+)/g)];
     const chosen = sizes.find((match) => match[1] === 'Override') ?? sizes[0];
     return chosen === undefined ? null : { width: Number(chosen[2]), height: Number(chosen[3]) };
-};
+}

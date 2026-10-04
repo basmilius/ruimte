@@ -28,11 +28,15 @@ const SKIPPED = new Set(['code', 'pre']);
 const WHITESPACE = /^\s+$/;
 
 /* A text cut into its words and the whitespace between them, in order. */
-export const wordSegments = (text: string): string[] => text.split(/(\s+)/).filter((segment) => segment !== '');
+export function wordSegments(text: string): string[] {
+    return text.split(/(\s+)/).filter((segment) => segment !== '');
+}
 
-export const isWhitespace = (segment: string): boolean => WHITESPACE.test(segment);
+export function isWhitespace(segment: string): boolean {
+    return WHITESPACE.test(segment);
+}
 
-const wrap = (parent: HastParent): void => {
+function wrap(parent: HastParent): void {
     parent.children = parent.children.flatMap((child): HastNode[] => {
         if (child.type === 'text') {
             return wordSegments(child.value).map((segment) =>
@@ -46,13 +50,15 @@ const wrap = (parent: HastParent): void => {
         }
         return [child];
     });
-};
+}
 
 /*
  * Every word of a reply that is still streaming in a span that fades in. Words only ever arrive at
  * the end, and the renderer keys a span by its place among the spans beside it, so the spans already
  * on screen keep their element and their fade does not start again.
  */
-export const rehypeFadeWords = () => (tree: HastParent) => {
-    wrap(tree);
-};
+export function rehypeFadeWords() {
+    return (tree: HastParent) => {
+        wrap(tree);
+    };
+}

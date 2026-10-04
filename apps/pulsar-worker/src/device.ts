@@ -52,20 +52,28 @@ interface LinkRow {
 
 const LINK_COLUMNS = 'machine_id, name, icon, broker_url, public_key, status, account_id, expires_at';
 
-const iconOf = (row: LinkRow): MachineIcon | null => (row.icon ? (JSON.parse(row.icon) as MachineIcon) : null);
+function iconOf(row: LinkRow): MachineIcon | null {
+    return row.icon ? (JSON.parse(row.icon) as MachineIcon) : null;
+}
 
-const lookupResult = (row: LinkRow): DeviceLinkLookupResult => ({
-    machine: { id: row.machine_id, name: row.name, icon: iconOf(row), publicKey: row.public_key },
-    expiresAt: row.expires_at
-});
+function lookupResult(row: LinkRow): DeviceLinkLookupResult {
+    return {
+        machine: { id: row.machine_id, name: row.name, icon: iconOf(row), publicKey: row.public_key },
+        expiresAt: row.expires_at
+    };
+}
 
-const pageUrl = (env: Env): string => env.DEVICE_LINK_PAGE_URL ?? DEVICE_LINK_PAGE_URL;
+function pageUrl(env: Env): string {
+    return env.DEVICE_LINK_PAGE_URL ?? DEVICE_LINK_PAGE_URL;
+}
 
 // A code that does not exist, ran out or was used already all read the same, so a guess learns nothing from which.
-const noSuchCode = (): Response => failure('not-found', 'No machine waits for that code. It may have expired or been used; run `ruimte login` again.');
+function noSuchCode(): Response {
+    return failure('not-found', 'No machine waits for that code. It may have expired or been used; run `ruimte login` again.');
+}
 
 // `POST /v1/device/start`, without a session.
-export const startDeviceLink = async (request: Request, env: Env): Promise<Response> => {
+export async function startDeviceLink(request: Request, env: Env): Promise<Response> {
     const ip = clientIp(request);
     const limited = await overAnyLimit(env.DB, [[`ip:${ip}:device-start`, LIMITS.deviceStartIp]]);
     if (limited) {
@@ -122,10 +130,10 @@ export const startDeviceLink = async (request: Request, env: Env): Promise<Respo
         }
     }
     return failure('internal', 'No free code could be found; try again');
-};
+}
 
 // The session and the code for the three routes a person uses, or the response that says why not.
-const personAndCode = async (request: Request, env: Env): Promise<{ session: SessionContext; userCode: string } | { response: Response }> => {
+async function personAndCode(request: Request, env: Env): Promise<{ session: SessionContext; userCode: string } | { response: Response }> {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return { response: failure('unauthorized', 'Sign in again') };
@@ -147,10 +155,10 @@ const personAndCode = async (request: Request, env: Env): Promise<{ session: Ses
         return { response: noSuchCode() };
     }
     return { session, userCode };
-};
+}
 
 // `POST /v1/device/lookup`: what the approval page shows. Reading it spends nothing.
-export const lookupDeviceLink = async (request: Request, env: Env): Promise<Response> => {
+export async function lookupDeviceLink(request: Request, env: Env): Promise<Response> {
     const given = await personAndCode(request, env);
     if ('response' in given) {
         return given.response;
@@ -159,14 +167,14 @@ export const lookupDeviceLink = async (request: Request, env: Env): Promise<Resp
         .bind(given.userCode, Date.now())
         .first<LinkRow>();
     return row ? json(lookupResult(row)) : noSuchCode();
-};
+}
 
 /*
  * `POST /v1/device/approve` and `/deny`. One conditional update, so a code is decided once however
  * many pages press at the same moment. An approval leaves the terminal time to finish even when it
  * came in the last seconds of the code.
  */
-const decide = async (request: Request, env: Env, decision: 'approved' | 'denied'): Promise<Response> => {
+async function decide(request: Request, env: Env, decision: 'approved' | 'denied'): Promise<Response> {
     const given = await personAndCode(request, env);
     if ('response' in given) {
         return given.response;
@@ -183,15 +191,19 @@ const decide = async (request: Request, env: Env, decision: 'approved' | 'denied
         return noSuchCode();
     }
     return decision === 'approved' ? json(lookupResult(row)) : noContent();
-};
+}
 
-export const approveDeviceLink = (request: Request, env: Env): Promise<Response> => decide(request, env, 'approved');
+export function approveDeviceLink(request: Request, env: Env): Promise<Response> {
+    return decide(request, env, 'approved');
+}
 
-export const denyDeviceLink = (request: Request, env: Env): Promise<Response> => decide(request, env, 'denied');
+export function denyDeviceLink(request: Request, env: Env): Promise<Response> {
+    return decide(request, env, 'denied');
+}
 
 // The link a device code names, with the account that decided it; a used link is gone for the terminal.
-const linkOfDeviceCode = async (env: Env, deviceCode: string) =>
-    env.DB.prepare(
+async function linkOfDeviceCode(env: Env, deviceCode: string) {
+    return env.DB.prepare(
         `SELECT ${LINK_COLUMNS.split(', ')
             .map((column) => `device_link.${column}`)
             .join(', ')}, CASE WHEN account.id IS NULL THEN NULL ELSE ${accountProviderSql('account.id')} END AS provider,
@@ -202,17 +214,18 @@ const linkOfDeviceCode = async (env: Env, deviceCode: string) =>
     )
         .bind(await sha256(deviceCode))
         .first<LinkRow & { provider: ProviderId | null; login: string | null; display_name: string | null }>();
+}
 
-const deviceCodeBody = async (request: Request, env: Env, bucket: string, limit: number) => {
+async function deviceCodeBody(request: Request, env: Env, bucket: string, limit: number) {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:${bucket}`, limit]]);
     if (limited) {
         return { response: limited };
     }
     return readBody(request, DeviceCodePayloadSchema);
-};
+}
 
 // `POST /v1/device/poll`
-export const pollDeviceLink = async (request: Request, env: Env): Promise<Response> => {
+export async function pollDeviceLink(request: Request, env: Env): Promise<Response> {
     const body = await deviceCodeBody(request, env, 'device-poll', LIMITS.devicePollIp);
     if ('response' in body) {
         return body.response;
@@ -230,14 +243,14 @@ export const pollDeviceLink = async (request: Request, env: Env): Promise<Respon
             : null;
     const result: DeviceLinkPollResult = { status, interval: DEVICE_LINK_POLL_INTERVAL_S, account };
     return json(result);
-};
+}
 
 /*
  * `POST /v1/device/complete`: the registration for the account that approved, signed by the machine.
  * The link is spent before the machine is stored, so a device code registers once even when two
  * requests race; one that fails after that is started again from the terminal.
  */
-export const completeDeviceLink = async (request: Request, env: Env): Promise<Response> => {
+export async function completeDeviceLink(request: Request, env: Env): Promise<Response> {
     const limited = await overAnyLimit(env.DB, [[`ip:${clientIp(request)}:device-poll`, LIMITS.devicePollIp]]);
     if (limited) {
         return limited;
@@ -276,10 +289,10 @@ export const completeDeviceLink = async (request: Request, env: Env): Promise<Re
         return stored.response;
     }
     return json({ machine: stored.machine, account: { id: row.account_id, provider: row.provider, login: row.login, displayName: row.display_name } });
-};
+}
 
 // `POST /v1/device/cancel`: the terminal stopped waiting, so the code stops working on the page too.
-export const cancelDeviceLink = async (request: Request, env: Env): Promise<Response> => {
+export async function cancelDeviceLink(request: Request, env: Env): Promise<Response> {
     const body = await deviceCodeBody(request, env, 'device-poll', LIMITS.devicePollIp);
     if ('response' in body) {
         return body.response;
@@ -288,4 +301,4 @@ export const cancelDeviceLink = async (request: Request, env: Env): Promise<Resp
         .bind(await sha256(body.value.deviceCode))
         .run();
     return noContent();
-};
+}

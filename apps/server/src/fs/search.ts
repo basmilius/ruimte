@@ -15,20 +15,20 @@ type Listing = { files: string[]; truncated: boolean };
 const trackedCache = new Map<string, Listing & { at: number }>();
 const ignoredCache = new Map<string, Listing & { at: number }>();
 
-const isWordStart = (path: string, index: number): boolean => {
+function isWordStart(path: string, index: number): boolean {
     if (index === 0) {
         return true;
     }
     const before = path[index - 1]!;
     return before === '/' || before === '.' || before === '-' || before === '_' || before === ' ';
-};
+}
 
 /*
  * Subsequence match of `query` in `path`, case-insensitive. Null when a query character is
  * missing. Higher is better: a hit at a word start or right after the previous hit counts
  * more, a hit in the file name more than one in a directory, and a shorter path wins ties.
  */
-export const fuzzyScore = (query: string, path: string): number | null => {
+export function fuzzyScore(query: string, path: string): number | null {
     const needle = query.toLowerCase();
     const haystack = path.toLowerCase();
     if (needle === '') {
@@ -61,10 +61,10 @@ export const fuzzyScore = (query: string, path: string): number | null => {
         score += 10;
     }
     return score;
-};
+}
 
 /* The best `limit` matches, best first; ties go to a file the repository keeps, then the shorter path, then alphabetical. */
-export const rankFiles = (files: string[], query: string, limit: number, ignored: string[] = []): string[] => {
+export function rankFiles(files: string[], query: string, limit: number, ignored: string[] = []): string[] {
     const scored: Array<{ path: string; score: number; ignored: boolean }> = [];
     const add = (paths: string[], isIgnored: boolean): void => {
         for (const path of paths) {
@@ -78,12 +78,14 @@ export const rankFiles = (files: string[], query: string, limit: number, ignored
     add(ignored, true);
     scored.sort((a, b) => b.score - a.score || Number(a.ignored) - Number(b.ignored) || a.path.length - b.path.length || a.path.localeCompare(b.path));
     return scored.slice(0, limit).map((entry) => entry.path);
-};
+}
 
-const toPosix = (path: string): string => (sep === '/' ? path : path.split(sep).join('/'));
+function toPosix(path: string): string {
+    return sep === '/' ? path : path.split(sep).join('/');
+}
 
 // Null when `cwd` is not in a repo.
-const gitLsFiles = async (cwd: string, args: string[]): Promise<string[] | null> => {
+async function gitLsFiles(cwd: string, args: string[]): Promise<string[] | null> {
     try {
         const proc = Bun.spawn(['git', 'ls-files', ...args, '-z'], { cwd, stdout: 'pipe', stderr: 'ignore' });
         const output = await new Response(proc.stdout).text();
@@ -94,10 +96,10 @@ const gitLsFiles = async (cwd: string, args: string[]): Promise<string[] | null>
     } catch {
         return null;
     }
-};
+}
 
 /* Paths come back relative to `root`; `from` is where the walk starts below it. */
-const walk = async (root: string, from = root, max = WALK_MAX_FILES): Promise<Listing> => {
+async function walk(root: string, from = root, max = WALK_MAX_FILES): Promise<Listing> {
     const files: string[] = [];
     if (max <= 0) {
         return { files, truncated: true };
@@ -129,9 +131,9 @@ const walk = async (root: string, from = root, max = WALK_MAX_FILES): Promise<Li
         }
     }
     return { files, truncated: false };
-};
+}
 
-const remembered = async (cache: Map<string, Listing & { at: number }>, cwd: string, load: () => Promise<Listing>): Promise<Listing> => {
+async function remembered(cache: Map<string, Listing & { at: number }>, cwd: string, load: () => Promise<Listing>): Promise<Listing> {
     const cached = cache.get(cwd);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
         return cached;
@@ -139,22 +141,23 @@ const remembered = async (cache: Map<string, Listing & { at: number }>, cwd: str
     const listed = await load();
     cache.set(cwd, { ...listed, at: Date.now() });
     return listed;
-};
+}
 
 /* The files a search of this folder walks: what git tracks, or the walk that stands in for it. */
-export const listSearchableFiles = (cwd: string): Promise<Listing> =>
-    remembered(trackedCache, cwd, async () => {
+export function listSearchableFiles(cwd: string): Promise<Listing> {
+    return remembered(trackedCache, cwd, async () => {
         const fromGit = await gitLsFiles(cwd, ['--cached', '--others', '--exclude-standard']);
         return fromGit ? { files: fromGit, truncated: false } : await walk(cwd);
     });
+}
 
 /*
  * What .gitignore keeps out but a person may still want to mention, a `.env.local` or a generated
  * report. Dot names and build output stay out the way a plain walk leaves them out; git collapses
  * an ignored directory to one entry, so `node_modules` costs nothing to skip.
  */
-const listIgnoredFiles = (cwd: string): Promise<Listing> =>
-    remembered(ignoredCache, cwd, async () => {
+function listIgnoredFiles(cwd: string): Promise<Listing> {
+    return remembered(ignoredCache, cwd, async () => {
         const entries = await gitLsFiles(cwd, ['--others', '--ignored', '--exclude-standard', '--directory']);
         const files = new Set<string>();
         let truncated = false;
@@ -177,18 +180,19 @@ const listIgnoredFiles = (cwd: string): Promise<Listing> =>
         }
         return { files: [...files], truncated };
     });
+}
 
 /* `fs.grep` keeps to `listSearchableFiles`: a match inside an ignored file is noise, naming one is not. */
-export const searchFiles = async (cwd: string, query: string, limit = 20): Promise<FsSearchResult> => {
+export async function searchFiles(cwd: string, query: string, limit = 20): Promise<FsSearchResult> {
     const [tracked, ignored] = await Promise.all([listSearchableFiles(cwd), listIgnoredFiles(cwd)]);
     return {
         files: rankFiles(tracked.files, query.trim(), Math.min(limit, FS_SEARCH_MAX_RESULTS), ignored.files),
         truncated: tracked.truncated || ignored.truncated
     };
-};
+}
 
 /* Tests and a daemon that watches a folder change can drop what the last search saw. */
-export const forgetSearchCache = (): void => {
+export function forgetSearchCache(): void {
     trackedCache.clear();
     ignoredCache.clear();
-};
+}

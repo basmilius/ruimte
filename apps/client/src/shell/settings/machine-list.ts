@@ -21,10 +21,12 @@ export interface MergeInput {
 }
 
 /* The row of this machine holds the daemon id once it answered; every other row is keyed on it. */
-export const machineIdOf = (endpoint: Endpoint): string => endpoint.daemonId ?? endpoint.id;
+export function machineIdOf(endpoint: Endpoint): string {
+    return endpoint.daemonId ?? endpoint.id;
+}
 
 /* This machine first, then the rows in the order they were added, then what only the account has. */
-export const mergeMachines = ({ endpoints, accountMachines, showLocal }: MergeInput): MachineEntry[] => {
+export function mergeMachines({ endpoints, accountMachines, showLocal }: MergeInput): MachineEntry[] {
     const entries: MachineEntry[] = [];
     const local = endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID);
     const ordered = [...(local && showLocal ? [local] : []), ...endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID)];
@@ -45,10 +47,10 @@ export const mergeMachines = ({ endpoints, accountMachines, showLocal }: MergeIn
         }
     }
     return entries;
-};
+}
 
 /* How a machine is reached, in the words of its row: "This machine", "On your account" or both. */
-export const reachLabel = (entry: MachineEntry): string => {
+export function reachLabel(entry: MachineEntry): string {
     const parts: string[] = [];
     if (entry.local) {
         parts.push(i18next.t('settings:reach.thisMachine'));
@@ -60,10 +62,12 @@ export const reachLabel = (entry: MachineEntry): string => {
         parts.push(i18next.t('settings:reach.openedThroughAccount'));
     }
     return parts.map((part, index) => (index === 0 ? part : part.toLowerCase())).join(', ');
-};
+}
 
 /* The name a row shows: what this client calls the machine, or what the account does for one it never opened. */
-export const nameOf = (entry: MachineEntry): string => entry.endpoint?.label ?? entry.machine?.name ?? entry.id;
+export function nameOf(entry: MachineEntry): string {
+    return entry.endpoint?.label ?? entry.machine?.name ?? entry.id;
+}
 
 /* What the Account pane shows: the account row, or one machine by its id. */
 export type MachinePick = { kind: 'account' } | { kind: 'machine'; id: string };
@@ -72,20 +76,20 @@ export type MachinePick = { kind: 'account' } | { kind: 'machine'; id: string };
  * What was picked while it is still in the list, else this machine, else the account. Never another
  * machine by itself: its detail holds a link to it, and opening settings must not reach out to one.
  */
-export const currentPick = (picked: MachinePick | null, entries: readonly MachineEntry[]): MachinePick => {
+export function currentPick(picked: MachinePick | null, entries: readonly MachineEntry[]): MachinePick {
     if (picked?.kind === 'account' || (picked !== null && entries.some((entry) => entry.id === picked.id))) {
         return picked;
     }
     const local = entries.find((entry) => entry.local);
     return local ? { kind: 'machine', id: local.id } : { kind: 'account' };
-};
+}
 
 /*
  * Where a search result of the Account pane lands, or null for one of another pane. A row of a
  * machine's detail lands on the machine picked when this client opened it, else on this machine,
  * else on the first one it opened.
  */
-export const pickForTarget = (target: string, entries: readonly MachineEntry[], picked: MachineEntry | null): MachinePick | null => {
+export function pickForTarget(target: string, entries: readonly MachineEntry[], picked: MachineEntry | null): MachinePick | null {
     if (target === 'machines.signIn' || target === 'machines.add') {
         return { kind: 'account' };
     }
@@ -97,4 +101,4 @@ export const pickForTarget = (target: string, entries: readonly MachineEntry[], 
     // Running in the background and Direct are about this machine only.
     const entry = target === 'machines.machine.keepRunning' || target === 'machines.machine.direct' ? local : opened;
     return entry === null ? null : { kind: 'machine', id: entry.id };
-};
+}

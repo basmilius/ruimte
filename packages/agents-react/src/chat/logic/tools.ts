@@ -8,10 +8,12 @@ export interface FileChange {
     after: string;
 }
 
-const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+function str(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+}
 
 /* The one line that says what a tool call is about: the command, the file, the pattern. */
-export const toolSummary = (name: string, input: unknown): string => {
+export function toolSummary(name: string, input: unknown): string {
     if (!isRecord(input)) {
         return '';
     }
@@ -28,13 +30,13 @@ export const toolSummary = (name: string, input: unknown): string => {
         }
     }
     return '';
-};
+}
 
 // What `GET /fs/file` will serve; a path with another suffix is not worth asking the host about.
 const IMAGE_SUFFIXES = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 /* The image file a tool call looked at, so the row can draw it; null for every other call. */
-export const readImagePath = (name: string, input: unknown): string | null => {
+export function readImagePath(name: string, input: unknown): string | null {
     if (toolEntry(name)?.readsImage !== true) {
         return null;
     }
@@ -44,10 +46,10 @@ export const readImagePath = (name: string, input: unknown): string | null => {
     }
     const lowered = path.toLowerCase();
     return IMAGE_SUFFIXES.some((suffix) => lowered.endsWith(suffix)) ? path : null;
-};
+}
 
 /* The before and after text of a file-changing tool call, so the thread can show it as a diff. */
-export const fileChanges = (name: string, input: unknown): FileChange[] => {
+export function fileChanges(name: string, input: unknown): FileChange[] {
     if (!isRecord(input)) {
         return [];
     }
@@ -62,15 +64,19 @@ export const fileChanges = (name: string, input: unknown): FileChange[] => {
         return input.edits.filter(isRecord).map((edit) => ({ path, before: str(edit.old_string) ?? '', after: str(edit.new_string) ?? '' }));
     }
     return [];
-};
+}
 
-export const isFileChange = (name: string): boolean => toolEntry(name)?.changesFiles === true;
+export function isFileChange(name: string): boolean {
+    return toolEntry(name)?.changesFiles === true;
+}
 
 /* The unified diffs a provider put next to a tool call; empty for one that reports before and after. */
-export const unifiedChanges = (tool: ChatToolItem): ChatFileChange[] => (tool.changes ?? []).filter((change) => change.diff !== '');
+export function unifiedChanges(tool: ChatToolItem): ChatFileChange[] {
+    return (tool.changes ?? []).filter((change) => change.diff !== '');
+}
 
 /* The same, for the copy an approval carries so the person can read what they are approving. */
-export const approvalChanges = (input: unknown): ChatFileChange[] => {
+export function approvalChanges(input: unknown): ChatFileChange[] {
     const changes = isRecord(input) ? input.changes : null;
     if (!Array.isArray(changes)) {
         return [];
@@ -78,23 +84,27 @@ export const approvalChanges = (input: unknown): ChatFileChange[] => {
     return changes.filter(
         (change): change is ChatFileChange => isRecord(change) && typeof change.path === 'string' && typeof change.diff === 'string' && change.diff !== ''
     );
-};
+}
 
 /* Whether a settled call is worth a row in the turn's changed files card. */
-export const hasFileChanges = (tool: ChatToolItem): boolean => unifiedChanges(tool).length > 0 || fileChanges(tool.name, tool.input).length > 0;
+export function hasFileChanges(tool: ChatToolItem): boolean {
+    return unifiedChanges(tool).length > 0 || fileChanges(tool.name, tool.input).length > 0;
+}
 
 /* When a running call started: what the CLI reported, or the moment the call appeared. */
-export const toolStartedAt = (tool: ChatToolItem): number => tool.progress?.startedAt ?? tool.createdAt;
+export function toolStartedAt(tool: ChatToolItem): number {
+    return tool.progress?.startedAt ?? tool.createdAt;
+}
 
 // Partial output is a tail: what the command says now matters more than what it said first.
 const LIVE_OUTPUT_LINES = 12;
 
 /* The last lines of a running call's output, or null when the provider streams none. */
-export const liveOutput = (tool: ChatToolItem): string | null => {
+export function liveOutput(tool: ChatToolItem): string | null {
     const output = tool.progress?.output;
     if (!output) {
         return null;
     }
     const lines = output.replace(/\n$/, '').split('\n');
     return lines.slice(-LIVE_OUTPUT_LINES).join('\n');
-};
+}

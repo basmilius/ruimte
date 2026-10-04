@@ -18,13 +18,15 @@ export type ChoiceKeyAction = { kind: 'move'; to: ListStep } | { kind: 'pick' } 
 
 export type AnswerFieldKeyAction = { kind: 'to-last-choice' } | { kind: 'commit' } | { kind: 'ignore' };
 
-const isPlain = (event: PromptKeyEvent): boolean => !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing;
+function isPlain(event: PromptKeyEvent): boolean {
+    return !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing;
+}
 
 const LIST_KEYS: Record<string, ListStep> = { ArrowUp: 'previous', ArrowDown: 'next', Home: 'first', End: 'last' };
 const TOOLBAR_KEYS: Record<string, ListStep> = { ArrowLeft: 'previous', ArrowRight: 'next', Home: 'first', End: 'last' };
 
 /* Both lists wrap, the way a radio group does. */
-export const stepIndex = (index: number, count: number, to: ListStep): number => {
+export function stepIndex(index: number, count: number, to: ListStep): number {
     if (count === 0) {
         return -1;
     }
@@ -38,13 +40,13 @@ export const stepIndex = (index: number, count: number, to: ListStep): number =>
         case 'next':
             return (index + 1) % count;
     }
-};
+}
 
 /*
  * A choice of a question. Enter on a multi select question only moves on once something is chosen, so
  * the first Enter on an empty question picks the choice instead of doing nothing.
  */
-export const choiceKey = (event: PromptKeyEvent, { multiSelect, anyChosen }: { multiSelect: boolean; anyChosen: boolean }): ChoiceKeyAction | null => {
+export function choiceKey(event: PromptKeyEvent, { multiSelect, anyChosen }: { multiSelect: boolean; anyChosen: boolean }): ChoiceKeyAction | null {
     if (!isPlain(event)) {
         return null;
     }
@@ -62,13 +64,13 @@ export const choiceKey = (event: PromptKeyEvent, { multiSelect, anyChosen }: { m
         return anyChosen ? { kind: 'commit' } : { kind: 'pick' };
     }
     return null;
-};
+}
 
 /* A written answer: under the choices ("Something else…") or the only field of a question without choices. */
-export const answerFieldKey = (
+export function answerFieldKey(
     event: PromptKeyEvent,
     { belowChoices, caretAtStart, hasText }: { belowChoices: boolean; caretAtStart: boolean; hasText: boolean }
-): AnswerFieldKeyAction | null => {
+): AnswerFieldKeyAction | null {
     if (!isPlain(event)) {
         return null;
     }
@@ -80,16 +82,22 @@ export const answerFieldKey = (
         return hasText ? { kind: 'commit' } : { kind: 'ignore' };
     }
     return null;
-};
+}
 
-export const headingKey = (event: PromptKeyEvent): boolean => isPlain(event) && event.key === 'ArrowDown';
+export function headingKey(event: PromptKeyEvent): boolean {
+    return isPlain(event) && event.key === 'ArrowDown';
+}
 
-export const toolbarKey = (event: PromptKeyEvent): ListStep | null => (isPlain(event) ? (TOOLBAR_KEYS[event.key] ?? null) : null);
+export function toolbarKey(event: PromptKeyEvent): ListStep | null {
+    return isPlain(event) ? (TOOLBAR_KEYS[event.key] ?? null) : null;
+}
 
-export const isPrimaryKey = (event: PromptKeyEvent, apple: boolean): boolean => !event.isComposing && matchesShortcut(PROMPT_SHORTCUTS.primary, event, apple);
+export function isPrimaryKey(event: PromptKeyEvent, apple: boolean): boolean {
+    return !event.isComposing && matchesShortcut(PROMPT_SHORTCUTS.primary, event, apple);
+}
 
 /* Paging through a stack. In a text field these keys select to the start or end of the line, so they stay there. */
-export const pageKey = (event: PromptKeyEvent, apple: boolean, typing: boolean): -1 | 1 | null => {
+export function pageKey(event: PromptKeyEvent, apple: boolean, typing: boolean): -1 | 1 | null {
     if (typing || event.isComposing) {
         return null;
     }
@@ -97,11 +105,12 @@ export const pageKey = (event: PromptKeyEvent, apple: boolean, typing: boolean):
         return -1;
     }
     return matchesShortcut(PROMPT_SHORTCUTS.nextPrompt, event, apple) ? 1 : null;
-};
+}
 
 /*
  * A key without Ctrl, Cmd or Alt never leaves a card: arrows would reach the canvas, Space would start a
  * pan and Backspace would delete the selected nodes. Escape and Tab still go on, since they leave the card.
  */
-export const staysInCard = (event: PromptKeyEvent): boolean =>
-    !event.ctrlKey && !event.metaKey && !event.altKey && event.key !== 'Escape' && event.key !== 'Tab';
+export function staysInCard(event: PromptKeyEvent): boolean {
+    return !event.ctrlKey && !event.metaKey && !event.altKey && event.key !== 'Escape' && event.key !== 'Tab';
+}

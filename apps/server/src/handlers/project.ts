@@ -2,7 +2,7 @@ import { translate, type Dispatcher } from '../dispatcher.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { newScratchChat, type ChatWritten } from '../projects/scratch-project.ts';
 
-export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectStore, written?: ChatWritten): void => {
+export function registerProjectHandlers(dispatcher: Dispatcher, store: ProjectStore, written?: ChatWritten): void {
     dispatcher.register('project.sidebar', () => translate(() => store.sidebar()));
     dispatcher.register('project.list', () => translate(async () => ({ projects: await store.list() })));
 
@@ -54,4 +54,4 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
             return {};
         })
     );
-};
+}

@@ -14,9 +14,11 @@ import { rekeyTicket } from './credentials';
  * that already knows a different daemon keeps everything it has, because the address now points at
  * another machine; that mismatch is reported rather than adopted.
  */
-export const noteDaemonIdentity = (endpointId: string, info: EndpointInfo): string => settleId(endpointId, info.id);
+export function noteDaemonIdentity(endpointId: string, info: EndpointInfo): string {
+    return settleId(endpointId, info.id);
+}
 
-const settleId = (endpointId: string, daemonId: string): string => {
+function settleId(endpointId: string, daemonId: string): string {
     const endpoint = endpointById(endpointId);
     if (!endpoint) {
         return endpointId;
@@ -69,20 +71,20 @@ const settleId = (endpointId: string, daemonId: string): string => {
         description: i18next.t('machines:identity.mismatch.description', { address: endpoint.httpBaseUrl })
     });
     return endpoint.id;
-};
+}
 
 /* The row that goes, with everything this client kept under its key; a row being worked on sends the app home first. */
-const dropDuplicate = async (kept: Endpoint, dropped: Endpoint): Promise<void> => {
+async function dropDuplicate(kept: Endpoint, dropped: Endpoint): Promise<void> {
     await forgetEndpoint(dropped.id);
     reportOneMachine(kept, dropped);
-};
+}
 
 /* A row that disappears without a word reads as a machine that was forgotten, so say which two turned out to be one. */
-const reportOneMachine = (kept: Endpoint, dropped: Endpoint): void => {
+function reportOneMachine(kept: Endpoint, dropped: Endpoint): void {
     useToasts.getState().show({
         id: `endpoint-merged-${dropped.id}`,
         kind: 'success',
         title: i18next.t('machines:identity.merged.title', { label: dropped.label }),
         description: i18next.t('machines:identity.merged.description', { address: dropped.httpBaseUrl, machine: kept.label })
     });
-};
+}

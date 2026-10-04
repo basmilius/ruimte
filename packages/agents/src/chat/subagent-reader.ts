@@ -59,19 +59,23 @@ interface Hold {
     stop: () => void;
 }
 
-const holdKey = (chatId: string, toolUseId: string): string => `${chatId}\n${toolUseId}`;
+function holdKey(chatId: string, toolUseId: string): string {
+    return `${chatId}\n${toolUseId}`;
+}
 
-const findSubagent = (items: ChatItem[], toolUseId: string): ChatItem | undefined =>
-    items.find((item) => item.kind === 'subagent' && item.toolUseId === toolUseId);
+function findSubagent(items: ChatItem[], toolUseId: string): ChatItem | undefined {
+    return items.find((item) => item.kind === 'subagent' && item.toolUseId === toolUseId);
+}
 
 // A workflow's agent works while its Workflow row runs and its last report has it running.
-const workflowAgentRunning = (items: ChatItem[], agentId: string): boolean =>
-    items.some(
+function workflowAgentRunning(items: ChatItem[], agentId: string): boolean {
+    return items.some(
         (item) =>
             item.kind === 'tool' &&
             item.state === 'running' &&
             item.workflow?.agents.some((agent) => agent.agentId === agentId && agent.status === 'running') === true
     );
+}
 
 /*
  * The whole conversation of a subagent, which the chat's own thread only keeps the beginning of:

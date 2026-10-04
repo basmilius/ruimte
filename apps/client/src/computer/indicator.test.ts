@@ -2,14 +2,16 @@ import { describe, expect, test } from 'bun:test';
 import type { ComputerUseStatus } from '@ruimte/contracts';
 import { indicatorLook, nodeSessionMode } from './indicator';
 
-const status = (session: ComputerUseStatus['session']): ComputerUseStatus => ({
-    enabled: true,
-    present: true,
-    running: true,
-    accessibility: true,
-    screenRecording: true,
-    session
-});
+function status(session: ComputerUseStatus['session']): ComputerUseStatus {
+    return {
+        enabled: true,
+        present: true,
+        running: true,
+        accessibility: true,
+        screenRecording: true,
+        session
+    };
+}
 
 describe('the indicator of computer use on a node', () => {
     test('shows only on the node whose agent holds the session', () => {

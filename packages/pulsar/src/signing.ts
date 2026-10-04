@@ -21,22 +21,25 @@ export const SIGNING_PURPOSES = {
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
-const signedBytes = (purpose: SigningPurpose, fields: ReadonlyArray<string | number | null>): string => `${purpose}\n${JSON.stringify(fields)}`;
+function signedBytes(purpose: SigningPurpose, fields: ReadonlyArray<string | number | null>): string {
+    return `${purpose}\n${JSON.stringify(fields)}`;
+}
 
 /*
  * A peer answering the broker's challenge. The broker's own host is in it, so a nonce another
  * service passed along yields a signature this broker refuses, and the role is in it, so a machine
  * key cannot be announced as a client or the other way round.
  */
-export const brokerHelloMessage = (broker: string, role: BrokerRole, publicKey: string, nonce: string): string =>
-    signedBytes(SIGNING_PURPOSES.brokerHello, [broker, role, publicKey, nonce]);
+export function brokerHelloMessage(broker: string, role: BrokerRole, publicKey: string, nonce: string): string {
+    return signedBytes(SIGNING_PURPOSES.brokerHello, [broker, role, publicKey, nonce]);
+}
 
 /*
  * One signal from one key to another. Signing it end to end is what keeps the broker out of the
  * DTLS handshake: the fingerprint in an SDP is bound to the sender's key, so a broker that swaps it
  * for its own is caught by the receiver.
  */
-export const signalMessage = (from: string, to: string, envelope: SignalEnvelope): string => {
+export function signalMessage(from: string, to: string, envelope: SignalEnvelope): string {
     const { signal } = envelope;
     const body = (() => {
         switch (signal.kind) {
@@ -68,25 +71,28 @@ export const signalMessage = (from: string, to: string, envelope: SignalEnvelope
         }
     })();
     return signedBytes(SIGNING_PURPOSES.signal, [from, to, envelope.connectionId, signal.kind, ...body]);
-};
+}
 
 // The daemon agreeing to join one account; the account id is in it, so the signature cannot be handed in under another.
-export const machineRegistrationMessage = (accountId: string, machineId: string, publicKey: string, name: string, issuedAt: number): string =>
-    signedBytes(SIGNING_PURPOSES.machineRegistration, [accountId, machineId, publicKey, name, issuedAt]);
+export function machineRegistrationMessage(accountId: string, machineId: string, publicKey: string, name: string, issuedAt: number): string {
+    return signedBytes(SIGNING_PURPOSES.machineRegistration, [accountId, machineId, publicKey, name, issuedAt]);
+}
 
 // A client asking for access to one machine, proving it holds the key the statement will name.
-export const accessRequestMessage = (machineId: string, clientPublicKey: string, nonce: string): string =>
-    signedBytes(SIGNING_PURPOSES.accessRequest, [machineId, clientPublicKey, nonce]);
+export function accessRequestMessage(machineId: string, clientPublicKey: string, nonce: string): string {
+    return signedBytes(SIGNING_PURPOSES.accessRequest, [machineId, clientPublicKey, nonce]);
+}
 
 // The address book vouching that this client key and this machine belong to the same account, until `expiresAt`.
-export const accessStatementMessage = (machineId: string, clientPublicKey: string, nonce: string, issuedAt: number, expiresAt: number): string =>
-    signedBytes(SIGNING_PURPOSES.accessStatement, [machineId, clientPublicKey, nonce, issuedAt, expiresAt]);
+export function accessStatementMessage(machineId: string, clientPublicKey: string, nonce: string, issuedAt: number, expiresAt: number): string {
+    return signedBytes(SIGNING_PURPOSES.accessStatement, [machineId, clientPublicKey, nonce, issuedAt, expiresAt]);
+}
 
 /*
  * The same, naming the key the account lists the machine with and the account itself. A machine id is
  * no secret, so only the key tells the machine that the account lists it and not a namesake.
  */
-export const accessStatementV2Message = (
+export function accessStatementV2Message(
     machineId: string,
     machinePublicKey: string,
     accountId: string,
@@ -94,30 +100,37 @@ export const accessStatementV2Message = (
     nonce: string,
     issuedAt: number,
     expiresAt: number
-): string => signedBytes(SIGNING_PURPOSES.accessStatementV2, [machineId, machinePublicKey, accountId, clientPublicKey, nonce, issuedAt, expiresAt]);
+): string {
+    return signedBytes(SIGNING_PURPOSES.accessStatementV2, [machineId, machinePublicKey, accountId, clientPublicKey, nonce, issuedAt, expiresAt]);
+}
 
 // The key a session is bound to, proven over the one-time login code so a key nobody holds is never bound.
-export const sessionKeyMessage = (code: string, sessionKey: string): string => signedBytes(SIGNING_PURPOSES.sessionKey, [code, sessionKey]);
+export function sessionKeyMessage(code: string, sessionKey: string): string {
+    return signedBytes(SIGNING_PURPOSES.sessionKey, [code, sessionKey]);
+}
 
 /*
  * A refresh, signed by the key the session is bound to. The refresh token is in it, so a signature is
  * good for one rotation only, and the time is in it, so one read off a request long ago is worth nothing.
  */
-export const sessionRefreshMessage = (refreshToken: string, issuedAt: number): string => signedBytes(SIGNING_PURPOSES.sessionRefresh, [refreshToken, issuedAt]);
+export function sessionRefreshMessage(refreshToken: string, issuedAt: number): string {
+    return signedBytes(SIGNING_PURPOSES.sessionRefresh, [refreshToken, issuedAt]);
+}
 
 /*
  * A machine asking to be linked with a code. It names no account, so it can put the machine on none:
  * it only proves the key the approval page shows, and a registration signed later does the rest.
  */
-export const deviceLinkStartMessage = (machineId: string, publicKey: string, name: string, issuedAt: number): string =>
-    signedBytes(SIGNING_PURPOSES.deviceLinkStart, [machineId, publicKey, name, issuedAt]);
+export function deviceLinkStartMessage(machineId: string, publicKey: string, name: string, issuedAt: number): string {
+    return signedBytes(SIGNING_PURPOSES.deviceLinkStart, [machineId, publicKey, name, issuedAt]);
+}
 
 /*
  * A push a machine hands the address book for one of its devices, signed with the machine key so the
  * address book and the device both know it came from that machine. A field that was added later is
  * signed only when present, so a push without it signs as it always did.
  */
-export const pushMessage = (push: PushEnvelope): string => {
+export function pushMessage(push: PushEnvelope): string {
     const body: (string | number | null)[] =
         push.pushType !== 'liveactivity'
             ? [push.ephemeralKey, push.nonce, push.ciphertext]
@@ -135,12 +148,13 @@ export const pushMessage = (push: PushEnvelope): string => {
         }
     }
     return signedBytes(SIGNING_PURPOSES.push, [push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body]);
-};
+}
 
 /*
  * A machine answering a client at its door on the local network. The nonce is the client's, so an
  * answer recorded once proves nothing later, and the machine's id and key are in it, so a client that
  * pinned one machine never believes another one that happens to sit at the same private address.
  */
-export const lanDoorMessage = (nonce: string, machineId: string, publicKey: string): string =>
-    signedBytes(SIGNING_PURPOSES.lanDoor, [nonce, machineId, publicKey]);
+export function lanDoorMessage(nonce: string, machineId: string, publicKey: string): string {
+    return signedBytes(SIGNING_PURPOSES.lanDoor, [nonce, machineId, publicKey]);
+}

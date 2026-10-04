@@ -23,12 +23,12 @@ export type TreeView = { kind: 'full'; reason: string | null } | ({ kind: 'diff'
 
 const HANDLE = /^\s*\[(\d+)\]/;
 
-export const handleOf = (line: string): number | null => {
+export function handleOf(line: string): number | null {
     const match = HANDLE.exec(line);
     return match === null ? null : Number(match[1]);
-};
+}
 
-export const rememberTree = (state: StateResult): RememberedTree => {
+export function rememberTree(state: StateResult): RememberedTree {
     const lines = new Map<number, string>();
     const order: number[] = [];
     for (const line of state.tree) {
@@ -46,10 +46,10 @@ export const rememberTree = (state: StateResult): RememberedTree => {
         lines,
         order
     };
-};
+}
 
 /* Why a tree cannot be told as a change against the one before, or null when it can. */
-const wholeBecause = (before: RememberedTree | undefined, after: RememberedTree): string | null => {
+function wholeBecause(before: RememberedTree | undefined, after: RememberedTree): string | null {
     if (before === undefined) {
         return 'the first state of this app you got';
     }
@@ -63,13 +63,13 @@ const wholeBecause = (before: RememberedTree | undefined, after: RememberedTree)
         return 'a new sheet';
     }
     return null;
-};
+}
 
 /*
  * A tree told against the last one the agent got. Handles keep their element for as long as the helper
  * runs, so a line is the same element by its handle, and anything else about it is what changed.
  */
-export const diffTree = (before: RememberedTree | undefined, after: RememberedTree): TreeView => {
+export function diffTree(before: RememberedTree | undefined, after: RememberedTree): TreeView {
     const reason = wholeBecause(before, after);
     if (before === undefined || reason !== null) {
         return { kind: 'full', reason };
@@ -90,4 +90,4 @@ export const diffTree = (before: RememberedTree | undefined, after: RememberedTr
         }
     }
     return { kind: 'diff', added, gone, changed, lines };
-};
+}

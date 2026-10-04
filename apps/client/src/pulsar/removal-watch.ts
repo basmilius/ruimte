@@ -9,8 +9,8 @@ import { rowsRemovedFromAccount } from './removal';
  * or a registration asks for. Only a fresh list triggers it, never a new row, so a row is judged
  * against the account the next time it answers and not against a list that was already on screen.
  */
-export const startRemovalWatch = (): (() => void) =>
-    usePulsarMachines.subscribe((state, before) => {
+export function startRemovalWatch(): () => void {
+    return usePulsarMachines.subscribe((state, before) => {
         if (state.machines === before.machines && state.removedMachineIds === before.removedMachineIds) {
             return;
         }
@@ -21,3 +21,4 @@ export const startRemovalWatch = (): (() => void) =>
             void forgetEndpoint(endpointId);
         }
     });
+}

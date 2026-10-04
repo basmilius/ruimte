@@ -4,7 +4,9 @@ import type { SessionHandoff } from '@/project/views';
 /* A view a person drew on a surface of its own is duplicated rather than moved to a canvas. */
 const DRAWN_KINDS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram'];
 
-export const isDrawnKind = (kind: ProjectView['kind']): boolean => DRAWN_KINDS.includes(kind);
+export function isDrawnKind(kind: ProjectView['kind']): boolean {
+    return DRAWN_KINDS.includes(kind);
+}
 
 export interface ViewOffersInput {
     kind: ProjectView['kind'];
@@ -41,7 +43,7 @@ export interface ViewOffers {
  * What a view can be asked, so the sidebar, the view menu, a cell's bar and the application menu read
  * the same rule. A row that needs a canvas to land on is left out without one rather than greyed.
  */
-export const viewOffers = (input: ViewOffersInput): ViewOffers => {
+export function viewOffers(input: ViewOffersInput): ViewOffers {
     const drawn = isDrawnKind(input.kind);
     return {
         duplicate: drawn,
@@ -54,20 +56,20 @@ export const viewOffers = (input: ViewOffersInput): ViewOffers => {
         // A divider goes where the group under it goes and is nobody's to share.
         share: input.kind !== 'separator' && input.kind !== 'subheader' && input.scratch !== true && (input.shared || input.canShare)
     };
-};
+}
 
 /*
  * The same session in the other kind of view. A terminal only goes on in a chat where the daemon
  * has a chat backend for that CLI, and a chat only goes on in a terminal once the CLI has told it
  * which session it is, which is what the resume line is built from.
  */
-export const sessionHandoffs = (
+export function sessionHandoffs(
     kind: ProjectView['kind'],
     view: ProjectView | undefined,
     chat: { agentSessionId?: string | null; provider: SessionHandoff['provider']; cwd?: string; account?: string } | undefined,
     session: { agent?: { kind: SessionHandoff['provider']; agentSessionId: string } | null; account?: string } | undefined,
     providers: readonly ProviderInfo[]
-): { asChat: SessionHandoff | null; asTerminal: SessionHandoff | null } => {
+): { asChat: SessionHandoff | null; asTerminal: SessionHandoff | null } {
     const agent = session?.agent;
     // The session's account is the one of the CLI the terminal was opened for, not of one started in it by hand.
     const account = agent && view?.kind === 'terminal' && view.node.provider === agent.kind ? (session.account ?? view.node.account) : undefined;
@@ -86,4 +88,4 @@ export const sessionHandoffs = (
                 ? { provider: chat.provider, resume: chat.agentSessionId, cwd: chat.cwd, ...(chat.account === undefined ? {} : { account: chat.account }) }
                 : null
     };
-};
+}

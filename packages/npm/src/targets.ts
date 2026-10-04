@@ -17,6 +17,10 @@ export const TARGETS: readonly Target[] = [
 export const LAUNCHER_NAME = 'ruimte';
 
 /* `darwin-arm64`: the folder a build lands in and the second half of the package name. */
-export const targetId = (target: Target): string => `${target.os}-${target.cpu}`;
+export function targetId(target: Target): string {
+    return `${target.os}-${target.cpu}`;
+}
 
-export const packageNameOf = (target: Target): string => `@ruimte/${targetId(target)}`;
+export function packageNameOf(target: Target): string {
+    return `@ruimte/${targetId(target)}`;
+}

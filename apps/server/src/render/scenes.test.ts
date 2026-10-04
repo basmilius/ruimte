@@ -5,7 +5,9 @@ import { pathsOfElement } from '@ruimte/drawing';
 import { renderDiagram, renderDrawing } from './scenes.ts';
 
 const base = { x: 40, y: 60, w: 160, h: 80, stroke: 'blue' as const, strokeWidth: 2 as const, seed: 28 };
-const drawing = (elements: DrawingElement[]): DrawingDocument => ({ version: 1, rev: 9, elements });
+function drawing(elements: DrawingElement[]): DrawingDocument {
+    return { version: 1, rev: 9, elements };
+}
 
 describe('native render scenes', () => {
     test('empty files render to finite empty scenes', () => {

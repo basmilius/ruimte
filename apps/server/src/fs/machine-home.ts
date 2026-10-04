@@ -12,7 +12,9 @@ export class MachineHomeError extends CodedError<'machine-state'> {}
  */
 const OPEN_FOLDERS = ['scratch', 'worktrees', 'screenshots', join('computer-use', 'screenshots'), 'attachments'];
 
-const isMachineState = (home: string, path: string): boolean => isInside(home, path) && !OPEN_FOLDERS.some((folder) => isInside(join(home, folder), path));
+function isMachineState(home: string, path: string): boolean {
+    return isInside(home, path) && !OPEN_FOLDERS.some((folder) => isInside(join(home, folder), path));
+}
 
 /*
  * The line a client's file requests stop at. A paired client is not the owner of this machine, so

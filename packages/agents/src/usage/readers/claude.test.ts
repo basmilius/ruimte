@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { foldByKey } from '../record.ts';
 import { claudeMightCarryUsage, parseClaudeLine } from './claude.ts';
 
-const line = (message: Record<string, unknown>, extra: Record<string, unknown> = {}): string =>
-    JSON.stringify({
+function line(message: Record<string, unknown>, extra: Record<string, unknown> = {}): string {
+    return JSON.stringify({
         type: 'assistant',
         timestamp: '2026-09-10T09:17:15.000Z',
         sessionId: 's-1',
@@ -11,16 +11,19 @@ const line = (message: Record<string, unknown>, extra: Record<string, unknown> =
         message: { id: 'msg_1', model: 'claude-opus-5', ...message },
         ...extra
     });
+}
 
-const usage = (patch: Record<string, unknown> = {}): Record<string, unknown> => ({
-    input_tokens: 12,
-    cache_read_input_tokens: 9_000,
-    cache_creation_input_tokens: 800,
-    cache_creation: { ephemeral_1h_input_tokens: 300, ephemeral_5m_input_tokens: 500 },
-    output_tokens: 640,
-    output_tokens_details: { thinking_tokens: 120 },
-    ...patch
-});
+function usage(patch: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        input_tokens: 12,
+        cache_read_input_tokens: 9_000,
+        cache_creation_input_tokens: 800,
+        cache_creation: { ephemeral_1h_input_tokens: 300, ephemeral_5m_input_tokens: 500 },
+        output_tokens: 640,
+        output_tokens_details: { thinking_tokens: 120 },
+        ...patch
+    };
+}
 
 describe('the Claude reader', () => {
     test('takes the counts, the model and the directory off an assistant line', () => {

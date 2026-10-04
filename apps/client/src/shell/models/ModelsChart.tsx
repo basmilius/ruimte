@@ -46,18 +46,20 @@ interface Placed extends BenchmarkPoint {
     y: number;
 }
 
-const keyOf = (at: PointAt): string => `${at.line}:${at.index}`;
+function keyOf(at: PointAt): string {
+    return `${at.line}:${at.index}`;
+}
 
 const measuring = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
 
 /* The width of a label before it is drawn, so the labels can be placed around each other. */
-const textWidth = (text: string, weight: number): number => {
+function textWidth(text: string, weight: number): number {
     if (measuring === null) {
         return text.length * 7;
     }
     measuring.font = `${weight} 12px ${getComputedStyle(document.body).fontFamily}`;
     return measuring.measureText(text).width;
-};
+}
 
 /*
  * The Intelligence Index against the cost per task, a line per model through its efforts and a band

@@ -11,7 +11,9 @@ const PREVIEW_CHARS = 280;
 
 const FOUND_WIDTH_PX = 4;
 
-const timeOf = (createdAt: number): string => formatMoment(createdAt);
+function timeOf(createdAt: number): string {
+    return formatMoment(createdAt);
+}
 
 /* What the card may do to the chat the strip belongs to; absent, the card only offers what needs no chat. */
 export interface CardChat {

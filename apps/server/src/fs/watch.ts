@@ -10,7 +10,9 @@ const SETTLE_MS = 250;
 // FSEvents can miss writes immediately after `fs.watch`; delay readiness until its stream is running.
 const STREAM_START_MS = 200;
 
-const isUnder = (path: string, ancestor: string): boolean => path === ancestor || path.startsWith(ancestor.endsWith(sep) ? ancestor : `${ancestor}${sep}`);
+function isUnder(path: string, ancestor: string): boolean {
+    return path === ancestor || path.startsWith(ancestor.endsWith(sep) ? ancestor : `${ancestor}${sep}`);
+}
 
 interface Watch {
     root: string;

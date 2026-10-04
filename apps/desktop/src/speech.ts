@@ -2,10 +2,11 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import type { SpeechEvent } from '@ruimte/desktop-bridge';
 
-export const speechHelperPath = (packaged: boolean, daemonExecutable: string, sourceRoot: string): string =>
-    packaged
+export function speechHelperPath(packaged: boolean, daemonExecutable: string, sourceRoot: string): string {
+    return packaged
         ? join(dirname(daemonExecutable), 'native', process.platform === 'win32' ? 'speech-bridge.exe' : 'speech-bridge')
         : join(sourceRoot, 'apps', 'speech-bridge', 'target', 'release', process.platform === 'win32' ? 'speech-bridge.exe' : 'speech-bridge');
+}
 
 interface Run<Owner> {
     id: string;

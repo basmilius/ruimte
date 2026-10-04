@@ -28,7 +28,7 @@ const ModelsPageSchema = z.object({
 type Measurement = Omit<BenchmarkPoint, 'effort'>;
 
 /* The measurements of one page by id, or null when the page is not the shape the documentation promises. */
-export const measurementsOf = (raw: unknown): { measurements: Map<string, Measurement>; hasMore: boolean } | null => {
+export function measurementsOf(raw: unknown): { measurements: Map<string, Measurement>; hasMore: boolean } | null {
     const page = ModelsPageSchema.safeParse(raw);
     if (!page.success) {
         return null;
@@ -47,10 +47,10 @@ export const measurementsOf = (raw: unknown): { measurements: Map<string, Measur
         }
     }
     return { measurements, hasMore: page.data.pagination.has_more };
-};
+}
 
 /* Every page, or null as soon as one fails, so a half answer never replaces a whole one. */
-const fetchMeasurements = async (apiKey: string): Promise<Map<string, Measurement> | null> => {
+async function fetchMeasurements(apiKey: string): Promise<Map<string, Measurement> | null> {
     const all = new Map<string, Measurement>();
     for (let page = 1; page <= MAX_PAGES; page++) {
         const response = await fetch(`${MODELS_URL}?page=${page}`, { headers: { 'x-api-key': apiKey, accept: 'application/json' } }).catch(() => null);
@@ -71,10 +71,10 @@ const fetchMeasurements = async (apiKey: string): Promise<Map<string, Measuremen
         }
     }
     return all;
-};
+}
 
 /* What the route hands out, or null when not one effort of any model in the table was measured. */
-export const benchmarksFrom = (measurements: ReadonlyMap<string, Measurement>, fetchedAt: number): ModelBenchmarksResult | null => {
+export function benchmarksFrom(measurements: ReadonlyMap<string, Measurement>, fetchedAt: number): ModelBenchmarksResult | null {
     const models: BenchmarkModel[] = BENCHMARK_MODELS.map((model) => ({
         id: model.slug,
         name: model.name,
@@ -86,10 +86,10 @@ export const benchmarksFrom = (measurements: ReadonlyMap<string, Measurement>, f
         })
     }));
     return models.some((model) => model.points.length > 0) ? { fetchedAt, models } : null;
-};
+}
 
 /* The scheduled refresh. Anything short of a whole, recognizable answer leaves the row that is there. */
-export const refreshBenchmarks = async (env: Env): Promise<void> => {
+export async function refreshBenchmarks(env: Env): Promise<void> {
     if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
         return;
     }
@@ -103,9 +103,9 @@ export const refreshBenchmarks = async (env: Env): Promise<void> => {
     )
         .bind(result.fetchedAt, JSON.stringify(result.models))
         .run();
-};
+}
 
-export const readBenchmarks = async (env: Env): Promise<Response> => {
+export async function readBenchmarks(env: Env): Promise<Response> {
     if (!env.ARTIFICIAL_ANALYSIS_API_KEY) {
         return failure('not-configured', 'Model benchmarks are not configured on this address book yet');
     }
@@ -114,4 +114,4 @@ export const readBenchmarks = async (env: Env): Promise<Response> => {
         return failure('no-benchmarks', 'The address book has not fetched any model benchmarks yet');
     }
     return json({ fetchedAt: row.fetched_at, models: JSON.parse(row.models) as BenchmarkModel[] } satisfies ModelBenchmarksResult);
-};
+}

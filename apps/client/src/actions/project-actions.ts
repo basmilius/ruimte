@@ -40,7 +40,7 @@ export interface ProjectMachine {
 }
 
 /* Every project of the union this window knows, with the name of its machine. */
-export const listedProjects = (): ListedProject[] => {
+export function listedProjects(): ListedProject[] {
     const current = useProject.getState();
     const endpoints = useEndpoints.getState().endpoints;
     return useProjectList.getState().projects.map(({ endpointId, summary }) => ({
@@ -54,9 +54,11 @@ export const listedProjects = (): ListedProject[] => {
         available: summary.available,
         summary
     }));
-};
+}
 
-const isHere = (project: ListedProject): boolean => project.active && windowWorkspace() !== null;
+function isHere(project: ListedProject): boolean {
+    return project.active && windowWorkspace() !== null;
+}
 
 const LIVE_MACHINE: ProjectMachine = {
     projects: listedProjects,
@@ -97,10 +99,12 @@ const LIVE_MACHINE: ProjectMachine = {
     }
 };
 
-const plural = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`;
+function plural(count: number, noun: string): string {
+    return `${count} ${count === 1 ? noun : `${noun}s`}`;
+}
 
 /* In the words the close dialog uses, so Voice asks what a person reads. */
-const closeConsequences = (answer: ProjectClosingResult | null): string[] => {
+function closeConsequences(answer: ProjectClosingResult | null): string[] {
     if (answer === null) {
         return ['Its machine cannot be reached, so only this window lets go of it.'];
     }
@@ -114,7 +118,7 @@ const closeConsequences = (answer: ProjectClosingResult | null): string[] => {
         : [
               `${plural(answer.sessions, 'running session')} ${answer.sessions === 1 ? 'ends' : 'end'}: a terminal loses its scrollback and an agent stops. The rest moves to Recent.`
           ];
-};
+}
 
 /*
  * What a person does to a project from the project menu, the start screen and the palette. Opening

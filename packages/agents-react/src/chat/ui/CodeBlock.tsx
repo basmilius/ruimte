@@ -20,20 +20,22 @@ const themeLoads = new Map<string, Promise<void>>();
 const tokenizers = new Map<string, { tokenize: Tokenize<GrammarState>; fg: string | undefined }>();
 
 // Shiki loads on the first code block, not with the app; the web bundle covers the languages a coding agent writes.
-const loadHighlighter = (): Promise<Highlighter> => {
+function loadHighlighter(): Promise<Highlighter> {
     highlighterLoad ??= import('shiki/bundle/web').then(async ({ createHighlighter }) => {
         highlighter = await createHighlighter({ themes: [], langs: [] });
         return highlighter;
     });
     return highlighterLoad;
-};
+}
 
-const resolveLanguage = (lang: string, known: Record<string, unknown> | null): string => (known !== null && lang in known ? lang : PLAIN);
+function resolveLanguage(lang: string, known: Record<string, unknown> | null): string {
+    return known !== null && lang in known ? lang : PLAIN;
+}
 
 let bundled: Record<string, unknown> | null = null;
 
 /* Loads the highlighter and the grammar of one language, once each. */
-const loadLanguage = (lang: string): Promise<void> => {
+function loadLanguage(lang: string): Promise<void> {
     let load = languageLoads.get(lang);
     if (!load) {
         load = Promise.all([loadHighlighter(), import('shiki/bundle/web')]).then(async ([loaded, { bundledLanguages }]) => {
@@ -47,10 +49,10 @@ const loadLanguage = (lang: string): Promise<void> => {
         languageLoads.set(lang, load);
     }
     return load;
-};
+}
 
 /* Loads a theme into the highlighter, once. */
-const loadTheme = (theme: string): Promise<void> => {
+function loadTheme(theme: string): Promise<void> {
     let load = themeLoads.get(theme);
     if (!load) {
         load = loadHighlighter().then(async (loaded) => {
@@ -60,10 +62,10 @@ const loadTheme = (theme: string): Promise<void> => {
         themeLoads.set(theme, load);
     }
     return load;
-};
+}
 
 /* The tokenizer for a language in a theme, or null while shiki, the grammar or the theme is still on its way. */
-const tokenizerFor = (lang: string, theme: string): { tokenize: Tokenize<GrammarState>; fg: string | undefined } | null => {
+function tokenizerFor(lang: string, theme: string): { tokenize: Tokenize<GrammarState>; fg: string | undefined } | null {
     if (highlighter === null || bundled === null || !languageLoads.has(lang) || !loadedThemes.has(theme)) {
         return null;
     }
@@ -86,9 +88,9 @@ const tokenizerFor = (lang: string, theme: string): { tokenize: Tokenize<Grammar
         tokenizers.set(key, entry);
     }
     return entry;
-};
+}
 
-const styleOf = (token: CodeToken): CSSProperties | undefined => {
+function styleOf(token: CodeToken): CSSProperties | undefined {
     const style = token.fontStyle ?? 0;
     if (token.color === undefined && style <= 0) {
         return undefined;
@@ -100,7 +102,7 @@ const styleOf = (token: CodeToken): CSSProperties | undefined => {
         ...(style & 2 ? { fontWeight: 'bold' } : {}),
         ...(decorations ? { textDecoration: decorations } : {})
     };
-};
+}
 
 /* A line whose tokens did not change keeps its elements, so a selection in it survives the next delta. */
 const CodeLine = memo(function CodeLine({ tokens }: { tokens: CodeToken[] }) {

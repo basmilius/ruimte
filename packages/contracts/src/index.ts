@@ -535,7 +535,11 @@ export type EventMap = {
     [E in EventType]: z.infer<(typeof EVENT_SCHEMAS)[E]>;
 };
 
-export const isRequestType = (type: string): type is RequestType => Object.hasOwn(REQUEST_SCHEMAS, type);
+export function isRequestType(type: string): type is RequestType {
+    return Object.hasOwn(REQUEST_SCHEMAS, type);
+}
 
-export const isEventType = (event: string): event is EventType => Object.hasOwn(EVENT_SCHEMAS, event);
+export function isEventType(event: string): event is EventType {
+    return Object.hasOwn(EVENT_SCHEMAS, event);
+}
 export * from './apple-foundation.ts';

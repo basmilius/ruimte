@@ -4,7 +4,7 @@ import { startMachine, type StartDeps } from './start.ts';
 
 const address = { host: '127.0.0.1', port: 4210 };
 
-const fakes = (options: { taken?: boolean; running?: RunningMachine | null; start?: () => Promise<void> }) => {
+function fakes(options: { taken?: boolean; running?: RunningMachine | null; start?: () => Promise<void> }) {
     const calls: string[] = [];
     const lines: string[] = [];
     const deps: StartDeps = {
@@ -23,7 +23,7 @@ const fakes = (options: { taken?: boolean; running?: RunningMachine | null; star
         err: (line) => lines.push(line)
     };
     return { deps, calls, lines };
-};
+}
 
 describe('startMachine', () => {
     test('a free port starts the machine without asking anyone on it', async () => {

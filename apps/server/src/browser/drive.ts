@@ -28,15 +28,17 @@ export interface ShotOutcome {
 }
 
 /* What a client is told about a page, out of what this machine knows of the one it runs itself. */
-const pageState = (info: BrowserInfo): BrowserPageState => ({
-    browserId: info.browserId,
-    url: info.url,
-    title: info.title,
-    loading: info.loading,
-    canGoBack: info.canGoBack,
-    canGoForward: info.canGoForward,
-    error: info.error
-});
+function pageState(info: BrowserInfo): BrowserPageState {
+    return {
+        browserId: info.browserId,
+        url: info.url,
+        title: info.title,
+        loading: info.loading,
+        canGoBack: info.canGoBack,
+        canGoForward: info.canGoForward,
+        error: info.error
+    };
+}
 
 /*
  * The one door a verb drives a page through, whichever of the two kinds of page a node turns out to

@@ -50,10 +50,12 @@ type Gap = Omit<GapGuide, 'equal'>;
 const EPSILON = 0.001;
 
 /* What the label shows, so two gaps are equal exactly when they read the same. */
-const measure = (gap: Gap): number => Math.round(gap.end - gap.start);
+function measure(gap: Gap): number {
+    return Math.round(gap.end - gap.start);
+}
 
 /* A neighbor that touches still stands in the way, so it answers with no gap rather than letting a node further out through. */
-const nearestGap = (rect: Rect, others: readonly Rect[], axis: 'x' | 'y', direction: 1 | -1): Gap | null => {
+function nearestGap(rect: Rect, others: readonly Rect[], axis: 'x' | 'y', direction: 1 | -1): Gap | null {
     const size = axis === 'x' ? 'w' : 'h';
     const cross = axis === 'x' ? 'y' : 'x';
     const crossSize = axis === 'x' ? 'h' : 'w';
@@ -75,7 +77,7 @@ const nearestGap = (rect: Rect, others: readonly Rect[], axis: 'x' | 'y', direct
         best = { axis, start, end, position: (low + high) / 2 };
     }
     return best && measure(best) > 0 ? best : null;
-};
+}
 
 /*
  * What moves counts as one block. A gap that reads the same as another on its axis lights up with

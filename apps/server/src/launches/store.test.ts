@@ -15,14 +15,19 @@ let fake: FakeWatch;
 let store: LaunchStore;
 let events: SessionEvent[];
 
-const sharedPath = (): string => join(folder, '.ruimte', 'launches.json');
-const privatePath = (): string => join(folder, '.ruimte', 'private', 'launches.json');
+function sharedPath(): string {
+    return join(folder, '.ruimte', 'launches.json');
+}
+function privatePath(): string {
+    return join(folder, '.ruimte', 'private', 'launches.json');
+}
 
-const exists = (path: string): Promise<boolean> =>
-    stat(path).then(
+function exists(path: string): Promise<boolean> {
+    return stat(path).then(
         () => true,
         () => false
     );
+}
 
 const server: LaunchConfigEntry = {
     id: 'run-server',

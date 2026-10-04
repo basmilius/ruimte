@@ -17,7 +17,7 @@ export interface WorkflowPhaseView {
     agents: WorkflowAgentView[];
 }
 
-export const workflowAgentState = (agent: ChatWorkflowAgent, workflowRunning: boolean): WorkflowAgentState => {
+export function workflowAgentState(agent: ChatWorkflowAgent, workflowRunning: boolean): WorkflowAgentState {
     if (agent.status !== 'running') {
         return agent.status;
     }
@@ -25,13 +25,13 @@ export const workflowAgentState = (agent: ChatWorkflowAgent, workflowRunning: bo
         return 'stopped';
     }
     return agent.startedAt === null ? 'waiting' : 'running';
-};
+}
 
 /*
  * The phases in the order the script announced them, each with the agents it started in it. A phase
  * announced ahead of its agents is there without any, and agents of no known phase come first, untitled.
  */
-export const workflowPhases = (workflow: ChatWorkflow, workflowRunning: boolean): WorkflowPhaseView[] => {
+export function workflowPhases(workflow: ChatWorkflow, workflowRunning: boolean): WorkflowPhaseView[] {
     const known = new Map(workflow.phases.map((phase) => [phase.index, phase]));
     const loose: WorkflowAgentView[] = [];
     const byPhase = new Map<number, WorkflowAgentView[]>();
@@ -45,10 +45,10 @@ export const workflowPhases = (workflow: ChatWorkflow, workflowRunning: boolean)
     }
     const phases = workflow.phases.map((phase) => ({ key: `phase-${phase.index}`, title: phase.title, agents: byPhase.get(phase.index) ?? [] }));
     return loose.length > 0 ? [{ key: 'loose', title: null, agents: loose }, ...phases] : phases;
-};
+}
 
 /* What the line of an agent that is not at work says about its time; one at work counts on by itself. */
-export const workflowAgentTime = (view: WorkflowAgentView): string | null => {
+export function workflowAgentTime(view: WorkflowAgentView): string | null {
     const duration = view.agent.durationMs === null ? null : formatElapsedShort(view.agent.durationMs);
     switch (view.state) {
         case 'running':
@@ -63,4 +63,4 @@ export const workflowAgentTime = (view: WorkflowAgentView): string | null => {
                 ? i18next.t(`agent-chat:common.status.${view.state}`)
                 : i18next.t(`agent-chat:rows.subagent.${view.state}In`, { duration });
     }
-};
+}

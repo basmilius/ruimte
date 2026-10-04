@@ -9,9 +9,9 @@ interface Call {
 }
 
 /* A transport that only records what was asked of it, per machine, and whose link drops and comes back when a test says so. */
-const fakePool = (
+function fakePool(
     calls: Call[]
-): ((endpointId: string) => Transport) & { setStatus(endpointId: string, status: TransportStatus): void; listening(endpointId: string): number } => {
+): ((endpointId: string) => Transport) & { setStatus(endpointId: string, status: TransportStatus): void; listening(endpointId: string): number } {
     const links = new Map<string, Transport>();
     const listeners = new Map<string, Set<(status: TransportStatus) => void>>();
     const linkFor = (endpointId: string): Transport => {
@@ -43,7 +43,7 @@ const fakePool = (
         },
         listening: (endpointId: string): number => listeners.get(endpointId)?.size ?? 0
     });
-};
+}
 
 describe('isUnderFolder', () => {
     test('answers for both separators', () => {

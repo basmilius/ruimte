@@ -10,7 +10,7 @@ export interface WorkFacts {
 
 const IN_TURN: ReadonlySet<AgentStatus> = new Set(['running', 'needs-you']);
 
-export const workOf = (facts: WorkFacts): MachineWork => {
+export function workOf(facts: WorkFacts): MachineWork {
     let terminals = 0;
     let agents = 0;
     for (const session of facts.sessions) {
@@ -32,13 +32,13 @@ export const workOf = (facts: WorkFacts): MachineWork => {
         }
     }
     return { terminals, agents };
-};
+}
 
 /* A child count over one reading of the process table. */
-export const childCounter = (processes: readonly { pid: number; ppid: number }[]): ((pid: number) => number) => {
+export function childCounter(processes: readonly { pid: number; ppid: number }[]): (pid: number) => number {
     const counts = new Map<number, number>();
     for (const entry of processes) {
         counts.set(entry.ppid, (counts.get(entry.ppid) ?? 0) + 1);
     }
     return (pid) => counts.get(pid) ?? 0;
-};
+}

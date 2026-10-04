@@ -22,16 +22,16 @@ export interface SkillRootOptions {
 
 const NAME = /^[A-Za-z][A-Za-z0-9_:-]*$/;
 
-const unquote = (value: string): string => {
+function unquote(value: string): string {
     const quoted = /^(['"])([\s\S]*)\1$/.exec(value);
     return quoted ? quoted[2]! : value;
-};
+}
 
 /*
  * The `key: value` pairs of a SKILL.md front matter. Enough YAML for what a skill file holds: flat
  * keys, quoted or bare values, and the block scalars (`>-`, `|`) a long description is written as.
  */
-export const parseFrontmatter = (text: string): Record<string, string> => {
+export function parseFrontmatter(text: string): Record<string, string> {
     const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
     if (!match) {
         return {};
@@ -56,13 +56,13 @@ export const parseFrontmatter = (text: string): Record<string, string> => {
         fields[pair[1]!] = unquote(value);
     }
     return fields;
-};
+}
 
 /*
  * The folders from `cwd` up to and including the repository root, closest first. The home folder
  * itself is not one of them, since its `.claude/skills` is already the user root.
  */
-const projectDirs = (cwd: string, home: string): string[] => {
+function projectDirs(cwd: string, home: string): string[] {
     const dirs: string[] = [];
     let current = cwd;
     while (current !== '' && current !== parse(current).root && current !== home && current !== dirname(home) && dirs.length < 8) {
@@ -78,10 +78,10 @@ const projectDirs = (cwd: string, home: string): string[] => {
         current = parent;
     }
     return dirs;
-};
+}
 
 /* The plugin folders Claude Code installed, each named the way its skills are addressed. */
-export const pluginSkillRoots = async (configDir: string): Promise<SkillRoot[]> => {
+export async function pluginSkillRoots(configDir: string): Promise<SkillRoot[]> {
     let raw: string;
     try {
         raw = await readFile(join(configDir, 'plugins', 'installed_plugins.json'), 'utf8');
@@ -112,10 +112,10 @@ export const pluginSkillRoots = async (configDir: string): Promise<SkillRoot[]> 
         }
     }
     return roots;
-};
+}
 
 /* Where a provider's CLI looks for skills, in the order a name clash is decided. */
-export const skillRootsFor = async (kind: AgentKind, cwd: string, options: SkillRootOptions = {}): Promise<SkillRoot[]> => {
+export async function skillRootsFor(kind: AgentKind, cwd: string, options: SkillRootOptions = {}): Promise<SkillRoot[]> {
     const home = options.home ?? homedir();
     if (kind === 'codex') {
         return [
@@ -130,9 +130,9 @@ export const skillRootsFor = async (kind: AgentKind, cwd: string, options: Skill
         ...projectDirs(cwd, home).map((dir): SkillRoot => ({ dir: join(dir, '.claude', 'skills'), source: 'project' })),
         ...(await pluginSkillRoots(configDir))
     ];
-};
+}
 
-const readSkill = async (root: SkillRoot, folder: string): Promise<ChatSkill | null> => {
+async function readSkill(root: SkillRoot, folder: string): Promise<ChatSkill | null> {
     let text: string;
     try {
         text = await readFile(join(root.dir, folder, 'SKILL.md'), 'utf8');
@@ -146,10 +146,10 @@ const readSkill = async (root: SkillRoot, folder: string): Promise<ChatSkill | n
         return null;
     }
     return { name, description: fields.description ?? '', source: root.source };
-};
+}
 
 /* Every skill under these roots, sorted by name; the first root that carries a name wins. */
-export const scanSkillRoots = async (roots: SkillRoot[]): Promise<ChatSkill[]> => {
+export async function scanSkillRoots(roots: SkillRoot[]): Promise<ChatSkill[]> {
     const found = new Map<string, ChatSkill>();
     for (const root of roots) {
         let entries: Dirent[];
@@ -168,10 +168,11 @@ export const scanSkillRoots = async (roots: SkillRoot[]): Promise<ChatSkill[]> =
         }
     }
     return [...found.values()].sort((a, b) => a.name.localeCompare(b.name));
-};
+}
 
-export const discoverSkills = async (kind: AgentKind, cwd: string, options: SkillRootOptions = {}): Promise<ChatSkill[]> =>
-    scanSkillRoots(await skillRootsFor(kind, cwd, options));
+export async function discoverSkills(kind: AgentKind, cwd: string, options: SkillRootOptions = {}): Promise<ChatSkill[]> {
+    return scanSkillRoots(await skillRootsFor(kind, cwd, options));
+}
 
 // How long a scan stays good; a skill written mid-session shows up on the next look.
 const CACHE_TTL_MS = 30_000;

@@ -48,13 +48,15 @@ export interface ServiceManager {
     linger?: { enabled(): boolean; enable(): void };
 }
 
-const describe = (result: CommandResult, what: string): string => `${what} failed (${result.code}): ${(result.stderr || result.stdout).trim() || 'no output'}`;
+function describe(result: CommandResult, what: string): string {
+    return `${what} failed (${result.code}): ${(result.stderr || result.stdout).trim() || 'no output'}`;
+}
 
-const expectSuccess = (result: CommandResult, what: string): void => {
+function expectSuccess(result: CommandResult, what: string): void {
     if (result.code !== 0) {
         throw new Error(describe(result, what));
     }
-};
+}
 
 export interface LaunchdOptions {
     uid: number;
@@ -70,7 +72,7 @@ export interface LaunchdOptions {
  * SMAppService (Electron's `agentService`) was the other way: it wants a plist that is sealed inside
  * the bundle, where the login shell's PATH and a log path in the home cannot be written.
  */
-export const launchdManager = (options: LaunchdOptions): ServiceManager => {
+export function launchdManager(options: LaunchdOptions): ServiceManager {
     const label = options.label ?? LAUNCH_AGENT_LABEL;
     const path = join(options.home, 'Library', 'LaunchAgents', `${label}.plist`);
     const domain = `gui/${options.uid}`;
@@ -123,7 +125,7 @@ export const launchdManager = (options: LaunchdOptions): ServiceManager => {
             options.files.remove(path);
         }
     };
-};
+}
 
 export interface SystemdOptions {
     configHome: string;
@@ -134,7 +136,7 @@ export interface SystemdOptions {
 }
 
 /* A user unit under ~/.config/systemd/user, enabled for `default.target`. */
-export const systemdManager = (options: SystemdOptions): ServiceManager => {
+export function systemdManager(options: SystemdOptions): ServiceManager {
     const unit = options.unitName ?? SYSTEMD_UNIT_NAME;
     const path = join(options.configHome, 'systemd', 'user', unit);
     const systemctl = (...args: string[]): CommandResult => options.run('systemctl', ['--user', ...args]);
@@ -180,4 +182,4 @@ export const systemdManager = (options: SystemdOptions): ServiceManager => {
             }
         }
     };
-};
+}

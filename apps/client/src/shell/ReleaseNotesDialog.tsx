@@ -8,13 +8,13 @@ import { UpdateAction } from '@/shell/settings/panes/AboutPane';
 import { closeReleaseNotes, missingNotesNotice, notesView, RELEASES_PAGE, useReleaseNotes, type NoteEntry } from '@/state/release-notes';
 import { useUpdates } from '@/state/updates';
 
-const dateOf = (iso: string): string => {
+function dateOf(iso: string): string {
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) {
         return '';
     }
     return date.getFullYear() === new Date().getFullYear() ? formatDay(date) : formatDayWithYear(date);
-};
+}
 
 function ReleaseEntry({ entry }: { entry: NoteEntry }) {
     const { t } = useTranslation('shell');

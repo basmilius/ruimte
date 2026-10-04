@@ -30,7 +30,7 @@ class FakePeer extends EventTarget {
     }
 }
 
-const setup = () => {
+function setup() {
     const peer = new FakePeer();
     let lost = 0;
     const session = new LiveSession(
@@ -42,7 +42,7 @@ const setup = () => {
         { peer: peer as unknown as RTCPeerConnection, audio: { autoplay: false, srcObject: null } as unknown as HTMLAudioElement }
     );
     return { peer, session, lost: () => lost };
-};
+}
 
 describe('a GPT-Live session', () => {
     test('says once that its connection is gone when it fails', () => {

@@ -41,7 +41,7 @@ type CarrierOverlay = Omit<ProjectNodeOverlay, 'title' | 'name'>;
 type Carrier = { [K in keyof CarrierOverlay]?: CarrierOverlay[K] };
 
 /* Whether a relative path climbs out of the folder it is read against, on either kind of machine. */
-const climbsOut = (path: string): boolean => {
+function climbsOut(path: string): boolean {
     let depth = 0;
     for (const segment of path.split(/[\\/]/)) {
         if (segment === '..') {
@@ -54,13 +54,15 @@ const climbsOut = (path: string): boolean => {
         }
     }
     return false;
-};
+}
 
 /* A path every checkout reads the same way: relative, and inside the project folder. */
-const isPortablePath = (path: string): boolean => !isAbsolutePath(path) && !climbsOut(path);
+function isPortablePath(path: string): boolean {
+    return !isAbsolutePath(path) && !climbsOut(path);
+}
 
 /* What a carrier cannot take into the shared file, or null when it can travel as it is. */
-const overlayOfCarrier = (carrier: Carrier): CarrierOverlay | null => {
+function overlayOfCarrier(carrier: Carrier): CarrierOverlay | null {
     const overlay: CarrierOverlay = {};
     for (const field of OVERLAY_FIELDS) {
         if (carrier[field] !== undefined) {
@@ -74,14 +76,14 @@ const overlayOfCarrier = (carrier: Carrier): CarrierOverlay | null => {
         }
     }
     return Object.keys(overlay).length === 0 ? null : overlay;
-};
+}
 
 /*
  * A shared carrier as a checkout may take it: everything `splitContent` never writes there is gone.
  * Anyone who can push to the repository can write the shared file, so a mode, a session, a worktree
  * or a folder off this disk found in it is not this person's and must not start anything.
  */
-const trustedOfShared = <T extends Carrier>(carrier: T): T => {
+function trustedOfShared<T extends Carrier>(carrier: T): T {
     const trusted = { ...carrier };
     for (const field of OVERLAY_FIELDS) {
         delete trusted[field];
@@ -93,17 +95,17 @@ const trustedOfShared = <T extends Carrier>(carrier: T): T => {
         }
     }
     return trusted;
-};
+}
 
-const withoutOverlay = <T extends Carrier>(carrier: T, overlay: CarrierOverlay): T => {
+function withoutOverlay<T extends Carrier>(carrier: T, overlay: CarrierOverlay): T {
     const stripped = { ...carrier };
     for (const field of Object.keys(overlay) as (keyof CarrierOverlay)[]) {
         delete stripped[field];
     }
     return stripped;
-};
+}
 
-const carrierPartOf = (overlay: ProjectNodeOverlay | undefined): CarrierOverlay | null => {
+function carrierPartOf(overlay: ProjectNodeOverlay | undefined): CarrierOverlay | null {
     if (!overlay) {
         return null;
     }
@@ -111,17 +113,19 @@ const carrierPartOf = (overlay: ProjectNodeOverlay | undefined): CarrierOverlay 
     delete part.title;
     delete part.name;
     return Object.keys(part).length === 0 ? null : part;
-};
+}
 
 /* The name a shared file gives in place of a session's, or null for a kind that has none to fall back on. */
-const defaultTitleOf = (kind: string): string | null => (Object.hasOwn(DEFAULT_TITLES, kind) ? DEFAULT_TITLES[kind as NodeKind] : null);
+function defaultTitleOf(kind: string): string | null {
+    return Object.hasOwn(DEFAULT_TITLES, kind) ? DEFAULT_TITLES[kind as NodeKind] : null;
+}
 
 /*
  * A shared view with every name a session gave taken out into the overlay and the name of its kind
  * in its place, so an agent naming its chat never shows up in git. Without a `titleSource` in the
  * shared file a colleague's own session names the node again, and a name a person typed travels.
  */
-const withoutSessionTitles = (view: ProjectView, overlay: Record<string, ProjectNodeOverlay>): ProjectView => {
+function withoutSessionTitles(view: ProjectView, overlay: Record<string, ProjectNodeOverlay>): ProjectView {
     const hold = (id: string, entry: ProjectNodeOverlay): void => {
         overlay[id] = { ...overlay[id], ...entry };
     };
@@ -149,10 +153,10 @@ const withoutSessionTitles = (view: ProjectView, overlay: Record<string, Project
     const stripped = { ...next, name };
     delete stripped.titleSource;
     return stripped;
-};
+}
 
 /* A shared view with the names this person's sessions gave laid back over it, unless a person named it in the shared file. */
-const withSessionTitles = (view: ProjectView, overlay: Record<string, ProjectNodeOverlay>): ProjectView => {
+function withSessionTitles(view: ProjectView, overlay: Record<string, ProjectNodeOverlay>): ProjectView {
     let next = view;
     if (isCanvasView(view)) {
         next = {
@@ -168,21 +172,23 @@ const withSessionTitles = (view: ProjectView, overlay: Record<string, ProjectNod
         return next;
     }
     return { ...next, name, titleSource: 'auto' } as ProjectView;
-};
+}
 
 /*
  * Why this view cannot go in the shared file, or null when it can. A file view is its path, so one
  * that points off the project folder has nothing left to share; every other kind keeps working
  * without the fields that stay behind.
  */
-export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | 'follows-its-group' | null => {
+export function viewShareRefusal(view: ProjectView): 'path-outside-project' | 'follows-its-group' | null {
     if (isDividerView(view)) {
         return 'follows-its-group';
     }
     return view.kind === 'file' && !isPortablePath(view.path) ? 'path-outside-project' : null;
-};
+}
 
-export const canShareView = (view: ProjectView): boolean => viewShareRefusal(view) === null;
+export function canShareView(view: ProjectView): boolean {
+    return viewShareRefusal(view) === null;
+}
 
 /*
  * The asked-for ids that name a view of this project that may travel, and the dividers that go with
@@ -192,7 +198,7 @@ export const canShareView = (view: ProjectView): boolean => viewShareRefusal(vie
  * heading over nothing. The last of each kind is the one that goes, which is why a line and the
  * heading under it both reach the shared file while two lines in a row do not.
  */
-const sharedIdsOf = (views: readonly ProjectView[], shared: readonly string[]): Set<string> => {
+function sharedIdsOf(views: readonly ProjectView[], shared: readonly string[]): Set<string> {
     const asked = new Set(shared);
     const ids = new Set(views.filter((view) => asked.has(view.id) && canShareView(view)).map((view) => view.id));
     const above = new Map<string, string>();
@@ -207,18 +213,18 @@ const sharedIdsOf = (views: readonly ProjectView[], shared: readonly string[]): 
         }
     }
     return ids;
-};
+}
 
 /*
  * Every node of a view, by the id its overlay hangs on. A canvas has one per node; a chat and a
  * terminal are one session under the view's own id, and nothing else carries anything at all.
  */
-const withCarriers = (view: ProjectView, map: (id: string, carrier: Carrier) => Carrier): ProjectView => {
+function withCarriers(view: ProjectView, map: (id: string, carrier: Carrier) => Carrier): ProjectView {
     if (isCanvasView(view)) {
         return { ...view, nodes: view.nodes.map((node: ProjectNode) => map(node.id, node) as ProjectNode) };
     }
     return view.kind === 'chat' || view.kind === 'terminal' ? { ...view, node: map(view.id, view.node) as typeof view.node } : view;
-};
+}
 
 /* What the two files hold, worked out from one document. */
 export interface ProjectSplit {
@@ -226,7 +232,7 @@ export interface ProjectSplit {
     private: ProjectPrivateFile;
 }
 
-export const splitContent = (content: ProjectContent, shared: readonly string[], rev: number): ProjectSplit => {
+export function splitContent(content: ProjectContent, shared: readonly string[], rev: number): ProjectSplit {
     const ids = sharedIdsOf(content.views, shared);
     const overlay: Record<string, ProjectNodeOverlay> = {};
     const travelling: ProjectView[] = [];
@@ -265,13 +271,13 @@ export const splitContent = (content: ProjectContent, shared: readonly string[],
             ...(Object.keys(flags).length > 0 ? { flags } : {})
         }
     };
-};
+}
 
 /*
  * The sidebar order over both files. The private file names every row it knew; a shared id it does
  * not know falls in behind the one before it in the shared file, which is where a colleague put it.
  */
-const orderedViews = (shared: ProjectView[], rest: ProjectView[], order: readonly string[]): ProjectView[] => {
+function orderedViews(shared: ProjectView[], rest: ProjectView[], order: readonly string[]): ProjectView[] {
     const byId = new Map<string, ProjectView>();
     for (const view of [...shared, ...rest]) {
         byId.set(view.id, view);
@@ -305,14 +311,14 @@ const orderedViews = (shared: ProjectView[], rest: ProjectView[], order: readonl
         take(view.id);
     }
     return views;
-};
+}
 
 /* One document out of the two files, with every overlay laid back over the node it belongs to. */
-export const mergeFiles = (
+export function mergeFiles(
     shared: ProjectSharedFile | null,
     file: ProjectPrivateFile,
     fallback: { name: string; color: string }
-): { content: ProjectContent; shared: string[] } => {
+): { content: ProjectContent; shared: string[] } {
     const overlay = file.overlay;
     // Ruimte never writes a file view off the folder there, so one that is came from whoever pushed it.
     const sharedViews = (shared?.views ?? [])
@@ -337,13 +343,13 @@ export const mergeFiles = (
         },
         shared: sharedViews.map((view) => view.id)
     };
-};
+}
 
 /*
  * What the one file of a version 1 or 2 held for this person on the nodes of views that go on
  * shared, taken out before `mergeFiles` strips it: that file was written by Ruimte, not pulled.
  */
-export const overlayOfLegacy = (views: readonly ProjectView[]): Record<string, ProjectNodeOverlay> => {
+export function overlayOfLegacy(views: readonly ProjectView[]): Record<string, ProjectNodeOverlay> {
     const overlay: Record<string, ProjectNodeOverlay> = {};
     for (const view of views) {
         withCarriers(view, (id, carrier) => {
@@ -355,12 +361,14 @@ export const overlayOfLegacy = (views: readonly ProjectView[]): Record<string, P
         });
     }
     return overlay;
-};
+}
 
 /* A project that has never been split: every view of it is one person's until they say otherwise. */
-export const privateFileOf = (views: readonly ProjectView[], rev: number): ProjectPrivateFile => ({
-    ...EMPTY_PRIVATE_FILE,
-    rev,
-    views: [...views],
-    order: views.map((view) => view.id)
-});
+export function privateFileOf(views: readonly ProjectView[], rev: number): ProjectPrivateFile {
+    return {
+        ...EMPTY_PRIVATE_FILE,
+        rev,
+        views: [...views],
+        order: views.map((view) => view.id)
+    };
+}

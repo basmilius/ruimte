@@ -2,9 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, SessionInfo } from '@ruimte/contracts';
 import { worktreeAgents } from './worktree-agents.ts';
 
-const chat = (chatId: string, cwd: string, extra: Partial<ChatInfo> = {}): ChatInfo =>
-    ({ chatId, cwd, running: false, activeTurnId: null, ...extra }) as ChatInfo;
-const session = (sessionId: string, cwd: string, extra: Partial<SessionInfo> = {}): SessionInfo => ({ sessionId, cwd, exited: false, ...extra }) as SessionInfo;
+function chat(chatId: string, cwd: string, extra: Partial<ChatInfo> = {}): ChatInfo {
+    return { chatId, cwd, running: false, activeTurnId: null, ...extra } as ChatInfo;
+}
+function session(sessionId: string, cwd: string, extra: Partial<SessionInfo> = {}): SessionInfo {
+    return { sessionId, cwd, exited: false, ...extra } as SessionInfo;
+}
 
 describe('worktreeAgents', () => {
     test('finds chats and terminals inside the worktree and the node it was made for, with whether each is in a turn', () => {

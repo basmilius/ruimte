@@ -9,7 +9,7 @@ export interface SupportFacts {
     appImage: string | undefined;
 }
 
-export const serviceSupport = (facts: SupportFacts): ServiceSupport => {
+export function serviceSupport(facts: SupportFacts): ServiceSupport {
     if (!facts.packaged) {
         return 'dev';
     }
@@ -23,7 +23,7 @@ export const serviceSupport = (facts: SupportFacts): ServiceSupport => {
         return 'supported';
     }
     return 'windows';
-};
+}
 
 export interface KeepRunningSetting {
     read(): boolean;
@@ -35,20 +35,22 @@ export interface KeepRunningSetting {
  * client, because the shell needs it before any window exists. Unset means on, since a machine that
  * stops with the app is out of reach from anywhere else; where there is no service it is always off.
  */
-export const keepRunningSetting = (path: string, support: ServiceSupport): KeepRunningSetting => ({
-    read() {
-        if (support !== 'supported') {
-            return false;
+export function keepRunningSetting(path: string, support: ServiceSupport): KeepRunningSetting {
+    return {
+        read() {
+            if (support !== 'supported') {
+                return false;
+            }
+            try {
+                const stored = JSON.parse(readFileSync(path, 'utf8')) as { keepRunning?: unknown };
+                return typeof stored.keepRunning === 'boolean' ? stored.keepRunning : true;
+            } catch {
+                return true;
+            }
+        },
+        write(keepRunning) {
+            mkdirSync(dirname(path), { recursive: true });
+            writeFileSync(path, `${JSON.stringify({ keepRunning }, null, 2)}\n`);
         }
-        try {
-            const stored = JSON.parse(readFileSync(path, 'utf8')) as { keepRunning?: unknown };
-            return typeof stored.keepRunning === 'boolean' ? stored.keepRunning : true;
-        } catch {
-            return true;
-        }
-    },
-    write(keepRunning) {
-        mkdirSync(dirname(path), { recursive: true });
-        writeFileSync(path, `${JSON.stringify({ keepRunning }, null, 2)}\n`);
-    }
-});
+    };
+}

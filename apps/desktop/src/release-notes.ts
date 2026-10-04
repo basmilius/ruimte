@@ -6,14 +6,16 @@ export const RELEASES_URL = 'https://api.github.com/repos/basmilius/ruimte/relea
 // The line GitHub's generated notes end with. It is a link, not a note, so it moves next to the date.
 const FULL_CHANGELOG = /\s*\*\*Full Changelog:?\*\*:?\s*(https?:\/\/\S+)\s*$/;
 
-const text = (value: unknown): string => (typeof value === 'string' ? value : '');
+function text(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+}
 
 /*
  * The releases a person can install, newest first. A draft is not out yet and a prerelease belongs to
  * a channel the updater does not follow; once there is a beta channel this has to follow
  * `allowPrerelease`. A tag that is not semver is not a version the updater would ever offer.
  */
-export const releasesFrom = (json: unknown): Release[] => {
+export function releasesFrom(json: unknown): Release[] {
     if (!Array.isArray(json)) {
         return [];
     }
@@ -40,7 +42,7 @@ export const releasesFrom = (json: unknown): Release[] => {
         });
     }
     return releases.sort((a, b) => compareVersions(b.version, a.version));
-};
+}
 
 interface CacheFile {
     etag: string | null;
@@ -59,7 +61,7 @@ export interface ReleaseNotes {
     list(refresh: boolean): Promise<ReleaseNotesState>;
 }
 
-const readCache = async (path: string): Promise<CacheFile> => {
+async function readCache(path: string): Promise<CacheFile> {
     try {
         const parsed = JSON.parse(await readFile(path, 'utf8')) as Partial<CacheFile>;
         return {
@@ -70,20 +72,20 @@ const readCache = async (path: string): Promise<CacheFile> => {
     } catch {
         return { etag: null, fetchedAt: null, releases: [] };
     }
-};
+}
 
-const failureOf = (status: number): string => {
+function failureOf(status: number): string {
     if (status === 403 || status === 429) {
         return 'GitHub is limiting requests from this network. Try again later.';
     }
     return `GitHub answered ${status}.`;
-};
+}
 
 /*
  * The notes of the last 20 releases, kept on disk so they read offline. The ETag keeps an unchanged
  * list to a 304, which matters because an anonymous client gets 60 requests an hour per address.
  */
-export const createReleaseNotes = (options: ReleaseNotesOptions): ReleaseNotes => {
+export function createReleaseNotes(options: ReleaseNotesOptions): ReleaseNotes {
     let cache: CacheFile | null = null;
     let error: string | null = null;
     let inFlight: Promise<void> | null = null;
@@ -136,4 +138,4 @@ export const createReleaseNotes = (options: ReleaseNotesOptions): ReleaseNotes =
             return stateOf(cache);
         }
     };
-};
+}

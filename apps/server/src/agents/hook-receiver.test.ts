@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { HookResult } from '../sessions/manager.ts';
 import { handleHookRequest } from './hook-receiver.ts';
 
-const target = (result: HookResult) => {
+function target(result: HookResult) {
     const calls: Array<{ kind: string; token: string; body: unknown }> = [];
     return {
         calls,
@@ -12,14 +12,15 @@ const target = (result: HookResult) => {
             return result;
         }
     };
-};
+}
 
-const post = (path: string, body: string, token?: string) =>
-    new Request(`http://127.0.0.1${path}`, {
+function post(path: string, body: string, token?: string) {
+    return new Request(`http://127.0.0.1${path}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
         body
     });
+}
 
 describe('handleHookRequest', () => {
     test('routes a valid POST to the session behind the token', async () => {

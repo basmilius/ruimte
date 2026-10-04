@@ -19,7 +19,7 @@ export interface VoiceProjectFacts {
  */
 const ALWAYS: readonly ActionDomain[] = ['workspace', 'views', 'canvas', 'layout', 'communicate', 'projects', 'machine'];
 
-export const voiceDomainsFor = (facts: VoiceProjectFacts): ActionDomain[] => {
+export function voiceDomainsFor(facts: VoiceProjectFacts): ActionDomain[] {
     const wanted = new Set<ActionDomain>(ALWAYS);
     if (facts.sessions) {
         wanted.add('sessions');
@@ -39,14 +39,15 @@ export const voiceDomainsFor = (facts: VoiceProjectFacts): ActionDomain[] => {
         wanted.add('developer');
     }
     return ACTION_DOMAINS.filter((domain) => wanted.has(domain));
-};
+}
 
 /* The kinds a project holds, as views and as nodes on its canvases. */
-export const kindsIn = (views: readonly ProjectView[]): Set<string> =>
-    new Set(views.flatMap((view) => [view.kind, ...(isCanvasView(view) ? view.nodes.map((node) => node.kind) : [])]));
+export function kindsIn(views: readonly ProjectView[]): Set<string> {
+    return new Set(views.flatMap((view) => [view.kind, ...(isCanvasView(view) ? view.nodes.map((node) => node.kind) : [])]));
+}
 
 /* A machine from before `git.repos` still has the folder, which the git panel then shows as its one repository. */
-const hasRepository = async (folder: string): Promise<boolean> => {
+async function hasRepository(folder: string): Promise<boolean> {
     const transport = windowWorkspace()?.connection.transport ?? null;
     if (transport === null) {
         return false;
@@ -55,10 +56,10 @@ const hasRepository = async (folder: string): Promise<boolean> => {
         .request('git.repos', { folder })
         .then((answer) => answer.repos.length > 0)
         .catch(() => true);
-};
+}
 
 /* The domains for a session that starts now; the list stays as it is for the whole session. */
-export const currentVoiceDomains = async (): Promise<ActionDomain[]> => {
+export async function currentVoiceDomains(): Promise<ActionDomain[]> {
     const kinds = kindsIn(useDocument.getState().exportViews());
     const folder = useProject.getState().current?.folder ?? null;
     return voiceDomainsFor({
@@ -68,4 +69,4 @@ export const currentVoiceDomains = async (): Promise<ActionDomain[]> => {
         folder: folder !== null,
         repository: folder !== null && (await hasRepository(folder))
     });
-};
+}

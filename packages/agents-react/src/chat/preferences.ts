@@ -32,7 +32,7 @@ export const DEFAULT_CHAT_PREFERENCES: ChatPreferences = {
  * toggle's `interactionMode`) falls away here instead of riding along in every later write. A
  * global selection cannot be mapped back onto a provider, so it is dropped: one lost pick.
  */
-export const parseChatPreferences = (raw: string | null): ChatPreferences => {
+export function parseChatPreferences(raw: string | null): ChatPreferences {
     if (raw === null) {
         return DEFAULT_CHAT_PREFERENCES;
     }
@@ -49,51 +49,55 @@ export const parseChatPreferences = (raw: string | null): ChatPreferences => {
     } catch {
         return DEFAULT_CHAT_PREFERENCES;
     }
-};
+}
 
 /* Which CLI a chat opens on when its node names none: the last one a model was picked for. */
-export const defaultProvider = (preferences: ChatPreferences): AgentKind | null => preferences.lastProvider;
+export function defaultProvider(preferences: ChatPreferences): AgentKind | null {
+    return preferences.lastProvider;
+}
 
 /* The model a chat of this provider starts with; null lets the host fall back to the CLI's own default. */
-export const selectionFor = (preferences: ChatPreferences, provider: AgentKind | null | undefined): ModelSelection | null => {
+export function selectionFor(preferences: ChatPreferences, provider: AgentKind | null | undefined): ModelSelection | null {
     const owner = provider ?? preferences.lastProvider;
     if (owner === null) {
         return null;
     }
     return preferences.selectionByProvider[owner] ?? null;
-};
+}
 
 /* The pick lands in its provider's slot and makes that provider the global default. */
-export const withSelection = (preferences: ChatPreferences, provider: AgentKind, selection: ModelSelection): ChatPreferences => ({
-    ...preferences,
-    selectionByProvider: { ...preferences.selectionByProvider, [provider]: selection },
-    lastProvider: provider
-});
+export function withSelection(preferences: ChatPreferences, provider: AgentKind, selection: ModelSelection): ChatPreferences {
+    return {
+        ...preferences,
+        selectionByProvider: { ...preferences.selectionByProvider, [provider]: selection },
+        lastProvider: provider
+    };
+}
 
 /*
  * The account a new agent of this CLI starts under on this machine; null is the CLI's default account.
  * Given the machine's accounts, a pick it turned off or removed is the default account again, so a new
  * chat is never refused over it; `undefined` is a machine that did not say yet, where the pick stands.
  */
-export const accountFor = (preferences: ChatPreferences, scopeId: string, provider: AgentKind, accounts?: ProviderAccounts | null): string | null => {
+export function accountFor(preferences: ChatPreferences, scopeId: string, provider: AgentKind, accounts?: ProviderAccounts | null): string | null {
     const picked = preferences.accountByMachine[scopeId]?.[provider] ?? null;
     if (picked === null || accounts === undefined) {
         return picked;
     }
     const account = accounts?.accounts[picked];
     return account?.kind === provider && account.enabled !== false ? picked : null;
-};
+}
 
 /* The default account is what an absent pick means, so picking it takes the pick away. */
-export const withAccount = (preferences: ChatPreferences, scopeId: string, provider: AgentKind, account: string | null): ChatPreferences => {
+export function withAccount(preferences: ChatPreferences, scopeId: string, provider: AgentKind, account: string | null): ChatPreferences {
     const { [provider]: _previous, ...others } = preferences.accountByMachine[scopeId] ?? {};
     const picks = account === null || account === provider ? others : { ...others, [provider]: account };
     const { [scopeId]: _machine, ...machines } = preferences.accountByMachine;
     return { ...preferences, accountByMachine: Object.keys(picks).length === 0 ? machines : { ...machines, [scopeId]: picks } };
-};
+}
 
 /* What a machine starts a chat with when it starts one with no client mounting it; `accounts` as `accountFor` takes them. */
-export const chatPreferencesPayload = (preferences: ChatPreferences, scopeId: string, accounts?: ProviderAccounts | null): ChatPreferencesPayload => {
+export function chatPreferencesPayload(preferences: ChatPreferences, scopeId: string, accounts?: ProviderAccounts | null): ChatPreferencesPayload {
     const picks = Object.keys(preferences.accountByMachine[scopeId] ?? {}).flatMap((provider) => {
         const account = accountFor(preferences, scopeId, provider as AgentKind, accounts);
         return account === null ? [] : [[provider, account] as const];
@@ -105,45 +109,47 @@ export const chatPreferencesPayload = (preferences: ChatPreferences, scopeId: st
         ...(picks.length === 0 ? {} : { accounts: Object.fromEntries(picks) }),
         changedAt: preferences.changedAt
     };
-};
+}
 
 const storage = persistedJson<ChatPreferences>(STORAGE_KEY, parseChatPreferences, DEFAULT_CHAT_PREFERENCES);
 
 /* What a new agent starts with: the last model and modes the person picked, like a remembered default. */
 export const useChatPreferences = create<ChatPreferences>(() => storage.read());
 
-export const readChatPreferences = (): ChatPreferences => useChatPreferences.getState();
+export function readChatPreferences(): ChatPreferences {
+    return useChatPreferences.getState();
+}
 
 /* Where the remembered default is kept, which an app with more than one window of the same origin listens for. */
 export const CHAT_PREFERENCES_KEY = STORAGE_KEY;
 
 /* Reads the remembered default again, once another window of the same origin wrote it. */
-export const reloadChatPreferences = (): void => {
+export function reloadChatPreferences(): void {
     useChatPreferences.setState(storage.read(), true);
-};
+}
 
-const write = (preferences: ChatPreferences): void => {
+function write(preferences: ChatPreferences): void {
     const next = { ...preferences, changedAt: Date.now() };
     useChatPreferences.setState(next);
     storage.write(next);
-};
+}
 
 /* The composer writes here on every change and the settings dialog too; both edit the same remembered default. */
-export const rememberChatPreferences = (patch: Partial<ChatPreferences>): void => {
+export function rememberChatPreferences(patch: Partial<ChatPreferences>): void {
     write({ ...useChatPreferences.getState(), ...patch });
-};
+}
 
-export const rememberChatSelection = (provider: AgentKind, selection: ModelSelection): void => {
+export function rememberChatSelection(provider: AgentKind, selection: ModelSelection): void {
     write(withSelection(useChatPreferences.getState(), provider, selection));
-};
+}
 
-export const rememberChatAccount = (scopeId: string, provider: AgentKind, account: string | null): void => {
+export function rememberChatAccount(scopeId: string, provider: AgentKind, account: string | null): void {
     write(withAccount(useChatPreferences.getState(), scopeId, provider, account));
-};
+}
 
 /* Back to the CLI's own default for this provider; the other providers keep what they had. */
-export const forgetChatSelection = (provider: AgentKind): void => {
+export function forgetChatSelection(provider: AgentKind): void {
     const current = useChatPreferences.getState();
     const { [provider]: _dropped, ...rest } = current.selectionByProvider;
     write({ ...current, selectionByProvider: rest, lastProvider: current.lastProvider === provider ? null : current.lastProvider });
-};
+}

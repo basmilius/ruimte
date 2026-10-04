@@ -13,7 +13,7 @@ export const SPEECH_FILES = [
 ] as const;
 export const SPEECH_BYTES = SPEECH_FILES.reduce((total, file) => total + file.size, 0);
 
-export const validModelFile = async (path: string, file: { size: number; sha256: string }, signal?: AbortSignal): Promise<boolean> => {
+export async function validModelFile(path: string, file: { size: number; sha256: string }, signal?: AbortSignal): Promise<boolean> {
     try {
         if ((await stat(path)).size !== file.size) {
             return false;
@@ -31,7 +31,7 @@ export const validModelFile = async (path: string, file: { size: number; sha256:
         }
         throw error;
     }
-};
+}
 
 // What the last full check of the model found, inside the model's folder so removing the model removes it too.
 const CHECKED = 'checked.json';

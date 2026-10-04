@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { STASH_LIMIT, parseStash, stashedFrom, withStashed, type StashedPrompt } from './stash.ts';
 import { EMPTY_DRAFT } from './drafts.ts';
 
-const prompt = (id: string): StashedPrompt => ({ id, text: id, mentions: [], skills: [], attachments: [], createdAt: 1 });
+function prompt(id: string): StashedPrompt {
+    return { id, text: id, mentions: [], skills: [], attachments: [], createdAt: 1 };
+}
 
 describe('parseStash', () => {
     test('reads what it knows and drops the rest', () => {

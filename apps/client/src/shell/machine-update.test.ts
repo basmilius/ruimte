@@ -6,7 +6,9 @@ const BRIDGE = { restartNow: async () => STATE, restartWhenIdle: async () => STA
 
 const STATE: BackgroundServiceState = { support: 'supported', keepRunning: true, owner: 'service', failure: null, linger: null, pendingRestart: null };
 
-const pending = (work: number | null, answered = false): BackgroundServiceState => ({ ...STATE, pendingRestart: { work, answered } });
+function pending(work: number | null, answered = false): BackgroundServiceState {
+    return { ...STATE, pendingRestart: { work, answered } };
+}
 
 describe('machineUpdatePrompt', () => {
     test('says how much a restart ends', () => {

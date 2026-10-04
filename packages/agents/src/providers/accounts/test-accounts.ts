@@ -5,28 +5,30 @@ import { accountsPath, writeAccounts } from './store.ts';
 import type { SecretStore } from './variables.ts';
 
 /* A keychain in memory; `values` is what it holds, by key. */
-export const memorySecrets = (values = new Map<string, string>()): SecretStore & { values: Map<string, string> } => ({
-    values,
-    read: async (key) => values.get(key) ?? null,
-    write: async (key, value) => {
-        values.set(key, value);
-    },
-    remove: async (key) => {
-        values.delete(key);
-    }
-});
+export function memorySecrets(values = new Map<string, string>()): SecretStore & { values: Map<string, string> } {
+    return {
+        values,
+        read: async (key) => values.get(key) ?? null,
+        write: async (key, value) => {
+            values.set(key, value);
+        },
+        remove: async (key) => {
+            values.delete(key);
+        }
+    };
+}
 
 /*
  * The accounts of a machine as a test wants them: written to `providers.json` under `home` as
  * they are, with only the folders in `folders` on disk, and every CLI signed in without being asked.
  */
-export const testAccounts = async (options: {
+export async function testAccounts(options: {
     home: string;
     env: Record<string, string | undefined>;
     accounts: ProviderAccountMap;
     // The folders that exist; a test takes one away to see what a missing folder does.
     folders: Set<string>;
-}): Promise<ProviderAccountsService> => {
+}): Promise<ProviderAccountsService> {
     const service = new ProviderAccountsService({
         home: options.home,
         providers: {
@@ -43,4 +45,4 @@ export const testAccounts = async (options: {
     await writeAccounts(accountsPath(options.home), options.accounts);
     await service.load();
     return service;
-};
+}

@@ -20,45 +20,49 @@ let told: Array<{ clientId: string; event: ChatSubagentChangedEvent }>;
 let chats: Map<string, SubagentChat>;
 let noted: Array<{ toolUseId: string; native: { agentId?: string; threadId?: string } }>;
 
-const info = (chatId: string, provider: ChatInfo['provider'], agentSessionId: string | null): ChatInfo => ({
-    chatId,
-    provider,
-    cwd: '/work/demo',
-    agentSessionId,
-    model: null,
-    selection: { model: 'm', options: {} },
-    runtimeMode: 'full-access',
-    status: 'idle',
-    running: false,
-    activeTurnId: null,
-    slashCommands: [],
-    usage: { contextTokens: 0, contextWindow: 0, costUsd: 0, turns: 0 },
-    createdAt: 0
-});
+function info(chatId: string, provider: ChatInfo['provider'], agentSessionId: string | null): ChatInfo {
+    return {
+        chatId,
+        provider,
+        cwd: '/work/demo',
+        agentSessionId,
+        model: null,
+        selection: { model: 'm', options: {} },
+        runtimeMode: 'full-access',
+        status: 'idle',
+        running: false,
+        activeTurnId: null,
+        slashCommands: [],
+        usage: { contextTokens: 0, contextWindow: 0, costUsd: 0, turns: 0 },
+        createdAt: 0
+    };
+}
 
-const row = (toolUseId: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
-    id: `1:${toolUseId}`,
-    kind: 'subagent',
-    createdAt: 0,
-    turnId: 'turn-1',
-    toolUseId,
-    description: 'Survey the docs',
-    subagentType: 'general-purpose',
-    prompt: null,
-    background: false,
-    status: 'running',
-    startedAt: 0,
-    finishedAt: null,
-    summary: null,
-    result: null,
-    usage: null,
-    lastTool: null,
-    itemsTruncated: true,
-    ...patch
-});
+function row(toolUseId: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem {
+    return {
+        id: `1:${toolUseId}`,
+        kind: 'subagent',
+        createdAt: 0,
+        turnId: 'turn-1',
+        toolUseId,
+        description: 'Survey the docs',
+        subagentType: 'general-purpose',
+        prompt: null,
+        background: false,
+        status: 'running',
+        startedAt: 0,
+        finishedAt: null,
+        summary: null,
+        result: null,
+        usage: null,
+        lastTool: null,
+        itemsTruncated: true,
+        ...patch
+    };
+}
 
-const makeReader = (listOnce?: (params: ThreadItemsParams) => Promise<unknown>, now: () => number = () => 0): SubagentReader =>
-    new SubagentReader({
+function makeReader(listOnce?: (params: ThreadItemsParams) => Promise<unknown>, now: () => number = () => 0): SubagentReader {
+    return new SubagentReader({
         chat: (chatId) => chats.get(chatId) ?? null,
         claudeProjectsDir: projects,
         codexProcess: (chatInfo) => ({ command: ['codex', 'app-server'], cwd: chatInfo.cwd, env: {} }),
@@ -67,36 +71,46 @@ const makeReader = (listOnce?: (params: ThreadItemsParams) => Promise<unknown>, 
         now,
         ...(listOnce ? { listOnce: (_spec, params) => listOnce(params) } : {})
     });
+}
 
-const claudeChat = (items: ChatItem[]): SubagentChat => ({
-    info: info('chat-1', 'claude', SESSION),
-    running: false,
-    items: () => items,
-    listThreadItems: () => null,
-    noteNative: (toolUseId, native) => noted.push({ toolUseId, native })
-});
+function claudeChat(items: ChatItem[]): SubagentChat {
+    return {
+        info: info('chat-1', 'claude', SESSION),
+        running: false,
+        items: () => items,
+        listThreadItems: () => null,
+        noteNative: (toolUseId, native) => noted.push({ toolUseId, native })
+    };
+}
 
-const subagentsDir = (): string => join(projects, claudeProjectSlug('/work/demo'), SESSION, 'subagents');
+function subagentsDir(): string {
+    return join(projects, claudeProjectSlug('/work/demo'), SESSION, 'subagents');
+}
 
-const line = (entry: Record<string, unknown>): string => `${JSON.stringify({ isSidechain: true, sessionId: SESSION, version: '2.1.273', ...entry })}\n`;
+function line(entry: Record<string, unknown>): string {
+    return `${JSON.stringify({ isSidechain: true, sessionId: SESSION, version: '2.1.273', ...entry })}\n`;
+}
 
-const toolStep = (step: number): string =>
-    line({
-        type: 'assistant',
-        uuid: `s-${step}-a`,
-        timestamp: '2026-09-16T09:00:00.000Z',
-        message: {
-            id: `msg_step_${step}`,
-            role: 'assistant',
-            content: [{ type: 'tool_use', id: `toolu_step_${step}`, name: 'Bash', input: { command: `echo ${step}` } }]
-        }
-    }) +
-    line({
-        type: 'user',
-        uuid: `s-${step}-u`,
-        timestamp: '2026-09-16T09:00:01.000Z',
-        message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: `toolu_step_${step}`, content: `${step}` }] }
-    });
+function toolStep(step: number): string {
+    return (
+        line({
+            type: 'assistant',
+            uuid: `s-${step}-a`,
+            timestamp: '2026-09-16T09:00:00.000Z',
+            message: {
+                id: `msg_step_${step}`,
+                role: 'assistant',
+                content: [{ type: 'tool_use', id: `toolu_step_${step}`, name: 'Bash', input: { command: `echo ${step}` } }]
+            }
+        }) +
+        line({
+            type: 'user',
+            uuid: `s-${step}-u`,
+            timestamp: '2026-09-16T09:00:01.000Z',
+            message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: `toolu_step_${step}`, content: `${step}` }] }
+        })
+    );
+}
 
 beforeEach(async () => {
     projects = await mkdtemp(join(tmpdir(), 'ruimte-subagents-'));

@@ -9,16 +9,20 @@ const IMAGE_TOKENS = 1_600;
 // Tools whose result is a file's contents. An MCP tool is named `<server>/<tool>`, so only the last part counts.
 const READ_TOOLS = new Set(['Read', 'NotebookRead', 'View', 'read_file', 'read_text_file', 'read_multiple_files']);
 
-const isReadTool = (name: string): boolean => READ_TOOLS.has(name.slice(name.lastIndexOf('/') + 1));
+function isReadTool(name: string): boolean {
+    return READ_TOOLS.has(name.slice(name.lastIndexOf('/') + 1));
+}
 
-const textTokens = (text: string): number => Math.ceil(text.length / CHARS_PER_TOKEN);
+function textTokens(text: string): number {
+    return Math.ceil(text.length / CHARS_PER_TOKEN);
+}
 
-const inputTokens = (input: unknown): number => {
+function inputTokens(input: unknown): number {
     if (input === undefined || input === null) {
         return 0;
     }
     return textTokens(typeof input === 'string' ? input : JSON.stringify(input));
-};
+}
 
 /*
  * What the context of the last request is made of, estimated from the thread and scaled to the
@@ -26,7 +30,7 @@ const inputTokens = (input: unknown): number => {
  * its report did, and nothing before the last compaction survived it. Thinking is left out: a CLI
  * does not carry it into the next request.
  */
-export const estimateContextBreakdown = (items: readonly ChatItem[], contextTokens: number): ChatContextBreakdown => {
+export function estimateContextBreakdown(items: readonly ChatItem[], contextTokens: number): ChatContextBreakdown {
     let toolOutput = 0;
     let filesRead = 0;
     let conversation = 0;
@@ -73,4 +77,4 @@ export const estimateContextBreakdown = (items: readonly ChatItem[], contextToke
         conversation: Math.floor(conversation * scale)
     };
     return { ...parts, system: Math.max(0, total - parts.toolOutput - parts.filesRead - parts.conversation) };
-};
+}

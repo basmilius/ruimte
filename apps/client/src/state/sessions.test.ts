@@ -8,7 +8,9 @@ import { nodeStatus, sessionSinkFor, useSessions } from '@/state/sessions';
 const LOCAL = 'local';
 const REMOTE = 'Xk3p';
 
-const node = (id: string, kind: CanvasNode['kind']): Pick<CanvasNode, 'id' | 'kind' | 'status'> => ({ id, kind, status: undefined });
+function node(id: string, kind: CanvasNode['kind']): Pick<CanvasNode, 'id' | 'kind' | 'status'> {
+    return { id, kind, status: undefined };
+}
 
 beforeEach(() => {
     useSessions.setState({ byKey: {}, restarts: {} });

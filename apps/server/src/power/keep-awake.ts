@@ -16,16 +16,22 @@ export interface KeepAwakeWork {
  * terminal agent only while its hooks say `running` and its CLI is live, a chat in a turn or between
  * turns with subagents still at work. Waiting on a person is not work.
  */
-export const agentsWorking = (work: KeepAwakeWork): boolean =>
-    work.sessions.some((session) => !session.exited && session.agent?.live === true && session.agent.status === 'running') ||
-    work.chats.some((chat) => chat.status === 'running' || (chat.status === 'idle' && chat.delegating === true));
+export function agentsWorking(work: KeepAwakeWork): boolean {
+    return (
+        work.sessions.some((session) => !session.exited && session.agent?.live === true && session.agent.status === 'running') ||
+        work.chats.some((chat) => chat.status === 'running' || (chat.status === 'idle' && chat.delegating === true))
+    );
+}
 
 /* Where the daemon can hold a block. Only macOS ships a tool that holds one for as long as a process lives. */
-export const keepAwakeAvailable = (platform: NodeJS.Platform): boolean => platform === 'darwin';
+export function keepAwakeAvailable(platform: NodeJS.Platform): boolean {
+    return platform === 'darwin';
+}
 
 /* Whether the setting asks for a block right now, before the power source has a say. */
-export const keepAwakeWanted = (setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform): boolean =>
-    keepAwakeAvailable(platform) && setting.mode !== 'off' && (setting.mode !== 'working' || working);
+export function keepAwakeWanted(setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform): boolean {
+    return keepAwakeAvailable(platform) && setting.mode !== 'off' && (setting.mode !== 'working' || working);
+}
 
 /*
  * The command that holds the block, or null for none. `-w` ties it to the daemon, so a daemon that is
@@ -33,13 +39,13 @@ export const keepAwakeWanted = (setting: KeepAwakeSetting, working: boolean, pla
  * display is held only with `-i`: caffeinate has no display assertion that lets go on battery, and
  * `-d` there would keep a laptop on battery awake that a person said should sleep.
  */
-export const keepAwakeCommand = (setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform, pid: number): string[] | null => {
+export function keepAwakeCommand(setting: KeepAwakeSetting, working: boolean, platform: NodeJS.Platform, pid: number): string[] | null {
     if (!keepAwakeWanted(setting, working, platform)) {
         return null;
     }
     const display = setting.mode === 'always' && setting.display && setting.onBattery;
     return ['caffeinate', '-w', String(pid), setting.onBattery ? '-i' : '-s', ...(display ? ['-d'] : [])];
-};
+}
 
 export interface HeldProcess {
     kill(): void;

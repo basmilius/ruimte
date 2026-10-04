@@ -31,7 +31,7 @@ export const useTasks = create<TasksStore>((set, get) => ({
 }));
 
 /* The newest of the tasks that match, since a node given a task twice shows the one it works on now. */
-const newest = (tasks: TasksById | undefined, matches: (task: Task) => boolean): Task | null => {
+function newest(tasks: TasksById | undefined, matches: (task: Task) => boolean): Task | null {
     let found: Task | null = null;
     for (const task of Object.values(tasks ?? {})) {
         if (matches(task) && (found === null || task.createdAt >= found.createdAt)) {
@@ -39,19 +39,24 @@ const newest = (tasks: TasksById | undefined, matches: (task: Task) => boolean):
         }
     }
     return found;
-};
+}
 
 /* The task a node was opened with, for the mark on its header and on its sidebar row. */
-export const childTask = (tasks: TasksById | undefined, childId: string): Task | null => newest(tasks, (task) => task.childId === childId);
+export function childTask(tasks: TasksById | undefined, childId: string): Task | null {
+    return newest(tasks, (task) => task.childId === childId);
+}
 
 /* The task a line stands for, the one its tail gave its head. */
-export const edgeTask = (tasks: TasksById | undefined, from: string, to: string): Task | null =>
-    newest(tasks, (task) => task.parentId === from && task.childId === to);
+export function edgeTask(tasks: TasksById | undefined, from: string, to: string): Task | null {
+    return newest(tasks, (task) => task.parentId === from && task.childId === to);
+}
 
-export const useChildTask = (childId: string): Task | null => {
+export function useChildTask(childId: string): Task | null {
     const endpointId = useEndpointId();
     return useTasks((s) => childTask(s.byEndpoint[endpointId], childId));
-};
+}
 
 /* The word a line carries while it stands for a task: "task" while it is open, and how it ended after. */
-export const taskEdgeLabel = (status: Task['status']): string => i18next.t(`state:taskEdge.${status}`);
+export function taskEdgeLabel(status: Task['status']): string {
+    return i18next.t(`state:taskEdge.${status}`);
+}

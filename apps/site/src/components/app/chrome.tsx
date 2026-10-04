@@ -73,7 +73,9 @@ const GLOW_ORBITS = [
     { size: 340, alpha: 0.025 }
 ] as const;
 
-const atTop = (size: number): CSSProperties => ({ width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` });
+function atTop(size: number): CSSProperties {
+    return { width: size, height: size, margin: `-${size / 2}px 0 0 -${size / 2}px` };
+}
 
 /** `SidebarGlow` in `shell/Sidebar.tsx`. */
 function SidebarGlow() {

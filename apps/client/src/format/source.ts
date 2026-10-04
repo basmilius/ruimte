@@ -12,6 +12,6 @@ export const formatSource: FormatSource = {
 };
 
 /* Before the first render as well as through `UIProvider`, so code outside React formats in the right region too. */
-export const connectFormat = (): void => {
+export function connectFormat(): void {
     setFormatSource(formatSource);
-};
+}

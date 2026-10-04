@@ -30,7 +30,7 @@ const MORNING_HOUR = 9;
  * When a choice made at `now` runs out. Tomorrow is the next 09:00 still ahead, so a snooze set
  * at two in the night wakes the same morning rather than a day later.
  */
-export const snoozeUntil = (choice: SnoozeChoice, now: number): number => {
+export function snoozeUntil(choice: SnoozeChoice, now: number): number {
     if (choice === 'ten-minutes') {
         return now + 10 * MINUTE;
     }
@@ -43,12 +43,14 @@ export const snoozeUntil = (choice: SnoozeChoice, now: number): number => {
         morning.setDate(morning.getDate() + 1);
     }
     return morning.getTime();
-};
+}
 
-export const isSnoozed = (snoozes: Snoozes, key: string, now: number): boolean => (snoozes[key] ?? 0) > now;
+export function isSnoozed(snoozes: Snoozes, key: string, now: number): boolean {
+    return (snoozes[key] ?? 0) > now;
+}
 
 /* The first snooze still ahead of `now`, or null when none is. */
-export const nextWake = (snoozes: Snoozes, now: number): number | null => {
+export function nextWake(snoozes: Snoozes, now: number): number | null {
     let next: number | null = null;
     for (const until of Object.values(snoozes)) {
         if (until > now && (next === null || until < next)) {
@@ -56,24 +58,24 @@ export const nextWake = (snoozes: Snoozes, now: number): number | null => {
         }
     }
     return next;
-};
+}
 
 /* The same object when nothing ran out, so a store that sets it changes nothing. */
-export const withoutExpired = (snoozes: Snoozes, now: number): Snoozes => {
+export function withoutExpired(snoozes: Snoozes, now: number): Snoozes {
     const kept = Object.entries(snoozes).filter(([key]) => isSnoozed(snoozes, key, now));
     return kept.length === Object.keys(snoozes).length ? snoozes : Object.fromEntries(kept);
-};
+}
 
 /*
  * Which snoozes end early because their node stopped needing you, and which snoozed nodes have been
  * seen waiting. Only a node seen waiting under its snooze can stop: after a reload a terminal reads as
  * running until its agent reports again, and that is not a person having answered.
  */
-export const observeWaiting = (
+export function observeWaiting(
     snoozes: Snoozes,
     waiting: ReadonlySet<string>,
     observed: ReadonlyMap<string, boolean>
-): { waiting: Set<string>; forget: string[] } => {
+): { waiting: Set<string>; forget: string[] } {
     const next = new Set([...waiting].filter((key) => snoozes[key] !== undefined));
     const forget: string[] = [];
     for (const [key, needsYou] of observed) {
@@ -88,13 +90,15 @@ export const observeWaiting = (
         }
     }
     return { waiting: next, forget };
-};
+}
 
 type SnoozeStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
-const browserStorage = (): SnoozeStorage | null => (typeof localStorage === 'undefined' ? null : localStorage);
+function browserStorage(): SnoozeStorage | null {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+}
 
-const readStored = (storage: SnoozeStorage | null, now: number): Snoozes => {
+function readStored(storage: SnoozeStorage | null, now: number): Snoozes {
     try {
         const parsed = JSON.parse(storage?.getItem(STORAGE_KEY) ?? '{}') as unknown;
         if (typeof parsed !== 'object' || parsed === null) {
@@ -104,20 +108,20 @@ const readStored = (storage: SnoozeStorage | null, now: number): Snoozes => {
     } catch {
         return {};
     }
-};
+}
 
 /* Snoozes set for a machine while the link to it was down, by key, until the machine has them. */
 const unsent = new Set<string>();
 
 /* Only what this client keeps itself; a machine's own snoozes come back from the machine. */
-const write = (byKey: Snoozes, onMachine: OnMachine): void => {
+function write(byKey: Snoozes, onMachine: OnMachine): void {
     try {
         const kept = Object.entries(byKey).filter(([key]) => onMachine[splitKey(key).endpointId] !== true || unsent.has(key));
         browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(kept)));
     } catch {
         // Storage that refuses keeps the snoozes for this session only.
     }
-};
+}
 
 /* The machines that keep the snoozes themselves, by endpoint id. */
 type OnMachine = Readonly<Record<string, true>>;
@@ -304,7 +308,7 @@ export class SnoozeSync {
     }
 }
 
-export const watchSnoozes = (endpointId: string, transport: Transport): (() => void) => {
+export function watchSnoozes(endpointId: string, transport: Transport): () => void {
     const sync = new SnoozeSync(endpointId, transport);
     machines.set(endpointId, sync);
     return () => {
@@ -313,12 +317,16 @@ export const watchSnoozes = (endpointId: string, transport: Transport): (() => v
             machines.delete(endpointId);
         }
     };
-};
+}
 
 /* When the snooze standing on a node runs out, or null while none does. */
-export const snoozeOf = (snoozes: Snoozes, endpointId: string, nodeId: string): number | null => snoozes[endpointKey(endpointId, nodeId)] ?? null;
+export function snoozeOf(snoozes: Snoozes, endpointId: string, nodeId: string): number | null {
+    return snoozes[endpointKey(endpointId, nodeId)] ?? null;
+}
 
-export const useSnoozedUntil = (endpointId: string, nodeId: string): number | null => useSnoozes((s) => snoozeOf(s.byKey, endpointId, nodeId));
+export function useSnoozedUntil(endpointId: string, nodeId: string): number | null {
+    return useSnoozes((s) => snoozeOf(s.byKey, endpointId, nodeId));
+}
 
 /*
  * A timer asleep with the machine runs late by as long as it slept, so it never waits longer than
@@ -330,7 +338,7 @@ export const MAX_TICK_MS = MINUTE;
  * Nothing moves in any store when a snooze runs out, so this clock takes it out on time, and every
  * watcher that reads the snoozes sees the node come back in the same change.
  */
-export const startSnoozeClock = (now: () => number = Date.now): (() => void) => {
+export function startSnoozeClock(now: () => number = Date.now): () => void {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const arm = (): void => {
         if (timer !== null) {
@@ -355,4 +363,4 @@ export const startSnoozeClock = (now: () => number = Date.now): (() => void) => 
             clearTimeout(timer);
         }
     };
-};
+}

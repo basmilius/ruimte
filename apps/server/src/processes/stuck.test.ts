@@ -4,39 +4,49 @@ import { STUCK_THRESHOLDS, StuckJudge, type AgentState, type ObservedGroup, type
 const MINUTE = 60_000;
 const T0 = 1_800_000_000_000;
 
-const proc = (pid: number, overrides: Partial<ObservedProcess> = {}): ObservedProcess => ({
-    identity: `${pid}:1`,
-    pid,
-    startTime: 1,
-    ppid: 100,
-    name: `p${pid}`,
-    ownFamily: null,
-    readable: true,
-    cpu: 0,
-    memory: 100 * 1024 ** 2,
-    disk: 0,
-    ...overrides
-});
+function proc(pid: number, overrides: Partial<ObservedProcess> = {}): ObservedProcess {
+    return {
+        identity: `${pid}:1`,
+        pid,
+        startTime: 1,
+        ppid: 100,
+        name: `p${pid}`,
+        ownFamily: null,
+        readable: true,
+        cpu: 0,
+        memory: 100 * 1024 ** 2,
+        disk: 0,
+        ...overrides
+    };
+}
 
-const shell = (overrides: Partial<ObservedProcess> = {}) => proc(200, overrides);
-const claude = (overrides: Partial<ObservedProcess> = {}) => proc(201, { ppid: 200, name: '2.1.269', ownFamily: 'claude', ...overrides });
+function shell(overrides: Partial<ObservedProcess> = {}) {
+    return proc(200, overrides);
+}
+function claude(overrides: Partial<ObservedProcess> = {}) {
+    return proc(201, { ppid: 200, name: '2.1.269', ownFamily: 'claude', ...overrides });
+}
 
-const agent = (status: AgentState['status'], updatedAt: number, overrides: Partial<AgentState> = {}): AgentState => ({
-    kind: 'claude',
-    status,
-    updatedAt,
-    reportsEnd: true,
-    ...overrides
-});
+function agent(status: AgentState['status'], updatedAt: number, overrides: Partial<AgentState> = {}): AgentState {
+    return {
+        kind: 'claude',
+        status,
+        updatedAt,
+        reportsEnd: true,
+        ...overrides
+    };
+}
 
-const group = (processes: ObservedProcess[], state: AgentState | null, kind: ObservedGroup['kind'] = 'terminal'): ObservedGroup => ({
-    nodeId: 'node-1',
-    kind,
-    agent: state,
-    processes
-});
+function group(processes: ObservedProcess[], state: AgentState | null, kind: ObservedGroup['kind'] = 'terminal'): ObservedGroup {
+    return {
+        nodeId: 'node-1',
+        kind,
+        agent: state,
+        processes
+    };
+}
 
-const observation = (at: number, durationMs: number | null, groups: ObservedGroup[], overrides: Partial<Observation> = {}): Observation => {
+function observation(at: number, durationMs: number | null, groups: ObservedGroup[], overrides: Partial<Observation> = {}): Observation {
     const everyone = [...groups.flatMap((entry) => entry.processes), ...(overrides.daemon ?? [])];
     return {
         at,
@@ -48,18 +58,20 @@ const observation = (at: number, durationMs: number | null, groups: ObservedGrou
         strays: [],
         ...overrides
     };
-};
+}
 
 /* Readings every `stepMs` from `from` to `to`, the first without a duration, as the monitor feeds them. */
-const series = (judge: StuckJudge, from: number, to: number, stepMs: number, build: (at: number) => ObservedGroup[]) => {
+function series(judge: StuckJudge, from: number, to: number, stepMs: number, build: (at: number) => ObservedGroup[]) {
     let last = judge.observe(observation(from, null, build(from)));
     for (let at = from + stepMs; at <= to; at += stepMs) {
         last = judge.observe(observation(at, stepMs, build(at)));
     }
     return last;
-};
+}
 
-const kinds = (alerts: { kind: string }[]) => alerts.map((alert) => alert.kind);
+function kinds(alerts: { kind: string }[]) {
+    return alerts.map((alert) => alert.kind);
+}
 
 describe('silent while working', () => {
     test('running for ten minutes without a hook, a tree at rest and no disk: a warning with the agent to interrupt', () => {

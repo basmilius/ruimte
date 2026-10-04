@@ -13,7 +13,7 @@ interface Sent {
     body: unknown;
 }
 
-const platformWith = () => {
+function platformWith() {
     const calls = { signOuts: 0 };
     const platform: PulsarPlatform = {
         addressBook: async () => 'https://pulsar.test',
@@ -29,9 +29,9 @@ const platformWith = () => {
         }
     };
     return { platform, calls };
-};
+}
 
-const answerDeleteWith = (response: () => Response): Sent[] => {
+function answerDeleteWith(response: () => Response): Sent[] {
     const sent: Sent[] = [];
     globalThis.fetch = (async (input: string, init: RequestInit) => {
         const path = new URL(input).pathname;
@@ -42,7 +42,7 @@ const answerDeleteWith = (response: () => Response): Sent[] => {
         return response();
     }) as typeof fetch;
     return sent;
-};
+}
 
 describe('deleting the account', () => {
     beforeEach(() => {

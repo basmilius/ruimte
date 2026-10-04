@@ -11,5 +11,6 @@ export interface OpenedChildReaders {
  * with no line from it, by the same lineage `answer` checks. A line would let any two agents read each
  * other, and a grandchild is its own parent's to read, so nothing wider than that one step opens here.
  */
-export const openedChildSource = (readerId: string, sourceId: string, readers: OpenedChildReaders): ContextSource | null =>
-    readers.startedBy(sourceId) === readerId ? readers.agentSource(sourceId) : null;
+export function openedChildSource(readerId: string, sourceId: string, readers: OpenedChildReaders): ContextSource | null {
+    return readers.startedBy(sourceId) === readerId ? readers.agentSource(sourceId) : null;
+}

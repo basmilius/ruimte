@@ -14,7 +14,7 @@ export interface SecretStore {
 }
 
 /* A secret is only persisted when Electron can encrypt it through the operating system's keychain. */
-export const fileSecretStore = (path: string, cipher: StringCipher): SecretStore => {
+export function fileSecretStore(path: string, cipher: StringCipher): SecretStore {
     let memory: string | null = null;
 
     return {
@@ -44,4 +44,4 @@ export const fileSecretStore = (path: string, cipher: StringCipher): SecretStore
             await rename(temporary, path);
         }
     };
-};
+}

@@ -20,19 +20,23 @@ export interface QuitQuestion {
     detail: string;
 }
 
-const agentsWorking = (agents: number): string => (agents === 1 ? 'An agent is still working.' : `${agents} agents are still working.`);
+function agentsWorking(agents: number): string {
+    return agents === 1 ? 'An agent is still working.' : `${agents} agents are still working.`;
+}
 
-const terminalsRunning = (terminals: number): string =>
-    terminals === 1 ? 'A terminal is still running something.' : `${terminals} terminals are still running something.`;
+function terminalsRunning(terminals: number): string {
+    return terminals === 1 ? 'A terminal is still running something.' : `${terminals} terminals are still running something.`;
+}
 
-const bothRunning = (agents: number, terminals: number): string =>
-    `${agents === 1 ? 'An agent' : `${agents} agents`} and ${terminals === 1 ? 'a terminal' : `${terminals} terminals`} are still running.`;
+function bothRunning(agents: number, terminals: number): string {
+    return `${agents === 1 ? 'An agent' : `${agents} agents`} and ${terminals === 1 ? 'a terminal' : `${terminals} terminals`} are still running.`;
+}
 
 /*
  * The question before a quit, or null when there is nothing to ask. When the quit ends the machine,
  * the machine itself says what runs on it, since a window that closed took its count with it.
  */
-export const quitQuestion = (facts: QuitFacts): QuitQuestion | null => {
+export function quitQuestion(facts: QuitFacts): QuitQuestion | null {
     if (facts.survives) {
         if (facts.windows.working === 0) {
             return null;
@@ -65,4 +69,4 @@ export const quitQuestion = (facts: QuitFacts): QuitQuestion | null => {
         message,
         detail: 'Quitting ends their sessions on this machine.'
     };
-};
+}

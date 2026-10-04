@@ -16,8 +16,12 @@ afterEach(async () => {
     await Promise.all([rm(project, { recursive: true, force: true }), rm(outside, { recursive: true, force: true })]);
 });
 
-const read = (path: string, offset = 0): Extract<AppleToolCall, { name: 'read_file' }> => ({ type: 'tool.call', id: 'read', name: 'read_file', path, offset });
-const list = (path = '.'): AppleToolCall => ({ type: 'tool.call', id: 'list', name: 'list_files', path });
+function read(path: string, offset = 0): Extract<AppleToolCall, { name: 'read_file' }> {
+    return { type: 'tool.call', id: 'read', name: 'read_file', path, offset };
+}
+function list(path = '.'): AppleToolCall {
+    return { type: 'tool.call', id: 'list', name: 'list_files', path };
+}
 
 describe('Apple project tools', () => {
     test('lists project files and directories without hidden state or credentials', async () => {

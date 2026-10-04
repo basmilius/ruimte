@@ -15,7 +15,7 @@ interface Hold {
 const holds = new Map<string, Hold>();
 
 /* On the scope's transport as it stands: reading the windows never makes the host connect, so they fill once it is connected for another reason. */
-const hold = (scope: ChatScope): Hold => {
+function hold(scope: ChatScope): Hold {
     const link = scope.transport;
     const scopeId = scope.id;
     const ask = (): void => {
@@ -40,10 +40,10 @@ const hold = (scope: ChatScope): Hold => {
             offStatus();
         }
     };
-};
+}
 
 /* The snapshot of the host in scope, kept fresh for as long as anything shows it. */
-export const useUsageLimits = (): UsageLimitsSnapshot | null => {
+export function useUsageLimits(): UsageLimitsSnapshot | null {
     const limits = useUsage((s) => s.limits);
     const scope = useChatScope();
 
@@ -61,11 +61,11 @@ export const useUsageLimits = (): UsageLimitsSnapshot | null => {
     }, [scope]);
 
     return limits;
-};
+}
 
 /* The snapshot per CLI and account, with the accounts of the same host it is read from. */
-export const useLimitGroups = (limits: UsageLimitsSnapshot | null): LimitGroup[] => {
+export function useLimitGroups(limits: UsageLimitsSnapshot | null): LimitGroup[] {
     const { id } = useChatScope();
     const accounts = useProviderAccountsStore((s) => s.byScope[id]?.accounts ?? null);
     return useMemo(() => (limits === null ? [] : limitGroups(limits, accounts)), [limits, accounts]);
-};
+}

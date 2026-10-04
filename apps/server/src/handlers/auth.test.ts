@@ -28,7 +28,7 @@ let lidCancels: boolean;
 let ruleRequests: { install: boolean; prompt: string }[];
 let updates: MachineUpdates;
 
-const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
+function client(access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } {
     const frames: ServerFrame[] = [];
     return {
         frames,
@@ -40,23 +40,23 @@ const client = (access?: ClientAccess): { connection: ClientConnection; frames: 
             }
         }
     };
-};
+}
 
 // A client that presented the local secret: the app on this machine, or `ruimte login`.
 const LOCAL: ClientAccess = { reachability: 'loopback', sessionId: null };
 
-const sessionOf = (admission: StatementAdmission): string => {
+function sessionOf(admission: StatementAdmission): string {
     if (!('sessionId' in admission)) {
         throw new Error(`Expected an admission, got ${admission.refused}`);
     }
     return admission.sessionId;
-};
+}
 
-const ask = async (access: ClientAccess | undefined, type: string, payload: unknown = {}): Promise<ServerFrame> => {
+async function ask(access: ClientAccess | undefined, type: string, payload: unknown = {}): Promise<ServerFrame> {
     const { connection, frames } = client(access);
     await dispatcher.handle(connection, JSON.stringify({ id: '1', type, payload }));
     return frames[0]!;
-};
+}
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-auth-handlers-'));

@@ -19,7 +19,7 @@ interface Preferences {
 
 const DEFAULTS: Preferences = { scope: 'ruimte', sort: 'cpu' };
 
-const readPreferences = (): Preferences => {
+function readPreferences(): Preferences {
     try {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Preferences>;
         return {
@@ -29,15 +29,15 @@ const readPreferences = (): Preferences => {
     } catch {
         return DEFAULTS;
     }
-};
+}
 
-const persist = (preferences: Preferences): void => {
+function persist(preferences: Preferences): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     } catch {
         // Storage that refuses keeps the choice for this session only.
     }
-};
+}
 
 /* What one machine said about its processes. */
 export interface ProcessesRow {
@@ -50,8 +50,9 @@ export interface ProcessesRow {
 
 export const EMPTY_PROCESSES: ProcessesRow = { supported: null, fine: [], coarse: [], sample: null };
 
-const capped = (points: readonly ProcessPoint[], point: ProcessPoint | null, cap: number): ProcessPoint[] =>
-    point === null ? [...points] : [...points, point].slice(-cap);
+function capped(points: readonly ProcessPoint[], point: ProcessPoint | null, cap: number): ProcessPoint[] {
+    return point === null ? [...points] : [...points, point].slice(-cap);
+}
 
 interface ProcessesStore extends Preferences {
     byEndpoint: Record<string, ProcessesRow>;
@@ -121,4 +122,6 @@ export const useProcessWarnings = create<WarningsStore>((set, get) => ({
 const NO_ALERTS: ProcessAlert[] = [];
 
 /* The warnings of one machine, as a stable array while there are none. */
-export const useProcessAlerts = (endpointId: string): ProcessAlert[] => useProcessWarnings((s) => s.byEndpoint[endpointId] ?? NO_ALERTS);
+export function useProcessAlerts(endpointId: string): ProcessAlert[] {
+    return useProcessWarnings((s) => s.byEndpoint[endpointId] ?? NO_ALERTS);
+}

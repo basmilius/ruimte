@@ -10,57 +10,68 @@ import { canvasPrompts, samePrompts, stackFront, type CanvasPrompt, type CanvasP
 const ENDPOINT = 'local';
 
 /* A chat's own request, or which of Ruimte's own cards it is. */
-const kindOf = (prompt: CanvasPrompt): string =>
-    prompt.subject.kind === 'chat' ? 'chat' : isRuimtePrompt(prompt.subject.prompt) ? prompt.subject.prompt.data.kind : 'host';
-const key = (nodeId: string): string => endpointKey(ENDPOINT, nodeId);
+function kindOf(prompt: CanvasPrompt): string {
+    return prompt.subject.kind === 'chat' ? 'chat' : isRuimtePrompt(prompt.subject.prompt) ? prompt.subject.prompt.data.kind : 'host';
+}
+function key(nodeId: string): string {
+    return endpointKey(ENDPOINT, nodeId);
+}
 
 const approval = PROMPT_SAMPLES.find((sample) => sample.label === 'Permission · Command')!.items[0]!;
 const optional = PROMPT_SAMPLES.find((sample) => sample.label === 'Question · Optional')!.items[0]!;
 
-const chatOf = (items: ChatItem[]): ChatsById[string] => {
+function chatOf(items: ChatItem[]): ChatsById[string] {
     const byId = Object.fromEntries(items.map((item) => [item.id, item]));
     return { info: { provider: 'codex' } as ChatInfo, items: byId, structure: byId, order: items.map((item) => item.id) };
-};
+}
 
-const agent = (status: AgentInfo['status'], updatedAt: number): AgentInfo => ({
-    kind: 'claude',
-    agentSessionId: 'session',
-    transcriptPath: null,
-    status,
-    live: true,
-    updatedAt
-});
+function agent(status: AgentInfo['status'], updatedAt: number): AgentInfo {
+    return {
+        kind: 'claude',
+        agentSessionId: 'session',
+        transcriptPath: null,
+        status,
+        live: true,
+        updatedAt
+    };
+}
 
-const node = (id: string, kind: 'chat' | 'terminal' | 'note') => ({ id, kind, title: id });
+function node(id: string, kind: 'chat' | 'terminal' | 'note') {
+    return { id, kind, title: id };
+}
 
-const input = (overrides: Partial<CanvasPromptsInput> = {}): CanvasPromptsInput => ({
-    nodes: [node('api', 'terminal'), node('docs', 'chat'), node('ios', 'terminal'), node('merge', 'chat'), node('note', 'note')],
-    endpointId: ENDPOINT,
-    sessions: {
-        [key('api')]: { attached: true, agent: agent('needs-you', 100) },
-        [key('ios')]: { attached: true, agent: agent('needs-you', 400) }
-    } satisfies SessionsByKey,
-    chats: {
-        [key('docs')]: chatOf([{ ...optional, id: 'docs-q', requestId: 'docs-q', createdAt: 50 }]),
-        [key('merge')]: chatOf([{ ...approval, id: 'merge-a', requestId: 'merge-a', createdAt: 300 }])
-    },
-    computer: [],
-    waitingSince: new Map(),
-    ...overrides
-});
+function input(overrides: Partial<CanvasPromptsInput> = {}): CanvasPromptsInput {
+    return {
+        nodes: [node('api', 'terminal'), node('docs', 'chat'), node('ios', 'terminal'), node('merge', 'chat'), node('note', 'note')],
+        endpointId: ENDPOINT,
+        sessions: {
+            [key('api')]: { attached: true, agent: agent('needs-you', 100) },
+            [key('ios')]: { attached: true, agent: agent('needs-you', 400) }
+        } satisfies SessionsByKey,
+        chats: {
+            [key('docs')]: chatOf([{ ...optional, id: 'docs-q', requestId: 'docs-q', createdAt: 50 }]),
+            [key('merge')]: chatOf([{ ...approval, id: 'merge-a', requestId: 'merge-a', createdAt: 300 }])
+        },
+        computer: [],
+        waitingSince: new Map(),
+        ...overrides
+    };
+}
 
-const computerCard = (nodeId: string, createdAt: number): ComputerApproval => ({
-    requestId: `computer-${nodeId}`,
-    nodeId,
-    surface: 'chat',
-    nodeTitle: nodeId,
-    projectId: 'p1',
-    projectName: 'Ruimte',
-    app: { name: 'TextEdit', bundleId: 'com.example.textedit' },
-    command: 'state',
-    createdAt,
-    expiresAt: createdAt + 600_000
-});
+function computerCard(nodeId: string, createdAt: number): ComputerApproval {
+    return {
+        requestId: `computer-${nodeId}`,
+        nodeId,
+        surface: 'chat',
+        nodeTitle: nodeId,
+        projectId: 'p1',
+        projectName: 'Ruimte',
+        app: { name: 'TextEdit', bundleId: 'com.example.textedit' },
+        command: 'state',
+        createdAt,
+        expiresAt: createdAt + 600_000
+    };
+}
 
 describe('canvasPrompts', () => {
     test('prompts come blocking first, oldest first, with an optional question last', () => {

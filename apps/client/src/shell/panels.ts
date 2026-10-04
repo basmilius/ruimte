@@ -15,4 +15,6 @@ export const PANELS: { kind: PanelKind; icon: LucideIcon; minWidth: number; tool
 ];
 
 /* The panels with a button in the toolbar of a project, which the Chats project has fewer of. */
-export const toolbarPanels = (scratch: boolean) => PANELS.filter((entry) => entry.toolbar && !panelHidden(entry.kind, scratch));
+export function toolbarPanels(scratch: boolean) {
+    return PANELS.filter((entry) => entry.toolbar && !panelHidden(entry.kind, scratch));
+}

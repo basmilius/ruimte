@@ -6,7 +6,7 @@ import { readingOrder, toSvg } from '@ruimte/diagram';
  * behind a heading of its own. A `tail` counts the reading order alone, since the last lines of an
  * SVG are markup and not an answer.
  */
-export const renderDiagram = (document: DiagramDocument, tail: number | null = null): string => {
+export function renderDiagram(document: DiagramDocument, tail: number | null = null): string {
     const lines = readingOrder(document);
     const list = lines.length > 0 ? lines : ['This diagram has no nodes in it.'];
     if (tail !== null) {
@@ -14,4 +14,4 @@ export const renderDiagram = (document: DiagramDocument, tail: number | null = n
     }
     const title = document.meta.title.trim();
     return [title === '' ? '# Diagram' : `# Diagram: ${title}`, '', list.join('\n'), '', '## SVG', '', toSvg(document, { background: null })].join('\n');
-};
+}

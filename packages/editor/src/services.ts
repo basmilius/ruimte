@@ -26,7 +26,7 @@ const MODULE_DETECTION_FORCE = 3;
  * So nothing is reported that only the project could settle, an import it cannot resolve above all,
  * and nothing is fetched to fill the gap. Syntax errors are the file's own and stay.
  */
-export const configureLanguageServices = (): void => {
+export function configureLanguageServices(): void {
     const compilerOptions = {
         target: ScriptTarget.Latest,
         module: ModuleKind.ESNext,
@@ -59,4 +59,4 @@ export const configureLanguageServices = (): void => {
         const lint = { ...defaults.options.lint, unknownAtRules: 'ignore' as const };
         defaults.setOptions({ ...defaults.options, lint });
     }
-};
+}

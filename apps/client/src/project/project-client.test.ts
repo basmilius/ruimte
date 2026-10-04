@@ -29,39 +29,45 @@ import { sessionNodesOf } from './project-sessions';
 type Call = { type: RequestType; payload: unknown };
 
 /* The canvas a workspace is editing, which with a project open is the editor of its active view. */
-const canvasOf = (stores: WorkspaceStores): StoreApi<CanvasState> => {
+function canvasOf(stores: WorkspaceStores): StoreApi<CanvasState> {
     const active = stores.document.getState().activeViewId;
     return (active === null ? null : stores.canvases.peek(active)) ?? stores.canvases.blank;
-};
+}
 
-const summary = (projectId: string, folder: string = '/repo'): ProjectSummary => ({
-    projectId,
-    name: projectId,
-    color: '#000',
-    folder,
-    lastOpenedAt: 0,
-    available: true,
-    icon: { kind: 'initial', value: projectId[0]!.toUpperCase() },
-    nameSource: 'chosen'
-});
+function summary(projectId: string, folder: string = '/repo'): ProjectSummary {
+    return {
+        projectId,
+        name: projectId,
+        color: '#000',
+        folder,
+        lastOpenedAt: 0,
+        available: true,
+        icon: { kind: 'initial', value: projectId[0]!.toUpperCase() },
+        nameSource: 'chosen'
+    };
+}
 
-const canvasView = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
-    kind: 'canvas',
-    id,
-    name: id,
-    nodes,
-    texts: [],
-    edges: [],
-    layouts: []
-});
+function canvasView(id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView {
+    return {
+        kind: 'canvas',
+        id,
+        name: id,
+        nodes,
+        texts: [],
+        edges: [],
+        layouts: []
+    };
+}
 
-const document = (rev: number, views: ProjectDocument['views'] = [canvasView('main')]): ProjectDocument => ({
-    version: 3,
-    rev,
-    name: 'p',
-    color: '#000',
-    views
-});
+function document(rev: number, views: ProjectDocument['views'] = [canvasView('main')]): ProjectDocument {
+    return {
+        version: 3,
+        rev,
+        name: 'p',
+        color: '#000',
+        views
+    };
+}
 
 class FakeTransport implements Transport {
     status: TransportStatus = 'open';
@@ -149,7 +155,7 @@ class FakeTransport implements Transport {
     }
 }
 
-const makeSink = () => {
+function makeSink() {
     const state: ReturnType<ProjectSink['getState']> & { projects: ProjectSummary[]; error: string | null; switching: boolean } = {
         current: null,
         rev: 0,
@@ -197,15 +203,15 @@ const makeSink = () => {
         getState: () => state
     };
     return { sink, state };
-};
+}
 
 // Fake timers leave setImmediate alone. Each step runs the timers due in that millisecond, then every promise they started.
-const tick = async (ms = 5): Promise<void> => {
+async function tick(ms = 5): Promise<void> {
     for (let i = 0; i < ms; i++) {
         jest.advanceTimersByTime(1);
         await new Promise((resolve) => setImmediate(resolve));
     }
-};
+}
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -216,17 +222,19 @@ afterEach(() => {
 });
 
 /* The three calls `ProjectClient` makes on the storage it is given, over a map a test can read. */
-const fakeStorage = (storage: Map<string, string>) => ({
-    getItem: (key: string) => storage.get(key) ?? null,
-    setItem: (key: string, value: string) => void storage.set(key, value),
-    removeItem: (key: string) => void storage.delete(key)
-});
+function fakeStorage(storage: Map<string, string>) {
+    return {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => void storage.set(key, value),
+        removeItem: (key: string) => void storage.delete(key)
+    };
+}
 
 /*
  * `open` is the project the client is built to open, the way a workspace is. A test that says nothing
  * gets the first project listed, so a test about saving or panels has a canvas without saying so.
  */
-const setup = (
+function setup(
     options: {
         endpointId?: string;
         storage?: Map<string, string>;
@@ -235,7 +243,7 @@ const setup = (
         stores?: WorkspaceStores;
         window?: Pick<Window, 'addEventListener' | 'removeEventListener'>;
     } = {}
-) => {
+) {
     const stores = options.stores ?? defaultWorkspaceStores;
     stores.document.getState().load(null, null);
     useUi.setState({ panel: { open: false, kind: 'files' }, panelWidth: null });
@@ -269,7 +277,7 @@ const setup = (
         panels.dispose();
     };
     return { transport, sink, state, client, storage, panels, stores, forgotten, dispose };
-};
+}
 
 describe('ProjectClient', () => {
     test('opens its project, and loads its document and camera', async () => {

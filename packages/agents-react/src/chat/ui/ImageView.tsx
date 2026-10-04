@@ -24,14 +24,14 @@ const START: View = { scale: 1, x: 0, y: 0 };
  * a slider. The pixel under the pointer stays where it is while everything else moves away from it.
  * `x` and `y` are offsets from the middle of the frame, so a scale of 1 is always centered.
  */
-const zoomed = (view: View, factor: number, pointX: number, pointY: number): View => {
+function zoomed(view: View, factor: number, pointX: number, pointY: number): View {
     const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale * factor));
     if (scale === MIN_SCALE) {
         return START;
     }
     const ratio = scale / view.scale;
     return { scale, x: pointX - (pointX - view.x) * ratio, y: pointY - (pointY - view.y) * ratio };
-};
+}
 
 /* An image on its own, large: the wheel and the buttons zoom, dragging pans, Escape closes. */
 function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; open: boolean; onOpenChange(open: boolean): void }) {

@@ -33,8 +33,8 @@ export interface LoginOptions {
 // A poll that reaches nobody this many times in a row is a network that is gone, not a hiccup.
 const MAX_POLL_FAILURES = 5;
 
-const sleepFor = (ms: number, signal?: AbortSignal): Promise<void> =>
-    new Promise((resolve) => {
+function sleepFor(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve) => {
         const timer = setTimeout(resolve, ms);
         signal?.addEventListener(
             'abort',
@@ -45,8 +45,11 @@ const sleepFor = (ms: number, signal?: AbortSignal): Promise<void> =>
             { once: true }
         );
     });
+}
 
-const whose = (account: Account): string => (account.login === null ? 'your' : `${account.login}'s`);
+function whose(account: Account): string {
+    return account.login === null ? 'your' : `${account.login}'s`;
+}
 
 class LoginFailure extends Error {}
 
@@ -60,7 +63,7 @@ const ON_ANOTHER_ACCOUNT =
  * account said yes. Runs where the daemon's home is, since the local secret is what lets it ask the
  * daemon to sign.
  */
-export const runLogin = async (options: LoginOptions): Promise<number> => {
+export async function runLogin(options: LoginOptions): Promise<number> {
     const fetcher: Fetch = options.fetch ?? ((input, init) => fetch(input, init));
     const sleep = options.sleep ?? sleepFor;
     const now = options.now ?? Date.now;
@@ -197,4 +200,4 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
         }
         return 1;
     }
-};
+}

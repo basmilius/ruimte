@@ -13,23 +13,20 @@ import {
 
 const BOTH: SwipeHistory = { canGoBack: true, canGoForward: true };
 
-const sample = (deltaX: number, deltaY = 0, extra: Partial<WheelSample> = {}): WheelSample => ({
-    deltaX,
-    deltaY,
-    momentum: false,
-    handled: false,
-    pinch: false,
-    pageTakes: false,
-    ...extra
-});
+function sample(deltaX: number, deltaY = 0, extra: Partial<WheelSample> = {}): WheelSample {
+    return {
+        deltaX,
+        deltaY,
+        momentum: false,
+        handled: false,
+        pinch: false,
+        pageTakes: false,
+        ...extra
+    };
+}
 
 /* Feeds samples 16 ms apart, the way macOS delivers them, and keeps every outcome. */
-const run = (
-    samples: WheelSample[],
-    history = BOTH,
-    start: SwipeState = IDLE_SWIPE,
-    from = 1000
-): { state: SwipeState; outcomes: SwipeOutcome[]; at: number } => {
+function run(samples: WheelSample[], history = BOTH, start: SwipeState = IDLE_SWIPE, from = 1000): { state: SwipeState; outcomes: SwipeOutcome[]; at: number } {
     let state = start;
     const outcomes: SwipeOutcome[] = [];
     let at = from;
@@ -40,9 +37,11 @@ const run = (
         at += 16;
     }
     return { state, outcomes, at };
-};
+}
 
-const navigations = (outcomes: SwipeOutcome[]): SwipeOutcome[] => outcomes.filter((outcome) => outcome.kind === 'navigate');
+function navigations(outcomes: SwipeOutcome[]): SwipeOutcome[] {
+    return outcomes.filter((outcome) => outcome.kind === 'navigate');
+}
 
 describe('feedWheel', () => {
     test('a swipe past the threshold navigates back when the fingers lift', () => {

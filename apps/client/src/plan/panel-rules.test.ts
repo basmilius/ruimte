@@ -38,7 +38,9 @@ let state: PlanPanelState;
 let clock: FakeClock;
 let rules: PlanPanelRules;
 
-const sight = (...chatIds: string[]): void => rules.sight(new Set(chatIds));
+function sight(...chatIds: string[]): void {
+    return rules.sight(new Set(chatIds));
+}
 
 beforeEach(() => {
     state = { anchor: null, open: false };

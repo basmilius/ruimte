@@ -4,15 +4,17 @@ import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import type { KeyLike, Shortcut } from '@basmilius/desktop-ui';
 import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, isShellShortcut, isTerminalPaste, macMotionSequence, TERMINAL_HANDED_BACK } from './keymap.ts';
 
-const shortcut = (key: string, modifiers: Partial<Omit<KeyLike, 'key'>> = {}): KeyLike => ({
-    key,
-    code: '',
-    metaKey: false,
-    altKey: false,
-    ctrlKey: false,
-    shiftKey: false,
-    ...modifiers
-});
+function shortcut(key: string, modifiers: Partial<Omit<KeyLike, 'key'>> = {}): KeyLike {
+    return {
+        key,
+        code: '',
+        metaKey: false,
+        altKey: false,
+        ctrlKey: false,
+        shiftKey: false,
+        ...modifiers
+    };
+}
 
 describe('macMotionSequence', () => {
     test('Cmd with an arrow is the start or the end of the line', () => {
@@ -164,7 +166,7 @@ describe('isClearShortcut', () => {
 });
 
 /* The key event a shortcut stands for, as a keyboard would send it. */
-const eventFor = (target: Shortcut, apple: boolean): KeyLike => {
+function eventFor(target: Shortcut, apple: boolean): KeyLike {
     const code = /^[A-Z]$/.test(target.key)
         ? `Key${target.key}`
         : /^[0-9]$/.test(target.key)
@@ -178,7 +180,7 @@ const eventFor = (target: Shortcut, apple: boolean): KeyLike => {
         altKey: target.alt,
         shiftKey: target.shift
     };
-};
+}
 
 describe('what a terminal hands back', () => {
     /* The canvas answers these from anywhere, a focused node included, so a terminal that ate one

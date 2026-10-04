@@ -11,14 +11,16 @@ type AgentOperation = ActionOutput<'operation.get'>['agents'][number];
  * An operation id names the action and the nodes it started, so an operation is read off the state
  * those nodes already have and needs no store of its own, across a restart too.
  */
-export const operationIdOf = (action: OperationAction, nodeIds: readonly string[]): string => `${action}:${nodeIds.join(',')}`;
+export function operationIdOf(action: OperationAction, nodeIds: readonly string[]): string {
+    return `${action}:${nodeIds.join(',')}`;
+}
 
 export const OPERATION_FORMS: readonly string[] = [
     'operation\tagent.start:<id>\tthe start of one agent, under the id of its node',
     'operation\tteam.start:<id>,<id>\tthe start of a team, under the ids of its roles in the order they were made'
 ];
 
-const parseOperationId = (operationId: string): { action: OperationAction; nodeIds: string[] } | null => {
+function parseOperationId(operationId: string): { action: OperationAction; nodeIds: string[] } | null {
     const colon = operationId.indexOf(':');
     const action = OPERATION_ACTIONS.find((candidate) => candidate === operationId.slice(0, colon));
     const nodeIds = operationId.slice(colon + 1).split(',');
@@ -26,18 +28,19 @@ const parseOperationId = (operationId: string): { action: OperationAction; nodeI
         return null;
     }
     return { action, nodeIds };
-};
+}
 
 /* The task a start gave its agent: the first one the caller gave that node, since a later task is its own. */
-const startTask = (host: CanvasHost, caller: string, nodeId: string): Task | undefined =>
-    host.tasks.involving(nodeId).find((task) => task.childId === nodeId && task.parentId === caller);
+function startTask(host: CanvasHost, caller: string, nodeId: string): Task | undefined {
+    return host.tasks.involving(nodeId).find((task) => task.childId === nodeId && task.parentId === caller);
+}
 
 /*
  * Whether a node of an operation id is a start of this caller's. A node that is here and no agent the
  * caller started is refused, so a note never reads as an agent whose start gave up; a node that is gone
  * counts when a task or the lineage still says it was the caller's.
  */
-const isOwnStart = (host: CanvasHost, agents: AgentStateHost, caller: string, nodeId: string, operationId: string, verb: 'follow' | 'cancel'): boolean => {
+function isOwnStart(host: CanvasHost, agents: AgentStateHost, caller: string, nodeId: string, operationId: string, verb: 'follow' | 'cancel'): boolean {
     const startedBy = agents.startedBy(nodeId);
     if (host.locate(nodeId) === null) {
         return startedBy === caller || startTask(host, caller, nodeId) !== undefined;
@@ -49,9 +52,9 @@ const isOwnStart = (host: CanvasHost, agents: AgentStateHost, caller: string, no
         throw new VerbRefusal('not-yours', `${nodeId} is not an agent you opened, so ${operationId} is not yours to ${verb}`);
     }
     throw new VerbRefusal('unknown-operation', `${nodeId} is no agent that agent or team started, so ${operationId} names no start`, [...OPERATION_FORMS]);
-};
+}
 
-const byTask = (task: Task, state: AgentState): Pick<AgentOperation, 'status' | 'detail'> => {
+function byTask(task: Task, state: AgentState): Pick<AgentOperation, 'status' | 'detail'> {
     if (task.status === 'open') {
         if (state === 'stopped') {
             return { status: 'cancelled', detail: 'its turn was stopped before it finished; its task stays open' };
@@ -62,10 +65,10 @@ const byTask = (task: Task, state: AgentState): Pick<AgentOperation, 'status' | 
         return { status: 'completed', detail: 'its task is done' };
     }
     return task.status === 'failed' ? { status: 'failed', detail: 'its task failed' } : { status: 'cancelled', detail: 'its task was cancelled' };
-};
+}
 
 /* Without a task a start has done its part once the agent runs and its first turn is over. */
-const byState = (state: AgentState): Pick<AgentOperation, 'status' | 'detail'> => {
+function byState(state: AgentState): Pick<AgentOperation, 'status' | 'detail'> {
     switch (state) {
         case 'owed':
             return { status: 'queued', detail: 'its start is owed and runs next' };
@@ -89,10 +92,10 @@ const byState = (state: AgentState): Pick<AgentOperation, 'status' | 'detail'> =
         case 'none':
             return { status: 'failed', detail: 'nothing runs in it: its start gave up, or the machine restarted and no client has shown it since' };
     }
-};
+}
 
 /* How the whole stands: going on while any part is, else failed when any part failed. */
-const overall = (statuses: readonly OperationStatus[]): OperationStatus => {
+function overall(statuses: readonly OperationStatus[]): OperationStatus {
     const going = statuses.filter((status) => status === 'queued' || status === 'running');
     if (going.length > 0) {
         return going.every((status) => status === 'queued') ? 'queued' : 'running';
@@ -101,12 +104,12 @@ const overall = (statuses: readonly OperationStatus[]): OperationStatus => {
         return 'failed';
     }
     return statuses.every((status) => status === 'cancelled') ? 'cancelled' : 'completed';
-};
+}
 
 type CancelLine = ActionOutput<'operation.cancel'>['operations'][number];
 
 /* What a cancel does to one node a start made: only a chat's turn stops, and a terminal is left to a person. */
-const cancelNode = async (agents: AgentStateHost, operationId: string, nodeId: string): Promise<CancelLine> => {
+async function cancelNode(agents: AgentStateHost, operationId: string, nodeId: string): Promise<CancelLine> {
     const state = await agents.stateOf(nodeId);
     if (agents.cancelTurn(nodeId)) {
         return {
@@ -122,7 +125,7 @@ const cancelNode = async (agents: AgentStateHost, operationId: string, nodeId: s
         return { operationId, status: 'left', detail: `${nodeId}: a terminal agent keeps running, since nothing sends it a signal a person did not press` };
     }
     return { operationId, status: 'over', detail: `${nodeId}: nothing runs in it now` };
-};
+}
 
 export const operationActions: ActionHandlers<ServerActionContext> = {
     'operation.get': async ({ operationId }, { actor, context }) => {

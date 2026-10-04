@@ -121,10 +121,10 @@ interface ProjectClientOptions {
 }
 
 /* A document without what wraps it. The version and the rev are the daemon's, not the person's. */
-const contentOf = (document: ProjectDocument): ProjectContent => {
+function contentOf(document: ProjectDocument): ProjectContent {
     const { version: _version, rev: _rev, ...content } = document;
     return content;
-};
+}
 
 /*
  * Synchronizes one workspace with its project file. Shared edits debounce to the daemon, local view

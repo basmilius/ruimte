@@ -96,7 +96,9 @@ interface Reading {
     cancel: () => void;
 }
 
-const deviceKey = (device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string => `${device.backendId}\u0000${device.deviceId}`;
+function deviceKey(device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string {
+    return `${device.backendId}\u0000${device.deviceId}`;
+}
 
 /*
  * The door an agent operates a device through. It holds a session of its own for as long as the

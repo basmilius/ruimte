@@ -9,21 +9,26 @@ import { useProjectList } from '@/state/project-list';
 
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 
-const document = (views: ProjectDocument['views']): ProjectDocument => ({ version: 3, rev: 1, name: 'Atlas', color: '#000', views });
+function document(views: ProjectDocument['views']): ProjectDocument {
+    return { version: 3, rev: 1, name: 'Atlas', color: '#000', views };
+}
 
-const canvasNode = (id: string, title: string, kind: ProjectNode['kind'], x: number): ProjectNode => ({ id, title, kind, x, y: 100, w: 240, h: 160 });
+function canvasNode(id: string, title: string, kind: ProjectNode['kind'], x: number): ProjectNode {
+    return { id, title, kind, x, y: 100, w: 240, h: 160 };
+}
 
-const resolve = (input: Partial<ActionInput<'target.resolve'>> & Pick<ActionInput<'target.resolve'>, 'target'>) =>
-    resolveTarget(useDocument, { names: null, nodeKind: null, scope: null, machine: null, ...input });
+function resolve(input: Partial<ActionInput<'target.resolve'>> & Pick<ActionInput<'target.resolve'>, 'target'>) {
+    return resolveTarget(useDocument, { names: null, nodeKind: null, scope: null, machine: null, ...input });
+}
 
-const load = (views: ProjectDocument['views']): void => {
+function load(views: ProjectDocument['views']): void {
     useDocument.getState().load(document(views), { activeViewId: 'main', views: {} });
     defaultCanvases
         .of('main')
         .getState()
         .loadView(views[0] as ProjectCanvasView, null);
     defaultCanvases.focus('main');
-};
+}
 
 const endpoints = useEndpoints.getState().endpoints;
 

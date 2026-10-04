@@ -15,10 +15,10 @@ interface Offer {
 }
 
 /* The last line the range covers. A triple-click ends on an empty rect at the start of the next row. */
-const lastLineOf = (range: Range): DOMRect | null => {
+function lastLineOf(range: Range): DOMRect | null {
     const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
     return rects.at(-1) ?? null;
-};
+}
 
 /*
  * A button under a selection in an answer that hands it to the composer. Quoting on the selection

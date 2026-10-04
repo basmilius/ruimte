@@ -5,7 +5,7 @@ import type { FramePort } from '@ruimte/agent-contracts';
  * frame crosses as a copy and only once the sender's own code ran, the way a MessagePort delivers it,
  * so neither end ever holds the other's object.
  */
-export const memoryPortPair = (): [FramePort, FramePort] => {
+export function memoryPortPair(): [FramePort, FramePort] {
     const listeners: [Set<(frame: unknown) => void>, Set<(frame: unknown) => void>] = [new Set(), new Set()];
     const end = (own: number): FramePort => ({
         send: (frame) => {
@@ -24,4 +24,4 @@ export const memoryPortPair = (): [FramePort, FramePort] => {
         }
     });
     return [end(0), end(1)];
-};
+}

@@ -10,12 +10,16 @@ import type { ThreadProjector } from './projector.ts';
 
 const CHUNK_BYTES = 4 * 1024 * 1024;
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+function str(value: unknown): string | null {
+    return typeof value === 'string' && value !== '' ? value : null;
+}
 
 /* The words of a user line that somebody said, or null for a line that carries tool results. */
-const spokenText = (content: unknown): string | null => {
+function spokenText(content: unknown): string | null {
     if (typeof content === 'string') {
         return content;
     }
@@ -24,7 +28,7 @@ const spokenText = (content: unknown): string | null => {
     }
     const texts = content.filter((block) => isRecord(block) && block.type === 'text').map((block) => String((block as { text?: unknown }).text ?? ''));
     return texts.length === 0 ? null : texts.join('\n');
-};
+}
 
 /* What Claude Code writes beside a subagent's transcript. Pinned on 2.1.273, where only the agent's own id is always there. */
 export interface SubagentMeta {
@@ -37,14 +41,16 @@ export interface SubagentMeta {
 }
 
 /* The folder name Claude Code gives a working directory: every character that is not a letter or a digit becomes a dash. */
-export const claudeProjectSlug = (cwd: string): string => cwd.replace(/[^a-zA-Z0-9]/g, '-');
+export function claudeProjectSlug(cwd: string): string {
+    return cwd.replace(/[^a-zA-Z0-9]/g, '-');
+}
 
 /*
  * Where the subagents of a session keep their transcripts. The folder of the chat's own directory
  * first; a slug the CLI wrote differently (or a session resumed from somewhere else) is found by the
  * session id alone, which is unique across every project.
  */
-export const findSubagentsDir = async (projectsDir: string, cwd: string, sessionId: string): Promise<string | null> => {
+export async function findSubagentsDir(projectsDir: string, cwd: string, sessionId: string): Promise<string | null> {
     if (projectsDir === '' || sessionId.includes('/') || sessionId.includes('..')) {
         return null;
     }
@@ -65,10 +71,10 @@ export const findSubagentsDir = async (projectsDir: string, cwd: string, session
         }
     }
     return null;
-};
+}
 
 /* Every meta file in a subagents folder that says which agent it is about; one that does not parse is left out. */
-export const readSubagentMetas = async (dir: string): Promise<SubagentMeta[]> => {
+export async function readSubagentMetas(dir: string): Promise<SubagentMeta[]> {
     let names: string[];
     try {
         names = await readdir(dir);
@@ -100,13 +106,13 @@ export const readSubagentMetas = async (dir: string): Promise<SubagentMeta[]> =>
         });
     }
     return metas;
-};
+}
 
 /*
  * The transcript of one agent a workflow started. Claude Code 2.1.282 keeps a folder per run under
  * `workflows` in the subagents folder, and nothing but the agent id ties an agent to its run.
  */
-export const findWorkflowAgent = async (subagentsDir: string, agentId: string): Promise<SubagentMeta | null> => {
+export async function findWorkflowAgent(subagentsDir: string, agentId: string): Promise<SubagentMeta | null> {
     if (!/^[\w-]+$/.test(agentId)) {
         return null;
     }
@@ -125,7 +131,7 @@ export const findWorkflowAgent = async (subagentsDir: string, agentId: string): 
         }
     }
     return null;
-};
+}
 
 /*
  * One subagent transcript as thread items, read on from where the last read stopped: a transcript only

@@ -9,12 +9,12 @@ const LOCAL_TEXT_MAX_BYTES = BYTES_READ_MAX_BYTES;
 const REMOTE_TEXT_MAX_BYTES = 8 * 1024 * 1024;
 
 /* The largest text file this client opens from a machine. A daemon that leaves `mtime` off serves no text as bytes, so its own cap is the limit. */
-export const textLimitFor = (endpointId: string, read: FsReadTooLarge): number => {
+export function textLimitFor(endpointId: string, read: FsReadTooLarge): number {
     if (read.mtime === undefined) {
         return FS_READ_MAX_TEXT_BYTES;
     }
     return endpointById(endpointId)?.reachability === 'loopback' ? LOCAL_TEXT_MAX_BYTES : REMOTE_TEXT_MAX_BYTES;
-};
+}
 
 /*
  * A text file past `fs.read`'s cap, fetched as bytes and decoded the way the daemon decodes one:
@@ -22,7 +22,7 @@ export const textLimitFor = (endpointId: string, read: FsReadTooLarge): number =
  * last text of this path read this way, kept while the file is unchanged, since a change anywhere in
  * its folder reads it again.
  */
-export const readLargeText = async (endpointId: string, path: string, read: FsReadTooLarge, previous: FsReadText | null): Promise<FsReadResult> => {
+export async function readLargeText(endpointId: string, path: string, read: FsReadTooLarge, previous: FsReadText | null): Promise<FsReadResult> {
     const { mtime, size } = read;
     const limit = textLimitFor(endpointId, read);
     if (mtime === undefined || size > limit) {
@@ -37,4 +37,4 @@ export const readLargeText = async (endpointId: string, path: string, read: FsRe
     } catch {
         return { kind: 'binary', mime: 'application/octet-stream', size, mtime };
     }
-};
+}

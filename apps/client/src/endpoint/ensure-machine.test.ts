@@ -3,22 +3,24 @@ import type { Endpoint } from '@/state/endpoints';
 import type { ConnectionState } from '@/transport/transport';
 import { MachineLinks, MachineWaitCancelled } from './ensure-machine';
 
-const row = (id: string): Endpoint => ({
-    id,
-    label: id,
-    httpBaseUrl: '',
-    wsBaseUrl: '',
-    reachability: 'public',
-    daemonId: id,
-    daemonPublicKey: 'key',
-    direct: true,
-    brokerUrl: 'wss://broker.example.com',
-    pairedBy: 'statement',
-    needsStatement: true
-});
+function row(id: string): Endpoint {
+    return {
+        id,
+        label: id,
+        httpBaseUrl: '',
+        wsBaseUrl: '',
+        reachability: 'public',
+        daemonId: id,
+        daemonPublicKey: 'key',
+        direct: true,
+        brokerUrl: 'wss://broker.example.com',
+        pairedBy: 'statement',
+        needsStatement: true
+    };
+}
 
 /* A pool in memory. A link starts connecting when it is first held, and a test says how it ends. */
-const fakePool = (options: { rows?: Endpoint[]; account?: string[] } = {}) => {
+function fakePool(options: { rows?: Endpoint[]; account?: string[] } = {}) {
     const rows = [...(options.rows ?? [])];
     const states = new Map<string, ConnectionState>();
     const handlers = new Map<string, Set<() => void>>();
@@ -61,7 +63,7 @@ const fakePool = (options: { rows?: Endpoint[]; account?: string[] } = {}) => {
         timeoutMs: 1000
     });
     return { links, rows, log, set, handlers };
-};
+}
 
 const OPEN: ConnectionState = { status: 'open', attempts: 0, retryAt: null, failure: null };
 

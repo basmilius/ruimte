@@ -27,7 +27,7 @@ const LINUX: ServiceFacts = {
 };
 
 /* A manager over an in-memory file, recording the steps it was asked to take. */
-const fakeManager = (files: ServiceFiles, linger?: boolean): ServiceManager & { steps: string[] } => {
+function fakeManager(files: ServiceFiles, linger?: boolean): ServiceManager & { steps: string[] } {
     const steps: string[] = [];
     const path = '/fake/app.ruimte.daemon.plist';
     return {
@@ -51,9 +51,9 @@ const fakeManager = (files: ServiceFiles, linger?: boolean): ServiceManager & { 
         },
         ...(linger === undefined ? {} : { linger: { enabled: () => linger, enable: () => void steps.push('enable-linger') } })
     };
-};
+}
 
-const setup = (options: { existing?: string; linger?: boolean; health?: BuildIdentity | null; build?: string | null } = {}) => {
+function setup(options: { existing?: string; linger?: boolean; health?: BuildIdentity | null; build?: string | null } = {}) {
     const disk = new Map<string, string>();
     const files: ServiceFiles = {
         read: (path) => disk.get(path) ?? null,
@@ -81,7 +81,7 @@ const setup = (options: { existing?: string; linger?: boolean; health?: BuildIde
         err: (line) => void err.push(line)
     };
     return { deps, manager, disk, out, err, copies, removed };
-};
+}
 
 describe('servicePath', () => {
     test('leaves out the folders npx and bunx put in front', () => {

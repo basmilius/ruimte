@@ -73,9 +73,11 @@ interface NumberOption {
 }
 
 /* `--key-relays-per-minute` reads `PULSAR_BROKER_KEY_RELAYS_PER_MINUTE` when the flag is not given. */
-const envNameOf = (flag: string): string => `PULSAR_BROKER_${flag.replaceAll('-', '_').toUpperCase()}`;
+function envNameOf(flag: string): string {
+    return `PULSAR_BROKER_${flag.replaceAll('-', '_').toUpperCase()}`;
+}
 
-const readNumber = (value: string | undefined, env: Record<string, string | undefined>, option: NumberOption): number => {
+function readNumber(value: string | undefined, env: Record<string, string | undefined>, option: NumberOption): number {
     const raw = value ?? env[envNameOf(option.flag)];
     if (raw === undefined || raw === '') {
         return option.fallback;
@@ -85,7 +87,7 @@ const readNumber = (value: string | undefined, env: Record<string, string | unde
         throw new Error(`Invalid --${option.flag}: ${raw} (a whole number from ${option.min} to ${option.max})`);
     }
     return parsed;
-};
+}
 
 const LIMIT_FLAGS = [
     'max-message-bytes',
@@ -101,7 +103,7 @@ const LIMIT_FLAGS = [
     'hello-timeout-seconds'
 ] as const;
 
-export const parseBrokerArgs = (argv: string[], env: Record<string, string | undefined> = process.env): BrokerConfig => {
+export function parseBrokerArgs(argv: string[], env: Record<string, string | undefined> = process.env): BrokerConfig {
     const { values } = parseArgs({
         args: argv,
         options: {
@@ -147,14 +149,14 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
         },
         turn: turnConfigOf(flags, values['turn-url'], env, number)
     };
-};
+}
 
-const turnConfigOf = (
+function turnConfigOf(
     flags: Record<string, string | undefined>,
     urlFlags: string[],
     env: Record<string, string | undefined>,
     number: (flag: string, min: number, max: number, fallback: number) => number
-): TurnConfig => {
+): TurnConfig {
     const text = (flag: string): string => (flags[flag] ?? env[envNameOf(flag)] ?? '').trim();
     const kind = text('turn') || 'none';
     // Credentials that outlive a day are what a leaked one costs; a minute is shorter than an attempt.
@@ -183,22 +185,22 @@ const turnConfigOf = (
         return { kind, keyId, tokenFile, ttlSeconds };
     }
     throw new Error(`Invalid --turn: ${kind} (none, shared-secret or cloudflare)`);
-};
+}
 
 /*
  * The name a socket signs into its answer. With names configured the `Host` header has to be one of
  * them, and null refuses the upgrade; without, the header is taken as it is.
  */
-export const nameFor = (hostHeader: string | null, names: string[]): string | null => {
+export function nameFor(hostHeader: string | null, names: string[]): string | null {
     const host = hostHeader?.trim().toLowerCase() ?? '';
     if (names.length === 0) {
         return host === '' ? null : host;
     }
     return names.includes(host) ? host : null;
-};
+}
 
 /* The eight groups of an IPv6 address, `::` and a trailing IPv4 part spelled out. */
-const ipv6GroupsOf = (address: string): number[] => {
+function ipv6GroupsOf(address: string): number[] {
     const groupsIn = (part: string): number[] =>
         part === ''
             ? []
@@ -216,15 +218,17 @@ const ipv6GroupsOf = (address: string): number[] => {
     }
     const back = groupsIn(tail);
     return [...front, ...Array<number>(8 - front.length - back.length).fill(0), ...back];
-};
+}
 
-const stripMappedPrefix = (address: string): string => (address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address);
+function stripMappedPrefix(address: string): string {
+    return address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
+}
 
 /*
  * What an address counts against in every limit: an IPv6 address by its /64, since one host is handed
  * the whole prefix and would otherwise have a fresh budget per address, and an IPv4 address as it is.
  */
-export const addressKeyOf = (address: string): string => {
+export function addressKeyOf(address: string): string {
     const bare = stripMappedPrefix(address.split('%')[0] ?? '');
     if (isIP(bare) !== 6) {
         return bare;
@@ -233,9 +237,11 @@ export const addressKeyOf = (address: string): string => {
         .slice(0, 4)
         .map((group) => group.toString(16))
         .join(':')}::/64`;
-};
+}
 
-const isLoopback = (address: string): boolean => address === '::1' || address.startsWith('127.');
+function isLoopback(address: string): boolean {
+    return address === '::1' || address.startsWith('127.');
+}
 
 export interface ClientHeaders {
     forwardedFor: string | null;
@@ -251,7 +257,7 @@ export interface ProxyTrust {
  * Trust the last forwarded address only from a loopback proxy. Trust `CF-Connecting-IP` only when
  * the resulting peer is in Cloudflare's ranges, otherwise clients could choose their rate-limit key.
  */
-export const clientIpOf = (socketAddress: string, headers: ClientHeaders, trust: ProxyTrust): string => {
+export function clientIpOf(socketAddress: string, headers: ClientHeaders, trust: ProxyTrust): string {
     const socket = stripMappedPrefix(socketAddress);
     let seen = socket;
     if (trust.trustProxy && headers.forwardedFor !== null && isLoopback(socket)) {
@@ -263,4 +269,4 @@ export const clientIpOf = (socketAddress: string, headers: ClientHeaders, trust:
         return stripMappedPrefix(connecting);
     }
     return seen;
-};
+}

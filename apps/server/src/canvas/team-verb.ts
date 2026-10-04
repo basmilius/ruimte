@@ -89,7 +89,7 @@ const TEAM_DETAIL: readonly string[] = [
  * Which role is wrong and why. zod says `[2].prompt`, and an agent that wrote the JSON needs the
  * index back to find the object it typed, so the path is spelled out in front of the sentence.
  */
-const rolesMessage = (error: z.ZodError): string => {
+function rolesMessage(error: z.ZodError): string {
     const issue = error.issues[0];
     if (!issue) {
         return '--roles is not a list of roles';
@@ -99,9 +99,9 @@ const rolesMessage = (error: z.ZodError): string => {
         return issue.message;
     }
     return `role ${index}${typeof key === 'string' ? ` (${key})` : ''}: ${issue.message}`;
-};
+}
 
-const parseRoles = (raw: string): Role[] => {
+function parseRoles(raw: string): Role[] {
     let json: unknown;
     try {
         json = JSON.parse(raw);
@@ -113,7 +113,7 @@ const parseRoles = (raw: string): Role[] => {
         throw new VerbRefusal('bad-roles', rolesMessage(parsed.error), [...ROLES_LINES]);
     }
     return parsed.data;
-};
+}
 
 export const teamVerb = defineStandaloneActionVerb({
     name: 'team',

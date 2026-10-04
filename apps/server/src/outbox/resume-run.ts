@@ -20,9 +20,8 @@ export interface OweResumeDeps {
  * again from the handler asks the same question and finds it owed. Only writes to the outbox, so
  * the chat that asks never runs the resume in its own call stack.
  */
-export const oweResume =
-    (deps: OweResumeDeps) =>
-    async (run: InterruptedRun): Promise<boolean> => {
+export function oweResume(deps: OweResumeDeps) {
+    return async (run: InterruptedRun): Promise<boolean> => {
         const projectId = deps.projectOf(run.chatId);
         if (projectId === null) {
             return false;
@@ -38,18 +37,18 @@ export const oweResume =
         }
         return true;
     };
+}
 
 /* Takes the turn up again; a CLI that will not start throws, and the worker tries again after 1, 5 and 30 seconds. */
-export const resumeRunHandler =
-    (deps: Pick<ResumeRunDeps, 'resumeRun'>) =>
-    (entry: ResumeRunEntry): Promise<void> =>
-        deps.resumeRun(entry.target, entry.payload.turnId, entry.payload.attempt);
+export function resumeRunHandler(deps: Pick<ResumeRunDeps, 'resumeRun'>) {
+    return (entry: ResumeRunEntry): Promise<void> => deps.resumeRun(entry.target, entry.payload.turnId, entry.payload.attempt);
+}
 
 /* A resume given up on ends its turn as aborted, with the reason in the thread, instead of leaving it running forever. */
-export const resumeRunParked =
-    (deps: Pick<ResumeRunDeps, 'abandonRun'>) =>
-    (entry: OutboxEntry, error: unknown): void => {
+export function resumeRunParked(deps: Pick<ResumeRunDeps, 'abandonRun'>) {
+    return (entry: OutboxEntry, error: unknown): void => {
         if (entry.kind === 'resume-run') {
             deps.abandonRun(entry.target, entry.payload.turnId, notResumedNote(errorText(error)));
         }
     };
+}

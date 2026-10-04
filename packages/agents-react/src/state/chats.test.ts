@@ -2,24 +2,28 @@ import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/agent-contracts';
 import { applyEvent, chatSink, prependPage, useChats, waitingRequestsOf, type ChatState } from './chats';
 
-const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
-    chatId: 'chat-1',
-    provider: 'claude',
-    cwd: '/',
-    agentSessionId: 'session-1',
-    model: null,
-    selection: { model: 'claude-sonnet-5', options: {} },
-    runtimeMode: 'full-access',
-    status: 'idle',
-    running: true,
-    activeTurnId: null,
-    slashCommands: ['compact'],
-    usage: { contextTokens: 1200, contextWindow: 200000, costUsd: 0.5, turns: 3 },
-    createdAt: 0,
-    ...patch
-});
+function info(patch: Partial<ChatInfo> = {}): ChatInfo {
+    return {
+        chatId: 'chat-1',
+        provider: 'claude',
+        cwd: '/',
+        agentSessionId: 'session-1',
+        model: null,
+        selection: { model: 'claude-sonnet-5', options: {} },
+        runtimeMode: 'full-access',
+        status: 'idle',
+        running: true,
+        activeTurnId: null,
+        slashCommands: ['compact'],
+        usage: { contextTokens: 1200, contextWindow: 200000, costUsd: 0.5, turns: 3 },
+        createdAt: 0,
+        ...patch
+    };
+}
 
-const user = (id: string, text: string): ChatItem => ({ id, kind: 'user', createdAt: 0, turnId: null, text });
+function user(id: string, text: string): ChatItem {
+    return { id, kind: 'user', createdAt: 0, turnId: null, text };
+}
 
 describe('applyEvent', () => {
     test('a delta grows the text of a thinking item as it does an assistant one', () => {

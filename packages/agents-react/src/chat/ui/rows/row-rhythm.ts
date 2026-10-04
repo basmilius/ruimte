@@ -9,18 +9,18 @@ export const FOLLOW_THRESHOLD_PX = 40;
  * the list rhythm of tool lines meets the block rhythm of prose gets the block gap. A question
  * already carries the gap before it, and the row after one is the answer, so neither takes a seam.
  */
-export const rowRhythm = (row: TimelineRow, previous: TimelineRow | null): string => {
+export function rowRhythm(row: TimelineRow, previous: TimelineRow | null): string {
     const question = row.kind === 'user';
     const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
     return clsx(question && 'pb-(--chat-answer-gap)', seam && 'pt-(--chat-block-gap)');
-};
+}
 
 /*
  * Whether a reply's header goes over this row, and the time it shows: the first row after the question
  * or the agent's own turn opener, whatever row that is, dated when that turn began. A thread that
  * starts halfway through a reply has no time to show.
  */
-export const replyHeader = (row: TimelineRow, previous: TimelineRow | null): { at: number | null } | null => {
+export function replyHeader(row: TimelineRow, previous: TimelineRow | null): { at: number | null } | null {
     if (row.kind === 'user' || row.kind === 'turn-start') {
         return null;
     }
@@ -34,4 +34,4 @@ export const replyHeader = (row: TimelineRow, previous: TimelineRow | null): { a
         return { at: previous.turn.createdAt };
     }
     return null;
-};
+}

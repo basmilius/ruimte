@@ -47,12 +47,14 @@ export interface SessionVaultOptions {
     now?: () => number;
 }
 
-const viewOf = (result: SessionResult): SessionView => ({
-    accessToken: result.accessToken,
-    accessExpiresAt: result.accessExpiresAt,
-    expiresAt: result.expiresAt,
-    account: result.account
-});
+function viewOf(result: SessionResult): SessionView {
+    return {
+        accessToken: result.accessToken,
+        accessExpiresAt: result.accessExpiresAt,
+        expiresAt: result.expiresAt,
+        account: result.account
+    };
+}
 
 /*
  * The one holder of an address book refresh token. It trades a login code for a session bound to its

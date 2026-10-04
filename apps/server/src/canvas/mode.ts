@@ -8,4 +8,6 @@ export const MODE_LINES: readonly string[] = [
     'mode\tA terminal agent counts as the mode its CLI last reported, or else the mode it was started in; one the machine cannot tell counts as supervised'
 ];
 
-export const modeForOpening = (call: VerbCall, requested: RuntimeMode | undefined): RuntimeMode => ceilingForOpening(call.host.modeOf(call.caller), requested);
+export function modeForOpening(call: VerbCall, requested: RuntimeMode | undefined): RuntimeMode {
+    return ceilingForOpening(call.host.modeOf(call.caller), requested);
+}

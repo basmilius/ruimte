@@ -30,16 +30,17 @@ const SHORT = { ppid: 4, comm: 16, commLength: 16, uid: 36 } as const;
 const RUSAGE = { userTime: 16, systemTime: 24, footprint: 72, diskRead: 144, diskWrite: 152 } as const;
 const VM = { wire: 12, purgeable: 88, compressor: 128, internal: 140 } as const;
 
-const libproc = () =>
-    dlopen('/usr/lib/libproc.dylib', {
+function libproc() {
+    return dlopen('/usr/lib/libproc.dylib', {
         proc_listallpids: { args: [FFIType.ptr, FFIType.i32], returns: FFIType.i32 },
         proc_pidinfo: { args: [FFIType.i32, FFIType.i32, FFIType.u64, FFIType.ptr, FFIType.i32], returns: FFIType.i32 },
         proc_pid_rusage: { args: [FFIType.i32, FFIType.i32, FFIType.ptr], returns: FFIType.i32 },
         proc_pidpath: { args: [FFIType.i32, FFIType.ptr, FFIType.u32], returns: FFIType.i32 }
     });
+}
 
-const libsystem = () =>
-    dlopen('/usr/lib/libSystem.B.dylib', {
+function libsystem() {
+    return dlopen('/usr/lib/libSystem.B.dylib', {
         mach_timebase_info: { args: [FFIType.ptr], returns: FFIType.i32 },
         mach_absolute_time: { args: [], returns: FFIType.u64 },
         mach_continuous_time: { args: [], returns: FFIType.u64 },
@@ -49,17 +50,20 @@ const libsystem = () =>
         sysctl: { args: [FFIType.ptr, FFIType.u32, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64], returns: FFIType.i32 },
         getpagesize: { args: [], returns: FFIType.i32 }
     });
+}
 
 const decoder = new TextDecoder();
 
-const cString = (bytes: Uint8Array, offset: number, length: number): string => {
+function cString(bytes: Uint8Array, offset: number, length: number): string {
     const slice = bytes.subarray(offset, offset + length);
     const end = slice.indexOf(0);
     return decoder.decode(end === -1 ? slice : slice.subarray(0, end));
-};
+}
 
 /* Two 32 bit halves instead of a BigInt, since a BigInt per counter is most of the cost at 1,500 processes. */
-const u64 = (view: DataView, offset: number): number => view.getUint32(offset, true) + view.getUint32(offset + 4, true) * 2 ** 32;
+function u64(view: DataView, offset: number): number {
+    return view.getUint32(offset, true) + view.getUint32(offset + 4, true) * 2 ** 32;
+}
 
 interface Described {
     name: string;

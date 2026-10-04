@@ -15,7 +15,9 @@ import {
 const sonnet: ModelSelection = { model: 'claude-sonnet-5', options: { effort: 'high' } };
 const gpt: ModelSelection = { model: 'gpt-5-codex', options: {} };
 
-const preferences = (patch: Partial<ChatPreferences> = {}): ChatPreferences => ({ ...DEFAULT_CHAT_PREFERENCES, ...patch });
+function preferences(patch: Partial<ChatPreferences> = {}): ChatPreferences {
+    return { ...DEFAULT_CHAT_PREFERENCES, ...patch };
+}
 
 describe('selectionByProvider', () => {
     test('a pick lands in its own provider and leaves the others alone', () => {

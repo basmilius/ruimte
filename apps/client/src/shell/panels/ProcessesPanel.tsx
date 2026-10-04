@@ -85,13 +85,15 @@ interface Target {
 }
 
 /* A process of another user has no start time here, and without one nothing can prove it is still the same process. */
-const signalable = (row: ProcessRow): boolean => row.readable && row.startTime !== 0;
+function signalable(row: ProcessRow): boolean {
+    return row.readable && row.startTime !== 0;
+}
 
 /*
  * Keeps this client subscribed while the panel is on screen. The subscription is per socket on the
  * daemon, so a socket that comes back asks again, and a change of scope or sort is a fresh ask.
  */
-const useProcessesFeed = (): void => {
+function useProcessesFeed(): void {
     const transport = useTransport();
     const endpointId = useEndpointId();
     const scope = useProcesses((s) => s.scope);
@@ -128,7 +130,7 @@ const useProcessesFeed = (): void => {
         },
         [transport]
     );
-};
+}
 
 function Numbers({ row }: { row: { cpu: number | null; memory: number | null; diskRead: number | null; diskWrite: number | null } }) {
     return (

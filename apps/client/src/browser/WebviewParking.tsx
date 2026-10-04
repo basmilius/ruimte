@@ -20,7 +20,7 @@ const TOOLBAR_PX = 37;
  * or the project saves, so the living canvases are asked first: without that a new browser node
  * stays empty until the next view switch.
  */
-const pageViewOf = (nodeId: string, open: readonly string[]): { viewId: string; onCanvas: boolean } | null => {
+function pageViewOf(nodeId: string, open: readonly string[]): { viewId: string; onCanvas: boolean } | null {
     for (const viewId of open) {
         if (liveCanvas(viewId)?.nodes[nodeId] !== undefined) {
             return { viewId, onCanvas: true };
@@ -28,7 +28,7 @@ const pageViewOf = (nodeId: string, open: readonly string[]): { viewId: string; 
     }
     // A browser of its own is one page over a whole cell, and the node is the view.
     return open.includes(nodeId) ? { viewId: nodeId, onCanvas: false } : null;
-};
+}
 
 interface Covering {
     nodes: unknown;
@@ -42,7 +42,7 @@ interface Covering {
 /* Answered once per canvas and kept until its nodes change, since it is asked again on every pan. */
 const coveringCache = new Map<string, Covering>();
 
-const coveringIn = (viewId: string, canvas: CanvasState): Record<string, PageHole[]> => {
+function coveringIn(viewId: string, canvas: CanvasState): Record<string, PageHole[]> {
     const aimed = canvas.linkDraft?.over ?? null;
     const cached = coveringCache.get(viewId);
     if (
@@ -59,7 +59,7 @@ const coveringIn = (viewId: string, canvas: CanvasState): Record<string, PageHol
     const over = nodesOverBrowsers(canvas.nodes, canvas.order, canvas.hidden, ringed);
     coveringCache.set(viewId, { nodes: canvas.nodes, order: canvas.order, hidden: canvas.hidden, selection: canvas.selection, aimed, over });
     return over;
-};
+}
 
 // Chromium discards a <webview> removed from the DOM, so hosts stay mounted and move in screen coordinates.
 export function WebviewParking() {

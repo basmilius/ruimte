@@ -18,38 +18,38 @@ const CHOSEN_LAUNCH_STORAGE_KEY = 'ruimte.launches.chosen';
 const LEGACY_PANEL_KEY = 'ruimte.panel';
 const LEGACY_PANEL_WIDTH_KEY = 'ruimte.panel.width';
 
-const readSidebarOpen = (): boolean => {
+function readSidebarOpen(): boolean {
     try {
         return localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'closed';
     } catch {
         return true;
     }
-};
+}
 
-const readChosenLaunches = (): Record<string, string> => {
+function readChosenLaunches(): Record<string, string> {
     try {
         const stored: unknown = JSON.parse(localStorage.getItem(CHOSEN_LAUNCH_STORAGE_KEY) ?? '{}');
         return stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, string>) : {};
     } catch {
         return {};
     }
-};
+}
 
-const persistChosenLaunches = (chosen: Record<string, string>): void => {
+function persistChosenLaunches(chosen: Record<string, string>): void {
     try {
         localStorage.setItem(CHOSEN_LAUNCH_STORAGE_KEY, JSON.stringify(chosen));
     } catch {
         // Storage that refuses keeps the choice for this session only.
     }
-};
+}
 
-const persistSidebarOpen = (open: boolean): void => {
+function persistSidebarOpen(open: boolean): void {
     try {
         localStorage.setItem(SIDEBAR_STORAGE_KEY, open ? 'open' : 'closed');
     } catch {
         // Storage that refuses keeps the sidebar for this session only.
     }
-};
+}
 
 export interface PanelState {
     open: boolean;
@@ -65,36 +65,39 @@ const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
 /* What the Chats project has no panel for: its folder is the daemon's, and so are its repository and what runs in it. */
 export const SCRATCH_HIDDEN_PANELS: readonly PanelKind[] = ['files', 'git', 'devices', 'launches'];
 
-export const panelHidden = (kind: PanelKind, scratch: boolean): boolean => scratch && SCRATCH_HIDDEN_PANELS.includes(kind);
+export function panelHidden(kind: PanelKind, scratch: boolean): boolean {
+    return scratch && SCRATCH_HIDDEN_PANELS.includes(kind);
+}
 
 /* The panel as the window shows it: one the project has no place for reads as closed, whatever its file stored. */
-export const shownPanel = (panel: PanelState, scratch: boolean): PanelState =>
-    panel.open && panelHidden(panel.kind, scratch) ? { ...panel, open: false } : panel;
+export function shownPanel(panel: PanelState, scratch: boolean): PanelState {
+    return panel.open && panelHidden(panel.kind, scratch) ? { ...panel, open: false } : panel;
+}
 
 /* The kind on its own for an open panel, `closed:` in front for one that is not, so a toggle still
    knows which panel it reopens. The shape the legacy key was written in. */
-export const parsePanel = (raw: string | null): PanelState => {
+export function parsePanel(raw: string | null): PanelState {
     if (!raw) {
         return CLOSED_PANEL;
     }
     const open = !raw.startsWith('closed:');
     const kind = (open ? raw : raw.slice('closed:'.length)) as PanelKind;
     return PANEL_KINDS.includes(kind) ? { open, kind } : CLOSED_PANEL;
-};
+}
 
 /* A width the legacy key holds, in whole pixels; null is "no width of the person's own". */
-export const parseWidth = (raw: string | null): number | null => {
+export function parseWidth(raw: string | null): number | null {
     const stored = raw === null ? Number.NaN : Number.parseInt(raw, 10);
     return Number.isFinite(stored) && stored > 0 ? stored : null;
-};
+}
 
-const readLegacy = (key: string): string | null => {
+function readLegacy(key: string): string | null {
     try {
         return localStorage.getItem(key);
     } catch {
         return null;
     }
-};
+}
 
 export interface PanelDefaults {
     panel: PanelState;
@@ -431,8 +434,8 @@ export const useUi = create<UiStore>((set, get) => ({
     }
 }));
 
-export const useShownPanel = (): PanelState => {
+export function useShownPanel(): PanelState {
     const panel = useUi((s) => s.panel);
     const scratch = useProject((s) => isScratchProject(s.current));
     return useMemo(() => shownPanel(panel, scratch), [panel, scratch]);
-};
+}
