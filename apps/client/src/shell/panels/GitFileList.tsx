@@ -68,6 +68,7 @@ import {
     visibleRows,
     PANEL_TREE_ROW_HEIGHT
 } from '@/shell/panels/panel-tree';
+import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
 import { setDragging } from '@/shell/view-drag';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -301,6 +302,7 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
         stickyFolders: false,
         unsafeCSS: GIT_TREE_CSS
     });
+    const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(model, folder ?? '');
 
     useEffect(() => {
         collapsedRef.current = new Set(collapsed);
@@ -512,6 +514,7 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
+                ref={attachShift}
                 render={<div />}
                 className="min-h-0 grow overflow-hidden pt-1"
                 onKeyDownCapture={onKeyDownCapture}
@@ -522,6 +525,7 @@ function GitTree({ layout, branches, collapsed, reading, busy, onOpen, onOpenFil
                 }}
             >
                 <FileTree model={model} className="panel-tree" onClick={onClick} onDragStart={onDragStart} onDragEnd={() => setDragging(null)} />
+                {shiftBar}
             </ContextMenu.Trigger>
             <ContextMenu.Popup>
                 {manyTargets && menuItems.length > 0 && (

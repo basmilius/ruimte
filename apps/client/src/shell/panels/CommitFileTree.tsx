@@ -16,6 +16,7 @@ import {
     visibleRows,
     PANEL_TREE_ROW_HEIGHT
 } from '@/shell/panels/panel-tree';
+import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
 import { FILE_TREE_ICONS } from '@basmilius/desktop-ui';
 
 interface CommitFileTreeProps {
@@ -72,6 +73,7 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
     });
 
     const rowCount = useFileTreeSelector(model, (current) => current.getVisibleCount());
+    const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(model);
 
     /* Before the paint, so a tab that opens draws its first file at once and not a frame later. */
     useLayoutEffect(() => {
@@ -153,8 +155,9 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
     };
 
     return (
-        <div style={{ height: rowCount * model.getItemHeight() }} onKeyDownCapture={onKeyDownCapture}>
+        <div ref={attachShift} style={{ height: rowCount * model.getItemHeight() }} onKeyDownCapture={onKeyDownCapture}>
             <FileTree model={model} className="panel-tree" />
+            {shiftBar}
         </div>
     );
 }

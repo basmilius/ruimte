@@ -62,6 +62,7 @@ import {
     PANEL_TREE_CSS,
     PANEL_TREE_ROW_HEIGHT
 } from '@/shell/panels/panel-tree';
+import { usePanelTreeShift } from '@/shell/panels/use-panel-tree-shift';
 import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
@@ -182,6 +183,7 @@ export function FilesPanel() {
 
     const searching = query.trim() !== '';
     const activeModel = searching ? searchModel : model;
+    const { attach: attachShift, bar: shiftBar } = usePanelTreeShift(activeModel, folder ?? '');
     /* The rows the tree is fed, kept here as well because what they add up to is what says whether
        the panel has anything to show. */
     const treeInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
@@ -582,6 +584,7 @@ export function FilesPanel() {
             ) : (
                 <ContextMenu.Root>
                     <ContextMenu.Trigger
+                        ref={attachShift}
                         render={<div />}
                         /* The padding is on the frame, not the scroller, so the first row keeps its
                            distance from the toolbar instead of sliding under it. */
@@ -613,6 +616,7 @@ export function FilesPanel() {
                             onKeyDown={onKeyDown}
                             onDragStart={onDragStart}
                         />
+                        {shiftBar}
                     </ContextMenu.Trigger>
                     <ContextMenu.Popup>
                         {manyTargets ? (

@@ -1,5 +1,6 @@
 import type { FileTree, FileTreeDirectoryHandle, FileTreeVisibleRow } from '@pierre/trees';
 import { expansionChanges, type FoldKeyOf, type GitTreeRow } from '@/shell/panels/git-tree';
+import { SHIFT_PROPERTY } from '@/shell/panels/panel-tree-shift';
 
 /* Opening a folder brings rows into view that may have to fold up in turn, so folding settles over
    a few passes; a tree that never settles stops here rather than looping. */
@@ -13,9 +14,20 @@ const EXPANSION_PASSES = 32;
  * name too short to be split included: a cell hidden inside a grid that stays a grid leaves the
  * name in a column no pixels wide. The chevron is drawn smaller than the tree's own 16, which is
  * the size of a file icon and more than a row needs for the thing that only turns.
+ *
+ * A row slides its content left by the shift (`usePanelTreeShift`) through an empty first item
+ * whose end margin takes back the gap after it. It is layout and not a transform, so the name gains
+ * the room and the ellipsis stays at the panel's edge, while what is pinned at the end stays put.
  */
 export const PANEL_TREE_CSS = `
     [data-icon-name="file-tree-icon-chevron"] { width: 12px; height: 12px; }
+    [data-type="item"] { overflow: clip; }
+    [data-type="item"]::after {
+        content: "";
+        flex: none;
+        order: -100;
+        margin-inline: calc(var(${SHIFT_PROPERTY}, 0px) * -1) calc(var(--trees-item-row-gap) * -1);
+    }
     [data-item-section="content"] { white-space: nowrap; }
     [data-item-section="content"] :where([data-truncate-group-container], [data-truncate-group-container] div, [data-truncate-container], [data-truncate-container] div) { display: inline; }
     [data-item-section="content"] [data-truncate-content] { direction: ltr; }
