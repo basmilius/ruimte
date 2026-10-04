@@ -575,3 +575,39 @@ describe('comments and Enter', () => {
         expect(editor.getCaret()).toEqual({ line: 1, character: 3 });
     });
 });
+
+describe('the clipboard', () => {
+    test('pastes a line copied from a bare caret above the line of the caret', () => {
+        const { editor, press: key, clip } = setup({ text: 'one\ntwo\nthree' });
+        key('ArrowDown');
+        const copied = clip('copy');
+        expect(copied).toBe('two\n');
+        key('ArrowDown');
+        clip('paste', copied);
+        expect(editor.getText()).toBe('one\ntwo\ntwo\nthree');
+        expect(editor.getCaret()).toEqual({ line: 3, character: 0 });
+    });
+
+    test('pastes a line cut from a bare caret as a line too, and a selection as it is', () => {
+        const { editor, press: key, clip } = setup({ text: 'one\ntwo' });
+        const cut = clip('cut');
+        expect(cut).toBe('one\n');
+        expect(editor.getText()).toBe('two');
+        key('End');
+        clip('paste', cut);
+        expect(editor.getText()).toBe('one\ntwo');
+        key('a', { ctrlKey: true });
+        const selected = clip('copy');
+        key('End', { ctrlKey: true });
+        clip('paste', selected);
+        expect(editor.getText()).toBe('one\ntwoone\ntwo');
+    });
+
+    test('moves a pasted block to the indentation of its line', () => {
+        const { editor, press: key, clip } = setup({ text: 'function f() {\n    \n}', language: 'typescript' });
+        key('ArrowDown');
+        key('End');
+        clip('paste', 'if (x) {\n    y;\n}');
+        expect(editor.getText()).toBe('function f() {\n    if (x) {\n        y;\n    }\n}');
+    });
+});

@@ -2,6 +2,7 @@ import { CloserTracker } from './closer-tracker.ts';
 import { planBlockComment, planLineComments } from './comments.ts';
 import type { CommentPlan } from './comments.ts';
 import { planEnter } from './enter.ts';
+import { planPaste } from './paste.ts';
 import type { EnterOptions, EnterPlan } from './enter.ts';
 import type { EditSource } from './edit-source.ts';
 import { vueRegionAt } from './languages.ts';
@@ -581,6 +582,21 @@ export class DocumentModel {
             this.rememberPairs(plans, transaction);
         }
         return changed || plans.some((plan) => plan.consumed);
+    }
+
+    /*
+     * Pastes `text` at every selection. With as many lines as carets each caret takes one; `wholeLines`
+     * marks text copied from a bare caret, which goes above the lines of bare carets.
+     */
+    paste(text: string, options: CommandOptions & { wholeLines?: boolean } = {}): boolean {
+        const tabSize = tabWidth(options);
+        const plan = planPaste(this.editSource(options.language ?? 'typescript'), this.selections, text, {
+            tabSize,
+            insertSpaces: options.insertSpaces !== false,
+            wholeLines: options.wholeLines === true,
+            reindent: options.indentOnPaste !== false
+        });
+        return this.applyEdits(plan.edits, { source: 'input', selections: plan.selections });
     }
 
     /* Runs a command on every caret. Returns whether the text or the selection changed. */

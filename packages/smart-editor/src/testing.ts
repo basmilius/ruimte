@@ -65,6 +65,26 @@ export function typeInto(window: Window, target: Element, text: string): void {
     target.dispatchEvent(event);
 }
 
+/* A clipboard event with the data it carries; what a copy or cut sets is read back through `data`. */
+export function clipboard(
+    window: Window,
+    target: Element,
+    type: 'copy' | 'cut' | 'paste',
+    data: { text: string } = { text: '' }
+): { prevented: boolean; text: string } {
+    const event = new (window as unknown as { Event: typeof Event }).Event(type, { bubbles: true, cancelable: true });
+    Object.assign(event, {
+        clipboardData: {
+            getData: () => data.text,
+            setData: (_format: string, value: string) => {
+                data.text = value;
+            }
+        }
+    });
+    target.dispatchEvent(event);
+    return { prevented: event.defaultPrevented, text: data.text };
+}
+
 /* A pointer event at a point of the screen; the page has no scroll or scale, so it is also the point of the content. */
 export function pointer(
     window: Window,
@@ -97,6 +117,8 @@ export interface MountedEditor {
     viewport: HTMLElement;
     press(key: string, modifiers?: KeyOptions): boolean;
     type(text: string): void;
+    /* Copies, cuts or pastes through the clipboard; the text a copy or cut left comes back. */
+    clip(type: 'copy' | 'cut' | 'paste', text?: string): string;
     click(x: number, y: number, options?: KeyOptions): void;
 }
 
@@ -117,6 +139,7 @@ export function mountEditor(options: Partial<EditorOptions> = {}, engineOptions:
         viewport,
         press: (key, modifiers = {}) => press(page.window, input, key, modifiers),
         type: (text) => typeInto(page.window, input, text),
+        clip: (type, text = '') => clipboard(page.window, input, type, { text }).text,
         click: (x, y, modifiers = {}) => {
             pointer(page.window, viewport, 'pointerdown', x, y, modifiers);
             pointer(page.window, viewport, 'pointerup', x, y);

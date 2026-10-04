@@ -113,4 +113,6 @@ export interface CommandOptions {
     tabOutOfClosers?: boolean;
     /* Enter computes the indentation of the new line, continues comments and closes braces. On unless false. */
     smartEnter?: boolean;
+    /* A pasted block moves to the indentation of the line it lands on. On unless false. */
+    indentOnPaste?: boolean;
 }

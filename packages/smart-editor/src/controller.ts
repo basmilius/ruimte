@@ -52,6 +52,8 @@ export class InputController {
     private readonly contextListeners = new Set<(menu: EditorContextMenu) => void>();
     private readonly subscription: { dispose(): void };
     private historyGroup = 0;
+    /* The clipboard text of the last copy or cut of a bare caret, which pastes back as whole lines. */
+    private lineClip: string | null = null;
     private lastInputAt = 0;
     private desiredXs: number[] = [];
     private keepDesiredXs = false;
@@ -126,12 +128,7 @@ export class InputController {
         });
         this.listen(input, 'paste', (event) => {
             event.preventDefault();
-            if (this.blockedByReadOnly()) {
-                return;
-            }
-            this.historyGroup++;
-            this.replaceSelections(event.clipboardData?.getData('text/plain') ?? '');
-            this.historyGroup++;
+            this.paste(event.clipboardData?.getData('text/plain') ?? '');
         });
         this.listen(input, 'copy', (event) => this.copy(event, false));
         this.listen(input, 'cut', (event) => this.copy(event, true));
@@ -204,6 +201,20 @@ export class InputController {
         }
         const replacement = replacementEdits(model.getSelections(), this.native.normalizeNewlines(text));
         this.applyEdits(replacement.edits, replacement.selections);
+        this.view.revealCaret();
+    }
+
+    private paste(text: string): void {
+        if (this.blockedByReadOnly()) {
+            return;
+        }
+        const { model } = this.view;
+        for (const selection of model.getSelections()) {
+            this.view.ensureVisible(selection.head);
+        }
+        this.historyGroup++;
+        model.paste(this.native.normalizeNewlines(text), { ...this.commandOptions(), wholeLines: text !== '' && text === this.lineClip });
+        this.historyGroup++;
         this.view.revealCaret();
     }
 
@@ -462,6 +473,7 @@ export class InputController {
                   .join('')
             : selections.map((selection) => model.slice(Math.min(selection.anchor, selection.head), Math.max(selection.anchor, selection.head))).join('\n');
         event.clipboardData?.setData('text/plain', text);
+        this.lineClip = empty ? text : null;
         if (!cut || this.blockedByReadOnly()) {
             return;
         }
