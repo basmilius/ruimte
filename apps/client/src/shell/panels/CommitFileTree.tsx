@@ -90,7 +90,7 @@ export function CommitFileTree({ files, shown, onPick }: CommitFileTreeProps) {
         const typing = document.activeElement !== null && document.activeElement === model.getFileTreeContainer();
         applyingRef.current = true;
         model.resetPaths(paths);
-        applyExpansion(model, new Set(foldedRef.current), '');
+        applyExpansion(model, new Set(foldedRef.current));
         applyingRef.current = false;
         for (const path of selected) {
             model.getItem(path)?.select();

@@ -392,7 +392,6 @@
             "noRepo": "Deze map is geen git repository.",
             "openChanges": "Wijzigingen openen",
             "stage": "Stage",
-            "stageGroup": "Alles in {{group}} stagen",
             "stageHere": "Alles hier stagen",
             "stageMany": "{{count}} bestanden stagen",
             "stageResolved": "Stagen als opgelost",
@@ -472,8 +471,7 @@
         "repo": {
             "hide": "Verberg deze repository",
             "showAll_one": "Toon {{count}} verborgen repository",
-            "showAll_other": "Toon {{count}} verborgen repositories",
-            "stageAll": "Stage alles in {{repo}}"
+            "showAll_other": "Toon {{count}} verborgen repositories"
         },
         "stage": {
             "failed": "Stagen mislukt",

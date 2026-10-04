@@ -443,16 +443,6 @@
         --trees-font-size-override: var(--text-xs);
     }
 
-    /* A tree in the git panel's changes, one level under the row of its group, or two under the row
-       of a repository in that group. */
-    .panel-tree-indented {
-        --trees-padding-inline-override: 20px;
-    }
-
-    .panel-tree-nested {
-        --trees-padding-inline-override: 36px;
-    }
-
     /* A diff in a panel sits on the panel itself, so it is no darker block. The library names its
        ground on its own element from the code theme, which is the chat's darker one; a rule on that
        element from out here outranks it. The container carries it too, so a short diff still fills. */

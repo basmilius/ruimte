@@ -392,7 +392,6 @@
             "noRepo": "This folder is not a git repository.",
             "openChanges": "Open changes",
             "stage": "Stage",
-            "stageGroup": "Stage everything in {{group}}",
             "stageHere": "Stage everything here",
             "stageMany": "Stage {{count}} files",
             "stageResolved": "Stage as resolved",
@@ -472,8 +471,7 @@
         "repo": {
             "hide": "Hide this repository",
             "showAll_one": "Show {{count}} hidden repository",
-            "showAll_other": "Show {{count}} hidden repositories",
-            "stageAll": "Stage everything in {{repo}}"
+            "showAll_other": "Show {{count}} hidden repositories"
         },
         "stage": {
             "failed": "Staging failed",

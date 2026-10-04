@@ -3,25 +3,36 @@ import type { GitFile, GitFileState } from '@ruimte/contracts';
 import {
     activeDiff,
     allCollapseKeys,
-    allDirs,
-    branchesUnder,
+    buildGitTree,
+    byCheckout,
     checkOf,
     checkOfAll,
+    checkOfItems,
     checkPart,
     collapsedPathsOf,
+    compareGitRows,
     entriesOf,
     entriesUnder,
     entryParts,
     expansionChanges,
+    fileId,
+    flattenPaths,
+    foldedBranches,
+    FOLDER_JOIN,
     gitTreeScope,
     groupKey,
+    itemsOfNodes,
     mergeCollapsedPaths,
+    nodeOf,
     repoKey,
     shownFile,
     statusColor,
     statusOf,
-    stopBeside,
+    SYNTHETIC_PREFIX,
+    toggleItems,
     toggleOf,
+    type GitGroup,
+    type GitTreeNode,
     type GitTreeRow
 } from './git-tree.ts';
 
@@ -114,21 +125,194 @@ describe('a box over more than one file', () => {
     });
 });
 
+describe('folders nothing branches in', () => {
+    test('a chain of lone folders is one row that stands for the deepest of them', () => {
+        expect(flattenPaths(['apps/client/src/a.ts', 'apps/client/src/b.ts'])).toEqual([
+            { kind: 'folder', path: 'apps/client/src', tree: `apps${FOLDER_JOIN}client${FOLDER_JOIN}src`, parent: null },
+            {
+                kind: 'file',
+                path: 'apps/client/src/a.ts',
+                tree: `apps${FOLDER_JOIN}client${FOLDER_JOIN}src/a.ts`,
+                parent: `apps${FOLDER_JOIN}client${FOLDER_JOIN}src`
+            },
+            {
+                kind: 'file',
+                path: 'apps/client/src/b.ts',
+                tree: `apps${FOLDER_JOIN}client${FOLDER_JOIN}src/b.ts`,
+                parent: `apps${FOLDER_JOIN}client${FOLDER_JOIN}src`
+            }
+        ]);
+    });
+
+    test('a folder with a file of its own or a second folder ends the chain', () => {
+        const nodes = flattenPaths(['src/a.ts', 'src/deep/er/b.ts', 'docs/x/y.md', 'docs/z/w.md']);
+        expect(nodes.filter((node) => node.kind === 'folder').map((node) => [node.path, node.tree])).toEqual([
+            ['src', 'src'],
+            ['src/deep/er', `src/deep${FOLDER_JOIN}er`],
+            ['docs', 'docs'],
+            ['docs/x', 'docs/x'],
+            ['docs/z', 'docs/z']
+        ]);
+    });
+
+    test('an untracked folder git names whole is a row of its own and ends a chain', () => {
+        expect(flattenPaths(['vendor/inner/'])).toEqual([
+            { kind: 'folder', path: 'vendor', tree: 'vendor', parent: null },
+            { kind: 'file', path: 'vendor/inner/', tree: 'vendor/inner/', parent: 'vendor' }
+        ]);
+    });
+});
+
+describe('the list as one tree', () => {
+    const label = (group: GitGroup): string => ({ conflicts: 'Conflicts', changes: 'Changes', unversioned: 'Unversioned Files' })[group];
+    const group = (name: string): string => `${SYNTHETIC_PREFIX}${name}`;
+    const one = buildGitTree(
+        [{ path: '/repo', label: 'repo', entries: entriesOf([file('src/state/a.ts'), file('src/state/b.ts', 'staged'), file('new.ts', 'untracked', '?')]) }],
+        label
+    );
+
+    test('one checkout has a row per group and none for the repository', () => {
+        expect(one.paths.sort()).toEqual(
+            [
+                `${group('Changes')}/src${FOLDER_JOIN}state/a.ts`,
+                `${group('Changes')}/src${FOLDER_JOIN}state/b.ts`,
+                `${group('Unversioned Files')}/new.ts`
+            ].sort()
+        );
+        expect([...one.nodes.values()].map((node) => node.kind).sort()).toEqual(['file', 'file', 'file', 'folder', 'group', 'group']);
+        expect(one.synthetic).toBe(1);
+    });
+
+    test('every row says what it stands for, without the lookalike slash', () => {
+        const folder = one.nodes.get(`${group('Changes')}/src${FOLDER_JOIN}state`);
+        expect(folder).toMatchObject({
+            kind: 'folder',
+            cwd: '/repo',
+            path: 'src/state',
+            key: `${gitTreeScope('/repo', 'changes')}/src/state`,
+            parent: group('Changes')
+        });
+        const row = one.files.get(fileId('/repo', 'src/state/a.ts'))!;
+        expect(nodeOf(one, row)).toMatchObject({ kind: 'file', cwd: '/repo', path: 'src/state/a.ts', group: 'changes' });
+        expect(nodeOf(one, `${group('Changes')}/`)).toMatchObject({ kind: 'group', key: groupKey('changes') });
+        for (const node of one.nodes.values()) {
+            expect('path' in node ? node.path.includes(FOLDER_JOIN) : false).toBe(false);
+        }
+    });
+
+    test('a group with one folder under it keeps a row of its own', () => {
+        const layout = buildGitTree([{ path: '/repo', label: 'repo', entries: entriesOf([file('src/a.ts')]) }], label);
+        expect(layout.paths).toEqual([`${group('Changes')}/src/a.ts`]);
+    });
+
+    test('more than one checkout has a row per repository under each group, and a slash in its label is no folder', () => {
+        const layout = buildGitTree(
+            [
+                { path: '/work', label: 'work', entries: entriesOf([file('a.ts')]) },
+                { path: '/work/packages/lib', label: 'packages/lib', entries: entriesOf([file('src/b.ts'), file('c.ts', 'untracked', '?')]) }
+            ],
+            label
+        );
+        const lib = `${SYNTHETIC_PREFIX}packages${FOLDER_JOIN}lib`;
+        expect(layout.paths.sort()).toEqual(
+            [`${group('Changes')}/${SYNTHETIC_PREFIX}work/a.ts`, `${group('Changes')}/${lib}/src/b.ts`, `${group('Unversioned Files')}/${lib}/c.ts`].sort()
+        );
+        expect(layout.nodes.get(`${group('Changes')}/${lib}`)).toMatchObject({
+            kind: 'repo',
+            cwd: '/work/packages/lib',
+            label: 'packages/lib',
+            key: repoKey('/work/packages/lib', 'changes')
+        });
+        expect(layout.synthetic).toBe(2);
+    });
+
+    test('two repositories that read the same still get a row each', () => {
+        const layout = buildGitTree(
+            [
+                { path: '/a/app', label: 'app', entries: entriesOf([file('x.ts')]) },
+                { path: '/b/app', label: 'app', entries: entriesOf([file('y.ts')]) }
+            ],
+            label
+        );
+        expect([...layout.nodes.values()].filter((node) => node.kind === 'repo')).toHaveLength(2);
+    });
+
+    test('groups and repositories keep their order whatever their labels say, and below them folders come first', () => {
+        const dutch = (name: GitGroup): string => ({ conflicts: 'Zeta', changes: 'Beta', unversioned: 'Alpha' })[name];
+        const layout = buildGitTree(
+            [
+                {
+                    path: '/z',
+                    label: 'z',
+                    entries: entriesOf([file('b.ts'), file('a/c.ts'), file('u.ts', 'untracked', '?'), file('x.ts', 'conflicted', 'UU')])
+                },
+                { path: '/a', label: 'a', entries: entriesOf([file('d.ts')]) }
+            ],
+            dutch
+        );
+        const sorted = [...layout.paths]
+            .map((path) => ({ isDirectory: false, segments: path.split('/') }))
+            .sort((left, right) => compareGitRows(layout, left, right));
+        expect(sorted.map((row) => row.segments.join('/'))).toEqual([
+            `${SYNTHETIC_PREFIX}Zeta/${SYNTHETIC_PREFIX}z/x.ts`,
+            `${SYNTHETIC_PREFIX}Beta/${SYNTHETIC_PREFIX}z/a/c.ts`,
+            `${SYNTHETIC_PREFIX}Beta/${SYNTHETIC_PREFIX}z/b.ts`,
+            `${SYNTHETIC_PREFIX}Beta/${SYNTHETIC_PREFIX}a/d.ts`,
+            `${SYNTHETIC_PREFIX}Alpha/${SYNTHETIC_PREFIX}z/u.ts`
+        ]);
+    });
+});
+
+describe('a box over rows of more than one repository', () => {
+    const layout = buildGitTree(
+        [
+            { path: '/one', label: 'one', entries: entriesOf([file('a.ts', 'staged'), file('b.ts'), file('x.ts', 'conflicted', 'UU')]) },
+            { path: '/two', label: 'two', entries: entriesOf([file('c.ts'), file('d.ts', 'untracked', '?')]) }
+        ],
+        (group) => group
+    );
+    const groupOf = (name: GitGroup): GitTreeNode => [...layout.nodes.values()].find((node) => node.kind === 'group' && node.group === name)!;
+
+    test('reads the files of every repository under it', () => {
+        expect(checkOfItems(itemsOfNodes([groupOf('changes')]))).toBe('mixed');
+        expect(toggleItems(itemsOfNodes([groupOf('changes')]))).toEqual({
+            staged: true,
+            work: [
+                { cwd: '/one', paths: ['b.ts'] },
+                { cwd: '/two', paths: ['c.ts'] }
+            ]
+        });
+    });
+
+    test('a selection over groups counts each file once and leaves conflicts out', () => {
+        const nodes = [groupOf('changes'), groupOf('conflicts'), groupOf('unversioned'), ...[...layout.nodes.values()].filter((node) => node.kind === 'file')];
+        const items = itemsOfNodes(nodes);
+        expect(items).toHaveLength(5);
+        expect(toggleItems(items).work).toEqual([
+            { cwd: '/one', paths: ['b.ts'] },
+            { cwd: '/two', paths: ['c.ts', 'd.ts'] }
+        ]);
+        expect(byCheckout(items).map(([cwd, entries]) => [cwd, entries.length])).toEqual([
+            ['/one', 3],
+            ['/two', 2]
+        ]);
+    });
+});
+
 describe('the folders a group folds', () => {
-    test('every folder on the way counts as one to fold up', () => {
-        expect(allDirs(['apps/client/a.ts', 'readme.md'])).toEqual(['apps', 'apps/client']);
-    });
-
-    test('a folder of one repository among several is folded up under that repository', () => {
-        expect(allDirs(['src/a.ts'], 'backend')).toEqual(['backend/src']);
-    });
-
-    test('collapse all names every folder once per group a file is in', () => {
-        const files = [file('src/a.ts'), file('src/a.ts', 'staged'), file('src/deep/b.ts', 'staged', 'A'), file('src/c.ts', 'untracked', '?')];
+    test('collapse all names every folder row once per group a file is in', () => {
+        const files = [
+            file('src/a.ts'),
+            file('src/a.ts', 'staged'),
+            file('src/deep/b.ts', 'staged', 'A'),
+            file('src/c.ts', 'untracked', '?'),
+            file('apps/client/d.ts')
+        ];
         const collapsed = new Set(allCollapseKeys(files, '/repo'));
         expect([...collapsed].sort()).toEqual(
             [
                 `${gitTreeScope('/repo', 'changes')}/src`,
+                `${gitTreeScope('/repo', 'changes')}/apps/client`,
                 `${gitTreeScope('/repo', 'unversioned')}/src`,
                 `${gitTreeScope('/repo', 'unversioned')}/src/deep`
             ].sort()
@@ -141,95 +325,56 @@ describe('the folders a group folds', () => {
             expect(`${scope}/src`.startsWith(`${key}/`)).toBe(false);
             expect(key.startsWith(`${scope}/`)).toBe(false);
         }
-        expect(branchesUnder([], [repoKey('/repo', 'changes')], ['src'], scope)).toEqual([]);
+    });
+
+    test('a folder that folds takes the folders under it along, a group or a repository does not', () => {
+        const layout = buildGitTree(
+            [
+                {
+                    path: '/one',
+                    label: 'one',
+                    entries: entriesOf([file('src/a.ts'), file('src/state/b.ts'), file('src/state/deep/c.ts'), file('src/state/deep/d.ts')])
+                },
+                { path: '/two', label: 'two', entries: entriesOf([file('e.ts')]) }
+            ],
+            (group) => group
+        );
+        const keyOfPath = (path: string): string => `${gitTreeScope('/one', 'changes')}/${path}`;
+        const branches = foldedBranches(layout, [], [keyOfPath('src')]);
+        expect(branches.map((path) => (layout.nodes.get(path) as { path: string }).path)).toEqual(['src/state', 'src/state/deep']);
+        expect(foldedBranches(layout, [keyOfPath('src')], [keyOfPath('src')])).toEqual([]);
+        expect(foldedBranches(layout, [], [groupKey('changes'), repoKey('/one', 'changes')])).toEqual([]);
     });
 });
 
-describe('which folders stand folded up', () => {
-    test('two groups of the same checkout fold the same folder apart', () => {
-        const changes = gitTreeScope('/repo', 'changes');
-        const unversioned = gitTreeScope('/repo', 'unversioned');
-        const collapsed = collapsedPathsOf([dir('src/', false)], changes);
-
-        expect(mergeCollapsedPaths(collapsed, [dir('src/', true)], unversioned)).toBe(collapsed);
-        expect(expansionChanges([dir('src/', true)], new Set(collapsed), changes)).toEqual({ collapse: ['src/'], expand: [] });
-        expect(expansionChanges([dir('src/', false)], new Set(collapsed), unversioned)).toEqual({ collapse: [], expand: ['src/'] });
-        expect(branchesUnder([], collapsed, ['src', 'src/deep'], unversioned)).toEqual([]);
-        expect(branchesUnder([], collapsed, ['src', 'src/deep'], changes)).toEqual(['src/deep']);
-    });
-
-    test('a checkout scope cannot be mistaken for a descendant folder', () => {
-        const parent = gitTreeScope('/repo', 'changes');
-        const child = gitTreeScope('/repo/src', 'changes');
-        const collapsed = collapsedPathsOf([dir('src/', false)], parent);
-
-        expect(branchesUnder([], collapsed, ['deep'], child)).toEqual([]);
-        expect(expansionChanges([dir('src/', true)], new Set(collapsed), child)).toEqual({ collapse: [], expand: [] });
-    });
-
-    test('selection notifications from different groups leave shared folds unchanged', () => {
-        const current = ['src', 'docs'];
-        const staged = mergeCollapsedPaths(current, [dir('src/', false)]);
-        const unstaged = mergeCollapsedPaths(staged, [dir('docs/', false)]);
-        expect(staged).toBe(current);
-        expect(unstaged).toBe(current);
-        expect(mergeCollapsedPaths(current, [dir('docs/', false), dir('src/', false)])).toBe(current);
-    });
-
-    test('fold changes preserve hidden descendants and folders belonging to other groups', () => {
-        const current = ['src', 'src/nested', 'docs'];
-        const next = mergeCollapsedPaths(current, [dir('src/', true), dir('tests/', false)]);
-        expect(next).toEqual(['src/nested', 'docs', 'tests']);
-        expect(mergeCollapsedPaths(next, [dir('src/', true), dir('tests/', false)])).toBe(next);
-        expect(current).toEqual(['src', 'src/nested', 'docs']);
-    });
+describe('which rows stand folded up', () => {
+    const keys: Record<string, string> = { 'g/': 'group', 'g/src/': 'folder:src', 'g/docs/': 'folder:docs' };
+    const keyOf = (path: string): string | null => keys[path] ?? null;
 
     test('a row that is closed is one, and the trailing slash of a directory is not part of it', () => {
         expect(collapsedPathsOf([dir('src/', false), dir('apps/client/', true), { path: 'a.ts', kind: 'file', isExpanded: false }])).toEqual(['src']);
     });
 
-    test('two repositories fold the same folder name apart', () => {
-        const current = ['backend/src'];
-        expect(collapsedPathsOf([dir('src/', false)], 'frontend')).toEqual(['frontend/src']);
-        // The tree of the other module says nothing about a folder it does not have.
-        expect(mergeCollapsedPaths(current, [dir('src/', true)], 'frontend')).toBe(current);
-        expect(mergeCollapsedPaths(current, [dir('src/', true)], 'backend')).toEqual([]);
+    test('rows read back under the key the list names them by, and a row without one is left out', () => {
+        expect(collapsedPathsOf([dir('g/', false), dir('g/src/', false), dir('g/inner/', false)], keyOf)).toEqual(['group', 'folder:src']);
     });
 
-    test('a tree of one repository only moves the rows its own keys name', () => {
-        const rows = [dir('src/', true)];
-        expect(expansionChanges(rows, new Set(['backend/src']), 'frontend')).toEqual({ collapse: [], expand: [] });
-        expect(expansionChanges(rows, new Set(['backend/src']), 'backend')).toEqual({ collapse: ['src/'], expand: [] });
+    test('selection notifications leave unchanged folds alone', () => {
+        const current = ['folder:src', 'elsewhere'];
+        expect(mergeCollapsedPaths(current, [dir('g/', true), dir('g/src/', false)], keyOf)).toBe(current);
     });
 
-    test('only the rows that differ from the set move, and the folders of other groups are left alone', () => {
-        const rows = [dir('src/', true), dir('apps/', false), dir('docs/', false)];
-        expect(expansionChanges(rows, new Set(['src', 'apps', 'elsewhere']))).toEqual({ collapse: ['src/'], expand: ['docs/'] });
+    test('fold changes keep the keys of rows the tree does not show', () => {
+        const current = ['folder:src', 'hidden', 'group'];
+        const next = mergeCollapsedPaths(current, [dir('g/', true), dir('g/src/', true), dir('g/docs/', false)], keyOf);
+        expect(next).toEqual(['hidden', 'folder:docs']);
+        expect(current).toEqual(['folder:src', 'hidden', 'group']);
     });
 
-    test('a folder that folds takes the folders under it along', () => {
-        const dirs = ['src', 'src/state', 'src/state/deep', 'docs', 'srcs'];
-        expect(branchesUnder([], ['src'], dirs)).toEqual(['src/state', 'src/state/deep']);
-        expect(branchesUnder(['src'], ['src'], dirs)).toEqual([]);
-        expect(branchesUnder([], ['src', 'src/state/deep'], dirs)).toEqual(['src/state']);
-        expect(branchesUnder([], ['frontend/src'], dirs, 'frontend')).toEqual(['src/state', 'src/state/deep']);
-    });
-
-    test('a tree that already stands the way the set says moves nothing', () => {
+    test('only the rows that differ from the set move', () => {
+        const rows = [dir('g/', true), dir('g/src/', true), dir('g/docs/', false), dir('g/inner/', false)];
+        expect(expansionChanges(rows, new Set(['folder:src', 'elsewhere']), keyOf)).toEqual({ collapse: ['g/src/'], expand: ['g/docs/'] });
         expect(expansionChanges([dir('src/', false), dir('apps/', true)], new Set(['src']))).toEqual({ collapse: [], expand: [] });
-    });
-});
-
-describe('the keyboard between the stops of the list', () => {
-    const order = ['group:changes', 'repo:a', 'tree:a', 'repo:b', 'tree:b', 'group:unversioned', 'tree:c'];
-
-    test('goes to the next stop on screen and passes over the ones a fold hides', () => {
-        const shown = new Set(['group:changes', 'repo:a', 'repo:b', 'tree:b', 'group:unversioned']);
-        const present = (id: string): boolean => shown.has(id);
-        expect(stopBeside(order, present, 'repo:a', 1)).toBe('repo:b');
-        expect(stopBeside(order, present, 'repo:b', -1)).toBe('repo:a');
-        expect(stopBeside(order, present, 'group:unversioned', 1)).toBeNull();
-        expect(stopBeside(order, present, 'group:changes', -1)).toBeNull();
     });
 });
 

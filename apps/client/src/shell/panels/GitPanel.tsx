@@ -13,7 +13,7 @@ import { CommitLog, type LogSource } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { GitChoice, GitDiverged, type Choice } from '@/shell/panels/GitDialogs';
 import { PromptDialog, useColumnResize, Button, ButtonGroup, FormError, Icon, IconButton, Pill, Separator, PanelEmpty, Menu } from '@basmilius/desktop-ui';
-import { GitFileList } from '@/shell/panels/GitFileList';
+import { GitFileList, type GitWork } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, popStashStep, pushButton, pushable, pushEntries, type CommitCandidate } from '@/shell/panels/git-actions';
 import { PushMenu } from '@/shell/panels/PushMenu';
 import { activeDiff, allCollapseKeys } from '@/shell/panels/git-tree';
@@ -44,7 +44,7 @@ const MIN_LOG_HEIGHT = 80;
 const MIN_LIST_HEIGHT = 160;
 
 /* Every dialog names the repository it acts on: with more than one on screen, "the checkout" is not
-   a thing a person can point at any more. */
+   a thing a person can point at any more. A discard or a delete over a selection names one each. */
 type Dialog =
     | { kind: 'create-branch'; cwd: string }
     | { kind: 'rename-branch'; cwd: string; branch: string }
@@ -54,10 +54,12 @@ type Dialog =
     | { kind: 'stash'; cwd: string }
     | { kind: 'pick-stash'; cwd: string }
     | { kind: 'switch'; cwd: string; ref: GitRef }
-    | { kind: 'discard'; cwd: string; files: GitFile[] }
-    | { kind: 'delete-file'; cwd: string; files: GitFile[] }
+    | { kind: 'discard'; work: GitWork[] }
+    | { kind: 'delete-file'; work: GitWork[] }
     | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string }
     | { kind: 'pull-request'; cwd: string; subject: string };
+
+const filesOf = (work: readonly GitWork[]): GitFile[] => work.flatMap((step) => step.files);
 
 /*
  * What the daemon knows about the checkouts of a project: every repository the folder holds, the
@@ -251,11 +253,9 @@ export function GitPanel() {
     /* What a toast calls the files it acted on: the path of one, the count of several. */
     const nameOf = (files: readonly GitFile[]): string => (files.length === 1 ? files[0]!.path : t('git.panel.manyFiles', { count: files.length }));
 
-    const discard = (path: string, files: GitFile[]): void => {
-        setDialog(null);
-        setBusy(true);
+    const discardIn = (path: string, files: GitFile[]): Promise<void> => {
         const name = nameOf(files);
-        performAsPerson('git.discard', { repository: path, paths: files.map((file) => file.path) })
+        return performAsPerson('git.discard', { repository: path, paths: files.map((file) => file.path) })
             .then(({ stash }) => {
                 useToasts.getState().show({
                     title: stash === null ? t('git.panel.discardNothing', { path: name }) : t('git.panel.discardStashed', { path: name }),
@@ -268,18 +268,15 @@ export function GitPanel() {
                 useToasts.getState().show({ title: t('git.panel.discardFailed'), description: message, kind: 'error', output: message });
             })
             .finally(() => {
-                setBusy(false);
                 void refresh(path);
             });
     };
 
     /* A file that was added to the index is taken out of it first, or the index would keep a file that is gone. */
-    const deleteNew = (path: string, files: GitFile[]): void => {
-        setDialog(null);
-        setBusy(true);
+    const deleteIn = (path: string, files: GitFile[]): Promise<void> => {
         const staged = files.filter((file) => file.state === 'staged').map((file) => file.path);
         const unstaged = staged.length > 0 ? performAsPerson('git.unstage', { repository: path, paths: staged }) : Promise.resolve();
-        unstaged
+        return unstaged
             .then(() => performAsPerson('file.delete', { paths: files.map((file) => `${path}/${file.path}`) }))
             .then(() => {
                 useToasts.getState().show({ title: t('git.panel.deleteDone', { path: nameOf(files) }), kind: 'success' });
@@ -289,9 +286,15 @@ export function GitPanel() {
                 useToasts.getState().show({ title: t('git.panel.deleteFailed'), description: message, kind: 'error', output: message });
             })
             .finally(() => {
-                setBusy(false);
                 void refresh(path);
             });
+    };
+
+    /* A selection can span repositories; each is one request of its own, with a toast of its own. */
+    const runWork = (work: readonly GitWork[], step: (path: string, files: GitFile[]) => Promise<void>): void => {
+        setDialog(null);
+        setBusy(true);
+        void Promise.all(work.map(({ cwd: path, files }) => step(path, files))).finally(() => setBusy(false));
     };
 
     const diffOf = (path: string, file: GitFile): DraggedDiff => {
@@ -559,8 +562,8 @@ export function GitPanel() {
                     onOpenFile={openFile}
                     onDrag={(path, file, transfer) => startDiffDrag(transfer, diffOf(path, file))}
                     onStage={stage}
-                    onDiscard={(path, files) => setDialog({ kind: 'discard', cwd: path, files })}
-                    onDelete={(path, files) => setDialog({ kind: 'delete-file', cwd: path, files })}
+                    onDiscard={(work) => setDialog({ kind: 'discard', work })}
+                    onDelete={(work) => setDialog({ kind: 'delete-file', work })}
                 />
                 {checkouts.length > 0 && (
                     <CommitBox messageKey={messageKey} checkouts={checkouts} named={named} capabilities={capabilities} busy={busy} onCommit={commit} />
@@ -681,19 +684,21 @@ export function GitPanel() {
                 title={
                     dialog?.kind !== 'discard'
                         ? t('git.dialog.discard.fallback')
-                        : dialog.files.length > 1
-                          ? t('git.dialog.discard.titleMany', { count: dialog.files.length })
-                          : t('git.dialog.discard.title', { name: basenameOf(dialog.files[0]!.path) })
+                        : filesOf(dialog.work).length > 1
+                          ? t('git.dialog.discard.titleMany', { count: filesOf(dialog.work).length })
+                          : t('git.dialog.discard.title', { name: basenameOf(filesOf(dialog.work)[0]!.path) })
                 }
                 description={
-                    dialog?.kind === 'discard' && dialog.files.length > 1 ? t('git.dialog.discard.descriptionMany') : t('git.dialog.discard.description')
+                    dialog?.kind === 'discard' && filesOf(dialog.work).length > 1
+                        ? t('git.dialog.discard.descriptionMany')
+                        : t('git.dialog.discard.description')
                 }
                 confirmLabel={t('git.dialog.discard.confirm')}
                 danger
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'discard') {
-                        discard(dialog.cwd, dialog.files);
+                        runWork(dialog.work, discardIn);
                     }
                 }}
                 onOpenChange={() => setDialog(null)}
@@ -703,12 +708,12 @@ export function GitPanel() {
                 title={
                     dialog?.kind !== 'delete-file'
                         ? t('git.dialog.deleteFile.fallback')
-                        : dialog.files.length > 1
-                          ? t('git.dialog.deleteFile.titleMany', { count: dialog.files.length })
-                          : t('git.dialog.deleteFile.title', { name: basenameOf(dialog.files[0]!.path) })
+                        : filesOf(dialog.work).length > 1
+                          ? t('git.dialog.deleteFile.titleMany', { count: filesOf(dialog.work).length })
+                          : t('git.dialog.deleteFile.title', { name: basenameOf(filesOf(dialog.work)[0]!.path) })
                 }
                 description={
-                    dialog?.kind === 'delete-file' && dialog.files.length > 1
+                    dialog?.kind === 'delete-file' && filesOf(dialog.work).length > 1
                         ? t('git.dialog.deleteFile.descriptionMany')
                         : t('git.dialog.deleteFile.description')
                 }
@@ -717,7 +722,7 @@ export function GitPanel() {
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'delete-file') {
-                        deleteNew(dialog.cwd, dialog.files);
+                        runWork(dialog.work, deleteIn);
                     }
                 }}
                 onOpenChange={() => setDialog(null)}

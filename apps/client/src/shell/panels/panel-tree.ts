@@ -1,5 +1,5 @@
 import type { FileTree, FileTreeDirectoryHandle, FileTreeVisibleRow } from '@pierre/trees';
-import { expansionChanges, type GitTreeRow } from '@/shell/panels/git-tree';
+import { expansionChanges, type FoldKeyOf, type GitTreeRow } from '@/shell/panels/git-tree';
 
 /* Opening a folder brings rows into view that may have to fold up in turn, so folding settles over
    a few passes; a tree that never settles stops here rather than looping. */
@@ -58,9 +58,9 @@ export const visibleRows = (model: FileTree): GitTreeRow[] =>
     model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
 
 /* Folds the tree the way the collapse set says. */
-export const applyExpansion = (model: FileTree, collapsed: ReadonlySet<string>, scope: string): void => {
+export const applyExpansion = (model: FileTree, collapsed: ReadonlySet<string>, keyOf?: FoldKeyOf): void => {
     for (let pass = 0; pass < EXPANSION_PASSES; pass++) {
-        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed, scope);
+        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed, keyOf);
         if (collapse.length === 0 && expand.length === 0) {
             return;
         }
