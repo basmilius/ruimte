@@ -71,7 +71,7 @@ describe('splitDocTags', () => {
 describe('hoverSectionsOf', () => {
     const php =
         '__Passly\\Message\\IssueTicketsMessage__\n\nClass IssueTicketsMessage\n\n```php\n<?php\nfinal class IssueTicketsMessage {\n```\n\n---\n\n' +
-        '__Passly\\Message\\IssueTicketsMessage::__construct__\n\nIssueTicketsMessage constructor.\n\n```php\n<?php\npublic function __construct(string $id) {\n```\n\n_@param_ `string $id`\n\n---\n\n' +
+        '__Passly\\\\Message\\\\IssueTicketsMessage::\\_\\_construct__\n\nIssueTicketsMessage constructor.\n\n```php\n<?php\npublic function __construct(string $id) {\n```\n\n_@param_ `string $id`\n\n---\n\n' +
         '__Passly\\Message\\IssueTicketsMessage::__construct__\n\nIssueTicketsMessage constructor.\n\n```php\n<?php\npublic function __construct(string $id) {\n```\n\n_@param_ `string $id`';
 
     test("splits the PHP server's symbols at its rules, with the snippet as the signature and the tags apart", () => {
@@ -83,6 +83,7 @@ describe('hoverSectionsOf', () => {
             markdown: 'Class IssueTicketsMessage',
             tags: []
         });
+        expect(sections[1]!.title).toBe('Passly\\Message\\IssueTicketsMessage::__construct');
         expect(sections[1]!.tags).toEqual([{ name: 'param', markdown: '`string $id`' }]);
     });
 

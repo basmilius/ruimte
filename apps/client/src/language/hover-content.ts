@@ -138,6 +138,11 @@ function withoutOpenTag(block: SignatureBlock): SignatureBlock {
     return { language: block.language, code: block.code.replace(/^<\?php\s*\n/, '') };
 }
 
+/* The title is drawn as text, so the escapes that kept it from reading as markdown come off: `A\\B::\_\_construct` is `A\B::__construct`. */
+function unescapeMarkdown(text: string): string {
+    return text.replace(/\\([\\`*_{}[\]()#+\-.!|<>~])/g, '$1');
+}
+
 function sectionOf(chunk: string, leading: readonly SignatureBlock[]): HoverSection {
     let rest = chunk.trim();
     const title = TITLE.exec(rest);
@@ -153,7 +158,7 @@ function sectionOf(chunk: string, leading: readonly SignatureBlock[]): HoverSect
     }
     const doc = splitDocTags(rest);
     return {
-        title: title === null ? null : (title[1] ?? title[2])!.trim(),
+        title: title === null ? null : unescapeMarkdown((title[1] ?? title[2])!.trim()),
         signatures: signatures.map(withoutOpenTag),
         markdown: doc.markdown,
         tags: doc.tags
