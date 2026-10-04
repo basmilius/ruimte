@@ -1,4 +1,12 @@
-import { type DocumentModel, type EditorSnapshot, type FoldingRange, replacementText, scanBrackets, type BracketIndex } from '@ruimte/smart-editor-core';
+import {
+    type DocumentModel,
+    type EditorSnapshot,
+    type FoldingRange,
+    replacementText,
+    scanBrackets,
+    type BracketIndex,
+    type Selection as EditorSelection
+} from '@ruimte/smart-editor-core';
 import { FindController } from './find.ts';
 import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type LayoutRect, type LayoutRow, RIGHT_PADDING, type TextRow } from './layout.ts';
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
@@ -146,6 +154,7 @@ export class EditorView {
     private blocks: BlockWidget[] = [];
     private occurrences: Occurrence[] = [];
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
+    private dropCaret: number | null = null;
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
     private foldRanges: ViewFold[] = [];
@@ -907,7 +916,35 @@ export class EditorView {
     }
 
     /* The pointer moved over the editor; a drag in progress is not a hover. */
+    /* The selection under a point of the screen, which a press there may drag away. */
+    selectionAtPoint(clientX: number, clientY: number): EditorSelection | null {
+        const point = this.contentPoint(clientX, clientY);
+        const rows = this.layout.visibleRows(this.viewport.scrollTop, this.viewportHeight, 0);
+        return (
+            this.model.getSelections().find((selection) => {
+                const from = Math.min(selection.anchor, selection.head);
+                const to = Math.max(selection.anchor, selection.head);
+                return (
+                    from !== to &&
+                    this.layout
+                        .rectangles(from, to, rows)
+                        .some((rect) => point.x >= rect.x && point.x < rect.x + rect.width && point.y >= rect.y && point.y < rect.y + rect.height)
+                );
+            }) ?? null
+        );
+    }
+
+    /* Where text being carried would land, drawn as a caret of its own. */
+    setDropCaret(offset: number | null): void {
+        this.dropCaret = offset;
+        this.render();
+    }
+
     hoverMoved(event: PointerEvent): void {
+        this.content.classList.toggle(
+            'se-over-selection',
+            !this.settings.readOnly && event.buttons === 0 && this.selectionAtPoint(event.clientX, event.clientY) !== null
+        );
         this.setHover(event.buttons === 0 ? this.characterAtPoint(event.clientX, event.clientY, event.target) : null);
     }
 
@@ -1264,7 +1301,7 @@ export class EditorView {
             clearTimeout(this.caretTimer);
             this.caretTimer = setTimeout(() => delete this.carets.dataset.moving, CARET_SOLID_MS);
         }
-        paintCarets(this.carets, caretRects);
+        paintCarets(this.carets, [...caretRects, ...(this.dropCaret === null ? [] : [{ ...this.layout.caret(this.dropCaret), primary: false, drop: true }])]);
         const caret = this.caretOf(primary.head);
         this.input.style.left = `${this.gutterWidth + Math.max(0, Math.min(this.viewportWidth - 2, caret.x - this.viewport.scrollLeft))}px`;
         this.input.style.top = `${Math.max(0, Math.min(this.viewportHeight - this.layout.metrics.lineHeight, caret.y - top))}px`;

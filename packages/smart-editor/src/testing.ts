@@ -89,7 +89,7 @@ export function clipboard(
 export function pointer(
     window: Window,
     target: Element,
-    type: 'pointerdown' | 'pointermove' | 'pointerup',
+    type: 'pointerdown' | 'pointermove' | 'pointerup' | 'pointercancel',
     x: number,
     y: number,
     options: KeyOptions = {}

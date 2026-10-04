@@ -116,6 +116,10 @@ export class InputController {
                 return row.kind === 'text' ? { from: model.getLine(row.line).start, to: model.getLine(row.lastLine).next } : { from: offset, to: offset };
             },
             camelHumps: () => view.settings.smartKeys.camelHumps,
+            selectionAt: (x, y) => (view.settings.readOnly ? null : view.selectionAtPoint(x, y)),
+            setDropCaret: (offset) => view.setDropCaret(offset),
+            drop: (from, to, offset, copy) => this.dropText(from, to, offset, copy),
+            copyHeld: (event) => (this.options.apple ? event.altKey : event.ctrlKey),
             focus: () => view.focus(),
             scrolled: () => view.requestRender()
         });
@@ -171,8 +175,8 @@ export class InputController {
         this.listen(this.view.gutterElement, 'pointerdown', (event) => this.gutterDown(event));
         this.listen(this.view.stickyElement, 'pointerdown', (event) => this.stickyDown(event));
         const move = (event: Event): void => this.pointer.move(event as PointerEvent);
-        const end = (): void => {
-            this.pointer.end();
+        const end = (event: Event): void => {
+            this.pointer.end(event as PointerEvent);
             this.historyGroup++;
         };
         document.addEventListener('pointermove', move);
@@ -394,6 +398,32 @@ export class InputController {
         if (!vertical) {
             this.desiredXs = [];
         }
+        this.historyGroup++;
+        this.view.revealCaret();
+    }
+
+    /* Carries the text of a selection to a place in the text, or copies it there, as one step of the history, and selects it where it landed. */
+    private dropText(from: number, to: number, offset: number, copy: boolean): void {
+        if (this.blockedByReadOnly()) {
+            return;
+        }
+        const { model } = this.view;
+        const text = model.slice(from, to);
+        this.view.ensureVisible(offset);
+        const start = copy || offset < from ? offset : offset - (to - from);
+        this.historyGroup++;
+        model.applyEdits(
+            copy
+                ? [{ from: offset, to: offset, text }]
+                : [
+                      { from, to, text: '' },
+                      { from: offset, to: offset, text }
+                  ],
+            {
+                source: 'input',
+                selections: [{ anchor: start, head: start + text.length }]
+            }
+        );
         this.historyGroup++;
         this.view.revealCaret();
     }

@@ -21,13 +21,33 @@ export interface PointerHost {
     lineAt(offset: number): { from: number; to: number };
     /* Whether a double click selects a camel hump and not the whole name. */
     camelHumps(): boolean;
+    /* The selection a point of the screen is on, for a press that may begin dragging it; null on anything else or when the text cannot be edited. */
+    selectionAt(clientX: number, clientY: number): Selection | null;
+    /* The place a drop would land, drawn as a caret; null takes it away. */
+    setDropCaret(offset: number | null): void;
+    /* Moves `[from, to)` to `offset`, or copies it there. */
+    drop(from: number, to: number, offset: number, copy: boolean): void;
+    /* Whether the key that turns a move into a copy is down. */
+    copyHeld(event: PointerEvent): boolean;
     focus(): void;
     /* The view scrolled by itself while the pointer was held at an edge. */
     scrolled(): void;
 }
 
-/* What a drag selects by: characters, or the words or lines the press started on. */
-type DragUnit = 'character' | 'word' | 'line';
+/* What a drag selects by: characters, or the words or lines the press started on. `drop` is no selection at all: the press was on a selection, and a drag carries its text. */
+type DragUnit = 'character' | 'word' | 'line' | 'drop';
+
+/* A press on a selection: it waits for the pointer to move this far before it carries the text, and without that it is a click. */
+interface Carry {
+    from: number;
+    to: number;
+    pressOffset: number;
+    startX: number;
+    startY: number;
+    active: boolean;
+    /* Where it would land, or null over the text itself. */
+    target: number | null;
+}
 
 interface Drag {
     id: number;
@@ -37,6 +57,7 @@ interface Drag {
     unit: DragUnit;
     /* The word or the lines the press selected, which a drag never gives back. */
     saved: { from: number; to: number };
+    carry?: Carry;
     /* Where the press landed in the content, which a scroll leaves in place. */
     anchorPoint: ContentPoint;
     x: number;
@@ -47,6 +68,8 @@ const SCROLL_STEP = 40;
 /* A press this soon after the last one, this close to it, is the next click of a double or triple click. */
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_DISTANCE = 4;
+/* How far the pointer goes, in pixels, before a press on a selection starts carrying it. */
+const CARRY_THRESHOLD = 5;
 
 /* The selection a mouse makes: a click, a drag, shift to extend, alt to add a caret or, dragged, a column, a double click for a word and a triple for a line, which a drag then grows by words and lines. */
 export class PointerSelection {
@@ -83,7 +106,19 @@ export class PointerSelection {
         };
         this.host.focus();
         viewport.setPointerCapture?.(event.pointerId);
-        if (area === 'gutter') {
+        const selected = count === 1 && area === 'text' && !event.shiftKey && !event.altKey ? this.host.selectionAt(event.clientX, event.clientY) : null;
+        if (selected !== null) {
+            this.drag.unit = 'drop';
+            this.drag.carry = {
+                from: Math.min(selected.anchor, selected.head),
+                to: Math.max(selected.anchor, selected.head),
+                pressOffset: head,
+                startX: event.clientX,
+                startY: event.clientY,
+                active: false,
+                target: null
+            };
+        } else if (area === 'gutter') {
             this.pressLineNumber(event, head);
         } else if (count >= 3) {
             this.selectUnit('line', this.host.lineAt(head), base);
@@ -171,13 +206,40 @@ export class PointerSelection {
         this.update();
     }
 
-    end(): void {
+    /* The pointer went up, or was taken away: a selection that was carried lands, and one that was only pressed gives way to a caret. */
+    end(event?: PointerEvent): void {
         const { viewport } = this.host;
+        const carry = this.drag?.carry;
         if (this.drag) {
             viewport.releasePointerCapture?.(this.drag.id);
         }
         this.drag = undefined;
         this.cancelFrame();
+        if (carry === undefined) {
+            return;
+        }
+        this.host.setDropCaret(null);
+        if (event?.type === 'pointercancel') {
+            return;
+        }
+        if (!carry.active) {
+            this.host.model.setSelections([{ anchor: carry.pressOffset, head: carry.pressOffset }]);
+        } else if (carry.target !== null && event !== undefined) {
+            this.host.drop(carry.from, carry.to, carry.target, this.host.copyHeld(event));
+        }
+    }
+
+    /* Where the carried text would land at the pointer, once the pointer has moved far enough to carry it. */
+    private updateCarry(drag: Drag, carry: Carry): void {
+        if (!carry.active) {
+            if (Math.abs(drag.x - carry.startX) < CARRY_THRESHOLD && Math.abs(drag.y - carry.startY) < CARRY_THRESHOLD) {
+                return;
+            }
+            carry.active = true;
+        }
+        const offset = this.host.offsetAt(drag.x, drag.y);
+        carry.target = offset >= carry.from && offset <= carry.to ? null : offset;
+        this.host.setDropCaret(carry.target);
     }
 
     dispose(): void {
@@ -194,6 +256,10 @@ export class PointerSelection {
 
     private update(): void {
         if (!this.drag) {
+            return;
+        }
+        if (this.drag.carry !== undefined) {
+            this.updateCarry(this.drag, this.drag.carry);
             return;
         }
         if (this.drag.add && this.drag.unit === 'character') {

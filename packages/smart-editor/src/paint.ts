@@ -370,9 +370,11 @@ export function paintOver(container: HTMLElement, layers: readonly { className: 
 }
 
 /* The carets, above the text. */
-export function paintCarets(container: HTMLElement, carets: readonly (LayoutRect & { primary: boolean })[]): void {
+export function paintCarets(container: HTMLElement, carets: readonly (LayoutRect & { primary: boolean; drop?: boolean })[]): void {
     const document = container.ownerDocument;
-    container.replaceChildren(...carets.map((rect) => box(document, rect.primary ? 'se-caret se-primary-caret' : 'se-caret', { ...rect, width: 2 })));
+    container.replaceChildren(
+        ...carets.map((rect) => box(document, rect.drop ? 'se-drop-caret' : rect.primary ? 'se-caret se-primary-caret' : 'se-caret', { ...rect, width: 2 }))
+    );
 }
 
 export interface StickyEntry {

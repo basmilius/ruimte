@@ -138,6 +138,80 @@ describe('the mouse', () => {
         });
     });
 
+    describe('carrying selected text', () => {
+        const select = (mounted: ReturnType<typeof mountEditor>): void => {
+            mounted.click(column(7) + 1, row(0));
+            mounted.click(column(7) + 1, row(0));
+            expect(mounted.editor.getSelection()).toEqual({ start: { line: 0, character: 6 }, end: { line: 0, character: 11 } });
+        };
+        const carry = (mounted: ReturnType<typeof mountEditor>, to: [number, number], release: Record<string, boolean> = {}): void => {
+            const target = mounted.page.document.documentElement;
+            pointer(mounted.page.window, mounted.viewport, 'pointerdown', column(8) + 1, row(0));
+            pointer(mounted.page.window, target, 'pointermove', column(to[0]) + 1, row(to[1]));
+            pointer(mounted.page.window, target, 'pointerup', column(to[0]) + 1, row(to[1]), release);
+        };
+
+        test('moves the text where the pointer lets go, selects it there and undoes in one step', () => {
+            const mounted = mountEditor({ text: 'hello world foo\nsecond' });
+            select(mounted);
+            carry(mounted, [15, 0]);
+            expect(mounted.editor.getText()).toBe('hello  fooworld\nsecond');
+            expect(mounted.editor.getSelection()).toEqual({ start: { line: 0, character: 10 }, end: { line: 0, character: 15 } });
+            mounted.press('z', { ctrlKey: true });
+            expect(mounted.editor.getText()).toBe('hello world foo\nsecond');
+        });
+
+        test('moves it back up the document as well', () => {
+            const mounted = mountEditor({ text: 'foo\nhello world' });
+            mounted.click(column(7) + 1, row(1));
+            mounted.click(column(7) + 1, row(1));
+            const target = mounted.page.document.documentElement;
+            pointer(mounted.page.window, mounted.viewport, 'pointerdown', column(8) + 1, row(1));
+            pointer(mounted.page.window, target, 'pointermove', column(0) + 1, row(0));
+            pointer(mounted.page.window, target, 'pointerup', column(0) + 1, row(0));
+            expect(mounted.editor.getText()).toBe('worldfoo\nhello ');
+        });
+
+        test('copies it with the key that says so held at the drop', () => {
+            const mounted = mountEditor({ text: 'hello world foo' });
+            select(mounted);
+            carry(mounted, [15, 0], { ctrlKey: true });
+            expect(mounted.editor.getText()).toBe('hello world fooworld');
+        });
+
+        test('takes a press on the selection without a drag as a click that puts the caret there', () => {
+            const mounted = mountEditor({ text: 'hello world foo' });
+            select(mounted);
+            mounted.click(column(8) + 1, row(0));
+            expect(mounted.editor.getSelection().start).toEqual({ line: 0, character: 8 });
+            expect(mounted.editor.getSelection().end).toEqual({ line: 0, character: 8 });
+        });
+
+        test('does nothing when it lets go on the text it carries, or when the editor is read only', () => {
+            const mounted = mountEditor({ text: 'hello world foo' });
+            select(mounted);
+            carry(mounted, [9, 0]);
+            expect(mounted.editor.getText()).toBe('hello world foo');
+            const readOnly = mountEditor({ text: 'hello world foo', readOnly: true });
+            select(readOnly);
+            carry(readOnly, [15, 0]);
+            expect(readOnly.editor.getText()).toBe('hello world foo');
+        });
+
+        test('shows where it would land while it is carried', () => {
+            const mounted = mountEditor({ text: 'hello world foo' });
+            select(mounted);
+            const target = mounted.page.document.documentElement;
+            pointer(mounted.page.window, mounted.viewport, 'pointerdown', column(8) + 1, row(0));
+            expect(mounted.page.host.querySelector('.se-drop-caret')).toBeNull();
+            pointer(mounted.page.window, target, 'pointermove', column(14) + 1, row(0));
+            expect(mounted.page.host.querySelector('.se-drop-caret')).not.toBeNull();
+            pointer(mounted.page.window, target, 'pointercancel', column(14) + 1, row(0));
+            expect(mounted.page.host.querySelector('.se-drop-caret')).toBeNull();
+            expect(mounted.editor.getText()).toBe('hello world foo');
+        });
+    });
+
     test('extends the selection with shift', () => {
         const { editor, click, type } = mountEditor({ text: 'abcdef' });
         click(column(1), row(0));

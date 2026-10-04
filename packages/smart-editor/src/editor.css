@@ -361,6 +361,10 @@
     background: var(--term-cursor, var(--accent));
     animation: se-blink 1.1s steps(1) infinite;
 }
+.se-drop-caret {
+    position: absolute;
+    background: var(--term-cursor, var(--accent));
+}
 .se-carets[data-moving] .se-caret {
     animation: none;
 }
@@ -427,6 +431,9 @@
 }
 .se-content-link {
     cursor: pointer;
+}
+.se-over-selection {
+    cursor: default;
 }
 .se-struck {
     position: absolute;
