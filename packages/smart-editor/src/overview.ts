@@ -1,4 +1,4 @@
-export type OverviewKind = 'added' | 'modified' | 'deleted' | 'find' | 'find-current' | 'info' | 'warning' | 'error';
+export type OverviewKind = 'added' | 'modified' | 'deleted' | 'find' | 'find-current' | 'occurrence' | 'info' | 'warning' | 'error';
 
 /* A stretch of the content, in the pixels the content is laid out in. */
 export interface OverviewSpan {

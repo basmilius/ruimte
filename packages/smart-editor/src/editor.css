@@ -239,6 +239,10 @@
 .se-tick-find {
     opacity: 0.6;
 }
+.se-tick-occurrence {
+    left: 6px;
+    background: var(--editor-occurrence);
+}
 .se-tick-error,
 .se-tick-warning,
 .se-tick-info {

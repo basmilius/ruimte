@@ -63,6 +63,9 @@ const CARET_SOLID_MS = 500;
  * switch, so the one place that decides it says so.
  */
 const REFRAIN_FROM_SCROLLING = true;
+/* Selecting text marks its other occurrences, unless there are more than this many, which would be noise. */
+const OCCURRENCE_LIMIT = 50;
+const OCCURRENCE_TEXT_LIMIT = 1000;
 const STICKY_MAX_LINES = 5;
 /* A view shows at most this share of its rows as sticky headers, so a small node keeps most of its text. */
 const STICKY_ROW_SHARE = 4;
@@ -157,6 +160,7 @@ export class EditorView {
     private occurrences: Occurrence[] = [];
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
     private dropCaret: number | null = null;
+    private selectionOccurrenceCache: { key: string; ranges: readonly { from: number; to: number }[] } = { key: '', ranges: [] };
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
     private foldRanges: ViewFold[] = [];
@@ -918,6 +922,32 @@ export class EditorView {
     }
 
     /* The pointer moved over the editor; a drag in progress is not a hover. */
+    /*
+     * The other places the selected text is, found without a language server: only for one selection that
+     * holds no line break and is not blank, and not at all when there are more than a few of them.
+     */
+    private selectionOccurrences(): readonly { from: number; to: number }[] {
+        const selections = this.model.getSelections();
+        const only = selections.length === 1 ? selections[0]! : null;
+        const from = only === null ? 0 : Math.min(only.anchor, only.head);
+        const to = only === null ? 0 : Math.max(only.anchor, only.head);
+        const key = `${this.revision}|${from}|${to}`;
+        if (this.selectionOccurrenceCache.key === key) {
+            return this.selectionOccurrenceCache.ranges;
+        }
+        let ranges: { from: number; to: number }[] = [];
+        const text = to - from > 0 && to - from <= OCCURRENCE_TEXT_LIMIT ? this.model.slice(from, to) : '';
+        if (text.trim() !== '' && !/[\r\n]/.test(text) && this.model.getLength() <= FOLD_LIMIT) {
+            const found = this.model.find(text, { maxResults: OCCURRENCE_LIMIT + 1 });
+            ranges =
+                found.length > OCCURRENCE_LIMIT
+                    ? []
+                    : found.filter((match) => match.from !== from || match.to !== to).map((match) => ({ from: match.from, to: match.to }));
+        }
+        this.selectionOccurrenceCache = { key, ranges };
+        return ranges;
+    }
+
     /* The selection under a point of the screen, which a press there may drag away. */
     selectionAtPoint(clientX: number, clientY: number): EditorSelection | null {
         const point = this.contentPoint(clientX, clientY);
@@ -1234,6 +1264,10 @@ export class EditorView {
                 });
             }
         }
+        const alike = this.selectionOccurrences();
+        if (alike.length > 0) {
+            marks.push({ className: 'se-occurrence', rects: alike.flatMap((range) => this.layout.rectangles(range.from, range.to, rows)) });
+        }
         const faded: LayoutRect[] = [];
         const struck: LayoutRect[] = [];
         for (const marker of this.markers) {
@@ -1389,7 +1423,8 @@ export class EditorView {
         const trackHeight = this.viewportHeight;
         const matches = this.find.matches;
         const current = this.find.current;
-        const key = `${this.revision}|${this.changeVersion}|${this.markerVersion}|${this.layout.height}|${trackHeight}|${matches.length}|${current}|${matches[0]?.from}|${matches.at(-1)?.from}`;
+        const alike = this.selectionOccurrences();
+        const key = `${this.revision}|${this.changeVersion}|${this.markerVersion}|${this.layout.height}|${trackHeight}|${matches.length}|${current}|${matches[0]?.from}|${matches.at(-1)?.from}|${this.selectionOccurrenceCache.key}`;
         if (key === this.overviewKey) {
             return;
         }
@@ -1416,6 +1451,10 @@ export class EditorView {
                     ...(marker.message === undefined ? {} : { title: marker.message })
                 });
             }
+        }
+        for (const range of alike) {
+            const line = this.model.positionAt(range.from).line;
+            spans.push({ kind: 'occurrence', top: rowTop(line), bottom: rowBottom(line) });
         }
         matches.forEach((match, index) => {
             const line = this.model.positionAt(match.from).line;

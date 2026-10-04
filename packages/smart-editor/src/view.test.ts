@@ -257,6 +257,44 @@ describe('inlays and widgets', () => {
     });
 });
 
+describe('occurrences of the selected text', () => {
+    const marks = (host: HTMLElement): number => host.querySelectorAll('.se-occurrence').length;
+
+    test('marks the other places a selection is, softly, in the text and in the scroll track', () => {
+        const { host, model, view } = mount('foo bar foo baz Foo');
+        model.setSelections([{ anchor: 0, head: 3 }]);
+        view.render();
+        expect(marks(host)).toBe(2);
+        expect(host.querySelectorAll('.se-tick-occurrence').length).toBeGreaterThan(0);
+        model.setSelections([{ anchor: 5, head: 5 }]);
+        view.render();
+        expect(marks(host)).toBe(0);
+        expect(host.querySelectorAll('.se-tick-occurrence').length).toBe(0);
+    });
+
+    test('leaves out blank text, several lines, several selections and a text that is everywhere', () => {
+        const { host, model, view } = mount('a b a\nb a b\n' + 'x '.repeat(60));
+        model.setSelections([{ anchor: 1, head: 2 }]);
+        view.render();
+        expect(marks(host)).toBe(0);
+        model.setSelections([{ anchor: 0, head: 8 }]);
+        view.render();
+        expect(marks(host)).toBe(0);
+        model.setSelections([
+            { anchor: 0, head: 1 },
+            { anchor: 4, head: 5 }
+        ]);
+        view.render();
+        expect(marks(host)).toBe(0);
+        model.setSelections([{ anchor: 12, head: 13 }]);
+        view.render();
+        expect(marks(host)).toBe(0);
+        model.setSelections([{ anchor: 0, head: 1 }]);
+        view.render();
+        expect(marks(host)).toBe(2);
+    });
+});
+
 describe('brackets', () => {
     test('marks a bracket at the caret and its mate', () => {
         const { host, model } = mount('f(a)');
