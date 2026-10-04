@@ -515,7 +515,9 @@
         "showLog": "Toon log",
         "logTitle": "Log van {{name}}",
         "logEmpty": "Nog niets gelogd",
-        "failed": "De language server is niet bereikbaar: {{message}}"
+        "failed": "De language server is niet bereikbaar: {{message}}",
+        "none": "Geen language server voor dit bestand",
+        "logs": "Logs"
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",
     "processes": {
@@ -565,6 +567,18 @@
         "theProcess": "Het proces",
         "unsupported": "Processen bekijken kan nog niet op dit platform.",
         "unsupportedWindows": "Processen bekijken kan nog niet op Windows."
+    },
+    "statusBar": {
+        "position": "Rg {{line}}, Kol {{column}}",
+        "spaces": "Spaties: {{count}}",
+        "tabs": "Tabbreedte: {{count}}",
+        "branch": "Branch",
+        "problems": "Problemen in dit bestand",
+        "symbol": "Symbool bij de cursor",
+        "errorsCount_one": "{{formatted}} fout",
+        "errorsCount_other": "{{formatted}} fouten",
+        "warningsCount_one": "{{formatted}} waarschuwing",
+        "warningsCount_other": "{{formatted}} waarschuwingen"
     },
     "worktree": {
         "baseBranch": "de base branch",

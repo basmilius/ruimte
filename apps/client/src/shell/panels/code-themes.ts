@@ -136,7 +136,13 @@ export const CODE_PALETTES: Readonly<Record<CodeThemeMode, CodePalette>> = { lig
  */
 const SCOPES: Readonly<Record<Exclude<CodeRole, 'foreground'>, readonly string[]>> = {
     comment: ['comment', 'punctuation.definition.comment', 'string.comment'],
-    docComment: ['comment.block.documentation', 'comment.line.documentation', 'comment.line.triple-slash.documentation'],
+    docComment: [
+        'comment.block.documentation',
+        'comment.line.documentation',
+        'comment.line.triple-slash.documentation',
+        // `/**` and `*/` are punctuation inside the doc comment, and the bare `punctuation.definition.comment` above would make them gray.
+        'comment.block.documentation punctuation.definition.comment'
+    ],
     docTag: [
         'comment.block.documentation storage.type',
         'comment.block.documentation entity.name.type',

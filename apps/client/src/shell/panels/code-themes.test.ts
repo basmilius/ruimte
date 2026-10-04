@@ -212,3 +212,20 @@ describe('the scopes our code themes cover', () => {
         }
     }
 });
+
+describe('a doc comment', () => {
+    for (const theme of CODE_THEMES) {
+        test(`${theme.name} draws its delimiters in the doc comment's color`, async () => {
+            const highlighter = await createHighlighter({ themes: [theme], langs: ['php', 'typescript'] });
+            for (const [lang, code] of [
+                ['php', '<?php\n/**\n * Returns.\n */\nfunction a() {}\n'],
+                ['typescript', '/**\n * Returns.\n */\nfunction a() {}\n']
+            ] as const) {
+                const tokens = highlighter.codeToTokens(code, { lang, theme: theme.name }).tokens.flat();
+                const colorOf = (text: string) => tokens.find((token) => token.content.trim() === text)?.color?.toLowerCase();
+                expect(colorOf('/**')).toBe(CODE_PALETTES[theme.type].docComment.toLowerCase());
+                expect(colorOf('*/')).toBe(CODE_PALETTES[theme.type].docComment.toLowerCase());
+            }
+        });
+    }
+});

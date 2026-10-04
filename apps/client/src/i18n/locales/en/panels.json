@@ -515,7 +515,9 @@
         "showLog": "Show log",
         "logTitle": "{{name}} log",
         "logEmpty": "Nothing logged yet",
-        "failed": "Could not reach the language server: {{message}}"
+        "failed": "Could not reach the language server: {{message}}",
+        "none": "No language server serves this file",
+        "logs": "Logs"
     },
     "machineNotAnswering": "This machine is not answering.",
     "processes": {
@@ -565,6 +567,18 @@
         "theProcess": "The process",
         "unsupported": "Process monitoring is not available on this platform yet.",
         "unsupportedWindows": "Process monitoring is not available on Windows yet."
+    },
+    "statusBar": {
+        "position": "Ln {{line}}, Col {{column}}",
+        "spaces": "Spaces: {{count}}",
+        "tabs": "Tab size: {{count}}",
+        "branch": "Branch",
+        "problems": "Problems in this file",
+        "symbol": "Symbol at the caret",
+        "errorsCount_one": "{{formatted}} error",
+        "errorsCount_other": "{{formatted}} errors",
+        "warningsCount_one": "{{formatted}} warning",
+        "warningsCount_other": "{{formatted}} warnings"
     },
     "worktree": {
         "baseBranch": "the base branch",

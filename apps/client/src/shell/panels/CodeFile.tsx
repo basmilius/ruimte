@@ -3,18 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadText } from '@ruimte/contracts';
 import type { Editor } from '@ruimte/smart-editor';
 import { FindBar } from '@/find/FindBar';
-import { LanguageStatusItem } from '@/language/LanguageStatusItem';
 import { useFind } from '@/find/use-find';
 import { formatBytes, formatNumber } from '@basmilius/desktop-ui/format';
 import { Button, ErrorBoundary, Pill, Tooltip } from '@basmilius/desktop-ui';
 import { DraftBar, EditorNotice } from '@/shell/panels/DraftBar';
 import type { EditBlock } from '@/shell/panels/edit-gate';
 import { useFileActions } from '@/shell/panels/file-actions';
+import { EditorStatusBar } from '@/shell/panels/EditorStatusBar';
 import { FileEditor } from '@/shell/panels/FileEditor';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { FileBreadcrumb } from '@/shell/panels/FileBreadcrumb';
 import { highlightCode } from '@/shell/panels/highlight';
+import { lineEndingOf } from '@/shell/panels/status-bar-model';
 import { useEditorFind } from '@/shell/panels/use-editor-find';
 import { useEditorLanguage } from '@/shell/panels/use-editor-language';
 import { useChangeMarks } from '@/shell/panels/use-change-marks';
@@ -226,11 +227,6 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     />
                 }
             >
-                {editorLanguage !== null && (
-                    <ErrorBoundary label={t('file.edit.failed')} resetKeys={[editorLanguage]}>
-                        <LanguageStatusItem language={editorLanguage} />
-                    </ErrorBoundary>
-                )}
                 {readOnlyReason !== null && (
                     <Tooltip label={readOnlyReason}>
                         <Pill>{t('file.edit.readOnly')}</Pill>
@@ -294,6 +290,18 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                     </FileScroll>
                 )}
             </div>
+            {editor !== null && editing.indentation !== null && (
+                <EditorStatusBar
+                    editor={editor}
+                    language={editorLanguage}
+                    path={path}
+                    languageId={plain ? undefined : read.language}
+                    indentation={editing.indentation}
+                    encoding={read.encoding}
+                    lineEnding={lineEndingOf(read.text)}
+                    scope={scope}
+                />
+            )}
         </div>
     );
 }

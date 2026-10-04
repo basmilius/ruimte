@@ -35,10 +35,11 @@ function report(error: unknown, t: (key: string, options: { message: string }) =
 }
 
 /*
- * The language servers behind the open file, as the chip in its toolbar and the list under it. A server
- * is installed only by a person's click on Install here; nothing else on the page asks the machine to.
+ * The language servers behind the open file, as the item at the end of the status bar and the list
+ * it opens. A server is installed only by a person's click on Install here; nothing else on the page
+ * asks the machine to.
  */
-export function LanguageStatusItem({ language }: { language: EditorLanguage }) {
+export function LanguageStatusItem({ language, name }: { language: EditorLanguage; name: string }) {
     const { t } = useTranslation('panels');
     const tracker = language.project.status;
     const statuses = useStatuses(tracker);
@@ -46,14 +47,13 @@ export function LanguageStatusItem({ language }: { language: EditorLanguage }) {
     const [logOf, setLogOf] = useState<string | null>(null);
     const chip = chipServer(statuses, serving);
     const listed = listedServers(statuses, serving);
+    // Work a person waits for is spelled out next to the name; a server that is simply up is the dot.
+    const busy = listed.find((status) => toneOf(status.state) === 'busy');
+    const shown = busy ?? chip;
 
-    if (chip === null) {
-        return null;
-    }
-
-    const runningCount = listed.filter((status) => actionsOf(status).restart).length;
+    const running = listed.filter((status) => actionsOf(status).restart);
     const restartAll = (): void => {
-        for (const status of listed.filter((entry) => actionsOf(entry).restart)) {
+        for (const status of running) {
             const kind = kindOf(status.server);
             if (kind !== null) {
                 void tracker.restart(kind).catch((error: unknown) => report(error, t));
@@ -64,24 +64,36 @@ export function LanguageStatusItem({ language }: { language: EditorLanguage }) {
     return (
         <>
             <Popover.Root>
-                <Tooltip label={`${nameOf(chip.server)} · ${t(`language.state.${chip.state}`)}`}>
+                <Tooltip label={t('language.chip')}>
                     <Popover.Trigger
                         aria-label={t('language.chip')}
-                        className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text aria-expanded:bg-surface-active aria-expanded:text-text"
+                        className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-md px-1.5 hover:bg-surface-hover hover:text-text aria-expanded:bg-surface-active aria-expanded:text-text"
                     >
-                        {chip.state === 'installing' ? <Spinner size={12} /> : <Dot tone={toneOf(chip.state)} />}
-                        {nameOf(chip.server)}
+                        {shown === null ? null : shown.state === 'installing' ? <Spinner size={12} /> : <Dot tone={toneOf(shown.state)} />}
+                        {name}
+                        {busy !== undefined && (
+                            <>
+                                <Spinner size={12} />
+                                <span className="text-text-faint">
+                                    {nameOf(busy.server)} {t(`language.state.${busy.state}`).toLowerCase()}
+                                </span>
+                            </>
+                        )}
                     </Popover.Trigger>
                 </Tooltip>
-                <Popover.Popup align="end" sideOffset={6} className="flex w-80 flex-col gap-1 p-2">
+                <Popover.Popup side="top" align="end" sideOffset={6} className="flex w-80 flex-col gap-1 p-2">
                     <Popover.Title className="px-2 pt-1 pb-1 text-xs font-medium text-text">{t('language.title')}</Popover.Title>
+                    {listed.length === 0 && <div className="px-2 py-1.5 text-xs text-text-muted">{t('language.none')}</div>}
                     {listed.map((status) => (
                         <ServerRow key={status.server} status={status} tracker={tracker} onLog={() => setLogOf(status.server)} />
                     ))}
-                    {runningCount > 1 && (
-                        <div className="flex justify-end border-t border-border pt-2">
-                            <Button size="xs" onClick={restartAll}>
+                    {listed.length > 0 && (
+                        <div className="flex items-center gap-2 border-t border-border pt-2">
+                            <Button size="xs" disabled={running.length === 0} onClick={restartAll}>
                                 {t('language.restartAll')}
+                            </Button>
+                            <Button size="xs" onClick={() => setLogOf(listed[0]!.server)}>
+                                {t('language.logs')}
                             </Button>
                         </div>
                     )}
