@@ -61,6 +61,11 @@ describe('panels in the machine-local file', () => {
         expect(serializePanels(defaults)).not.toHaveProperty('launchesPanel');
     });
 
+    test('the problems panel is for this session only, so the file stores it as closed', () => {
+        const problems: PanelsState = { ...defaults, panel: { open: true, kind: 'problems' } };
+        expect(serializePanels(problems).panel).toEqual({ open: false, kind: 'files' });
+    });
+
     test('a folder where nothing is hidden writes no list of hidden repositories', () => {
         expect(serializePanels(defaults).git?.hiddenRepos).toBeUndefined();
     });

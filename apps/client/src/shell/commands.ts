@@ -592,7 +592,12 @@ export function appCommands(): Command[] {
                       ? []
                       : [
                             { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
-                            { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') }
+                            { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
+                            {
+                                id: 'panel-problems',
+                                label: i18next.t('shell:palette.commands.toggleProblems'),
+                                run: () => useUi.getState().togglePanel('problems')
+                            }
                         ]),
                   { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') }
               ]

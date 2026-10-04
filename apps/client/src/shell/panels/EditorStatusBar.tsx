@@ -9,6 +9,7 @@ import { useProblemCounts } from '@/language/use-problem-counts';
 import { encodingLabelOf, languageNameOf, symbolBadgeOf } from '@/shell/panels/status-bar-model';
 import { useEditorCaret } from '@/shell/panels/use-editor-caret';
 import { useFileBranch } from '@/shell/panels/use-file-branch';
+import { useUi } from '@/state/ui';
 
 const ITEM = 'inline-flex h-5 shrink-0 items-center gap-1.5 rounded-md px-1.5';
 
@@ -56,7 +57,11 @@ export function EditorStatusBar({ editor, language, path, languageId, indentatio
             )}
             {language !== null && (
                 <Tooltip label={t('statusBar.problems')}>
-                    <button type="button" className={`${ITEM} hover:bg-surface-hover hover:text-text`} onClick={() => void language.diagnostics.goToFirst()}>
+                    <button
+                        type="button"
+                        className={`${ITEM} hover:bg-surface-hover hover:text-text`}
+                        onClick={() => useUi.getState().setPanel({ open: true, kind: 'problems' })}
+                    >
                         <Icon icon={CircleX} size={12} className={counts.error > 0 ? 'text-status-error' : 'text-text-faint'} />
                         <span aria-label={t('statusBar.errorsCount', { count: counts.error, formatted: formatNumber(counts.error) })}>
                             {formatNumber(counts.error)}

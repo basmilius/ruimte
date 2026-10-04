@@ -1,6 +1,7 @@
 import { fileUriToPath, type ApplyWorkspaceEditResult, type ContentChange, type LanguageService, type WorkspaceEdit } from '@ruimte/smart-editor-lsp';
 import type { Editor } from '@ruimte/smart-editor';
 import type { Transport } from '@/transport/transport';
+import { ProjectProblems } from './project-problems';
 import { LanguageStatusTracker } from './status';
 import { WireLanguageService } from './wire-service';
 import { applyWorkspaceEdit, type ProjectFiles } from './workspace-edit';
@@ -80,6 +81,8 @@ interface Holder {
 export class ProjectLanguage {
     readonly service: WireLanguageService;
     readonly status: LanguageStatusTracker;
+    /* What the servers report for every file of the project that is open on the machine, which the problems panel lists. */
+    readonly problems: ProjectProblems;
     /* The project folder on the machine of the daemon. */
     readonly folder: string;
     private readonly holders = new Map<string, Holder>();
@@ -89,6 +92,7 @@ export class ProjectLanguage {
         this.folder = folder;
         this.files = files;
         this.status = new LanguageStatusTracker(transport, projectId);
+        this.problems = new ProjectProblems(transport, projectId);
         this.service = new WireLanguageService({
             transport,
             projectId,
@@ -163,6 +167,7 @@ export class ProjectLanguage {
         this.holders.clear();
         this.service.dispose();
         this.status.dispose();
+        this.problems.dispose();
     }
 }
 

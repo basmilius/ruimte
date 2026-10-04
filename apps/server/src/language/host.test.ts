@@ -369,6 +369,16 @@ describe('commands', () => {
 });
 
 describe('events', () => {
+    it('tells the clients a file has no problems once its last document closes', async () => {
+        const { host, events } = await installed();
+        await openReady(host);
+        events['client-1'].length = 0;
+        await host.closeDocument('client-1', { projectId: 'p1', path: 'src/a.ts' });
+        expect(kinds(events['client-1'], 'language.diagnostics')).toEqual([
+            { event: 'language.diagnostics', payload: { projectId: 'p1', path: 'src/a.ts', server: 'typescript', diagnostics: [] } }
+        ]);
+    });
+
     it('sends diagnostics to the clients that have the project open, and only those', async () => {
         const { host, spawner, events } = await installed();
         await openReady(host);

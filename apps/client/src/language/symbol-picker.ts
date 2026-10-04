@@ -43,13 +43,11 @@ export class SymbolPickerFeature {
             popups.setState({ symbols: { file: basenameOf(this.language.uri), entries } });
         } catch (error) {
             if (!(error instanceof StaleResultError)) {
-                useToasts
-                    .getState()
-                    .show({
-                        id: TOAST_ID,
-                        kind: 'error',
-                        title: i18next.t('panels:language.symbols.failed', { message: error instanceof Error ? error.message : String(error) })
-                    });
+                useToasts.getState().show({
+                    id: TOAST_ID,
+                    kind: 'error',
+                    title: i18next.t('panels:language.symbols.failed', { message: error instanceof Error ? error.message : String(error) })
+                });
             }
         }
     }

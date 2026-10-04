@@ -13,6 +13,7 @@ import { useShownPanel, useUi, type PanelKind } from '@/state/ui';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const GitPanel = lazyNamed(() => import('@/shell/panels/GitPanel'), 'GitPanel');
+const ProblemsPanel = lazyNamed(() => import('@/language/ProblemsPanel'), 'ProblemsPanel');
 const LaunchesPanel = lazyNamed(() => import('@/launches/LaunchesPanel'), 'LaunchesPanel');
 
 const DEFAULT_WIDTH = 540;
@@ -31,6 +32,8 @@ function PanelBody({ kind }: { kind: PanelKind }) {
             return <DevicesPanel />;
         case 'launches':
             return <LaunchesPanel />;
+        case 'problems':
+            return <ProblemsPanel />;
     }
 }
 

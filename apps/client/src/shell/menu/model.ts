@@ -402,6 +402,7 @@ export function menuModel(context: MenuContext): MenuSpec {
             ...only(desktop && apple, role('zoom', t('zoom'))),
             separator,
             ...only(workspace, command('panel-processes', t('processes'), { checked: context.panel === 'processes' })),
+            ...only(workspace && !context.scratch, command('panel-problems', t('problems'), { checked: context.panel === 'problems' })),
             command('usage', t('usage')),
             command('models', t('compareModels')),
             command('settings-machines', t('machines')),

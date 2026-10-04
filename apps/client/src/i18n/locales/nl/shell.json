@@ -53,7 +53,8 @@
             "git": "Git",
             "devices": "Apparaten",
             "processes": "Processen",
-            "launches": "Launches"
+            "launches": "Launches",
+            "problems": "Problemen"
         }
     },
     "layoutDialog": {
@@ -534,6 +535,7 @@
             "toggleFiles": "Bestandenpaneel aan of uit",
             "toggleGit": "Git-paneel aan of uit",
             "toggleProcesses": "Processen-paneel aan of uit",
+            "toggleProblems": "Problemenpaneel aan of uit",
             "toggleTheme": "Licht of donker",
             "keyboardShortcuts": "Sneltoetsen",
             "searchSettings": "Instellingen zoeken",
@@ -720,6 +722,7 @@
         "minimize": "Minimaliseren",
         "zoom": "Zoom",
         "processes": "Processen",
+        "problems": "Problemen",
         "usage": "Verbruik",
         "compareModels": "Modellen vergelijken",
         "machines": "Account…",

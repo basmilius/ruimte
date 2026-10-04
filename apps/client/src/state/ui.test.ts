@@ -121,7 +121,7 @@ describe('ui', () => {
 
 describe('the panel a window shows', () => {
     test('a panel the Chats project has no place for reads as closed, and keeps its kind for the next project', () => {
-        for (const kind of ['files', 'git', 'devices', 'launches'] as const) {
+        for (const kind of ['files', 'git', 'devices', 'launches', 'problems'] as const) {
             expect(shownPanel({ open: true, kind }, true)).toEqual({ open: false, kind });
             expect(shownPanel({ open: true, kind }, false)).toEqual({ open: true, kind });
         }

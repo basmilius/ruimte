@@ -98,6 +98,7 @@ export const PALETTE_IDS = [
     'panel-files',
     'panel-git',
     'panel-processes',
+    'panel-problems',
     'theme',
     'settings',
     'settings-search',

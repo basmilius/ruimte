@@ -617,6 +617,17 @@
         }
     },
     "machineNotAnswering": "This machine is not answering.",
+    "problems": {
+        "error_one": "{{formatted}} error",
+        "error_other": "{{formatted}} errors",
+        "warning_one": "{{formatted}} warning",
+        "warning_other": "{{formatted}} warnings",
+        "info_one": "{{formatted}} message",
+        "info_other": "{{formatted}} messages",
+        "empty": "No problems in the files that are open. The language servers report on the files they have been given.",
+        "filter": "Filter",
+        "nothingMatches": "No problem matches the filter"
+    },
     "processes": {
         "anotherProject": "another project",
         "collapse": "Collapse {{name}}",

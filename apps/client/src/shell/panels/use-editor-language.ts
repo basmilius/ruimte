@@ -10,7 +10,7 @@ import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 
 /* One value that an effect sets and a render reads, which is how an effect's result reaches the tree without a state update inside the effect. */
-function createHolder<T>(): { get(): T | null; set(value: T | null): void; subscribe(listener: () => void): () => void } {
+export function createHolder<T>(): { get(): T | null; set(value: T | null): void; subscribe(listener: () => void): () => void } {
     let value: T | null = null;
     const listeners = new Set<() => void>();
     return {

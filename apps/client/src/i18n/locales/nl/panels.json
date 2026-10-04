@@ -617,6 +617,17 @@
         }
     },
     "machineNotAnswering": "Deze machine antwoordt niet.",
+    "problems": {
+        "error_one": "{{formatted}} fout",
+        "error_other": "{{formatted}} fouten",
+        "warning_one": "{{formatted}} waarschuwing",
+        "warning_other": "{{formatted}} waarschuwingen",
+        "info_one": "{{formatted}} melding",
+        "info_other": "{{formatted}} meldingen",
+        "empty": "Geen problemen in de geopende bestanden. De language servers rapporteren over de bestanden die ze hebben gekregen.",
+        "filter": "Filter",
+        "nothingMatches": "Geen probleem past bij het filter"
+    },
     "processes": {
         "anotherProject": "ander project",
         "collapse": "{{name}} inklappen",

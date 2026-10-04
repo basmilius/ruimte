@@ -53,7 +53,8 @@
             "git": "Git",
             "devices": "Devices",
             "processes": "Processes",
-            "launches": "Launches"
+            "launches": "Launches",
+            "problems": "Problems"
         }
     },
     "layoutDialog": {
@@ -534,6 +535,7 @@
             "toggleFiles": "Toggle files panel",
             "toggleGit": "Toggle git panel",
             "toggleProcesses": "Toggle processes panel",
+            "toggleProblems": "Toggle problems panel",
             "toggleTheme": "Toggle light and dark",
             "keyboardShortcuts": "Keyboard shortcuts",
             "searchSettings": "Search settings",
@@ -720,6 +722,7 @@
         "minimize": "Minimize",
         "zoom": "Zoom",
         "processes": "Processes",
+        "problems": "Problems",
         "usage": "Usage",
         "compareModels": "Compare Models",
         "machines": "Account…",

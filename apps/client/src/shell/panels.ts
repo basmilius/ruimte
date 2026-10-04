@@ -1,4 +1,4 @@
-import { Activity, Folder, GitBranch, Rocket, TabletSmartphone, type LucideIcon } from 'lucide-react';
+import { Activity, CircleAlert, Folder, GitBranch, Rocket, TabletSmartphone, type LucideIcon } from 'lucide-react';
 import { panelHidden, type PanelKind } from '@/state/ui';
 
 /* The panels, in the order their buttons sit in the toolbar. They share one stored width and each
@@ -11,7 +11,8 @@ export const PANELS: { kind: PanelKind; icon: LucideIcon; minWidth: number; tool
     { kind: 'git', icon: GitBranch, minWidth: 240, toolbar: true },
     { kind: 'devices', icon: TabletSmartphone, minWidth: 320, toolbar: true },
     { kind: 'processes', icon: Activity, minWidth: 420, toolbar: false },
-    { kind: 'launches', icon: Rocket, minWidth: 480, toolbar: false }
+    { kind: 'launches', icon: Rocket, minWidth: 480, toolbar: false },
+    { kind: 'problems', icon: CircleAlert, minWidth: 360, toolbar: false }
 ];
 
 /* The panels with a button in the toolbar of a project, which the Chats project has fewer of. */

@@ -430,6 +430,13 @@ export class LanguageHost {
             return;
         }
         project.documents.delete(document.absolutePath);
+        // A server clears what it reported for a file it was told closed, but no report of it reaches the clients once the file is out of the project's documents.
+        for (const component of document.kind === null ? [] : KIND_PROFILES[document.kind].components) {
+            this.toHolders(project.projectId, {
+                event: 'language.diagnostics',
+                payload: { projectId: project.projectId, path: document.storedPath, server: component.name, diagnostics: [] }
+            });
+        }
         const server = this.serverOf(project, document);
         if (!server) {
             return;

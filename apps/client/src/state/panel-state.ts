@@ -57,7 +57,12 @@ export function parsePanels(stored: ProjectPanels | undefined, defaults: PanelsS
 export function serializePanels(state: PanelsState): ProjectPanels {
     return {
         // A client from before launches reads the files panel in its place.
-        panel: state.panel.kind === 'launches' ? { open: state.panel.open, kind: 'files' } : { open: state.panel.open, kind: state.panel.kind },
+        panel:
+            state.panel.kind === 'launches'
+                ? { open: state.panel.open, kind: 'files' }
+                : state.panel.kind === 'problems'
+                  ? { open: false, kind: 'files' }
+                  : { open: state.panel.open, kind: state.panel.kind },
         ...(state.panel.kind === 'launches' ? { launchesPanel: true } : {}),
         ...(state.panelWidth === null ? {} : { panelWidth: Math.round(state.panelWidth) }),
         ...(state.planAnchor === null ? {} : { plan: state.planAnchor }),
