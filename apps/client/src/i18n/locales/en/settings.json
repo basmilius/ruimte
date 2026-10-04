@@ -78,6 +78,14 @@
             "wrap": {
                 "label": "Wrap long lines",
                 "description": "In files, the editor and diffs."
+            },
+            "indentGuides": {
+                "label": "Indent guides",
+                "description": "A line at each indentation level in the editor, with the one around the cursor stronger."
+            },
+            "whitespace": {
+                "label": "Show whitespace",
+                "description": "Spaces as dots and tabs as arrows in the editor."
             }
         },
         "smartKeys": {

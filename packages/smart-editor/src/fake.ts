@@ -310,6 +310,22 @@ export class FakeEditor implements Editor {
 
     smartKeys: Partial<EditorSmartKeys>;
 
+    guides = true;
+    whitespace = false;
+    rightMargin: number | null = null;
+
+    setGuides(guides: boolean): void {
+        this.guides = guides;
+    }
+
+    setWhitespace(whitespace: boolean): void {
+        this.whitespace = whitespace;
+    }
+
+    setRightMargin(column: number | null): void {
+        this.rightMargin = column;
+    }
+
     setSmartKeys(keys: Partial<EditorSmartKeys>): void {
         this.smartKeys = keys;
     }

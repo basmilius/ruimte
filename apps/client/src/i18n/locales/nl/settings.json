@@ -78,6 +78,14 @@
             "wrap": {
                 "label": "Lange regels afbreken",
                 "description": "In bestanden, de editor en diffs."
+            },
+            "indentGuides": {
+                "label": "Inspringlijnen",
+                "description": "Een lijn bij elk inspringniveau in de editor, met de lijn rond de cursor sterker."
+            },
+            "whitespace": {
+                "label": "Witruimte tonen",
+                "description": "Spaties als punten en tabs als pijlen in de editor."
             }
         },
         "smartKeys": {

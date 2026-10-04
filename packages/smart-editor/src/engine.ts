@@ -72,7 +72,10 @@ class SmartEditor implements Editor {
             readOnlyReason: options.readOnlyReason,
             wrap: options.wrap ?? false,
             smartKeys: resolveSmartKeys(options.smartKeys),
-            messages: options.messages ?? {}
+            messages: options.messages ?? {},
+            guides: options.guides !== false,
+            whitespace: options.whitespace === true,
+            rightMargin: options.rightMargin ?? null
         };
         this.view = new EditorView(element, this.model, this.settings);
         this.controller = new InputController(this.view, {
@@ -504,6 +507,21 @@ class SmartEditor implements Editor {
 
     onScope(listener: (scope: readonly EditorBlock[]) => void): () => void {
         return this.view.onScope(listener);
+    }
+
+    setGuides(guides: boolean): void {
+        this.settings.guides = guides;
+        this.view.applySettings();
+    }
+
+    setWhitespace(whitespace: boolean): void {
+        this.settings.whitespace = whitespace;
+        this.view.applySettings();
+    }
+
+    setRightMargin(column: number | null): void {
+        this.settings.rightMargin = column;
+        this.view.applySettings();
     }
 
     setSmartKeys(keys: Partial<EditorSmartKeys>): void {

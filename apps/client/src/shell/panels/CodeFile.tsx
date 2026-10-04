@@ -285,6 +285,7 @@ export function CodeFile({ path, read, toolbarExtra }: CodeFileProps) {
                             language={plain ? undefined : read.language}
                             wrap={wrap}
                             indentation={editing.indentation}
+                            rightMargin={editing.rightMargin}
                             readOnlyReason={readOnlyReason}
                             placeholderScroll={viewerScroll}
                             focused={editing.focused}

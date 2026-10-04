@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FsReadText } from '@ruimte/contracts';
 import type { EditorEngine, EditorIndentation } from '@ruimte/smart-editor';
 import { type EditBlock, editBlockOf, isCoarsePointer, useFileNodeGate } from '@/shell/panels/edit-gate';
-import { DEFAULT_INDENTATION, editorConfigDirs, indentationFor } from '@/shell/panels/editor-config';
+import { DEFAULT_INDENTATION, editorConfigDirs, type EditorStyle, editorStyleFor } from '@/shell/panels/editor-config';
 import { loadEditorEngine, loadedEditorEngine } from '@/shell/panels/editor-engine';
 import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -20,6 +20,8 @@ export interface FileEditing {
     engine: EditorEngine | null;
     /* The defaults until the project's `.editorconfig` has been read; the editor opens at once and takes the settings when they arrive. */
     indentation: EditorIndentation;
+    /* The `max_line_length` of the project's `.editorconfig`, null when it has none. */
+    rightMargin: number | null;
     loadFailed: boolean;
     /* Whether the node it is in has the keyboard; null in a tab and a view. */
     focused: boolean | null;
@@ -37,7 +39,7 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
     const [engine, setEngine] = useState<EditorEngine | null>(loadedEditorEngine);
     const [loadFailed, setLoadFailed] = useState(false);
     const [attempt, setAttempt] = useState(0);
-    const [indent, setIndent] = useState<{ endpointId: string; path: string; value: EditorIndentation } | null>(null);
+    const [indent, setIndent] = useState<{ endpointId: string; path: string; value: EditorStyle } | null>(null);
 
     const roots = useMemo(
         () => (folder === null ? [] : [folder, ...worktrees.filter((worktree) => worktree.missing !== true).map((worktree) => worktree.path)]),
@@ -79,7 +81,7 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
         }
         let cancelled = false;
         const read = (): void => {
-            void indentationFor(path, roots, (target) => transport.request('fs.read', { path: target })).then((value) => {
+            void editorStyleFor(path, roots, (target) => transport.request('fs.read', { path: target })).then((value) => {
                 if (!cancelled) {
                     setIndent({ endpointId, path, value });
                 }
@@ -98,12 +100,13 @@ export function useFileEditing(path: string, read: FsReadText, plain: boolean, l
         };
     }, [viewer, transport, endpointId, path, roots]);
 
-    const indentation = indent?.endpointId === endpointId && indent.path === path ? indent.value : DEFAULT_INDENTATION;
+    const style = indent?.endpointId === endpointId && indent.path === path ? indent.value : null;
+    const indentation = style?.indentation ?? DEFAULT_INDENTATION;
 
     const retryLoad = (): void => {
         setLoadFailed(false);
         setAttempt((count) => count + 1);
     };
 
-    return { endpointId, block, viewer, engine, indentation, loadFailed, focused: gate?.focused ?? null, retryLoad };
+    return { endpointId, block, viewer, engine, indentation, rightMargin: style?.maxLineLength ?? null, loadFailed, focused: gate?.focused ?? null, retryLoad };
 }

@@ -7,7 +7,8 @@ import {
     indentationFor,
     loadEditorConfigs,
     parseEditorConfig,
-    resolveIndentation
+    resolveIndentation,
+    resolveMaxLineLength
 } from '@/shell/panels/editor-config';
 
 const file = (dir: string, text: string) => ({ dir, config: parseEditorConfig(text) });
@@ -59,6 +60,17 @@ describe('globToRegExp', () => {
     test('takes a star that is part of a name literally when escaped', () => {
         expect(globToRegExp('a\\*b').test('a*b')).toBe(true);
         expect(globToRegExp('a\\*b').test('axb')).toBe(false);
+    });
+});
+
+describe('resolveMaxLineLength', () => {
+    test('reads the number of the sections that match and nothing when there is none or it is off', () => {
+        const files = [file('/repo', '[*]\nmax_line_length = 100\n[*.md]\nmax_line_length = off\n[*.php]\nmax_line_length = 120')];
+        expect(resolveMaxLineLength(files, '/repo/a.ts')).toBe(100);
+        expect(resolveMaxLineLength(files, '/repo/a.php')).toBe(120);
+        expect(resolveMaxLineLength(files, '/repo/a.md')).toBeNull();
+        expect(resolveMaxLineLength([file('/repo', '[*]\nindent_size = 2')], '/repo/a.ts')).toBeNull();
+        expect(resolveMaxLineLength([], '/repo/a.ts')).toBeNull();
     });
 });
 

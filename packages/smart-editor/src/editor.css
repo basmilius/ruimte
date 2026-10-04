@@ -69,6 +69,33 @@
 .se-code {
     user-select: none;
 }
+.se-signs {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.se-guide,
+.se-margin {
+    position: absolute;
+}
+.se-guide {
+    background: var(--editor-guide);
+}
+.se-guide-active {
+    background: var(--editor-guide-active);
+}
+.se-margin {
+    background: var(--editor-margin);
+}
+.se-ws {
+    color: var(--editor-whitespace);
+}
+.se-wrap-sign,
+.se-tab-sign {
+    position: absolute;
+    overflow: visible;
+    color: var(--editor-whitespace);
+}
 .se-over {
     z-index: 2;
 }

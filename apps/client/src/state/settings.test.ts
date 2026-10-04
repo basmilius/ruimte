@@ -222,6 +222,16 @@ describe('the colors of code', () => {
     });
 });
 
+describe('what the editor draws', () => {
+    test('has indent guides on and whitespace off until a person says otherwise', () => {
+        expect(settingsFrom({}).codeIndentGuides).toBe(true);
+        expect(settingsFrom({ codeIndentGuides: false }).codeIndentGuides).toBe(false);
+        expect(settingsFrom({}).codeWhitespace).toBe(false);
+        expect(settingsFrom({ codeWhitespace: true }).codeWhitespace).toBe(true);
+        expect(settingsFrom({ codeWhitespace: 'yes' as unknown as boolean }).codeWhitespace).toBe(false);
+    });
+});
+
 describe('wrapping long lines of code', () => {
     test('is off until a person turns it on', () => {
         expect(settingsFrom({}).codeWrap).toBe(false);

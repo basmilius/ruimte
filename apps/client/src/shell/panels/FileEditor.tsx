@@ -20,6 +20,8 @@ interface FileEditorProps {
     language: string | undefined;
     wrap: boolean;
     indentation: EditorIndentation;
+    /* The column the project holds lines to, drawn as a line; null for none. */
+    rightMargin: number | null;
     /* Why the file cannot be edited here, null when it can. */
     readOnlyReason: string | null;
     /* Where the placeholder was scrolled to when the editor took over, so nothing moves. */
@@ -43,6 +45,7 @@ export function FileEditor({
     language,
     wrap,
     indentation,
+    rightMargin,
     readOnlyReason,
     placeholderScroll,
     focused,
@@ -56,8 +59,10 @@ export function FileEditor({
     const font = useSettings((s) => s.font);
     const codeLigatures = useSettings((s) => s.codeLigatures);
     const smartKeys = useSettings((s) => s.smartKeys);
+    const guides = useSettings((s) => s.codeIndentGuides);
+    const whitespace = useSettings((s) => s.codeWhitespace);
     // What the editor mounts with; every later change reaches it through the effects below.
-    const initial = useRef({ disk, language, wrap, indentation, smartKeys, readOnlyReason, theme, reveal });
+    const initial = useRef({ disk, language, wrap, indentation, rightMargin, guides, whitespace, smartKeys, readOnlyReason, theme, reveal });
     const revealed = useRef<number | null>(null);
     const readOnly = readOnlyReason !== null;
 
@@ -79,6 +84,9 @@ export function FileEditor({
                 ...(first.readOnlyReason === null ? {} : { readOnly: true, readOnlyReason: first.readOnlyReason }),
                 wrap: first.wrap,
                 indentation: first.indentation,
+                guides: first.guides,
+                whitespace: first.whitespace,
+                rightMargin: first.rightMargin,
                 smartKeys: first.smartKeys,
                 messages: { noMoreOccurrences: i18next.t('panels:file.edit.noMoreOccurrences') },
                 ...openingPlace(first.reveal, viewStates.get(key), placeholderScroll.current)
@@ -116,6 +124,18 @@ export function FileEditor({
     useEffect(() => {
         editorRef.current?.setSmartKeys(smartKeys);
     }, [smartKeys]);
+
+    useEffect(() => {
+        editorRef.current?.setGuides(guides);
+    }, [guides]);
+
+    useEffect(() => {
+        editorRef.current?.setWhitespace(whitespace);
+    }, [whitespace]);
+
+    useEffect(() => {
+        editorRef.current?.setRightMargin(rightMargin);
+    }, [rightMargin]);
 
     useEffect(() => {
         editorRef.current?.setReadOnly(readOnly, readOnlyReason ?? undefined);

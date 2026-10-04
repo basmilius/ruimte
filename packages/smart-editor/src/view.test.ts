@@ -12,7 +12,10 @@ const SETTINGS: ViewSettings = {
     readOnlyReason: undefined,
     wrap: false,
     smartKeys: DEFAULT_SMART_KEYS,
-    messages: {}
+    messages: {},
+    guides: true,
+    whitespace: false,
+    rightMargin: null
 };
 
 function mount(text: string, settings: Partial<ViewSettings> = {}) {
@@ -292,6 +295,58 @@ describe('occurrences of the selected text', () => {
         model.setSelections([{ anchor: 0, head: 1 }]);
         view.render();
         expect(marks(host)).toBe(2);
+    });
+});
+
+describe('indent guides, the right margin, whitespace and wrap signs', () => {
+    const source = 'class A {\n    method() {\n        body();\n\n        more();\n    }\n}';
+    const lefts = (host: HTMLElement, selector: string): string[] =>
+        [...host.querySelectorAll(selector)].map((element) => `${(element as HTMLElement).style.left}/${(element as HTMLElement).style.height}`);
+
+    test('draw a line at each level, through blank lines, and the one of the caret`s scope stronger', () => {
+        const { host, model, view } = mount(source);
+        model.setSelections([{ anchor: model.getLine(2).start + 9, head: model.getLine(2).start + 9 }]);
+        view.render();
+        expect(lefts(host, '.se-guide:not(.se-guide-active)')).toEqual(['0px/100px']);
+        expect(lefts(host, '.se-guide-active')).toEqual(['31.2px/60px']);
+    });
+
+    test('light the guide a line opens or closes, and the scope of a blank line', () => {
+        const { host, model, view } = mount(source);
+        model.setSelections([{ anchor: model.getLine(1).start, head: model.getLine(1).start }]);
+        view.render();
+        expect(lefts(host, '.se-guide-active')).toEqual(['31.2px/60px']);
+        model.setSelections([{ anchor: model.getLine(6).start, head: model.getLine(6).start }]);
+        view.render();
+        expect(lefts(host, '.se-guide-active')).toEqual(['0px/100px']);
+        model.setSelections([{ anchor: model.getLine(3).start, head: model.getLine(3).start }]);
+        view.render();
+        expect(lefts(host, '.se-guide-active')).toEqual(['31.2px/60px']);
+    });
+
+    test('draw none when they are off, and the margin only when a column is given', () => {
+        const off = mount(source, { guides: false });
+        expect(off.host.querySelectorAll('.se-guide').length).toBe(0);
+        expect(off.host.querySelector('.se-margin')).toBeNull();
+        const margin = mount(source, { rightMargin: 80 });
+        expect((margin.host.querySelector('.se-margin') as HTMLElement).style.left).toBe('624px');
+    });
+
+    test('draw spaces as dots and tabs as arrows when whitespace shows', () => {
+        const plain = mount('a b\n\tc');
+        expect(plain.host.querySelector('.se-ws')).toBeNull();
+        const shown = mount('a b\n\tc', { whitespace: true });
+        expect(shown.host.querySelector('.se-ws')!.textContent).toBe('·');
+        expect(shown.host.querySelectorAll('.se-tab-sign').length).toBe(1);
+    });
+
+    test('draw an arrow where a wrapped row ends and where the next one starts', () => {
+        const { host, view } = mount('abcd '.repeat(40).trimEnd(), { wrap: true });
+        Object.defineProperty(view.viewport, 'clientWidth', { value: 400 });
+        view.applySettings();
+        const signs = [...host.querySelectorAll('.se-wrap-sign')].map((sign) => (sign as HTMLElement).style.left);
+        expect(signs.length).toBeGreaterThanOrEqual(2);
+        expect(signs).toContain('0px');
     });
 });
 

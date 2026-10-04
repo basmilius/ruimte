@@ -167,6 +167,25 @@ function sizeOf(value: string | undefined): number | undefined {
  * walk. What no file says is left out.
  */
 export function resolveIndentation(files: readonly EditorConfigFile[], path: string): Partial<EditorIndentation> {
+    const properties = resolveProperties(files, path);
+    const style = properties.indent_style;
+    const indentSize = properties.indent_size === 'tab' ? undefined : sizeOf(properties.indent_size);
+    const tabWidth = sizeOf(properties.tab_width);
+    const tabSize = style === 'tab' ? (tabWidth ?? indentSize) : (indentSize ?? tabWidth);
+    return {
+        ...(tabSize === undefined ? {} : { tabSize }),
+        ...(style === 'tab' ? { insertSpaces: false } : style === 'space' ? { insertSpaces: true } : {})
+    };
+}
+
+/* The longest line a path is held to, or null when the files name no number (`off` included). */
+export function resolveMaxLineLength(files: readonly EditorConfigFile[], path: string): number | null {
+    const value = Number(resolveProperties(files, path).max_line_length);
+    return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/* What the sections that apply to a path say, nearest file first winning and later sections over earlier ones. */
+function resolveProperties(files: readonly EditorConfigFile[], path: string): Record<string, string> {
     const properties: Record<string, string> = {};
     const rootAt = files.findIndex((file) => file.config.root);
     const applicable = rootAt === -1 ? files : files.slice(0, rootAt + 1);
@@ -181,14 +200,7 @@ export function resolveIndentation(files: readonly EditorConfigFile[], path: str
             }
         }
     }
-    const style = properties.indent_style;
-    const indentSize = properties.indent_size === 'tab' ? undefined : sizeOf(properties.indent_size);
-    const tabWidth = sizeOf(properties.tab_width);
-    const tabSize = style === 'tab' ? (tabWidth ?? indentSize) : (indentSize ?? tabWidth);
-    return {
-        ...(tabSize === undefined ? {} : { tabSize }),
-        ...(style === 'tab' ? { insertSpaces: false } : style === 'space' ? { insertSpaces: true } : {})
-    };
+    return properties;
 }
 
 /* The folders a file's `.editorconfig` files can be in, nearest first, up to the project folder it is in or, outside one, the file's own. */
@@ -226,6 +238,17 @@ export async function loadEditorConfigs(path: string, roots: readonly string[], 
 
 /* What the project's `.editorconfig` files say for a file, over the defaults. */
 export async function indentationFor(path: string, roots: readonly string[], read: ReadText): Promise<EditorIndentation> {
+    return (await editorStyleFor(path, roots, read)).indentation;
+}
+
+export interface EditorStyle {
+    indentation: EditorIndentation;
+    /* The column a line is held to, drawn as a line in the editor; null when no file names one. */
+    maxLineLength: number | null;
+}
+
+/* The indentation and the line length the `.editorconfig` files say for a file, read once. */
+export async function editorStyleFor(path: string, roots: readonly string[], read: ReadText): Promise<EditorStyle> {
     const files = await loadEditorConfigs(path, roots, read);
-    return { ...DEFAULT_INDENTATION, ...resolveIndentation(files, path) };
+    return { indentation: { ...DEFAULT_INDENTATION, ...resolveIndentation(files, path) }, maxLineLength: resolveMaxLineLength(files, path) };
 }

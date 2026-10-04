@@ -131,6 +131,10 @@
     /* What the editor (`@ruimte/smart-editor`) marks beyond a find: a selection weak enough that code keeps its colors under it, and the other uses of a name. */
     --editor-selection: color-mix(in srgb, var(--accent) 16%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 7%, transparent);
+    --editor-guide: color-mix(in srgb, var(--text) 8%, transparent);
+    --editor-guide-active: color-mix(in srgb, var(--text) 24%, transparent);
+    --editor-margin: color-mix(in srgb, var(--text) 14%, transparent);
+    --editor-whitespace: color-mix(in srgb, var(--text) 30%, transparent);
     /* What the editor marks against the committed version: lines added, lines changed, and where lines were removed. */
     --editor-added: var(--status-idle);
     --editor-modified: var(--accent);
@@ -226,6 +230,10 @@
     --find-current-text: #18181b;
     --editor-selection: color-mix(in srgb, var(--accent) 28%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 9%, transparent);
+    --editor-guide: color-mix(in srgb, var(--text) 10%, transparent);
+    --editor-guide-active: color-mix(in srgb, var(--text) 28%, transparent);
+    --editor-margin: color-mix(in srgb, var(--text) 16%, transparent);
+    --editor-whitespace: color-mix(in srgb, var(--text) 32%, transparent);
     --editor-sticky-shadow: rgb(0 0 0 / 0.6);
     --note-yellow: #3b3416;
     --note-green: #173a25;

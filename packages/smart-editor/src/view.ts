@@ -14,8 +14,9 @@ import { mapOffset } from './offsets.ts';
 import { type ScrollKind, scrollPosition } from './scroll.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
-import { paintCarets, paintGutter, paintOver, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
+import { paintCarets, paintGutter, paintOver, paintOverlays, paintSigns, paintSticky, RowPainter, type StickyEntry, type WrapSign } from './paint.ts';
 import { overlayTokens, type SemanticSpan } from './semantic.ts';
+import { indentationColumn } from '@ruimte/smart-editor-core';
 import { TokenCache } from './tokens.ts';
 import type {
     EditorBlock,
@@ -42,6 +43,12 @@ export interface ViewSettings {
     wrap: boolean;
     smartKeys: EditorSmartKeys;
     messages: Partial<EditorMessages>;
+    /* A line at each indentation level, and the one of the scope around the caret stronger. */
+    guides: boolean;
+    /* Spaces drawn as dots and tabs as arrows. */
+    whitespace: boolean;
+    /* The column a line is held to, drawn as a line; null for none. */
+    rightMargin: number | null;
 }
 
 /* The lines past the visible ones that are colored ahead of the scroll, and how long one slice of that work may take. */
@@ -66,6 +73,9 @@ const REFRAIN_FROM_SCROLLING = true;
 /* Selecting text marks its other occurrences, unless there are more than this many, which would be noise. */
 const OCCURRENCE_LIMIT = 50;
 const OCCURRENCE_TEXT_LIMIT = 1000;
+/* How far the guides look for the lines around a blank one, and how far a scope's guide is followed from the caret. */
+const GUIDE_SCAN_LINES = 100;
+const GUIDE_RUN_LINES = 5000;
 const STICKY_MAX_LINES = 5;
 /* A view shows at most this share of its rows as sticky headers, so a small node keeps most of its text. */
 const STICKY_ROW_SHARE = 4;
@@ -115,6 +125,7 @@ export class EditorView {
     private readonly over: HTMLElement;
     private readonly carets: HTMLElement;
     private readonly preview: HTMLElement;
+    private readonly signs: HTMLElement;
     private readonly notice: HTMLElement;
     private readonly sticky: HTMLElement;
     private readonly overview: HTMLElement;
@@ -200,6 +211,8 @@ export class EditorView {
         const code = make('div', 'se-code');
         this.over = make('div', 'se-over');
         this.carets = make('div', 'se-carets');
+        this.signs = make('div', 'se-signs');
+        this.signs.setAttribute('aria-hidden', 'true');
         this.preview = make('div', 'se-preview');
         this.preview.setAttribute('aria-hidden', 'true');
         this.preview.hidden = true;
@@ -207,7 +220,7 @@ export class EditorView {
             layer.setAttribute('aria-hidden', 'true');
         }
         code.setAttribute('aria-hidden', 'true');
-        this.content.append(this.overlays, code, this.over, this.carets, this.preview);
+        this.content.append(this.overlays, this.signs, code, this.over, this.carets, this.preview);
         // The gutter is in the scroller with the text and sticks to its left, so the browser moves both in the same frame.
         const scroller = make('div', 'se-scroller');
         // The pinned headers stick to the corner the same way, which keeps them still against the text while the browser scrolls.
@@ -948,6 +961,149 @@ export class EditorView {
         return ranges;
     }
 
+    /* The arrows of the soft wraps in the rows on screen. */
+    private wrapSigns(rows: readonly LayoutRow[]): WrapSign[] {
+        if (!this.layout.wrapping) {
+            return [];
+        }
+        const lineHeight = this.layout.metrics.lineHeight;
+        const signs: WrapSign[] = [];
+        for (const row of rows) {
+            if (row.kind !== 'text' || row.subRows < 2) {
+                continue;
+            }
+            const geometry = this.layout.geometry(row);
+            for (let subRow = 0; subRow < geometry.subRows; subRow++) {
+                const y = row.top + subRow * lineHeight;
+                if (subRow + 1 < geometry.subRows) {
+                    const x = geometry.rowEnds[subRow]!;
+                    signs.push({ x, y, width: this.viewportWidth - x });
+                }
+                if (subRow > 0) {
+                    signs.push({ x: 0, y, width: geometry.before[geometry.rowStarts[subRow]!]! });
+                }
+            }
+        }
+        return signs.filter((sign) => sign.width >= 3);
+    }
+
+    /* The indentation of a line in columns, or null when it is blank. */
+    private indentOf(line: number): number | null {
+        const text = this.model.getLine(line).text;
+        const lead = /^[\t ]*/.exec(text)![0];
+        return lead.length === text.length ? null : indentationColumn(lead, this.settings.tabSize);
+    }
+
+    /* The indentation a line is read at: a blank one takes the lesser of the lines around it, so a guide runs through it. */
+    private effectiveIndent(line: number): number {
+        const own = this.indentOf(line);
+        if (own !== null) {
+            return own;
+        }
+        const last = this.model.getLineCount() - 1;
+        const nearest = (direction: -1 | 1): number => {
+            for (let at = line + direction, steps = 0; at >= 0 && at <= last && steps < GUIDE_SCAN_LINES; at += direction, steps++) {
+                const indent = this.indentOf(at);
+                if (indent !== null) {
+                    return indent;
+                }
+            }
+            return 0;
+        };
+        return Math.min(nearest(-1), nearest(1));
+    }
+
+    /* The run of lines around a caret that the scope guide there goes along, and the column it is at. */
+    private activeGuide(): { column: number; first: number; last: number } | null {
+        const size = this.settings.tabSize;
+        const line = this.model.positionAt(this.model.getPrimary().head).line;
+        const indent = this.effectiveIndent(line);
+        const count = this.model.getLineCount();
+        const deeper = (at: number, column: number): boolean => at >= 0 && at < count && this.effectiveIndent(at) > column;
+        const next = (() => {
+            for (let at = line + 1; at < count && at < line + GUIDE_SCAN_LINES; at++) {
+                if (this.indentOf(at) !== null) {
+                    return this.indentOf(at)!;
+                }
+            }
+            return 0;
+        })();
+        const previous = (() => {
+            for (let at = line - 1; at >= 0 && at > line - GUIDE_SCAN_LINES; at--) {
+                if (this.indentOf(at) !== null) {
+                    return this.indentOf(at)!;
+                }
+            }
+            return 0;
+        })();
+        // A line that opens a block, or closes one, is at the edge of its guide: the one that sits at its own indentation.
+        const opens = indent % size === 0 && (next > indent || previous > indent) && this.indentOf(line) !== null;
+        const column = opens ? indent : indent > 0 ? Math.ceil(indent / size - 1) * size : -1;
+        if (column < 0) {
+            return null;
+        }
+        const reaches = (from: number, direction: -1 | 1): number => {
+            let at = from;
+            while (deeper(at + direction, column) && Math.abs(at - line) < GUIDE_RUN_LINES) {
+                at += direction;
+            }
+            return at;
+        };
+        const inside = deeper(line, column);
+        const first = inside ? reaches(line, -1) : next > indent ? line + 1 : reaches(line - 1, -1);
+        const last = inside ? reaches(line, 1) : next > indent ? reaches(line + 1, 1) : line - 1;
+        return { column, first, last };
+    }
+
+    /* A line at each indentation level of the rows on screen, joined where the lines go on, and the one of the scope around the caret apart. */
+    private guideRects(rows: readonly LayoutRow[]): { plain: LayoutRect[]; active: LayoutRect[] } {
+        const size = this.settings.tabSize;
+        const charWidth = this.layout.metrics.charWidth;
+        const active = this.activeGuide();
+        const plain: LayoutRect[] = [];
+        const marked: LayoutRect[] = [];
+        interface Open {
+            top: number;
+            bottom: number;
+            first: number;
+            last: number;
+        }
+        const open = new Map<number, Open>();
+        const close = (column: number): void => {
+            const segment = open.get(column)!;
+            open.delete(column);
+            const rect = { x: column * charWidth, y: segment.top, width: 1, height: segment.bottom - segment.top };
+            (active !== null && active.column === column && segment.last >= active.first && segment.first <= active.last ? marked : plain).push(rect);
+        };
+        for (const row of rows) {
+            if (row.kind !== 'text') {
+                for (const segment of open.values()) {
+                    segment.bottom = row.top + row.height;
+                }
+                continue;
+            }
+            const indent = this.effectiveIndent(row.line);
+            for (const column of [...open.keys()]) {
+                if (column >= indent) {
+                    close(column);
+                }
+            }
+            for (let column = 0; column < indent; column += size) {
+                const segment = open.get(column);
+                if (segment === undefined) {
+                    open.set(column, { top: row.top, bottom: row.top + row.height, first: row.line, last: row.lastLine });
+                } else {
+                    segment.bottom = row.top + row.height;
+                    segment.last = row.lastLine;
+                }
+            }
+        }
+        for (const column of [...open.keys()]) {
+            close(column);
+        }
+        return { plain, active: marked };
+    }
+
     /* The selection under a point of the screen, which a press there may drag away. */
     selectionAtPoint(clientX: number, clientY: number): EditorSelection | null {
         const point = this.contentPoint(clientX, clientY);
@@ -1210,6 +1366,7 @@ export class EditorView {
             }
             const paint = {
                 layoutVersion: this.layoutVersion,
+                whitespace: this.settings.whitespace,
                 tokensOf: (line: number) => this.styledTokensOf(line),
                 viewportWidth: this.viewportWidth - RIGHT_PADDING,
                 hostLeft: this.viewport.scrollLeft - this.gutterWidth,
@@ -1264,6 +1421,17 @@ export class EditorView {
                 });
             }
         }
+        if (this.settings.rightMargin !== null) {
+            marks.push({
+                className: 'se-margin',
+                rects: [{ x: this.settings.rightMargin * this.layout.metrics.charWidth, y: 0, width: 1, height: this.layout.height }]
+            });
+        }
+        if (this.settings.guides) {
+            const guides = this.guideRects(rows);
+            marks.push({ className: 'se-guide', rects: guides.plain }, { className: 'se-guide se-guide-active', rects: guides.active });
+        }
+        paintSigns(this.signs, this.wrapSigns(rows), this.layout.metrics.lineHeight);
         const alike = this.selectionOccurrences();
         if (alike.length > 0) {
             marks.push({ className: 'se-occurrence', rects: alike.flatMap((range) => this.layout.rectangles(range.from, range.to, rows)) });

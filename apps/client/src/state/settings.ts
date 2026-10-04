@@ -143,6 +143,10 @@ export interface Settings {
     codeThemeDark: string;
     /* Whether a long line of code wraps in the viewer, the editor and a diff. */
     codeWrap: boolean;
+    /* Whether the editor draws a line at each indentation level. */
+    codeIndentGuides: boolean;
+    /* Whether the editor draws spaces as dots and tabs as arrows. */
+    codeWhitespace: boolean;
     /* Whether a font draws `=>` or `!==` as one glyph. Off sets the whole document, since the diffs draw in a shadow root that only inheritance reaches. */
     codeLigatures: boolean;
     /* What the editor does by itself as you type. The defaults are the editor's own: all on, except the camel humps. */
@@ -234,6 +238,8 @@ const DEFAULT_SETTINGS: Settings = {
     codeThemeLight: 'ruimte-light',
     codeThemeDark: 'ruimte-dark',
     codeWrap: false,
+    codeIndentGuides: true,
+    codeWhitespace: false,
     codeLigatures: true,
     smartKeys: { ...DEFAULT_SMART_KEYS },
     diffLayout: 'stacked',
@@ -284,6 +290,8 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
         codeThemeLight: codeThemeFrom(stored.codeThemeLight, 'light', DEFAULT_SETTINGS.codeThemeLight),
         codeThemeDark: codeThemeFrom(stored.codeThemeDark, 'dark', DEFAULT_SETTINGS.codeThemeDark),
         codeWrap: stored.codeWrap === true,
+        codeIndentGuides: stored.codeIndentGuides !== false,
+        codeWhitespace: stored.codeWhitespace === true,
         codeLigatures: stored.codeLigatures !== false,
         smartKeys: smartKeysFrom(stored.smartKeys),
         // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
@@ -394,6 +402,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeThemeLight,
                 codeThemeDark,
                 codeWrap,
+                codeIndentGuides,
+                codeWhitespace,
                 codeLigatures,
                 smartKeys,
                 diffLayout,
@@ -434,6 +444,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 codeThemeLight,
                 codeThemeDark,
                 codeWrap,
+                codeIndentGuides,
+                codeWhitespace,
                 codeLigatures,
                 smartKeys,
                 diffLayout,

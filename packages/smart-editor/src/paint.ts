@@ -11,6 +11,7 @@ interface PaintedRow {
     text: string;
     tokens: readonly LineToken[] | null;
     layoutVersion: number;
+    whitespace: boolean;
     folded: boolean;
     /* What a collapsed fold keeps drawn after its placeholder, and the colors of the line it is from. */
     tail: string;
@@ -24,6 +25,8 @@ const FOLD_CHIP_PADDING = 12;
 export interface RowPaint {
     /* Changes whenever the metrics, the wrapping or the inlays do, which moves every character. */
     layoutVersion: number;
+    /* Spaces are drawn as dots and tabs as arrows. */
+    whitespace: boolean;
     tokensOf(line: number): readonly LineToken[] | null;
     viewportWidth: number;
     /* Where a row of the host's own DOM starts and how wide it is: the whole width of the editor, over the gutter, wherever the text is scrolled to. */
@@ -49,10 +52,37 @@ function styleSpan(span: HTMLElement, token: LineToken): void {
     }
 }
 
+/* Text in an element, with each space drawn as a faint dot when whitespace shows. A dot is as wide as a space in the code face, so nothing moves. */
+function setText(element: HTMLElement, text: string, whitespace: boolean): void {
+    if (!whitespace || !text.includes(' ')) {
+        element.textContent = text;
+        return;
+    }
+    const document = element.ownerDocument;
+    for (const part of text.split(/( +)/)) {
+        if (part.startsWith(' ')) {
+            const dots = document.createElement('span');
+            dots.className = 'se-ws';
+            dots.textContent = '·'.repeat(part.length);
+            element.append(dots);
+        } else if (part !== '') {
+            element.append(part);
+        }
+    }
+}
+
 /* The text of one run, split along the colors of the line. `tokensFrom` is the offset the first token starts at, which is the geometry's own start unless it is a slice of a line. */
-function fillRun(run: HTMLElement, geometry: LineGeometry, from: number, to: number, tokens: readonly LineToken[] | null, tokensFrom = geometry.start): void {
+function fillRun(
+    run: HTMLElement,
+    geometry: LineGeometry,
+    from: number,
+    to: number,
+    tokens: readonly LineToken[] | null,
+    whitespace: boolean,
+    tokensFrom = geometry.start
+): void {
     if (tokens === null) {
-        run.textContent = geometry.text.slice(from - geometry.start, to - geometry.start);
+        setText(run, geometry.text.slice(from - geometry.start, to - geometry.start), whitespace);
         return;
     }
     let tokenStart = tokensFrom;
@@ -62,7 +92,7 @@ function fillRun(run: HTMLElement, geometry: LineGeometry, from: number, to: num
         const end = Math.min(to, tokenEnd);
         if (start < end) {
             const span = run.ownerDocument.createElement('span');
-            span.textContent = geometry.text.slice(start - geometry.start, end - geometry.start);
+            setText(span, geometry.text.slice(start - geometry.start, end - geometry.start), whitespace);
             styleSpan(span, token);
             run.append(span);
         }
@@ -79,7 +109,8 @@ export function lineElement(
     geometry: LineGeometry,
     tokens: readonly LineToken[] | null,
     lineHeight: number,
-    firstRowOnly: boolean
+    firstRowOnly: boolean,
+    whitespace = false
 ): HTMLElement {
     const element = document.createElement('div');
     element.className = 'se-line';
@@ -92,8 +123,11 @@ export function lineElement(
         span.className = 'se-run';
         span.style.left = `${run.x}px`;
         span.style.top = `${run.subRow * lineHeight}px`;
-        fillRun(span, geometry, run.from, run.to, tokens);
+        fillRun(span, geometry, run.from, run.to, tokens, whitespace);
         element.append(span);
+    }
+    if (whitespace) {
+        appendTabSigns(element, geometry, lineHeight, firstRowOnly);
     }
     for (const box of geometry.inlays) {
         if (firstRowOnly && box.subRow > 0) {
@@ -162,6 +196,7 @@ export class RowPainter {
             entry.text !== geometry.text ||
             entry.tokens !== tokens ||
             entry.layoutVersion !== paint.layoutVersion ||
+            entry.whitespace !== paint.whitespace ||
             entry.folded !== folded ||
             entry.tail !== tail ||
             entry.tailTokens !== tailTokens
@@ -172,7 +207,7 @@ export class RowPainter {
             } else {
                 this.code.append(element);
             }
-            entry = { element, text: geometry.text, tokens, layoutVersion: paint.layoutVersion, folded, tail, tailTokens };
+            entry = { element, text: geometry.text, tokens, layoutVersion: paint.layoutVersion, whitespace: paint.whitespace, folded, tail, tailTokens };
             this.rows.set(row.key, entry);
         }
         entry.element.style.top = `${row.top}px`;
@@ -190,7 +225,7 @@ export class RowPainter {
     ): HTMLElement {
         const document = this.code.ownerDocument;
         const lineHeight = this.layout.metrics.lineHeight;
-        const element = lineElement(document, geometry, tokens, lineHeight, false);
+        const element = lineElement(document, geometry, tokens, lineHeight, false, paint.whitespace);
         if (row.lastLine > row.line) {
             const chip = document.createElement('button');
             chip.type = 'button';
@@ -222,7 +257,7 @@ export class RowPainter {
             span.className = 'se-run';
             span.style.left = `${left + run.x}px`;
             span.style.top = `${(header.subRows - 1) * this.layout.metrics.lineHeight}px`;
-            fillRun(span, geometry, run.from, run.to, tokens, lineStart);
+            fillRun(span, geometry, run.from, run.to, tokens, false, lineStart);
             element.append(span);
         }
     }
@@ -241,7 +276,7 @@ export class RowPainter {
             }
             this.code.append(element);
             this.observer?.observe(element);
-            entry = { element, text: '', tokens: null, layoutVersion: 0, folded: false, tail: '', tailTokens: null };
+            entry = { element, text: '', tokens: null, layoutVersion: 0, whitespace: false, folded: false, tail: '', tailTokens: null };
             this.rows.set(row.key, entry);
         }
         entry.element.style.top = `${row.top}px`;
@@ -400,6 +435,70 @@ export function paintSticky(container: HTMLElement, entries: readonly StickyEntr
             code.append(lineElement(document, entry.geometry, entry.tokens, lineHeight, true));
             row.append(number, code);
             return row;
+        })
+    );
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+/*
+ * An arrow as the platform draws a tab or a soft wrap: a line across the middle of half a line's height,
+ * ending in a head that points right with a bar behind it, in as much room as it has.
+ */
+export function arrowSign(document: Document, width: number, lineHeight: number, className: string): SVGSVGElement {
+    const svg = document.createElementNS(SVG, 'svg');
+    svg.setAttribute('class', className);
+    svg.setAttribute('width', String(Math.max(1, Math.round(width))));
+    svg.setAttribute('height', String(lineHeight));
+    const height = Math.round(lineHeight / 2);
+    const stop = Math.max(1, Math.round(width)) - 1;
+    const bottom = Math.round((lineHeight + height) / 2);
+    const top = bottom - height;
+    const middle = bottom - height / 2;
+    const head = Math.max(1, Math.round(height / 2));
+    const path = document.createElementNS(SVG, 'path');
+    path.setAttribute('d', `M0 ${middle}H${stop}M${stop} ${top}V${bottom}M${stop - head} ${top}L${stop} ${middle}L${stop - head} ${bottom}Z`);
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1');
+    svg.append(path);
+    return svg as SVGSVGElement;
+}
+
+/* An arrow over each tab of a line. */
+function appendTabSigns(element: HTMLElement, geometry: LineGeometry, lineHeight: number, firstRowOnly: boolean): void {
+    const document = element.ownerDocument;
+    for (let stop = 0; stop < geometry.offsets.length - 1; stop++) {
+        if (geometry.text[geometry.offsets[stop]!] !== '\t' || (firstRowOnly && geometry.rowOf[stop]! > 0)) {
+            continue;
+        }
+        const left = geometry.before[stop]!;
+        const right = geometry.rowOf[stop + 1] === geometry.rowOf[stop] ? geometry.before[stop + 1]! : geometry.rowEnds[geometry.rowOf[stop]!]!;
+        if (right - left < 3) {
+            continue;
+        }
+        const sign = arrowSign(document, right - left - 2, lineHeight, 'se-tab-sign');
+        sign.style.left = `${left + 1}px`;
+        sign.style.top = `${geometry.rowOf[stop]! * lineHeight}px`;
+        element.append(sign);
+    }
+}
+
+export interface WrapSign {
+    x: number;
+    y: number;
+    width: number;
+}
+
+/* The signs of the soft wraps: an arrow where a row ends in the middle of a line, and one at the start of the row that goes on. */
+export function paintSigns(container: HTMLElement, signs: readonly WrapSign[], lineHeight: number): void {
+    const document = container.ownerDocument;
+    container.replaceChildren(
+        ...signs.map((sign) => {
+            const arrow = arrowSign(document, sign.width, lineHeight, 'se-wrap-sign');
+            arrow.style.left = `${sign.x}px`;
+            arrow.style.top = `${sign.y}px`;
+            return arrow;
         })
     );
 }
