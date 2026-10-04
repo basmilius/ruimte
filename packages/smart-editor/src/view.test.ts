@@ -115,10 +115,108 @@ describe('folding', () => {
         const { host, model, view } = mount(text);
         view.refreshFolds();
         model.setSelections([{ anchor: 20, head: 20 }]);
-        view.foldAround(true, false);
+        view.collapseRegion();
         expect(rendered(host)).toEqual(['0', '4', '5']);
-        view.foldAround(false, true);
+        view.foldAll(false);
         expect(rendered(host)).toEqual(['0', '1', '2', '3', '4', '5']);
+        view.foldAll(true);
+        expect(rendered(host)).toEqual(['0', '4', '5']);
+    });
+});
+
+describe('fold commands', () => {
+    const nested = 'class A {\n    method() {\n        body();\n    }\n    other() {\n        more();\n    }\n}\nend();';
+    const folded = (view: EditorView): { startLine: number; endLine: number }[] => [...view.getFolds().collapsed];
+
+    test('collapse folds the range that starts on the caret line, or else the innermost open one around it', () => {
+        const { model, view } = mount(nested);
+        view.refreshFolds();
+        model.setSelections([{ anchor: model.getLine(2).start + 4, head: model.getLine(2).start + 4 }]);
+        view.collapseRegion();
+        expect(folded(view)).toEqual([{ startLine: 1, endLine: 3 }]);
+        model.setSelections([{ anchor: model.getLine(1).start, head: model.getLine(1).start }]);
+        view.collapseRegion();
+        expect(folded(view)).toEqual([
+            { startLine: 0, endLine: 7 },
+            { startLine: 1, endLine: 3 }
+        ]);
+    });
+
+    test('expand opens the range on the caret line, or else the outermost folded one around it', () => {
+        const { model, view } = mount(nested);
+        view.refreshFolds();
+        view.foldAll(true);
+        model.setSelections([{ anchor: 0, head: 0 }]);
+        view.expandRegion();
+        expect(folded(view).map((fold) => fold.startLine)).toEqual([1, 4]);
+    });
+
+    test('collapse and expand recursively take every range inside the one at the caret', () => {
+        const { model, view } = mount(nested);
+        view.refreshFolds();
+        model.setSelections([{ anchor: 0, head: 0 }]);
+        view.collapseRecursively();
+        expect(folded(view).map((fold) => fold.startLine)).toEqual([0, 1, 4]);
+        view.expandRecursively();
+        expect(folded(view)).toEqual([]);
+    });
+
+    test('fold all and unfold all keep to the selection when it holds ranges', () => {
+        const { model, view } = mount(nested);
+        view.refreshFolds();
+        model.setSelections([{ anchor: model.getLine(1).start, head: model.getLine(3).end }]);
+        view.foldAll(true);
+        expect(folded(view)).toEqual([{ startLine: 1, endLine: 3 }]);
+    });
+
+    test('fold selection folds the lines of the selection, takes the same fold away and follows edits', () => {
+        const { host, model, view } = mount('a\nb\nc\nd\ne');
+        view.refreshFolds();
+        model.setSelections([{ anchor: 2, head: 6 }]);
+        view.foldSelection();
+        expect(rendered(host)).toEqual(['0', '1', '3', '4']);
+        expect(view.getFolds().custom).toEqual([{ startLine: 1, endLine: 2 }]);
+        model.applyEdits([{ from: 0, to: 0, text: 'x\n' }]);
+        view.refreshFolds();
+        expect(view.getFolds().custom).toEqual([{ startLine: 2, endLine: 3 }]);
+        model.setSelections([{ anchor: model.getLine(2).start, head: model.getLine(4).start }]);
+        view.foldSelection();
+        expect(view.getFolds().custom).toEqual([]);
+    });
+
+    test('fold selection leaves a selection inside one line alone', () => {
+        const { model, view } = mount('abc\ndef');
+        view.refreshFolds();
+        model.setSelections([{ anchor: 0, head: 2 }]);
+        view.foldSelection();
+        expect(view.getFolds().custom).toEqual([]);
+    });
+
+    test('remembers what is folded and folds it again', () => {
+        const { view } = mount(nested);
+        view.refreshFolds();
+        view.toggleFold(1, true);
+        const state = view.getFolds();
+        const again = mount(nested);
+        again.view.restoreFolds(state);
+        expect(again.view.getFolds().collapsed).toEqual([{ startLine: 1, endLine: 3 }]);
+    });
+
+    test('folds the import list the first time a file opens', () => {
+        const source = "import a from 'a';\nimport b from 'b';\n\nconst x = 1;\nfunction f() {\n    return x;\n}\n";
+        const { host, view } = mount(source);
+        view.restoreFolds(null);
+        expect(rendered(host)).toEqual(['0', '2', '3', '4', '5', '6', '7']);
+        const second = mount(source);
+        second.view.restoreFolds({ collapsed: [], custom: [] });
+        expect(second.host.querySelectorAll('.se-fold-chip')).toHaveLength(0);
+    });
+
+    test('folds a region between its markers', () => {
+        const { host, view } = mount('// region A\nx();\ny();\n// endregion\nz();');
+        view.refreshFolds();
+        view.toggleFold(0, true);
+        expect(rendered(host)).toEqual(['0', '4']);
     });
 });
 

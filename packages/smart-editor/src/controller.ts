@@ -4,7 +4,16 @@ import { chordMatches, type KeyAction, keyAction, type MoveKey } from './keymap.
 import { NativeInput } from './native-input.ts';
 import { columnSelections, sameCell } from './column-selection.ts';
 import { PointerSelection } from './pointer.ts';
-import type { EditorClick, EditorClickHandler, EditorContextMenu, EditorKeyHandler, EditorPosition, KeyChord } from './types.ts';
+import type {
+    EditorClick,
+    EditorClickHandler,
+    EditorContextMenu,
+    EditorKeyHandler,
+    EditorPosition,
+    EditorRunCommand,
+    EditorViewCommand,
+    KeyChord
+} from './types.ts';
 import type { EditorView } from './view.ts';
 
 export interface ControllerOptions {
@@ -39,6 +48,16 @@ const MODIFYING = new Set<EditorCommand>([
     'insertNewline',
     'smartBackspace',
     'deleteForward'
+]);
+
+const VIEW_COMMANDS = new Set<EditorViewCommand>([
+    'collapseRegion',
+    'expandRegion',
+    'collapseAllRegions',
+    'expandAllRegions',
+    'collapseRegionRecursively',
+    'expandRegionRecursively',
+    'foldSelection'
 ]);
 
 /* Typing in the same stretch is one undo step until a pause this long. */
@@ -249,8 +268,31 @@ export class InputController {
         };
     }
 
+    /* Folding is the view's, since it knows where the ranges are. */
+    private viewCommand(name: EditorViewCommand): boolean {
+        const { view } = this;
+        const run: Record<EditorViewCommand, () => void> = {
+            collapseRegion: () => view.collapseRegion(),
+            expandRegion: () => view.expandRegion(),
+            collapseAllRegions: () => view.foldAll(true),
+            expandAllRegions: () => view.foldAll(false),
+            collapseRegionRecursively: () => view.collapseRecursively(),
+            expandRegionRecursively: () => view.expandRecursively(),
+            foldSelection: () => view.foldSelection()
+        };
+        run[name]();
+        return true;
+    }
+
     /* Runs a model command on every caret, with the folds that would hide its result opened first. */
-    command(name: EditorCommand): boolean {
+    command(name: EditorRunCommand): boolean {
+        if (VIEW_COMMANDS.has(name as EditorViewCommand)) {
+            return this.viewCommand(name as EditorViewCommand);
+        }
+        return this.modelCommand(name as EditorCommand);
+    }
+
+    private modelCommand(name: EditorCommand): boolean {
         const { model, layout } = this.view;
         const modifies = MODIFYING.has(name) && name !== 'undo' && name !== 'redo';
         if ((modifies || name === 'undo' || name === 'redo') && this.blockedByReadOnly()) {
@@ -401,9 +443,9 @@ export class InputController {
                 event.preventDefault();
                 this.goToMatchingBracket();
                 return;
-            case 'fold':
+            case 'view':
                 event.preventDefault();
-                this.view.foldAround(action.collapse, action.all);
+                this.viewCommand(action.command);
                 return;
             case 'escape': {
                 const selections = model.getSelections();

@@ -2,6 +2,33 @@ import type { EditorCommand } from '@ruimte/smart-editor-core';
 
 export type { EditorCommand };
 
+/* The commands that fold, which the view answers since it knows where the ranges are. */
+export type EditorViewCommand =
+    | 'collapseRegion'
+    | 'expandRegion'
+    | 'collapseAllRegions'
+    | 'expandAllRegions'
+    | 'collapseRegionRecursively'
+    | 'expandRegionRecursively'
+    | 'foldSelection';
+
+/* Everything `runCommand` runs. */
+export type EditorRunCommand = EditorCommand | EditorViewCommand;
+
+/* Lines to fold, zero-based. */
+export interface EditorFoldRange {
+    readonly startLine: number;
+    readonly endLine: number;
+}
+
+/* What a host keeps of an editor's folds to open the file again as it was left. */
+export interface EditorFolds {
+    /* The ranges that are folded, the ones made of a selection included. */
+    readonly collapsed: readonly EditorFoldRange[];
+    /* The ranges made of a selection, folded or not. */
+    readonly custom: readonly EditorFoldRange[];
+}
+
 /* A Shiki theme id, the one the viewer draws the same file in. */
 export type EditorTheme = string;
 
@@ -20,6 +47,10 @@ export interface EditorOptions {
     readonly indentation?: EditorIndentation;
     /* What it does as a person types; whatever is left out is on, except the camel humps. */
     readonly smartKeys?: Partial<EditorSmartKeys>;
+    /* The folds a host kept when the file was last open. */
+    readonly folds?: EditorFolds;
+    /* Without remembered folds, the import list folds, as it does the first time a file opens. */
+    readonly collapseImports?: boolean;
     /* One-based, the line the cursor opens on. */
     readonly line?: number;
     /* One-based, where on that line. */
@@ -301,6 +332,8 @@ export interface Editor {
     getCaret(): EditorPosition;
     /* In pixels, what `scrollTop` on mounting takes back. */
     getScrollTop(): number;
+    /* Which lines are folded, for `folds` on mounting. */
+    getFolds(): EditorFolds;
     /* The primary selection, start before end; empty at the caret. */
     getSelection(): EditorRange;
     getIndentation(): EditorIndentation;
@@ -333,7 +366,7 @@ export interface Editor {
     refreshFont(): void;
     setReadOnly(readOnly: boolean, reason?: string): void;
     /* Runs an editing command on every caret, as its key would. False when it changed nothing. */
-    runCommand(command: EditorCommand): boolean;
+    runCommand(command: EditorRunCommand): boolean;
     focus(): void;
     dispose(): void;
 }

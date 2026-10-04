@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { Shortcut } from '@basmilius/desktop-ui';
-import type { EditorCommand } from '@ruimte/smart-editor';
+import type { EditorRunCommand } from '@ruimte/smart-editor';
 import { editorShortcut } from '@/shell/editor-keymap';
 import { focusedEditor } from '@/shell/panels/focused-editor';
 
@@ -12,7 +12,7 @@ import { focusedEditor } from '@/shell/panels/focused-editor';
  */
 interface EditorCommandSpec {
     readonly key: string;
-    readonly command: EditorCommand;
+    readonly command: EditorRunCommand;
     readonly shortcut?: Shortcut;
 }
 
@@ -24,7 +24,14 @@ const TABLE = {
     'start-new-line': { key: 'startNewLine', command: 'startNewLine', shortcut: editorShortcut('startNewLine') },
     'start-new-line-before': { key: 'startNewLineBefore', command: 'startNewLineBefore', shortcut: editorShortcut('startNewLineBefore') },
     'toggle-case': { key: 'toggleCase', command: 'toggleCase', shortcut: editorShortcut('toggleCase') },
-    'auto-indent-lines': { key: 'autoIndentLines', command: 'autoIndentLines', shortcut: editorShortcut('autoIndentLines') }
+    'auto-indent-lines': { key: 'autoIndentLines', command: 'autoIndentLines', shortcut: editorShortcut('autoIndentLines') },
+    'collapse-region': { key: 'collapseRegion', command: 'collapseRegion', shortcut: editorShortcut('collapse') },
+    'expand-region': { key: 'expandRegion', command: 'expandRegion', shortcut: editorShortcut('expand') },
+    'collapse-region-recursively': { key: 'collapseRegionRecursively', command: 'collapseRegionRecursively', shortcut: editorShortcut('collapseRecursively') },
+    'expand-region-recursively': { key: 'expandRegionRecursively', command: 'expandRegionRecursively', shortcut: editorShortcut('expandRecursively') },
+    'collapse-all-regions': { key: 'collapseAllRegions', command: 'collapseAllRegions', shortcut: editorShortcut('collapseAll') },
+    'expand-all-regions': { key: 'expandAllRegions', command: 'expandAllRegions', shortcut: editorShortcut('expandAll') },
+    'fold-selection': { key: 'foldSelection', command: 'foldSelection', shortcut: editorShortcut('foldSelection') }
 } satisfies Record<string, EditorCommandSpec>;
 
 export type EditorCommandId = keyof typeof TABLE;

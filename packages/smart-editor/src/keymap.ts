@@ -1,4 +1,5 @@
 import type { EditorCommand } from '@ruimte/smart-editor-core';
+import type { EditorViewCommand } from './types.ts';
 import { chordOf, KEYMAP_IDS, type KeymapId, parseChord } from './keymap-table.ts';
 import type { KeyChord } from './types.ts';
 
@@ -19,7 +20,7 @@ export type KeyAction =
     | { readonly type: 'move'; readonly key: MoveKey; readonly extend: boolean }
     | { readonly type: 'edge'; readonly end: boolean; readonly extend: boolean }
     | { readonly type: 'bracket' }
-    | { readonly type: 'fold'; readonly collapse: boolean; readonly all: boolean }
+    | { readonly type: 'view'; readonly command: EditorViewCommand }
     | { readonly type: 'save' }
     | { readonly type: 'escape' };
 
@@ -65,10 +66,13 @@ const ACTIONS: Partial<Record<KeymapId, KeyAction>> = {
     selectTextStart: { type: 'edge', end: false, extend: true },
     textEnd: { type: 'edge', end: true, extend: false },
     selectTextEnd: { type: 'edge', end: true, extend: true },
-    collapse: { type: 'fold', collapse: true, all: false },
-    expand: { type: 'fold', collapse: false, all: false },
-    collapseAll: { type: 'fold', collapse: true, all: true },
-    expandAll: { type: 'fold', collapse: false, all: true }
+    collapse: { type: 'view', command: 'collapseRegion' },
+    expand: { type: 'view', command: 'expandRegion' },
+    collapseAll: { type: 'view', command: 'collapseAllRegions' },
+    expandAll: { type: 'view', command: 'expandAllRegions' },
+    collapseRecursively: { type: 'view', command: 'collapseRegionRecursively' },
+    expandRecursively: { type: 'view', command: 'expandRegionRecursively' },
+    foldSelection: { type: 'view', command: 'foldSelection' }
 };
 
 const PUNCTUATION_CODES: Readonly<Record<string, string>> = {

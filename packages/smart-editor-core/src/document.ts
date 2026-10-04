@@ -7,6 +7,7 @@ import { planPaste } from './paste.ts';
 import type { EnterOptions, EnterPlan } from './enter.ts';
 import type { EditPlan, EditSource } from './edit-source.ts';
 import { isPlainText, vueRegionAt } from './languages.ts';
+import { lexicalFolds } from './lexical-folds.ts';
 import { isQuote, replacesComparison, surround, swapQuotes } from './typing-handlers.ts';
 import { scanBrackets } from './brackets.ts';
 import type { BracketIndex } from './brackets.ts';
@@ -578,13 +579,23 @@ export class DocumentModel {
 
     getFoldingRanges(options: FoldingOptions = {}): FoldingRange[] {
         const ranges = options.brackets === false && options.comments === false ? [] : this.structure();
-        return deriveFoldingRanges(
+        const derived = deriveFoldingRanges(
             ranges,
             (offset) => this.rope.lineAt(offset),
             this.getLineCount(),
             (line) => this.getLine(line),
             options
         );
+        if (options.language === undefined) {
+            return derived;
+        }
+        const minimum = options.minLines === undefined ? 1 : Math.max(1, Math.trunc(options.minLines) || 1);
+        // Listed first, so a fold that spans the same lines as a bracket pair is the import list and not the pair.
+        const merged = [...lexicalFolds(this.getLineCount(), (line) => this.getLine(line), options.language, options), ...derived].filter(
+            (range) => range.endLine - range.startLine >= minimum
+        );
+        merged.sort((left, right) => left.startLine - right.startLine || right.endLine - left.endLine);
+        return merged.filter((range, index) => index === 0 || range.startLine !== merged[index - 1]!.startLine || range.endLine !== merged[index - 1]!.endLine);
     }
 
     /*

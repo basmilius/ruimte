@@ -87,7 +87,7 @@ export function FileEditor({
         onEditor?.(editor);
         return () => {
             const caret = editor.getCaret();
-            viewStates.set(key, { scrollTop: editor.getScrollTop(), line: caret.line + 1, column: caret.character + 1 });
+            viewStates.set(key, { scrollTop: editor.getScrollTop(), line: caret.line + 1, column: caret.character + 1, folds: editor.getFolds() });
             editorRef.current = null;
             onEditor?.(null);
             unmount();

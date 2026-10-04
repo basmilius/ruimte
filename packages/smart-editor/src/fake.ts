@@ -4,7 +4,6 @@ import type {
     EditorChangeMark,
     EditorClick,
     EditorClickHandler,
-    EditorCommand,
     EditorContextMenu,
     EditorContentChange,
     EditorEngine,
@@ -23,6 +22,8 @@ import type {
     EditorRange,
     EditorReveal,
     EditorRect,
+    EditorRunCommand,
+    EditorFolds,
     EditorSemanticToken,
     EditorSmartKeys,
     EditorTextChange,
@@ -362,6 +363,13 @@ export class FakeEditor implements Editor {
         return this.caret;
     }
 
+    /* The folds the client asked to keep. */
+    folds: EditorFolds = { collapsed: [], custom: [] };
+
+    getFolds(): EditorFolds {
+        return this.folds;
+    }
+
     getScrollTop(): number {
         return this.scrollTop ?? 0;
     }
@@ -521,9 +529,9 @@ export class FakeEditor implements Editor {
     }
 
     /* The commands run, in order; the fake has no commands of its own to carry out. */
-    readonly commands: EditorCommand[] = [];
+    readonly commands: EditorRunCommand[] = [];
 
-    runCommand(command: EditorCommand): boolean {
+    runCommand(command: EditorRunCommand): boolean {
         this.commands.push(command);
         return false;
     }

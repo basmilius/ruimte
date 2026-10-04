@@ -57,10 +57,8 @@ const STICKY_MAX_LINES = 5;
 /* A view shows at most this share of its rows as sticky headers, so a small node keeps most of its text. */
 const STICKY_ROW_SHARE = 4;
 
-/* A line that starts several ranges folds as the outermost one, which the sort puts first. */
-export function outermostPerLine(ranges: readonly FoldingRange[]): FoldingRange[] {
-    return ranges.filter((range, index) => index === 0 || range.startLine !== ranges[index - 1]!.startLine);
-}
+/* A range of lines that folds: the document's own, or one a person made of a selection. */
+export type ViewFold = Omit<FoldingRange, 'kind'> & { kind: FoldingRange['kind'] | 'custom' };
 
 /* A mark the host asked for, such as every use of the name under the caret. */
 export interface Occurrence {
@@ -150,7 +148,9 @@ export class EditorView {
     private replacePreview: { text: string; preserveCase: boolean } | null = null;
     private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
-    private foldRanges: FoldingRange[] = [];
+    private foldRanges: ViewFold[] = [];
+    /* The folds made of a selection, which follow their text through edits. */
+    private customFolds: { from: number; to: number }[] = [];
     private collapsed = new Set<number>();
     private foldTimer: ReturnType<typeof setTimeout> | undefined;
     private colorTimer: ReturnType<typeof setTimeout> | undefined;
@@ -422,6 +422,7 @@ export class EditorView {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
                 this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
+                this.customFolds = this.customFolds.map((fold) => ({ from: mapOffset(fold.from, changes), to: mapOffset(fold.to, changes) }));
                 this.find.mapBounds(changes);
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
@@ -490,8 +491,12 @@ export class EditorView {
         const ranges =
             this.model.getLength() > FOLD_LIMIT
                 ? []
-                : this.model.getFoldingRanges({ indentation: /^(python|py|yaml|yml)$/.test(this.settings.language ?? ''), tabSize: this.settings.tabSize });
-        this.foldRanges = outermostPerLine(ranges);
+                : this.model.getFoldingRanges({
+                      indentation: /^(python|py|yaml|yml)$/.test(this.settings.language ?? ''),
+                      tabSize: this.settings.tabSize,
+                      ...(this.settings.language === undefined ? {} : { language: this.settings.language })
+                  });
+        this.foldRanges = this.withCustomFolds(ranges);
         this.outline.setStructure(
             structuralEntries(
                 ranges,
@@ -507,8 +512,18 @@ export class EditorView {
         this.render();
     }
 
+    /* The folds a person made of a selection, which the document's own structure does not know, among the ones it does. */
+    private withCustomFolds(ranges: readonly FoldingRange[]): ViewFold[] {
+        const custom = this.customFolds.flatMap((fold): ViewFold[] => {
+            const startLine = this.model.positionAt(fold.from).line;
+            const endLine = this.model.positionAt(fold.to).line;
+            return endLine > startLine ? [{ startLine, endLine, from: fold.from, to: fold.to, kind: 'custom' }] : [];
+        });
+        return [...ranges, ...custom].sort((left, right) => left.startLine - right.startLine || right.endLine - left.endLine);
+    }
+
     /* Where what stays visible of a collapsed range starts on its last line: its closer, with any closers right before it, so `])` is kept whole. */
-    private closerOf(range: FoldingRange): number | undefined {
+    private closerOf(range: ViewFold): number | undefined {
         if (range.kind === 'comment') {
             return range.to - 2;
         }
@@ -524,36 +539,193 @@ export class EditorView {
     }
 
     /* The range a collapsed or collapsible line starts, outermost first. */
-    private foldAt(line: number): FoldingRange | undefined {
+    private foldAt(line: number): ViewFold | undefined {
         return this.foldRanges.find((range) => range.startLine === line);
     }
 
+    /* The range that starts on a line when it is the only one, as the platform's fold commands read a line. */
+    private soleFoldAt(line: number): ViewFold | undefined {
+        const starting = this.foldRanges.filter((range) => range.startLine === line);
+        return starting.length === 1 ? starting[0] : undefined;
+    }
+
+    /* The ranges an offset is in or at the edge of, the innermost first. */
+    private foldsAt(offset: number): ViewFold[] {
+        return this.foldRanges.filter((range) => range.from <= offset && offset <= range.to).sort((left, right) => right.from - left.from);
+    }
+
+    private isCollapsed(range: ViewFold): boolean {
+        return this.collapsed.has(range.from);
+    }
+
+    private setCollapsed(range: ViewFold, collapse: boolean): void {
+        if (collapse) {
+            this.collapsed.add(range.from);
+        } else {
+            this.collapsed.delete(range.from);
+        }
+    }
+
+    /* A click on a line's control: the outermost range there folds, and unfolding opens every range that starts there. */
     toggleFold(line: number, collapse?: boolean): boolean {
         const range = this.foldAt(line);
         if (!range) {
             return false;
         }
-        const next = collapse ?? !this.collapsed.has(range.from);
-        if (next) {
-            this.collapsed.add(range.from);
-        } else {
-            this.collapsed.delete(range.from);
+        const next = collapse ?? !this.foldRanges.some((candidate) => candidate.startLine === line && this.isCollapsed(candidate));
+        for (const candidate of this.foldRanges) {
+            if (candidate.startLine === line && (next ? candidate === range : true)) {
+                this.setCollapsed(candidate, next);
+            }
         }
         this.refoldLayout();
         return true;
     }
 
-    /* Folds or unfolds every range, or only the ones around the caret. */
-    foldAround(collapse: boolean, all: boolean): void {
-        const line = this.model.positionAt(this.model.getPrimary().head).line;
-        const targets = this.foldRanges.filter((range) => all || (range.startLine <= line && range.endLine >= line));
-        const chosen = all ? targets : collapse ? targets.slice(-1) : targets.filter((range) => this.collapsed.has(range.from)).slice(0, 1);
-        for (const range of chosen) {
-            if (collapse) {
-                this.collapsed.add(range.from);
+    /* Folds, at every caret, the range that starts on its line, or else the innermost open range around it. */
+    collapseRegion(): void {
+        const carets = this.model.getSelections();
+        const primary = this.model.getPrimary().head;
+        for (const caret of carets) {
+            const range = this.soleFoldAt(this.model.positionAt(caret.head).line);
+            if (range !== undefined && !this.isCollapsed(range)) {
+                this.setCollapsed(range, true);
             } else {
-                this.collapsed.delete(range.from);
+                const open = this.foldsAt(primary).find((candidate) => !this.isCollapsed(candidate));
+                if (open !== undefined) {
+                    this.setCollapsed(open, true);
+                }
             }
+        }
+        this.refoldLayout();
+    }
+
+    /* Opens, at every caret, the range that starts on its line when it is folded, or else the outermost folded range around it. */
+    expandRegion(): void {
+        for (const caret of this.model.getSelections()) {
+            const range = this.soleFoldAt(this.model.positionAt(caret.head).line);
+            if (range !== undefined && this.isCollapsed(range)) {
+                this.setCollapsed(range, false);
+            } else {
+                const closed = this.foldsAt(caret.head).findLast((candidate) => this.isCollapsed(candidate));
+                if (closed !== undefined) {
+                    this.setCollapsed(closed, false);
+                }
+            }
+        }
+        this.refoldLayout();
+    }
+
+    /* The range at the primary caret and every range inside it, to be folded or opened together. */
+    private foldTreeAtCaret(collapse: boolean): ViewFold[] {
+        const head = this.model.getPrimary().head;
+        let root = this.soleFoldAt(this.model.positionAt(head).line);
+        if (root === undefined || (collapse && this.isCollapsed(root))) {
+            root = this.foldsAt(head).find((candidate) => !this.isCollapsed(candidate) === collapse);
+        }
+        return root === undefined ? [] : this.foldRanges.filter((range) => root.from <= range.from && range.to <= root.to);
+    }
+
+    collapseRecursively(): void {
+        for (const range of this.foldTreeAtCaret(true)) {
+            this.setCollapsed(range, true);
+        }
+        this.refoldLayout();
+    }
+
+    expandRecursively(): void {
+        for (const range of this.foldTreeAtCaret(false)) {
+            this.setCollapsed(range, false);
+        }
+        this.refoldLayout();
+    }
+
+    /* Folds or opens every range, or the ones inside the selection when it holds any. */
+    foldAll(collapse: boolean): void {
+        const { anchor, head } = this.model.getPrimary();
+        const from = Math.min(anchor, head);
+        const to = Math.max(anchor, head);
+        const inside = from === to ? [] : this.foldRanges.filter((range) => from <= range.from && range.to <= to);
+        for (const range of inside.length > 0 ? inside : this.foldRanges) {
+            this.setCollapsed(range, collapse);
+        }
+        this.refoldLayout();
+    }
+
+    /*
+     * Folds the lines of the selection under its first line, with a chip, or takes a fold of the same lines
+     * away. With nothing selected it takes away the fold around the caret that a selection made, or opens
+     * and closes one of the document's own. A selection inside one line has no line to fold.
+     */
+    foldSelection(): void {
+        const { anchor, head } = this.model.getPrimary();
+        let from = Math.min(anchor, head);
+        let to = Math.max(anchor, head);
+        if (from === to) {
+            const around = this.foldsAt(head)[0];
+            if (around?.kind === 'custom') {
+                this.customFolds = this.customFolds.filter((fold) => fold.from !== around.from);
+                this.collapsed.delete(around.from);
+            } else if (around !== undefined) {
+                this.setCollapsed(around, !this.isCollapsed(around));
+            }
+            this.refreshFolds();
+            return;
+        }
+        if (this.model.slice(to - 1, to) === '\n') {
+            to--;
+        }
+        const startLine = this.model.positionAt(from).line;
+        if (this.model.positionAt(to).line <= startLine) {
+            return;
+        }
+        from = this.model.getLine(startLine).start;
+        const existing = this.foldRanges.find((range) => range.kind === 'custom' && range.from === from && range.to === to);
+        if (existing !== undefined) {
+            this.customFolds = this.customFolds.filter((fold) => fold.from !== from);
+            this.collapsed.delete(from);
+        } else {
+            this.customFolds = [...this.customFolds, { from, to }];
+            this.collapsed.add(from);
+        }
+        this.refreshFolds();
+    }
+
+    /* The lines that are folded and the ones a selection folded, for a host that opens the file again where it left it. */
+    getFolds(): { collapsed: { startLine: number; endLine: number }[]; custom: { startLine: number; endLine: number }[] } {
+        const lines = (range: ViewFold): { startLine: number; endLine: number } => ({ startLine: range.startLine, endLine: range.endLine });
+        return {
+            collapsed: this.foldRanges.filter((range) => this.isCollapsed(range)).map(lines),
+            custom: this.foldRanges.filter((range) => range.kind === 'custom').map(lines)
+        };
+    }
+
+    /*
+     * Folds the lines a host remembers, those that still start a range of the same lines or else any range
+     * at their first line, after the ranges are read. Without a memory the import list folds, since that is
+     * what a file opens as the first time.
+     */
+    restoreFolds(
+        state: { collapsed: readonly { startLine: number; endLine: number }[]; custom: readonly { startLine: number; endLine: number }[] } | null
+    ): void {
+        const last = this.model.getLineCount() - 1;
+        if (state !== null) {
+            this.customFolds = state.custom
+                .filter((fold) => fold.startLine < fold.endLine && fold.endLine <= last)
+                .map((fold) => ({ from: this.model.getLine(fold.startLine).start, to: this.model.getLine(fold.endLine).end }));
+        }
+        this.refreshFolds();
+        const wanted = state === null ? this.foldRanges.filter((range) => range.kind === 'imports').slice(0, 1) : [];
+        for (const remembered of state?.collapsed ?? []) {
+            const match =
+                this.foldRanges.find((range) => range.startLine === remembered.startLine && range.endLine === remembered.endLine) ??
+                this.foldRanges.find((range) => range.startLine === remembered.startLine);
+            if (match !== undefined) {
+                wanted.push(match);
+            }
+        }
+        for (const range of wanted) {
+            this.setCollapsed(range, true);
         }
         this.refoldLayout();
     }
@@ -1000,9 +1172,7 @@ export class EditorView {
         const focused = this.focused;
         const foldable = new Map<number, boolean>();
         for (const range of this.foldRanges) {
-            if (!foldable.has(range.startLine)) {
-                foldable.set(range.startLine, this.collapsed.has(range.from));
-            }
+            foldable.set(range.startLine, (foldable.get(range.startLine) ?? false) || this.collapsed.has(range.from));
         }
         paintGutter(this.gutterLines, this.layout, rows, {
             changes: this.changedLines(rows),

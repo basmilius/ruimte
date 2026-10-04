@@ -1,4 +1,4 @@
-import { changedSpan, DocumentModel, type EditorCommand, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
+import { changedSpan, DocumentModel, type EditorSnapshot, replacementText } from '@ruimte/smart-editor-core';
 import { InputController } from './controller.ts';
 import { resolveSmartKeys } from './smart-keys.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
@@ -11,6 +11,7 @@ import type {
     EditorContentChange,
     EditorEngine,
     EditorFindQuery,
+    EditorFolds,
     EditorIndentation,
     EditorFindState,
     EditorReplaceOptions,
@@ -25,6 +26,7 @@ import type {
     EditorRange,
     EditorReveal,
     EditorRect,
+    EditorRunCommand,
     EditorSemanticToken,
     EditorSmartKeys,
     EditorTextChange,
@@ -93,6 +95,9 @@ class SmartEditor implements Editor {
             }
         });
         this.loadTokenizer();
+        if (options.folds !== undefined || options.collapseImports === true) {
+            this.view.restoreFolds(options.folds ?? null);
+        }
         this.placeCursor(options);
     }
 
@@ -530,8 +535,12 @@ class SmartEditor implements Editor {
         this.view.applySettings();
     }
 
-    runCommand(command: EditorCommand): boolean {
+    runCommand(command: EditorRunCommand): boolean {
         return this.controller.command(command);
+    }
+
+    getFolds(): EditorFolds {
+        return this.view.getFolds();
     }
 
     focus(): void {

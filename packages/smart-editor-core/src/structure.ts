@@ -16,7 +16,8 @@ export interface FoldingRange {
     endLine: number;
     from: number;
     to: number;
-    kind: 'bracket' | 'comment' | 'indentation';
+    /* `imports` is a run of import lines, `line-comments` a run of lines of `//` comments, and `region` what sits between `// region` and `// endregion`. */
+    kind: 'bracket' | 'comment' | 'indentation' | 'imports' | 'line-comments' | 'region';
 }
 
 export interface FoldingOptions {
@@ -25,6 +26,12 @@ export interface FoldingOptions {
     /* On unless `false`. */
     comments?: boolean;
     indentation?: boolean;
+    /* The language id, which decides what an import line and a line comment look like. Without one only brackets, block comments and indentation fold. */
+    language?: string;
+    /* Each on unless `false`, and only with a language. */
+    imports?: boolean;
+    regions?: boolean;
+    lineComments?: boolean;
     tabSize?: number;
     /* How many lines a range spans past its first one before it can fold. */
     minLines?: number;

@@ -116,6 +116,14 @@ describe('the key table', () => {
         expect(chordMatches(parseChord('Mod+Shift+='), key('+', { metaKey: true, shiftKey: true, code: 'Equal' }), true)).toBe(true);
     });
 
+    test('folds with the platform`s keys, whatever Shift and Option make of the character', () => {
+        expect(keyAction(key('-', { metaKey: true, code: 'Minus' }), true)).toEqual({ type: 'view', command: 'collapseRegion' });
+        expect(keyAction(key('+', { metaKey: true, shiftKey: true, code: 'Equal' }), true)).toEqual({ type: 'view', command: 'expandAllRegions' });
+        expect(keyAction(key('–', { metaKey: true, altKey: true, code: 'Minus' }), true)).toEqual({ type: 'view', command: 'collapseRegionRecursively' });
+        expect(keyAction(key('.', { metaKey: true, code: 'Period' }), true)).toEqual({ type: 'view', command: 'foldSelection' });
+        expect(keyAction(key('=', { ctrlKey: true, code: 'Equal' }), false)).toEqual({ type: 'view', command: 'expandRegion' });
+    });
+
     test('has the platform`s key for the line commands on each system', () => {
         expect(keyAction(key('Backspace', { metaKey: true }), true)).toEqual({ type: 'command', command: 'deleteLine' });
         expect(keyAction(key('y', { ctrlKey: true }), false)).toEqual({ type: 'command', command: 'deleteLine' });
