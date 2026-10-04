@@ -18,6 +18,8 @@ const EXPANSION_PASSES = 32;
  * A row slides its content left by the shift (`usePanelTreeShift`) through an empty first item
  * whose end margin takes back the gap after it. It is layout and not a transform, so the name gains
  * the room and the ellipsis stays at the panel's edge, while what is pinned at the end stays put.
+ * The tree caps a name at the row's width, which a shift past the indentation outgrows, so the cap
+ * goes, or what follows the name drifts off the edge.
  */
 export const PANEL_TREE_CSS = `
     [data-icon-name="file-tree-icon-chevron"] { width: 12px; height: 12px; }
@@ -28,7 +30,7 @@ export const PANEL_TREE_CSS = `
         order: -100;
         margin-inline: calc(var(${SHIFT_PROPERTY}, 0px) * -1) calc(var(--trees-item-row-gap) * -1);
     }
-    [data-item-section="content"] { white-space: nowrap; }
+    [data-item-section="content"] { white-space: nowrap; max-width: none; }
     [data-item-section="content"] :where([data-truncate-group-container], [data-truncate-group-container] div, [data-truncate-container], [data-truncate-container] div) { display: inline; }
     [data-item-section="content"] [data-truncate-content] { direction: ltr; }
     [data-item-section="content"] :where([data-truncate-content="overflow"], [data-truncate-marker-cell], [data-truncate-fill]) { display: none; }
