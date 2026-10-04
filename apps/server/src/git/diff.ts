@@ -1,6 +1,6 @@
 import { copyFile, lstat, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join, relative, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { readCommit } from './log.ts';
 import { git, runGit, runGitBytes, toplevel, GitError } from './run.ts';
@@ -238,6 +238,32 @@ const readBlob = async (top: string, name: string): Promise<string | null> => {
     return blob.code !== 0 || hasNul(blob.stdout) ? null : KEEP_BOM.decode(blob.stdout);
 };
 
+/* A path relative to a folder that climbs out of it. */
+const leaves = (inside: string): boolean => inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside);
+
+/*
+ * Whether a path a client named stays inside the checkout, also once every symlinked folder on the
+ * way is followed. The file itself may be gone, so the nearest folder of it that exists resolves.
+ * A symlink at the end is diffed as its target's name and never read through.
+ */
+const insideCheckout = async (top: string, path: string): Promise<boolean> => {
+    const root = await realpath(top);
+    if (isAbsolute(path) || leaves(relative(root, join(root, path)))) {
+        return false;
+    }
+    let folder = dirname(join(root, path));
+    for (;;) {
+        try {
+            return !leaves(relative(root, await realpath(folder)));
+        } catch {
+            if (folder === root) {
+                return false;
+            }
+            folder = dirname(folder);
+        }
+    }
+};
+
 /*
  * A file of the working tree, or null. A path that leaves the repository, also through a symlinked
  * folder, is never read; a symlink itself is its target's name to git, not a text.
@@ -247,7 +273,7 @@ const readWorktree = async (top: string, path: string): Promise<string | null> =
         const root = await realpath(top);
         const file = join(root, path);
         const inside = relative(root, await realpath(file));
-        if (inside === '' || inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
+        if (inside === '' || leaves(inside)) {
             return null;
         }
         const stat = await lstat(file);
@@ -285,6 +311,10 @@ const readSides = async (
  */
 export const diffFile = async (cwd: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<GitDiffResult> => {
     const top = await toplevel(cwd);
+    // An untracked file is read through `--no-index`, which follows any path it is handed.
+    if (!(await insideCheckout(top, path))) {
+        throw new GitError('outside-checkout', `${path} is not inside the checkout.`);
+    }
     const args = await diffArgs(top, path, options, mergeBase);
     const counts = await runGit(asNumstat(args), top);
     const stat = counts.code > 1 ? null : (parseNumstat(counts.stdout)[0] ?? null);

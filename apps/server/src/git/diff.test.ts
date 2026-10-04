@@ -137,6 +137,19 @@ describe('diffFile with the whole texts', () => {
         expect(diff.newText).toBeUndefined();
     });
 
+    test('a path that climbs out of the checkout is refused', async () => {
+        await writeFile(join(root, 'outside.txt'), 'secret\n');
+        for (const path of ['../outside.txt', join(root, 'outside.txt'), 'missing/../../outside.txt']) {
+            await expect(diffFile(repo, path, worktree(), null)).rejects.toMatchObject({ code: 'outside-checkout' });
+        }
+    });
+
+    test('a path through a symlinked folder out of the checkout is refused', async () => {
+        await writeFile(join(root, 'outside.txt'), 'secret\n');
+        await symlink(root, join(repo, 'up'));
+        await expect(diffFile(repo, 'up/outside.txt', worktree(), null)).rejects.toMatchObject({ code: 'outside-checkout' });
+    });
+
     test('a symlink out of the repository is never read', async () => {
         await writeFile(join(root, 'outside.txt'), 'secret\n');
         await symlink(join(root, 'outside.txt'), join(repo, 'link.txt'));

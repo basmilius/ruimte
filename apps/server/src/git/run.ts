@@ -13,6 +13,7 @@ interface GitOptions {
 
 export type GitErrorCode =
     | 'not-a-repo'
+    | 'outside-checkout'
     | 'git-failed'
     | 'worktree-not-found'
     | 'worktree-has-work'
