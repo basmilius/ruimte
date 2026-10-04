@@ -563,6 +563,17 @@
             "cancel": "Annuleer",
             "apply": "Hernoem"
         },
+        "navigation": {
+            "unavailable": "Geen language server die dat hier beantwoordt",
+            "none": "Niets gevonden",
+            "failed": "Opzoeken mislukt: {{message}}",
+            "titles": {
+                "definition": "Definities",
+                "declaration": "Declaraties",
+                "typeDefinition": "Typedefinities",
+                "implementation": "Implementaties"
+            }
+        },
         "completion": {
             "insert": "Invoegen",
             "replace": "Vervangen",

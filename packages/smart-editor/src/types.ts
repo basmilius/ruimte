@@ -103,6 +103,29 @@ export interface EditorHover {
     readonly rect: EditorRect;
 }
 
+/* A press of the primary button on a character of the text. */
+export interface EditorClick {
+    readonly position: EditorPosition;
+    /* Cmd on macOS, Ctrl elsewhere. */
+    readonly mod: boolean;
+    readonly alt: boolean;
+    readonly shift: boolean;
+}
+
+/* Returns true when the click was taken; the editor then leaves the caret and the selection where they are. */
+export type EditorClickHandler = (click: EditorClick) => boolean;
+
+/* A request for the context menu, by the secondary button or its key, which the editor does not answer itself. */
+export interface EditorContextMenu {
+    /* The character under the pointer, or the end of the line it is past. */
+    readonly position: EditorPosition;
+    /* Whether it lies in the selection, so the host knows whether to leave the selection alone. */
+    readonly inSelection: boolean;
+    /* In the page's pixels. */
+    readonly x: number;
+    readonly y: number;
+}
+
 /* Returns true when the key was taken; the editor then prevents its default and does nothing else with it. */
 export type EditorKeyHandler = (event: KeyboardEvent) => boolean;
 
@@ -223,6 +246,10 @@ export interface Editor {
     rectAt(position: EditorPosition): EditorRect | null;
     /* The editor scrolled or changed size, so whatever is placed by `rectAt` is somewhere else. */
     onViewChange(listener: () => void): () => void;
+    /* Handlers see a press of the primary button before the editor does, the first to take it winning. */
+    onClick(handler: EditorClickHandler): () => void;
+    /* The context menu was asked for. The editor draws none of its own and does not move the caret. */
+    onContextMenu(listener: (menu: EditorContextMenu) => void): () => void;
     /* Handlers see a key before the editor does, the first to take it winning. */
     onKeyDown(handler: EditorKeyHandler): () => void;
     /* Replaces ranges of the current text at once, as one step of the undo history. */

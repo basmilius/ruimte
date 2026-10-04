@@ -241,3 +241,43 @@ describe('the gutter action', () => {
         expect(page.host.querySelectorAll('.se-gutter-action')).toHaveLength(0);
     });
 });
+
+describe('clicks the host answers', () => {
+    test('offers a press on a character to the host, which can take it and leave the caret alone', () => {
+        const { editor, click, type } = mountEditor({ text: 'abcdef' }, { apple: false });
+        const seen: unknown[] = [];
+        editor.onClick((press) => {
+            seen.push(press);
+            return press.mod;
+        });
+        click(column(2) + 1, row(0));
+        click(column(4) + 1, row(0), { ctrlKey: true });
+        type('-');
+        expect(editor.getText()).toBe('ab-cdef');
+        expect(seen).toEqual([
+            { position: { line: 0, character: 2 }, mod: false, alt: false, shift: false },
+            { position: { line: 0, character: 4 }, mod: true, alt: false, shift: false }
+        ]);
+    });
+
+    test('leaves a press past the end of a line to the editor', () => {
+        const { editor, click, type } = mountEditor({ text: 'ab' });
+        editor.onClick(() => true);
+        click(400, row(0));
+        type('!');
+        expect(editor.getText()).toBe('ab!');
+    });
+});
+
+describe('the context menu', () => {
+    test('is the host to draw, with the character it was asked on and whether it lies in the selection', () => {
+        const { editor, page, viewport } = mountEditor({ text: 'abcdef' });
+        const asked: unknown[] = [];
+        editor.onContextMenu((menu) => asked.push(menu));
+        const event = new (page.window as unknown as { Event: typeof Event }).Event('contextmenu', { bubbles: true, cancelable: true });
+        Object.assign(event, { clientX: column(3) + 1, clientY: row(0) });
+        viewport.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(asked).toEqual([{ position: { line: 0, character: 3 }, inSelection: false, x: column(3) + 1, y: row(0) }]);
+    });
+});

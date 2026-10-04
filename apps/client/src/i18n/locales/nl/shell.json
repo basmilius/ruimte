@@ -555,7 +555,11 @@
             "codeActions": "Toon code actions",
             "organizeImports": "Imports organiseren",
             "formatDocument": "Document formatteren",
-            "renameSymbol": "Symbool hernoemen"
+            "renameSymbol": "Symbool hernoemen",
+            "goToDefinition": "Ga naar definitie",
+            "goToDeclaration": "Ga naar declaratie",
+            "goToTypeDefinition": "Ga naar typedefinitie",
+            "goToImplementation": "Ga naar implementatie"
         },
         "sections": {
             "recent": "Recent",
@@ -747,6 +751,10 @@
         "codeActions": "Toon code actions",
         "organizeImports": "Imports organiseren",
         "formatDocument": "Document formatteren",
-        "renameSymbol": "Symbool hernoemen…"
+        "renameSymbol": "Symbool hernoemen…",
+        "goToDefinition": "Ga naar definitie",
+        "goToDeclaration": "Ga naar declaratie",
+        "goToTypeDefinition": "Ga naar typedefinitie",
+        "goToImplementation": "Ga naar implementatie"
     }
 }

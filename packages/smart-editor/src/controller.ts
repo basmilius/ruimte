@@ -3,7 +3,7 @@ import { replacementEdits } from './input.ts';
 import { chordMatches, type KeyAction, keyAction, type MoveKey } from './keymap.ts';
 import { NativeInput } from './native-input.ts';
 import { PointerSelection } from './pointer.ts';
-import type { EditorKeyHandler, KeyChord } from './types.ts';
+import type { EditorClick, EditorClickHandler, EditorContextMenu, EditorKeyHandler, EditorPosition, KeyChord } from './types.ts';
 import type { EditorView } from './view.ts';
 
 export interface ControllerOptions {
@@ -47,6 +47,8 @@ export class InputController {
     private readonly pointer: PointerSelection;
     private readonly cleanup: (() => void)[] = [];
     private readonly keyHandlers = new Set<EditorKeyHandler>();
+    private readonly clickHandlers = new Set<EditorClickHandler>();
+    private readonly contextListeners = new Set<(menu: EditorContextMenu) => void>();
     private readonly subscription: { dispose(): void };
     private historyGroup = 0;
     private lastInputAt = 0;
@@ -134,6 +136,7 @@ export class InputController {
         this.listen(viewport, 'pointerleave', () => this.view.setHover(null));
         this.listen(viewport, 'wheel', (event) => this.wheel(event));
         this.listen(viewport, 'pointerdown', (event) => this.pointerDown(event));
+        this.listen(viewport, 'contextmenu', (event) => this.contextMenu(event));
         this.listen(this.view.gutterElement, 'pointerdown', (event) => this.gutterDown(event));
         this.listen(this.view.stickyElement, 'pointerdown', (event) => this.stickyDown(event));
         this.listen(this.view.stickyElement, 'wheel', (event) => this.wheel(event));
@@ -374,6 +377,20 @@ export class InputController {
         };
     }
 
+    onClick(handler: EditorClickHandler): () => void {
+        this.clickHandlers.add(handler);
+        return () => {
+            this.clickHandlers.delete(handler);
+        };
+    }
+
+    onContextMenu(listener: (menu: EditorContextMenu) => void): () => void {
+        this.contextListeners.add(listener);
+        return () => {
+            this.contextListeners.delete(listener);
+        };
+    }
+
     private keydown(event: KeyboardEvent): void {
         if (event.isComposing || this.native.composing) {
             return;
@@ -463,7 +480,49 @@ export class InputController {
             return;
         }
         event.preventDefault();
+        if (this.takenByHost(event)) {
+            this.view.focus();
+            return;
+        }
         this.pointer.start(event);
+    }
+
+    /* Whether a handler of the host took a press on a character, such as a Mod+click that follows a name. */
+    private takenByHost(event: PointerEvent): boolean {
+        if (this.clickHandlers.size === 0) {
+            return false;
+        }
+        const offset = this.view.characterAtPoint(event.clientX, event.clientY, event.target);
+        if (offset === null) {
+            return false;
+        }
+        const click: EditorClick = {
+            position: this.positionOf(offset),
+            mod: this.options.apple ? event.metaKey : event.ctrlKey,
+            alt: event.altKey,
+            shift: event.shiftKey
+        };
+        return [...this.clickHandlers].some((handler) => handler(click));
+    }
+
+    private positionOf(offset: number): EditorPosition {
+        const { line, column } = this.view.model.positionAt(offset);
+        return { line, character: column };
+    }
+
+    private contextMenu(event: MouseEvent): void {
+        if (this.contextListeners.size === 0) {
+            return;
+        }
+        event.preventDefault();
+        const offset = this.view.offsetAtPoint(event.clientX, event.clientY);
+        const selection = this.view.model
+            .getSelections()
+            .some((candidate) => Math.min(candidate.anchor, candidate.head) <= offset && offset <= Math.max(candidate.anchor, candidate.head));
+        const menu: EditorContextMenu = { position: this.positionOf(offset), inSelection: selection, x: event.clientX, y: event.clientY };
+        for (const listener of [...this.contextListeners]) {
+            listener(menu);
+        }
     }
 
     /* A press on a pinned header goes to that header. */

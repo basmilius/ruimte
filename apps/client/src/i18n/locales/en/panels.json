@@ -563,6 +563,17 @@
             "cancel": "Cancel",
             "apply": "Rename"
         },
+        "navigation": {
+            "unavailable": "No language server answers that here",
+            "none": "Nothing found",
+            "failed": "Could not look it up: {{message}}",
+            "titles": {
+                "definition": "Definitions",
+                "declaration": "Declarations",
+                "typeDefinition": "Type definitions",
+                "implementation": "Implementations"
+            }
+        },
         "completion": {
             "insert": "Insert",
             "replace": "Replace",

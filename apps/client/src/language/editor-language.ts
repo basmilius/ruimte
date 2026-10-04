@@ -1,4 +1,4 @@
-import type { Editor } from '@ruimte/smart-editor';
+import type { Editor, EditorPosition } from '@ruimte/smart-editor';
 import { fileUriToPath, type Location } from '@ruimte/smart-editor-lsp';
 import { openFileLink } from '@/shell/panels/file-links';
 import { CodeActionsFeature } from './code-actions';
@@ -6,6 +6,7 @@ import { CompletionFeature } from './completion';
 import { DiagnosticsFeature } from './diagnostics';
 import { HighlightsFeature } from './highlights';
 import { HoverFeature } from './hover';
+import { NavigationFeature, locationRow } from './navigation';
 import { PickFeature } from './pick';
 import { RenameFeature } from './rename';
 import { createPopupStore } from './popups';
@@ -34,6 +35,7 @@ export class EditorLanguage {
     readonly pick: PickFeature;
     readonly codeActions: CodeActionsFeature;
     readonly rename: RenameFeature;
+    readonly navigation: NavigationFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -53,6 +55,7 @@ export class EditorLanguage {
         new InlayHintsFeature(this, timers);
         this.codeActions = new CodeActionsFeature(this, timers);
         this.rename = new RenameFeature(this);
+        this.navigation = new NavigationFeature(this);
     }
 
     get uri(): string {
@@ -74,6 +77,12 @@ export class EditorLanguage {
         if (path !== null) {
             void openFileLink(this.project.folder, { path, line: location.range.start.line + 1, directory: false });
         }
+    }
+
+    /* Lists places under a position to choose from; choosing one goes there. */
+    locations(places: readonly Location[], anchor: EditorPosition, title: string): void {
+        const rows = places.map((place, index) => ({ id: String(index), ...locationRow(place, this.project.service.pathOfLocation(place.uri)) }));
+        this.pick.open({ anchor, title, groups: [{ title: null, rows }], accept: (id) => this.goTo(places[Number(id)]!) });
     }
 
     /* Runs `dispose` when the editor lets go of its document. */

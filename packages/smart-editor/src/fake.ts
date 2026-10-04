@@ -2,6 +2,9 @@ import type {
     Editor,
     EditorBlock,
     EditorChangeMark,
+    EditorClick,
+    EditorClickHandler,
+    EditorContextMenu,
     EditorContentChange,
     EditorEngine,
     EditorFindQuery,
@@ -374,6 +377,35 @@ export class FakeEditor implements Editor {
         return () => {
             this.keys.delete(handler);
         };
+    }
+
+    private readonly clickHandlers = new Set<EditorClickHandler>();
+    private readonly contextListeners = new Set<(menu: EditorContextMenu) => void>();
+
+    onClick(handler: EditorClickHandler): () => void {
+        this.clickHandlers.add(handler);
+        return () => {
+            this.clickHandlers.delete(handler);
+        };
+    }
+
+    onContextMenu(listener: (menu: EditorContextMenu) => void): () => void {
+        this.contextListeners.add(listener);
+        return () => {
+            this.contextListeners.delete(listener);
+        };
+    }
+
+    /* A press on a character as the editor sees it first; true when a handler took it, and the caret stays where it is otherwise only until the test moves it. */
+    click(click: EditorClick): boolean {
+        return [...this.clickHandlers].some((handler) => handler(click));
+    }
+
+    /* The context menu asked for at a position. */
+    openContextMenu(menu: EditorContextMenu): void {
+        for (const listener of [...this.contextListeners]) {
+            listener(menu);
+        }
     }
 
     /* A key as the editor sees it first; true when a handler took it. */

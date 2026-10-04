@@ -75,7 +75,18 @@ export function pointer(
     options: KeyOptions = {}
 ): void {
     const event = new (window as unknown as { Event: typeof Event }).Event(type, { bubbles: true, cancelable: true });
-    Object.assign(event, { clientX: x, clientY: y, button: 0, pointerId: 1, detail: 0, shiftKey: false, altKey: false, ...options });
+    Object.assign(event, {
+        clientX: x,
+        clientY: y,
+        button: 0,
+        pointerId: 1,
+        detail: 0,
+        shiftKey: false,
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        ...options
+    });
     target.dispatchEvent(event);
 }
 

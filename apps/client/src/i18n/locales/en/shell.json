@@ -555,7 +555,11 @@
             "codeActions": "Show code actions",
             "organizeImports": "Organize imports",
             "formatDocument": "Format document",
-            "renameSymbol": "Rename symbol"
+            "renameSymbol": "Rename symbol",
+            "goToDefinition": "Go to definition",
+            "goToDeclaration": "Go to declaration",
+            "goToTypeDefinition": "Go to type definition",
+            "goToImplementation": "Go to implementation"
         },
         "sections": {
             "recent": "Recent",
@@ -747,6 +751,10 @@
         "codeActions": "Show Code Actions",
         "organizeImports": "Organize Imports",
         "formatDocument": "Format Document",
-        "renameSymbol": "Rename Symbol…"
+        "renameSymbol": "Rename Symbol…",
+        "goToDefinition": "Go to Definition",
+        "goToDeclaration": "Go to Declaration",
+        "goToTypeDefinition": "Go to Type Definition",
+        "goToImplementation": "Go to Implementation"
     }
 }

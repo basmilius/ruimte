@@ -5,6 +5,8 @@ import type {
     Editor,
     EditorBlock,
     EditorChangeMark,
+    EditorClickHandler,
+    EditorContextMenu,
     EditorContentChange,
     EditorEngine,
     EditorFindQuery,
@@ -218,6 +220,14 @@ class SmartEditor implements Editor {
 
     onViewChange(listener: Listener): () => void {
         return this.view.onViewChange(listener);
+    }
+
+    onClick(handler: EditorClickHandler): () => void {
+        return this.controller.onClick(handler);
+    }
+
+    onContextMenu(listener: (menu: EditorContextMenu) => void): () => void {
+        return this.controller.onContextMenu(listener);
     }
 
     onKeyDown(handler: EditorKeyHandler): () => void {
