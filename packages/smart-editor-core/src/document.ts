@@ -31,7 +31,7 @@ import type {
 } from './types.ts';
 import { TypingContexts } from './typing-context.ts';
 import type { TypingContext } from './typing-context.ts';
-import { isHumpBoundary, isWordBoundary, wordBoundary } from './words.ts';
+import { isHumpBoundary, isWordBoundary } from './words.ts';
 
 export type { DocumentLine, FindMatch, FindNextOptions, FindOptions, FoldingOptions, FoldingRange };
 
@@ -102,6 +102,21 @@ interface TypingInput {
     /* A closing bracket typed on a line of its own goes back to the indentation of its opener. */
     dedent: boolean;
 }
+
+/* Where a word move may stop: at the start of words, at their end, or both. */
+type CaretStopAt = 'start' | 'end' | 'both';
+
+interface CaretStops {
+    word: CaretStopAt;
+    /* Where the move stops at a line break: the start of the next line, the end of the line, or both, which is the end first. */
+    line: CaretStopAt;
+}
+
+/* The platform's defaults: forward to a word's end and then the start of the next line, backward to a word's start and then the end of the line above. Deleting stops at every edge of a word and at both ends of a line. */
+const MOVE_FORWARD: CaretStops = { word: 'end', line: 'start' };
+const MOVE_BACKWARD: CaretStops = { word: 'start', line: 'end' };
+const DELETE_FORWARD: CaretStops = { word: 'both', line: 'both' };
+const DELETE_BACKWARD: CaretStops = { word: 'start', line: 'both' };
 
 const historyLimit = 200;
 const bracketScanLimit = 2_000_000;
@@ -648,7 +663,7 @@ export class DocumentModel {
         }
         const wordMatch = wordCommand.exec(command);
         if (wordMatch) {
-            const camel = wordMatch[2]!.toLowerCase() === 'camel' || options.camelCase !== false;
+            const camel = wordMatch[2]!.toLowerCase() === 'camel' || options.camelCase === true;
             return this.moveByWord(wordMatch[1] as 'select' | 'delete' | undefined, wordMatch[3] === 'Left' ? -1 : 1, camel);
         }
         if (command === 'addCaretAbove' || command === 'addCaretBelow') {
@@ -918,21 +933,67 @@ export class DocumentModel {
 
     private moveByWord(mode: 'select' | 'delete' | undefined, direction: -1 | 1, camel: boolean): boolean {
         if (mode === 'delete') {
+            const stops = direction === 1 ? DELETE_FORWARD : DELETE_BACKWARD;
             return this.deleteRanges(
                 this.selections.map((selection) => {
-                    const head = selection.head === selection.anchor ? wordBoundary(this.rope, selection.head, direction, camel) : selection.anchor;
+                    const head = selection.head === selection.anchor ? this.caretStop(selection.head, direction, stops, camel) : selection.anchor;
                     return { from: Math.min(selection.head, head), to: Math.max(selection.head, head), text: '' };
                 })
             );
         }
+        const stops = direction === 1 ? MOVE_FORWARD : MOVE_BACKWARD;
         return this.changeSelections(
             this.selections.map((selection) => {
-                const collapse = mode !== 'select' && selection.head !== selection.anchor;
-                const { from, to } = rangeOf(selection);
-                const head = collapse ? (direction === -1 ? from : to) : wordBoundary(this.rope, selection.head, direction, camel);
+                const head = this.caretStop(selection.head, direction, stops, camel);
                 return { anchor: mode === 'select' ? selection.anchor : head, head };
             })
         );
+    }
+
+    /*
+     * The next stop of a word move: a word edge as `stops` says, but never past the line stop, so a line
+     * break is a stop of its own and an empty line is one. Nowhere to go leaves the offset where it is.
+     */
+    private caretStop(offset: number, direction: -1 | 1, stops: CaretStops, camel: boolean): number {
+        const line = this.rope.lineAt(offset);
+        const edge = direction === 1 ? this.nextLineStop(line, offset, stops.line) : this.previousLineStop(line, offset, stops.line);
+        if (offset === edge) {
+            return offset;
+        }
+        const isStop = (position: number): boolean =>
+            ((stops.word !== 'start' && isWordBoundary(this.rope, position, camel, false)) ||
+                (stops.word !== 'end' && isWordBoundary(this.rope, position, camel, true))) &&
+            !splitsCluster(this.rope, position);
+        let position = offset + direction;
+        while (direction === 1 ? position < edge : position > edge) {
+            if (isStop(position)) {
+                break;
+            }
+            position += direction;
+        }
+        return position;
+    }
+
+    private nextLineStop(line: number, offset: number, stop: CaretStopAt): number {
+        if (line + 1 >= this.rope.lineCount) {
+            return this.rope.length;
+        }
+        const atEnd = offset === this.rope.lineBounds(line).end;
+        if (!atEnd && stop !== 'start') {
+            return this.rope.lineBounds(line).end;
+        }
+        return stop === 'end' ? this.rope.lineBounds(line + 1).end : this.rope.lineBounds(line + 1).start;
+    }
+
+    private previousLineStop(line: number, offset: number, stop: CaretStopAt): number {
+        if (line === 0) {
+            return 0;
+        }
+        const atStart = offset === this.rope.lineBounds(line).start;
+        if (!atStart && stop !== 'end') {
+            return this.rope.lineBounds(line).start;
+        }
+        return stop === 'start' ? this.rope.lineBounds(line - 1).start : this.rope.lineBounds(line - 1).end;
     }
 
     private addCaret(direction: -1 | 1): boolean {

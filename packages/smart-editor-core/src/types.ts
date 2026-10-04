@@ -109,7 +109,7 @@ export interface CommandOptions {
     insertSpaces?: boolean;
     /* Replaces the line comment marker of the language. */
     commentToken?: string;
-    /* Whether the plain word commands stop at camel humps. The explicit camel commands always do. */
+    /* Whether the plain word commands stop at camel humps. Off unless true; the explicit camel commands always do. */
     camelCase?: boolean;
     /* Turns pairing off for brackets and quotes at once; the two below turn off one of them. */
     autoClosingPairs?: boolean;
