@@ -610,6 +610,12 @@
                 "other": "Other"
             }
         },
+        "context": {
+            "refactor": "Refactor",
+            "cut": "Cut",
+            "copy": "Copy",
+            "paste": "Paste"
+        },
         "completion": {
             "insert": "Insert",
             "replace": "Replace",

@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import type { EditorLanguage } from './editor-language';
 import { AnchoredPopup } from './AnchoredPopup';
 import { CompletionPopup } from './CompletionPopup';
+import { EditorContextMenu } from './EditorContextMenu';
 import { HoverCard } from './HoverCard';
 import { PeekPanel } from './PeekPanel';
 import { PickPopup } from './PickPopup';
@@ -24,6 +25,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
     const rename = useStore(language.popups, (state) => state.rename);
     const peek = useStore(language.popups, (state) => state.peek);
     const symbols = useStore(language.popups, (state) => state.symbols);
+    const menu = useStore(language.popups, (state) => state.menu);
 
     useEffect(() => language.editor.onViewChange(redraw), [language]);
 
@@ -47,6 +49,7 @@ export function LanguagePopups({ language }: { language: EditorLanguage }) {
             )}
             {completion !== null && completionRect !== null && <CompletionPopup language={language} view={completion} rect={completionRect} />}
             {pick !== null && pickRect !== null && <PickPopup language={language} view={pick} rect={pickRect} />}
+            {menu !== null && <EditorContextMenu language={language} view={menu} />}
             {symbols !== null && <SymbolPicker language={language} view={symbols} />}
             {peek !== null && <PeekPanel language={language} view={peek} />}
             {rename !== null && renameRect !== null && <RenameCard language={language} view={rename} rect={renameRect} endRect={renameEnd} />}

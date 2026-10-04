@@ -610,6 +610,12 @@
                 "other": "Overig"
             }
         },
+        "context": {
+            "refactor": "Refactor",
+            "cut": "Knip",
+            "copy": "Kopieer",
+            "paste": "Plak"
+        },
         "completion": {
             "insert": "Invoegen",
             "replace": "Vervangen",

@@ -3,6 +3,7 @@ import { fileUriToPath, type Location } from '@ruimte/smart-editor-lsp';
 import { openFileLink } from '@/shell/panels/file-links';
 import { CodeActionsFeature } from './code-actions';
 import { CompletionFeature } from './completion';
+import { ContextMenuFeature } from './context-menu';
 import { DiagnosticsFeature } from './diagnostics';
 import { HighlightsFeature } from './highlights';
 import { HoverFeature } from './hover';
@@ -40,6 +41,7 @@ export class EditorLanguage {
     readonly navigation: NavigationFeature;
     readonly peek: PeekFeature;
     readonly symbolPicker: SymbolPickerFeature;
+    readonly contextMenu: ContextMenuFeature;
     private readonly disposers: Array<() => void> = [];
     private disposed = false;
 
@@ -62,6 +64,7 @@ export class EditorLanguage {
         this.navigation = new NavigationFeature(this);
         this.peek = new PeekFeature(this);
         this.symbolPicker = new SymbolPickerFeature(this);
+        this.contextMenu = new ContextMenuFeature(this);
     }
 
     get uri(): string {

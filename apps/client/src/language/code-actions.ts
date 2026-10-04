@@ -125,6 +125,11 @@ export class CodeActionsFeature {
         }
     }
 
+    /* The actions of one kind for the selection, as entries a menu can list and `apply` runs. */
+    list(only: readonly string[]): Promise<ActionEntry[] | null> {
+        return this.supported ? this.request(this.language.editor.getSelection(), only, AUTOMATIC) : Promise.resolve(null);
+    }
+
     private async ask(options: AskOptions): Promise<void> {
         if (!this.supported) {
             tell('error', say('unavailable'));
@@ -251,7 +256,7 @@ export class CodeActionsFeature {
     }
 
     /* Resolves the action, makes its edit as one undo step, and then runs its command. */
-    private async apply(entry: ActionEntry): Promise<void> {
+    async apply(entry: ActionEntry): Promise<void> {
         const { editor, project, uri } = this.language;
         try {
             const action = await this.resolve(entry);

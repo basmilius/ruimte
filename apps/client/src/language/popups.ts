@@ -3,6 +3,7 @@ import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { Location } from '@ruimte/smart-editor-lsp';
 import type { Problem } from './diagnostics-model';
 import type { PeekFile, PeekSnippet } from './peek-model';
+import type { ActionEntry } from './code-actions-model';
 import type { SymbolEntry } from './symbol-picker-model';
 import type { HoverText } from './hover-content';
 import type { SignatureViewModel } from './signature-model';
@@ -131,6 +132,14 @@ export interface SymbolsView {
     readonly entries: readonly SymbolEntry[];
 }
 
+/* The context menu of the editor, asked for at a point of the page. */
+export interface MenuView {
+    readonly x: number;
+    readonly y: number;
+    /* The refactors the servers offer at the caret, once they have said. */
+    readonly refactors: readonly ActionEntry[];
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
@@ -139,10 +148,11 @@ export interface PopupState {
     readonly rename: RenameView | null;
     readonly peek: PeekView | null;
     readonly symbols: SymbolsView | null;
+    readonly menu: MenuView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null, peek: null, symbols: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null, pick: null, rename: null, peek: null, symbols: null, menu: null }));
 }
