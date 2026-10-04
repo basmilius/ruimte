@@ -565,7 +565,14 @@
             "goToTypeDefinition": "Go to type definition",
             "goToImplementation": "Go to implementation",
             "peekReferences": "Peek references",
-            "goToSymbol": "Go to symbol"
+            "goToSymbol": "Go to symbol",
+            "triggerCompletion": "Show suggestions",
+            "parameterInfo": "Show parameter info",
+            "quickInfo": "Show quick info",
+            "peekDefinition": "Peek definition",
+            "historyBack": "Go back to the previous location",
+            "historyForward": "Go forward to the next location",
+            "recentLocations": "Show recent locations"
         },
         "sections": {
             "recent": "Recent",
@@ -766,6 +773,13 @@
         "goToTypeDefinition": "Go to Type Definition",
         "goToImplementation": "Go to Implementation",
         "peekReferences": "Peek References",
-        "goToSymbol": "Go to Symbol…"
+        "goToSymbol": "Go to Symbol…",
+        "triggerCompletion": "Show Suggestions",
+        "parameterInfo": "Parameter Info",
+        "quickInfo": "Quick Info",
+        "peekDefinition": "Peek Definition",
+        "historyBack": "Back",
+        "historyForward": "Forward",
+        "recentLocations": "Recent Locations…"
     }
 }

@@ -13,6 +13,9 @@ interface LanguageCommandSpec {
 }
 
 const TABLE = {
+    'trigger-completion': { menu: 'code', key: 'triggerCompletion', shortcut: CANVAS_SHORTCUTS.triggerCompletion },
+    'parameter-info': { menu: 'code', key: 'parameterInfo', shortcut: CANVAS_SHORTCUTS.parameterInfo },
+    'quick-info': { menu: 'code', key: 'quickInfo', shortcut: CANVAS_SHORTCUTS.quickInfo },
     'code-actions': { menu: 'code', key: 'codeActions', shortcut: CANVAS_SHORTCUTS.codeActions },
     'rename-symbol': { menu: 'code', key: 'renameSymbol', shortcut: CANVAS_SHORTCUTS.rename },
     'organize-imports': { menu: 'code', key: 'organizeImports', shortcut: CANVAS_SHORTCUTS.organizeImports },
@@ -21,8 +24,12 @@ const TABLE = {
     'go-to-definition': { menu: 'go', key: 'goToDefinition', shortcut: CANVAS_SHORTCUTS.goToDefinition },
     'go-to-declaration': { menu: 'go', key: 'goToDeclaration' },
     'go-to-type-definition': { menu: 'go', key: 'goToTypeDefinition', shortcut: CANVAS_SHORTCUTS.goToTypeDefinition },
+    'peek-definition': { menu: 'go', key: 'peekDefinition', shortcut: CANVAS_SHORTCUTS.peekDefinition },
     'peek-references': { menu: 'go', key: 'peekReferences', shortcut: CANVAS_SHORTCUTS.peekReferences },
-    'go-to-implementation': { menu: 'go', key: 'goToImplementation', shortcut: CANVAS_SHORTCUTS.goToImplementation }
+    'go-to-implementation': { menu: 'go', key: 'goToImplementation', shortcut: CANVAS_SHORTCUTS.goToImplementation },
+    'history-back': { menu: 'go', key: 'historyBack', shortcut: CANVAS_SHORTCUTS.historyBack },
+    'history-forward': { menu: 'go', key: 'historyForward', shortcut: CANVAS_SHORTCUTS.historyForward },
+    'recent-locations': { menu: 'go', key: 'recentLocations', shortcut: CANVAS_SHORTCUTS.recentLocations }
 } satisfies Record<string, LanguageCommandSpec>;
 
 export type LanguageCommandId = keyof typeof TABLE;

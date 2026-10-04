@@ -565,7 +565,14 @@
             "goToTypeDefinition": "Ga naar typedefinitie",
             "goToImplementation": "Ga naar implementatie",
             "peekReferences": "Referenties bekijken",
-            "goToSymbol": "Ga naar symbool"
+            "goToSymbol": "Ga naar symbool",
+            "triggerCompletion": "Toon suggesties",
+            "parameterInfo": "Toon parameterinfo",
+            "quickInfo": "Toon snelle info",
+            "peekDefinition": "Bekijk definitie",
+            "historyBack": "Ga terug naar de vorige plek",
+            "historyForward": "Ga vooruit naar de volgende plek",
+            "recentLocations": "Toon recente plekken"
         },
         "sections": {
             "recent": "Recent",
@@ -766,6 +773,13 @@
         "goToTypeDefinition": "Ga naar typedefinitie",
         "goToImplementation": "Ga naar implementatie",
         "peekReferences": "Referenties bekijken",
-        "goToSymbol": "Ga naar symbool…"
+        "goToSymbol": "Ga naar symbool…",
+        "triggerCompletion": "Toon suggesties",
+        "parameterInfo": "Parameterinfo",
+        "quickInfo": "Snelle info",
+        "peekDefinition": "Definitie bekijken",
+        "historyBack": "Terug",
+        "historyForward": "Vooruit",
+        "recentLocations": "Recente plekken…"
     }
 }

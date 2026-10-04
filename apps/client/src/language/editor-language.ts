@@ -37,6 +37,7 @@ export class EditorLanguage {
     readonly diagnostics: DiagnosticsFeature;
     readonly hover: HoverFeature;
     readonly completion: CompletionFeature;
+    readonly signature: SignatureFeature;
     readonly snippets: SnippetFeature;
     readonly highlights: HighlightsFeature;
     readonly pick: PickFeature;
@@ -61,7 +62,7 @@ export class EditorLanguage {
         this.hover = new HoverFeature(this, timers);
         this.completion = new CompletionFeature(this, timers);
         this.snippets = new SnippetFeature(this);
-        new SignatureFeature(this, timers);
+        this.signature = new SignatureFeature(this, timers);
         this.highlights = new HighlightsFeature(this, timers);
         new SymbolsFeature(this, timers);
         new SemanticTokensFeature(this, timers);
