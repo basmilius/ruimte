@@ -367,6 +367,21 @@
     position: absolute;
     background: color-mix(in srgb, var(--surface) 55%, transparent);
 }
+.se-link {
+    position: absolute;
+}
+.se-link::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 2px;
+    left: 0;
+    height: 1px;
+    background: var(--accent);
+}
+.se-content-link {
+    cursor: pointer;
+}
 .se-struck {
     position: absolute;
 }

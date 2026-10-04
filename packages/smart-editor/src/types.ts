@@ -235,6 +235,8 @@ export interface Editor {
     setMarkers(markers: readonly EditorMarker[]): void;
     /* The other uses of the name at the caret, drawn as soft marks until the next edit. */
     setHighlights(highlights: readonly EditorHighlight[]): void;
+    /* A range drawn as a link, underlined with the pointer on it, until the host sets another or the text is edited; null takes it away. */
+    setLink(range: EditorRange | null): void;
     /* Colors by what the language servers know, over what the grammar made of the text; null takes them away. */
     setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void;
     /* Hints to draw as soft pills in the text, replacing the ones set before. They follow their text through edits until set again. */

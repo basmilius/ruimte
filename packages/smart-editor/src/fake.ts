@@ -309,6 +309,13 @@ export class FakeEditor implements Editor {
         this.semanticTokens = tokens;
     }
 
+    /* What the client drew as a link last. */
+    link: EditorRange | null = null;
+
+    setLink(range: EditorRange | null): void {
+        this.link = range;
+    }
+
     setHighlights(highlights: readonly EditorHighlight[]): void {
         this.highlights = highlights;
     }

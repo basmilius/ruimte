@@ -135,6 +135,7 @@ export class EditorView {
     private inlays: Inlay[] = [];
     private blocks: BlockWidget[] = [];
     private occurrences: Occurrence[] = [];
+    private link: { from: number; to: number } | null = null;
     private composition: string | undefined;
     private foldRanges: FoldingRange[] = [];
     private collapsed = new Set<number>();
@@ -264,6 +265,13 @@ export class EditorView {
 
     setOccurrences(occurrences: readonly Occurrence[]): void {
         this.occurrences = [...occurrences];
+        this.render();
+    }
+
+    /* A name underlined as a link a press follows, with the pointer to match; null takes it away. */
+    setLink(link: { from: number; to: number } | null): void {
+        this.link = link;
+        this.content.classList.toggle('se-content-link', link !== null);
         this.render();
     }
 
@@ -403,6 +411,8 @@ export class EditorView {
             this.markerVersion++;
             const anchor = this.topAnchor;
             this.occurrences = [];
+            this.link = null;
+            this.content.classList.remove('se-content-link');
             this.outline.edited(batches);
             this.changeVersion++;
             this.tokens.edited(batches, (offset) => this.model.positionAt(offset).line);
@@ -987,7 +997,8 @@ export class EditorView {
         paintOverlays(this.overlays, { currentLine, selections: selected, focused, marks });
         paintOver(this.over, [
             { className: 'se-faded', rects: faded },
-            { className: 'se-struck', rects: struck }
+            { className: 'se-struck', rects: struck },
+            { className: 'se-link', rects: this.link === null ? [] : this.layout.rectangles(this.link.from, this.link.to, rows) }
         ]);
         const top = this.viewport.scrollTop;
         const caretRects = focused
