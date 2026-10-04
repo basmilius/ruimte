@@ -2,6 +2,8 @@ import type { Editor } from '@ruimte/smart-editor';
 import { DiagnosticsFeature } from './diagnostics';
 import type { Problem } from './diagnostics-model';
 import { HoverFeature } from './hover';
+import { InlayHintsFeature } from './inlay-hints';
+import { SemanticTokensFeature } from './semantic-tokens';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
 
 /*
@@ -27,6 +29,8 @@ export class EditorLanguage {
         this.document = project.acquire(uri, languageId, editor);
         this.diagnostics = new DiagnosticsFeature(this);
         this.hover = new HoverFeature(this);
+        new SemanticTokensFeature(this);
+        new InlayHintsFeature(this);
     }
 
     get uri(): string {

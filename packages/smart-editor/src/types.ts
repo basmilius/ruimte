@@ -104,6 +104,33 @@ export interface EditorHover {
 /* Returns true when the key was taken; the editor then prevents its default and does nothing else with it. */
 export type EditorKeyHandler = (event: KeyboardEvent) => boolean;
 
+/* A range of text the language servers classified, by the TextMate scopes the editor's theme colors it by. */
+export interface EditorSemanticToken {
+    readonly line: number;
+    readonly character: number;
+    readonly length: number;
+    /* Outermost first, as a grammar would have reported them. */
+    readonly scopes: readonly string[];
+}
+
+/* How a theme draws a piece of code. The font style is Shiki's flags: 1 italic, 2 bold, 4 underline, 8 strikethrough. */
+export interface ScopeStyle {
+    readonly color: string;
+    readonly fontStyle: number;
+}
+
+/* What the current theme draws a scope stack in, or undefined where it says nothing and the grammar's color stays. */
+export type ScopeColors = (scopes: readonly string[]) => ScopeStyle | undefined;
+
+/* The scope colors of a theme, or null when there is none. May load the theme, so it is async. */
+export type ScopeColorSource = (theme: EditorTheme) => Promise<ScopeColors | null>;
+
+/* Text drawn between two characters of a line, such as the type of a variable or the name of a parameter. It is not part of the document. */
+export interface EditorInlayHint {
+    readonly position: EditorPosition;
+    readonly label: string;
+}
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -163,6 +190,10 @@ export interface Editor {
     setMarkers(markers: readonly EditorMarker[]): void;
     /* The other uses of the name at the caret, drawn as soft marks until the next edit. */
     setHighlights(highlights: readonly EditorHighlight[]): void;
+    /* Colors by what the language servers know, over what the grammar made of the text; null takes them away. */
+    setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void;
+    /* Hints to draw as soft pills in the text, replacing the ones set before. They follow their text through edits until set again. */
+    setInlayHints(hints: readonly EditorInlayHint[]): void;
     getCaret(): EditorPosition;
     /* Moves the one caret and scrolls it into view. */
     setCaret(position: EditorPosition): void;
@@ -232,6 +263,8 @@ export type TokenizerSource = (language: string | undefined, theme: EditorTheme)
 
 export interface SmartEditorEngineOptions {
     readonly tokenizer: TokenizerSource;
+    /* Without it semantic tokens are ignored and the grammar's colors stand. */
+    readonly scopeColors?: ScopeColorSource;
     /* The app's shortcuts that work from anywhere, a text field included; the editor lets them pass untouched. */
     readonly handBack?: readonly KeyChord[];
     /* Whether the physical Ctrl and Meta of a shortcut are macOS's. */

@@ -12,11 +12,13 @@ import type {
     EditorFindState,
     EditorHighlight,
     EditorHover,
+    EditorInlayHint,
     EditorKeyHandler,
     EditorMarker,
     EditorOptions,
     EditorPosition,
     EditorRect,
+    EditorSemanticToken,
     EditorTextChange,
     EditorTheme,
     SmartEditorEngineOptions
@@ -104,6 +106,14 @@ class SmartEditor implements Editor {
 
     private loadTokenizer(): void {
         const request = ++this.tokenizerRequest;
+        void this.engine
+            .scopeColors?.(this.theme)
+            .catch(() => null)
+            .then((colors) => {
+                if (!this.disposed && request === this.tokenizerRequest) {
+                    this.view.setScopeColors(colors ?? null);
+                }
+            });
         void this.engine
             .tokenizer(this.language, this.theme)
             .catch(() => null)
@@ -225,6 +235,21 @@ class SmartEditor implements Editor {
                 unnecessary: marker.unnecessary === true,
                 deprecated: marker.deprecated === true
             }))
+        );
+    }
+
+    setInlayHints(hints: readonly EditorInlayHint[]): void {
+        this.view.setInlays(hints.map((hint, index) => ({ id: `hint-${index}`, at: this.offsetAt(hint.position), text: hint.label })));
+    }
+
+    setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void {
+        this.view.setSemanticTokens(
+            tokens === null
+                ? null
+                : tokens.map((token) => {
+                      const from = this.offsetAt({ line: token.line, character: token.character });
+                      return { from, to: from + token.length, scopes: token.scopes };
+                  })
         );
     }
 

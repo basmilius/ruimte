@@ -1,5 +1,5 @@
 export { createSmartEditorEngine } from './engine.ts';
-export { shikiTokenizers } from './shiki.ts';
+export { shikiScopeColors, shikiTokenizers } from './shiki.ts';
 export type {
     Editor,
     EditorBlock,
@@ -13,6 +13,7 @@ export type {
     EditorHighlight,
     EditorHighlightKind,
     EditorHover,
+    EditorInlayHint,
     EditorKeyHandler,
     EditorMarker,
     EditorMarkerSeverity,
@@ -24,6 +25,10 @@ export type {
     EditorTheme,
     KeyChord,
     LineToken,
+    ScopeColorSource,
+    ScopeColors,
+    ScopeStyle,
+    EditorSemanticToken,
     LineTokenizer,
     SmartEditorEngineOptions,
     TokenizedLine,

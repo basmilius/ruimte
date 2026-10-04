@@ -9,11 +9,13 @@ import type {
     EditorHighlight,
     EditorHover,
     EditorIndentation,
+    EditorInlayHint,
     EditorKeyHandler,
     EditorMarker,
     EditorOptions,
     EditorPosition,
     EditorRect,
+    EditorSemanticToken,
     EditorTextChange,
     EditorTheme
 } from './types.ts';
@@ -245,6 +247,20 @@ export class FakeEditor implements Editor {
 
     setMarkers(markers: readonly EditorMarker[]): void {
         this.markers = markers;
+    }
+
+    /* What the client drew as hints last. */
+    inlayHints: readonly EditorInlayHint[] = [];
+
+    setInlayHints(hints: readonly EditorInlayHint[]): void {
+        this.inlayHints = hints;
+    }
+
+    /* What the client classified last. */
+    semanticTokens: readonly EditorSemanticToken[] | null = null;
+
+    setSemanticTokens(tokens: readonly EditorSemanticToken[] | null): void {
+        this.semanticTokens = tokens;
     }
 
     setHighlights(highlights: readonly EditorHighlight[]): void {

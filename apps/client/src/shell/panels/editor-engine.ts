@@ -27,16 +27,17 @@ export function loadEditorEngine(): Promise<EditorEngine> {
 
 async function createEngine(): Promise<EditorEngine> {
     const apple = isApplePlatform();
-    const { createSmartEditorEngine, shikiTokenizers } = await import('@ruimte/smart-editor');
+    const { createSmartEditorEngine, shikiScopeColors, shikiTokenizers } = await import('@ruimte/smart-editor');
+    // Ours go in up front, since the editor loads a theme it has not seen by a bundled id.
+    const highlighter = () =>
+        import('shiki').then(async ({ getSingletonHighlighter }) => {
+            const loaded = await getSingletonHighlighter();
+            await loaded.loadTheme(...CODE_THEMES);
+            return loaded;
+        });
     return createSmartEditorEngine({
-        // Ours go in up front, since the editor loads a theme it has not seen by a bundled id.
-        tokenizer: shikiTokenizers(() =>
-            import('shiki').then(async ({ getSingletonHighlighter }) => {
-                const highlighter = await getSingletonHighlighter();
-                await highlighter.loadTheme(...CODE_THEMES);
-                return highlighter;
-            })
-        ),
+        tokenizer: shikiTokenizers(highlighter),
+        scopeColors: shikiScopeColors(highlighter),
         handBack: shellShortcuts(apple),
         apple
     });

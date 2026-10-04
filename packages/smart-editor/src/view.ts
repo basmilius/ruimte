@@ -6,6 +6,7 @@ import { mapOffset } from './offsets.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
 import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
 import { paintCarets, paintGutter, paintOver, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
+import { overlayTokens, type SemanticSpan } from './semantic.ts';
 import { TokenCache } from './tokens.ts';
 import type {
     EditorBlock,
@@ -16,7 +17,9 @@ import type {
     EditorHighlightKind,
     EditorMarkerSeverity,
     EditorRect,
-    LineTokenizer
+    LineToken,
+    LineTokenizer,
+    ScopeColors
 } from './types.ts';
 
 export interface ViewSettings {
@@ -56,6 +59,13 @@ export interface Occurrence {
     kind?: EditorHighlightKind;
 }
 
+/* A stretch of text the language servers classified, anchored to offsets that follow the text through edits. */
+export interface ViewSemanticToken {
+    from: number;
+    to: number;
+    scopes: readonly string[];
+}
+
 /* A problem the host marked, anchored to offsets that follow the text through edits. */
 export interface ViewMarker {
     severity: EditorMarkerSeverity;
@@ -93,6 +103,11 @@ export class EditorView {
     private readonly findListeners = new Set<(state: EditorFindState) => void>();
     private readonly scopeListeners = new Set<(scope: readonly EditorBlock[]) => void>();
     private readonly viewListeners = new Set<() => void>();
+    private semantic: ViewSemanticToken[] = [];
+    private scopeColors: ScopeColors | null = null;
+    private semanticVersion = 0;
+    private semanticIndex: { key: string; lines: Map<number, SemanticSpan[]> } | undefined;
+    private readonly semanticLines = new Map<number, { base: readonly LineToken[]; signature: string; result: readonly LineToken[] }>();
     private markers: ViewMarker[] = [];
     private markerVersion = 0;
     private viewKey = '';
@@ -246,6 +261,73 @@ export class EditorView {
         this.render();
     }
 
+    /* What the language servers classified, drawn over the grammar's colors; null takes it away. */
+    setSemanticTokens(tokens: readonly ViewSemanticToken[] | null): void {
+        this.semantic = tokens === null ? [] : [...tokens];
+        this.semanticVersion++;
+        this.render();
+    }
+
+    /* How the current theme draws a scope; without it the classification has no colors to draw in. */
+    setScopeColors(colors: ScopeColors | null): void {
+        this.scopeColors = colors;
+        this.semanticVersion++;
+        this.semanticLines.clear();
+        this.render();
+    }
+
+    /* The grammar's colors of a line with the servers' laid over them, the same object for as long as neither changed. */
+    private styledTokensOf(line: number): readonly LineToken[] | null {
+        const base = this.tokens.tokensOf(line);
+        if (base === null || this.semantic.length === 0 || this.scopeColors === null) {
+            return base;
+        }
+        const spans = this.semanticSpans().get(line);
+        if (spans === undefined) {
+            return base;
+        }
+        const signature = spans.map((span) => `${span.from}:${span.to}:${span.color}:${span.fontStyle}`).join('|');
+        const cached = this.semanticLines.get(line);
+        if (cached?.base === base && cached.signature === signature) {
+            return cached.result;
+        }
+        if (this.semanticLines.size > 600) {
+            this.semanticLines.clear();
+        }
+        const result = overlayTokens(base, spans);
+        this.semanticLines.set(line, { base, signature, result });
+        return result;
+    }
+
+    private semanticSpans(): Map<number, SemanticSpan[]> {
+        const key = `${this.revision}|${this.semanticVersion}`;
+        if (this.semanticIndex?.key === key) {
+            return this.semanticIndex.lines;
+        }
+        const lines = new Map<number, SemanticSpan[]>();
+        const colors = this.scopeColors;
+        for (const token of this.semantic) {
+            const style = colors?.(token.scopes);
+            if (style === undefined || token.to <= token.from) {
+                continue;
+            }
+            const line = this.model.positionAt(token.from).line;
+            const start = this.model.getLine(line).start;
+            const end = this.model.getLine(line).end;
+            if (token.to > end) {
+                continue;
+            }
+            const list = lines.get(line) ?? [];
+            list.push({ from: token.from - start, to: token.to - start, color: style.color, fontStyle: style.fontStyle });
+            lines.set(line, list);
+        }
+        for (const list of lines.values()) {
+            list.sort((left, right) => left.from - right.from);
+        }
+        this.semanticIndex = { key, lines };
+        return lines;
+    }
+
     setMarkers(markers: readonly ViewMarker[]): void {
         this.markers = [...markers];
         this.markerVersion++;
@@ -304,7 +386,9 @@ export class EditorView {
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
                 this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
                 this.markers = this.markers.map((marker) => ({ ...marker, from: mapOffset(marker.from, changes), to: mapOffset(marker.to, changes) }));
+                this.semantic = this.semantic.map((token) => ({ ...token, from: mapOffset(token.from, changes), to: mapOffset(token.to, changes) }));
             }
+            this.semanticVersion++;
             this.markerVersion++;
             const anchor = this.topAnchor;
             this.occurrences = [];
@@ -778,7 +862,7 @@ export class EditorView {
             }
             const paint = {
                 layoutVersion: this.layoutVersion,
-                tokensOf: (line: number) => this.tokens.tokensOf(line),
+                tokensOf: (line: number) => this.styledTokensOf(line),
                 viewportWidth: this.viewportWidth - RIGHT_PADDING,
                 onUnfold: (line: number) => this.toggleFold(line, false)
             };
@@ -1035,7 +1119,7 @@ export class EditorView {
         const placements = this.viewport.scrollTop <= 0 ? [] : this.stickyAt(this.viewport.scrollTop);
         const entries = placements.map((placement): StickyEntry => {
             const row = this.layout.rowForLine(placement.block.startLine) as TextRow;
-            return { line: placement.block.startLine, geometry: this.layout.geometry(row), tokens: this.tokens.tokensOf(placement.block.startLine) };
+            return { line: placement.block.startLine, geometry: this.layout.geometry(row), tokens: this.styledTokensOf(placement.block.startLine) };
         });
         const changed =
             entries.length !== this.stickyEntries.length ||

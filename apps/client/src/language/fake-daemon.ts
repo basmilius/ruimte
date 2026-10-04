@@ -18,6 +18,8 @@ export class FakeLanguageTransport implements Transport {
     /* Each document by stored path: the text and version the daemon holds. */
     documents = new Map<string, { text: string; version: number; languageId: string }>();
     answers = new Map<string, (payload: never) => unknown>();
+    /* What the daemon says a document may ask, which a test sets before the document opens. */
+    providers: Record<string, unknown> = { 'textDocument/hover': {}, 'textDocument/completion': { triggerCharacters: ['.'] } };
     /* Held replies, released by a test to decide their order against events and changes. */
     private gates: Array<() => void> = [];
     private holdNext = false;
@@ -88,7 +90,7 @@ export class FakeLanguageTransport implements Transport {
             return {
                 version: this.documents.get(payload.path)?.version,
                 servers: ['typescript'],
-                providers: { 'textDocument/hover': {}, 'textDocument/completion': { triggerCharacters: ['.'] } }
+                providers: this.providers
             };
         }
         const held = this.documents.get(payload.path);

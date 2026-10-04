@@ -291,6 +291,31 @@ describe('coloring', () => {
         };
     }
 
+    test('draws what the language servers classified in the colors of the theme, over the grammar, and keeps it on its text through an edit', async () => {
+        const { host, editor, type } = setup(
+            { language: 'typescript', text: 'let name = call();' },
+            {
+                tokenizer: async () => tokenizer(),
+                scopeColors: async () => (scopes) => (scopes.includes('entity.name.function') ? { color: '#ff0000', fontStyle: 0 } : undefined)
+            }
+        );
+        await settle();
+        editor.setSemanticTokens([
+            { line: 0, character: 11, length: 4, scopes: ['meta.function-call', 'entity.name.function'] },
+            { line: 0, character: 4, length: 4, scopes: ['variable'] }
+        ]);
+        const colored = (): string[] =>
+            [...host.querySelectorAll('.se-run span')]
+                .filter((span) => span.getAttribute('style')?.includes('255, 0, 0') || span.getAttribute('style')?.includes('#ff0000'))
+                .map((span) => span.textContent!);
+        expect(colored()).toEqual(['call']);
+        editor.setCaret({ line: 0, character: 0 });
+        type('xx');
+        expect(colored()).toEqual(['call']);
+        editor.setSemanticTokens(null);
+        expect(colored()).toEqual([]);
+    });
+
     test('colors the lines once the tokenizer arrives', async () => {
         const { host } = setup({ language: 'typescript' }, { tokenizer: async () => tokenizer() });
         expect(host.querySelector('.se-run span')).toBeNull();

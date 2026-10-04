@@ -1,5 +1,6 @@
 import type { GrammarState, Highlighter } from 'shiki';
-import type { LineToken, LineTokenizer, TokenizerSource } from './types.ts';
+import { scopeColorsOf, type ThemeRule } from './theme-scopes.ts';
+import type { LineToken, LineTokenizer, ScopeColorSource, TokenizerSource } from './types.ts';
 
 type LanguageId = Parameters<Highlighter['loadLanguage']>[0];
 type ThemeId = Parameters<Highlighter['loadTheme']>[0];
@@ -52,5 +53,20 @@ export function shikiTokenizers(highlighter: () => Promise<Highlighter>): Tokeni
             return null;
         }
         return shiki.getLoadedLanguages().includes(language) ? lineTokenizer(shiki, language, theme) : null;
+    };
+}
+
+/* The colors of a theme's own rules by scope, so what a language server classifies is drawn in the theme's colors. */
+export function shikiScopeColors(highlighter: () => Promise<Highlighter>): ScopeColorSource {
+    return async (theme) => {
+        const shiki = await highlighter();
+        try {
+            if (!shiki.getLoadedThemes().includes(theme)) {
+                await shiki.loadTheme(theme as ThemeId);
+            }
+            return scopeColorsOf(shiki.getTheme(theme).settings as readonly ThemeRule[]);
+        } catch {
+            return null;
+        }
     };
 }
