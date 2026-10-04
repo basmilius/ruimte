@@ -1,0 +1,22 @@
+{
+  "name": "@ruimte/smart-editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./editor.css": "./src/editor.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ruimte/smart-editor-core": "workspace:*",
+    "shiki": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "linkedom": "^0.18.13",
+    "typescript": "^7.0.2"
+  }
+}

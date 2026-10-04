@@ -1,0 +1,271 @@
+import type { EditorLayout, LayoutRect, LayoutRow, LineGeometry, TextRow } from './layout.ts';
+import type { LineToken } from './types.ts';
+
+const ITALIC = 1;
+const BOLD = 2;
+const UNDERLINE = 4;
+const STRIKETHROUGH = 8;
+
+interface PaintedRow {
+    element: HTMLElement;
+    text: string;
+    tokens: readonly LineToken[] | null;
+    layoutVersion: number;
+    folded: boolean;
+}
+
+export interface RowPaint {
+    /* Changes whenever the metrics, the wrapping or the inlays do, which moves every character. */
+    layoutVersion: number;
+    tokensOf(line: number): readonly LineToken[] | null;
+    viewportWidth: number;
+    /* A collapsed fold's row draws a chip after its line. */
+    onUnfold(line: number): void;
+}
+
+function styleSpan(span: HTMLElement, token: LineToken): void {
+    if (token.color !== '') {
+        span.style.color = token.color;
+    }
+    if (token.fontStyle & ITALIC) {
+        span.style.fontStyle = 'italic';
+    }
+    if (token.fontStyle & BOLD) {
+        span.style.fontWeight = 'bold';
+    }
+    const decorations = [token.fontStyle & UNDERLINE ? 'underline' : '', token.fontStyle & STRIKETHROUGH ? 'line-through' : ''].filter(Boolean);
+    if (decorations.length > 0) {
+        span.style.textDecoration = decorations.join(' ');
+    }
+}
+
+/* The text of one run, split along the colors of the line. */
+function fillRun(run: HTMLElement, geometry: LineGeometry, from: number, to: number, tokens: readonly LineToken[] | null): void {
+    if (tokens === null) {
+        run.textContent = geometry.text.slice(from - geometry.start, to - geometry.start);
+        return;
+    }
+    let tokenStart = geometry.start;
+    for (const token of tokens) {
+        const tokenEnd = tokenStart + token.length;
+        const start = Math.max(from, tokenStart);
+        const end = Math.min(to, tokenEnd);
+        if (start < end) {
+            const span = run.ownerDocument.createElement('span');
+            span.textContent = geometry.text.slice(start - geometry.start, end - geometry.start);
+            styleSpan(span, token);
+            run.append(span);
+        }
+        tokenStart = tokenEnd;
+        if (tokenStart >= to) {
+            break;
+        }
+    }
+}
+
+/*
+ * The text layer: one element per visible row, kept while what it shows stays the same. A line is
+ * drawn as absolutely placed runs of text, so the layout alone decides where each character is and
+ * the browser only has to paint it.
+ */
+export class RowPainter {
+    private readonly rows = new Map<string, PaintedRow>();
+    private readonly code: HTMLElement;
+    private readonly layout: EditorLayout;
+    private readonly observer: ResizeObserver | undefined;
+
+    constructor(code: HTMLElement, layout: EditorLayout, observer: ResizeObserver | undefined) {
+        this.code = code;
+        this.layout = layout;
+        this.observer = observer;
+    }
+
+    /* Draws the rows and takes the rest away. Returns whether a widget's height moved the layout. */
+    paint(rows: readonly LayoutRow[], paint: RowPaint): boolean {
+        const visible = new Set(rows.map((row) => row.key));
+        for (const [key, entry] of this.rows) {
+            if (!visible.has(key)) {
+                this.observer?.unobserve(entry.element);
+                entry.element.remove();
+                this.rows.delete(key);
+            }
+        }
+        let measured = false;
+        for (const row of rows) {
+            if (row.kind === 'text') {
+                this.paintText(row, paint);
+            } else {
+                measured = this.paintBlock(row, paint) || measured;
+            }
+        }
+        return measured;
+    }
+
+    private paintText(row: TextRow, paint: RowPaint): void {
+        const geometry = this.layout.geometry(row);
+        const tokens = paint.tokensOf(row.line);
+        const folded = row.lastLine > row.line;
+        let entry = this.rows.get(row.key);
+        if (!entry || entry.text !== geometry.text || entry.tokens !== tokens || entry.layoutVersion !== paint.layoutVersion || entry.folded !== folded) {
+            const element = this.buildText(row, geometry, tokens, paint);
+            if (entry) {
+                entry.element.replaceWith(element);
+            } else {
+                this.code.append(element);
+            }
+            entry = { element, text: geometry.text, tokens, layoutVersion: paint.layoutVersion, folded };
+            this.rows.set(row.key, entry);
+        }
+        entry.element.style.top = `${row.top}px`;
+        entry.element.style.height = `${row.height}px`;
+        entry.element.dataset.line = String(row.line);
+    }
+
+    private buildText(row: TextRow, geometry: LineGeometry, tokens: readonly LineToken[] | null, paint: RowPaint): HTMLElement {
+        const document = this.code.ownerDocument;
+        const element = document.createElement('div');
+        element.className = 'se-line';
+        element.style.width = `${geometry.width}px`;
+        const lineHeight = this.layout.metrics.lineHeight;
+        for (const run of geometry.runs) {
+            const span = document.createElement('span');
+            span.className = 'se-run';
+            span.style.left = `${run.x}px`;
+            span.style.top = `${run.subRow * lineHeight}px`;
+            fillRun(span, geometry, run.from, run.to, tokens);
+            element.append(span);
+        }
+        for (const box of geometry.inlays) {
+            const span = document.createElement('span');
+            span.className = 'se-inlay';
+            span.dataset.inlayId = box.inlay.id;
+            span.textContent = box.inlay.text;
+            span.style.left = `${box.x}px`;
+            span.style.top = `${box.subRow * lineHeight}px`;
+            span.style.width = `${box.width}px`;
+            element.append(span);
+        }
+        if (row.lastLine > row.line) {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'se-fold-chip';
+            chip.textContent = '…';
+            chip.tabIndex = -1;
+            chip.style.left = `${geometry.rowEnds[geometry.rowEnds.length - 1]! + 8}px`;
+            chip.style.top = `${(geometry.subRows - 1) * lineHeight}px`;
+            chip.addEventListener('pointerdown', (event) => event.stopPropagation());
+            chip.addEventListener('click', () => paint.onUnfold(row.line));
+            element.append(chip);
+        }
+        return element;
+    }
+
+    private paintBlock(row: Extract<LayoutRow, { kind: 'block' }>, paint: RowPaint): boolean {
+        let entry = this.rows.get(row.key);
+        if (!entry) {
+            const element = this.code.ownerDocument.createElement('div');
+            element.className = 'se-block';
+            element.dataset.rowKey = row.key;
+            element.dataset.widgetId = row.widget.id;
+            if (row.widget.render) {
+                row.widget.render(element);
+            } else {
+                element.textContent = row.widget.text ?? '';
+            }
+            this.code.append(element);
+            this.observer?.observe(element);
+            entry = { element, text: '', tokens: null, layoutVersion: 0, folded: false };
+            this.rows.set(row.key, entry);
+        }
+        entry.element.style.top = `${row.top}px`;
+        entry.element.style.width = `${Math.max(80, paint.viewportWidth)}px`;
+        const height = entry.element.getBoundingClientRect?.().height ?? 0;
+        return height > 0 && this.layout.setMeasuredHeight(row.key, height);
+    }
+
+    clear(): void {
+        for (const entry of this.rows.values()) {
+            this.observer?.unobserve(entry.element);
+            entry.element.remove();
+        }
+        this.rows.clear();
+    }
+}
+
+export interface GutterPaint {
+    activeLines: ReadonlySet<number>;
+    /* Lines a fold can start at, and whether each is collapsed. */
+    foldable: ReadonlyMap<number, boolean>;
+}
+
+/* The line numbers of the visible rows, and the fold control of the lines that have one. */
+export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: readonly LayoutRow[], paint: GutterPaint): void {
+    const document = container.ownerDocument;
+    const fragment = document.createDocumentFragment();
+    for (const row of rows) {
+        if (row.kind !== 'text') {
+            continue;
+        }
+        const item = document.createElement('div');
+        item.className = paint.activeLines.has(row.line) ? 'se-line-number se-active-number' : 'se-line-number';
+        item.style.top = `${row.top}px`;
+        item.style.height = `${layout.metrics.lineHeight}px`;
+        const number = document.createElement('span');
+        number.textContent = String(row.line + 1);
+        item.append(number);
+        const collapsed = paint.foldable.get(row.line);
+        if (collapsed !== undefined) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = collapsed ? 'se-fold-toggle se-folded' : 'se-fold-toggle';
+            button.dataset.foldLine = String(row.line);
+            button.tabIndex = -1;
+            button.setAttribute('aria-label', collapsed ? 'Expand' : 'Collapse');
+            button.textContent = collapsed ? '›' : '⌄';
+            item.append(button);
+        }
+        fragment.append(item);
+    }
+    container.replaceChildren(fragment);
+}
+
+export interface OverlayPaint {
+    currentLine: LayoutRect | null;
+    selections: readonly LayoutRect[];
+    focused: boolean;
+    marks: readonly { className: string; rects: readonly LayoutRect[] }[];
+}
+
+function box(document: Document, className: string, rect: LayoutRect): HTMLElement {
+    const element = document.createElement('div');
+    element.className = className;
+    element.style.left = `${rect.x}px`;
+    element.style.top = `${rect.y}px`;
+    element.style.width = `${Math.max(1, rect.width)}px`;
+    element.style.height = `${rect.height}px`;
+    return element;
+}
+
+/* What sits behind the text: the current line, the selections and the marks of find and brackets. */
+export function paintOverlays(container: HTMLElement, paint: OverlayPaint): void {
+    const document = container.ownerDocument;
+    const fragment = document.createDocumentFragment();
+    if (paint.currentLine) {
+        fragment.append(box(document, 'se-current-line', paint.currentLine));
+    }
+    for (const mark of paint.marks) {
+        for (const rect of mark.rects) {
+            fragment.append(box(document, mark.className, rect));
+        }
+    }
+    for (const rect of paint.selections) {
+        fragment.append(box(document, paint.focused ? 'se-selection' : 'se-selection se-selection-inactive', rect));
+    }
+    container.replaceChildren(fragment);
+}
+
+/* The carets, above the text. */
+export function paintCarets(container: HTMLElement, carets: readonly LayoutRect[]): void {
+    const document = container.ownerDocument;
+    container.replaceChildren(...carets.map((rect, index) => box(document, index === 0 ? 'se-caret se-primary-caret' : 'se-caret', { ...rect, width: 2 })));
+}

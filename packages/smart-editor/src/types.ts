@@ -1,0 +1,114 @@
+/* A Shiki theme id, the one the viewer draws the same file in. */
+export type EditorTheme = string;
+
+export interface EditorOptions {
+    readonly text: string;
+    /* The Shiki id `fs.read` answers with. Without one, or with one Shiki does not know, it is plain text. */
+    readonly language?: string;
+    /* The file's path, absolute or only a name. A language service reads the dialect off its extension, a `.tsx` from a `.ts`. */
+    readonly path?: string;
+    readonly theme: EditorTheme;
+    readonly readOnly?: boolean;
+    /* What a person is told on typing into a read-only editor. */
+    readonly readOnlyReason?: string;
+    readonly wrap?: boolean;
+    /* One-based, the line the cursor opens on. */
+    readonly line?: number;
+    /* One-based, where on that line. */
+    readonly column?: number;
+    /* In pixels, where the view opens; without it the cursor's line is brought into view. */
+    readonly scrollTop?: number;
+}
+
+/* What a find bar asks the editor; the editor's own matcher reads it. */
+export interface EditorFindQuery {
+    readonly text: string;
+    readonly caseSensitive: boolean;
+    readonly wholeWord: boolean;
+    readonly regex: boolean;
+}
+
+export interface EditorFindState {
+    readonly count: number;
+    /* Zero-based; null without a match. */
+    readonly current: number | null;
+}
+
+export interface Editor {
+    getText(): string;
+    /* A change from outside, such as a reload after `fs.changed` or another surface's edit. It is never
+       reported as a change, and the cursor and the scroll stay put wherever the text around them did. */
+    setText(text: string): void;
+    onChange(listener: () => void): () => void;
+    /* Mod+S from inside the editor; what happens then is the client's. */
+    onSave(listener: () => void): () => void;
+    /* The focus left the editor and every widget of its own, such as its suggestions. */
+    onBlur(listener: () => void): () => void;
+    revealLine(line: number): void;
+    /* Marks every match and moves to the first one from the cursor on; null takes the marks away. The
+       count comes back through `onFind`, and again whenever an edit changes it. */
+    find(query: EditorFindQuery | null): void;
+    findStep(direction: 1 | -1): void;
+    onFind(listener: (state: EditorFindState) => void): () => void;
+    /* Takes the marks away and selects the match the find was on, so the cursor is where it stopped. */
+    endFind(): void;
+    setWrap(wrap: boolean): void;
+    setTheme(theme: EditorTheme): void;
+    /* Reads the code face off the page again, after the page changed its size, family or ligatures. */
+    refreshFont(): void;
+    setReadOnly(readOnly: boolean, reason?: string): void;
+    focus(): void;
+    dispose(): void;
+}
+
+export interface EditorEngine {
+    /* The element is sized by its parent; the editor follows it. It must sit under `styles.css`, whose tokens color the chrome. */
+    mount(element: HTMLElement, options: EditorOptions): Editor;
+}
+
+/* A shortcut as the client writes it (`ui/shortcut.ts`): `mod` is Cmd on macOS and Ctrl elsewhere, `ctrl` and `meta` the physical keys. */
+export interface KeyChord {
+    readonly mod: boolean;
+    readonly ctrl: boolean;
+    readonly meta: boolean;
+    readonly alt: boolean;
+    readonly shift: boolean;
+    /* An uppercase letter, a digit, a punctuation mark or a named key such as `ArrowLeft`. */
+    readonly key: string;
+}
+
+/* One stretch of a colored line. The tokens of a line add up to its length. */
+export interface LineToken {
+    readonly length: number;
+    /* Any CSS color; empty for the editor's own text color. */
+    readonly color: string;
+    /* Bit flags as Shiki writes them: 1 italic, 2 bold, 4 underline, 8 strikethrough. */
+    readonly fontStyle: number;
+}
+
+export interface TokenizedLine {
+    readonly tokens: readonly LineToken[];
+    /* What the next line starts from; only the tokenizer that made it reads it. */
+    readonly state: unknown;
+}
+
+/*
+ * The coloring seam. A grammar needs the state the line before it ended in, so an edit recolors from
+ * the changed line on, and stops as soon as a line ends in the state it ended in before.
+ */
+export interface LineTokenizer {
+    /* A null state starts the document. */
+    tokenizeLine(text: string, state: unknown): TokenizedLine;
+    sameState(a: unknown, b: unknown): boolean;
+}
+
+/* A tokenizer for a language in a theme, or null when there is no grammar for it. May load the grammar, so it is async. */
+export type TokenizerSource = (language: string | undefined, theme: EditorTheme) => Promise<LineTokenizer | null>;
+
+export interface SmartEditorEngineOptions {
+    readonly tokenizer: TokenizerSource;
+    /* The app's shortcuts that work from anywhere, a text field included; the editor lets them pass untouched. */
+    readonly handBack?: readonly KeyChord[];
+    /* Whether the physical Ctrl and Meta of a shortcut are macOS's. */
+    readonly apple?: boolean;
+}

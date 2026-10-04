@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@basmilius/desktop-ui/theme.css";
 @import "@ruimte/agents-react/theme.css";
+@import "@ruimte/smart-editor/editor.css";
 
 /* The components of @basmilius/desktop-ui and the chat of @ruimte/agents-react carry their own classes, outside the folder Tailwind scans by itself.
    The library through `node_modules`, so a linked checkout, the published package and the station build read the same path. */
@@ -127,6 +128,9 @@
     --find-match: rgb(250 204 21 / 0.35);
     --find-current: #facc15;
     --find-current-text: #18181b;
+    /* What the editor (`@ruimte/smart-editor`) marks beyond a find: a selection weak enough that code keeps its colors under it, and the other uses of a name. */
+    --editor-selection: color-mix(in srgb, var(--accent) 16%, transparent);
+    --editor-occurrence: color-mix(in srgb, var(--text) 7%, transparent);
     --note-yellow: #fff3bf;
     --note-green: #dcf5e3;
     --note-blue: #dbe9ff;
@@ -214,6 +218,8 @@
     --find-match: rgb(250 204 21 / 0.24);
     --find-current: #f5c542;
     --find-current-text: #18181b;
+    --editor-selection: color-mix(in srgb, var(--accent) 28%, transparent);
+    --editor-occurrence: color-mix(in srgb, var(--text) 9%, transparent);
     --note-yellow: #3b3416;
     --note-green: #173a25;
     --note-blue: #182f4b;

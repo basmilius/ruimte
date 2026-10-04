@@ -1,0 +1,272 @@
+/*
+ * The editor's surface, drawn only in the app's tokens (`@basmilius/desktop-ui/theme.css` and the
+ * client's `styles.css`), so it follows the theme, the code face and the accent without a color of its
+ * own. The syntax colors are not here: they come from the Shiki theme the viewer draws with.
+ */
+.se-editor {
+    --se-gutter-width: 64px;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: var(--se-gutter-width) minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--surface);
+    color: var(--term-fg, var(--text));
+    font-family: var(--font-mono);
+    font-size: var(--code-font-size, var(--text-code));
+    line-height: var(--code-line-height, var(--text-code--line-height));
+    font-kerning: none;
+    text-align: left;
+}
+.se-editor *,
+.se-editor *::before,
+.se-editor *::after {
+    box-sizing: border-box;
+}
+.se-editor [hidden] {
+    display: none !important;
+}
+
+.se-viewport {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overflow-anchor: none;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text) 25%, transparent) transparent;
+}
+.se-editor[data-wrap='true'] .se-viewport {
+    overflow-x: hidden;
+}
+.se-content {
+    position: relative;
+    min-width: 100%;
+    min-height: 100%;
+    cursor: text;
+}
+.se-overlays,
+.se-code,
+.se-carets {
+    position: absolute;
+    inset: 0;
+}
+.se-overlays,
+.se-carets {
+    pointer-events: none;
+}
+.se-code {
+    z-index: 1;
+    user-select: none;
+}
+.se-carets {
+    z-index: 2;
+}
+
+.se-line {
+    position: absolute;
+    left: 0;
+    white-space: pre;
+    letter-spacing: 0;
+    direction: ltr;
+}
+.se-run {
+    position: absolute;
+    white-space: pre;
+}
+
+.se-gutter {
+    position: relative;
+    z-index: 3;
+    overflow: hidden;
+    background: var(--surface);
+    color: var(--text-faint);
+    cursor: default;
+    user-select: none;
+}
+.se-gutter-lines {
+    position: absolute;
+    inset: 0;
+}
+.se-line-number {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 16px;
+}
+.se-active-number {
+    color: var(--text-muted);
+}
+.se-fold-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0;
+}
+.se-fold-toggle::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border: solid var(--text-muted);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-2px) rotate(45deg);
+}
+.se-folded::before {
+    transform: translateX(-2px) rotate(-45deg);
+}
+.se-gutter:hover .se-fold-toggle,
+.se-fold-toggle.se-folded {
+    opacity: 1;
+}
+.se-fold-chip {
+    position: absolute;
+    height: calc(var(--code-line-height, 20px) - 4px);
+    margin-top: 2px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-hover);
+    color: var(--text-muted);
+    font: inherit;
+    line-height: calc(var(--code-line-height, 20px) - 4px);
+    cursor: pointer;
+}
+
+.se-current-line {
+    position: absolute;
+    background: var(--surface-hover);
+}
+.se-selection {
+    position: absolute;
+    background: var(--editor-selection);
+}
+.se-selection-inactive {
+    opacity: 0.6;
+}
+.se-caret {
+    position: absolute;
+    background: var(--term-cursor, var(--accent));
+    animation: se-blink 1.1s steps(1) infinite;
+}
+@keyframes se-blink {
+    50% {
+        opacity: 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .se-caret {
+        animation: none;
+    }
+}
+.se-find-match,
+.se-find-current,
+.se-occurrence,
+.se-bracket-match,
+.se-bracket-unmatched {
+    position: absolute;
+    border-radius: var(--radius-xs);
+}
+.se-find-match {
+    background: var(--find-match);
+}
+.se-find-current {
+    background: color-mix(in srgb, var(--find-current) 55%, transparent);
+    box-shadow: 0 0 0 1px var(--find-current);
+}
+.se-occurrence {
+    background: var(--editor-occurrence);
+    border-radius: var(--radius-sm);
+}
+.se-bracket-match {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+.se-bracket-unmatched {
+    background: color-mix(in srgb, var(--status-error) 16%, transparent);
+    box-shadow: inset 0 -2px var(--status-error);
+}
+
+.se-inlay {
+    position: absolute;
+    height: calc(var(--code-line-height, 20px) - 4px);
+    margin-top: 2px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-hover);
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: max(12px, calc(var(--code-font-size, 13px) - 1px));
+    line-height: calc(var(--code-line-height, 20px) - 4px);
+    white-space: pre;
+    cursor: default;
+}
+.se-block {
+    position: absolute;
+    left: 0;
+    padding: 4px 16px;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.se-input {
+    position: absolute;
+    z-index: 5;
+    width: 2px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    font: inherit;
+    resize: none;
+    outline: none;
+    opacity: 0;
+    overflow: hidden;
+    white-space: pre;
+    pointer-events: none;
+}
+.se-notice {
+    position: absolute;
+    right: 16px;
+    bottom: 8px;
+    z-index: 6;
+    padding: 4px 12px;
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    box-shadow: 0 0 0 1px var(--border);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    pointer-events: none;
+}
+
+@media (forced-colors: active) {
+    .se-selection,
+    .se-find-current,
+    .se-bracket-match {
+        forced-color-adjust: none;
+        background: Highlight;
+    }
+}
