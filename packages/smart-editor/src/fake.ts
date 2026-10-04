@@ -1,4 +1,14 @@
-import type { Editor, EditorBlock, EditorEngine, EditorFindQuery, EditorFindState, EditorIndentation, EditorOptions, EditorTheme } from './types.ts';
+import type {
+    Editor,
+    EditorBlock,
+    EditorChangeMark,
+    EditorEngine,
+    EditorFindQuery,
+    EditorFindState,
+    EditorIndentation,
+    EditorOptions,
+    EditorTheme
+} from './types.ts';
 import { emit, type Listener, subscribe } from './listeners.ts';
 
 /* An editor without a DOM, for tests: `type`, `save` and `blur` do what a person would, the rest says what the client asked of it. */
@@ -124,6 +134,13 @@ export class FakeEditor implements Editor {
     /* What the client handed it last; null while it reads the structure itself. */
     blocks: readonly EditorBlock[] | null = null;
     private readonly scopes = new Set<(scope: readonly EditorBlock[]) => void>();
+
+    /* What the client marked as changed last. */
+    changeMarks: readonly EditorChangeMark[] = [];
+
+    setChangeMarks(marks: readonly EditorChangeMark[]): void {
+        this.changeMarks = marks;
+    }
 
     setBlocks(blocks: readonly EditorBlock[] | null): void {
         this.blocks = blocks;

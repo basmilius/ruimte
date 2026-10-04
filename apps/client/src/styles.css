@@ -131,6 +131,10 @@
     /* What the editor (`@ruimte/smart-editor`) marks beyond a find: a selection weak enough that code keeps its colors under it, and the other uses of a name. */
     --editor-selection: color-mix(in srgb, var(--accent) 16%, transparent);
     --editor-occurrence: color-mix(in srgb, var(--text) 7%, transparent);
+    /* What the editor marks against the committed version: lines added, lines changed, and where lines were removed. */
+    --editor-added: var(--status-idle);
+    --editor-modified: var(--accent);
+    --editor-deleted: var(--status-error);
     /* The soft edge under the headers sticky scroll pins over the code. */
     --editor-sticky-shadow: rgb(0 0 0 / 0.12);
     --note-yellow: #fff3bf;

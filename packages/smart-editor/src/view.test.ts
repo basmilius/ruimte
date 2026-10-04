@@ -257,6 +257,44 @@ describe('the gutter', () => {
     });
 });
 
+describe('change marks', () => {
+    const text = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join('\n');
+
+    test('draw a bar in the gutter beside each marked line and a triangle for a removal', () => {
+        const { host, view } = mount(text);
+        view.setChangeMarks([
+            { kind: 'added', startLine: 2, endLine: 3 },
+            { kind: 'modified', startLine: 5, endLine: 5 },
+            { kind: 'deleted', startLine: 8, endLine: 8 },
+            { kind: 'deleted', startLine: 2, endLine: 2 }
+        ]);
+        const marked = [...host.querySelectorAll('.se-line-number')].flatMap((item) => {
+            const mark = item.querySelector('.se-change');
+            return mark ? [`${item.textContent}:${mark.className.replace('se-change se-change-', '')}`] : [];
+        });
+        expect(marked).toEqual(['2:added', '3:added', '5:modified', '8:deleted']);
+    });
+
+    test('follow their lines through an edit above them', () => {
+        const { host, model, view } = mount(text);
+        view.setChangeMarks([{ kind: 'modified', startLine: 5, endLine: 5 }]);
+        model.applyEdits([{ from: 0, to: 0, text: 'new\nnew\n' }]);
+        const marked = [...host.querySelectorAll('.se-line-number')].filter((item) => item.querySelector('.se-change')).map((item) => item.textContent);
+        expect(marked).toEqual(['7']);
+    });
+
+    test('and the find matches are ticks in the scroll track', () => {
+        const { host, view } = mount(text);
+        view.setChangeMarks([{ kind: 'added', startLine: 10, endLine: 12 }]);
+        view.setFind({ text: 'line 2', caseSensitive: true, wholeWord: false, regex: false }, false);
+        view.render();
+        const kinds = [...host.querySelectorAll('.se-tick')].map((tick) => tick.className.replace('se-tick se-tick-', ''));
+        expect(kinds).toContain('added');
+        expect(kinds).toContain('find-current');
+        expect(kinds).toContain('find');
+    });
+});
+
 describe('scope', () => {
     test('reports the named blocks around the caret when they change', () => {
         const { model, view } = mount('class A {\n  run() {\n    one();\n  }\n}\nconst x = 1;');

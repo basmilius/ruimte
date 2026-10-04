@@ -3,6 +3,8 @@ export { shikiTokenizers } from './shiki.ts';
 export type {
     Editor,
     EditorBlock,
+    EditorChangeKind,
+    EditorChangeMark,
     EditorEngine,
     EditorFindQuery,
     EditorFindState,

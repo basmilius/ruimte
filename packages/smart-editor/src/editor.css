@@ -141,6 +141,62 @@
 .se-fold-toggle.se-folded {
     opacity: 1;
 }
+.se-change {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 3px;
+}
+.se-change-added {
+    background: var(--editor-added);
+}
+.se-change-modified {
+    background: var(--editor-modified);
+}
+.se-change-deleted {
+    top: -4px;
+    width: 0;
+    height: 0;
+    border: solid transparent;
+    border-width: 4px 0 4px 5px;
+    border-left-color: var(--editor-deleted);
+}
+.se-overview {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    width: 12px;
+    pointer-events: none;
+}
+.se-tick {
+    position: absolute;
+    width: 4px;
+    border-radius: 1px;
+}
+.se-tick-added,
+.se-tick-modified,
+.se-tick-deleted {
+    left: 2px;
+}
+.se-tick-added {
+    background: var(--editor-added);
+}
+.se-tick-modified {
+    background: var(--editor-modified);
+}
+.se-tick-deleted {
+    background: var(--editor-deleted);
+}
+.se-tick-find,
+.se-tick-find-current {
+    left: 6px;
+    background: var(--find-current);
+}
+.se-tick-find {
+    opacity: 0.6;
+}
 .se-fold-chip {
     position: absolute;
     height: calc(var(--code-line-height, 20px) - 4px);

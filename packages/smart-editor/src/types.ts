@@ -34,6 +34,17 @@ export interface EditorBlock {
     readonly kind?: string;
 }
 
+export type EditorChangeKind = 'added' | 'modified' | 'deleted';
+
+/* A stretch of lines that differs from the version the host compares against, drawn in the gutter and in the scroll track. */
+export interface EditorChangeMark {
+    readonly kind: EditorChangeKind;
+    /* One-based. For `deleted` the line the removed lines were above, which is where the mark sits. */
+    readonly startLine: number;
+    /* One-based and inclusive; the same as `startLine` for `deleted`. */
+    readonly endLine: number;
+}
+
 export interface EditorIndentation {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -73,6 +84,8 @@ export interface Editor {
     endFind(): void;
     setWrap(wrap: boolean): void;
     setIndentation(indentation: EditorIndentation): void;
+    /* Marks that follow their lines through edits until the host sets them again. */
+    setChangeMarks(marks: readonly EditorChangeMark[]): void;
     /* The blocks sticky scroll and the breadcrumb go by. The editor reads them from brackets and
        indentation until the host has better, such as a language server's symbols; null goes back. */
     setBlocks(blocks: readonly EditorBlock[] | null): void;

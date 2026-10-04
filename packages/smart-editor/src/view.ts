@@ -4,9 +4,10 @@ import { type BlockWidget, EditorLayout, type FoldState, type Inlay, type Layout
 import { createMetrics, type EditorFont, readEditorFont } from './metrics.ts';
 import { mapOffset } from './offsets.ts';
 import { Outline, scopeChain, type StickyPlacement, stickyCover, stickyPlacements, structuralEntries } from './outline.ts';
+import { type OverviewSpan, overviewTicks, paintOverview } from './overview.ts';
 import { paintCarets, paintGutter, paintOverlays, paintSticky, RowPainter, type StickyEntry } from './paint.ts';
 import { TokenCache } from './tokens.ts';
-import type { EditorBlock, EditorFindQuery, EditorFindState, LineTokenizer } from './types.ts';
+import type { EditorBlock, EditorChangeKind, EditorChangeMark, EditorFindQuery, EditorFindState, LineTokenizer } from './types.ts';
 
 export interface ViewSettings {
     language: string | undefined;
@@ -62,6 +63,7 @@ export class EditorView {
     private readonly carets: HTMLElement;
     private readonly notice: HTMLElement;
     private readonly sticky: HTMLElement;
+    private readonly overview: HTMLElement;
     private readonly painter: RowPainter;
     private readonly document: Document;
     private readonly resizeObserver: ResizeObserver | undefined;
@@ -72,6 +74,9 @@ export class EditorView {
     private readonly outline = new Outline();
     private stickyEntries: StickyEntry[] = [];
     private scopeKey = '';
+    private changeMarks: { kind: EditorChangeKind; from: number; to: number }[] = [];
+    private changeVersion = 0;
+    private overviewKey = '';
     private gutterWidth = MIN_GUTTER_WIDTH;
     private frame: number | undefined;
     private caretTimer: ReturnType<typeof setTimeout> | undefined;
@@ -140,10 +145,12 @@ export class EditorView {
         this.sticky = make('div', 'se-sticky');
         this.sticky.setAttribute('aria-hidden', 'true');
         this.sticky.hidden = true;
+        this.overview = make('div', 'se-overview');
+        this.overview.setAttribute('aria-hidden', 'true');
         this.notice = make('div', 'se-notice');
         this.notice.setAttribute('role', 'status');
         this.notice.hidden = true;
-        this.root.append(this.viewport, this.sticky, this.input, this.notice);
+        this.root.append(this.viewport, this.sticky, this.overview, this.input, this.notice);
         container.append(this.root);
 
         this.font = readEditorFont(this.root);
@@ -260,10 +267,12 @@ export class EditorView {
                 this.inlays = this.inlays.map((inlay) => ({ ...inlay, at: mapOffset(inlay.at, changes) }));
                 this.blocks = this.blocks.map((block) => ({ ...block, at: mapOffset(block.at, changes) }));
                 this.collapsed = new Set([...this.collapsed].map((anchor) => mapOffset(anchor, changes)));
+                this.changeMarks = this.changeMarks.map((mark) => ({ ...mark, from: mapOffset(mark.from, changes), to: mapOffset(mark.to, changes) }));
             }
             const anchor = this.topAnchor;
             this.occurrences = [];
             this.outline.edited(batches);
+            this.changeVersion++;
             this.tokens.edited(batches, (offset) => this.model.positionAt(offset).line);
             this.layout.configure({ textChanged: true, inlays: this.displayedInlays(), blocks: this.blocks, folds: this.foldStates() });
             if (anchor && this.viewport.scrollTop > 0) {
@@ -660,6 +669,7 @@ export class EditorView {
             this.renderedScroll = { top: this.viewport.scrollTop, left: this.viewport.scrollLeft };
             this.paintDecorations(rows);
             this.paintSticky();
+            this.paintOverview();
             this.announceScope();
             this.colorAhead();
         } finally {
@@ -678,6 +688,7 @@ export class EditorView {
             }
         }
         paintGutter(this.gutterLines, this.layout, rows, {
+            changes: this.changedLines(rows),
             activeLines: new Set(selections.map((selection) => this.model.positionAt(selection.head).line)),
             foldable
         });
@@ -741,6 +752,67 @@ export class EditorView {
         this.input.style.top = `${Math.max(0, Math.min(this.viewportHeight - this.layout.metrics.lineHeight, caret.y - top))}px`;
         this.input.style.height = `${this.layout.metrics.lineHeight}px`;
         this.root.dataset.carets = String(selections.length);
+    }
+
+    /* The lines the host marked, which stay on their lines through edits until it marks them again. */
+    setChangeMarks(marks: readonly EditorChangeMark[]): void {
+        const last = this.model.getLineCount();
+        const clamp = (line: number): number => Math.min(last, Math.max(1, Math.trunc(line) || 1)) - 1;
+        this.changeMarks = marks.map((mark) => {
+            const from = this.model.getLine(clamp(mark.startLine)).start;
+            return { kind: mark.kind, from, to: mark.kind === 'deleted' ? from : this.model.getLine(Math.max(clamp(mark.startLine), clamp(mark.endLine))).end };
+        });
+        this.changeVersion++;
+        this.render();
+    }
+
+    private markedLines(mark: { kind: EditorChangeKind; from: number; to: number }): { start: number; end: number } {
+        const start = this.model.positionAt(mark.from).line;
+        return { start, end: mark.kind === 'deleted' ? start : this.model.positionAt(Math.max(mark.from, mark.to)).line };
+    }
+
+    /* How each line on screen differs, a removal never covering a line that was added or changed. */
+    private changedLines(rows: readonly LayoutRow[]): Map<number, EditorChangeKind> {
+        const lines = new Map<number, EditorChangeKind>();
+        const first = rows[0]?.line ?? 0;
+        const lastRow = rows.at(-1);
+        const last = lastRow?.kind === 'text' ? lastRow.lastLine : (lastRow?.line ?? 0);
+        for (const mark of this.changeMarks) {
+            const { start, end } = this.markedLines(mark);
+            for (let line = Math.max(start, first); line <= Math.min(end, last); line++) {
+                if (mark.kind !== 'deleted' || !lines.has(line)) {
+                    lines.set(line, mark.kind);
+                }
+            }
+        }
+        return lines;
+    }
+
+    /* The find matches and the changes as ticks in the scroll track, redrawn when what they stand on changes. */
+    private paintOverview(): void {
+        const trackHeight = this.viewportHeight;
+        const matches = this.find.matches;
+        const current = this.find.current;
+        const key = `${this.revision}|${this.changeVersion}|${this.layout.height}|${trackHeight}|${matches.length}|${current}|${matches[0]?.from}|${matches.at(-1)?.from}`;
+        if (key === this.overviewKey) {
+            return;
+        }
+        this.overviewKey = key;
+        const spans: OverviewSpan[] = [];
+        const rowTop = (line: number): number => this.layout.rowForLine(line).top;
+        const rowBottom = (line: number): number => {
+            const row = this.layout.rowForLine(line);
+            return row.top + row.height;
+        };
+        for (const mark of this.changeMarks) {
+            const { start, end } = this.markedLines(mark);
+            spans.push({ kind: mark.kind, top: rowTop(start), bottom: mark.kind === 'deleted' ? rowTop(start) : rowBottom(end) });
+        }
+        matches.forEach((match, index) => {
+            const line = this.model.positionAt(match.from).line;
+            spans.push({ kind: index === current ? 'find-current' : 'find', top: rowTop(line), bottom: rowBottom(line) });
+        });
+        paintOverview(this.overview, overviewTicks(spans, this.layout.height, trackHeight));
     }
 
     /* The blocks sticky scroll and the breadcrumb go by; null goes back to the editor's own reading. */

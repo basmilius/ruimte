@@ -5,6 +5,7 @@ import { changedSpan } from './text-span.ts';
 import type {
     Editor,
     EditorBlock,
+    EditorChangeMark,
     EditorEngine,
     EditorFindQuery,
     EditorIndentation,
@@ -162,6 +163,10 @@ class SmartEditor implements Editor {
             this.view.viewport.scrollLeft = 0;
         }
         this.view.applySettings();
+    }
+
+    setChangeMarks(marks: readonly EditorChangeMark[]): void {
+        this.view.setChangeMarks(marks);
     }
 
     setBlocks(blocks: readonly EditorBlock[] | null): void {

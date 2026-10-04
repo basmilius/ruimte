@@ -1,5 +1,5 @@
 import { type EditorLayout, type LayoutRect, type LayoutRow, type LineGeometry, scanLine, type TextRow } from './layout.ts';
-import type { LineToken } from './types.ts';
+import type { EditorChangeKind, LineToken } from './types.ts';
 
 const ITALIC = 1;
 const BOLD = 2;
@@ -258,6 +258,8 @@ export class RowPainter {
 
 export interface GutterPaint {
     activeLines: ReadonlySet<number>;
+    /* How the lines the host marked differ from what it compares against. */
+    changes: ReadonlyMap<number, EditorChangeKind>;
     /* Lines a fold can start at, and whether each is collapsed. */
     foldable: ReadonlyMap<number, boolean>;
 }
@@ -277,6 +279,15 @@ export function paintGutter(container: HTMLElement, layout: EditorLayout, rows: 
         const number = document.createElement('span');
         number.textContent = String(row.line + 1);
         item.append(number);
+        const change = paint.changes.get(row.line);
+        if (change) {
+            const mark = document.createElement('span');
+            mark.className = `se-change se-change-${change}`;
+            if (change !== 'deleted') {
+                mark.style.height = `${row.height}px`;
+            }
+            item.append(mark);
+        }
         const collapsed = paint.foldable.get(row.line);
         if (collapsed !== undefined) {
             const button = document.createElement('button');
