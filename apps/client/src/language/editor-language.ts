@@ -9,6 +9,7 @@ import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
 import { InlayHintsFeature } from './inlay-hints';
 import { SemanticTokensFeature } from './semantic-tokens';
+import { SignatureFeature } from './signature';
 import type { LanguageDocumentHandle, ProjectLanguage } from './project-language';
 
 /*
@@ -38,6 +39,7 @@ export class EditorLanguage {
         this.diagnostics = new DiagnosticsFeature(this);
         this.hover = new HoverFeature(this, timers);
         this.completion = new CompletionFeature(this, timers);
+        new SignatureFeature(this, timers);
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
     }

@@ -3,6 +3,7 @@ import type { EditorPosition, EditorRange } from '@ruimte/smart-editor';
 import type { Location } from '@ruimte/smart-editor-lsp';
 import type { Problem } from './diagnostics-model';
 import type { HoverText } from './hover-content';
+import type { SignatureViewModel } from './signature-model';
 
 /* What a hover card shows for the character under the pointer. */
 export interface HoverView {
@@ -44,13 +45,21 @@ export interface CompletionView {
     readonly highlightLanguage: string;
 }
 
+/* The signature of the call the caret is in. */
+export interface SignatureView {
+    /* Where the call opened, so the card stays put while the arguments are typed. */
+    readonly anchor: EditorPosition;
+    readonly model: SignatureViewModel;
+}
+
 export interface PopupState {
     readonly hover: HoverView | null;
     readonly completion: CompletionView | null;
+    readonly signature: SignatureView | null;
 }
 
 export type PopupStore = StoreApi<PopupState>;
 
 export function createPopupStore(): PopupStore {
-    return createStore<PopupState>(() => ({ hover: null, completion: null }));
+    return createStore<PopupState>(() => ({ hover: null, completion: null, signature: null }));
 }
