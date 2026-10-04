@@ -43,6 +43,7 @@
         }
     },
     "diff": {
+        "commitCrashed": "The commit view failed",
         "commitFailed": "Could not read the commit.",
         "layout": {
             "split": "Split",
@@ -51,6 +52,7 @@
         "loading": "Loading diff",
         "moreFiles": "More files changed than this list holds.",
         "noChange": "Nothing changed in {{path}} in this scope.",
+        "noFiles": "This commit changed no files.",
         "nothingSince": "Nothing changed since {{base}}.",
         "omitted": {
             "binary": "Binary files have no diff.",

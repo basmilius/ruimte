@@ -1,4 +1,9 @@
-import type { FileTree, FileTreeDirectoryHandle } from '@pierre/trees';
+import type { FileTree, FileTreeDirectoryHandle, FileTreeVisibleRow } from '@pierre/trees';
+import { expansionChanges, type GitTreeRow } from '@/shell/panels/git-tree';
+
+/* Opening a folder brings rows into view that may have to fold up in turn, so folding settles over
+   a few passes; a tree that never settles stops here rather than looping. */
+const EXPANSION_PASSES = 32;
 
 /*
  * What both panels put over the tree's own stylesheet.
@@ -18,6 +23,19 @@ export const PANEL_TREE_CSS = `
 `;
 
 /*
+ * A tree of changed files, over the shared rules. Every row is a change, so the news rides on the
+ * parts of the decoration and a name keeps the panel's color. The decoration is laid open into the
+ * row, so the parts stand apart by the row's own gap, and the counts are set in the mono face at the
+ * floor this app puts under type, which keeps a column of them straight.
+ */
+export const CHANGE_TREE_CSS = `
+    ${PANEL_TREE_CSS}
+    [data-item-section="content"] { flex: 1 1 auto; }
+    [data-item-section="decoration"], [data-item-section="decoration"] > span { display: contents; }
+    [data-item-section="decoration"] span { flex: none; font-family: var(--font-mono); font-size: 12px; }
+`;
+
+/*
  * The height of a row, over the 24 of the tree's compact density. A row divides what it has left
  * over the text evenly, so an even height splits the odd box of a 13px face over two half pixels
  * and the letters land under the middle. An odd height splits it whole; the icons pay the half
@@ -29,6 +47,30 @@ export const PANEL_TREE_ROW_HEIGHT = 25;
 export const directoryHandle = (model: FileTree, path: string): FileTreeDirectoryHandle | null => {
     const item = model.getItem(path);
     return item?.isDirectory() ? (item as FileTreeDirectoryHandle) : null;
+};
+
+/* A chain of folders nothing branches in is one row, which stands for the deepest of them. */
+export const pathOfRow = (row: FileTreeVisibleRow): string =>
+    row.isFlattened ? (row.flattenedSegments?.findLast((segment) => segment.isTerminal)?.path ?? row.path) : row.path;
+
+/* Every row the tree shows, which is every row but the ones a folded folder holds. */
+export const visibleRows = (model: FileTree): GitTreeRow[] =>
+    model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
+
+/* Folds the tree the way the collapse set says. */
+export const applyExpansion = (model: FileTree, collapsed: ReadonlySet<string>, scope: string): void => {
+    for (let pass = 0; pass < EXPANSION_PASSES; pass++) {
+        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed, scope);
+        if (collapse.length === 0 && expand.length === 0) {
+            return;
+        }
+        for (const path of collapse) {
+            directoryHandle(model, path)?.collapse();
+        }
+        for (const path of expand) {
+            directoryHandle(model, path)?.expand();
+        }
+    }
 };
 
 export const resetExpandedPaths = (model: FileTree, paths: readonly string[], expanded: ReadonlySet<string>): void => {

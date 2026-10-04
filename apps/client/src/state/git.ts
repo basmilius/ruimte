@@ -6,6 +6,9 @@ export const DEFAULT_SCOPE: GitDiffScope = 'worktree';
 // What the commit log takes at the bottom of the panel until a drag gives the project its own.
 export const DEFAULT_LOG_HEIGHT = 200;
 
+// The file tree of a commit tab, until a drag gives it a width of its own.
+export const DEFAULT_COMMIT_TREE_WIDTH = 240;
+
 interface GitStore {
     /* What a diff opens in, remembered per project so a branch review stays a branch review. */
     scope: GitDiffScope;
@@ -15,6 +18,10 @@ interface GitStore {
     hiddenRepos: string[];
     /* What the diff of a tab holds, keyed by that tab, so the strip can say it without reading again. */
     counts: Record<string, { added: number; deleted: number }>;
+    /* The file a commit tab shows, keyed by that tab, so switching tabs comes back to it. */
+    commitFiles: Record<string, string>;
+    /* Whole pixels the file tree of a commit tab takes, the same in every one of them for as long as the window stays. */
+    commitTreeWidth: number;
     /* Whole pixels the commit log takes; it travels with the project like the widths beside it. */
     logHeight: number;
     /* The commit message being written, per project, since one message commits whatever is staged and
@@ -27,6 +34,8 @@ interface GitStore {
     setLogHeight(height: number): void;
     setMessage(cwd: string, message: string): void;
     setCounts(key: string, counts: { added: number; deleted: number }): void;
+    setCommitFile(key: string, path: string): void;
+    setCommitTreeWidth(width: number): void;
     setCollapsedDirs(dirs: string[]): void;
     toggleDir(path: string): void;
 }
@@ -40,6 +49,8 @@ export const useGit = create<GitStore>((set, get) => ({
     collapsedDirs: [],
     hiddenRepos: [],
     counts: {},
+    commitFiles: {},
+    commitTreeWidth: DEFAULT_COMMIT_TREE_WIDTH,
     logHeight: DEFAULT_LOG_HEIGHT,
     messages: {},
     setScope(scope) {
@@ -60,6 +71,15 @@ export const useGit = create<GitStore>((set, get) => ({
     },
     setCounts(key, counts) {
         set({ counts: { ...get().counts, [key]: counts } });
+    },
+    setCommitFile(key, path) {
+        if (get().commitFiles[key] === path) {
+            return;
+        }
+        set({ commitFiles: { ...get().commitFiles, [key]: path } });
+    },
+    setCommitTreeWidth(width) {
+        set({ commitTreeWidth: Math.round(width) });
     },
     setCollapsedDirs(dirs) {
         set({ collapsedDirs: dirs });

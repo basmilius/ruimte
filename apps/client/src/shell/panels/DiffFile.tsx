@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Columns2, FileWarning, GitCompare, RefreshCw, Rows2 } from 'lucide-react';
@@ -8,6 +8,8 @@ import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts
 import { performAsPerson } from '@/actions/client-actions';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { relativeTime } from '@/shell/panels/commit-log';
+import { CommitFileTree } from '@/shell/panels/CommitFileTree';
+import { pickedFile } from '@/shell/panels/commit-tree';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { relativeTo } from '@/shell/panels/files-tree';
@@ -16,11 +18,14 @@ import { useGit } from '@/state/git';
 import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
-import { ButtonGroup, EmptyState, Menu, Separator, lazyNamed, useNow } from '@basmilius/desktop-ui';
+import { ButtonGroup, ColumnResizeHandle, EmptyState, ErrorBoundary, Menu, Separator, lazyNamed, useColumnResize, useNow } from '@basmilius/desktop-ui';
 
 const UnifiedDiff = lazyNamed(() => import('@ruimte/agents-react/chat/ui/UnifiedDiff'), 'default');
 
 const MINUTE_MS = 60_000;
+
+/* A commit's file tree keeps room for a name and its counts; it never takes more than half the tab (`max-w-1/2`). */
+const MIN_TREE_WIDTH = 160;
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
@@ -177,10 +182,10 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
 type CommitState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
 /*
- * A whole commit in one tab: what it says and who wrote it, the files it touched as a list at the
- * top, and every patch under that. One request answers all of it, so a commit opens as fast as a
- * single file does and the caps that keep a diff readable are the same ones. Without a commit the
- * tab is a whole checkout against `base`, which is how a worktree shows what it holds.
+ * A whole commit in one tab: what it says and who wrote it over a tree of the files it touched, and
+ * beside that the diff of the one file picked in the tree. One request answers all of it, so moving
+ * through the tree reads nothing and the caps that keep a diff readable are the same ones. Without a
+ * commit the tab is a whole checkout against `base`, which is how a worktree shows what it holds.
  */
 function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string; commit?: string; base?: string | null }) {
     const { t } = useTranslation('panels');
@@ -222,14 +227,29 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
         };
     }, [transport, asked, nonce, signal, commit, base, cwd, tabKey]);
 
-    const meta = state.status === 'ready' ? state.diff.commit : undefined;
-    const files: readonly GitDiffFile[] = state.status === 'ready' ? (state.diff.files ?? []) : [];
+    const ready = state.status === 'ready' ? state.diff : null;
+    const meta = ready?.commit;
+    const files = useMemo<readonly GitDiffFile[]>(() => ready?.files ?? [], [ready]);
+    const since = base ?? t('worktree.baseBranch');
+    const picked = useGit((s) => s.commitFiles[tabKey]);
+    const shown = pickedFile(files, picked);
+    const pick = useCallback((path: string) => useGit.getState().setCommitFile(tabKey, path), [tabKey]);
+    const treeWidth = useGit((s) => s.commitTreeWidth);
+    const bodyRef = useRef<HTMLDivElement>(null);
+    const treeRef = useRef<HTMLElement>(null);
+    const { startResize } = useColumnResize(treeRef, {
+        size: treeWidth,
+        min: MIN_TREE_WIDTH,
+        from: 'left',
+        max: () => Math.floor((bodyRef.current?.getBoundingClientRect().width ?? 0) / 2),
+        onSize: (next) => useGit.getState().setCommitTreeWidth(next)
+    });
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <div className={FILE_TOOLBAR}>
                 <span className="truncate font-mono text-xs text-text-muted">
-                    {commit === undefined ? t('diff.since', { base: base ?? t('worktree.baseBranch') }) : (meta?.shortHash ?? commit.slice(0, 7))}
+                    {commit === undefined ? t('diff.since', { base: since }) : (meta?.shortHash ?? commit.slice(0, 7))}
                 </span>
                 <span className="grow" />
                 {commit === undefined && (
@@ -263,53 +283,83 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                     <EmptyState icon={FileWarning}>{state.message}</EmptyState>
                 </div>
             )}
-            {state.status === 'ready' && (
-                <div className="file-diff min-h-0 grow overflow-auto">
-                    <div className="border-b border-border px-3 py-2">
-                        {commit === undefined ? (
-                            <p className="text-xs text-text-faint">
-                                {files.length === 0
-                                    ? t('diff.nothingSince', { base: base ?? t('worktree.baseBranch') })
-                                    : t('diff.sinceSummary', { base: base ?? t('worktree.baseBranch') })}
-                            </p>
-                        ) : (
-                            <>
-                                <p className="text-xs font-medium text-text">{meta?.subject ?? commit}</p>
-                                <p className="mt-1 text-xs text-text-faint">
-                                    {meta === undefined ? commit : `${meta.author} · ${relativeTime(meta.at, now)} · ${meta.shortHash}`}
-                                </p>
-                            </>
-                        )}
-                        <ul className="mt-2 flex flex-col gap-0.5">
-                            {files.map((file) => (
-                                <li key={file.path} className="flex items-center gap-2 text-xs">
-                                    <span className="truncate font-mono text-text-muted">{file.path}</span>
-                                    <span className="grow" />
-                                    <span className="shrink-0 tabular-nums text-term-green">{file.added > 0 ? `+${file.added}` : ''}</span>
-                                    <span className="shrink-0 tabular-nums text-term-red">{file.deleted > 0 ? `-${file.deleted}` : ''}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        {state.diff.truncated === true && <p className="mt-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
+            {ready !== null && (
+                <ErrorBoundary label={t('diff.commitCrashed')} resetKeys={[asked]} className="min-h-0 grow">
+                    {/* Too narrow for the two side by side, the tree stands above the diff at a height it cannot grow past. */}
+                    <div ref={bodyRef} className="@container flex min-h-0 grow flex-col">
+                        <div className="flex min-h-0 grow flex-col @xl:flex-row">
+                            <aside
+                                ref={treeRef}
+                                className="relative flex max-h-72 shrink-0 flex-col border-b bg-surface border-border @xl:max-h-none @xl:w-(--commit-tree-width) @xl:max-w-1/2 @xl:border-r @xl:border-b-0"
+                                style={{ '--commit-tree-width': `${treeWidth}px` } as CSSProperties}
+                            >
+                                <div className="shrink-0 border-b border-border px-3 py-2">
+                                    {commit === undefined ? (
+                                        <p className="text-xs text-text-faint">
+                                            {files.length === 0 ? t('diff.nothingSince', { base: since }) : t('diff.sinceSummary', { base: since })}
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs font-medium text-text">{meta?.subject ?? commit}</p>
+                                            <p className="mt-1 text-xs text-text-faint">
+                                                {meta === undefined ? commit : `${meta.author} · ${relativeTime(meta.at, now)} · ${meta.shortHash}`}
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="min-h-0 grow overflow-y-auto py-1">
+                                    {files.length > 0 && <CommitFileTree files={files} shown={shown?.path ?? null} onPick={pick} />}
+                                    {ready.truncated === true && <p className="px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
+                                </div>
+                                <ColumnResizeHandle from="left" className="hidden @xl:block" onPointerDown={startResize} />
+                            </aside>
+                            <CommitFileDiff file={shown} empty={files.length === 0} commit={commit !== undefined} wrap={wrap} layout={layout} />
+                        </div>
                     </div>
-                    <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
-                        {files.map((file) =>
-                            file.diff === '' ? (
-                                <p key={file.path} className="px-3 py-2 text-xs text-text-faint">
-                                    {file.path}: {omittedLabel(file.omitted)}
-                                </p>
-                            ) : (
-                                <UnifiedDiff
-                                    key={file.path}
-                                    change={{ path: file.path, kind: 'update', diff: file.diff }}
-                                    overflow={wrap ? 'wrap' : 'scroll'}
-                                    diffStyle={layout === 'split' ? 'split' : 'unified'}
-                                />
-                            )
-                        )}
-                    </Suspense>
-                </div>
+                </ErrorBoundary>
             )}
+        </div>
+    );
+}
+
+/* The diff of the one file of a commit the tree has picked. */
+function CommitFileDiff({
+    file,
+    empty,
+    commit,
+    wrap,
+    layout
+}: {
+    file: GitDiffFile | null;
+    /* Whether the answer holds no file at all, which a checkout says above the tree already. */
+    empty: boolean;
+    commit: boolean;
+    wrap: boolean;
+    layout: 'stacked' | 'split';
+}) {
+    const { t } = useTranslation('panels');
+    if (file === null || file.diff === '') {
+        return (
+            <div className="file-diff grid min-h-0 min-w-0 grow place-items-center">
+                {file !== null ? (
+                    <EmptyState icon={FileWarning}>{omittedLabel(file.omitted)}</EmptyState>
+                ) : (
+                    empty && commit && <EmptyState icon={GitCompare}>{t('diff.noFiles')}</EmptyState>
+                )}
+            </div>
+        );
+    }
+    return (
+        <div className="file-diff flex min-h-0 min-w-0 grow flex-col overflow-auto">
+            <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
+                <UnifiedDiff
+                    key={file.path}
+                    change={{ path: file.path, kind: 'update', diff: file.diff }}
+                    overflow={wrap ? 'wrap' : 'scroll'}
+                    diffStyle={layout === 'split' ? 'split' : 'unified'}
+                    fill
+                />
+            </Suspense>
         </div>
     );
 }

@@ -1,3 +1,4 @@
+import type { FileTreeRowDecoration } from '@pierre/trees';
 import type { GitFile } from '@ruimte/contracts';
 import { treeGitStatus } from '@/shell/panels/files-tree';
 import type { FileTab } from '@/state/files';
@@ -106,23 +107,32 @@ export interface DecorationPart {
    is what the tree's stylesheet draws the box by (`GitFileList`). */
 export const checkPart = (state: CheckState): DecorationPart => ({ text: '', color: `var(--git-check-${state})` });
 
-/* A file's row after its name: the lines it adds and removes in the diff it opens, and its letter. */
-export const entryParts = (entry: GitEntry): DecorationPart[] => {
-    const file = shownFile(entry);
+/* A changed file's row after its name: the lines it adds and removes, and its letter when it has one. */
+export const changeParts = (added: number, deleted: number, status: string | null): DecorationPart[] => {
     const parts: DecorationPart[] = [];
-    if (file.added > 0) {
-        parts.push({ text: `+${file.added}`, color: ADDED_COLOR });
+    if (added > 0) {
+        parts.push({ text: `+${added}`, color: ADDED_COLOR });
     }
-    if (file.deleted > 0) {
-        parts.push({ text: `-${file.deleted}`, color: DELETED_COLOR });
+    if (deleted > 0) {
+        parts.push({ text: `-${deleted}`, color: DELETED_COLOR });
     }
-    const status = statusOf(entry);
-    parts.push({ text: status, color: statusColor(status) });
+    if (status !== null) {
+        parts.push({ text: status, color: statusColor(status) });
+    }
     return parts;
 };
 
+/* The counts are the ones of the diff the row opens. */
+export const entryParts = (entry: GitEntry): DecorationPart[] => {
+    const file = shownFile(entry);
+    return changeParts(file.added, file.deleted, statusOf(entry));
+};
+
+export const decorationOfParts = (parts: DecorationPart[]): FileTreeRowDecoration => ({ text: parts.map((part) => part.text).join(' '), parts });
+
 /* Every entry under a folder of a tree, however deep, which is what a folder's box and menu act on. */
-export const entriesUnder = (entries: readonly GitEntry[], dir: string): GitEntry[] => entries.filter((entry) => entry.path.startsWith(`${dir}/`));
+export const entriesUnder = <T extends { path: string }>(entries: readonly T[], dir: string): T[] =>
+    entries.filter((entry) => entry.path.startsWith(`${dir}/`));
 
 // JSON keeps checkout paths out of the directory prefix used to fold descendants.
 export const gitTreeScope = (checkout: string, group: GitGroup): string => JSON.stringify([checkout, group]);

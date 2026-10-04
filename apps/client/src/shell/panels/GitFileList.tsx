@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
+import type { FileTreeRowDecoration, FileTreeRowDecorationContext } from '@pierre/trees';
 import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
 import {
     AtSign,
@@ -43,11 +43,11 @@ import {
     checkOfAll,
     checkPart,
     collapseKey,
+    decorationOfParts,
     dirPathOf,
     entriesOf,
     entriesUnder,
     entryParts,
-    expansionChanges,
     GIT_GROUPS,
     gitTreeScope,
     groupKey,
@@ -60,19 +60,21 @@ import {
     type CheckState,
     type DecorationPart,
     type GitEntry,
-    type GitGroup,
-    type GitTreeRow
+    type GitGroup
 } from '@/shell/panels/git-tree';
 import {
+    applyExpansion,
+    CHANGE_TREE_CSS,
     directoryHandle,
     extendsSelection,
     focusRow,
     followFocus,
     menuTargetsOf,
     movesFocus,
+    pathOfRow,
     rowPathOf,
     selectOnly,
-    PANEL_TREE_CSS,
+    visibleRows,
     PANEL_TREE_ROW_HEIGHT
 } from '@/shell/panels/panel-tree';
 import { setDragging } from '@/shell/view-drag';
@@ -84,10 +86,6 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { Checkbox, copyText, FILE_TREE_ICONS, Icon, PanelEmpty, SectionLabel, ContextMenu } from '@basmilius/desktop-ui';
 
-/* Opening a folder brings rows into view that may have to fold up in turn, so folding settles over
-   a few passes; a tree that never settles stops here rather than looping. */
-const EXPANSION_PASSES = 32;
-
 /* The marks of a checkbox, drawn in the color of its part. */
 const svgMask = (path: string): string =>
     `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='0.875' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='${path}'/%3E%3C/svg%3E")`;
@@ -95,25 +93,19 @@ const CHECK_MASK = svgMask('M2.5 6.25 4.75 8.5 9.5 3.5');
 const MIXED_MASK = svgMask('M3 6h6');
 
 /*
- * This panel's own rules, over the shared ones. Every row here is a change, so the news rides on
- * the parts of the decoration and a name keeps the panel's color; the tree left to itself paints
- * every name and icon in its status. The tree has no place for a checkbox, so the decoration is
- * laid open into the row: its first part is the box, moved in front of the icon, and the rest stay
- * at the end. The part names its state in the custom property its color comes from (`checkPart`),
- * which is the one thing about a part this stylesheet can see. The counts are set in the mono face
- * at the floor this app puts under type, which keeps a column of them straight.
+ * This panel's own rules, over those of a tree of changes. The tree has no place for a checkbox, so
+ * the first part of the decoration is the box, moved in front of the icon, and the rest stay at the
+ * end. The part names its state in the custom property its color comes from (`checkPart`), which is
+ * the one thing about a part this stylesheet can see.
  */
 const GIT_TREE_CSS = `
-    ${PANEL_TREE_CSS}
+    ${CHANGE_TREE_CSS}
     :host {
         --git-check-checked: var(--accent-text);
         --git-check-mixed: var(--accent-text);
         --git-check-unchecked: transparent;
     }
     [data-item-section="spacing"] { order: -2; }
-    [data-item-section="content"] { flex: 1 1 auto; }
-    [data-item-section="decoration"], [data-item-section="decoration"] > span { display: contents; }
-    [data-item-section="decoration"] span { flex: none; font-family: var(--font-mono); font-size: 12px; }
     [data-item-section="decoration"] [style*="--git-check-"] {
         order: -1;
         box-sizing: border-box;
@@ -153,39 +145,13 @@ const newFileOf = (entry: GitEntry): GitFile => (entry.staged ?? entry.worktree)
 /* The absolute path of a row on the daemon's machine, which is what reveal and copy take. */
 const absolutePathOf = (root: string | null, path: string): string => (root === null ? path : `${root}/${path}`);
 
-/* A chain of folders nothing branches in is one row, which stands for the deepest of them. */
-const pathOfRow = (row: FileTreeVisibleRow): string =>
-    row.isFlattened ? (row.flattenedSegments?.findLast((segment) => segment.isTerminal)?.path ?? row.path) : row.path;
-
-/* Every row the tree shows, which is every row but the ones a folded folder holds. */
-const visibleRows = (model: FileTreeModel): GitTreeRow[] =>
-    model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
-
-/* Folds the tree the way the collapse set says. */
-const applyExpansion = (model: FileTreeModel, collapsed: ReadonlySet<string>, scope: string): void => {
-    for (let pass = 0; pass < EXPANSION_PASSES; pass++) {
-        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed, scope);
-        if (collapse.length === 0 && expand.length === 0) {
-            return;
-        }
-        for (const path of collapse) {
-            directoryHandle(model, path)?.collapse();
-        }
-        for (const path of expand) {
-            directoryHandle(model, path)?.expand();
-        }
-    }
-};
-
 /* Whether a click landed on a row's checkbox, which lives in the tree's shadow root. */
 const onCheckbox = (event: { nativeEvent: Event }): boolean =>
     event.nativeEvent.composedPath().some((node) => node instanceof HTMLElement && node.style.color.startsWith('var(--git-check-'));
 
 /* The decoration of one row: its box, unless it is a conflict, and what follows the name. */
-const decorationOf = (box: CheckState | null, parts: DecorationPart[]): FileTreeRowDecoration => {
-    const all = box === null ? parts : [checkPart(box), ...parts];
-    return { text: all.map((part) => part.text).join(' '), parts: all };
-};
+const decorationOf = (box: CheckState | null, parts: DecorationPart[]): FileTreeRowDecoration =>
+    decorationOfParts(box === null ? parts : [checkPart(box), ...parts]);
 
 /* What a stop of the list does when the keyboard arrives at it, or moves on to another one. */
 interface Stop {

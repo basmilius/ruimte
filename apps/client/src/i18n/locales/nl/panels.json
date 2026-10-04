@@ -43,6 +43,7 @@
         }
     },
     "diff": {
+        "commitCrashed": "De commitweergave liep vast",
         "commitFailed": "Kon de commit niet lezen.",
         "layout": {
             "split": "Naast elkaar",
@@ -51,6 +52,7 @@
         "loading": "Diff laden",
         "moreFiles": "Er zijn meer bestanden veranderd dan in deze lijst passen.",
         "noChange": "Er is niets veranderd in {{path}} in deze scope.",
+        "noFiles": "Deze commit veranderde geen bestanden.",
         "nothingSince": "Er is niets veranderd sinds {{base}}.",
         "omitted": {
             "binary": "Binaire bestanden hebben geen diff.",
