@@ -120,13 +120,19 @@ export const RECENT_FILES_LIMIT = 5;
 export const rememberClosed = (recent: readonly string[], tab: FileTab | undefined): string[] =>
     tab === undefined || tab.view !== undefined ? [...recent] : [tab.path, ...recent.filter((path) => path !== tab.path)].slice(0, RECENT_FILES_LIMIT);
 
+export interface OpenOptions {
+    /* False leaves the keyboard where it is; the files cell takes it otherwise. */
+    focus?: boolean;
+}
+
 interface FilesStore extends TabState {
     /* Whose tabs these are; a canvas that is not open has none. */
     projectId: string | null;
     /* Files of this project closed in this session, newest first. Not saved: the tabs that are open are what the project keeps. */
     recent: string[];
     /* Counts the files opened by hand. The files cell watches it to take the keyboard, so the tab
-       that just opened answers to ⌘W. Restoring a project does not count: nothing was asked for. */
+       that just opened answers to ⌘W. Restoring a project does not count: nothing was asked for, and
+       neither does a tree that opens its row, since the next arrow key belongs to the tree. */
     focusRequest: number;
     /* The directories the tree has open, the way the tree names one: relative, POSIX, trailing slash. */
     expandedDirs: string[];
@@ -135,9 +141,9 @@ interface FilesStore extends TabState {
     /* The line the viewer was asked to jump to, from a file reference that named one. */
     revealLine: RevealLineRequest | null;
     load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
-    open(path: string, limit: number, view?: FileTabView, line?: number): void;
+    open(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
     /* The tab without the cell, for a caller that puts the files on the grid itself, such as a drop. */
-    openHidden(path: string, limit: number, view?: FileTabView, line?: number): void;
+    openHidden(path: string, limit: number, view?: FileTabView, line?: number, options?: OpenOptions): void;
     close(key: string): void;
     closeOthers(key: string): void;
     closeAll(): void;
@@ -169,15 +175,16 @@ export const useFiles = create<FilesStore>((set, get) => ({
     /* A tab and the cell that draws it are one thing to the person opening a file: an open puts the
        files in the cell they were working in, like any view, and the last close takes the cell away
        again. Beside it is a drag. */
-    open(path, limit, view, line) {
-        get().openHidden(path, limit, view, line);
+    open(path, limit, view, line, options) {
+        get().openHidden(path, limit, view, line, options);
         useDocument.getState().showFiles();
     },
-    openHidden(path, limit, view, line) {
+    openHidden(path, limit, view, line, options) {
         const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
         const endpointId = currentEndpointId();
         const unsaved = (tab: FileTab): boolean => tab.view === undefined && textDrafts.isUnsaved(endpointId, tab.path);
-        set({ ...openTab(get(), path, limit, view, unsaved), focusRequest: get().focusRequest + 1, revealLine: reveal });
+        const focusRequest = options?.focus === false ? get().focusRequest : get().focusRequest + 1;
+        set({ ...openTab(get(), path, limit, view, unsaved), focusRequest, revealLine: reveal });
     },
     /* A file with unsaved changes is saved first, and closes once it is (`unsaved-close.ts`). */
     close(key) {

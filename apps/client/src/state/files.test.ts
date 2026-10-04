@@ -144,6 +144,13 @@ describe('the store and the files cell', () => {
         expect(useFiles.getState().focusRequest).toBe(2);
     });
 
+    test('a row a tree opens shows the file and leaves the keyboard in the tree', () => {
+        useFiles.getState().open('a', 5, undefined, undefined, { focus: false });
+        expect(useFiles.getState().active).toBe('a');
+        expect(useDocument.getState().activeViewId).toBe(FILES_VIEW_ID);
+        expect(useFiles.getState().focusRequest).toBe(0);
+    });
+
     /* The empty cell is a blank column, so it goes with the last tab and a file opened later brings it back. */
     test('the last tab that closes takes the cell with it', () => {
         useDocument.getState().splitFocused('right', 'b');

@@ -311,7 +311,8 @@ export function GitPanel() {
             return;
         }
         const diff = diffOf(path, file);
-        useFiles.getState().open(diff.path, tabLimit, diff.view);
+        // The list keeps the keyboard, so the next arrow key moves on to the next change.
+        useFiles.getState().open(diff.path, tabLimit, diff.view, undefined, { focus: false });
     };
 
     /* The file next to its diff, for a change a person wants to read whole rather than as a patch. */

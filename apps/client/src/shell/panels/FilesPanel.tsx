@@ -1,4 +1,4 @@
-import { performAsPerson, runAsPerson } from '@/actions/client-actions';
+import { performAsPerson } from '@/actions/client-actions';
 import {
     useCallback,
     useEffect,
@@ -54,7 +54,9 @@ import {
 import {
     directoryHandle,
     extendsSelection,
+    followFocus,
     menuTargetsOf,
+    movesFocus,
     resetExpandedPaths,
     rowPathOf,
     PANEL_TREE_CSS,
@@ -382,11 +384,12 @@ export function FilesPanel() {
         searchModel.resetPaths([...matches]);
     }, [matches, searchModel]);
 
+    /* The file opens beside the panel and the keyboard stays in the tree, so the next arrow moves on. */
     const openPath = (treePath: string | null): void => {
         if (!folder || !treePath || isDirectoryPath(treePath)) {
             return;
         }
-        void runAsPerson('file.preview', { path: absoluteOf(folder, treePath), line: null });
+        useFiles.getState().open(absoluteOf(folder, treePath), tabLimit, undefined, undefined, { focus: false });
     };
 
     /* One click opens a file, the way every row in this app opens what it points at. A directory
@@ -399,8 +402,20 @@ export function FilesPanel() {
     };
 
     const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
-        if (event.key === 'Enter') {
-            openPath(activeModel.getFocusedPath());
+        if (event.key !== 'Enter') {
+            return;
+        }
+        const focused = activeModel.getFocusedPath();
+        if (focused !== null && isDirectoryPath(focused)) {
+            directoryHandle(activeModel, focused)?.toggle();
+            return;
+        }
+        openPath(focused);
+    };
+
+    const onKeyDownCapture = (event: ReactKeyboardEvent<HTMLElement>): void => {
+        if (movesFocus(event)) {
+            followFocus(activeModel);
         }
     };
 
@@ -569,6 +584,7 @@ export function FilesPanel() {
                         /* The padding is on the frame, not the scroller, so the first row keeps its
                            distance from the toolbar instead of sliding under it. */
                         className="min-h-0 grow overflow-hidden pt-2"
+                        onKeyDownCapture={onKeyDownCapture}
                         onContextMenu={(event) => {
                             const path = rowPathOf(event);
                             setMenuPath(path);

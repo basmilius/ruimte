@@ -56,3 +56,36 @@ export const menuTargetsOf = (row: string, selected: readonly string[]): string[
 
 /* A click that extends the selection, which the tree handles and a panel must not read as "open this". */
 export const extendsSelection = (event: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }): boolean => event.shiftKey || event.metaKey || event.ctrlKey;
+
+/* The keys that move the tree's focus without extending the selection. */
+const FOCUS_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']);
+
+export const movesFocus = (event: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean }): boolean =>
+    FOCUS_KEYS.has(event.key) && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey;
+
+export const selectOnly = (model: FileTree, path: string | null): void => {
+    for (const selected of model.getSelectedPaths()) {
+        if (selected !== path) {
+            model.getItem(selected)?.deselect();
+        }
+    }
+    const item = path === null ? null : model.getItem(path);
+    if (item && !item.isSelected()) {
+        item.select();
+    }
+};
+
+/* The tree moves its focus while the key is still being dispatched and leaves the selection where it
+   was, so the selection catches up once the dispatch is over, the way a list of the OS moves both. */
+export const followFocus = (model: FileTree): void => {
+    queueMicrotask(() => selectOnly(model, model.getFocusedPath()));
+};
+
+/* Gives one row the keyboard. A row that takes the focus tells the tree itself, so the tree's own
+   arrows go on from there. */
+export const focusRow = (model: FileTree, path: string): boolean => {
+    const selector = `[data-type="item"][data-item-path="${CSS.escape(path)}"]:not([data-item-parked="true"])`;
+    const row = model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
+    row?.focus();
+    return row !== null;
+};
