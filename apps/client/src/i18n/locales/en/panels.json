@@ -648,7 +648,8 @@
         "completion": {
             "insert": "Insert",
             "replace": "Replace",
-            "details": "Details"
+            "details": "Details",
+            "none": "No suggestions"
         },
         "history": {
             "recent": "Recent locations"

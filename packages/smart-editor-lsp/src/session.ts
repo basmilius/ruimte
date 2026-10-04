@@ -499,6 +499,7 @@ function clientCapabilities(options: LspSessionOptions): object {
                 contextSupport: true,
                 completionItem: {
                     snippetSupport: options.snippetSupport ?? false,
+                    commitCharactersSupport: true,
                     documentationFormat: ['markdown', 'plaintext'],
                     deprecatedSupport: true,
                     preselectSupport: true,

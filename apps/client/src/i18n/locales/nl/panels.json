@@ -648,7 +648,8 @@
         "completion": {
             "insert": "Invoegen",
             "replace": "Vervangen",
-            "details": "Details"
+            "details": "Details",
+            "none": "Geen suggesties"
         },
         "history": {
             "recent": "Recente plekken"

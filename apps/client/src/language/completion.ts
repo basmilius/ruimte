@@ -1,5 +1,7 @@
+import i18next from 'i18next';
 import { StaleResultError, type CompletionContext, type CompletionItem } from '@ruimte/smart-editor-lsp';
 import type { EditorContentChange, EditorPosition, EditorRange, EditorTextChange } from '@ruimte/smart-editor';
+import { useToasts } from '@/state/toasts';
 import { comparePositions, shiftPosition } from './diagnostics-model';
 import type { EditorLanguage } from './editor-language';
 import {
@@ -25,6 +27,7 @@ const START_DELAY_MS = 80;
 const REFRESH_DELAY_MS = 150;
 const RESOLVE_DELAY_MS = 120;
 const PAGE = 8;
+const TOAST_ID = 'language-completion';
 
 function isEmpty(range: EditorRange): boolean {
     return comparePositions(range.start, range.end) === 0;
@@ -45,6 +48,8 @@ export class CompletionFeature {
     /* Whether the person moved in the list; until then the active row is the best match, whatever the typing does to the list. */
     private touched = false;
     private activeKey: string | null = null;
+    /* Asked for with the keyboard, which is as good as moving in the list when a commit character is typed. */
+    private explicit = false;
     private detailsOpen = true;
     private start: EditorPosition | null = null;
     private server = '';
@@ -79,6 +84,7 @@ export class CompletionFeature {
 
     /* Asks for suggestions at the caret now, as Ctrl+Space does. */
     invoke(): void {
+        this.explicit = true;
         this.beginRequest({ triggerKind: 1 }, 0);
     }
 
@@ -95,7 +101,7 @@ export class CompletionFeature {
     }
 
     /* Picks a row by a click or a key. */
-    async accept(replace: boolean, index = this.active): Promise<void> {
+    async accept(replace: boolean, index = this.active, commit?: string): Promise<void> {
         const entry = this.ranked[index];
         if (entry === undefined) {
             return;
@@ -112,7 +118,8 @@ export class CompletionFeature {
         const caret = editor.getCaret();
         const lineBefore = editor.textInRange({ start: { line: caret.line, character: 0 }, end: caret });
         const lineAfter = editor.textInRange({ start: caret, end: { line: caret.line, character: Number.MAX_SAFE_INTEGER } });
-        const main = insertionOf(item, caret, lineBefore, replace, lineAfter);
+        // A character that commits is typed after the name, so a call is not added before it.
+        const main = insertionOf(item, caret, lineBefore, replace, commit === undefined ? lineAfter : '(');
         const extras = (item.additionalTextEdits ?? []).map((edit): EditorContentChange => ({ range: edit.range, text: edit.newText }));
         // An import above the insertion moves it, and the tab stops are measured from where it ends up.
         const start = extras
@@ -120,7 +127,15 @@ export class CompletionFeature {
             .sort((left, right) => comparePositions(right.range.start, left.range.start))
             .reduce((place, extra) => shiftPosition(place, extra), main.range.start);
         editor.applyEdits([{ range: main.range, text: main.text }, ...extras]);
-        this.language.snippets.begin(start, main.text, main.stops);
+        if (commit === undefined) {
+            this.language.snippets.begin(start, main.text, main.stops);
+        } else {
+            const end = editor.getCaret();
+            editor.applyEdits([{ range: { start: end, end }, text: commit }]);
+            if (this.triggerCharacters().includes(commit)) {
+                this.beginRequest({ triggerKind: 2, triggerCharacter: commit }, 0);
+            }
+        }
         editor.focus();
     }
 
@@ -157,6 +172,7 @@ export class CompletionFeature {
         this.pool = [];
         this.ranked = [];
         this.touched = false;
+        this.explicit = false;
         this.activeKey = null;
         this.start = null;
         this.resolved.clear();
@@ -177,6 +193,10 @@ export class CompletionFeature {
         }
         if (!this.isOpen || event.ctrlKey || event.metaKey || event.altKey) {
             return false;
+        }
+        if (this.commits(event)) {
+            void this.accept(false, this.active, event.key);
+            return true;
         }
         switch (event.key) {
             case 'ArrowDown':
@@ -204,6 +224,14 @@ export class CompletionFeature {
             default:
                 return false;
         }
+    }
+
+    /* A character the active item commits on, typed once the person has moved in the list or asked for it, which is when Enter would not be the way they chose. */
+    private commits(event: KeyboardEvent): boolean {
+        if ((!this.touched && !this.explicit) || event.key.length !== 1 || event.isComposing) {
+            return false;
+        }
+        return this.ranked[this.active]?.item.commitCharacters?.includes(event.key) === true;
     }
 
     private edited(change: EditorTextChange): void {
@@ -301,7 +329,14 @@ export class CompletionFeature {
             // The list is made again, so the row that was chosen is found again by what it says.
             this.activeKey = RecentChoices.keyOf(this.ranked[this.active]!.item);
         }
+        const asked = this.explicit && !refresh;
         this.refilter();
+        if (asked && !this.isOpen && !this.incomplete) {
+            useToasts.getState().show({ id: TOAST_ID, kind: 'error', title: i18next.t('panels:language.completion.none') });
+        } else if (asked && this.ranked.length === 1 && !this.incomplete) {
+            // One answer to a list that was asked for is the one wanted.
+            void this.accept(false, 0);
+        }
     }
 
     private refilter(): void {

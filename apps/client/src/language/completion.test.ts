@@ -4,6 +4,7 @@ import type { CompletionItem } from '@ruimte/smart-editor-lsp';
 import { EditorLanguage } from './editor-language';
 import { FakeLanguageTransport } from './fake-daemon';
 import { ProjectLanguage } from './project-language';
+import { useToasts } from '@/state/toasts';
 import { forgetRecentChoices } from './recent-choices';
 import { ManualTimers } from './timers';
 
@@ -143,6 +144,82 @@ describe('the active row', () => {
         await settle();
         expect(view()?.rows.map((row) => row.label)).toEqual(['baz']);
         expect(view()?.active).toBe(0);
+    });
+});
+
+describe('asking for the list', () => {
+    test('inserts the only suggestion at once, and says there are none when nothing fits', async () => {
+        const one = await setup('fil', [
+            { label: 'filter', kind: 2 },
+            { label: 'map', kind: 2 }
+        ]);
+        expect(one.editor.press({ key: ' ', ctrlKey: true })).toBe(true);
+        one.timers.advance(10);
+        await settle();
+        expect(one.editor.getText()).toBe("import 'x';\nfilter");
+        expect(one.view()).toBeNull();
+        useToasts.setState({ toasts: [] });
+        const none = await setup('zzz', ITEMS);
+        none.editor.press({ key: ' ', ctrlKey: true });
+        none.timers.advance(10);
+        await settle();
+        expect(none.view()).toBeNull();
+        expect(useToasts.getState().toasts.some((toast) => toast.id === 'language-completion')).toBe(true);
+    });
+
+    test('lists several suggestions as usual', async () => {
+        const { editor, timers, view } = await setup('fi');
+        editor.press({ key: ' ', ctrlKey: true });
+        timers.advance(10);
+        await settle();
+        expect(view()?.rows.length).toBe(3);
+    });
+});
+
+describe('commit characters', () => {
+    const items: CompletionItem[] = [
+        { label: 'fill', kind: 2, sortText: '0', commitCharacters: ['.', '('] },
+        { label: 'filter', kind: 2, sortText: '1', commitCharacters: ['.', '('], insertText: 'filter(${1:predicate})$0', insertTextFormat: 2 }
+    ];
+
+    async function open(text = '') {
+        const mounted = await setup(text, items);
+        mounted.editor.type('f');
+        mounted.timers.advance(100);
+        await settle();
+        return mounted;
+    }
+
+    test('commit the active row after the person moved in the list, and the character follows the name', async () => {
+        const { editor, view } = await open();
+        editor.press({ key: 'ArrowDown' });
+        expect(editor.press({ key: '.' })).toBe(true);
+        await settle();
+        expect(editor.getText()).toBe("import 'x';\nfilter.");
+        expect(editor.getCaret()).toEqual(at(1, 7));
+        expect(view()).toBeNull();
+    });
+
+    test('leave a typed character alone before the person moved, and after a list that was asked for the keyboard commits', async () => {
+        const first = await open();
+        expect(first.editor.press({ key: '.' })).toBe(false);
+        const second = await setup('', items);
+        expect(second.editor.press({ key: ' ', ctrlKey: true })).toBe(true);
+        second.timers.advance(10);
+        await settle();
+        expect(second.editor.press({ key: '(' })).toBe(true);
+        await settle();
+        expect(second.editor.getText()).toBe("import 'x';\nfill(");
+    });
+
+    test('ask for the list after the name again when the character triggers one', async () => {
+        const { editor, requests, timers } = await open();
+        editor.press({ key: 'ArrowDown' });
+        editor.press({ key: '.' });
+        await settle();
+        timers.advance(10);
+        await settle();
+        expect(requests.filter((entry) => entry.method === 'textDocument/completion').length).toBe(2);
     });
 });
 

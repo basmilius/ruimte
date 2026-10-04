@@ -111,6 +111,9 @@ export function itemsOf(result: CompletionResult): { items: CompletionItem[]; in
             if (defaults.insertTextFormat !== undefined && next.insertTextFormat === undefined) {
                 next.insertTextFormat = defaults.insertTextFormat;
             }
+            if (defaults.commitCharacters !== undefined && next.commitCharacters === undefined) {
+                next.commitCharacters = defaults.commitCharacters;
+            }
             if (next.textEdit === undefined && defaults.editRange !== undefined) {
                 const text = item.textEditText ?? item.insertText ?? item.label;
                 next.textEdit =
