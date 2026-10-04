@@ -135,7 +135,7 @@ export function ProjectSwitchScreen() {
         return null;
     }
     return (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-surface-sunken" role="status" aria-live="polite">
+        <div className="absolute inset-0 z-10 grid place-items-center bg-surface" role="status" aria-live="polite">
             <SwitchCard state={state} />
         </div>
     );

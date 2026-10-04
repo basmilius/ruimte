@@ -37,7 +37,7 @@ export function MachineLostScreen() {
     const seen = describeLastSeen(lastSeen, now);
     const retrying = connection.status === 'connecting';
     return (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-surface-sunken" role="status" aria-live="polite">
+        <div className="absolute inset-0 z-10 grid place-items-center bg-surface" role="status" aria-live="polite">
             <StatusCard
                 glyph={<MachineGlyph icon={icon} size={24} className="text-text-faint" />}
                 title={nameOf(entry)}
