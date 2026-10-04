@@ -1,9 +1,13 @@
 import type { DocumentModel, Selection } from '@ruimte/smart-editor-core';
+import type { ContentPoint } from './column-selection.ts';
 
 export interface PointerHost {
     readonly model: DocumentModel;
     readonly viewport: HTMLElement;
     offsetAt(clientX: number, clientY: number): number;
+    contentPoint(clientX: number, clientY: number): ContentPoint;
+    /* The box between two points, or null while they are in the same cell, so a press with alt is still a click. */
+    columnSelections(from: ContentPoint, to: ContentPoint): Selection[] | null;
     focus(): void;
     /* The view scrolled by itself while the pointer was held at an edge. */
     scrolled(): void;
@@ -14,6 +18,8 @@ interface Drag {
     anchor: number;
     selections: readonly Selection[];
     add: boolean;
+    /* Where the press landed in the content, which a scroll leaves in place. */
+    anchorPoint: ContentPoint;
     x: number;
     y: number;
 }
@@ -24,7 +30,7 @@ const SCROLL_STEP = 40;
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_DISTANCE = 4;
 
-/* The selection a mouse makes: a click, a drag, shift to extend, alt to add a caret, a double click for a word and a triple for a line. */
+/* The selection a mouse makes: a click, a drag, shift to extend, alt to add a caret or, dragged, a column, a double click for a word and a triple for a line. */
 export class PointerSelection {
     private drag: Drag | undefined;
     private frame: number | undefined;
@@ -49,6 +55,7 @@ export class PointerSelection {
             anchor: event.shiftKey ? selections[0]!.anchor : head,
             selections,
             add: event.altKey,
+            anchorPoint: this.host.contentPoint(event.clientX, event.clientY),
             x: event.clientX,
             y: event.clientY
         };
@@ -119,6 +126,13 @@ export class PointerSelection {
     private update(): void {
         if (!this.drag) {
             return;
+        }
+        if (this.drag.add) {
+            const box = this.host.columnSelections(this.drag.anchorPoint, this.host.contentPoint(this.drag.x, this.drag.y));
+            if (box) {
+                this.host.model.setSelections(box);
+                return;
+            }
         }
         const head = this.host.offsetAt(this.drag.x, this.drag.y);
         this.host.model.setSelections([...(this.drag.add ? this.drag.selections : []), { anchor: this.drag.anchor, head }]);

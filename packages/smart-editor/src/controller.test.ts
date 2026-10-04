@@ -60,6 +60,62 @@ describe('the mouse', () => {
         expect(editor.getText()).toBe('a-ef');
     });
 
+    describe('with alt held while dragging', () => {
+        const drag = (mounted: ReturnType<typeof mountEditor>, from: [number, number], to: [number, number]): void => {
+            const target = mounted.page.document.documentElement;
+            pointer(mounted.page.window, mounted.viewport, 'pointerdown', column(from[0]), row(from[1]), { altKey: true });
+            pointer(mounted.page.window, target, 'pointermove', column(to[0]), row(to[1]), { altKey: true });
+            pointer(mounted.page.window, target, 'pointerup', column(to[0]), row(to[1]));
+        };
+
+        test('selects the same columns on every line of the box', () => {
+            const mounted = mountEditor({ text: 'abcdef\nghijkl\nmnopqr' });
+            drag(mounted, [1, 0], [3, 2]);
+            mounted.type('-');
+            expect(mounted.editor.getText()).toBe('a-def\ng-jkl\nm-pqr');
+        });
+
+        test('selects upward as well', () => {
+            const mounted = mountEditor({ text: 'abcdef\nghijkl\nmnopqr' });
+            drag(mounted, [4, 2], [2, 0]);
+            mounted.type('-');
+            expect(mounted.editor.getText()).toBe('ab-ef\ngh-kl\nmn-qr');
+        });
+
+        test('clamps a short line to its end and skips a line that ends before the box', () => {
+            const mounted = mountEditor({ text: 'abcdef\nab\nabcdef' });
+            drag(mounted, [3, 0], [5, 2]);
+            mounted.type('-');
+            expect(mounted.editor.getText()).toBe('abc-f\nab\nabc-f');
+            const clamped = mountEditor({ text: 'abcdef\nabcd\nabcdef' });
+            drag(clamped, [3, 0], [5, 2]);
+            clamped.type('-');
+            expect(clamped.editor.getText()).toBe('abc-f\nabc-\nabc-f');
+        });
+
+        test('puts a caret at the end of a short line when the box is a column of carets', () => {
+            const mounted = mountEditor({ text: 'abcdef\nab\nabcdef' });
+            drag(mounted, [4, 0], [4, 2]);
+            mounted.type('-');
+            expect(mounted.editor.getText()).toBe('abcd-ef\nab-\nabcd-ef');
+        });
+
+        test('measures a tab as the columns it expands to', () => {
+            const mounted = mountEditor({ text: '\tabcd\n    abcd' });
+            drag(mounted, [5, 0], [7, 1]);
+            mounted.type('-');
+            expect(mounted.editor.getText()).toBe('\ta-d\n    a-d');
+        });
+
+        test('a press without a drag still adds a caret', () => {
+            const mounted = mountEditor({ text: 'ab\ncd' });
+            mounted.click(column(1), row(0));
+            mounted.click(column(1), row(1), { altKey: true });
+            mounted.type('-');
+            expect(mounted.editor.getText()).toBe('a-b\nc-d');
+        });
+    });
+
     test('selects a line from its number', () => {
         const { editor, page, type } = mountEditor({ text: 'one\ntwo\nthree' });
         pointer(page.window, page.host.querySelector('.se-gutter')!, 'pointerdown', 4, row(1));

@@ -2,6 +2,7 @@ import type { EditorCommand, Selection, TextEdit } from '@ruimte/smart-editor-co
 import { replacementEdits } from './input.ts';
 import { chordMatches, type KeyAction, keyAction, type MoveKey } from './keymap.ts';
 import { NativeInput } from './native-input.ts';
+import { columnSelections, sameCell } from './column-selection.ts';
 import { PointerSelection } from './pointer.ts';
 import type { EditorClick, EditorClickHandler, EditorContextMenu, EditorKeyHandler, EditorPosition, KeyChord } from './types.ts';
 import type { EditorView } from './view.ts';
@@ -79,6 +80,8 @@ export class InputController {
             model,
             viewport,
             offsetAt: (x, y) => view.offsetAtPoint(x, y),
+            contentPoint: (x, y) => view.contentPoint(x, y),
+            columnSelections: (from, to) => (sameCell(view.layout, from, to) ? null : columnSelections(view.layout, from, to)),
             focus: () => view.focus(),
             scrolled: () => view.requestRender()
         });
