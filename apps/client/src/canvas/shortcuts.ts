@@ -37,6 +37,9 @@ export const CANVAS_SHORTCUTS = {
     findReplace: shortcut('Mod+Shift+H'),
     nextProblem: shortcut('F8'),
     previousProblem: shortcut('Shift+F8'),
+    // Mod+Alt+Up and Down are the grid's, so stepping through the uses of a name takes the function key.
+    nextHighlight: shortcut('Alt+F3'),
+    previousHighlight: shortcut('Alt+Shift+F3'),
     previousMessage: shortcut('Alt+ArrowUp'),
     nextMessage: shortcut('Alt+ArrowDown')
 } as const;

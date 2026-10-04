@@ -549,7 +549,9 @@
             "onboarding": "Ruimte instellen",
             "findReplace": "Zoeken en vervangen in bestand",
             "nextProblem": "Ga naar volgend probleem",
-            "previousProblem": "Ga naar vorig probleem"
+            "previousProblem": "Ga naar vorig probleem",
+            "nextHighlight": "Ga naar volgend gebruik van de naam",
+            "previousHighlight": "Ga naar vorig gebruik van de naam"
         },
         "sections": {
             "recent": "Recent",
@@ -734,6 +736,8 @@
         "onboarding": "Ruimte instellen…",
         "findReplace": "Zoeken en vervangen",
         "nextProblem": "Volgend probleem",
-        "previousProblem": "Vorig probleem"
+        "previousProblem": "Vorig probleem",
+        "nextHighlight": "Volgend gebruik van naam",
+        "previousHighlight": "Vorig gebruik van naam"
     }
 }

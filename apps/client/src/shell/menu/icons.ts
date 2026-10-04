@@ -132,6 +132,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
     'find-replace': Replace,
     'next-problem': ArrowDown,
     'previous-problem': ArrowUp,
+    'next-highlight': ArrowDown,
+    'previous-highlight': ArrowUp,
     'find-in-files': Search,
     sidebar: PanelLeft,
     'panel-files': Folder,

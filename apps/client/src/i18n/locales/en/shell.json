@@ -549,7 +549,9 @@
             "onboarding": "Set up Ruimte",
             "findReplace": "Find and replace in file",
             "nextProblem": "Go to next problem",
-            "previousProblem": "Go to previous problem"
+            "previousProblem": "Go to previous problem",
+            "nextHighlight": "Go to next use of the name",
+            "previousHighlight": "Go to previous use of the name"
         },
         "sections": {
             "recent": "Recent",
@@ -734,6 +736,8 @@
         "onboarding": "Set Up Ruimte…",
         "findReplace": "Find and Replace",
         "nextProblem": "Next Problem",
-        "previousProblem": "Previous Problem"
+        "previousProblem": "Previous Problem",
+        "nextHighlight": "Next Use of Name",
+        "previousHighlight": "Previous Use of Name"
     }
 }

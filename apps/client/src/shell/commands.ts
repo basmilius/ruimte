@@ -255,6 +255,26 @@ export function appCommands(): Command[] {
                       }
                   },
                   {
+                      id: 'next-highlight',
+                      label: i18next.t('shell:palette.commands.nextHighlight'),
+                      shortcut: CANVAS_SHORTCUTS.nextHighlight,
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              focusedLanguage()?.highlights.step(1);
+                          });
+                      }
+                  },
+                  {
+                      id: 'previous-highlight',
+                      label: i18next.t('shell:palette.commands.previousHighlight'),
+                      shortcut: CANVAS_SHORTCUTS.previousHighlight,
+                      run: () => {
+                          requestAnimationFrame(() => {
+                              focusedLanguage()?.highlights.step(-1);
+                          });
+                      }
+                  },
+                  {
                       id: 'previous-problem',
                       label: i18next.t('shell:palette.commands.previousProblem'),
                       shortcut: CANVAS_SHORTCUTS.previousProblem,

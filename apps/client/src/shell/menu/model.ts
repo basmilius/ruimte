@@ -304,6 +304,8 @@ export function menuModel(context: MenuContext): MenuSpec {
                 separator,
                 command('next-problem', t('nextProblem'), { shortcut: CANVAS_SHORTCUTS.nextProblem }),
                 command('previous-problem', t('previousProblem'), { shortcut: CANVAS_SHORTCUTS.previousProblem }),
+                command('next-highlight', t('nextHighlight'), { shortcut: CANVAS_SHORTCUTS.nextHighlight }),
+                command('previous-highlight', t('previousHighlight'), { shortcut: CANVAS_SHORTCUTS.previousHighlight }),
                 separator
             ),
             ...only(context.settingsOpen, command('settings-search', t('searchSettings'), { shortcut: APP_SHORTCUTS.settingsSearch })),

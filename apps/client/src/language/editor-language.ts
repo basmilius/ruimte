@@ -4,6 +4,7 @@ import { openFileLink } from '@/shell/panels/file-links';
 import { CompletionFeature } from './completion';
 import { DiagnosticsFeature } from './diagnostics';
 import type { Problem } from './diagnostics-model';
+import { HighlightsFeature } from './highlights';
 import { HoverFeature } from './hover';
 import { createPopupStore } from './popups';
 import { realTimers, type Timers } from './timers';
@@ -26,6 +27,7 @@ export class EditorLanguage {
     readonly diagnostics: DiagnosticsFeature;
     readonly hover: HoverFeature;
     readonly completion: CompletionFeature;
+    readonly highlights: HighlightsFeature;
     /* What the Quick fix button of a problem calls; the code actions fill it in, and the button stays off until they do. */
     quickFix: ((problem: Problem) => void) | null = null;
     private readonly disposers: Array<() => void> = [];
@@ -40,6 +42,7 @@ export class EditorLanguage {
         this.hover = new HoverFeature(this, timers);
         this.completion = new CompletionFeature(this, timers);
         new SignatureFeature(this, timers);
+        this.highlights = new HighlightsFeature(this, timers);
         new SemanticTokensFeature(this, timers);
         new InlayHintsFeature(this, timers);
     }
