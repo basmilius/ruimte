@@ -186,6 +186,10 @@ class SmartEditor implements Editor {
         return this.positionAt(this.model.getSelections()[0]!.head);
     }
 
+    getScrollTop(): number {
+        return this.view.viewport.scrollTop;
+    }
+
     getSelection(): EditorRange {
         const { anchor, head } = this.model.getSelections()[0]!;
         return { start: this.positionAt(Math.min(anchor, head)), end: this.positionAt(Math.max(anchor, head)) };

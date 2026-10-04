@@ -244,6 +244,8 @@ export interface Editor {
     /* The button was pressed; the zero-based line it is on. */
     onGutterAction(listener: (line: number) => void): () => void;
     getCaret(): EditorPosition;
+    /* In pixels, what `scrollTop` on mounting takes back. */
+    getScrollTop(): number;
     /* The primary selection, start before end; empty at the caret. */
     getSelection(): EditorRange;
     getIndentation(): EditorIndentation;

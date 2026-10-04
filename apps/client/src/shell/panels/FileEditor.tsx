@@ -4,6 +4,8 @@ import { mountDraftEditor } from '@/shell/panels/draft-editor';
 import { useCodeTheme } from '@/state/code-theme';
 import type { RevealLineRequest } from '@/state/files';
 import { useSettings } from '@/state/settings';
+import { openingPlace, viewStates } from '@/shell/panels/editor-view-state';
+import { endpointKey } from '@/state/keys';
 import { type DiskText, textDrafts } from '@/state/text-drafts';
 
 interface FileEditorProps {
@@ -63,6 +65,7 @@ export function FileEditor({
             return;
         }
         const first = initial.current;
+        const key = endpointKey(endpointId, path);
         const { editor, unmount } = mountDraftEditor(
             engine,
             element,
@@ -74,13 +77,15 @@ export function FileEditor({
                 ...(first.readOnlyReason === null ? {} : { readOnly: true, readOnlyReason: first.readOnlyReason }),
                 wrap: first.wrap,
                 indentation: first.indentation,
-                ...(first.reveal === null ? { scrollTop: placeholderScroll.current } : { line: first.reveal.line })
+                ...openingPlace(first.reveal, viewStates.get(key), placeholderScroll.current)
             }
         );
         revealed.current = first.reveal?.nonce ?? null;
         editorRef.current = editor;
         onEditor?.(editor);
         return () => {
+            const caret = editor.getCaret();
+            viewStates.set(key, { scrollTop: editor.getScrollTop(), line: caret.line + 1, column: caret.character + 1 });
             editorRef.current = null;
             onEditor?.(null);
             unmount();

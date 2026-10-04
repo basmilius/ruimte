@@ -317,6 +317,10 @@ export class FakeEditor implements Editor {
         return this.caret;
     }
 
+    getScrollTop(): number {
+        return this.scrollTop ?? 0;
+    }
+
     /* The selection a person made; without one the caret. */
     selection: EditorRange | null = null;
 
