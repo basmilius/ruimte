@@ -107,7 +107,7 @@ describe('lexical pairing contexts', () => {
     it('keeps quote and comment punctuation literal in Enter and Backspace', () => {
         const comment = at('// {¦}');
         comment.execute('insertNewline', { language: 'typescript' });
-        expectMarked(comment, '// {\n¦}');
+        expectMarked(comment, '// {\n// ¦}');
         const quoted = at('const text = "(¦)";');
         quoted.execute('smartBackspace', { language: 'typescript' });
         expectMarked(quoted, 'const text = "¦)";');

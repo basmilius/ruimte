@@ -37,6 +37,8 @@ export interface TypingContext {
     expression: boolean;
     /* The last word, or `control-close` after the parenthesis of a control statement. */
     word: string;
+    /* Where the comment the lexer is in began, in the document. */
+    commentStart?: number;
 }
 
 interface Rules {
@@ -70,6 +72,7 @@ function scanComment(state: TypingContext, text: string, at: number, end: number
     const close = state.mode === 'block-comment' ? '*/' : '-->';
     if (at + close.length <= end && text.startsWith(close, at)) {
         state.mode = 'code';
+        state.commentStart = undefined;
         return at + close.length - 1;
     }
     return at;
@@ -113,18 +116,22 @@ function scanCode(state: TypingContext, rules: Rules, text: string, at: number, 
     }
     if (rules.markup && text.startsWith('<!--', at)) {
         state.mode = 'html-comment';
+        state.commentStart = offset + at;
         return at + 3;
     }
     if (rules.hash && char === '#' && !(rules.php && next === '[')) {
         state.mode = 'line-comment';
+        state.commentStart = offset + at;
         return at;
     }
     if (rules.slash && char === '/' && next === '/') {
         state.mode = 'line-comment';
+        state.commentStart = offset + at;
         return at + 1;
     }
     if (rules.block && char === '/' && next === '*') {
         state.mode = 'block-comment';
+        state.commentStart = offset + at;
         return at + 1;
     }
     if (char === '"' || char === "'" || char === '`') {
@@ -213,7 +220,8 @@ function sameState(left: TypingContext, right: TypingContext): boolean {
         left.inClass === right.inClass &&
         left.bracket === right.bracket &&
         left.expression === right.expression &&
-        left.word === right.word
+        left.word === right.word &&
+        left.commentStart === right.commentStart
     );
 }
 
@@ -246,6 +254,7 @@ export class TypingContexts {
             if (next.mode === 'line-comment' || next.mode === 'regex' || (next.mode === 'quote' && !/^(php|rust|rs)$/i.test(id) && !next.escaped)) {
                 next.mode = 'code';
                 next.quote = undefined;
+                next.commentStart = undefined;
                 next.expression = true;
             }
             next.escaped = false;

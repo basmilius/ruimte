@@ -1,4 +1,9 @@
 import { CloserTracker } from './closer-tracker.ts';
+import { planEnter } from './enter.ts';
+import type { EnterOptions, EnterPlan, EnterSource } from './enter.ts';
+import { vueRegionAt } from './languages.ts';
+import { scanBrackets } from './brackets.ts';
+import type { BracketIndex } from './brackets.ts';
 import { hasSmartSemicolon } from './lexical.ts';
 import { clampInteger, TextRope } from './rope.ts';
 import type { DocumentLine } from './rope.ts';
@@ -86,6 +91,7 @@ interface TypingInput {
 }
 
 const historyLimit = 200;
+const bracketScanLimit = 2_000_000;
 const pairs: Readonly<Record<string, string>> = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
 const identifier = /[\p{L}\p{N}\p{M}\p{Pc}$]/u;
 const wordCommand = /^(select|delete)?(word|camel)(Left|Right)$/i;
@@ -306,6 +312,7 @@ export class DocumentModel {
     private typingContexts = new TypingContexts((line) => this.getLine(line));
     private statementClosers = new Map<number, { text: string; language: string }>();
     private closers = new CloserTracker();
+    private bracketCache?: { revision: number; language: string; index: BracketIndex };
 
     constructor(text = '') {
         this.rope = TextRope.from(text);
@@ -610,7 +617,13 @@ export class DocumentModel {
             return this.deleteCharacter(command === 'smartBackspace', tabSize, options.autoClosingPairs !== false, language);
         }
         if (command === 'insertNewline') {
-            return this.insertNewline(options.insertSpaces === false ? '\t' : ' '.repeat(tabSize), language);
+            return this.insertNewline({
+                language,
+                unit: options.insertSpaces === false ? '\t' : ' '.repeat(tabSize),
+                tabSize,
+                smart: options.smartEnter !== false,
+                reach: true
+            });
         }
         if (command === 'insertTab') {
             return this.insertTab(tabSize, options);
@@ -930,25 +943,49 @@ export class DocumentModel {
         return this.applyEdits(edits, { source: 'command', selections });
     }
 
-    private insertNewline(indentation: string, language: string): boolean {
-        return this.applySelectionEdits(
+    private insertNewline(options: EnterOptions): boolean {
+        const source = this.enterSource(options.language);
+        const plan = (reach: boolean): EnterPlan[] =>
             this.selections.map((selection) => {
                 const { from, to } = rangeOf(selection);
-                const index = this.rope.lineAt(from);
-                const line = this.rope.lineBounds(index);
-                const before = this.slice(line.start, from);
-                const leading = before.match(/^[\t ]*/)?.[0] ?? '';
-                const opener = before.trimEnd().at(-1) ?? '';
-                const context = this.typingContext(from, language);
-                const opensBlock = opener.length > 0 && '([{'.includes(opener) && context.mode === 'code' && context.bracket?.close === pairs[opener];
-                const newline = this.newlineAt(index);
-                const prefix = newline + leading + (opensBlock ? indentation : '');
-                // Between a matching pair the closer moves to a line of its own.
-                const text = prefix + (opensBlock && pairs[opener] === this.rope.charAt(to) ? newline + leading : '');
-                return { from, to, text, anchor: prefix.length, head: prefix.length };
-            }),
+                return planEnter(source, from, to, { ...options, reach });
+            });
+        let plans = plan(true);
+        const sorted = [...plans].sort((left, right) => left.from - right.from);
+        if (sorted.some((current, index) => index > 0 && current.from < sorted[index - 1]!.to)) {
+            plans = plan(false);
+        }
+        return this.applySelectionEdits(
+            plans.map((entry) => ({ from: entry.from, to: entry.to, text: entry.text, anchor: entry.caret, head: entry.caret })),
             { source: 'command' }
         );
+    }
+
+    private enterSource(language: string): EnterSource {
+        return {
+            slice: (from, to) => this.slice(from, to),
+            charAt: (offset) => this.rope.charAt(offset),
+            lineAt: (offset) => this.rope.lineAt(offset),
+            line: (index) => this.getLine(index),
+            newline: (index) => this.newlineAt(index),
+            context: (offset) => this.typingContext(offset, language),
+            region: (line) => (/^vue$/i.test(language) ? vueRegionAt((index) => this.getLine(index).text, line) : null),
+            unmatchedBrace: (offset) => this.bracketIndex(language)?.unmatched.has(offset) ?? false
+        };
+    }
+
+    /* Undefined for a document too large to scan on every Enter. */
+    private bracketIndex(language: string): BracketIndex | undefined {
+        if (this.rope.length > bracketScanLimit) {
+            return undefined;
+        }
+        const cache = this.bracketCache;
+        if (cache?.revision === this.revision && cache.language === language) {
+            return cache.index;
+        }
+        const index = scanBrackets(this.getText(), language);
+        this.bracketCache = { revision: this.revision, language, index };
+        return index;
     }
 
     private deleteCharacter(backwards: boolean, tabSize: number, pairing: boolean, language: string): boolean {

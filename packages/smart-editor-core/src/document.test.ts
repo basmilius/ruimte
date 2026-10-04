@@ -199,15 +199,15 @@ describe('editing commands', () => {
     });
 
     it('inserts newline with existing indentation and extra block indent at multiple carets', () => {
-        const model = new DocumentModel('  {\n  x');
+        const model = new DocumentModel('  {\n  x\n  }');
         model.setSelections([
             { anchor: 3, head: 3 },
             { anchor: 7, head: 7 }
         ]);
         model.execute('insertNewline', { tabSize: 2 });
-        expect(model.getText()).toBe('  {\n    \n  x\n  ');
+        expect(model.getText()).toBe('  {\n    \n  x\n  \n  }');
         model.undo();
-        expect(model.getText()).toBe('  {\n  x');
+        expect(model.getText()).toBe('  {\n  x\n  }');
     });
 
     it('preserves CRLF for inserted newlines', () => {

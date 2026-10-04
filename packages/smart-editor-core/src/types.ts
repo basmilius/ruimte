@@ -109,4 +109,6 @@ export interface CommandOptions {
     smartSemicolon?: boolean;
     /* Tab steps over a closer the editor inserted. On unless false. */
     tabOutOfClosers?: boolean;
+    /* Enter computes the indentation of the new line, continues comments and closes braces. On unless false. */
+    smartEnter?: boolean;
 }
