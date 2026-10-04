@@ -338,6 +338,14 @@ export class FakeEditor implements Editor {
         this.moveCaret(position);
     }
 
+    setSelection(range: EditorRange): void {
+        this.caret = range.end;
+        this.selection = range;
+        for (const listener of [...this.carets]) {
+            listener(range.end);
+        }
+    }
+
     /* The caret a person's click or key moved. */
     moveCaret(position: EditorPosition): void {
         this.caret = position;

@@ -88,4 +88,11 @@ describe('FakeEditorEngine', () => {
         expect(editor.disposed).toBe(true);
         expect(() => editor.type('a')).toThrow('The editor is disposed');
     });
+
+    test('selects a range with the caret at its end', () => {
+        const editor = new FakeEditorEngine().mount(element, { text: 'let value = 1;', theme: 'dark' });
+        editor.setSelection({ start: { line: 0, character: 4 }, end: { line: 0, character: 9 } });
+        expect(editor.getSelection()).toEqual({ start: { line: 0, character: 4 }, end: { line: 0, character: 9 } });
+        expect(editor.getCaret()).toEqual({ line: 0, character: 9 });
+    });
 });

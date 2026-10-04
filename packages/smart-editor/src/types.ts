@@ -251,6 +251,8 @@ export interface Editor {
     getIndentation(): EditorIndentation;
     /* Moves the one caret and scrolls it into view. */
     setCaret(position: EditorPosition): void;
+    /* Replaces the selections with one over the range, the caret at its end, and scrolls it into view. */
+    setSelection(range: EditorRange): void;
     /* The caret moved or the text under it changed. */
     onCaret(listener: (position: EditorPosition) => void): () => void;
     /* The pointer moved onto another character, or null when it left the text. */

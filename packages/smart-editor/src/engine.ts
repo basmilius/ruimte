@@ -205,6 +205,12 @@ class SmartEditor implements Editor {
         this.view.revealOffset(offset);
     }
 
+    setSelection(range: EditorRange): void {
+        const head = this.offsetAt(range.end);
+        this.model.setSelections([{ anchor: this.offsetAt(range.start), head }]);
+        this.view.revealOffset(head);
+    }
+
     onCaret(listener: (position: EditorPosition) => void): () => void {
         this.carets.add(listener);
         return () => {
