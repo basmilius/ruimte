@@ -77,9 +77,9 @@ class SmartEditor implements Editor {
             blur: () => emit(this.blurs)
         });
         this.revision = this.model.getRevision();
-        this.caretOffset = this.model.getSelections()[0]!.head;
+        this.caretOffset = this.model.getPrimary().head;
         this.subscription = this.model.subscribe((snapshot) => {
-            this.caretMoved(snapshot.selections[0]!.head);
+            this.caretMoved(snapshot.selections.at(-1)!.head);
             if (snapshot.revision !== this.revision) {
                 this.revision = snapshot.revision;
                 if (snapshot.contentEdits !== undefined && snapshot.contentEdits.length > 0) {
@@ -186,7 +186,7 @@ class SmartEditor implements Editor {
     }
 
     getCaret(): EditorPosition {
-        return this.positionAt(this.model.getSelections()[0]!.head);
+        return this.positionAt(this.model.getPrimary().head);
     }
 
     getScrollTop(): number {
@@ -194,7 +194,7 @@ class SmartEditor implements Editor {
     }
 
     getSelection(): EditorRange {
-        const { anchor, head } = this.model.getSelections()[0]!;
+        const { anchor, head } = this.model.getPrimary();
         return { start: this.positionAt(Math.min(anchor, head)), end: this.positionAt(Math.max(anchor, head)) };
     }
 

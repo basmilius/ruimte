@@ -181,6 +181,15 @@ describe('the keyboard', () => {
         expect(press('Escape')).toBe(false);
     });
 
+    test('reads the newest caret for the language features and keeps the oldest on Escape', () => {
+        const { editor, press } = mountEditor({ text: 'ab\ncd\nef' });
+        editor.runCommand('addCaretBelow');
+        editor.runCommand('addCaretBelow');
+        expect(editor.getCaret()).toEqual({ line: 2, character: 0 });
+        press('Escape');
+        expect(editor.getCaret()).toEqual({ line: 0, character: 0 });
+    });
+
     test('jumps to the matching bracket', () => {
         const { editor, press, type } = mountEditor({ text: 'f(a, b)', language: 'typescript' });
         press('ArrowRight');

@@ -436,7 +436,7 @@ export class EditorView {
             this.scheduleFolds();
             this.colorAhead(true);
         }
-        if (this.rowEndCaret !== null && this.model.getSelections()[0]!.head !== this.rowEndCaret) {
+        if (this.rowEndCaret !== null && this.model.getPrimary().head !== this.rowEndCaret) {
             this.rowEndCaret = null;
         }
         this.requestRender();
@@ -444,7 +444,7 @@ export class EditorView {
 
     private displayedInlays(): Inlay[] {
         return this.composition
-            ? [...this.inlays, { id: '__composition', at: this.model.getSelections()[0]!.head, text: this.composition, composition: true }]
+            ? [...this.inlays, { id: '__composition', at: this.model.getPrimary().head, text: this.composition, composition: true }]
             : this.inlays;
     }
 
@@ -532,7 +532,7 @@ export class EditorView {
 
     /* Folds or unfolds every range, or only the ones around the caret. */
     foldAround(collapse: boolean, all: boolean): void {
-        const line = this.model.positionAt(this.model.getSelections()[0]!.head).line;
+        const line = this.model.positionAt(this.model.getPrimary().head).line;
         const targets = this.foldRanges.filter((range) => all || (range.startLine <= line && range.endLine >= line));
         const chosen = all ? targets : collapse ? targets.slice(-1) : targets.filter((range) => this.collapsed.has(range.from)).slice(0, 1);
         for (const range of chosen) {
@@ -772,7 +772,7 @@ export class EditorView {
     }
 
     revealCaret(): void {
-        this.revealOffset(this.model.getSelections()[0]!.head);
+        this.revealOffset(this.model.getPrimary().head);
     }
 
     setFind(query: EditorFindQuery | null, reveal: boolean): void {
@@ -922,7 +922,7 @@ export class EditorView {
 
     private paintDecorations(rows: readonly LayoutRow[]): void {
         const selections = this.model.getSelections();
-        const primary = selections[0]!;
+        const primary = this.model.getPrimary();
         const focused = this.focused;
         const foldable = new Map<number, boolean>();
         for (const range of this.foldRanges) {
@@ -1010,7 +1010,7 @@ export class EditorView {
         const top = this.viewport.scrollTop;
         const caretRects = focused
             ? selections
-                  .map((selection) => this.caretOf(selection.head))
+                  .map((selection) => ({ ...this.caretOf(selection.head), primary: selection === selections.at(-1) }))
                   .filter((rect) => rect.y + rect.height >= top - rect.height && rect.y <= top + this.viewportHeight)
             : [];
         const caretKey = caretRects.map((rect) => `${rect.x},${rect.y}`).join(' ');
@@ -1155,7 +1155,7 @@ export class EditorView {
     }
 
     private announceScope(): void {
-        const line = this.model.positionAt(this.model.getSelections()[0]!.head).line;
+        const line = this.model.positionAt(this.model.getPrimary().head).line;
         const scope = scopeChain(this.outline.blocks(this.model), line).map((block): EditorBlock => ({
             startLine: block.startLine + 1,
             endLine: block.endLine + 1,

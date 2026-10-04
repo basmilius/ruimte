@@ -361,7 +361,7 @@ export class InputController {
             case 'edge': {
                 event.preventDefault();
                 const head = action.end ? model.getLength() : 0;
-                model.setSelections([{ anchor: action.extend ? model.getSelections()[0]!.anchor : head, head }]);
+                model.setSelections([{ anchor: action.extend ? model.getPrimary().anchor : head, head }]);
                 this.view.revealCaret();
                 return;
             }
@@ -377,8 +377,12 @@ export class InputController {
                 const selections = model.getSelections();
                 if (selections.length > 1 || selections[0]!.anchor !== selections[0]!.head) {
                     event.preventDefault();
+                    // The oldest caret stays; the newest ones go.
                     const head = selections[0]!.head;
                     model.setSelections([{ anchor: head, head }]);
+                    if (selections.length > 1) {
+                        this.view.revealCaret();
+                    }
                 }
                 return;
             }

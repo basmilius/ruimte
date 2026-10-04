@@ -52,7 +52,7 @@ export class PointerSelection {
         const selections = model.getSelections();
         this.drag = {
             id: event.pointerId,
-            anchor: event.shiftKey ? selections[0]!.anchor : head,
+            anchor: event.shiftKey ? model.getPrimary().anchor : head,
             selections,
             add: event.altKey,
             anchorPoint: this.host.contentPoint(event.clientX, event.clientY),

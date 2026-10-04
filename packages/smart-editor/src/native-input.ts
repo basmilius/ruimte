@@ -49,8 +49,8 @@ export class NativeInput {
         if (this.composing) {
             return;
         }
-        const selections = this.model.getSelections();
-        const selection = selections[0]!;
+        const selection = this.model.getPrimary();
+        const caretCount = this.model.getSelectionCount();
         const length = this.model.getLength();
         const start = Math.min(selection.anchor, selection.head);
         const end = Math.max(selection.anchor, selection.head);
@@ -85,7 +85,7 @@ export class NativeInput {
         const position = this.model.positionAt(selection.head);
         this.element.setAttribute(
             'aria-description',
-            `Line ${position.line + 1}, column ${position.column + 1}. ${selections.length} caret${selections.length === 1 ? '' : 's'}.`
+            `Line ${position.line + 1}, column ${position.column + 1}. ${caretCount} caret${caretCount === 1 ? '' : 's'}.`
         );
     }
 

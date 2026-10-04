@@ -191,24 +191,34 @@ function deletionStep(rope: TextRope, offset: number, direction: -1 | 1): number
     return direction < 0 ? previous : line.end;
 }
 
-/* Clamps every selection and merges the ones that overlap or touch, so the result is ordered and disjoint. */
+/*
+ * Clamps every selection and merges the ones that overlap or touch, so the result is disjoint. The
+ * last one stays the primary caret, and a merge that takes it in keeps it last.
+ */
 function normalizeSelections(rope: TextRope, selections: readonly Selection[]): Selection[] {
-    const result: Selection[] = [];
-    for (const raw of selections.length > 0 ? selections : [{ anchor: 0, head: 0 }]) {
+    const input = selections.length > 0 ? selections : [{ anchor: 0, head: 0 }];
+    const result: { selection: Selection; primary: boolean }[] = [];
+    for (const [position, raw] of input.entries()) {
         let selection = { anchor: offsetIn(rope, raw.anchor), head: offsetIn(rope, raw.head) };
+        let primary = position === input.length - 1;
         let { from, to } = rangeOf(selection);
         for (let index = result.length - 1; index >= 0; index--) {
-            const other = rangeOf(result[index]!);
+            const other = rangeOf(result[index]!.selection);
             if (from <= other.to && to >= other.from) {
                 from = Math.min(from, other.from);
                 to = Math.max(to, other.to);
+                primary ||= result[index]!.primary;
                 result.splice(index, 1);
                 selection = selection.anchor > selection.head ? { anchor: to, head: from } : { anchor: from, head: to };
             }
         }
-        result.push(selection);
+        result.push({ selection, primary });
     }
-    return result;
+    const primary = result.findIndex((entry) => entry.primary);
+    if (primary !== result.length - 1) {
+        result.push(...result.splice(primary, 1));
+    }
+    return result.map((entry) => entry.selection);
 }
 
 function inverseChanges(changes: readonly DocumentChange[]): DocumentChange[] {
@@ -347,6 +357,15 @@ export class DocumentModel {
 
     getSelections(): readonly Selection[] {
         return this.selections.map((selection) => ({ ...selection }));
+    }
+
+    getSelectionCount(): number {
+        return this.selections.length;
+    }
+
+    /* The caret added last, which is where the view scrolls to and what a language feature reads. */
+    getPrimary(): Selection {
+        return { ...this.selections.at(-1)! };
     }
 
     getSnapshot(): EditorSnapshot {
@@ -496,7 +515,7 @@ export class DocumentModel {
     }
 
     /* Includes a match that starts at `from`, or ends there when searching backwards. */
-    findNext(query: string, from = this.selections[0]!.head, options: FindNextOptions = {}): FindMatch | null {
+    findNext(query: string, from = this.selections.at(-1)!.head, options: FindNextOptions = {}): FindMatch | null {
         const matches = this.find(query, options);
         const offset = clampInteger(from, this.rope.length);
         const ordered = options.backwards ? matches.reverse() : matches;
@@ -1401,7 +1420,7 @@ export class DocumentModel {
     }
 
     private selectNextOccurrence(): boolean {
-        const { from, to } = rangeOf(this.selections[0]!);
+        const { from, to } = rangeOf(this.selections.at(-1)!);
         if (from === to) {
             const word = this.wordRange(from);
             return word.from === word.to ? false : this.changeSelections([{ anchor: word.from, head: word.to }]);

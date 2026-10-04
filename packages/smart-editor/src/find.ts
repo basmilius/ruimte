@@ -77,7 +77,7 @@ export class FindController {
             // A pattern that does not parse finds nothing; the find bar says it is invalid.
         }
         this.marks = found;
-        const selection = this.model.getSelections()[0]!;
+        const selection = this.model.getPrimary();
         const anchor = this.pendingAnchor ?? previous?.from ?? Math.min(selection.anchor, selection.head);
         this.pendingAnchor = undefined;
         const next = found.findIndex((mark) => mark.from >= anchor);

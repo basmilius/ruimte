@@ -209,6 +209,21 @@ describe('scrolling', () => {
     });
 });
 
+describe('the primary caret', () => {
+    const text = Array.from({ length: 400 }, (_, i) => `line ${i}`).join('\n');
+
+    test('is the one the view scrolls to', () => {
+        const { model, view } = mount(text);
+        const far = model.getLine(300).start;
+        model.setSelections([
+            { anchor: 0, head: 0 },
+            { anchor: far, head: far }
+        ]);
+        view.revealCaret();
+        expect(view.viewport.scrollTop).toBeGreaterThan(20 * 300 - 400);
+    });
+});
+
 describe('sticky scroll', () => {
     const body = Array.from({ length: 40 }, (_, i) => `    call(${i});`).join('\n');
     const text = `export function outer() {\n  function inner() {\n${body}\n  }\n}\nconst after = 1;`;
