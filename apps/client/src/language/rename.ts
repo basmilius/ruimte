@@ -108,7 +108,7 @@ export class RenameFeature {
             this.finish();
             return;
         }
-        this.publish({ phase: 'input', busy: true, name: next });
+        this.publish({ phase: 'input', busy: true, name: next, error: null });
         const { project, uri } = this.language;
         try {
             const edit = await project.service.rename(uri, session.target.range.start, next);
@@ -168,9 +168,19 @@ export class RenameFeature {
         }
     }
 
+    /* The input stays, with the reason under it, so the name can be changed and tried again. */
     private fail(message: string): void {
-        this.finish();
-        tell('error', say('failed', { message }));
+        if (this.session !== null) {
+            this.session.edit = null;
+            this.publish({ phase: 'input', busy: false, files: [], error: say('failed', { message }) });
+        }
+    }
+
+    /* The name was changed, which answers the failure under it. */
+    edited(): void {
+        if (this.language.popups.getState().rename?.error != null) {
+            this.publish({ error: null });
+        }
     }
 
     private finish(): void {
@@ -215,6 +225,7 @@ export class RenameFeature {
                 placeholder: session.target.placeholder,
                 occurrences: null,
                 busy: false,
+                error: null,
                 name: session.target.placeholder,
                 files: [],
                 ...current,

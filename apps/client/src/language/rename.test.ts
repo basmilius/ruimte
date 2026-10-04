@@ -134,7 +134,12 @@ describe('rename', () => {
         refused.editor.moveCaret(at(0, 8));
         await refused.language.rename.start();
         await refused.language.rename.submit('scores', false);
-        expect(useToasts.getState().toasts.at(-1)?.title).toBe('Could not rename: The language server refused the new name');
+        const open = refused.language.popups.getState().rename;
+        expect(open).toMatchObject({ phase: 'input', busy: false, error: 'Could not rename: The language server refused the new name' });
+        expect(refused.language.rename.isOpen).toBe(true);
+        expect(useToasts.getState().toasts.some((toast) => toast.title.startsWith('Could not rename'))).toBe(false);
+        refused.language.rename.edited();
+        expect(refused.language.popups.getState().rename?.error).toBeNull();
         const off = await setup({ providers: {} });
         await off.language.rename.start();
         expect(useToasts.getState().toasts.at(-1)?.title).toBe('No language server renames in this file');

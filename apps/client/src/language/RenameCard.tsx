@@ -21,20 +21,27 @@ function Hints({ view }: { view: RenameView }) {
     const { t } = useTranslation('panels');
     const { occurrences } = view;
     return (
-        <div className="flex items-center gap-3 px-2.5 py-1.5 text-xs whitespace-nowrap text-text-muted">
-            {occurrences !== null && (
-                <span>
-                    {occurrences.files > 1
-                        ? t('language.rename.occurrencesFiles', {
-                              count: occurrences.count,
-                              formatted: formatNumber(occurrences.count),
-                              files: formatNumber(occurrences.files)
-                          })
-                        : t('language.rename.occurrences', { count: occurrences.count, formatted: formatNumber(occurrences.count) })}
-                </span>
+        <div className="flex flex-col">
+            {view.error !== null && (
+                <div role="alert" className="max-w-[420px] px-2.5 py-1.5 text-xs text-status-error">
+                    {view.error}
+                </div>
             )}
-            <span>↵ {t('language.rename.rename')}</span>
-            <span>⇧↵ {t('language.rename.preview')}</span>
+            <div className="flex items-center gap-3 px-2.5 py-1.5 text-xs whitespace-nowrap text-text-muted">
+                {occurrences !== null && (
+                    <span>
+                        {occurrences.files > 1
+                            ? t('language.rename.occurrencesFiles', {
+                                  count: occurrences.count,
+                                  formatted: formatNumber(occurrences.count),
+                                  files: formatNumber(occurrences.files)
+                              })
+                            : t('language.rename.occurrences', { count: occurrences.count, formatted: formatNumber(occurrences.count) })}
+                    </span>
+                )}
+                <span>↵ {t('language.rename.rename')}</span>
+                <span>⇧↵ {t('language.rename.preview')}</span>
+            </div>
         </div>
     );
 }
@@ -132,7 +139,10 @@ export function RenameCard({ language, view, rect, endRect }: { language: Editor
                     height: Math.round(rect.bottom - rect.top) + 4,
                     minWidth: Math.round(symbolWidth) + 10
                 }}
-                onChange={(event) => setValue(event.target.value)}
+                onChange={(event) => {
+                    setValue(event.target.value);
+                    language.rename.edited();
+                }}
                 onKeyDown={onKeyDown}
                 onBlur={(event) => {
                     if (!staysInside(event.relatedTarget)) {

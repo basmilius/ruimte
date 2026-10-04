@@ -125,6 +125,8 @@ export interface RenameView {
     readonly occurrences: { readonly count: number; readonly files: number } | null;
     /* A request is out, so the input waits. */
     readonly busy: boolean;
+    /* Why the last try failed, shown under the input, which stays open for another. */
+    readonly error: string | null;
     readonly name: string;
     readonly files: readonly RenameFileView[];
 }
