@@ -223,8 +223,8 @@ describe('a doc comment', () => {
             ] as const) {
                 const tokens = highlighter.codeToTokens(code, { lang, theme: theme.name }).tokens.flat();
                 const colorOf = (text: string) => tokens.find((token) => token.content.trim() === text)?.color?.toLowerCase();
-                expect(colorOf('/**')).toBe(CODE_PALETTES[theme.type].docComment.toLowerCase());
-                expect(colorOf('*/')).toBe(CODE_PALETTES[theme.type].docComment.toLowerCase());
+                expect(colorOf('/**')).toBe(CODE_PALETTES[theme.type].colors.docComment.toLowerCase());
+                expect(colorOf('*/')).toBe(CODE_PALETTES[theme.type].colors.docComment.toLowerCase());
             }
         });
     }
