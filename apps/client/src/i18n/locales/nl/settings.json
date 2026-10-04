@@ -308,7 +308,7 @@
         },
         "pending": {
             "takeOver": "Ruimte draait deze machine nu zelf. Vanaf de volgende keer dat Ruimte afsluit blijft die draaien.",
-            "handBack": "Deze machine stopt als Ruimte afsluit, en vanaf de volgende start draait Ruimte die zelf."
+            "handBack": "Deze machine stopt als Ruimte afsluit."
         },
         "restart": {
             "label": "Herstarten om de update af te ronden",

@@ -4,7 +4,7 @@ import { isIdle, type BuildIdentity, type MachineWork } from '@ruimte/contracts'
 export type StartDecision =
     /* The service runs the binary in this bundle. */
     | 'attach'
-    /* Something answers that is not the service's to manage (the service is off): used as it is, as before. */
+    /* Something answers that is not the app's service to manage. */
     | 'attach-external'
     /* The service runs an older binary, after an update: restarted onto the new one. */
     | 'restart-service'

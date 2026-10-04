@@ -25,7 +25,7 @@ describe('backgroundServiceRow', () => {
     });
 
     test('switched off while the service runs: it stops at quit', () => {
-        expect(backgroundServiceRow(state({ keepRunning: false })).pending).toContain('stops when Ruimte quits');
+        expect(backgroundServiceRow(state({ keepRunning: false })).pending).toBe('This machine stops when Ruimte quits.');
     });
 
     test('no switch in the dev app, on Windows or for an AppImage, each with its reason', () => {

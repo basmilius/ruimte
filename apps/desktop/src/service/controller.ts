@@ -40,7 +40,7 @@ export interface ServiceController {
      * what answers cannot prove it holds the local secret, and is false when the person chose to quit.
      */
     start(): Promise<boolean>;
-    /* The switch. The daemon that runs keeps running; the other owner takes over when the app quits. */
+    /* The running service stays in place, so toggling background use does not end its sessions. */
     setKeepRunning(keepRunning: boolean): ShellServiceState;
     /* Whether the agents outlive this quit, for the question asked before it. */
     survivesQuit(stopMachine: boolean): boolean;
@@ -98,6 +98,18 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
         return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger, pendingRestart, commandLineService: commandLineService(), crash };
     };
 
+    const uninstallWhenOff = (): void => {
+        if (!manager || commandLineService() || deps.setting.read() || !manager.isInstalled()) {
+            return;
+        }
+        try {
+            // A loaded service keeps running without its file, while the next login starts nothing.
+            manager.uninstall();
+        } catch (e) {
+            failure = messageOf(e);
+        }
+    };
+
     const spawn = async (): Promise<void> => {
         spawnedAt = deps.now();
         deps.spawnDaemon(ended);
@@ -140,11 +152,16 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
 
     const runService = async (service: ServiceManager, step: () => void | Promise<void>): Promise<void> => {
         try {
+            if (!service.isInstalled()) {
+                service.install(deps.definition());
+            }
             await step();
             await deps.waitForHealth((health) => sameBuild(health, deps.expected));
             owner = 'service';
         } catch (e) {
             await fallBack(service, e);
+        } finally {
+            uninstallWhenOff();
         }
     };
 
@@ -161,24 +178,18 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
         async start() {
             failure = null;
             staleDefinition = false;
-            const serviceOn = keepRunning();
+            const managedService = manager !== null && !commandLineService();
             let definitionChanged = false;
             // A service of the command line is used as it is, the way that command leaves the app's alone.
-            if (manager && !commandLineService()) {
+            if (manager && managedService) {
                 try {
-                    if (serviceOn) {
-                        definitionChanged = manager.install(deps.definition());
-                    } else if (manager.isInstalled()) {
-                        // Off, yet a definition is on disk: a quit that never ran after the switch. Removed and stopped
-                        // here, before the port is asked, so the answer is not a service about to go.
-                        manager.uninstall();
-                        manager.stop();
-                    }
+                    // Use the service even with background use off, so turning it on needs no daemon restart.
+                    definitionChanged = manager.install(deps.definition());
                 } catch (e) {
                     failure = messageOf(e);
                 }
             }
-            const decision = decideStart(await deps.probe(), deps.expected, manager !== null && serviceOn && failure === null);
+            const decision = decideStart(await deps.probe(), deps.expected, managedService && failure === null);
             if (decision === 'attach') {
                 owner = 'service';
                 if (manager && definitionChanged) {
@@ -192,6 +203,7 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
                 if (!(await deps.verify())) {
                     // A build from before the proof cannot show it is ours, and nothing is sent to it or loaded from it until it restarted.
                     if (!(await deps.askRestart())) {
+                        uninstallWhenOff();
                         return false;
                     }
                     await runService(manager, () => manager.restart());
@@ -208,6 +220,7 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
             } else {
                 await runService(manager, () => manager.start());
             }
+            uninstallWhenOff();
             if (!(await deps.verify())) {
                 throw new Error(UNPROVEN);
             }
@@ -224,7 +237,9 @@ export function createServiceController(deps: ServiceControllerDeps): ServiceCon
                 } else {
                     manager.uninstall();
                 }
-                failure = null;
+                if (owner !== 'app') {
+                    failure = null;
+                }
             } catch (e) {
                 failure = messageOf(e);
             }

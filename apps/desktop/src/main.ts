@@ -190,7 +190,7 @@ function clientRoot(): string {
 
 const MISSING_DAEMON = 'The background service is missing. Run the desktop app from the repository or install a release.';
 
-/* The app's own daemon, a child that ends with the app: the dev app always, a packaged one with the service off. */
+/* A child that ends with the app, used in development or when the service fails to start. */
 function spawnDaemon(onExit: () => void): void {
     const target = daemonCommand();
     if (!target) {

@@ -308,7 +308,7 @@
         },
         "pending": {
             "takeOver": "Ruimte runs this machine itself right now. It keeps running from the next time Ruimte quits.",
-            "handBack": "This machine stops when Ruimte quits, and Ruimte runs it itself from the next start."
+            "handBack": "This machine stops when Ruimte quits."
         },
         "restart": {
             "label": "Restart to finish the update",

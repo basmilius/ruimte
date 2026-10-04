@@ -34,10 +34,16 @@ function fakeManager(options: { installed?: boolean; onDisk?: string; running?: 
             if (options.refuseStart) {
                 throw new Error(options.refuseStart);
             }
+            if (service.definition === null) {
+                throw new Error('No service definition');
+            }
             service.running = EXPECTED;
         },
         restart: async () => {
             calls.push('restart');
+            if (service.definition === null) {
+                throw new Error('No service definition');
+            }
             service.running = EXPECTED;
         },
         stop: () => {
@@ -66,6 +72,7 @@ function memorySetting(initial: boolean): KeepRunningSetting & { value: boolean 
 function setup(options: {
     support?: ServiceSupport;
     keepRunning?: boolean;
+    setting?: KeepRunningSetting;
     fake?: ReturnType<typeof fakeManager>;
     answering?: BuildIdentity | null;
     work?: MachineWork | null;
@@ -85,7 +92,7 @@ function setup(options: {
     const deps: ServiceControllerDeps = {
         support: options.support ?? 'supported',
         manager: fake.manager,
-        setting: memorySetting(options.keepRunning ?? true),
+        setting: options.setting ?? memorySetting(options.keepRunning ?? true),
         definition: () => DEFINITION,
         commandLineProgram: COMMAND_LINE_PROGRAM,
         expected: EXPECTED,
@@ -207,19 +214,27 @@ describe('start', () => {
         expect(controller.state()).toMatchObject({ owner: 'app', failure: 'Bootstrap failed: 5', keepRunning: true });
     });
 
-    test('with the service off the app spawns its own daemon as before', async () => {
+    test('with background use off the service runs until the app quits, without staying installed', async () => {
         const { controller, fake, events } = setup({ keepRunning: false });
         await controller.start();
-        expect(fake.calls).toEqual([]);
-        expect(events).toEqual(['spawn']);
-        expect(controller.state().owner).toBe('app');
+        expect(fake.calls).toEqual(['install', 'start', 'uninstall']);
+        expect(events).toEqual([]);
+        expect(controller.state()).toMatchObject({ owner: 'service', keepRunning: false });
+        expect(fake.service.definition).toBeNull();
+        controller.quit(false);
+        expect(fake.calls.at(-1)).toBe('stop');
     });
 
-    test('with the service off a definition left on disk is removed and its daemon stopped first', async () => {
-        const { controller, fake, events } = setup({ keepRunning: false, fake: fakeManager({ installed: true, running: EXPECTED }) });
+    test('with background use off an existing service keeps its sessions running until quit', async () => {
+        const { controller, fake, events } = setup({
+            keepRunning: false,
+            fake: fakeManager({ installed: true, running: EXPECTED }),
+            work: { terminals: 1, agents: 1 }
+        });
         await controller.start();
-        expect(fake.calls).toEqual(['uninstall', 'stop']);
-        expect(events).toEqual(['spawn']);
+        expect(fake.calls).toEqual(['install', 'uninstall']);
+        expect(fake.service.running).toEqual(EXPECTED);
+        expect(events).toEqual([]);
     });
 
     test('a definition that changed under the same build is read by restarting the service, once nothing runs', async () => {
@@ -245,8 +260,8 @@ describe('start', () => {
         expect(controller.unsettled()).toBe(false);
     });
 
-    test('with the service off whatever answers is used and never killed', async () => {
-        const { controller, events } = setup({ keepRunning: false, answering: { version: '0.0.9', build: 'old' } });
+    test('without service support whatever answers is used and never killed', async () => {
+        const { controller, events } = setup({ support: 'dev', answering: { version: '0.0.9', build: 'old' } });
         await controller.start();
         expect(controller.state().owner).toBe('external');
         expect(controller.survivesQuit(true)).toBe(true);
@@ -339,7 +354,7 @@ describe('a service the command line installed', () => {
 
 describe("the app's own daemon", () => {
     test('that ends by itself is started again after a pause, and every window hears of it', async () => {
-        const { controller, events, clock, published, crash, advance } = setup({ keepRunning: false });
+        const { controller, events, clock, published, crash, advance } = setup({ support: 'dev' });
         await controller.start();
         crash();
         expect(events).toEqual(['spawn']);
@@ -351,7 +366,7 @@ describe("the app's own daemon", () => {
     });
 
     test('waits longer each time it ends again soon, and starts over once it stayed up', async () => {
-        const { controller, clock, crash, advance } = setup({ keepRunning: false });
+        const { controller, clock, crash, advance } = setup({ support: 'dev' });
         await controller.start();
         const pauses: number[] = [];
         for (let i = 0; i < 3; i++) {
@@ -366,7 +381,7 @@ describe("the app's own daemon", () => {
     });
 
     test('is given up on after five ends in a row, which the windows hear too', async () => {
-        const { controller, events, clock, crash, advance } = setup({ keepRunning: false });
+        const { controller, events, clock, crash, advance } = setup({ support: 'dev' });
         await controller.start();
         for (let i = 0; i < 5; i++) {
             crash();
@@ -379,7 +394,7 @@ describe("the app's own daemon", () => {
     });
 
     test('that a quit ends is not started again', async () => {
-        const { controller, events, clock } = setup({ keepRunning: false });
+        const { controller, events, clock } = setup({ support: 'dev' });
         await controller.start();
         controller.quit(false);
         expect(events).toEqual(['spawn', 'kill']);
@@ -426,15 +441,65 @@ describe('the setting', () => {
         expect(fake.calls).toEqual(['install', 'uninstall', 'stop']);
     });
 
-    test('on while the app runs its own daemon installs the service, which takes over at quit', async () => {
-        const { controller, fake, events } = setup({ keepRunning: false });
+    test('turning background use on applies immediately and keeps the same daemon and sessions at quit', async () => {
+        const { controller, fake, events, machine } = setup({ keepRunning: false, work: { terminals: 2, agents: 1 } });
         await controller.start();
-        controller.setKeepRunning(true);
-        expect(fake.calls).toEqual(['install']);
-        expect(controller.survivesQuit(false)).toBe(false);
+        expect(controller.setKeepRunning(true)).toMatchObject({ keepRunning: true, owner: 'service', failure: null });
+        expect(fake.calls).toEqual(['install', 'start', 'uninstall', 'install']);
+        expect(controller.survivesQuit(false)).toBe(true);
         controller.quit(false);
-        expect(events).toEqual(['spawn', 'kill']);
-        expect(fake.calls).toEqual(['install', 'start']);
+        expect(events).toEqual([]);
+        expect(fake.calls).toEqual(['install', 'start', 'uninstall', 'install']);
+        expect(fake.service.running).toEqual(EXPECTED);
+        expect(machine.work).toEqual({ terminals: 2, agents: 1 });
+    });
+
+    test('turning background use off and back on keeps the running service, including across refresh', async () => {
+        const { controller, fake, events } = setup({ work: { terminals: 1, agents: 1 } });
+        await controller.start();
+        controller.setKeepRunning(false);
+        expect(controller.survivesQuit(false)).toBe(false);
+        expect(controller.setKeepRunning(true)).toMatchObject({ keepRunning: true, owner: 'service' });
+        await controller.refresh();
+        expect(controller.unsettled()).toBe(false);
+        expect(controller.survivesQuit(false)).toBe(true);
+        expect(fake.calls).toEqual(['install', 'start', 'uninstall', 'install']);
+        expect(events).toEqual([]);
+    });
+
+    test('a deferred definition update still applies after background use is turned off', async () => {
+        const { controller, fake, machine, events } = setup({
+            fake: fakeManager({ onDisk: '<plist>old PATH</plist>', running: EXPECTED }),
+            work: { terminals: 1, agents: 1 }
+        });
+        await controller.start();
+        controller.setKeepRunning(false);
+        await controller.refresh();
+        expect(fake.calls).toEqual(['install', 'uninstall']);
+        machine.work = { terminals: 0, agents: 0 };
+        expect(await controller.refresh()).toMatchObject({ owner: 'service', keepRunning: false, failure: null });
+        expect(fake.calls).toEqual(['install', 'uninstall', 'install', 'restart', 'uninstall']);
+        expect(fake.service.definition).toBeNull();
+        expect(events).toEqual([]);
+    });
+
+    test('updating an older daemon after background use is turned off leaves login startup disabled', async () => {
+        const { controller, fake, events } = setup({
+            fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }),
+            work: { terminals: 1, agents: 0 }
+        });
+        await controller.start();
+        controller.setKeepRunning(false);
+        expect(await controller.restartNow()).toMatchObject({ owner: 'service', keepRunning: false, failure: null, pendingRestart: null });
+        expect(fake.calls).toEqual(['install', 'uninstall', 'install', 'restart', 'uninstall']);
+        expect(fake.service.definition).toBeNull();
+        expect(events).toEqual([]);
+    });
+
+    test('a fallback daemon keeps the service failure visible when background use is turned on', async () => {
+        const { controller } = setup({ keepRunning: false, fake: fakeManager({ refuseStart: 'Bootstrap failed: 5' }) });
+        await controller.start();
+        expect(controller.setKeepRunning(true)).toMatchObject({ keepRunning: true, owner: 'app', failure: 'Bootstrap failed: 5' });
     });
 
     test('on while the service runs: quitting leaves it running', async () => {
@@ -458,12 +523,12 @@ describe('the setting', () => {
     });
 
     test('stopping the machine while the app runs its own daemon does not hand it to the service', async () => {
-        const { controller, fake, events } = setup({ keepRunning: false });
+        const { controller, fake, events } = setup({ keepRunning: false, fake: fakeManager({ refuseStart: 'Bootstrap failed: 5' }) });
         await controller.start();
         controller.setKeepRunning(true);
         controller.quit(true);
         expect(events).toEqual(['spawn', 'kill']);
-        expect(fake.calls).toEqual(['install']);
+        expect(fake.calls).toEqual(['install', 'start', 'stop', 'uninstall', 'install']);
     });
 });
 
@@ -483,6 +548,19 @@ describe('keepRunningSetting', () => {
         expect(setting.read()).toBe(true);
         setting.write(false);
         expect(setting.read()).toBe(false);
+    });
+
+    test('a fresh profile starts a background service that survives quitting without changing the setting', async () => {
+        dir = mkdtempSync(join(tmpdir(), 'ruimte-service-'));
+        const setting = keepRunningSetting(join(dir, 'background-service.json'), 'supported');
+        const { controller, fake, events } = setup({ setting });
+        await controller.start();
+        expect(controller.state()).toMatchObject({ keepRunning: true, owner: 'service' });
+        expect(controller.survivesQuit(false)).toBe(true);
+        controller.quit(false);
+        expect(fake.calls).toEqual(['install', 'start']);
+        expect(fake.service.running).toEqual(EXPECTED);
+        expect(events).toEqual([]);
     });
 
     test('always off where there is no service', () => {
