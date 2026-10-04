@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@basmilius/desktop-shell": "^0.13.0",
+    "@basmilius/desktop-shell": "^0.13.2",
     "@ruimte/contracts": "workspace:*"
   },
   "devDependencies": {
