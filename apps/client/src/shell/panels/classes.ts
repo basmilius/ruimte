@@ -8,5 +8,7 @@ export const FILE_TOOLBAR = 'flex h-10 shrink-0 items-center gap-2 border-b bord
 /* The header over a group of the git panel: the changes of one state, and the commits of one day. */
 export const GIT_GROUP = 'flex h-7 items-center gap-2 pr-2 pl-3 text-xs';
 
-// The repository a group's changes belong to, the row above its tree while the folder holds more than one.
-export const GIT_REPO = 'flex h-6 items-center gap-1.5 pr-2 pl-3 text-xs';
+/* A group of the git panel's changes, or a repository in one: a row of the list that the trees under
+   it go on from, under the same keys. */
+export const GIT_LIST_ROW =
+    'mx-0.5 flex shrink-0 cursor-default items-center gap-1.5 rounded-md pr-2 text-xs outline-none hover:bg-surface-hover focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent';

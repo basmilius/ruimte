@@ -373,10 +373,9 @@
             }
         },
         "group": {
-            "conflicted": "Conflicted",
-            "staged": "Staged",
-            "unstaged": "Changes",
-            "untracked": "Untracked"
+            "changes": "Changes",
+            "conflicts": "Conflicts",
+            "unversioned": "Unversioned Files"
         },
         "list": {
             "collapseFolder": "Collapse this folder",
@@ -385,6 +384,8 @@
             "discard": "Discard changes",
             "discardMany": "Discard {{count}} files",
             "expandFolder": "Expand this folder",
+            "files_one": "{{count}} file",
+            "files_other": "{{count}} files",
             "noChanges": "No changes.",
             "noRepo": "This folder is not a git repository.",
             "openChanges": "Open changes",
@@ -394,7 +395,6 @@
             "stageMany": "Stage {{count}} files",
             "stageResolved": "Stage as resolved",
             "unstage": "Unstage",
-            "unstageGroup": "Unstage everything in {{group}}",
             "unstageHere": "Unstage everything here",
             "unstageMany": "Unstage {{count}} files"
         },
@@ -471,8 +471,7 @@
             "hide": "Hide this repository",
             "showAll_one": "Show {{count}} hidden repository",
             "showAll_other": "Show {{count}} hidden repositories",
-            "stageAll": "Stage everything in {{repo}}",
-            "unstageAll": "Unstage everything in {{repo}}"
+            "stageAll": "Stage everything in {{repo}}"
         },
         "stage": {
             "failed": "Staging failed",

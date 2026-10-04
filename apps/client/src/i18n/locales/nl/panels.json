@@ -373,10 +373,9 @@
             }
         },
         "group": {
-            "conflicted": "Conflicten",
-            "staged": "Staged",
-            "unstaged": "Wijzigingen",
-            "untracked": "Untracked"
+            "changes": "Wijzigingen",
+            "conflicts": "Conflicten",
+            "unversioned": "Niet-geversioneerde bestanden"
         },
         "list": {
             "collapseFolder": "Deze map inklappen",
@@ -385,6 +384,8 @@
             "discard": "Wijzigingen weggooien",
             "discardMany": "{{count}} bestanden weggooien",
             "expandFolder": "Deze map uitklappen",
+            "files_one": "{{count}} bestand",
+            "files_other": "{{count}} bestanden",
             "noChanges": "Geen wijzigingen.",
             "noRepo": "Deze map is geen git repository.",
             "openChanges": "Wijzigingen openen",
@@ -394,7 +395,6 @@
             "stageMany": "{{count}} bestanden stagen",
             "stageResolved": "Stagen als opgelost",
             "unstage": "Unstage",
-            "unstageGroup": "Alles in {{group}} unstagen",
             "unstageHere": "Alles hier unstagen",
             "unstageMany": "{{count}} bestanden unstagen"
         },
@@ -471,8 +471,7 @@
             "hide": "Verberg deze repository",
             "showAll_one": "Toon {{count}} verborgen repository",
             "showAll_other": "Toon {{count}} verborgen repositories",
-            "stageAll": "Stage alles in {{repo}}",
-            "unstageAll": "Unstage alles in {{repo}}"
+            "stageAll": "Stage alles in {{repo}}"
         },
         "stage": {
             "failed": "Stagen mislukt",
