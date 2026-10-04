@@ -73,7 +73,7 @@ export function CompletionPopup({ language, view, rect }: { language: EditorLang
                             onClick={() => void language.completion.accept(false, index)}
                         >
                             <span
-                                className={`grid size-4 shrink-0 place-items-center rounded-sm font-mono text-xs font-semibold ${TONES[kindToneOf(row.kind)]}`}
+                                className={`grid size-4 shrink-0 place-items-center rounded-sm font-mono text-xs leading-none font-semibold ${TONES[kindToneOf(row.kind)]}`}
                             >
                                 {kindLetterOf(row.kind)}
                             </span>
