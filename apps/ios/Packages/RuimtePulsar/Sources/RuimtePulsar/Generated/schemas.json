@@ -35286,6 +35286,46 @@
       }
     ]
   },
+  "request.fs.create.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "file",
+          "directory"
+        ]
+      },
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "path",
+      "kind"
+    ]
+  },
+  "request.fs.create.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "size": {
+        "type": "number"
+      },
+      "mtime": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "size",
+      "mtime"
+    ]
+  },
   "request.fs.delete.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

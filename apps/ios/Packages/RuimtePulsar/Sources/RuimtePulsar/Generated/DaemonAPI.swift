@@ -122,6 +122,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `fsGrep` = "fs.grep"
     case `fsList` = "fs.list"
     case `fsRead` = "fs.read"
+    case `fsCreate` = "fs.create"
     case `fsDelete` = "fs.delete"
     case `fsWrite` = "fs.write"
     case `fsWatch` = "fs.watch"

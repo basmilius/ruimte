@@ -205,6 +205,23 @@ export const FsWriteResultSchema = z.object({
 });
 export type FsWriteResult = z.infer<typeof FsWriteResultSchema>;
 
+/* Creates one file or folder, and the folders above it that are missing. A path that is already
+   there is refused as `exists`, whatever it is. Held to the boundary of `fs.write`, and `.git` and
+   `.ruimte` stay closed. A file starts with `text`, which is held to `FS_READ_MAX_TEXT_BYTES`. */
+export const FsCreatePayloadSchema = z.object({
+    path: z.string().min(1),
+    kind: z.enum(['file', 'directory']),
+    // Only for a file; a directory has no text.
+    text: z.string().optional()
+});
+export type FsCreatePayload = z.infer<typeof FsCreatePayloadSchema>;
+
+export const FsCreateResultSchema = z.object({
+    size: z.number(),
+    mtime: z.number()
+});
+export type FsCreateResult = z.infer<typeof FsCreateResultSchema>;
+
 /* Moves a file or folder to the machine's trash. Only inside an open project or one of its
    worktrees, and never the project folder itself, `.git` or `.ruimte`. */
 export const FsDeletePayloadSchema = z.object({

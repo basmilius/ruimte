@@ -85,6 +85,10 @@ describe('the machine home', () => {
         expect(await request('fs.write', { path: approval, text: '{"approved":true}', expectedMtime: Math.round(mtimeMs) })).toMatchObject(refused);
     });
 
+    test('nor to a create', async () => {
+        expect(await request('fs.create', { path: join(home, 'command-approvals', 'new.json'), kind: 'file' })).toMatchObject(refused);
+    });
+
     test('nor to a delete', async () => {
         expect(await request('fs.delete', { path: join(home, 'command-approvals', 'approval.json') })).toMatchObject(refused);
     });

@@ -1,5 +1,6 @@
 import { translate, type Dispatcher } from '../dispatcher.ts';
 import { browseDirectories } from '../fs/browse.ts';
+import { createEntry } from '../fs/create.ts';
 import { deletePath } from '../fs/delete.ts';
 import { listDirectory } from '../fs/list.ts';
 import type { MachineHome } from '../fs/machine-home.ts';
@@ -45,6 +46,13 @@ export function registerFsHandlers(
         translate(async () => {
             await machineHome.refuse(payload.path);
             return writeTextFile(payload.path, payload.text, payload.expectedMtime, await boundaryOf(client.id));
+        })
+    );
+
+    dispatcher.register('fs.create', (payload, client) =>
+        translate(async () => {
+            await machineHome.refuse(payload.path);
+            return createEntry(payload, await boundaryOf(client.id));
         })
     );
 

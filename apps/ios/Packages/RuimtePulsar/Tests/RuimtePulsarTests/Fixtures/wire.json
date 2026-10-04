@@ -214,6 +214,7 @@
     "fs.grep",
     "fs.list",
     "fs.read",
+    "fs.create",
     "fs.delete",
     "fs.write",
     "fs.watch",
