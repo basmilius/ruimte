@@ -69,6 +69,10 @@ On-device model (Apple Foundation Models), code never leaves the Mac:
 - Name suggestions in rename.
 - Ghost text only on ⌥\, since the first text takes two to three seconds.
 
+### Open questions
+
+- Formatting follows the language server's own style, with only the tab size and indent style from `.editorconfig`. Options: configure the servers' formatter settings, run the project's own formatter (oxfmt, prettier, php-cs-fixer) with the repository's config, or a code style setting of Ruimte translated for each server. The second looks most worth it, since projects already record their style.
+
 ### Cleanup
 
 - Remove `packages/editor` and its dependency once Bas confirms parity.
