@@ -35,8 +35,11 @@ export class SignatureFeature {
                     return true;
                 }
                 if (event.key === ' ' && event.ctrlKey && event.shiftKey && !event.metaKey && !event.altKey) {
-                    this.ask({ triggerKind: 1, isRetrigger: false });
+                    this.invoke();
                     return true;
+                }
+                if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+                    return this.cycle(event.key === 'ArrowDown' ? 1 : -1);
                 }
                 return false;
             })
@@ -51,6 +54,28 @@ export class SignatureFeature {
 
     get isOpen(): boolean {
         return this.language.popups.getState().signature !== null;
+    }
+
+    /* Asks for the parameters of the call at the caret, as Ctrl+Shift+Space does. */
+    invoke(): void {
+        this.ask({ triggerKind: 1, isRetrigger: false });
+    }
+
+    /* Shows the next overload, or the one before, while the card is up and has more than one; false when it has not, which leaves the arrow to the caret. */
+    private cycle(step: 1 | -1): boolean {
+        const { help } = this;
+        if (help === null || help.signatures.length < 2 || !this.isOpen) {
+            return false;
+        }
+        const count = help.signatures.length;
+        const next = { ...help, activeSignature: (Math.min(Math.max(0, help.activeSignature ?? 0), count - 1) + step + count) % count };
+        const model = signatureViewOf(next);
+        if (model === null || this.anchor === null) {
+            return false;
+        }
+        this.help = next;
+        this.language.popups.setState({ signature: { anchor: this.anchor, model } });
+        return true;
     }
 
     close(): void {

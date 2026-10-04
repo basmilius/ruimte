@@ -182,7 +182,7 @@ export class CompletionFeature {
     }
 
     private key(event: KeyboardEvent): boolean {
-        if (event.key === ' ' && event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (event.key === ' ' && event.ctrlKey && !event.shiftKey && !event.metaKey && !event.altKey) {
             if (this.isOpen) {
                 this.detailsOpen = !this.detailsOpen;
                 this.publish();

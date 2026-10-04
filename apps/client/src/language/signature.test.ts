@@ -13,7 +13,20 @@ async function settle(): Promise<void> {
     }
 }
 
-async function setup() {
+const OVERLOADS = [
+    { label: 'score(candidate: Candidate): number', parameters: [{ label: 'candidate: Candidate' }] },
+    { label: 'score(candidate: Candidate, vacancy: Vacancy): number', parameters: [{ label: 'candidate: Candidate' }, { label: 'vacancy: Vacancy' }] },
+    { label: 'score(id: number): number', parameters: [{ label: 'id: number' }] }
+];
+
+async function setup(
+    signatures: unknown[] = [
+        {
+            label: 'score(candidate: Candidate, vacancy: Vacancy): number',
+            parameters: [{ label: 'candidate: Candidate' }, { label: 'vacancy: Vacancy' }]
+        }
+    ]
+) {
     const transport = new FakeLanguageTransport();
     transport.providers = { 'textDocument/signatureHelp': { triggerCharacters: ['(', ','], retriggerCharacters: [')'] } };
     const contexts: unknown[] = [];
@@ -24,12 +37,7 @@ async function setup() {
             active < 0
                 ? null
                 : {
-                      signatures: [
-                          {
-                              label: 'score(candidate: Candidate, vacancy: Vacancy): number',
-                              parameters: [{ label: 'candidate: Candidate' }, { label: 'vacancy: Vacancy' }]
-                          }
-                      ],
+                      signatures,
                       activeParameter: active
                   };
         return { result: help, server: 'typescript', version: 1 };
@@ -41,6 +49,60 @@ async function setup() {
     await language.document.ready;
     return { editor, timers, contexts, view: () => language.popups.getState().signature, setActive: (next: number) => (active = next) };
 }
+
+describe('overloads', () => {
+    test('Up and Down show the next and the previous one while the card is up, and go round', async () => {
+        const { editor, timers, view } = await setup(OVERLOADS);
+        editor.type('score(');
+        timers.advance(100);
+        await settle();
+        expect(view()?.model).toMatchObject({ index: 0, count: 3, label: OVERLOADS[0]!.label });
+        expect(editor.press({ key: 'ArrowDown' })).toBe(true);
+        expect(view()?.model).toMatchObject({ index: 1, label: OVERLOADS[1]!.label });
+        editor.press({ key: 'ArrowDown' });
+        editor.press({ key: 'ArrowDown' });
+        expect(view()?.model.index).toBe(0);
+        editor.press({ key: 'ArrowUp' });
+        expect(view()?.model.index).toBe(2);
+        expect(editor.press({ key: 'ArrowDown', shiftKey: true })).toBe(false);
+    });
+
+    test('leave the arrows to the caret when there is one signature or no card', async () => {
+        const single = await setup();
+        single.editor.type('score(');
+        single.timers.advance(100);
+        await settle();
+        expect(single.editor.press({ key: 'ArrowDown' })).toBe(false);
+        const none = await setup(OVERLOADS);
+        expect(none.editor.press({ key: 'ArrowUp' })).toBe(false);
+    });
+
+    test('the overload picked stays picked when the server is asked again as the call is typed', async () => {
+        const { editor, timers, view, contexts } = await setup(OVERLOADS);
+        editor.type('score(');
+        timers.advance(100);
+        await settle();
+        editor.press({ key: 'ArrowDown' });
+        editor.type('score(a');
+        timers.advance(100);
+        await settle();
+        expect(contexts.at(-1)).toMatchObject({ activeSignatureHelp: { activeSignature: 1 } });
+        expect(view()).not.toBeNull();
+    });
+
+    test('Ctrl+Shift+Space asks for the parameters of the call at the caret', async () => {
+        const { editor, timers, view, contexts } = await setup(OVERLOADS);
+        editor.type('score(');
+        timers.advance(100);
+        await settle();
+        editor.press({ key: 'Escape' });
+        expect(editor.press({ key: ' ', ctrlKey: true, shiftKey: true })).toBe(true);
+        timers.advance(100);
+        await settle();
+        expect(view()).not.toBeNull();
+        expect(contexts.at(-1)).toEqual({ triggerKind: 1, isRetrigger: false });
+    });
+});
 
 describe('signature help', () => {
     test('opens on a trigger character and follows the argument the caret is in', async () => {
